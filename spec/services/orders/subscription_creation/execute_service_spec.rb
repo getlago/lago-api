@@ -343,6 +343,24 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
+      # This is why QuoteVersions::Validators::SubscriptionCreation::BusinessValidator checks the
+      # negotiated properties at approve: Plans::OverrideService calls Charges::OverrideService
+      # without raise_if_error!, so the charge is dropped and the subscription bills nothing for the
+      # metric. Should this example ever fail, that service now surfaces the error and the executor
+      # can stop relying on approve alone.
+      context "when the negotiated properties are invalid for the charge model" do
+        let(:plan_overrides) do
+          super().merge("charges" => [super()["charges"].sole.merge("properties" => {"amount" => "not a number"})])
+        end
+
+        it "executes with the charge silently dropped from the override plan" do
+          result = execute_service.call
+
+          expect(result).to be_success
+          expect(customer.subscriptions.sole.plan.charges).to be_empty
+        end
+      end
+
       context "when the plan is gone" do
         before { plan.discard! }
 

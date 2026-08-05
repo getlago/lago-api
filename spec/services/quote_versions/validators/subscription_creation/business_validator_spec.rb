@@ -406,6 +406,103 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the negotiated charge properties are invalid for the charge model" do
+      let(:charge_override) { super().merge("properties" => {"amount" => "not a number"}) }
+
+      it "returns the error the charge model itself raises" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties.amount": ["invalid_amount"]}
+        )
+      end
+    end
+
+    context "when the negotiated charge properties are empty" do
+      let(:charge_override) { super().merge("properties" => {}) }
+
+      it "returns an invalid_amount error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties.amount": ["invalid_amount"]}
+        )
+      end
+    end
+
+    context "when the negotiated charge properties were drafted for another charge model" do
+      let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+      let(:charge_override) { super().merge("chargeModel" => nil, "properties" => {"amount" => "100"}) }
+
+      it "returns a missing_graduated_ranges error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties.graduated_ranges": ["missing_graduated_ranges"]}
+        )
+      end
+    end
+
+    context "when the negotiated charge properties are not shaped for any charge model" do
+      let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+      let(:charge_override) do
+        super().merge("chargeModel" => nil, "properties" => {"graduated_ranges" => "one to ten"})
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the charge override carries no properties" do
+      let(:charge_override) { super().except("properties") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the charge model moved and the properties no longer fit it" do
+      let(:charge_snapshot) { super().merge("chargeModel" => "graduated") }
+      let(:charge_override) { super().merge("chargeModel" => nil, "properties" => {"amount" => "100"}) }
+
+      it "only reports the charge model" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.charges.0.chargeModel": ["charge_model_changed"]}
+        )
+      end
+    end
+
+    context "when the negotiated minimum lands on a charge billed in advance" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true) }
+      let(:charge_override) { super().merge("minAmountCents" => 1_000) }
+
+      it "returns a not_compatible_with_pay_in_advance error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.minAmountCents": ["not_compatible_with_pay_in_advance"]}
+        )
+      end
+    end
+
+    context "when the negotiated minimum is zero on a charge billed in advance" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true) }
+      let(:charge_override) { super().merge("minAmountCents" => 0) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated minimum lands on a charge billed in arrears" do
+      let(:charge_override) { super().merge("minAmountCents" => 1_000) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the billable metric is discarded" do
       before do
         charge
@@ -467,6 +564,50 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the snapshot fixed charge carries no charge model" do
       let(:fixed_charge_snapshot) { super().except("chargeModel") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated fixed charge properties are invalid for the charge model" do
+      let(:fixed_charge_override) { super().merge("properties" => {"amount" => "not a number"}) }
+
+      it "returns the error the charge model itself raises" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.properties.amount": ["invalid_amount"]}
+        )
+      end
+    end
+
+    # FixedCharges::OverrideService slices these away and FixedCharge then refuses blank properties.
+    context "when the negotiated fixed charge properties were drafted for another charge model" do
+      let(:fixed_charge_override) do
+        super().merge("properties" => {"graduated_ranges" => [{"from_value" => 0, "per_unit_amount" => "1"}]})
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.properties": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the negotiated fixed charge properties are empty" do
+      let(:fixed_charge_override) { super().merge("properties" => {}) }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.properties": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the negotiated fixed charge properties are valid" do
+      let(:fixed_charge_override) { super().merge("properties" => {"amount" => "42"}) }
 
       it "is valid" do
         expect(validator).to be_valid
