@@ -71,6 +71,28 @@ RSpec.describe Api::V2::RateCards::RatesController do
       end
     end
 
+    context "when effective_from is unparseable" do
+      before { create_params[:effective_from] = "hello" }
+
+      it "returns value_is_invalid rather than value_is_mandatory" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :effective_from)).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "when effective_from is omitted" do
+      before { create_params.delete(:effective_from) }
+
+      it "returns value_is_mandatory" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :effective_from)).to eq(["value_is_mandatory"])
+      end
+    end
+
     context "when the rate card does not exist" do
       subject { post_with_token(organization, "/api/v2/rate_cards/unknown/rates", {rate: create_params}) }
 
