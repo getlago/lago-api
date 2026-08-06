@@ -81,8 +81,8 @@ module Api
       end
 
       # Testing helper: fast-forwards one or more product-catalog subscriptions to
-      # `timestamp` (default now) and returns what they produced, synchronously. With
-      # `terminate: true` it simulates a termination at that date (final prorated cycle +
+      # a date range and returns what they produced, synchronously. With
+      # `terminate: true` it simulates a termination at the range end (final prorated cycle +
       # advance credit notes) instead of periodic billing. Takes the id from the path, or
       # an `external_ids` array to bill several at once.
       def bill
@@ -103,14 +103,18 @@ module Api
 
         result = ::V2::Subscriptions::BillService.call(
           subscriptions:,
-          timestamp: params[:timestamp],
-          terminate: ActiveModel::Type::Boolean.new.cast(params[:terminate])
+          start_on: params[:start_on],
+          end_on: params[:end_on],
+          terminate: ActiveModel::Type::Boolean.new.cast(params[:terminate]) || false
         )
 
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.invoices, ::V1::InvoiceSerializer, collection_name: "invoices"
+              result.invoices,
+              ::V1::InvoiceSerializer,
+              collection_name: "invoices",
+              includes: %i[customer billing_periods subscriptions fees]
             ).serialize.merge(
               ::CollectionSerializer.new(
                 result.credit_notes, ::V1::CreditNoteSerializer, collection_name: "credit_notes"
