@@ -5,6 +5,15 @@ module UsageMonitoring
     module CreateOrUpdateConcern
       extend ActiveSupport::Concern
 
+      CODE_UNIQUE_INDEXES = %w[
+        idx_alerts_code_unique_per_subscription
+        idx_alerts_code_unique_per_wallet
+      ].freeze
+
+      def duplicate_code_error?(exception)
+        CODE_UNIQUE_INDEXES.any? { |index| exception.message.include?(index) }
+      end
+
       def find_billable_metric_from_params!
         if params[:billable_metric]
           params[:billable_metric]
