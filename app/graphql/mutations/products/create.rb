@@ -5,7 +5,6 @@ module Mutations
     class Create < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
-      include SurfaceErrorFields
 
       REQUIRED_PERMISSION = "products:create"
 
@@ -18,7 +17,7 @@ module Mutations
       def resolve(**args)
         result = ::Products::CreateService.call(organization: current_organization, params: args)
 
-        result.success? ? result.product : render_item_error(result)
+        result.success? ? result.product : result_error(result)
       end
     end
   end

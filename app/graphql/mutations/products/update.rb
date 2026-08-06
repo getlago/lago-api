@@ -5,7 +5,6 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
-      include SurfaceErrorFields
 
       REQUIRED_PERMISSION = "products:update"
 
@@ -19,7 +18,7 @@ module Mutations
         product = current_organization.products.find_by(id: args[:id])
         result = ::Products::UpdateService.call(product:, params: args.except(:id))
 
-        result.success? ? result.product : render_item_error(result)
+        result.success? ? result.product : result_error(result)
       end
     end
   end

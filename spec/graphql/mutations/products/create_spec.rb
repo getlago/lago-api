@@ -71,8 +71,8 @@ RSpec.describe Mutations::Products::Create do
   context "when a usage item has no billable metric" do
     let(:input) { {name: "Orphan", code: "orphan", productType: "usage"} }
 
-    it "returns a validation error on billable_metric_id" do
-      expect(execution["errors"].first["extensions"]["details"]).to eq("billableMetricId" => ["value_is_mandatory"])
+    it "returns a validation error on the relation" do
+      expect(execution["errors"].first["extensions"]["details"]).to eq("billableMetric" => ["value_is_mandatory"])
     end
   end
 end
