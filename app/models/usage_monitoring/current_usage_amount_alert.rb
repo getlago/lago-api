@@ -5,6 +5,10 @@ module UsageMonitoring
     def find_value(current_usage)
       current_usage.amount_cents
     end
+
+    def window_resets_each_period?(subscription)
+      !subscription.plan.charges.joins(:billable_metric).exists?(billable_metrics: {recurring: true})
+    end
   end
 end
 
