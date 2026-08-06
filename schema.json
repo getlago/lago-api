@@ -29714,12 +29714,6 @@
               "deprecationReason": null
             },
             {
-              "name": "multi_entity_billing",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "order_forms",
               "description": null,
               "isDeprecated": false,
