@@ -221,6 +221,17 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
       end
 
+      context "when code already exists on the same wallet" do
+        let(:params) { {code: "taken"} }
+
+        it "returns a record validation failure result" do
+          create(:wallet_credits_balance_alert, organization:, wallet: alert.wallet, code: "taken")
+
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+      end
+
       context "when processing wallet alerts", :premium do
         it "enqueues ProcessWalletAlertsJob" do
           expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(alert.wallet)
