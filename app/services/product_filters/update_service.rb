@@ -70,9 +70,12 @@ module ProductFilters
 
     attr_reader :product_filter, :params
 
+    # value.to_s keeps key-only entries (nil) sortable next to valued entries
+    # for the same key — nil <=> String raises. It cannot conflate distinct
+    # entries: an empty-string value is invalid, so "" only ever means nil.
     def values_changed?
-      current = product_filter.values.map { |value| [value.billable_metric_filter_id, value.value] }.sort
-      submitted = resolved_values.values_params.map { |value| [value[:billable_metric_filter_id], value[:value]] }.sort
+      current = product_filter.values.map { |value| [value.billable_metric_filter_id.to_s, value.value.to_s] }.sort
+      submitted = resolved_values.values_params.map { |value| [value[:billable_metric_filter_id].to_s, value[:value].to_s] }.sort
 
       current != submitted
     end

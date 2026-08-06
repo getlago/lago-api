@@ -107,6 +107,22 @@ RSpec.describe ProductFilters::UpdateService do
       expect(update_result).to be_success
       expect(product_filter.reload.name).to eq("renamed")
     end
+
+    context "when the payload mixes a key-only entry with a valued entry for the same key" do
+      let(:params) do
+        {
+          values: [
+            {billable_metric_filter_id: region_filter.id},
+            {billable_metric_filter_id: region_filter.id, value: "eu"}
+          ]
+        }
+      end
+
+      it "rejects the values change instead of crashing on the comparison" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:values]).to eq(["attached_to_subscriptions"])
+      end
+    end
   end
 
   it "produces an activity log" do
