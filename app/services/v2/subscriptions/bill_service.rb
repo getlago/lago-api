@@ -3,12 +3,12 @@
 module V2
   module Subscriptions
     # Manual billing trigger for the product-catalog engine, so the product team can
-    # fast-forward one or more subscriptions to a date and inspect the result synchronously
+    # fast-forward one or more subscriptions to a date range and inspect the result synchronously
     # (the invoices land in the response instead of waiting for the clock).
     #
-    # - terminate: false => run the producer + consumer up to `timestamp`, emitting the
-    #   cycles that would have been billed by then.
-    # - terminate: true  => terminate each subscription at `timestamp` (final prorated cycle
+    # - terminate: false => run the producer + consumer for `range`, emitting the
+    #   cycles that would have been billed during it.
+    # - terminate: true  => terminate each subscription at the range end (final prorated cycle
     #   + advance credit notes), then bill inline. TerminateService also enqueues the billing
     #   job after commit; running it inline here just materialises the invoice in the
     #   response, and the async job then finds nothing left to bill.
@@ -18,9 +18,10 @@ module V2
     class BillService < BaseService
       Result = BaseResult[:invoices, :credit_notes]
 
-      def initialize(subscriptions:, timestamp: nil, terminate: false)
+      def initialize(subscriptions:, start_on: nil, end_on: nil, terminate: false)
         @subscriptions = Array.wrap(subscriptions)
-        @timestamp = timestamp
+        @start_on = start_on
+        @end_on = end_on
         @terminate = terminate
         super
       end
@@ -32,26 +33,26 @@ module V2
           return result.single_validation_failure!(field: :subscription, error_code: "not_a_product_catalog_subscription")
         end
 
-        at = parse_timestamp
+        billing_range
         return result if result.error
 
         result.invoices = []
         result.credit_notes = []
 
-        terminate_all(at) if terminate
+        terminate_all if terminate
         return result if result.error
 
-        bill_all(at)
+        bill_all
         result
       end
 
       private
 
-      attr_reader :subscriptions, :timestamp, :terminate
+      attr_reader :subscriptions, :start_on, :end_on, :terminate
 
-      def terminate_all(at)
+      def terminate_all
         subscriptions.each do |subscription|
-          termination = ::V2::Subscriptions::TerminateService.call(subscription:, terminated_at: at)
+          termination = ::V2::Subscriptions::TerminateService.call(subscription:, terminated_at: billing_range.end)
           return result.fail_with_error!(termination.error) unless termination.success?
 
           result.credit_notes.concat(Array.wrap(termination.credit_notes))
@@ -62,30 +63,47 @@ module V2
       # customer-scoped, so one pass emits every due cycle that customer has). Billing once
       # per distinct customer therefore covers every subscription passed in, and avoids
       # follow-up passes that would find nothing left to bill.
-      def bill_all(at)
+      def bill_all
         subscriptions.uniq(&:customer_id).each do |subscription|
-          billing = BillingCycles::BillSubscriptionService.call(subscription:, up_to: at)
+          billing = BillingCycles::BillSubscriptionService.call(subscription:, range: billing_range)
           return result.fail_with_error!(billing.error) unless billing.success?
 
           result.invoices.concat(billing.invoices)
         end
       end
 
-      # Accepts an ISO8601 datetime/date ("2026-09-01T00:00:00Z", "2026-09-01") or an epoch
-      # second ("1756684800"); defaults to now when omitted.
-      def parse_timestamp
-        return Time.current if timestamp.blank?
-
-        value = timestamp.to_s
-        return Time.zone.at(Integer(value)) if value.match?(/\A\d+\z/)
-
-        Time.zone.parse(value) || invalid_timestamp
-      rescue ArgumentError, TypeError
-        invalid_timestamp
+      def billing_range
+        @billing_range ||= parse_range
       end
 
-      def invalid_timestamp
-        result.single_validation_failure!(field: :timestamp, error_code: "invalid_timestamp")
+      def parse_range
+        now = Time.current
+        return now..now if end_on.blank?
+
+        parsed_end_on = parse_bill_date(end_on)
+        parsed_start_on = if start_on.present?
+          parse_bill_date(start_on)
+        else
+          parsed_end_on&.yesterday
+        end
+
+        from = parsed_start_on&.beginning_of_day&.utc
+        to = parsed_end_on&.end_of_day&.utc
+        return invalid_range unless from && to
+
+        return invalid_range if from > to
+
+        from..to
+      end
+
+      def parse_bill_date(value)
+        value.to_s.delete('"').to_date
+      rescue Date::Error
+        nil
+      end
+
+      def invalid_range
+        result.single_validation_failure!(field: :range, error_code: "invalid_date_range")
         nil
       end
     end

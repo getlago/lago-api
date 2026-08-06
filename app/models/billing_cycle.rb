@@ -46,6 +46,7 @@ end
 #
 # Indexes
 #
+#  billing_cycles_no_overlapping_periods                (organization_id, subscription_id, customer_id, subscription_rate_card_id, tsrange(period_from, period_to, '[]'::text)) USING gist
 #  idx_on_subscription_id_billing_at_status_a01115903b  (subscription_id,billing_at,status)
 #  index_billing_cycles_on_customer_id                  (customer_id)
 #  index_billing_cycles_on_invoice_id                   (invoice_id)

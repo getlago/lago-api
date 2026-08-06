@@ -98,4 +98,199 @@ RSpec.describe Api::V2::SubscriptionsController do
       end
     end
   end
+
+  describe "POST /api/v2/subscriptions/:external_id/bill" do
+    subject do
+      post_with_token(
+        organization,
+        "/api/v2/subscriptions/#{subscription.external_id}/bill",
+        {start_on: "2026-08-01", end_on: "2026-08-14"}
+      )
+    end
+
+    let(:billing_result) do
+      V2::Subscriptions::BillService::Result.new.tap do |result|
+        result.invoices = []
+        result.credit_notes = []
+      end
+    end
+
+    before do
+      allow(V2::Subscriptions::BillService).to receive(:call).and_return(billing_result)
+    end
+
+    it "passes the requested range to the bill service" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(V2::Subscriptions::BillService).to have_received(:call).with(
+        subscriptions: [subscription],
+        start_on: "2026-08-01",
+        end_on: "2026-08-14",
+        terminate: false
+      )
+    end
+
+    context "without start_on" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v2/subscriptions/#{subscription.external_id}/bill",
+          {end_on: "2026-08-14"}
+        )
+      end
+
+      it "uses end_on as the range start" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(V2::Subscriptions::BillService).to have_received(:call).with(
+          subscriptions: [subscription],
+          start_on: nil,
+          end_on: "2026-08-14",
+          terminate: false
+        )
+      end
+    end
+
+    context "with a quoted date param" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v2/subscriptions/#{subscription.external_id}/bill",
+          {end_on: '"2026-09-10"'}
+        )
+      end
+
+      it "removes extra quotes before building the range" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(V2::Subscriptions::BillService).to have_received(:call).with(
+          subscriptions: [subscription],
+          start_on: nil,
+          end_on: '"2026-09-10"',
+          terminate: false
+        )
+      end
+    end
+
+    context "with an invalid date param" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v2/subscriptions/#{subscription.external_id}/bill",
+          {end_on: "hello"}
+        )
+      end
+
+      it "passes the invalid range to the bill service" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(V2::Subscriptions::BillService).to have_received(:call).with(
+          subscriptions: [subscription],
+          start_on: nil,
+          end_on: "hello",
+          terminate: false
+        )
+      end
+    end
+
+    context "with the QA billing run payload" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v2/subscriptions/bill",
+          {
+            subscription_external_ids: ["sub_r1"],
+            end_on: "2026-09-10",
+            terminate: false
+          }
+        )
+      end
+
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          customer:,
+          plan:,
+          external_id: "sub_r1",
+          started_at: Time.zone.parse("2026-08-10"),
+          activated_at: Time.zone.parse("2026-08-10"),
+          subscription_at: Time.zone.parse("2026-08-10")
+        )
+      end
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, organization:, product:, code: "card_r1", currency: "USD") }
+      let!(:rate) do
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          code: "rate_r1_v1",
+          effective_from: Time.zone.parse("2026-01-01"),
+          rate_properties: {"amount" => "30.00"}
+        )
+      end
+
+      before do
+        allow(V2::Subscriptions::BillService).to receive(:call).and_call_original
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          code: "rate_r1_v2",
+          effective_from: Time.zone.parse("2026-12-01"),
+          rate_properties: {"amount" => "40.00"}
+        )
+        create(
+          :subscription_rate_card,
+          organization:,
+          subscription:,
+          customer:,
+          rate_card:,
+          units: 5,
+          billing_anchor_date: Date.parse("2026-08-10"),
+          started_at: Time.zone.parse("2026-08-10"),
+          next_billing_at: Time.zone.parse("2026-08-10")
+        )
+      end
+
+      it "creates one billing cycle for the latest period using the active rate" do
+        expect { subject }.to change(BillingCycle, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+
+        billing_cycle = BillingCycle.sole
+        fee = Fee.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
+        expect(fee.rate_card_rate).to eq(rate)
+        expect(fee.amount_cents).to eq(15_000)
+        expect(json[:invoices].sole[:fees].sole[:lago_id]).to eq(fee.id)
+      end
+
+      it "returns a validation error when billing the same period twice" do
+        subject
+        expect(response).to have_http_status(:success)
+
+        expect do
+          post_with_token(
+            organization,
+            "/api/v2/subscriptions/bill",
+            {
+              subscription_external_ids: ["sub_r1"],
+              end_on: "2026-09-10",
+              terminate: false
+            }
+          )
+        end.not_to change(BillingCycle, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(billing_cycle: ["overlapping_periods"])
+      end
+    end
+  end
 end
