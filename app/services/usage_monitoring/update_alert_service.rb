@@ -46,7 +46,7 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       end
 
-      ActiveRecord::Base.transaction do
+      alert.with_lock do
         alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)
         alert.billable_metric = billable_metric if billable_metric
