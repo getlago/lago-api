@@ -35,6 +35,9 @@ module UsageMonitoring
         if !all_recurring_threshold_values_positive?(params[:thresholds])
           return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
         end
+
+        validate_notify_on!(params[:thresholds])
+        return result unless result.success?
       end
 
       result.alert = alert
