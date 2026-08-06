@@ -9,21 +9,23 @@ module BillingCycles
   class BillSubscriptionService < BaseService
     Result = BaseResult[:invoices]
 
-    def initialize(subscription:, up_to: Time.current)
+    def initialize(subscription:, range: Time.current..Time.current)
       @subscription = subscription
-      @up_to = up_to
+      @range = range
       super
     end
 
     def call
-      ScheduleService.call(customer:, up_to:)
+      schedule = ScheduleService.call(customer:, range:)
+      return result.fail_with_error!(schedule.error) if schedule.failure?
+
       result.invoices = ProcessService.call(customer:).invoices
       result
     end
 
     private
 
-    attr_reader :subscription, :up_to
+    attr_reader :subscription, :range
 
     def customer
       subscription.customer

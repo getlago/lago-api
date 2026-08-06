@@ -1,0 +1,367 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe BillingCycles::ScheduleService do
+  describe ".call" do
+    subject(:result) { described_class.call(customer:, range:) }
+
+    around do |example|
+      travel_to(current_time) { example.run }
+    end
+
+    let(:current_time) { Time.zone.parse("2026-08-14 12:00:00") }
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:, timezone:) }
+    let(:timezone) { "UTC" }
+    let(:plan) { create(:plan, organization:) }
+    let(:subscription) do
+      create(
+        :subscription,
+        customer:,
+        organization:,
+        plan:,
+        started_at: Time.zone.parse("2026-01-01"),
+        activated_at: Time.zone.parse("2026-01-01"),
+        subscription_at: Time.zone.parse("2026-01-01")
+      )
+    end
+    let(:rate_card) { create(:rate_card, organization:) }
+    let(:range) { current_time..current_time }
+    let(:next_billing_at) { Time.zone.parse("2026-08-01") }
+    let(:billing_anchor_date) { Date.parse("2026-01-01") }
+    let(:started_at) { Time.zone.parse("2026-01-01") }
+    let(:ended_at) { nil }
+    let(:billing_interval_count) { 1 }
+    let(:billing_interval_unit) { "month" }
+
+    before do
+      create(
+        :rate_card_rate,
+        organization:,
+        rate_card:,
+        effective_from: Time.zone.parse("2026-01-01"),
+        billing_interval_count:,
+        billing_interval_unit:
+      )
+      create(
+        :subscription_rate_card,
+        organization:,
+        subscription:,
+        customer:,
+        rate_card:,
+        billing_anchor_date:,
+        started_at:,
+        next_billing_at:,
+        ended_at:
+      )
+    end
+
+    it "does not schedule periods outside the default scheduling range" do
+      expect { result }.not_to change(BillingCycle, :count)
+
+      expect(result.billing_cycles).to eq([])
+      expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-08-01"))
+    end
+
+    context "with a closed date range" do
+      let(:range) { "2026-07-15".."2026-08-14" }
+      let(:next_billing_at) { Time.zone.parse("2026-07-01") }
+
+      it "schedules billing cycles overlapping the range" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
+        expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
+      end
+    end
+
+    context "with rate changes inside the range" do
+      let(:range) { "2026-07-01".."2026-09-01" }
+      let(:next_billing_at) { Time.zone.parse("2026-07-01") }
+
+      before do
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          code: "rate_r1_v2",
+          effective_from: Time.zone.parse("2026-08-01"),
+          rate_properties: {"amount" => "40.00"}
+        )
+      end
+
+      it "splits billing cycles across rate effective dates and calendar periods" do
+        expect { result }.to change(BillingCycle, :count).by(2)
+
+        expect(result.billing_cycles.map { [it.period_from, it.period_to] }).to eq(
+          [
+            [Time.zone.parse("2026-07-01"), Time.zone.parse("2026-07-31 23:59:59.999999")],
+            [Time.zone.parse("2026-08-01"), Time.zone.parse("2026-08-31 23:59:59.999999")]
+          ]
+        )
+      end
+    end
+
+    context "with a rate change in the middle of a weekly period" do
+      let(:range) { "2026-08-01".."2026-08-14" }
+      let(:next_billing_at) { Time.zone.parse("2026-08-03") }
+      let(:billing_anchor_date) { Date.parse("2026-08-03") }
+      let(:billing_interval_unit) { "week" }
+
+      before do
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          code: "rate_r1_v2",
+          effective_from: Date.parse("2026-08-06"),
+          billing_interval_count:,
+          billing_interval_unit:,
+          rate_properties: {"amount" => "40.00"}
+        )
+      end
+
+      it "splits the billing period at the rate effective date" do
+        expect { result }.to change(BillingCycle, :count).by(3)
+
+        expect(result.billing_cycles.map { [it.period_from, it.period_to] }).to eq(
+          [
+            [Time.zone.parse("2026-07-27"), Time.zone.parse("2026-08-02 23:59:59.999999")],
+            [Time.zone.parse("2026-08-03"), Time.zone.parse("2026-08-05 23:59:59.999999")],
+            [Time.zone.parse("2026-08-06"), Time.zone.parse("2026-08-09 23:59:59.999999")]
+          ]
+        )
+      end
+
+      context "when an earlier out-of-range period is already persisted" do
+        let(:range) { "2026-08-03".."2026-09-08" }
+
+        before do
+          BillingCycle.create!(
+            organization:,
+            subscription:,
+            customer:,
+            subscription_rate_card: customer.subscription_rate_cards.sole,
+            billing_at: Time.zone.parse("2026-08-03"),
+            period_from: Time.zone.parse("2026-07-27"),
+            period_to: Time.zone.parse("2026-08-02 23:59:59.999999")
+          )
+        end
+
+        it "skips the out-of-range period and schedules the overlapping ones" do
+          expect { result }.to change(BillingCycle, :count).by(6)
+
+          expect(result).to be_success
+          expect(result.billing_cycles.map(&:period_from)).not_to include(Time.zone.parse("2026-07-27"))
+          expect(result.billing_cycles.first.period_from).to eq(Time.zone.parse("2026-08-03"))
+        end
+      end
+    end
+
+    context "with a partial date range inside the current billing period" do
+      let(:range) { "2026-08-10".."2026-08-15" }
+      let(:next_billing_at) { Time.zone.parse("2026-09-10") }
+      let(:billing_anchor_date) { Date.parse("2026-08-10") }
+      let(:started_at) { Time.zone.parse("2026-08-10") }
+
+      it "does not schedule the previous arrears period before the subscription rate card starts" do
+        expect { result }.not_to change(BillingCycle, :count)
+
+        expect(result.billing_cycles).to eq([])
+      end
+    end
+
+    context "with a partial date range starting before the subscription rate card" do
+      let(:range) { "2026-08-01".."2026-08-15" }
+      let(:next_billing_at) { Time.zone.parse("2026-09-10") }
+      let(:billing_anchor_date) { Date.parse("2026-08-10") }
+      let(:started_at) { Time.zone.parse("2026-08-10 12:34:56") }
+
+      it "does not schedule the previous arrears period before the subscription rate card starts" do
+        expect { result }.not_to change(BillingCycle, :count)
+
+        expect(result.billing_cycles).to eq([])
+      end
+    end
+
+    context "when the range overlaps the period before the next billing date" do
+      let(:range) { "2026-07-31".."2026-08-14" }
+
+      it "schedules the previous period" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
+      end
+    end
+
+    context "with an ended item overlapping the range" do
+      let(:range) { "2026-07-15".."2026-08-14" }
+      let(:ended_at) { Time.zone.parse("2026-08-07") }
+
+      it "schedules the overlapping period" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
+      end
+    end
+
+    context "with an ended item outside the range" do
+      let(:ended_at) { Time.zone.parse("2026-08-07") }
+
+      it "keeps the previous due item behavior" do
+        expect { result }.not_to change(BillingCycle, :count)
+        expect(result.billing_cycles).to eq([])
+      end
+    end
+
+    context "when a single-day range includes the next billing date" do
+      let(:current_time) { Time.zone.parse("2026-09-10 12:00:00") }
+      let(:next_billing_at) { Time.zone.parse("2026-09-10") }
+      let(:billing_anchor_date) { Date.parse("2026-08-10") }
+      let(:started_at) { Time.zone.parse("2026-08-10 12:34:56") }
+
+      it "does not schedule the closed arrears period outside the range" do
+        expect { result }.not_to change(BillingCycle, :count)
+
+        expect(result.billing_cycles).to eq([])
+        expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-10"))
+      end
+
+      context "with a customer timezone" do
+        let(:timezone) { "Europe/Paris" }
+
+        it "does not schedule the closed arrears period outside the range" do
+          expect { result }.not_to change(BillingCycle, :count)
+
+          expect(result.billing_cycles).to eq([])
+          expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-10"))
+        end
+      end
+
+      context "with a two-day lookback range" do
+        let(:range) { "2026-09-09".."2026-09-10" }
+
+        it "schedules the closed arrears period overlapping the range" do
+          expect { result }.to change(BillingCycle, :count).by(1)
+
+          billing_cycle = result.billing_cycles.sole
+          expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
+          expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
+          expect(billing_cycle.billing_at).to eq(current_time)
+          expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
+        end
+
+        context "with a customer timezone" do
+          let(:timezone) { "Europe/Paris" }
+
+          it "floors the subscription rate card start in the customer timezone" do
+            expect { result }.to change(BillingCycle, :count).by(1)
+
+            billing_cycle = result.billing_cycles.sole
+            expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-09 22:00:00"))
+            expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 21:59:59.999999"))
+            expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-09 22:00:00"))
+          end
+        end
+      end
+
+      context "with an advance rate card" do
+        let(:rate_card) { create(:rate_card, :advance, organization:) }
+
+        it "schedules the requested day" do
+          expect { result }.to change(BillingCycle, :count).by(1)
+
+          billing_cycle = result.billing_cycles.sole
+          expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-09-10"))
+          expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-10 23:59:59.999999"))
+          expect(billing_cycle.billing_at).to eq(billing_cycle.period_to)
+          expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
+        end
+      end
+    end
+
+    context "when different subscription rate cards have overlapping periods" do
+      let(:range) { "2026-07-15".."2026-08-14" }
+      let(:second_rate_card) { create(:rate_card, organization:) }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card: second_rate_card, effective_from: Time.zone.parse("2026-01-01"))
+        create(
+          :subscription_rate_card,
+          organization:,
+          subscription:,
+          customer:,
+          rate_card: second_rate_card,
+          billing_anchor_date: Date.parse("2026-01-01"),
+          started_at: Time.zone.parse("2026-01-01"),
+          next_billing_at: Time.zone.parse("2026-08-03")
+        )
+      end
+
+      it "schedules every billing cycle" do
+        expect { result }.to change(BillingCycle, :count).by(2)
+
+        expect(result).to be_success
+        expect(result.billing_cycles.map(&:subscription_rate_card_id).uniq.count).to eq(2)
+      end
+    end
+
+    context "when a persisted billing cycle overlaps the generated period" do
+      let(:range) { "2026-07-15".."2026-08-14" }
+
+      before do
+        BillingCycle.create!(
+          organization:,
+          subscription:,
+          customer:,
+          subscription_rate_card: customer.subscription_rate_cards.sole,
+          billing_at: Time.zone.parse("2026-08-15"),
+          period_from: Time.zone.parse("2026-07-15"),
+          period_to: Time.zone.parse("2026-08-15 23:59:59.999999")
+        )
+      end
+
+      it "returns an error and does not persist the generated billing cycle" do
+        expect { result }.not_to change(BillingCycle, :count)
+
+        expect(result).to be_failure
+        expect(result.billing_cycles).to eq([])
+        expect(result.error.messages).to eq(billing_cycle: ["overlapping_periods"])
+      end
+    end
+
+    context "when the generated billing cycle already exists" do
+      let(:range) { "2026-07-15".."2026-08-14" }
+
+      before do
+        BillingCycle.create!(
+          organization:,
+          subscription:,
+          customer:,
+          subscription_rate_card: customer.subscription_rate_cards.sole,
+          billing_at: Time.zone.parse("2026-08-14"),
+          period_from: Time.zone.parse("2026-07-01"),
+          period_to: Time.zone.parse("2026-07-31 23:59:59.999999")
+        )
+      end
+
+      it "returns an error and does not persist a duplicate billing cycle" do
+        expect { result }.not_to change(BillingCycle, :count)
+
+        expect(result).to be_failure
+        expect(result.billing_cycles).to eq([])
+        expect(result.error.messages).to eq(billing_cycle: ["overlapping_periods"])
+      end
+    end
+  end
+end
