@@ -987,6 +987,7 @@ DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
+DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_subscription;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
 DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
@@ -7056,6 +7057,13 @@ CREATE INDEX idx_aggregation_lookup ON public.cached_aggregations USING btree (e
 --
 
 CREATE UNIQUE INDEX idx_alerts_code_unique_per_subscription ON public.usage_monitoring_alerts USING btree (code, subscription_external_id, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_alerts_code_unique_per_wallet; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_alerts_code_unique_per_wallet ON public.usage_monitoring_alerts USING btree (code, wallet_id, organization_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -14162,6 +14170,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805104301'),
 ('20260804131008'),
 ('20260803162623'),
 ('20260724094543'),
