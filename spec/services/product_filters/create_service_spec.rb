@@ -139,7 +139,7 @@ RSpec.describe ProductFilters::CreateService do
     end
   end
 
-  context "when the combination is already used on the product" do
+  context "when the value set is already used by another filter on the product" do
     before do
       described_class.call(
         product:,
@@ -147,9 +147,50 @@ RSpec.describe ProductFilters::CreateService do
       )
     end
 
-    it "creates the filter anyway" do
+    it "returns a validation failure" do
+      expect { result }.not_to change(ProductFilter, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages[:values]).to eq(["value_already_exist"])
+    end
+
+    it "detects the duplicate regardless of the values order" do
+      params[:values] = [
+        {billable_metric_filter_id: scheme_filter.id, value: "visa"},
+        {billable_metric_filter_id: region_filter.id, value: "us"}
+      ]
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:values]).to eq(["value_already_exist"])
+    end
+
+    it "accepts a differing value set" do
+      params[:values] = [{billable_metric_filter_id: region_filter.id, value: "us"}]
+
       expect(result).to be_success
-      expect(result.product_filter.to_h).to eq("region" => %w[us], "scheme" => %w[visa])
+    end
+  end
+
+  context "when a key-only filter for the same key already exists" do
+    before do
+      described_class.call(
+        product:,
+        params: params.merge(name: "Existing", code: "existing", values: [{billable_metric_filter_id: region_filter.id}])
+      )
+    end
+
+    it "rejects a second key-only filter but accepts a valued one" do
+      duplicate = described_class.call(
+        product:,
+        params: params.merge(values: [{billable_metric_filter_id: region_filter.id}])
+      )
+      expect(duplicate).not_to be_success
+      expect(duplicate.error.messages[:values]).to eq(["value_already_exist"])
+
+      valued = described_class.call(
+        product:,
+        params: params.merge(values: [{billable_metric_filter_id: region_filter.id, value: "eu"}])
+      )
+      expect(valued).to be_success
     end
   end
 
