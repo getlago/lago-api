@@ -34,15 +34,27 @@ module UsageMonitoring
     attr_reader :alert, :alertable, :current_metrics
 
     def evaluate(current, now)
+      # Re-baselining discards the evidence a recovery would be measured against, so it replaces the resolution.
+      rebaselined = period_rolled_over? && alert.window_resets_each_period?(alertable)
+      alert.previous_value = 0 if rebaselined
+
       crossed_threshold_values = alert.find_thresholds_crossed(current)
 
       if crossed_threshold_values.present?
         record_trigger(crossed_threshold_values, current, now)
-      else
+      elsif !rebaselined
         record_resolution(current, now)
       end
 
       alert.previous_value = current
+    end
+
+    def period_rolled_over?
+      return false unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
+      return false if alert.last_processed_at.nil?
+
+      # NOTE: from_datetime arrives as an ISO8601 string on the usage path, hence the parse
+      alert.last_processed_at < Time.zone.parse(current_metrics.from_datetime.to_s)
     end
 
     def record_trigger(crossed_threshold_values, current, now)

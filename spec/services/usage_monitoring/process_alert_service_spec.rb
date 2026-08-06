@@ -186,6 +186,171 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "when the last evaluation is from a previous period" do
+      let(:period_start) { Time.current.beginning_of_month }
+      let(:alert) do
+        create(:usage_current_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll",
+          last_processed_at: period_start - 1.day, organization:, subscription_external_id: subscription.external_id)
+      end
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601) }
+
+      before do
+        alert.thresholds.each { it.update!(notify_on: %w[triggered resolved]) }
+        create(:triggered_alert, alert:, organization:, subscription:,
+          crossed_thresholds: [{code: alert.thresholds.find_by(value: 20).code, value: "20.0", recurring: false}])
+      end
+
+      it "fires the thresholds the new period already crossed" do
+        recorded_before = alert.all_triggered_alerts.pluck(:id)
+        expect(result).to be_success
+
+        triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+        expect(triggered).to be_triggered
+        expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(triggered.previous_value).to eq(0)
+      end
+
+      it "does not report a recovery at the boundary" do
+        result
+        expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+      end
+
+      context "when the new period opens above the old value" do
+        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 95, from_datetime: period_start.iso8601) }
+
+        it "fires every threshold the new period crossed, not only those above the old value" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0 20.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
+      context "when a charge on the plan meters a recurring metric" do
+        # A recurring billable metric aggregates from subscription start, so the plan total does not reset.
+        let(:subscription) { create(:subscription, organization:, plan: recurring_plan) }
+        let(:recurring_plan) { create(:plan, organization:) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 90, from_datetime: period_start.iso8601) }
+
+        before do
+          create(:standard_charge, plan: recurring_plan, organization:,
+            billable_metric: create(:sum_billable_metric, :recurring, organization:))
+        end
+
+        it "keeps the baseline and does not re-fire across two consecutive boundaries" do
+          expect do
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+            alert.update!(last_processed_at: period_start - 1.day)
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+          end.not_to change { alert.all_triggered_alerts.count }
+        end
+      end
+
+      context "when a continuous metric recovers across the boundary" do
+        let(:subscription) { create(:subscription, organization:, plan: recurring_plan) }
+        let(:recurring_plan) { create(:plan, organization:) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601) }
+
+        before do
+          create(:standard_charge, plan: recurring_plan, organization:,
+            billable_metric: create(:sum_billable_metric, :recurring, organization:))
+        end
+
+        it "still announces the recovery, because its window never restarted" do
+          expect(result).to be_success
+
+          resolved = alert.all_triggered_alerts.where(kind: :resolved).sole
+          expect(resolved.crossed_thresholds.map { it["value"] }).to eq(%w[20.0])
+          expect(resolved.current_value).to eq(15)
+        end
+      end
+
+      context "when the alert watches one non-recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
+        let(:alert) do
+          create(:billable_metric_current_usage_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll-bm-amount",
+            last_processed_at: period_start - 1.day, organization:, billable_metric:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:current_metrics) do
+          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+            fees: [instance_double(Fee, charge_id: charge.id, amount_cents: 15)])
+        end
+
+        it "resets the baseline and fires what the new period crossed" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered).to be_triggered
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
+      context "when the alert watches units of one non-recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
+        let(:alert) do
+          create(:billable_metric_current_usage_units_alert, thresholds: [10, 20], previous_value: 90, code: "roll-bm-units",
+            last_processed_at: period_start - 1.day, organization:, billable_metric:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:current_metrics) do
+          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+            fees: [instance_double(Fee, charge_id: charge.id, units: 15)])
+        end
+
+        it "resets the baseline and fires what the new period crossed" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered).to be_triggered
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
+      context "when the alert watches one recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+        let(:alert) do
+          create(:billable_metric_current_usage_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll-bm",
+            last_processed_at: period_start - 1.day, organization:, billable_metric:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
+        let(:current_metrics) do
+          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+            fees: [instance_double(Fee, charge_id: charge.id, amount_cents: 90)])
+        end
+
+        it "keeps the baseline because a recurring metric never restarts" do
+          expect { result }.not_to change { alert.all_triggered_alerts.count }
+        end
+      end
+
+      context "when the alert counts lifetime usage" do
+        let(:alert) do
+          create(:lifetime_usage_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll",
+            last_processed_at: period_start - 1.day, organization:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:current_metrics) { instance_double(LifetimeUsage, total_amount_cents: 90) }
+
+        it "does not re-fire across two consecutive boundaries" do
+          expect do
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+            alert.update!(last_processed_at: period_start - 1.day)
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+          end.not_to change { alert.all_triggered_alerts.count }
+        end
+      end
+    end
+
     context "when billable metric is not part of the plan charges" do
       let(:alert) do
         create(
