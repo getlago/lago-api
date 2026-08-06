@@ -11,7 +11,7 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
 
-      field :attached_to_plan_or_subscription, Boolean, null: false, method: :attached_to_plan_or_subscription?
+      field :attached_to_plan_or_subscription, Boolean, null: false
       field :code, String, null: false
       field :description, String, null: true
       field :invoice_display_name, String, null: true
@@ -26,8 +26,12 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      def attached_to_plan_or_subscription
+        dataloader.with(Sources::AttachedToPlanOrSubscription, :product).load(object.id)
+      end
+
       def filters_count
-        object.filters.count
+        dataloader.with(Sources::CountByForeignKey, ProductFilter, :product_id).load(object.id)
       end
     end
   end

@@ -14,14 +14,18 @@ module Types
       field :invoice_display_name, String, null: true
       field :name, String, null: false
 
-      field :attached_to_plan_or_subscription, Boolean, null: false, method: :attached_to_plan_or_subscription?
+      field :attached_to_plan_or_subscription, Boolean, null: false
       field :products_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      def attached_to_plan_or_subscription
+        dataloader.with(Sources::AttachedToPlanOrSubscription, :product_category).load(object.id)
+      end
+
       def products_count
-        object.products.count
+        dataloader.with(Sources::CountByForeignKey, Product, :product_category_id).load(object.id)
       end
     end
   end
