@@ -105,6 +105,44 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
       end
     end
 
+    context "when the reference fits within Adyen's limit" do
+      let(:reference) { "Hooli - Overdue invoices: #{invoice.number}" }
+
+      it "sends it through unchanged" do
+        create_service.call
+
+        expect(reference.length).to be <= described_class::REFERENCE_MAX_LENGTH
+        expect(payments_api).to have_received(:payments)
+          .with(hash_including(reference:), anything)
+      end
+    end
+
+    context "when a long billing entity name pushes the reference over Adyen's limit" do
+      let(:billing_entity_name) { "A" * 60 }
+      let(:reference) { "#{billing_entity_name} - Overdue invoices: #{invoice.number}" }
+
+      it "clamps it to the documented maximum" do
+        create_service.call
+
+        expect(reference.length).to be > described_class::REFERENCE_MAX_LENGTH
+        expect(payments_api).to have_received(:payments) do |params, _headers|
+          expect(params[:reference].length).to eq(described_class::REFERENCE_MAX_LENGTH)
+        end
+      end
+
+      # NOTE: BIL-371 appends the invoice number to the END of the reference, so
+      #       trimming from the right would drop the very thing the ticket adds.
+      #       Keep the tail and lose the billing entity name instead.
+      it "keeps the invoice number and drops the head" do
+        create_service.call
+
+        expect(payments_api).to have_received(:payments) do |params, _headers|
+          expect(params[:reference]).to end_with(invoice.number)
+          expect(params[:reference]).not_to start_with(billing_entity_name)
+        end
+      end
+    end
+
     context "with error response from adyen" do
       let(:payments_error_response) { generate(:adyen_payments_error_response) }
 
