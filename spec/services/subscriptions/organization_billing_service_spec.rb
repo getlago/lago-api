@@ -899,7 +899,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
     end
 
     context "when grouping subscriptions by billing entity" do
-      let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
+      let(:organization) { create(:organization) }
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:other_billing_entity) { create(:billing_entity, organization:) }
       let(:interval) { :monthly }
@@ -949,21 +949,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([subscription_default_entity], current_date)
           expect(BillNonInvoiceableFeesJob).to have_been_enqueued
             .with([subscription_other_entity], current_date)
-        end
-
-        context "without feature flag" do
-          let(:organization) { create(:organization) }
-
-          it "groups them into a single billing job" do
-            billing_service.call
-
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with(
-                contain_exactly(subscription_default_entity, subscription_other_entity),
-                current_date.to_i,
-                invoicing_reason: :subscription_periodic
-              )
-          end
         end
       end
 
@@ -1270,7 +1255,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when combined with billing entity grouping" do
-        let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
+        let(:organization) { create(:organization) }
         let(:other_billing_entity) { create(:billing_entity, organization:) }
 
         let(:default_entity_consolidated) do
@@ -1418,7 +1403,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
 
       context "when combined with payment method, currency and billing entity grouping" do
         let(:organization) do
-          create(:organization, feature_flags: %w[multi_entity_billing])
+          create(:organization)
         end
         let(:other_billing_entity) { create(:billing_entity, organization:) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }

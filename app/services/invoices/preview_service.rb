@@ -62,15 +62,10 @@ module Invoices
     delegate :organization, to: :customer
 
     def billing_entity
-      @billing_entity ||= if multi_entity_billing_enabled?
-        first_subscription.billing_entity || customer.billing_entity
-      else
-        customer.billing_entity
-      end
+      @billing_entity ||= first_subscription.billing_entity || customer.billing_entity
     end
 
     def billing_entities_aligned?
-      return true unless multi_entity_billing_enabled?
       return true if subscriptions.size <= 1
 
       effective_entity_ids = subscriptions.map { |s| s.billing_entity_id || customer.billing_entity_id }.uniq
@@ -81,10 +76,6 @@ module Invoices
       end
 
       true
-    end
-
-    def multi_entity_billing_enabled?
-      organization.feature_flag_enabled?(:multi_entity_billing)
     end
 
     def fetch_context

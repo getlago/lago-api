@@ -1915,29 +1915,7 @@ RSpec.describe Subscriptions::CreateService do
     describe "billing entity binding" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
-      context "when multi_entity_billing flag is OFF" do
-        it "ignores billing_entity_code and persists nil" do
-          params[:billing_entity_code] = billing_entity.code
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to be_nil
-        end
-
-        it "ignores billing_entity_id and persists nil" do
-          params[:billing_entity_id] = billing_entity.id
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to be_nil
-        end
-      end
-
-      context "when multi_entity_billing flag is ON" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
+      context "when binding a billing entity" do
         it "persists nil when no billing entity reference is provided" do
           result = create_service.call
 
@@ -2017,40 +1995,8 @@ RSpec.describe Subscriptions::CreateService do
 
       before { CurrentContext.source = "api" }
 
-      context "when multi_entity_billing flag is OFF" do
+      context "when downgrading" do
         before { subscription.mark_as_active! }
-
-        it "carries over current_subscription.billing_entity_id to the pending subscription" do
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
-        end
-
-        it "carries over NULL when current_subscription is not bound to any entity" do
-          subscription.update!(billing_entity_id: nil)
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.next_subscription.billing_entity_id).to be_nil
-        end
-
-        it "ignores billing_entity_code param and still carries over from current_subscription" do
-          params[:billing_entity_code] = target_entity.code
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
-        end
-      end
-
-      context "when multi_entity_billing flag is ON" do
-        before do
-          subscription.mark_as_active!
-          organization.enable_feature_flag!(:multi_entity_billing)
-        end
 
         it "carries over current_subscription.billing_entity_id when no param is provided" do
           result = create_service.call
@@ -2131,7 +2077,6 @@ RSpec.describe Subscriptions::CreateService do
 
         before do
           subscription
-          organization.enable_feature_flag!(:multi_entity_billing)
         end
 
         it "re-binds the pending subscription when billing_entity_code is provided" do

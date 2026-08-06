@@ -683,8 +683,6 @@ RSpec.shared_examples "a wallet create endpoint" do
   end
 
   context "when multi_entity_billing is enabled" do
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
     context "when billing_entity_code is provided" do
       let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
 
@@ -751,8 +749,6 @@ RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
   end
 
   context "when multi_entity_billing is enabled" do
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
     context "when billing_entity_id is provided" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
@@ -1266,8 +1262,6 @@ RSpec.shared_examples "a wallet update endpoint" do
     let(:wallet) { create(:wallet, customer:, billing_entity: initial_billing_entity) }
 
     context "when multi_entity_billing is enabled" do
-      before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
       context "when billing_entity_code matches an entity" do
         let(:update_params) { {billing_entity_code: target_billing_entity.code} }
 
