@@ -62,26 +62,15 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
-      context "when currencies do not match" do
+      context "when the customer currency differs from the subscription" do
         let(:customer) { build(:customer, organization:, billing_entity:, currency: "USD") }
 
-        it "returns an error" do
-          result = preview_service.call
+        it "allows the preview" do
+          travel_to(timestamp) do
+            result = preview_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("customer_currency_does_not_match")
-        end
-
-        context "when multi_currency flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_currency) }
-
-          it "allows the preview" do
-            travel_to(timestamp) do
-              result = preview_service.call
-
-              expect(result).to be_success
-              expect(result.invoice).to be_present
-            end
+            expect(result).to be_success
+            expect(result.invoice).to be_present
           end
         end
       end
