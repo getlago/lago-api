@@ -41,7 +41,7 @@ RSpec.describe InvoiceSubscriptionsHelper do
     end
 
     describe "filtered_fees" do
-      subject(:filtered_fees) { result.first.filtered_fees }
+      subject(:filtered_fees) { result.first.filtered_fees.to_a }
 
       context "when there is a subscription fee" do
         let!(:subscription_fee) { create(:fee, fee_type: "subscription", subscription:, invoice:) }
@@ -62,10 +62,18 @@ RSpec.describe InvoiceSubscriptionsHelper do
           it { is_expected.to include(fixed_charge_fee) }
         end
 
-        context "with zero units" do
-          let!(:fixed_charge_fee) { create(:fixed_charge_fee, subscription:, invoice:, units: 0) }
+        context "with zero units and a positive amount" do
+          let!(:fixed_charge_fee) { create(:fixed_charge_fee, subscription:, invoice:, units: 0, amount_cents: 200) }
 
-          it { is_expected.not_to include(fixed_charge_fee) }
+          it { is_expected.to eq([fixed_charge_fee]) }
+        end
+
+        context "with zero units and zero amount" do
+          before do
+            create(:fixed_charge_fee, subscription:, invoice:, units: 0, amount_cents: 0, precise_amount_cents: 0)
+          end
+
+          it { is_expected.to eq([]) }
         end
       end
 
@@ -76,22 +84,47 @@ RSpec.describe InvoiceSubscriptionsHelper do
           it { is_expected.to include(charge_fee) }
         end
 
-        context "with zero units and no true_up_parent_fee" do
-          let!(:charge_fee) { create(:charge_fee, subscription:, invoice:, units: 0, total_aggregated_units: 0) }
+        context "with zero units, a positive amount, and no true_up_parent_fee" do
+          let!(:charge_fee) { create(:charge_fee, subscription:, invoice:, units: 0, amount_cents: 200, total_aggregated_units: 0) }
 
-          it { is_expected.not_to include(charge_fee) }
+          it { is_expected.to eq([charge_fee]) }
+        end
+
+        context "with zero units, zero amount, and no true_up_parent_fee" do
+          before do
+            create(
+              :charge_fee,
+              subscription:,
+              invoice:,
+              units: 0,
+              amount_cents: 0,
+              precise_amount_cents: 0,
+              total_aggregated_units: 0
+            )
+          end
+
+          it { is_expected.to eq([]) }
         end
 
         context "with zero units but is the parent of a true_up fee" do
-          let!(:parent_fee) { create(:charge_fee, subscription:, invoice:, units: 0, total_aggregated_units: 0) }
-          let!(:true_up_fee) { create(:charge_fee, subscription:, invoice:, units: 5, total_aggregated_units: 5, true_up_parent_fee: parent_fee) }
-
-          it "includes the parent fee" do
-            expect(filtered_fees).to include(parent_fee)
+          let!(:parent_fee) do
+            create(
+              :charge_fee,
+              subscription:,
+              invoice:,
+              units: 0,
+              amount_cents: 0,
+              precise_amount_cents: 0,
+              total_aggregated_units: 0
+            )
           end
 
-          it "excludes the true_up fee itself" do
-            expect(filtered_fees).not_to include(true_up_fee)
+          before do
+            create(:charge_fee, subscription:, invoice:, units: 5, total_aggregated_units: 5, true_up_parent_fee: parent_fee)
+          end
+
+          it "includes only the parent fee" do
+            expect(filtered_fees).to eq([parent_fee])
           end
         end
       end
