@@ -69,11 +69,11 @@ module Wallets
       recurring_transaction_rule = nil
 
       ActiveRecord::Base.transaction do
-        if currency.present? && (!organization_flag_enabled?(:multi_currency) || customer.currency.blank?)
+        if currency.present? && customer.currency.blank?
           Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = organization_flag_enabled?(:multi_currency) ? (currency || wallet.customer.currency) : wallet.customer.currency
+        wallet.currency = currency || wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet

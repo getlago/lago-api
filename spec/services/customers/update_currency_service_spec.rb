@@ -40,53 +40,6 @@ RSpec.describe Customers::UpdateCurrencyService do
       end
     end
 
-    context "when customer already has a currency" do
-      let(:customer) { create(:customer, currency: "EUR") }
-
-      it "returns a failure" do
-        result = currency_service.call
-
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
-      end
-
-      context "when in customer update" do
-        let(:customer_update) { true }
-
-        it "assigns the currency to the customer" do
-          result = currency_service.call
-
-          expect(result).to be_success
-          expect(customer.reload.currency).to eq(currency)
-        end
-
-        context "when customer is not editable" do
-          before { create(:subscription, customer:) }
-
-          it "returns a failure" do
-            result = currency_service.call
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
-          end
-        end
-      end
-    end
-
-    context "when customer is not editable" do
-      before { create(:subscription, customer:) }
-
-      it "returns a failure" do
-        result = currency_service.call
-
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
-      end
-    end
-
     context "when providing an invalid currency" do
       let(:currency) { "INVALID" }
 
@@ -99,9 +52,7 @@ RSpec.describe Customers::UpdateCurrencyService do
       end
     end
 
-    context "when multi_currency flag is enabled" do
-      before { customer.organization.enable_feature_flag!(:multi_currency) }
-
+    context "when the customer currency is a default preference" do
       context "when customer_update is false (billing object creation)" do
         let(:customer_update) { false }
 
