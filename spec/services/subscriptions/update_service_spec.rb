@@ -1447,8 +1447,6 @@ RSpec.describe Subscriptions::UpdateService do
       let(:new_billing_entity) { create(:billing_entity, organization:) }
 
       context "with multi_entity_billing feature flag enabled" do
-        before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
         context "with billing_entity_id" do
           let(:params) { {billing_entity_id: new_billing_entity.id} }
 
@@ -1609,37 +1607,6 @@ RSpec.describe Subscriptions::UpdateService do
               expect(result.error.resource).to eq("billing_entity")
               expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
             end
-          end
-        end
-      end
-
-      context "with multi_entity_billing feature flag disabled" do
-        let(:params) { {billing_entity_id: new_billing_entity.id} }
-
-        it "silently ignores billing_entity_id" do
-          update_service.call
-
-          expect(subscription.reload.billing_entity_id).to be_nil
-        end
-
-        it "returns success" do
-          expect(update_service.call).to be_success
-        end
-
-        context "when the subscription already has a billing_entity attached" do
-          let(:current_entity) { create(:billing_entity, organization:) }
-          let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
-
-          it "leaves billing_entity_id unchanged when an id is sent" do
-            update_service.call
-
-            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
-          end
-
-          it "leaves billing_entity_id unchanged when nil is sent" do
-            described_class.new(subscription:, params: {billing_entity_id: nil}).call
-
-            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
           end
         end
       end

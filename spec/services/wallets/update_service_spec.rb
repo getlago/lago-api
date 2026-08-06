@@ -984,10 +984,6 @@ RSpec.describe Wallets::UpdateService do
     context "when multi_entity_billing is enabled" do
       let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
 
-      before do
-        organization.update!(feature_flags: ["multi_entity_billing"])
-      end
-
       context "when billing_entity_code is provided" do
         let(:params) do
           {
@@ -1197,22 +1193,6 @@ RSpec.describe Wallets::UpdateService do
             expect(wallet.reload.billing_entity_id).to eq(current_entity.id)
           end
         end
-      end
-    end
-
-    context "when multi_entity_billing is not enabled" do
-      let(:params) do
-        {
-          id: wallet&.id,
-          billing_entity_code: "be_code"
-        }
-      end
-
-      before { create(:billing_entity, organization:, code: "be_code") }
-
-      it "does not assign the billing entity even if code is provided" do
-        expect(result).to be_success
-        expect(result.wallet.billing_entity_id).to be_nil
       end
     end
   end
