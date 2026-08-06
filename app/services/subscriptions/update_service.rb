@@ -25,7 +25,7 @@ module Subscriptions
       return result.not_found_failure!(resource: "subscription") unless subscription
       return result.not_allowed_failure!(code: "subscription_incomplete") if subscription.incomplete?
 
-      if params.key?(:purchase_order_number) && !subscription.pending? && !subscription.active?
+      if purchase_order_number_change_attempted? && !subscription.pending? && !subscription.active?
         return result.not_allowed_failure!(code: "purchase_order_number_not_editable")
       end
 
@@ -132,6 +132,14 @@ module Subscriptions
 
     def pay_in_advance?
       subscription.plan.pay_in_advance?
+    end
+
+    # The attribute is normalized on assignment (see HasPurchaseOrderNumber), so a caller
+    # resending the stored value - or a blank or padded equivalent of it - is not changing it.
+    def purchase_order_number_change_attempted?
+      params.key?(:purchase_order_number) &&
+        Subscription.normalize_value_for(:purchase_order_number, params[:purchase_order_number]) !=
+          subscription.purchase_order_number
     end
 
     def subscription_at_changing_to_past?
