@@ -10,6 +10,17 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     let(:alert) { create(:usage_current_amount_alert, recurring_threshold: 35, thresholds: [10, 20], previous_value: 4, code: "test", organization:, subscription_external_id: subscription.external_id) }
     let(:subscription) { create(:subscription, organization:) }
 
+    context "when locking" do
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
+
+      it "uses with_lock to prevent racing a config change" do
+        allow(alert).to receive(:with_lock).and_call_original
+        described_class.call(alert:, alertable: subscription, current_metrics:)
+
+        expect(alert).to have_received(:with_lock)
+      end
+    end
+
     context "when no thresholds are crossed" do
       let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
 
@@ -84,7 +95,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       it "does not update alert last_processed_at or previous_value" do
         expect(SendWebhookJob).not_to have_been_enqueued
-        expect { service.call }.to raise_error(StandardError)
+        expect { result }.to raise_error(StandardError)
         expect(alert.reload.last_processed_at).to be_nil
         expect(alert.previous_value).to eq 4
       end
@@ -108,10 +119,14 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       it "returns success without triggering alert" do
         expect(result).to be_success
-        expect(alert.reload.last_processed_at).to be_nil
         expect(alert.previous_value).to eq 0
         expect(organization.triggered_alerts.count).to eq 0
         expect(SendWebhookJob).not_to have_been_enqueued
+      end
+
+      it "still records the evaluation time" do
+        expect(result).to be_success
+        expect(alert.reload.last_processed_at).to be_within(5.seconds).of(Time.current)
       end
     end
   end
