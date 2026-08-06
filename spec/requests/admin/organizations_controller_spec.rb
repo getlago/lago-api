@@ -32,6 +32,8 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
   end
 
   describe "POST /admin/organizations" do
+    let(:headers) { {"X-Admin-API-Key" => "super-secret"} }
+
     let(:create_params) do
       {
         name: "NewCo",
@@ -48,7 +50,6 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
     context "with a valid admin key" do
       it "creates an organization and returns 201" do
-        headers = {"X-Admin-API-Key" => "super-secret"}
         expect do
           admin_post_without_bearer("/admin/organizations", create_params, headers)
         end.to change(Organization, :count).by(1)
@@ -60,9 +61,21 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
       end
     end
 
+    context "with an invalid email" do
+      it "returns an error without creating the organization" do
+        expect do
+          admin_post_without_bearer("/admin/organizations", create_params.merge(email: "not-an-email"), headers)
+        end.not_to change(Organization, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(Invite.count).to eq(0)
+      end
+    end
+
     context "with an invalid admin key" do
+      let(:headers) { {"X-Admin-API-Key" => "wrong"} }
+
       it "returns unauthorized" do
-        headers = {"X-Admin-API-Key" => "wrong"}
         admin_post_without_bearer("/admin/organizations", create_params, headers)
         expect(response).to have_http_status(:unauthorized)
       end

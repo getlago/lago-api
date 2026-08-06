@@ -1,0 +1,112 @@
+# frozen_string_literal: true
+
+module Admin
+  class CreateOrganizationService < ::BaseService
+    Result = BaseResult[:organization, :invite_url]
+
+    def initialize(actor:, name:, owner_email:, reason:, timezone: nil, premium_integrations: [], feature_flags: [])
+      @actor = actor
+      @name = name
+      @owner_email = owner_email
+      @timezone = timezone
+      @premium_integrations = premium_integrations || []
+      @feature_flags = feature_flags || []
+      @reason = reason
+      super()
+    end
+
+    def call
+      return result.validation_failure!(errors: {feature_flags: ["invalid"]}) unless valid_feature_flags?
+
+      batch_id = SecureRandom.uuid
+
+      ActiveRecord::Base.transaction do
+        organization = ::Organizations::CreateService
+          .call(name:, timezone:, document_numbering: "per_organization")
+          .raise_if_error!
+          .organization
+
+        organization.update!(premium_integrations:) if premium_integrations.any?
+
+        feature_flags.each do |flag|
+          organization.enable_feature_flag!(flag)
+        end
+
+        invite_result = ::Invites::CreateService.call(
+          current_organization: organization,
+          email: owner_email,
+          roles: %w[admin],
+          skip_admin_check: true
+        ).raise_if_error!
+
+        create_audit_logs!(organization, batch_id)
+
+        result.organization = organization
+        result.invite_url = invite_result.invite_url
+      end
+
+      CsAdminAuditLog.where(batch_id:).find_each do |log|
+        Admin::SlackNotificationJob.perform_later(log.id)
+      end
+
+      result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    end
+
+    private
+
+    attr_reader :actor, :name, :owner_email, :timezone, :premium_integrations, :feature_flags, :reason
+
+    def valid_feature_flags?
+      feature_flags.all? { |flag| FeatureFlag.valid?(flag) }
+    end
+
+    def create_audit_logs!(organization, batch_id)
+      CsAdminAuditLog.create!(
+        actor_user: actor,
+        actor_email: actor.email,
+        action: :org_created,
+        organization:,
+        feature_type: :organization,
+        feature_key: "organization",
+        before_value: nil,
+        after_value: true,
+        reason:,
+        batch_id:
+      )
+
+      premium_integrations.each do |key|
+        CsAdminAuditLog.create!(
+          actor_user: actor,
+          actor_email: actor.email,
+          action: :org_created,
+          organization:,
+          feature_type: :premium_integration,
+          feature_key: key,
+          before_value: nil,
+          after_value: true,
+          reason:,
+          batch_id:
+        )
+      end
+
+      feature_flags.each do |key|
+        CsAdminAuditLog.create!(
+          actor_user: actor,
+          actor_email: actor.email,
+          action: :org_created,
+          organization:,
+          feature_type: :feature_flag,
+          feature_key: key,
+          before_value: nil,
+          after_value: true,
+          reason:,
+          batch_id:
+        )
+      end
+    end
+  end
+end

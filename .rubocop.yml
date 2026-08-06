@@ -170,6 +170,9 @@ GraphQL/ExtractType:
 
 GraphQL/ExtractInputType:
   Exclude:
+    - "app/graphql/mutations/admin/batch_toggle_feature.rb"
+    - "app/graphql/mutations/admin/create_organization.rb"
+    - "app/graphql/mutations/admin/toggle_feature.rb"
     - "app/graphql/mutations/applied_coupons/create.rb"
     - "app/graphql/mutations/credit_notes/create.rb"
     - "app/graphql/mutations/invites/accept.rb"
