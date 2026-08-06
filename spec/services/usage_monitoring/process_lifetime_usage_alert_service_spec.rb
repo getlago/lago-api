@@ -40,6 +40,42 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
     end
   end
 
+  context "when the alert's metric changes while the usage is being built" do
+    let(:premium_integrations) { %w[lifetime_usage] }
+
+    before do
+      other_metric = create(:billable_metric, organization:)
+      allow(::Invoices::CustomerUsageService).to receive(:call!) do
+        alert.update!(billable_metric: other_metric)
+        double(success?: true, usage: mocked_usage) # rubocop:disable RSpec/VerifiedDoubles
+      end
+    end
+
+    it "skips the evaluation rather than measuring the new metric against the old usage" do
+      service.call
+
+      expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+      expect(alert.reload.last_processed_at).to be_nil
+    end
+  end
+
+  context "when the alert is deleted while the usage is being built" do
+    let(:premium_integrations) { %w[lifetime_usage] }
+
+    before do
+      allow(::Invoices::CustomerUsageService).to receive(:call!) do
+        alert.discard!
+        double(success?: true, usage: mocked_usage) # rubocop:disable RSpec/VerifiedDoubles
+      end
+    end
+
+    it "skips the evaluation" do
+      service.call
+
+      expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+    end
+  end
+
   context "when lifetime_usage is not enabled" do
     let(:premium_integrations) { [] }
     let(:usage_error) { BaseService::ServiceFailure.new(nil, code: "full_usage_not_allowed", error_message: "not allowed") }
