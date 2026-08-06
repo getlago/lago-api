@@ -13,6 +13,14 @@ module UsageMonitoring
       class_name: "UsageMonitoring::Alert"
 
     enum :kind, KINDS, validate: true
+
+    def alertable=(alertable)
+      case alertable
+      when Subscription then self.subscription = alertable
+      when Wallet then self.wallet = alertable
+      else raise ArgumentError, "unsupported alertable: #{alertable.class}"
+      end
+    end
   end
 end
 

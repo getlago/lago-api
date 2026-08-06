@@ -77,6 +77,27 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "when a line is opted in while already past" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: [100], organization:, previous_value: 0) }
+      let(:params) { {thresholds: [{code: "critical", value: 100, notify_on: %w[triggered resolved]}]} }
+
+      it "records a silent alarm so the next recovery can announce" do
+        expect(described_class.call(alert:, params:)).to be_success
+
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to be_seeded
+        expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
+      end
+
+      it "does not record a second one when an alarm is already on record" do
+        create(:triggered_alert, alert:, organization:, subscription: nil, wallet: alert.wallet,
+          crossed_thresholds: [{code: "critical", value: "100.0", recurring: false}])
+
+        expect { described_class.call(alert:, params:) }
+          .not_to change { alert.all_triggered_alerts.where(kind: :seeded).count }
+      end
+    end
+
     context "with too many thresholds" do
       let(:params) do
         {
