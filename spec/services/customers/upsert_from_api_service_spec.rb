@@ -279,20 +279,10 @@ RSpec.describe Customers::UpsertFromApiService do
         create(:invoice, customer: customer)
       end
 
-      it "does not update the billing_entity of the customer" do
+      it "updates the billing_entity of the customer" do
         expect(result).to be_success
         expect(result.customer).to eq(customer)
-        expect(result.customer.billing_entity).to eq(billing_entity_2)
-      end
-
-      context "when multi_entity_billing feature flag is enabled" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
-        it "updates the billing_entity of the customer" do
-          expect(result).to be_success
-          expect(result.customer).to eq(customer)
-          expect(result.customer.billing_entity).to eq(billing_entity)
-        end
+        expect(result.customer.billing_entity).to eq(billing_entity)
       end
     end
 

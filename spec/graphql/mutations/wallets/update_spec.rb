@@ -315,10 +315,6 @@ RSpec.describe Mutations::Wallets::Update, :premium do
   context "when updating billing_entity_id with multi_entity_billing enabled" do
     let(:billing_entity) { create(:billing_entity, organization:) }
 
-    before do
-      organization.update!(feature_flags: ["multi_entity_billing"])
-    end
-
     it "updates the wallet's billing entity" do
       result = execute_graphql(
         current_organization: organization,

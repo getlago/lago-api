@@ -47,7 +47,7 @@ module Customers
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
         billing_entity_changed = false
-        if new_customer || (params.key?(:billing_entity_code) && allow_billing_entity_update?(customer))
+        if new_customer || params.key?(:billing_entity_code)
           customer.billing_entity = billing_entity
           billing_entity_changed = !new_customer && customer.billing_entity_id_changed?
         end
@@ -189,10 +189,6 @@ module Customers
       input_types = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }&.map { |c| c[:integration_type] }
 
       input_types.length == input_types.uniq.length
-    end
-
-    def allow_billing_entity_update?(customer)
-      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def create_metadata(customer:, args:)

@@ -455,7 +455,6 @@ RSpec.describe Invoices::CreateOneOffService do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
-        organization.enable_feature_flag!(:multi_entity_billing)
         create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
       end
 
@@ -512,18 +511,6 @@ RSpec.describe Invoices::CreateOneOffService do
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq("billing_entity_not_found")
         end
-      end
-    end
-
-    context "when multi_entity_billing feature flag is disabled" do
-      let(:other_billing_entity) { create(:billing_entity, organization:) }
-      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: other_billing_entity.id} }
-
-      it "ignores the billing_entity param and falls back to the customer's billing entity" do
-        result = described_class.call(**args)
-
-        expect(result).to be_success
-        expect(result.invoice.billing_entity).to eq(customer.billing_entity)
       end
     end
 

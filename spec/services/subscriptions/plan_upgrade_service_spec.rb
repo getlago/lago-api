@@ -479,31 +479,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:other_entity) { create(:billing_entity, organization:) }
 
-      context "when multi_entity_billing flag is OFF" do
-        it "carries over the current subscription's billing_entity_id even without params" do
-          subscription.update!(billing_entity:)
-
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
-        end
-
-        it "ignores billing_entity_code in params but still carries over" do
-          subscription.update!(billing_entity:)
-          params[:billing_entity_code] = other_entity.code
-
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to eq(billing_entity.id)
-        end
-
-        it "persists nil when current subscription has no billing entity binding" do
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to be_nil
-        end
-      end
-
-      context "when multi_entity_billing flag is ON" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
+      context "when binding a billing entity" do
         it "carries over the current subscription's billing_entity_id when no param is provided" do
           subscription.update!(billing_entity:)
 
@@ -559,8 +535,6 @@ RSpec.describe Subscriptions::PlanUpgradeService do
 
       context "when bill_subscriptions runs after the upgrade" do
         let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
-
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
 
         it "carries the current subscription's entity into termination and new-period billing context" do
           subscription.update!(billing_entity:)

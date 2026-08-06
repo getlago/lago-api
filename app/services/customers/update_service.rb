@@ -96,11 +96,9 @@ module Customers
       end
 
       # NOTE: Some fields are not editable if customer is attached to subscriptions:
-      #       external_id,
-      #       account_type,
-      #       billing_entity_id (gated by editable? unless multi_entity_billing flag is enabled)
+      #       external_id, account_type
       billing_entity_changed = false
-      if args.key?(:billing_entity_code) && allow_billing_entity_update?
+      if args.key?(:billing_entity_code)
         customer.billing_entity = billing_entity
         billing_entity_changed = customer.billing_entity_id_changed?
       end
@@ -229,10 +227,6 @@ module Customers
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
 
       false
-    end
-
-    def allow_billing_entity_update?
-      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def assign_premium_attributes(customer, args)
