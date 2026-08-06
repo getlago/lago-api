@@ -70,4 +70,50 @@ RSpec.describe Mutations::Wallets::Alerts::Create do
       {"code" => nil, "value" => "1000.0", "recurring" => true}
     )
   end
+
+  context "with notifyOn" do
+    let(:mutation) do
+      <<-GQL
+      mutation ($input: CreateCustomerWalletAlertInput!) {
+        createCustomerWalletAlert(input: $input) {
+          thresholds { code notifyOn }
+        }
+      }
+      GQL
+    end
+
+    let(:input) do
+      {
+        walletId: wallet.id,
+        code: "wallet_balance_alert",
+        alertType: "wallet_balance_amount",
+        thresholds: [
+          {code: "warn", value: "5000", notifyOn: %w[triggered resolved]},
+          {code: "alert", value: "2500"}
+        ]
+      }
+    end
+
+    it "round-trips the opted-in transitions" do
+      expect(result["data"]["createCustomerWalletAlert"]["thresholds"]).to contain_exactly(
+        {"code" => "warn", "notifyOn" => %w[triggered resolved]},
+        {"code" => "alert", "notifyOn" => %w[triggered]}
+      )
+    end
+
+    context "when a threshold opts in without a code" do
+      let(:input) do
+        {
+          walletId: wallet.id,
+          code: "wallet_balance_alert",
+          alertType: "wallet_balance_amount",
+          thresholds: [{value: "5000", notifyOn: %w[triggered resolved]}]
+        }
+      end
+
+      it "returns a validation error" do
+        expect(result["errors"].first["extensions"]["details"]).to eq({"thresholds:code" => ["value_is_mandatory"]})
+      end
+    end
+  end
 end
