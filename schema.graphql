@@ -6238,7 +6238,6 @@ enum FeatureFlagEnum {
   lazy_charge_usage_cache
   meilisearch
   multi_connection
-  multi_currency
   multi_entity_billing
   order_forms
   payment_gated_subscriptions
