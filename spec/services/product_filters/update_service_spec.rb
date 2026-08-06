@@ -83,6 +83,21 @@ RSpec.describe ProductFilters::UpdateService do
         expect(product_filter.reload.to_h).to eq("region" => %w[eu])
       end
     end
+
+    context "when the new values duplicate another filter on the product" do
+      before do
+        sibling = create(:product_filter, organization:, product:, code: "sibling")
+        create(:product_filter_value, organization:, product_filter: sibling, billable_metric_filter: region_filter, value: "eu")
+      end
+
+      let(:params) { {values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:values]).to eq(["value_already_exist"])
+        expect(product_filter.reload.to_h).to eq("region" => %w[us])
+      end
+    end
   end
 
   context "when a subscription bills through a card scoped to the filter" do
@@ -145,18 +160,6 @@ RSpec.describe ProductFilters::UpdateService do
     it "replaces the existing values" do
       expect(result).to be_success
       expect(result.product_filter.reload.to_h).to eq("region" => %w[eu])
-    end
-
-    context "when the new combination matches another filter on the item" do
-      before do
-        other = create(:product_filter, organization:, product:)
-        create(:product_filter_value, organization:, product_filter: other, billable_metric_filter: region_filter, value: "eu")
-      end
-
-      it "is allowed" do
-        expect(result).to be_success
-        expect(result.product_filter.reload.to_h).to eq("region" => %w[eu])
-      end
     end
 
     context "when values are empty" do

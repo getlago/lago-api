@@ -39,7 +39,8 @@ module ProductFilters
       if params.key?(:values)
         values_validation = ProductFilters::ValidateValuesService.call(
           product: product_filter.product,
-          values_params: resolved_values.values_params
+          values_params: resolved_values.values_params,
+          product_filter:
         )
         return values_validation unless values_validation.success?
       end
