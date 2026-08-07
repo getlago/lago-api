@@ -57,7 +57,7 @@ module PaymentRequests
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
           provider:,
           payment:,
-          reference: "#{payable.billing_entity.name} - Overdue invoices",
+          reference: payment_reference,
           metadata: {
             lago_customer_id: payable.customer_id,
             lago_payable_id: payable.id,
@@ -172,6 +172,18 @@ module PaymentRequests
             error_code: payment_result.error_code
           }
         })
+      end
+
+      # Mirrors the checkout-link description built by PaymentRequests::Payments::StripeService,
+      # so both payment paths expose the same reference to the provider.
+      def payment_reference
+        reference = "#{payable.billing_entity.name} - Overdue invoices"
+
+        if payable.invoices.one?
+          "#{reference}: #{payable.invoices.first.number}"
+        else
+          reference
+        end
       end
 
       def processing_payment
