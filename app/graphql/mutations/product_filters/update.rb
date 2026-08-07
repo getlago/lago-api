@@ -18,7 +18,7 @@ module Mutations
         product_filter = current_organization.product_filters.find_by(id: args[:id])
 
         params = args.except(:id)
-        params[:values] = params[:values].map(&:to_h) if params.key?(:values)
+        params[:values] = params[:values]&.map(&:to_h) if params.key?(:values)
 
         result = ::ProductFilters::UpdateService.call(product_filter:, params:)
 
