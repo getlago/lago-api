@@ -61,6 +61,8 @@ module Fees
       fixed_charge
         .fees
         .where(subscription:)
+        # A fee with no units and no amount billed nothing, so it is not proof of billing.
+        .where("fees.units > 0 OR fees.amount_cents > 0")
         .joins(:invoice).where.not(invoices: {status: %i[voided deleted]})
         .where(
           "date_trunc('second', (properties->>'fixed_charges_from_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
