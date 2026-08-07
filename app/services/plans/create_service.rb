@@ -22,6 +22,7 @@ module Plans
         invoice_display_name: args[:invoice_display_name],
         code: args[:code],
         description: args[:description],
+        pricing_type: args[:pricing_type] || "legacy",
         interval: args[:interval]&.to_sym,
         pay_in_advance: args[:pay_in_advance],
         amount_cents: args[:amount_cents],

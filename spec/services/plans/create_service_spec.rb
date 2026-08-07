@@ -959,4 +959,23 @@ RSpec.describe Plans::CreateService do
       end
     end
   end
+
+  context "when creating a product_catalog plan" do
+    let(:create_args) do
+      {
+        organization_id: organization.id,
+        name: "Catalog plan",
+        code: "catalog_plan",
+        amount_currency: "USD",
+        pricing_type: "product_catalog"
+      }
+    end
+
+    it "creates the plan without plan-level billing fields" do
+      result = plans_service.call
+
+      expect(result).to be_success
+      expect(result.plan).to have_attributes(pricing_type: "product_catalog", interval: nil, amount_cents: nil)
+    end
+  end
 end
