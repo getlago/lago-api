@@ -18,6 +18,7 @@ RSpec.describe Wallet do
       expect(subject).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
       expect(subject).to have_many(:alerts).class_name("UsageMonitoring::Alert")
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
+        .conditions(kind: "triggered")
     end
   end
 

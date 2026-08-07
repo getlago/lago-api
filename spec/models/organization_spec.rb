@@ -58,6 +58,8 @@ RSpec.describe Organization do
       expect(subject).to have_many(:pending_vies_checks)
       expect(subject).to have_many(:order_forms)
       expect(subject).to have_many(:orders)
+      expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
+        .conditions(kind: "triggered")
     end
   end
 
