@@ -3,6 +3,7 @@
 class PlanRateCard < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include RatePhaseable
 
   self.discard_column = :deleted_at
 

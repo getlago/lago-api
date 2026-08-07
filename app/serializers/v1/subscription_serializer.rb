@@ -15,6 +15,7 @@ module V1
         status: model.status,
         billing_time: model.billing_time,
         subscription_at: model.subscription_at&.iso8601,
+        billing_anchor_date: model.effective_billing_anchor_date&.iso8601,
         started_at: model.started_at&.iso8601(3),
         trial_ended_at: model.trial_ended_at&.iso8601,
         ending_at: model.ending_at&.iso8601,
