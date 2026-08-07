@@ -339,13 +339,11 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
-    # A burst only alerts, because refusing would leave the wallet short. Only the daily
-    # ceiling refuses.
+    # Reporting only. Refusing a top-up would leave the wallet short, and the allocator
+    # routes all of a customer's usage into a threshold wallet on the assumption that its
+    # rule always refills it.
     describe "runaway top-ups", :sentry do
-      # Keeps the examples independent of the production ceiling, and off 25 factory rows.
-      before { stub_const("#{described_class}::DAILY_TOP_UPS", described_class::BURST_TOP_UPS + 1) }
-
-      shared_examples "no bound applies" do
+      shared_examples "no burst is reported" do
         it "tops up" do
           expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
         end
@@ -360,10 +358,10 @@ RSpec.describe Wallets::ThresholdTopUpService do
       context "when the wallet topped up fewer times than the burst threshold" do
         before { create_list(:wallet_transaction, described_class::BURST_TOP_UPS - 1, wallet:, source: :threshold) }
 
-        it_behaves_like "no bound applies"
+        it_behaves_like "no burst is reported"
       end
 
-      context "when the top-ups are inside the day but not the last minutes" do
+      context "when the top-ups are older than the window" do
         before do
           create_list(
             :wallet_transaction,
@@ -374,41 +372,44 @@ RSpec.describe Wallets::ThresholdTopUpService do
           )
         end
 
-        it_behaves_like "no bound applies"
-      end
-
-      context "when the earlier top-ups fall outside both windows" do
-        before do
-          create_list(
-            :wallet_transaction,
-            described_class::DAILY_TOP_UPS,
-            wallet:,
-            source: :threshold,
-            created_at: described_class::DAILY_WINDOW.ago - 1.hour
-          )
-        end
-
-        it_behaves_like "no bound applies"
+        it_behaves_like "no burst is reported"
       end
 
       context "when the earlier transactions were not automatic top-ups" do
-        before { create_list(:wallet_transaction, described_class::DAILY_TOP_UPS, wallet:, source: :manual) }
+        before { create_list(:wallet_transaction, described_class::BURST_TOP_UPS, wallet:, source: :manual) }
 
-        it_behaves_like "no bound applies"
+        it_behaves_like "no burst is reported"
       end
 
       context "when the earlier top-ups only moved credits out" do
         before do
           create_list(
             :wallet_transaction,
-            described_class::DAILY_TOP_UPS,
+            described_class::BURST_TOP_UPS,
             wallet:,
             source: :threshold,
             transaction_type: :outbound
           )
         end
 
-        it_behaves_like "no bound applies"
+        it_behaves_like "no burst is reported"
+      end
+
+      # One top-up writes a second row when the rule also grants credits. Only the
+      # purchased row is a charge, so only that one counts.
+      context "when the earlier top-ups also granted credits" do
+        before do
+          create_list(:wallet_transaction, described_class::BURST_TOP_UPS - 1, wallet:, source: :threshold)
+          create_list(
+            :wallet_transaction,
+            described_class::BURST_TOP_UPS,
+            wallet:,
+            source: :threshold,
+            transaction_status: :granted
+          )
+        end
+
+        it_behaves_like "no burst is reported"
       end
 
       context "when the wallet topped up repeatedly in the last few minutes" do
@@ -422,22 +423,6 @@ RSpec.describe Wallets::ThresholdTopUpService do
           top_up_service.call
 
           expect(sentry_events.map(&:message)).to eq(["Automatic wallet top-up burst"])
-        end
-      end
-
-      context "when the wallet reached the daily ceiling" do
-        before { create_list(:wallet_transaction, described_class::DAILY_TOP_UPS, wallet:, source: :threshold) }
-
-        it "refuses the top-up" do
-          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
-        end
-
-        # The burst threshold is also crossed here. Only the order of the two guards
-        # keeps this to one report.
-        it "reports the ceiling and not the burst" do
-          top_up_service.call
-
-          expect(sentry_events.map(&:message)).to eq(["Automatic wallet top-up daily limit reached"])
         end
       end
     end

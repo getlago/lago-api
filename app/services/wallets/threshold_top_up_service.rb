@@ -6,12 +6,6 @@ module Wallets
 
     BURST_TOP_UPS = 3
     BURST_WINDOW = 10.minutes
-    DEFAULT_DAILY_TOP_UPS = 25
-    # A blank or malformed value parses to zero, which would refuse every top-up.
-    DAILY_TOP_UPS = ENV["LAGO_WALLET_MAX_AUTOMATIC_TOP_UPS_PER_DAY"].to_i.then do |configured|
-      configured.positive? ? configured : DEFAULT_DAILY_TOP_UPS
-    end
-    DAILY_WINDOW = 24.hours
 
     def initialize(wallet:)
       @wallet = wallet
@@ -22,12 +16,6 @@ module Wallets
       return result if rule.nil?
       return result if wallet.credits_ongoing_balance > rule.threshold_credits
       return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
-
-      daily_top_ups = top_ups_since(DAILY_WINDOW)
-      if daily_top_ups >= DAILY_TOP_UPS
-        report("Automatic wallet top-up daily limit reached", count: daily_top_ups)
-        return result
-      end
 
       burst_top_ups = top_ups_since(BURST_WINDOW)
       if burst_top_ups >= BURST_TOP_UPS
@@ -70,7 +58,7 @@ module Wallets
     end
 
     def top_ups_since(window)
-      wallet.wallet_transactions.threshold.inbound.where(created_at: window.ago..).count
+      wallet.wallet_transactions.threshold.inbound.purchased.where(created_at: window.ago..).count
     end
 
     def report(message, count:)
