@@ -6,7 +6,11 @@ module Wallets
 
     BURST_TOP_UPS = 3
     BURST_WINDOW = 10.minutes
-    DAILY_TOP_UPS = ENV.fetch("LAGO_WALLET_MAX_AUTOMATIC_TOP_UPS_PER_DAY", 25).to_i
+    DEFAULT_DAILY_TOP_UPS = 25
+    # A blank or malformed value parses to zero, which would refuse every top-up.
+    DAILY_TOP_UPS = ENV["LAGO_WALLET_MAX_AUTOMATIC_TOP_UPS_PER_DAY"].to_i.then do |configured|
+      configured.positive? ? configured : DEFAULT_DAILY_TOP_UPS
+    end
     DAILY_WINDOW = 24.hours
 
     def initialize(wallet:)
@@ -65,8 +69,6 @@ module Wallets
       @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:amount)
     end
 
-    # Counts charges, not rows: outbound movements and granted-only top-ups cost the
-    # customer nothing and must not push a wallet towards the ceiling.
     def top_ups_since(window)
       wallet.wallet_transactions.threshold.inbound.where(created_at: window.ago..).count
     end
@@ -74,8 +76,6 @@ module Wallets
     def report(message, count:)
       context = {wallet_id: wallet.id, organization_id: wallet.organization_id, top_ups: count}
 
-      # Sentry does nothing without a DSN, which is the common self-hosted setup, so the
-      # log line is what guarantees a refusal always leaves a trace somewhere.
       Rails.logger.warn("#{message} #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
       Sentry.capture_message(message, level: :warning, extra: context)
     end
