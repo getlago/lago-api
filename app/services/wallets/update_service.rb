@@ -65,7 +65,7 @@ module Wallets
           wallet.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
-        process_billable_metrics
+        process_billable_metrics if billable_metric_limitations_sent?
 
         wallet.save!
 
@@ -164,10 +164,23 @@ module Wallets
       (wallet.saved_changes.keys & Wallet::REFRESH_RELEVANT_ATTRIBUTES).any?
     end
 
+    # Billable metric limitations are only processed when the payload explicitly carries the
+    # identifiers key: omitting it leaves the existing wallet targets untouched, while sending
+    # an empty array still clears them.
+    def billable_metric_limitations_sent?
+      return false if params[:applies_to].nil?
+
+      params[:applies_to].key?(billable_metric_identifiers_key)
+    end
+
+    def billable_metric_identifiers_key
+      api_context? ? :billable_metric_codes : :billable_metric_ids
+    end
+
     def billable_metric_identifiers
       return [] if params[:applies_to].blank?
 
-      key = api_context? ? :billable_metric_codes : :billable_metric_ids
+      key = billable_metric_identifiers_key
 
       return [] if params[:applies_to][key].blank?
 
