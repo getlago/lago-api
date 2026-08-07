@@ -803,6 +803,24 @@
               "description": "feature.updated",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "product_filter_created",
+              "description": "product_filter.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_filter_updated",
+              "description": "product_filter.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_filter_deleted",
+              "description": "product_filter.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -64304,6 +64322,12 @@
             {
               "name": "feature",
               "description": "Entitlement::Feature",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_filter",
+              "description": "ProductFilter",
               "isDeprecated": false,
               "deprecationReason": null
             }
