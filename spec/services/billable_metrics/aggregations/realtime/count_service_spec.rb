@@ -72,4 +72,59 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
       expect(aggregation_result.aggregation).to eq(0)
     end
   end
+
+  context "with pricing group keys" do
+    let(:count_service) do
+      described_class.new(
+        event_store_class: Events::Stores::PostgresStore,
+        charge:,
+        subscription:,
+        boundaries: {
+          from_datetime: charges_from,
+          to_datetime: charges_to,
+          charges_from_datetime: charges_from,
+          charges_to_datetime: charges_to
+        },
+        filters: {grouped_by: ["region"]}
+      )
+    end
+
+    context "with grouped projection rows" do
+      before do
+        UsageRealtimeProjection.insert_all(
+          [
+            {grouped_by: {region: "eu"}.to_json, events_count: 7, units: 7},
+            {grouped_by: {region: "us"}.to_json, events_count: 3, units: 3}
+          ].map do |row|
+            row.merge(
+              organization_id: billable_metric.organization_id,
+              subscription_id: subscription.id,
+              billing_period_id: SecureRandom.uuid,
+              charge_id: charge.id,
+              charge_filter_id: "",
+              plan_id: plan.id,
+              code: billable_metric.code,
+              aggregation_type: "count",
+              period_charges_from: period_from,
+              period_charges_to: period_to
+            )
+          end
+        )
+      end
+
+      it "serves one aggregation per group from the projections" do
+        groups = aggregation_result.aggregations.sort_by { |a| a.grouped_by["region"] }
+
+        expect(groups.map(&:grouped_by)).to eq([{"region" => "eu"}, {"region" => "us"}])
+        expect(groups.map(&:aggregation)).to eq([7, 3])
+        expect(groups.map(&:count)).to eq([7, 3])
+      end
+    end
+
+    context "without grouped projection rows" do
+      it "falls back to the events store" do
+        expect(aggregation_result.aggregations.first.aggregation).to eq(0)
+      end
+    end
+  end
 end
