@@ -32,14 +32,24 @@ module Integrations
               IntegrationResource.find_by(integration:, syncable: invoice, resource_type: "invoice")
           end
 
+          # Whether the invoice has anything the provider will accept. Providers rejecting
+          # line-less transactions override this to skip the sync instead of failing on it.
+          def sync_allowed?
+            true
+          end
+
           private
 
           attr_reader :integration_customer, :invoice
           attr_accessor :remaining_taxes_amount_cents
 
+          def positive_fees
+            invoice.fees.where("amount_cents > ?", 0)
+          end
+
           def fees
-            @fees ||= if invoice.fees.where("amount_cents > ?", 0).exists?
-              invoice.fees.where("amount_cents > ?", 0).order(created_at: :asc)
+            @fees ||= if positive_fees.exists?
+              positive_fees.order(created_at: :asc)
             else
               invoice.fees.order(created_at: :asc)
             end
