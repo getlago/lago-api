@@ -1164,8 +1164,6 @@ describe "Invoice Numbering Scenario", transaction: false do
     let(:subscription_under_first_external_id) { "sub-under-first" }
     let(:subscription_under_second_external_id) { "sub-under-second" }
 
-    before { organization.enable_feature_flag!(:multi_entity_billing) }
-
     it "numbers invoices gaplessly per (customer, billing_entity)" do
       # NOTE: Jul 19th: create two subscriptions for the same customer, one per billing entity
       travel_to(subscription_at) do

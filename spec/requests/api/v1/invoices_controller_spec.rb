@@ -146,7 +146,6 @@ RSpec.describe Api::V1::InvoicesController do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
-        organization.enable_feature_flag!(:multi_entity_billing)
         create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
       end
 
@@ -200,25 +199,6 @@ RSpec.describe Api::V1::InvoicesController do
           expect(response).to have_http_status(:success)
           expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
         end
-      end
-    end
-
-    context "when multi_entity_billing feature flag is disabled" do
-      let(:other_billing_entity) { create(:billing_entity, organization:) }
-      let(:create_params) do
-        {
-          external_customer_id: customer_external_id,
-          currency: "EUR",
-          billing_entity_code: other_billing_entity.code,
-          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
-        }
-      end
-
-      it "ignores billing_entity_code and falls back to the customer's billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
       end
     end
   end
@@ -1227,8 +1207,6 @@ RSpec.describe Api::V1::InvoicesController do
           }
         end
 
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
         it "creates a preview invoice under the requested billing entity" do
           subject
 
@@ -1253,8 +1231,6 @@ RSpec.describe Api::V1::InvoicesController do
             billing_entity_code: billing_entity.code
           }
         end
-
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
 
         it "stamps the invoice with the requested billing entity" do
           subject
