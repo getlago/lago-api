@@ -187,6 +187,7 @@ To create a webhook:
 - `LAGO_ENABLE_YJIT` — when true, enables YJIT (`config.yjit`). Disabled by default. Example: `LAGO_ENABLE_YJIT=true`
 - `SIDEKIQ_WALLETS` — when true, wallet jobs (e.g. `Customers::RefreshWalletJob`) are routed to the `wallets` queue, processed by the dedicated wallet worker (`scripts/start.wallets.worker.sh`). Example: `SIDEKIQ_WALLETS=true`
 - `SIDEKIQ_AI_AGENT` — when true, AI conversation jobs (`AiConversations::StreamJob`) are routed to the `ai_agent` queue. Example: `SIDEKIQ_AI_AGENT=true`
+- `LAGO_BILLING_PERIODS_REFRESH_INTERVAL_SECONDS` — interval of the clock job maintaining `subscription_billing_periods` (current + next period per active subscription, consumed by the realtime usage pipeline). Defaults to 15 minutes. Example: `LAGO_BILLING_PERIODS_REFRESH_INTERVAL_SECONDS=900`
 - `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
 - `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
