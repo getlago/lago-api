@@ -58,6 +58,32 @@ RSpec.describe PaymentProviderCustomers::DestroyService do
             .to change { payment_method.reload.deleted_at }.from(nil)
         end
       end
+
+      context "when the connection is the customer's active provider" do
+        let(:customer) do
+          create(:customer, organization:, payment_provider: "stripe", payment_provider_code: "stripe_1")
+        end
+
+        it "clears the customer's payment provider and code" do
+          destroy_service.call
+
+          expect(customer.reload.payment_provider).to be_nil
+          expect(customer.payment_provider_code).to be_nil
+        end
+      end
+
+      context "when the connection is not the customer's active provider" do
+        let(:customer) do
+          create(:customer, organization:, payment_provider: "gocardless", payment_provider_code: "gc_1")
+        end
+
+        it "leaves the customer's payment provider untouched" do
+          destroy_service.call
+
+          expect(customer.reload.payment_provider).to eq("gocardless")
+          expect(customer.payment_provider_code).to eq("gc_1")
+        end
+      end
     end
   end
 end
