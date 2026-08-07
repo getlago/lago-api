@@ -9,11 +9,13 @@ class SubscriptionRateCard < ApplicationRecord
 
   belongs_to :organization
   belongs_to :subscription
+  belongs_to :customer
   belongs_to :rate_card
 
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
+  has_many :billing_cycles
 
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
@@ -55,6 +57,7 @@ end
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
+#  customer_id         :uuid             not null
 #  organization_id     :uuid             not null
 #  rate_card_id        :uuid             not null
 #  subscription_id     :uuid             not null
@@ -62,6 +65,7 @@ end
 # Indexes
 #
 #  index_active_subscription_rate_cards_on_sub_and_card  (subscription_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
+#  index_subscription_rate_cards_on_customer_id          (customer_id)
 #  index_subscription_rate_cards_on_deleted_at           (deleted_at)
 #  index_subscription_rate_cards_on_next_billing_at      (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
 #  index_subscription_rate_cards_on_organization_id      (organization_id)
@@ -70,6 +74,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (rate_card_id => rate_cards.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)

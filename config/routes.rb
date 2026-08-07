@@ -55,6 +55,9 @@ Rails.application.routes.draw do
         end
       end
       resources :subscriptions, only: %i[index show], param: :external_id
+      delete "subscriptions/:external_id", to: "subscriptions#terminate"
+      post "subscriptions/:external_id/bill", to: "subscriptions#bill"
+      post "subscriptions/bill", to: "subscriptions#bill"
     end
 
     namespace :v2, module: :v1 do
