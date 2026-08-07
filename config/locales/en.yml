@@ -48,10 +48,16 @@ en:
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
         modification_not_allowed: modification_not_allowed
+        must_be_after_active_rate: must_be_after_active_rate
         must_be_array: must_be_array
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         must_be_greater_than_or_equal_threshold: must_be_greater_than_or_equal_threshold
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
+        not_allowed_for_aggregation_type: not_allowed_for_aggregation_type
+        not_allowed_for_billing_timing: not_allowed_for_billing_timing
+        not_allowed_for_product: not_allowed_for_product
+        not_allowed_with_display_on_invoice: not_allowed_with_display_on_invoice
+        not_allowed_with_proration: not_allowed_with_proration
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
         one_of_plan_or_subscription_required: one_of_plan_or_subscription_required

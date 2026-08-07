@@ -235,6 +235,11 @@ product_categories:
   create:
   update:
   delete:
+rate_cards:
+  view:
+  create:
+  update:
+  delete:
 roles:
   view:
   create:

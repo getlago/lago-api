@@ -50,6 +50,8 @@ class Organization < ApplicationRecord
   has_many :product_categories
   has_many :products
   has_many :product_filters
+  has_many :rate_cards
+  has_many :rate_card_rates
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions

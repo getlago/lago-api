@@ -21,6 +21,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         product_category
         product
         product_filter
+        rate_card
       ]
     )
   end
