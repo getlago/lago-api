@@ -115,15 +115,16 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
         end
       end
 
-      context "when provider_customer does not exist and is not provided" do
+      context "when the connection has no provider_customer_id and none is provided" do
         let(:payment_provider_customer) do
           create(:stripe_customer, organization:, customer:, provider_customer_id: nil, provider_payment_methods: %w[card])
         end
         let(:params) { {provider_payment_methods: %w[card sepa_debit]} }
 
-        it "does not update the provider payment methods" do
+        it "applies the provider payment methods" do
           expect { update_service.call }
-            .not_to change { payment_provider_customer.reload.provider_payment_methods }
+            .to change { payment_provider_customer.reload.provider_payment_methods }
+            .from(%w[card]).to(%w[card sepa_debit])
         end
       end
     end

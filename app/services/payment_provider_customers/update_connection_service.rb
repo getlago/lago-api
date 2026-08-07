@@ -53,10 +53,6 @@ module PaymentProviderCustomers
     end
 
     def update_provider_customer
-      handle_provider_customer = provider_customer_params[:provider_customer_id].present?
-      handle_provider_customer ||= payment_provider_customer&.provider_customer_id.present?
-      return unless handle_provider_customer
-
       PaymentProviders::CreateCustomerFactory.new_instance(
         provider:,
         customer:,
