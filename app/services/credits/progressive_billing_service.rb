@@ -24,9 +24,15 @@ module Credits
         next unless progressive_billing_invoice
 
         progressive_billed_charge_ids = progressive_billing_invoice.fees.charge.pluck(:charge_id)
+        # A plan override creates a child charge, so a fee on this invoice can point at the child
+        # while the progressive billing invoice was billed on its parent. Both are matched, as the
+        # override can also predate the progressive billing invoices.
         invoice_charge_fees = invoice.fees.charge.where(subscription:).joins(:charge)
         total_charges_amount = invoice_charge_fees
-          .where("COALESCE(charges.parent_id, charges.id) IN (?)", progressive_billed_charge_ids)
+          .where(
+            "fees.charge_id IN (:ids) OR charges.parent_id IN (:ids)",
+            ids: progressive_billed_charge_ids
+          )
           .sum(:amount_cents)
 
         # Don't be tempted to calculate the credit amount yourself, you have to use the result from this service.
@@ -67,9 +73,11 @@ module Credits
     def apply_credit_to_fees(progressive_billing_invoice)
       # Use the loaded association so the credit stays visible to the caller's in-memory fees.
       invoice_fees = invoice.fees.select(&:charge?)
+      parent_charge_ids = parent_charge_ids_for(invoice_fees)
+
       progressive_billing_invoice.fees.charge.each do |progressive_fee|
         fee = invoice_fees.find { |f|
-          f.charge_id == progressive_fee.charge_id &&
+          matching_charge?(f, progressive_fee, parent_charge_ids) &&
             f.charge_filter_id == progressive_fee.charge_filter_id &&
             f.grouped_by == progressive_fee.grouped_by
         }
@@ -79,6 +87,20 @@ module Credits
         fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
         fee.save!
       end
+    end
+
+    # Mirrors the charge matching used for total_charges_amount: a fee on an overridden (child)
+    # charge belongs to the progressive billing fee booked on its parent.
+    def matching_charge?(fee, progressive_fee, parent_charge_ids)
+      fee.charge_id == progressive_fee.charge_id ||
+        parent_charge_ids[fee.charge_id] == progressive_fee.charge_id
+    end
+
+    def parent_charge_ids_for(fees)
+      charge_ids = fees.filter_map(&:charge_id).uniq
+      return {} if charge_ids.empty?
+
+      Charge.with_discarded.where(id: charge_ids).pluck(:id, :parent_id).to_h
     end
   end
 end

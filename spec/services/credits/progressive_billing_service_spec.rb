@@ -505,6 +505,170 @@ Rspec.describe Credits::ProgressiveBillingService do
     end
   end
 
+  context "when the subscription plan is overridden" do
+    # An override creates a child charge (charges.parent_id -> parent charge). Depending on when it
+    # happened, the progressive billing fees sit on the parent while the final invoice's fees sit on
+    # the child, or both sit on the child. Both have to be credited.
+    let(:plan) { create(:plan, organization: customer.organization) }
+    let(:overridden_plan) { create(:plan, organization: customer.organization, parent_id: plan.id) }
+    let(:billable_metric) { create(:billable_metric, organization: customer.organization) }
+
+    let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+    let(:overridden_charge) do
+      create(:standard_charge, plan: overridden_plan, billable_metric:, parent_id: charge.id)
+    end
+
+    let(:subscription) { create(:subscription, customer_id: customer.id, plan: overridden_plan) }
+
+    let(:invoice) do
+      create(:invoice,
+        :subscription,
+        customer:,
+        organization:,
+        sub_total_excluding_taxes_amount_cents: 35_000,
+        subscriptions: subscriptions)
+    end
+
+    # $350 of charges, billed on the overridden (child) charge
+    let(:subscription_fees) { [overridden_fee] }
+    let(:overridden_fee) do
+      create(:charge_fee, invoice:, subscription:, charge: overridden_charge, amount_cents: 35_000)
+    end
+
+    # $100 / $200 / $300 progressive billing invoices, all billed on the parent charge
+    let(:progressive_billing_invoice) do
+      create(
+        :invoice,
+        :with_subscriptions,
+        organization:,
+        customer:,
+        status: "finalized",
+        invoice_type: :progressive_billing,
+        subscriptions: [subscription],
+        issuing_date: invoice.issuing_date - 3.days,
+        created_at: invoice.issuing_date - 3.days,
+        fees_amount_cents: 10_000
+      )
+    end
+
+    let(:progressive_billing_invoice2) do
+      create(
+        :invoice,
+        :with_subscriptions,
+        organization:,
+        customer:,
+        status: "finalized",
+        invoice_type: :progressive_billing,
+        subscriptions: [subscription],
+        issuing_date: invoice.issuing_date - 2.days,
+        created_at: invoice.issuing_date - 2.days,
+        fees_amount_cents: 20_000
+      )
+    end
+
+    let(:progressive_billing_invoice3) do
+      create(
+        :invoice,
+        :with_subscriptions,
+        organization:,
+        customer:,
+        status: "finalized",
+        invoice_type: :progressive_billing,
+        subscriptions: [subscription],
+        issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day,
+        fees_amount_cents: 30_000
+      )
+    end
+
+    let(:progressive_billing_fee) do
+      create(:charge_fee, amount_cents: 10_000, charge:, invoice: progressive_billing_invoice)
+    end
+    let(:progressive_billing_fee2) do
+      create(:charge_fee, amount_cents: 20_000, charge:, invoice: progressive_billing_invoice2)
+    end
+    let(:progressive_billing_fee3) do
+      create(:charge_fee, amount_cents: 30_000, charge:, invoice: progressive_billing_invoice3)
+    end
+
+    before do
+      progressive_billing_fee
+      progressive_billing_fee2
+      progressive_billing_fee3
+
+      [progressive_billing_invoice, progressive_billing_invoice2, progressive_billing_invoice3].each do |pb_invoice|
+        pb_invoice.invoice_subscriptions.first.update!(
+          charges_from_datetime: pb_invoice.issuing_date - 1.month,
+          charges_to_datetime: pb_invoice.issuing_date,
+          timestamp: pb_invoice.issuing_date
+        )
+      end
+    end
+
+    # The progressive billing invoices were issued before the override, so their fees are booked on
+    # the parent charge while the final invoice's fees are on the child.
+    describe "#call" do
+      it "credits the progressively billed amount against the overridden charge" do
+        result = credit_service.call
+
+        expect(result.credits.size).to eq(1)
+        credit = result.credits.sole
+        expect(credit.progressive_billing_invoice).to eq(progressive_billing_invoice3)
+        expect(credit.amount_cents).to eq(30_000)
+        expect(invoice.progressive_billing_credit_amount_cents).to eq(30_000)
+      end
+
+      it "does not create a credit note for the progressively billed amount" do
+        # The $350 of charges fully absorb the $300 already billed, so nothing is left to refund.
+        expect { credit_service.call }.not_to change(CreditNote, :count)
+        expect(progressive_billing_invoice3.credit_notes).to be_empty
+      end
+
+      it "applies the credit to the overridden charge fee" do
+        credit_service.call
+
+        expect(overridden_fee.reload.precise_coupons_amount_cents).to eq(30_000)
+      end
+    end
+
+    context "when the progressive billing invoices were issued after the override" do
+      # The subscription was already overridden, so every fee - progressive billing and final alike -
+      # is booked on the child charge and nothing points at the parent.
+      let(:progressive_billing_fee) do
+        create(:charge_fee, amount_cents: 10_000, charge: overridden_charge, invoice: progressive_billing_invoice)
+      end
+      let(:progressive_billing_fee2) do
+        create(:charge_fee, amount_cents: 20_000, charge: overridden_charge, invoice: progressive_billing_invoice2)
+      end
+      let(:progressive_billing_fee3) do
+        create(:charge_fee, amount_cents: 30_000, charge: overridden_charge, invoice: progressive_billing_invoice3)
+      end
+
+      describe "#call" do
+        it "credits the progressively billed amount" do
+          result = credit_service.call
+
+          expect(result.credits.size).to eq(1)
+          credit = result.credits.sole
+          expect(credit.progressive_billing_invoice).to eq(progressive_billing_invoice3)
+          expect(credit.amount_cents).to eq(30_000)
+          expect(invoice.progressive_billing_credit_amount_cents).to eq(30_000)
+        end
+
+        it "does not create a credit note for the progressively billed amount" do
+          expect { credit_service.call }.not_to change(CreditNote, :count)
+          expect(progressive_billing_invoice3.credit_notes).to be_empty
+        end
+
+        it "applies the credit to the overridden charge fee" do
+          credit_service.call
+
+          expect(overridden_fee.reload.precise_coupons_amount_cents).to eq(30_000)
+        end
+      end
+    end
+  end
+
   context "with a spy on Subscriptions::ProgressiveBilledAmount" do
     let(:progressive_billing_invoice) do
       create(
