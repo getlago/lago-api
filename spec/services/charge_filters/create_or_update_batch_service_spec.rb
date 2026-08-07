@@ -444,4 +444,70 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       expect(new_filter.values.pluck(:values).flatten).to eq(["visa"])
     end
   end
+
+  describe "filter codes" do
+    let(:charge) { create(:standard_charge) }
+    let(:bm_filter) { create(:billable_metric_filter, billable_metric: charge.billable_metric, key: "model", values: %w[a b]) }
+
+    before { bm_filter }
+
+    # The rows go in through insert_all!, which skips model callbacks, so the code has to be
+    # built while the row hash is assembled
+    it "assigns a code to every filter it inserts" do
+      result = described_class.call(charge:, filters_params: [
+        {values: {"model" => %w[a]}, properties: {amount: "10"}},
+        {values: {"model" => %w[b]}, properties: {amount: "20"}}
+      ])
+
+      expect(result.filters.map(&:code)).to eq([
+        ChargeFilter.generate_code({"model" => %w[a]}),
+        ChargeFilter.generate_code({"model" => %w[b]})
+      ])
+    end
+
+    it "suffixes the second of two filters holding the same values" do
+      result = described_class.call(charge:, filters_params: [
+        {values: {"model" => %w[a]}, properties: {amount: "10"}},
+        {values: {"model" => %w[a]}, properties: {amount: "20"}}
+      ])
+
+      base_code = ChargeFilter.generate_code({"model" => %w[a]})
+
+      expect(result.filters.map(&:code)).to eq([base_code, "#{base_code}_2"])
+    end
+
+    # Codes are read before the insert, so a concurrent request can take the one this call
+    # picked. A real race commits in another transaction; here we only raise what the index
+    # would raise, and check the call recovers instead of surfacing a 500.
+    it "recovers when the insert hits the unique index" do
+      base_code = ChargeFilter.generate_code({"model" => %w[a]})
+      attempts = 0
+
+      allow(ChargeFilter).to receive(:insert_all!).and_wrap_original do |original, *args, **kwargs|
+        attempts += 1
+        raise ActiveRecord::RecordNotUnique.new("index_charge_filters_on_charge_id_and_code") if attempts == 1
+
+        original.call(*args, **kwargs)
+      end
+
+      result = described_class.call(charge:, filters_params: [
+        {values: {"model" => %w[a]}, properties: {amount: "10"}}
+      ])
+
+      expect(result).to be_success
+      expect(attempts).to eq(2)
+      expect(charge.filters.reload.map(&:code)).to eq([base_code])
+    end
+
+    it "gives up when the retry collides too" do
+      allow(ChargeFilter).to receive(:insert_all!)
+        .and_raise(ActiveRecord::RecordNotUnique.new("index_charge_filters_on_charge_id_and_code"))
+
+      expect {
+        described_class.call(charge:, filters_params: [
+          {values: {"model" => %w[a]}, properties: {amount: "10"}}
+        ])
+      }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
 end

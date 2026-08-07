@@ -22,7 +22,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "create", us_values, nil, {"amount" => "10"}, "US"
+          charge.id, "create", us_values, nil, {"amount" => "10"}, "US", nil
         )
       end
     end
@@ -37,7 +37,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "destroy", us_values, {"amount" => "10"}, nil, "US"
+          charge.id, "destroy", us_values, {"amount" => "10"}, nil, "US", nil
         )
       end
     end
@@ -54,7 +54,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "update", us_values, {"amount" => "10"}, {"amount" => "15"}, "US"
+          charge.id, "update", us_values, {"amount" => "10"}, {"amount" => "15"}, "US", nil
         )
       end
     end
@@ -71,7 +71,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "update", us_values, {"amount" => "10"}, {"amount" => "10"}, "US region"
+          charge.id, "update", us_values, {"amount" => "10"}, {"amount" => "10"}, "US region", nil
         )
       end
     end
@@ -119,7 +119,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "update", eu_values, {"amount" => "20"}, {"amount" => "25"}, "EU"
+          charge.id, "update", eu_values, {"amount" => "20"}, {"amount" => "25"}, "EU", nil
         )
       end
 
@@ -127,7 +127,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "create", ca_values, nil, {"amount" => "40"}, "CA"
+          charge.id, "create", ca_values, nil, {"amount" => "40"}, "CA", nil
         )
       end
 
@@ -135,7 +135,7 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         expect {
           described_class.call(charge:, before:, after:)
         }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
-          charge.id, "destroy", asia_values, {"amount" => "30"}, nil, "Asia"
+          charge.id, "destroy", asia_values, {"amount" => "30"}, nil, "Asia", nil
         )
       end
     end
