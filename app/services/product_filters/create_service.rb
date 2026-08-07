@@ -19,7 +19,7 @@ module ProductFilters
       return result.not_found_failure!(resource: "product") unless product
 
       unless product.usage?
-        return result.single_validation_failure!(field: :product, error_code: "invalid_product_type")
+        return result.single_validation_failure!(field: :product, error_code: "not_allowed_for_product_type")
       end
 
       return resolved_values unless resolved_values.success?

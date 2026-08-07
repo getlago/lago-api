@@ -11,8 +11,16 @@ class ProductFilter < ApplicationRecord
 
   has_many :values, class_name: "ProductFilterValue"
   has_many :billable_metric_filters, through: :values
+  has_many :rate_cards
 
   delegate :attached_to_plan_or_subscription?, to: :product
+
+  # The values define which events the filter's scoped cards price. They are
+  # frozen only once a subscription bills through one of those cards — until
+  # then a slice redefinition cannot rewrite any live billing.
+  def attached_to_subscriptions?
+    SubscriptionRateCard.joins(:rate_card).where(rate_cards: {product_filter_id: id}).exists?
+  end
 
   validates :name, presence: true
   validates :code,

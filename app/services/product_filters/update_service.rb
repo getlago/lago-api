@@ -20,10 +20,27 @@ module ProductFilters
 
       if params.key?(:values)
         return resolved_values unless resolved_values.success?
+      end
 
+      # NOTE: the code freezes as soon as the item is in a plan or subscription
+      #       (it is the filter's identity); the values only freeze once a
+      #       subscription bills through a card scoped to this filter. Clients
+      #       typically resend the whole payload on edit, so only an actual
+      #       change counts as a structural edit.
+      if product_filter.attached_to_plan_or_subscription? &&
+          params.key?(:code) && params[:code] != product_filter.code
+        return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
+      end
+
+      if product_filter.attached_to_subscriptions? && params.key?(:values) && values_changed?
+        return result.single_validation_failure!(field: :values, error_code: "attached_to_subscriptions")
+      end
+
+      if params.key?(:values)
         values_validation = ProductFilters::ValidateValuesService.call(
           product: product_filter.product,
-          values_params: resolved_values.values_params
+          values_params: resolved_values.values_params,
+          product_filter:
         )
         return values_validation unless values_validation.success?
       end
@@ -32,9 +49,10 @@ module ProductFilters
         product_filter.name = params[:name] if params.key?(:name)
         product_filter.description = params[:description] if params.key?(:description)
         product_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+        product_filter.code = params[:code] if params.key?(:code)
         product_filter.save!
 
-        replace_values if params.key?(:values)
+        replace_values if params.key?(:values) && values_changed?
 
         result.product_filter = product_filter
       end
@@ -52,6 +70,16 @@ module ProductFilters
     private
 
     attr_reader :product_filter, :params
+
+    # value.to_s keeps key-only entries (nil) sortable next to valued entries
+    # for the same key — nil <=> String raises. It cannot conflate distinct
+    # entries: an empty-string value is invalid, so "" only ever means nil.
+    def values_changed?
+      current = product_filter.values.map { |value| [value.billable_metric_filter_id.to_s, value.value.to_s] }.sort
+      submitted = resolved_values.values_params.map { |value| [value[:billable_metric_filter_id].to_s, value[:value].to_s] }.sort
+
+      current != submitted
+    end
 
     def resolved_values
       @resolved_values ||= ProductFilters::ResolveValuesService.call(

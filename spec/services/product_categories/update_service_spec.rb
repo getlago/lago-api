@@ -17,8 +17,33 @@ RSpec.describe ProductCategories::UpdateService do
     expect(result.product_category.invoice_display_name).to eq("Display")
   end
 
-  it "does not change the code" do
-    expect { result }.not_to change { product_category.reload.code }
+  describe "code editability" do
+    let(:params) { {code: "after"} }
+
+    it "updates the code when the product_category is not in a plan or subscription" do
+      expect { result }.to change { product_category.reload.code }.to("after")
+    end
+
+    context "when the product_category is attached to a plan" do
+      before do
+        item = create(:product, organization:, product_category:)
+        rate_card = create(:rate_card, organization:, product: item)
+        create(:plan_rate_card, organization:, rate_card:)
+      end
+
+      it "rejects the code change" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:code]).to eq(["attached_to_plan_or_subscription"])
+        expect(product_category.reload.code).to eq("before")
+      end
+
+      it "accepts an unchanged code alongside other updates" do
+        update_result = described_class.call(product_category:, params: {code: "before", name: "renamed"})
+
+        expect(update_result).to be_success
+        expect(product_category.reload.name).to eq("renamed")
+      end
+    end
   end
 
   it "produces an activity log" do
