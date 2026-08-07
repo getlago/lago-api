@@ -33,6 +33,31 @@ module BillableMetrics
 
           (row.period_charges_from - charges_from).abs <= BOUNDARY_TOLERANCE
         end
+
+        # All per-group rows for the aggregation scope, with the grouped_by
+        # JSON parsed back into a hash. Returns [] (=> caller falls back to
+        # the events store) when there are no rows, when any period
+        # disagrees, or when any row's group keys differ from the charge's
+        # current pricing_group_keys (stale attribution after a charge edit).
+        def grouped_projection_rows
+          return @grouped_projection_rows if defined?(@grouped_projection_rows)
+
+          rows = UsageRealtimeProjection.covering(Time.current).where(
+            subscription_id: subscription.id,
+            charge_id: charge.id,
+            charge_filter_id: charge_filter&.id.to_s
+          ).where.not(grouped_by: "{}").to_a
+
+          parsed = rows.map { |row| [row, JSON.parse(row.grouped_by)] }
+
+          valid = rows.present? &&
+            rows.all? { |row| boundaries_agree?(row) } &&
+            parsed.all? { |(_, groups)| groups.keys.sort == Array(grouped_by).map(&:to_s).sort }
+
+          @grouped_projection_rows = valid ? parsed : []
+        rescue JSON::ParserError
+          @grouped_projection_rows = []
+        end
       end
     end
   end
