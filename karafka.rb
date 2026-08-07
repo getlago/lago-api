@@ -57,6 +57,16 @@ class KarafkaApp < Karafka::App
       end
     end
   end
+
+  if ENV["LAGO_KAFKA_WALLET_REFRESH_TRIGGERS_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_wallet_refresh_triggers_consumer do
+        topic ENV["LAGO_KAFKA_WALLET_REFRESH_TRIGGERS_TOPIC"] do
+          consumer WalletRefreshTriggersConsumer
+        end
+      end
+    end
+  end
 end
 
 Karafka::Process.tags.add(:application_name, "lago-api")
