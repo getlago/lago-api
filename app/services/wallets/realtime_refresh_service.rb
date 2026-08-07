@@ -71,10 +71,12 @@ module Wallets
       deadline = Time.current + PROJECTION_WAIT_TIMEOUT
 
       loop do
-        pending.delete_if do |subscription_id, watermark|
+        pending.delete_if do |subscription_id, watermark_ms|
+          # Millisecond-granularity comparison on integers: float Time
+          # conversion is off by up to a microsecond and can never match.
           UsageRealtimeProjection
             .where(subscription_id:)
-            .where("last_ingested_at >= ?", watermark)
+            .where("(EXTRACT(EPOCH FROM last_ingested_at) * 1000)::bigint >= ?", watermark_ms.to_i)
             .exists?
         end
         break if pending.empty?

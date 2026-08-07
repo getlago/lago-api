@@ -18,10 +18,13 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
         wallet_codes = payloads.filter_map { |p| p["target_wallet_code"].presence }.uniq
 
         # Per-subscription watermarks: the refresh waits for projections to
-        # reach the latest last_ingested_at seen in this batch (epoch millis).
+        # reach the latest last_ingested_at seen in this batch. Kept as
+        # INTEGER epoch millis end-to-end — converting through Time.at(float)
+        # can land a microsecond above the stored timestamp and never match.
         expected_ingested_at = payloads
           .group_by { |p| p["subscription_id"] }
-          .transform_values { |rows| Time.at(rows.filter_map { |r| r["last_ingested_at"] }.max.to_f / 1000.0).utc }
+          .transform_values { |rows| rows.filter_map { |r| r["last_ingested_at"] }.max }
+          .compact
 
         result = Wallets::RealtimeRefreshService.call(organization_id:, customer_id:, wallet_codes:, expected_ingested_at:)
         next if result.success?
