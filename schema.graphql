@@ -293,6 +293,31 @@ enum ActivityTypeEnum {
   plan_updated
 
   """
+  product_category.created
+  """
+  product_category_created
+
+  """
+  product_category.deleted
+  """
+  product_category_deleted
+
+  """
+  product_category.updated
+  """
+  product_category_updated
+
+  """
+  product.created
+  """
+  product_created
+
+  """
+  product.deleted
+  """
+  product_deleted
+
+  """
   product_filter.created
   """
   product_filter_created
@@ -306,6 +331,11 @@ enum ActivityTypeEnum {
   product_filter.updated
   """
   product_filter_updated
+
+  """
+  product.updated
+  """
+  product_updated
 
   """
   subscription.canceled
@@ -11836,6 +11866,16 @@ enum ResourceTypeEnum {
   Plan
   """
   plan
+
+  """
+  Product
+  """
+  product
+
+  """
+  ProductCategory
+  """
+  product_category
 
   """
   ProductFilter
