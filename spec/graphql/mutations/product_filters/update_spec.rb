@@ -56,6 +56,14 @@ RSpec.describe Mutations::ProductFilters::Update do
     expect(result_data["values"].map { [it["key"], it["value"]] }).to eq([%w[region eu]])
   end
 
+  context "when values is null" do
+    let(:input) { {id: product_filter.id, name: "After", values: nil} }
+
+    it "returns a validation error" do
+      expect_graphql_error(result: execution, message: :unprocessable_entity)
+    end
+  end
+
   context "when the filter belongs to another organization" do
     let(:input) { {id: create(:product_filter).id, name: "After"} }
 
