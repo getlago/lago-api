@@ -22,6 +22,7 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
 
   let(:subscription_date) { DateTime.new(2024, 3, 1) }
   let(:subscription) { customer.subscriptions.sole }
+  # The grace period keeps this one as a draft, so it is the invoice the refresh rebuilds.
   let(:draft) { subscription.invoices.order(:created_at).first }
 
   before do
@@ -45,6 +46,8 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
     end
   end
 
+  # A refresh destroys the fees and builds them again. The zero-unit fee on the other
+  # invoice billed nothing, so it is not proof of billing and must not stop the rebuild.
   it "keeps the fee and the invoice total when the draft is refreshed" do
     # 2 units x 239.90, a full calendar month so proration is a no-op
     expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(47_980)
