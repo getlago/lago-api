@@ -8,9 +8,6 @@ module ChargeFilters
       @charge = charge
       @filters_params = filters_params
       @organization = charge.organization
-      @new_filter_rows = []
-      @new_filter_value_rows = []
-      @new_filter_ids = []
 
       # We only care about order when you have less than 100 filters.
       @should_touch = filters_params.size < 100
@@ -29,26 +26,32 @@ module ChargeFilters
 
       return result.single_validation_failure!(field: :values, error_code: "value_is_mandatory") if empty_filter_values?
 
-      # Codes are read before the insert, so two concurrent requests creating filters with the
-      # same values on one charge can pick the same one. The index is what rejects it; retrying
-      # recomputes against the row that won, rather than failing a request nobody got wrong.
-      retried = false
-      begin
-        create_or_update_filters
-      rescue ActiveRecord::RecordNotUnique
-        raise if retried
-
-        retried = true
-        reset_filter_state
-        retry
-      end
+      retrying_on_code_collision { create_or_update_filters }
 
       result
     end
 
     private
 
+    # Codes are read before the insert, so two concurrent requests creating filters with the same
+    # values on one charge can pick the same one. The index is what rejects it; retrying recomputes
+    # against the row that won, rather than failing a request nobody got wrong.
+    def retrying_on_code_collision
+      attempted = false
+
+      begin
+        yield
+      rescue ActiveRecord::RecordNotUnique
+        raise if attempted
+
+        attempted = true
+        retry
+      end
+    end
+
     def create_or_update_filters
+      start_attempt
+
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
           values_params = filter_param[:values].transform_keys(&:to_s)
@@ -78,16 +81,17 @@ module ChargeFilters
       end
     end
 
-    # Every memo this class holds has to be cleared here, or the retry recomputes against state
-    # from the attempt that failed
-    def reset_filter_state
-      result.filters = []
+    # Everything an attempt accumulates is built here rather than in the constructor, so a retry
+    # starts clean without a second list of things to undo
+    def start_attempt
       @new_filter_rows = []
       @new_filter_value_rows = []
       @new_filter_ids = []
       @taken_filter_codes = nil
       @filters = nil
       @filters_by_values_key = nil
+
+      result.filters = []
       charge.filters.reset
     end
 
@@ -155,7 +159,7 @@ module ChargeFilters
         organization_id: organization.id,
         invoice_display_name: filter_param[:invoice_display_name],
         properties: properties,
-        code: next_filter_code(values_params)
+        code: claim_filter_code(values_params)
       }
       new_filter_ids << filter_id
 
@@ -179,7 +183,7 @@ module ChargeFilters
       end
     end
 
-    def next_filter_code(values_params)
+    def claim_filter_code(values_params)
       code = ChargeFilter.next_free_code(ChargeFilter.generate_code(values_params), taken_filter_codes)
       taken_filter_codes << code
 
