@@ -18,10 +18,20 @@ module Wallets
   class RealtimeRefreshService < BaseService
     Result = BaseResult[:wallets]
 
-    def initialize(organization_id:, customer_id:, wallet_codes: [])
+    # The Kafka trigger and the Postgres projection upsert are two sinks of
+    # the same RisingWave epoch with no cross-sink ordering guarantee: a fast
+    # consumer can refresh BEFORE the projection row landed and compute the
+    # previous epoch's usage. expected_ingested_at maps subscription_id =>
+    # the trigger's last_ingested_at watermark; the refresh waits (bounded)
+    # until projections catch up to it.
+    PROJECTION_WAIT_TIMEOUT = 5.seconds
+    PROJECTION_WAIT_INTERVAL = 0.1
+
+    def initialize(organization_id:, customer_id:, wallet_codes: [], expected_ingested_at: {})
       @organization_id = organization_id
       @customer_id = customer_id
       @wallet_codes = wallet_codes
+      @expected_ingested_at = expected_ingested_at
 
       super
     end
@@ -33,6 +43,8 @@ module Wallets
       return result if customer.nil?
       return result unless customer.wallets.active.exists?
       return result if customer.error_details.tax_error.exists?
+
+      wait_for_projections
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?
         Rails.logger.warn(
@@ -50,6 +62,33 @@ module Wallets
 
     private
 
-    attr_reader :organization_id, :customer_id, :wallet_codes
+    attr_reader :organization_id, :customer_id, :wallet_codes, :expected_ingested_at
+
+    def wait_for_projections
+      pending = expected_ingested_at.dup
+      return if pending.empty?
+
+      deadline = Time.current + PROJECTION_WAIT_TIMEOUT
+
+      loop do
+        pending.delete_if do |subscription_id, watermark|
+          UsageRealtimeProjection
+            .where(subscription_id:)
+            .where("last_ingested_at >= ?", watermark)
+            .exists?
+        end
+        break if pending.empty?
+
+        if Time.current > deadline
+          Rails.logger.warn(
+            "[wallets] projections did not catch up before refresh " \
+            "customer_id=#{customer_id} pending=#{pending.keys.inspect}"
+          )
+          break
+        end
+
+        sleep PROJECTION_WAIT_INTERVAL
+      end
+    end
   end
 end

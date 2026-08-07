@@ -63,6 +63,12 @@ class KarafkaApp < Karafka::App
       consumer_group :lago_wallet_refresh_triggers_consumer do
         topic ENV["LAGO_KAFKA_WALLET_REFRESH_TRIGGERS_TOPIC"] do
           consumer WalletRefreshTriggersConsumer
+
+          # Wallet freshness: don't sit on a sparse batch (default is 1000ms).
+          # Under load this is a no-op — batches fill via max_messages first,
+          # so batch-collapse is unaffected.
+          max_wait_time 100
+          max_messages 500
         end
       end
     end
