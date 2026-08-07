@@ -2912,6 +2912,7 @@ input CreateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [PaymentProviderCustomerInput!]
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -4447,12 +4448,12 @@ type Customer {
   activityLogs: [ActivityLog!]
   addressLine1: String
   addressLine2: String
-  anrokCustomer: AnrokCustomer
+  anrokCustomer: AnrokCustomer @deprecated(reason: "Use integrationCustomers instead")
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
   appliedDunningCampaign: DunningCampaign
-  avalaraCustomer: AvalaraCustomer
+  avalaraCustomer: AvalaraCustomer @deprecated(reason: "Use integrationCustomers instead")
   billingConfiguration: CustomerBillingConfiguration
   billingEntity: BillingEntity!
 
@@ -4466,6 +4467,11 @@ type Customer {
   Invoice custom sections manually configured for the customer
   """
   configurableInvoiceCustomSections: [InvoiceCustomSection!]
+
+  """
+  Payment connection status derived from the customer's default payment connection
+  """
+  connectionStatus: PaymentProviderConnectionStatusEnum!
   country: CountryCode
   createdAt: ISO8601DateTime!
   creditNotes: [CreditNote!]
@@ -4519,8 +4525,9 @@ type Customer {
   Define if the customer has custom invoice custom sections selection
   """
   hasOverwrittenInvoiceCustomSectionsSelection: Boolean
-  hubspotCustomer: HubspotCustomer
+  hubspotCustomer: HubspotCustomer @deprecated(reason: "Use integrationCustomers instead")
   id: ID!
+  integrationCustomers: [IntegrationCustomer!]!
   invoiceGracePeriod: Int
   invoices: [Invoice!]
   lastDunningCampaignAttempt: Int!
@@ -4532,7 +4539,7 @@ type Customer {
   metadata: [CustomerMetadata!]
   name: String
   netPaymentTerm: Int
-  netsuiteCustomer: NetsuiteCustomer
+  netsuiteCustomer: NetsuiteCustomer @deprecated(reason: "Use integrationCustomers instead")
 
   """
   Overdue balance per currency
@@ -4540,9 +4547,10 @@ type Customer {
   overdueBalances: [CustomerOverdueBalance!]!
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [ProviderCustomer!]!
   phone: String
-  providerCustomer: ProviderCustomer
-  salesforceCustomer: SalesforceCustomer
+  providerCustomer: ProviderCustomer @deprecated(reason: "Use paymentProviderCustomers instead")
+  salesforceCustomer: SalesforceCustomer @deprecated(reason: "Use integrationCustomers instead")
   sequentialId: String!
   shippingAddress: CustomerAddress
 
@@ -4567,7 +4575,7 @@ type Customer {
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String
-  xeroCustomer: XeroCustomer
+  xeroCustomer: XeroCustomer @deprecated(reason: "Use integrationCustomers instead")
   zipcode: String
 }
 
@@ -9823,6 +9831,24 @@ type PaymentProviderCollection {
   metadata: CollectionMetadata!
 }
 
+enum PaymentProviderConnectionStatusEnum {
+  connected
+  manual
+  not_connected
+}
+
+input PaymentProviderCustomerInput {
+  code: String
+  id: ID
+  isDefault: Boolean
+  paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
+  providerCustomerId: ID
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]
+  syncWithProvider: Boolean
+  type: String
+}
+
 """
 PaymentReceipt
 """
@@ -13461,6 +13487,7 @@ input UpdateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [PaymentProviderCustomerInput!]
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
