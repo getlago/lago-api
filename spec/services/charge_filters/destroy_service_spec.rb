@@ -76,6 +76,33 @@ RSpec.describe ChargeFilters::DestroyService do
           nil
         )
       end
+
+      # The filter holds card_location=domestic plus a tier=gold value that an earlier
+      # billable metric change discarded, so its live predicate is card_location alone
+      context "when the filter holds a value discarded by an earlier metric change" do
+        let(:tier_filter) do
+          create(:billable_metric_filter, billable_metric: charge.billable_metric, key: "tier", values: %w[gold])
+        end
+
+        before do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter: tier_filter, values: ["gold"]).discard!
+        end
+
+        # The children lost tier=gold to the same metric change, so a predicate naming
+        # it would match none of them and the child filter would survive the delete
+        it "cascades the live predicate, without the discarded value" do
+          service
+
+          expect(ChargeFilters::CascadeJob).to have_been_enqueued.with(
+            charge.id,
+            "destroy",
+            {"card_location" => ["domestic"]},
+            nil,
+            nil,
+            nil
+          )
+        end
+      end
     end
 
     context "without cascade_updates when charge has children" do

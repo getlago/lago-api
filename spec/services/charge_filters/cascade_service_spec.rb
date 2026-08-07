@@ -49,6 +49,27 @@ RSpec.describe ChargeFilters::CascadeService do
         )
       end
 
+      # Filters collapsed onto one predicate each carry their own negotiated price on the
+      # child. Only one can survive the predicate, so the rest go with it.
+      context "when the child holds several filters on the cascaded predicate" do
+        let(:duplicates) do
+          ["2", "3"].map do |amount|
+            filter = create(:charge_filter, charge: child_charge, invoice_display_name: "US #{amount}", properties: {amount:})
+            create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
+            filter
+          end
+        end
+
+        before { duplicates }
+
+        it "keeps a single filter on the predicate and discards the rest" do
+          service
+
+          expect(child_filter.reload).not_to be_discarded
+          expect(duplicates.map { it.reload.discarded? }).to all(be(true))
+        end
+      end
+
       context "with several children" do
         let(:other_child_plan) { create(:plan, organization:, parent: parent_plan) }
         let(:other_child_charge) do
@@ -254,6 +275,62 @@ RSpec.describe ChargeFilters::CascadeService do
 
         expect(child_filter.reload).to be_discarded
         expect(child_filter.values.kept).to be_empty
+      end
+
+      # The child can hold several filters on the cascaded predicate, each with its own
+      # negotiated price, while other predicates on the same charge must stay untouched
+      context "when the child holds several filters on the cascaded predicate and others beside" do
+        let(:eu_filters) do
+          ["1", "2"].map do |amount|
+            filter = create(:charge_filter, charge: child_charge, invoice_display_name: "EU #{amount}", properties: {amount:})
+            create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["eu"])
+            filter
+          end
+        end
+
+        let(:extra_us_filters) do
+          ["2", "3"].map do |amount|
+            filter = create(:charge_filter, charge: child_charge, invoice_display_name: "US #{amount}", properties: {amount:})
+            create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
+            filter
+          end
+        end
+
+        before do
+          eu_filters
+          extra_us_filters
+        end
+
+        it "discards every filter on the cascaded predicate" do
+          service
+
+          expect(child_filter.reload).to be_discarded
+          expect(extra_us_filters.map { it.reload.discarded? }).to all(be(true))
+        end
+
+        it "leaves the filters on the other predicate untouched" do
+          service
+
+          expect(eu_filters.map { it.reload.discarded? }).to all(be(false))
+          expect(eu_filters.map { it.reload.properties["amount"] }).to eq(%w[1 2])
+        end
+      end
+
+      context "when the child holds several filters with the same predicate" do
+        let(:duplicate_child_filter) do
+          filter = create(:charge_filter, charge: child_charge, invoice_display_name: "US region bis", properties: {amount: "20"})
+          create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
+          filter
+        end
+
+        before { duplicate_child_filter }
+
+        it "discards every filter matching the predicate" do
+          service
+
+          expect(child_filter.reload).to be_discarded
+          expect(duplicate_child_filter.reload).to be_discarded
+        end
       end
 
       context "when child has no matching filter" do

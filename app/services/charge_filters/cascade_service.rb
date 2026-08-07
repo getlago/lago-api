@@ -28,12 +28,12 @@ module ChargeFilters
         Charge.where(id: ids).includes(:billable_metric).find_each do |child_charge|
           Charge.no_touching do
             Plan.no_touching do
-              child_filter = matches[child_charge.id]
+              matching_filters = matches.fetch(child_charge.id, [])
 
               case action
-              when "update" then update_child_filter(child_charge, child_filter)
-              when "create" then create_child_filter(child_charge, child_filter)
-              when "destroy" then destroy_child_filter(child_filter)
+              when "update" then update_child_filters(child_charge, matching_filters)
+              when "create" then create_child_filter(child_charge) if matching_filters.empty?
+              when "destroy" then matching_filters.each { destroy_child_filter(it) }
               end
             end
           end
@@ -75,7 +75,16 @@ module ChargeFilters
         .where(id: candidate_ids)
         .includes(values: :billable_metric_filter)
         .select { |filter| filter.to_h == filter_values }
-        .index_by(&:charge_id)
+        .group_by(&:charge_id)
+    end
+
+    # The parent holds one filter per predicate, so the child converges on one too:
+    # duplicates left by an older billable metric change go with the update
+    def update_child_filters(child_charge, matching_filters)
+      surviving, *duplicates = matching_filters
+
+      update_child_filter(child_charge, surviving)
+      duplicates.each { destroy_child_filter(it) }
     end
 
     def update_child_filter(child_charge, child_filter)
@@ -95,9 +104,7 @@ module ChargeFilters
       child_filter.save!
     end
 
-    def create_child_filter(child_charge, existing_filter)
-      return if existing_filter
-
+    def create_child_filter(child_charge)
       # NOTE: Resolve against the current state of the billable metric filters
       # to avoid any changes that may have occurred since the job was enqueued
       return if resolved_filter_values.empty?

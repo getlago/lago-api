@@ -129,9 +129,9 @@ module ScenariosHelper
     end
   end
 
-  def delete_plan_charge_filter(plan, charge_code, filter_id, **kwargs)
+  def delete_plan_charge_filter(plan, charge_code, filter_id, params = {}, **kwargs)
     api_call(**kwargs) do
-      delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters/#{filter_id}")
+      delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters/#{filter_id}", params)
     end
   end
 
