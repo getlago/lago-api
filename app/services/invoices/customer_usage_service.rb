@@ -131,7 +131,10 @@ module Invoices
         subscription:,
         charge:,
         to_datetime: boundaries.charges_to_datetime,
-        cache: cache_applicable?,
+        # Realtime-eligible charges are served from usage_realtime_projections
+        # (O(1), always fresh): caching them would only reintroduce staleness,
+        # since cache invalidation is driven by the legacy pipeline.
+        cache: cache_applicable? && !UsageProjections.eligible_charge?(charge),
         last_seen_at: applied_filters
       )
 
