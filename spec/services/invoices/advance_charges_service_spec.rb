@@ -294,15 +294,15 @@ RSpec.describe Invoices::AdvanceChargesService do
         )
       end
 
-      it "bills the terminated subscription on its own last period" do
+      it "bills the terminated subscription on the current billing period" do
         result = invoice_service.call
 
         expect(result).to be_success
         expect(result.invoice.fees.count).to eq 1
 
         invoice_subscription = result.invoice.invoice_subscriptions.sole
-        expect(invoice_subscription.charges_from_datetime).to match_datetime subscription_2.terminated_at.beginning_of_month
-        expect(invoice_subscription.charges_to_datetime).to match_datetime subscription_2.terminated_at
+        expect(invoice_subscription.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
+        expect(invoice_subscription.charges_to_datetime).to match_datetime fee_boundaries[:charges_to_datetime]
       end
     end
 

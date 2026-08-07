@@ -17,10 +17,7 @@ module Invoices
     # we apply the `charges_(from|to)_date for both charges and subscriptions period
     # See https://github.com/getlago/lago-api/pull/3327 for details
     def call
-      latest_subscription = all_subscriptions.max_by(&:started_at)
       boundaries = calculate_boundaries(latest_subscription)
-
-      return skip_invalid_boundaries(latest_subscription, boundaries) unless charge_boundaries_valid?(boundaries)
 
       subscriptions_with_fees.each do |subscription|
         invoice.invoice_subscriptions << InvoiceSubscription.create!(
@@ -44,56 +41,26 @@ module Invoices
 
     attr_reader :invoice, :timestamp, :subscriptions_with_fees, :all_subscriptions
 
+    # NOTE: A subscription already terminated at `timestamp` must not drive the boundaries: the re-expanded
+    #       set (see Invoices::AdvanceChargesService#subscriptions) can contain a terminated subscription
+    #       with a later `started_at` than the running one that replaced it, after a backdated
+    #       re-subscription. Its charges period ended on its termination date, so it would stamp the group
+    #       with a period preceding the one being billed.
+    #       We only fall back to it for an actual termination flow, where every subscription is terminated
+    #       and `timestamp` is the termination date.
+    def latest_subscription
+      running_subscriptions = all_subscriptions.reject { |subscription| subscription.terminated_at?(timestamp) }
+
+      (running_subscriptions.presence || all_subscriptions).max_by(&:started_at)
+    end
+
     def calculate_boundaries(subscription)
-      date_service = Subscriptions::DatesService.new_instance(
-        subscription,
-        boundaries_billing_at(subscription),
-        current_usage: false
-      )
+      date_service = Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: false)
 
       {
         from: date_service.charges_from_datetime,
         to: date_service.charges_to_datetime
       }
-    end
-
-    # NOTE: A subscription already terminated at `timestamp` has a charges period that ended on its
-    #       termination date. It can still be re-expanded into a much later billing cycle (see
-    #       Invoices::AdvanceChargesService#subscriptions), and computing its boundaries from that cycle's
-    #       timestamp then yields a period starting after it ended, because `charges_to_datetime` stays
-    #       capped at `terminated_at`.
-    #       The termination flow already bills non-invoiceable fees on `terminated_at`, so we do the same.
-    def boundaries_billing_at(subscription)
-      return timestamp unless subscription.terminated_at?(timestamp)
-
-      subscription.terminated_at
-    end
-
-    # NOTE: Unlike Invoices::CalculateFeesService, blank boundaries are not invalid here: yearly plans
-    #       legitimately produce no charges boundaries, and their already-paid fees must still be invoiced.
-    def charge_boundaries_valid?(boundaries)
-      return true if boundaries[:from].blank? || boundaries[:to].blank?
-
-      boundaries[:from] <= boundaries[:to]
-    end
-
-    # Defer the fees rather than stamping an invalid period: leaving them with `invoice_id: nil` makes the
-    # next billing cycle retry them, and the invoice is rolled back by the caller when no fee is attached.
-    def skip_invalid_boundaries(subscription, boundaries)
-      message = "Invoices::CreateAdvanceChargesInvoiceSubscriptionService skipped: invalid charges boundaries"
-      context = {
-        organization_id: invoice.organization_id,
-        invoice_id: invoice.id,
-        subscription_id: subscription.id,
-        subscription_status: subscription.status,
-        charges_from_datetime: boundaries[:from],
-        charges_to_datetime: boundaries[:to],
-        timestamp:
-      }
-
-      Rails.logger.warn("#{message} #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
-
-      result
     end
   end
 end
