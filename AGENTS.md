@@ -190,6 +190,7 @@ To create a webhook:
 - `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
 - `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
+- `LAGO_WALLET_MAX_AUTOMATIC_TOP_UPS_PER_DAY`: how many automatic threshold top-ups a wallet may make in a rolling 24 hours before the rule refuses and reports. Defaults to 25, which nothing normal reaches. It exists so the ceiling can be raised without a release if it ever refuses a legitimately busy wallet. Example: `LAGO_WALLET_MAX_AUTOMATIC_TOP_UPS_PER_DAY=25`
 - Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
 
 # Service
