@@ -212,7 +212,9 @@ Rails.application.routes.draw do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
       resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
-      resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy]
+      resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
+      end
     end
   end
   resources :webhooks, only: [] do
