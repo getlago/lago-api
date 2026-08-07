@@ -154,7 +154,7 @@ module Plans
           old_parent_applied_pricing_unit_attrs:
         )
 
-        cascade_filter_changes(charge, before_filters, payload_charge[:filters]) if before_filters
+        cascade_filter_changes(charge, before_filters) if before_filters
       end
     end
 
@@ -163,21 +163,18 @@ module Plans
         {
           values: f.to_h.deep_stringify_keys,
           properties: f.properties,
-          invoice_display_name: f.invoice_display_name
+          invoice_display_name: f.invoice_display_name,
+          code: f.code
         }
       end
     end
 
-    def cascade_filter_changes(charge, before, payload_filters)
-      after = (payload_filters || []).map do |fp|
-        {
-          values: (fp[:values] || {}).deep_stringify_keys,
-          properties: fp[:properties]&.deep_stringify_keys,
-          invoice_display_name: fp[:invoice_display_name]
-        }
-      end
+    # Read back rather than reuse the payload: the codes are assigned while saving, and a child
+    # filter has to be created with the code of the parent filter it copies
+    def cascade_filter_changes(charge, before)
+      charge.filters.reset
 
-      ChargeFilters::CascadeDispatcher.call(charge:, before:, after:)
+      ChargeFilters::CascadeDispatcher.call(charge:, before:, after: capture_filters(charge))
     end
 
     def cascade_fixed_charge_removal(fixed_charge)

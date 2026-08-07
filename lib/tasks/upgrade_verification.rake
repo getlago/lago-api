@@ -33,19 +33,6 @@ namespace :upgrade do
       end
     end
 
-    pp "- Checking Subscription#last_received_event_on: 🔎"
-    backfill_org_ids = Organization
-      .joins(:subscriptions)
-      .where(subscriptions: {status: :active, last_received_event_on: nil})
-      .distinct
-      .pluck(:id)
-
-    if backfill_org_ids.any?
-      pp "  -> #{backfill_org_ids.size} organizations to process 🧮"
-    else
-      pp "  -> Nothing to do ✅"
-    end
-
     if to_fill.any?
       puts "\n#### Enqueue jobs in the low_priority queue ####"
       to_fill.each do |resource|
@@ -54,15 +41,7 @@ namespace :upgrade do
       end
     end
 
-    if backfill_org_ids.any?
-      puts "\n#### Enqueue BackfillLastReceivedEventOnJob per organization ####"
-      backfill_org_ids.each do |organization_id|
-        pp "- Enqueuing BackfillLastReceivedEventOnJob for org #{organization_id}"
-        DatabaseMigrations::BackfillLastReceivedEventOnJob.perform_later(organization_id)
-      end
-    end
-
-    while to_fill.present? || backfill_org_ids.any?
+    while to_fill.present?
       sleep 5
       puts "\n#### Checking status ####"
 
@@ -80,17 +59,37 @@ namespace :upgrade do
         end
       end
       to_delete.each { to_fill.delete(it) }
+    end
 
-      if backfill_org_ids.any?
-        pp "- Checking BackfillLastReceivedEventOnJob: 🔎"
-        still_running = backfill_last_received_event_on_jobs_running?
-        if still_running
-          pp "  -> Jobs still running 🧮"
-        else
-          backfill_org_ids = []
-          pp "  -> Done ✅"
+    [
+      ["plan charges", DatabaseMigrations::EnqueueChargeFilterCodeBackfillService, DatabaseMigrations::BackfillChargeFilterCodesJob, :parents],
+      ["their overrides", DatabaseMigrations::EnqueueChildChargeFilterCodeBackfillService, DatabaseMigrations::BackfillChildChargeFilterCodesJob, :children]
+    ].each do |label, enqueue, job, pass|
+      puts "\n#### Backfilling charge filter codes on #{label} ####"
+
+      enqueue.call
+
+      # Sidekiq answers cheaply but not exactly: busy workers are reported from a heartbeat that
+      # refreshes every few seconds, so right after the queue drains there is a window where the
+      # jobs are running and nothing shows it. It is the trigger, not the verdict — the count
+      # below is, and it is only reached once the queue looks quiet.
+      loop do
+        sleep 5
+
+        if backfill_jobs_running?(job)
+          pp "- Checking #{job.name}: 🔎"
+          pp "  -> #{Sidekiq::Queue.new(job.queue_name).size} jobs left 🧮"
+          next
         end
+
+        remaining = codeless_filters_that_can_be_filled(pass)
+        break if remaining.zero?
+
+        pp "- Checking #{job.name}: 🔎"
+        pp "  -> #{remaining} filters still fillable 🧮"
       end
+
+      pp "  -> Done ✅"
     end
 
     puts "\n#### All good, ready to Upgrade! ✅ ####"
@@ -216,14 +215,96 @@ namespace :upgrade do
     queue.size == 0
   end
 
-  def backfill_last_received_event_on_jobs_running?
-    job_class = "DatabaseMigrations::BackfillLastReceivedEventOnJob"
+  # Sidekiq stores ActiveJob entries under the adapter's wrapper class, so `klass` reads
+  # "ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper" and never matches a job name. The
+  # job's own name lives in `wrapped`, which `display_class` reads back off a queue entry.
+  # How many filters are still waiting for a code that the pass can actually give them. It reaches
+  # zero, which a plain `code IS NULL` count never does: a charge holding two filters on one
+  # predicate keeps theirs on purpose, and so does an override that lost the filter it was copied
+  # from. Those are excluded here, which is what makes this an end condition.
+  #
+  # It aggregates predicates, so it is not cheap — a minute and a half over every plan charge on
+  # the largest deployment. That is why it only runs once the queue has gone quiet: by then the
+  # scope is whatever is left rather than everything.
+  def codeless_filters_that_can_be_filled(pass)
+    sql = (pass == :parents) ? parent_pending_codes_sql : child_pending_codes_sql
 
-    queued = Sidekiq::Queue.new("low_priority").any? { |job| job.klass == job_class }
-    return true if queued
+    ActiveRecord::Base.connection.select_value(sql).to_i
+  end
+
+  # A plan's filter can be filled unless another filter on the same charge holds the same predicate
+  def parent_pending_codes_sql
+    <<~SQL.squish
+      WITH pending AS (
+        SELECT DISTINCT cf.charge_id
+        FROM charge_filters cf
+        JOIN charges ch ON ch.id = cf.charge_id
+        JOIN plans pl ON pl.id = ch.plan_id
+        WHERE cf.code IS NULL AND cf.deleted_at IS NULL
+          AND ch.parent_id IS NULL AND ch.deleted_at IS NULL
+          AND pl.parent_id IS NULL AND pl.deleted_at IS NULL
+      ),
+      predicates AS (
+        #{filter_predicates_sql("JOIN pending p ON p.charge_id = cf.charge_id")}
+      )
+      SELECT count(*)
+      FROM (SELECT *, count(*) OVER (PARTITION BY charge_id, predicate) AS siblings FROM predicates) x
+      WHERE code IS NULL AND siblings = 1
+    SQL
+  end
+
+  # An override's filter can be filled when its parent holds that predicate exactly once, with a
+  # code. Anything else is either orphaned or a decision the parent could not make either.
+  def child_pending_codes_sql
+    <<~SQL.squish
+      WITH pending AS (
+        SELECT DISTINCT cf.charge_id, ch.parent_id
+        FROM charge_filters cf
+        JOIN charges ch ON ch.id = cf.charge_id
+        WHERE cf.code IS NULL AND cf.deleted_at IS NULL
+          AND ch.parent_id IS NOT NULL AND ch.deleted_at IS NULL
+      ),
+      predicates AS (
+        #{filter_predicates_sql("JOIN pending p ON p.charge_id = cf.charge_id OR p.parent_id = cf.charge_id")}
+      ),
+      inheritable AS (
+        SELECT charge_id, predicate, min(code) AS code
+        FROM predicates
+        GROUP BY charge_id, predicate
+        HAVING count(*) = 1 AND min(code) IS NOT NULL
+      )
+      SELECT count(*)
+      FROM predicates f
+      JOIN pending p ON p.charge_id = f.charge_id
+      JOIN inheritable i ON i.charge_id = p.parent_id AND i.predicate = f.predicate
+      WHERE f.code IS NULL
+    SQL
+  end
+
+  # Built the same way as ChargeFilter.generate_code reads the values: keys sorted, and the values
+  # sorted within each key. Without both, the same predicate compares as two different ones.
+  def filter_predicates_sql(join)
+    <<~SQL.squish
+      SELECT cf.id, cf.charge_id, cf.code,
+             string_agg(
+               bmf.key || ':' || (SELECT string_agg(v, '+' ORDER BY v) FROM unnest(cfv.values) AS v),
+               '|' ORDER BY bmf.key
+             ) AS predicate
+      FROM charge_filters cf
+      #{join}
+      JOIN charge_filter_values cfv ON cfv.charge_filter_id = cf.id AND cfv.deleted_at IS NULL
+      JOIN billable_metric_filters bmf ON bmf.id = cfv.billable_metric_filter_id
+      WHERE cf.deleted_at IS NULL
+      GROUP BY cf.id, cf.charge_id, cf.code
+    SQL
+  end
+
+  def backfill_jobs_running?(job_class)
+    return true if Sidekiq::Queue.new(job_class.queue_name).any? { |job| job.display_class == job_class.name }
+    return true if Sidekiq::ScheduledSet.new.any? { |job| job.display_class == job_class.name }
 
     Sidekiq::Workers.new.any? do |_process_id, _thread_id, work|
-      work.dig("payload", "class") == job_class
+      work.dig("payload", "wrapped") == job_class.name
     end
   end
 end
