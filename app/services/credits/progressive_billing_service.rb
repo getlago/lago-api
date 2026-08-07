@@ -22,22 +22,12 @@ module Credits
         progressive_billing_invoice = progressive_billed_result.progressive_billing_invoice
 
         next unless progressive_billing_invoice
-        #
-        # total_charges_amount = invoice
-        #   .fees
-        #   .charge
-        #   .where(subscription:)
-        #   .where(charge_id: progressive_billing_invoice.fees.charge.pluck(:charge_id))
-        #   .sum(:amount_cents)
-        #
 
-        parent_charge_ids = invoice.fees.charge.map { it.charge.parent_id }.compact.uniq
-        total_charges_amount = progressive_billing_invoice
-         .fees
-         .charge
-         .where(subscription:)
-         .where(charge_id: invoice.fees.charge.pluck(:charge_id).merge(parent_charge_ids.present? ? parent_charge_ids : [nil]))
-         .sum(:amount_cents)
+        progressive_billed_charge_ids = progressive_billing_invoice.fees.charge.pluck(:charge_id)
+        invoice_charge_fees = invoice.fees.charge.where(subscription:).joins(:charge)
+        total_charges_amount = invoice_charge_fees
+          .where("COALESCE(charges.parent_id, charges.id) IN (?)", progressive_billed_charge_ids)
+          .sum(:amount_cents)
 
         # Don't be tempted to calculate the credit amount yourself, you have to use the result from this service.
         amount_to_credit = progressive_billed_result.to_credit_amount
