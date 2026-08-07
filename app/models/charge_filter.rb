@@ -39,7 +39,12 @@ class ChargeFilter < ApplicationRecord
   def self.unique_code_for(charge_id, base_code)
     return base_code if charge_id.nil?
 
-    taken = where(charge_id:).unscope(:order).pluck(:code).compact.to_set
+    next_free_code(base_code, where(charge_id:).unscope(:order).pluck(:code).compact.to_set)
+  end
+
+  # Callers that create several filters at once hold their own set, since the codes they hand out
+  # are not in the table yet
+  def self.next_free_code(base_code, taken)
     return base_code unless taken.include?(base_code)
 
     suffix = 2

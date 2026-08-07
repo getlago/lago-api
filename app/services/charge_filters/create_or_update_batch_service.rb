@@ -78,6 +78,8 @@ module ChargeFilters
       end
     end
 
+    # Every memo this class holds has to be cleared here, or the retry recomputes against state
+    # from the attempt that failed
     def reset_filter_state
       result.filters = []
       @new_filter_rows = []
@@ -178,16 +180,9 @@ module ChargeFilters
     end
 
     def next_filter_code(values_params)
-      base_code = ChargeFilter.generate_code(values_params)
-      code = base_code
-
-      suffix = 2
-      while taken_filter_codes.include?(code)
-        code = "#{base_code}_#{suffix}"
-        suffix += 1
-      end
-
+      code = ChargeFilter.next_free_code(ChargeFilter.generate_code(values_params), taken_filter_codes)
       taken_filter_codes << code
+
       code
     end
 
