@@ -362,20 +362,6 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "when customer already has a different currency" do
-      let(:customer_currency) { "USD" }
-
-      it "returns a currency mismatch error" do
-        expect(service_result).not_to be_success
-        expect(service_result.error.messages[:currency]).to eq(["currencies_does_not_match"])
-      end
-
-      it "does not update the customer currency" do
-        service_result
-        expect(customer.reload.currency).to eq("USD")
-      end
-    end
-
     context "when customer already has the same currency" do
       let(:customer_currency) { "EUR" }
 
@@ -392,9 +378,7 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "when multi currency is enabled" do
-      before { organization.update!(feature_flags: ["multi_currency"]) }
-
+    context "when the wallet currency can differ from the customer currency" do
       context "when customer does not have a currency" do
         let(:customer_currency) { nil }
 

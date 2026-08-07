@@ -530,8 +530,6 @@ module Subscriptions
     end
 
     def group_by_currency(subscription_groups)
-      return subscription_groups unless organization.feature_flag_enabled?(:multi_currency)
-
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by { |sub| sub.plan.amount_currency }.values
       end
