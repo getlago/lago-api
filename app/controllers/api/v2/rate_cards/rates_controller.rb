@@ -4,6 +4,8 @@ module Api
   module V2
     module RateCards
       class RatesController < Api::BaseController
+        include Api::RequiresProductCatalog
+
         before_action :find_rate_card
         before_action :find_rate, only: %i[show update destroy]
 

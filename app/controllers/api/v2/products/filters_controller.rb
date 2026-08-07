@@ -4,6 +4,8 @@ module Api
   module V2
     module Products
       class FiltersController < Api::BaseController
+        include Api::RequiresProductCatalog
+
         before_action :find_product
         before_action :find_product_filter, only: %i[show update destroy]
 
