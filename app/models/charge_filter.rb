@@ -75,10 +75,9 @@ class ChargeFilter < ApplicationRecord
 
   def assign_code!
     return if code.present?
+    base_code = self.class.generate_code(values_by_key(values.reload))
 
-    derived = self.class.generate_code(values_by_key(values.reload))
-
-    update_column(:code, self.class.unique_code_for(charge_id, derived)) # rubocop:disable Rails/SkipsModelValidations
+    update_column(:code, self.class.unique_code_for(charge_id, base_code)) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def pricing_group_keys
