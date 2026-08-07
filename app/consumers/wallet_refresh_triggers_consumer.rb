@@ -17,7 +17,13 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
       .each do |(organization_id, customer_id), payloads|
         wallet_codes = payloads.filter_map { |p| p["target_wallet_code"].presence }.uniq
 
-        result = Wallets::RealtimeRefreshService.call(organization_id:, customer_id:, wallet_codes:)
+        # Per-subscription watermarks: the refresh waits for projections to
+        # reach the latest last_ingested_at seen in this batch (epoch millis).
+        expected_ingested_at = payloads
+          .group_by { |p| p["subscription_id"] }
+          .transform_values { |rows| Time.at(rows.filter_map { |r| r["last_ingested_at"] }.max.to_f / 1000.0).utc }
+
+        result = Wallets::RealtimeRefreshService.call(organization_id:, customer_id:, wallet_codes:, expected_ingested_at:)
         next if result.success?
 
         Rails.logger.error(
