@@ -33,19 +33,6 @@ namespace :upgrade do
       end
     end
 
-    pp "- Checking Subscription#last_received_event_on: 🔎"
-    backfill_org_ids = Organization
-      .joins(:subscriptions)
-      .where(subscriptions: {status: :active, last_received_event_on: nil})
-      .distinct
-      .pluck(:id)
-
-    if backfill_org_ids.any?
-      pp "  -> #{backfill_org_ids.size} organizations to process 🧮"
-    else
-      pp "  -> Nothing to do ✅"
-    end
-
     if to_fill.any?
       puts "\n#### Enqueue jobs in the low_priority queue ####"
       to_fill.each do |resource|
@@ -54,15 +41,7 @@ namespace :upgrade do
       end
     end
 
-    if backfill_org_ids.any?
-      puts "\n#### Enqueue BackfillLastReceivedEventOnJob per organization ####"
-      backfill_org_ids.each do |organization_id|
-        pp "- Enqueuing BackfillLastReceivedEventOnJob for org #{organization_id}"
-        DatabaseMigrations::BackfillLastReceivedEventOnJob.perform_later(organization_id)
-      end
-    end
-
-    while to_fill.present? || backfill_org_ids.any?
+    while to_fill.present?
       sleep 5
       puts "\n#### Checking status ####"
 
@@ -80,18 +59,27 @@ namespace :upgrade do
         end
       end
       to_delete.each { to_fill.delete(it) }
-
-      if backfill_org_ids.any?
-        pp "- Checking BackfillLastReceivedEventOnJob: 🔎"
-        still_running = backfill_last_received_event_on_jobs_running?
-        if still_running
-          pp "  -> Jobs still running 🧮"
-        else
-          backfill_org_ids = []
-          pp "  -> Done ✅"
-        end
-      end
     end
+
+    # Only the charges belonging to a plan. Their overrides can only take a code their plan
+    # already holds, so those are a later release's pass.
+    puts "\n#### Backfilling charge filter codes on plan charges, one job per charge ####"
+
+    # Blocks while it hands charges out, pausing whenever the queue is fuller than it should be,
+    # so on a large install it can sit here a while. It does nothing at all when there is nothing
+    # to fill, which is why there is no check before it.
+    DatabaseMigrations::EnqueueChargeFilterCodeBackfillService.call
+
+    # Reaching the end of the walk only means every charge has been handed out, not that any of
+    # them are done. And a count of remaining NULLs never reaches zero, since the charges holding
+    # two filters on one predicate keep theirs — so the queue is what says when the work is over.
+    while charge_filter_code_jobs_running?
+      sleep 5
+      pp "- Checking DatabaseMigrations::BackfillChargeFilterCodesJob: 🔎"
+      pp "  -> #{Sidekiq::Queue.new(DatabaseMigrations::BackfillChargeFilterCodesJob.queue_name).size} jobs left 🧮"
+    end
+
+    pp "  -> Done ✅"
 
     puts "\n#### All good, ready to Upgrade! ✅ ####"
   end
@@ -216,14 +204,17 @@ namespace :upgrade do
     queue.size == 0
   end
 
-  def backfill_last_received_event_on_jobs_running?
-    job_class = "DatabaseMigrations::BackfillLastReceivedEventOnJob"
+  # Sidekiq stores ActiveJob entries under the adapter's wrapper class, so `klass` reads
+  # "ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper" and never matches a job name. The
+  # job's own name lives in `wrapped`, which `display_class` reads back off a queue entry.
+  def charge_filter_code_jobs_running?
+    job_class = DatabaseMigrations::BackfillChargeFilterCodesJob
 
-    queued = Sidekiq::Queue.new("low_priority").any? { |job| job.klass == job_class }
-    return true if queued
+    return true if Sidekiq::Queue.new(job_class.queue_name).any? { |job| job.display_class == job_class.name }
+    return true if Sidekiq::ScheduledSet.new.any? { |job| job.display_class == job_class.name }
 
     Sidekiq::Workers.new.any? do |_process_id, _thread_id, work|
-      work.dig("payload", "class") == job_class
+      work.dig("payload", "wrapped") == job_class.name
     end
   end
 end

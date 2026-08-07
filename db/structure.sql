@@ -767,6 +767,7 @@ DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_charges_on_accepts_target_wallet;
 DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id_and_code;
 DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
@@ -2212,7 +2213,8 @@ CREATE TABLE public.charge_filters (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
     invoice_display_name character varying,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying
 );
 
 
@@ -7564,6 +7566,13 @@ CREATE INDEX index_charge_filter_values_on_organization_id ON public.charge_filt
 --
 
 CREATE INDEX index_charge_filters_on_charge_id ON public.charge_filters USING btree (charge_id);
+
+
+--
+-- Name: index_charge_filters_on_charge_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_charge_filters_on_charge_id_and_code ON public.charge_filters USING btree (charge_id, code) WHERE (deleted_at IS NULL);
 
 
 --
@@ -13097,6 +13106,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805110509'),
+('20260805110508'),
 ('20260724094543'),
 ('20260724094542'),
 ('20260724094541'),
@@ -14177,3 +14188,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
