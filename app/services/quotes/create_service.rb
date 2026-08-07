@@ -69,11 +69,18 @@ module Quotes
         params: params.slice(
           :billing_items,
           :content,
-          :currency,
           :start_date,
           :end_date
-        )
+        ).merge(currency: deal_currency)
       )
+    end
+
+    # The deal currency follows the billing object when there is one, and only then the customer's
+    # own default. It stays editable on the draft through QuoteVersions::UpdateService.
+    def deal_currency
+      return subscription.plan_amount_currency if subscription
+
+      customer.currency.presence || customer.billing_entity.default_currency
     end
 
     def add_owners!(quote:)

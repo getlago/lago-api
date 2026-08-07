@@ -3468,7 +3468,6 @@ input CreateQuoteInput {
   """
   clientMutationId: String
   content: String
-  currency: String
   customerId: ID!
   endDate: ISO8601Date
   orderType: OrderTypeEnum!
