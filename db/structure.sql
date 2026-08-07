@@ -921,6 +921,7 @@ DROP INDEX IF EXISTS public.idx_usage_thresholds_subscription_recurring;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_plan_recurring;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_subscription_recurring;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_plan_recurring;
+DROP INDEX IF EXISTS public.idx_usage_realtime_projections_on_org_and_subscription;
 DROP INDEX IF EXISTS public.idx_unique_tax_code_per_organization;
 DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
@@ -1009,6 +1010,7 @@ ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pk
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS user_devices_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_realtime_projections DROP CONSTRAINT IF EXISTS usage_realtime_projections_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_triggered_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS usage_monitoring_subscription_activities_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_alerts_pkey;
@@ -1146,6 +1148,7 @@ DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.user_devices;
+DROP TABLE IF EXISTS public.usage_realtime_projections;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
@@ -5728,6 +5731,29 @@ ALTER SEQUENCE public.usage_monitoring_subscription_activities_id_seq OWNED BY p
 
 
 --
+-- Name: usage_realtime_projections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_realtime_projections (
+    subscription_id uuid NOT NULL,
+    billing_period_id uuid NOT NULL,
+    charge_id uuid NOT NULL,
+    charge_filter_id character varying DEFAULT ''::character varying NOT NULL,
+    grouped_by character varying DEFAULT '{}'::character varying NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_id uuid,
+    code character varying NOT NULL,
+    aggregation_type character varying NOT NULL,
+    period_charges_from timestamp(6) without time zone NOT NULL,
+    period_charges_to timestamp(6) without time zone NOT NULL,
+    events_count bigint DEFAULT 0 NOT NULL,
+    units numeric DEFAULT 0.0 NOT NULL,
+    last_event_at timestamp(6) without time zone,
+    last_ingested_at timestamp(6) without time zone
+);
+
+
+--
 -- Name: user_devices; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6906,6 +6932,14 @@ ALTER TABLE ONLY public.usage_monitoring_triggered_alerts
 
 
 --
+-- Name: usage_realtime_projections usage_realtime_projections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_realtime_projections
+    ADD CONSTRAINT usage_realtime_projections_pkey PRIMARY KEY (subscription_id, billing_period_id, charge_id, charge_filter_id, grouped_by);
+
+
+--
 -- Name: usage_thresholds usage_thresholds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7559,6 +7593,13 @@ CREATE UNIQUE INDEX idx_unique_privilege_removal_per_subscription ON public.enti
 --
 
 CREATE UNIQUE INDEX idx_unique_tax_code_per_organization ON public.taxes USING btree (code, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_usage_realtime_projections_on_org_and_subscription; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usage_realtime_projections_on_org_and_subscription ON public.usage_realtime_projections USING btree (organization_id, subscription_id);
 
 
 --
@@ -14205,6 +14246,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260807173549'),
 ('20260807150000'),
 ('20260803162623'),
 ('20260724094543'),
