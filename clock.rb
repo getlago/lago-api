@@ -50,6 +50,14 @@ module Clockwork
       .perform_later
   end
 
+  if ENV["LAGO_RISINGWAVE_USAGE_PARITY_CHECK_ENABLED"] == "true"
+    every(1.hour, "schedule:usage_projections_parity_check") do
+      Clock::UsageProjectionsParityCheckJob
+        .set(sentry: {"slug" => "lago_usage_projections_parity_check", "cron" => "0 * * * *"})
+        .perform_later
+    end
+  end
+
   lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
   every(lifetime_usage_refresh_interval.to_i.seconds, "schedule:refresh_lifetime_usages") do
     unless ENV["LAGO_DISABLE_LIFETIME_USAGE_REFRESH"] == "true"

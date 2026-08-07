@@ -13,7 +13,11 @@ module BillableMetrics
     def self.aggregator_class(charge, current_usage)
       case charge.billable_metric.aggregation_type.to_sym
       when :count_agg
-        BillableMetrics::Aggregations::CountService
+        if current_usage && UsageProjections.eligible_charge?(charge)
+          BillableMetrics::Aggregations::Realtime::CountService
+        else
+          BillableMetrics::Aggregations::CountService
+        end
 
       when :latest_agg
         raise(NotImplementedError) if charge.pay_in_advance? && !current_usage
@@ -28,6 +32,8 @@ module BillableMetrics
       when :sum_agg
         if charge.prorated?
           BillableMetrics::ProratedAggregations::SumService
+        elsif current_usage && UsageProjections.eligible_charge?(charge)
+          BillableMetrics::Aggregations::Realtime::SumService
         else
           BillableMetrics::Aggregations::SumService
         end
