@@ -4,6 +4,11 @@ module Wallets
   class ThresholdTopUpService < BaseService
     Result = BaseResult
 
+    BURST_TOP_UPS = 3
+    BURST_WINDOW = 10.minutes
+    MAX_TOP_UPS_PER_DAY = 25
+    DAILY_WINDOW = 24.hours
+
     def initialize(wallet:)
       @wallet = wallet
       super
@@ -13,6 +18,17 @@ module Wallets
       return result if rule.nil?
       return result if wallet.credits_ongoing_balance > rule.threshold_credits
       return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
+
+      daily_top_ups = top_ups_since(DAILY_WINDOW)
+      if daily_top_ups >= MAX_TOP_UPS_PER_DAY
+        report("Automatic wallet top-up daily limit reached", count: daily_top_ups, window: DAILY_WINDOW)
+        return result
+      end
+
+      burst_top_ups = top_ups_since(BURST_WINDOW)
+      if burst_top_ups >= BURST_TOP_UPS
+        report("Automatic wallet top-up burst", count: burst_top_ups, window: BURST_WINDOW)
+      end
 
       params = {
         wallet_id: wallet.id,
@@ -47,6 +63,23 @@ module Wallets
 
     def pending_transactions_amount
       @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:amount)
+    end
+
+    def top_ups_since(window)
+      wallet.wallet_transactions.where(source: :threshold).where(created_at: window.ago..).count
+    end
+
+    def report(message, count:, window:)
+      Sentry.capture_message(
+        message,
+        level: :warning,
+        extra: {
+          wallet_id: wallet.id,
+          organization_id: wallet.organization_id,
+          top_ups: count,
+          window_minutes: window.in_minutes.to_i
+        }
+      )
     end
   end
 end

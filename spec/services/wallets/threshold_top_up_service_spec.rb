@@ -338,5 +338,69 @@ RSpec.describe Wallets::ThresholdTopUpService do
         end
       end
     end
+
+    # A rule answering a shortfall it cannot close charges the customer once per cycle
+    # until something else stops it. Refusing has its own cost, because the wallet then
+    # stays short, so a burst only raises an alert and the rule is stopped outright only
+    # at a ceiling that normal wallets never reach.
+    describe "runaway top-ups" do
+      before { allow(Sentry).to receive(:capture_message) }
+
+      context "when the wallet topped up repeatedly in the last few minutes" do
+        before { create_list(:wallet_transaction, described_class::BURST_TOP_UPS, wallet:, source: :threshold) }
+
+        it "still tops up, because the shortfall is real" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+
+        it "reports the burst, so a person hears about it" do
+          top_up_service.call
+
+          expect(Sentry).to have_received(:capture_message)
+            .with("Automatic wallet top-up burst", hash_including(level: :warning))
+        end
+      end
+
+      context "when the wallet reached the daily ceiling" do
+        before { create_list(:wallet_transaction, described_class::MAX_TOP_UPS_PER_DAY, wallet:, source: :threshold) }
+
+        it "refuses the top-up" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+
+        it "reports the ceiling rather than the burst" do
+          top_up_service.call
+
+          expect(Sentry).to have_received(:capture_message)
+            .with("Automatic wallet top-up daily limit reached", hash_including(level: :warning))
+        end
+      end
+
+      context "when the earlier top-ups fall outside both windows" do
+        before do
+          create_list(
+            :wallet_transaction,
+            described_class::MAX_TOP_UPS_PER_DAY,
+            wallet:,
+            source: :threshold,
+            created_at: described_class::DAILY_WINDOW.ago - 1.hour
+          )
+        end
+
+        it "tops up without reporting" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          expect(Sentry).not_to have_received(:capture_message)
+        end
+      end
+
+      context "when the earlier transactions were not automatic top-ups" do
+        before { create_list(:wallet_transaction, described_class::MAX_TOP_UPS_PER_DAY, wallet:, source: :manual) }
+
+        it "tops up without reporting" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          expect(Sentry).not_to have_received(:capture_message)
+        end
+      end
+    end
   end
 end
