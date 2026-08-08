@@ -4,8 +4,11 @@ module WalletTransactions
   class MarkAsFailedService < BaseService
     Result = BaseResult[:wallet_transaction]
 
-    def initialize(wallet_transaction:)
+    SETTLED_FAILURE_WEBHOOK = "wallet_transaction.payment_failure_after_settlement"
+
+    def initialize(wallet_transaction:, notify_settled_failure: false)
       @wallet_transaction = wallet_transaction
+      @notify_settled_failure = notify_settled_failure
       super
     end
 
@@ -17,8 +20,12 @@ module WalletTransactions
     def call
       return result unless wallet_transaction
       return result if wallet_transaction.failed?
-      # note: if a wallet transaction is settled, but they mark payment as failed, they need to void credits manually
-      return result if wallet_transaction.settled?
+
+      if wallet_transaction.settled?
+        # note: credits were already granted, they can only be voided manually
+        notify_settled_failure! if notify_settled_failure
+        return result
+      end
 
       wallet_transaction.mark_as_failed!
       after_commit { SendWebhookJob.perform_later("wallet_transaction.updated", wallet_transaction) }
@@ -29,6 +36,12 @@ module WalletTransactions
 
     private
 
-    attr_reader :wallet_transaction
+    attr_reader :wallet_transaction, :notify_settled_failure
+
+    def notify_settled_failure!
+      return if Webhook.exists?(object: wallet_transaction, webhook_type: SETTLED_FAILURE_WEBHOOK)
+
+      after_commit { SendWebhookJob.perform_later(SETTLED_FAILURE_WEBHOOK, wallet_transaction) }
+    end
   end
 end
