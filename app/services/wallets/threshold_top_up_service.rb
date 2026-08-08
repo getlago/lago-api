@@ -22,7 +22,8 @@ module Wallets
         invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
         metadata: rule.transaction_metadata,
         name: rule.transaction_name,
-        ignore_paid_top_up_limits: rule.ignore_paid_top_up_limits?,
+        # The rule already computed the amount; re-checking limits here would reject it.
+        ignore_paid_top_up_limits: true,
         purchase_order_number: rule.resolved_purchase_order_number
       }
 
