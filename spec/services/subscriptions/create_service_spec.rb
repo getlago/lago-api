@@ -1028,13 +1028,11 @@ RSpec.describe Subscriptions::CreateService do
       context "when new plan has different currency than the old plan" do
         let(:plan) { create(:plan, amount_cents: 200, organization:, amount_currency: "USD") }
 
-        it "fails" do
+        it "creates the subscription (currency is a default preference)" do
           result = create_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+          expect(result).to be_success
+          expect(result.subscription).to be_present
         end
       end
 

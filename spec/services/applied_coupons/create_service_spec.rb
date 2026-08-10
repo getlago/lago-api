@@ -105,11 +105,10 @@ RSpec.describe AppliedCoupons::CreateService do
 
         before { customer.update!(currency: "EUR") }
 
-        it "fails" do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:currency)
-          expect(create_result.error.messages[:currency]).to include("currencies_does_not_match")
+        it "applies the coupon (currency is a default preference)" do
+          expect(create_result).to be_success
+          expect(create_result.applied_coupon.amount_currency).to eq("NOK")
+          expect(customer.reload.currency).to eq("EUR")
         end
       end
     end
@@ -224,11 +223,10 @@ RSpec.describe AppliedCoupons::CreateService do
 
       before { customer.update!(currency: "EUR") }
 
-      it "fails" do
-        expect(create_result).not_to be_success
-        expect(create_result.error).to be_a(BaseService::ValidationFailure)
-        expect(create_result.error.messages.keys).to include(:currency)
-        expect(create_result.error.messages[:currency]).to include("currencies_does_not_match")
+      it "applies the coupon (currency is a default preference)" do
+        expect(create_result).to be_success
+        expect(create_result.applied_coupon.amount_currency).to eq("NOK")
+        expect(customer.reload.currency).to eq("EUR")
       end
     end
 

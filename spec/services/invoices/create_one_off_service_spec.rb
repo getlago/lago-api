@@ -353,13 +353,11 @@ RSpec.describe Invoices::CreateOneOffService do
     context "when currency does not match" do
       let(:currency) { "NOK" }
 
-      it "fails" do
+      it "creates the invoice (currency is a default preference)" do
         result = described_class.call(**args)
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:currency)
-        expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+        expect(result).to be_success
+        expect(result.invoice.currency).to eq("NOK")
       end
     end
 
