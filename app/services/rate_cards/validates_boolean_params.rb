@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
 module RateCards
-  # Rails casts any non-falsey value to true on a boolean column, so a garbage
-  # string like "hello" would silently become `true`. Reject non-boolean input
-  # with a 422 instead. nil is allowed (missing key or explicit null falls back
-  # to the column default). GraphQL is already protected by its Boolean arg type;
-  # this guards the permissive JSON REST layer.
+  # Rails casts any non-falsey value to true on boolean columns; reject
+  # non-boolean input from the permissive REST layer instead. nil is allowed.
   module ValidatesBooleanParams
     BOOLEAN_FIELDS = %i[proration display_on_invoice wallet_targetable].freeze
 

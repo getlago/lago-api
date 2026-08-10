@@ -48,9 +48,7 @@ module RateCards
         applied_pricing_unit_code: params[:applied_pricing_unit_code],
         wallet_targetable: params[:wallet_targetable]
       }
-      # proration and display_on_invoice are NOT NULL with a DB default; only set
-      # them when a value is given so a missing key OR an explicit null falls back
-      # to the column default instead of inserting NULL.
+      # NOT NULL columns with DB defaults: only set when a value is given.
       attributes[:proration] = params[:proration] unless params[:proration].nil?
       attributes[:display_on_invoice] = params[:display_on_invoice] unless params[:display_on_invoice].nil?
       attributes[:regroup_paid_fees] = params[:regroup_paid_fees] unless params[:regroup_paid_fees].nil?

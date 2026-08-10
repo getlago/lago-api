@@ -6,12 +6,8 @@ module RateCards
 
     Result = BaseResult[:rate_card]
 
-    # The billing-semantic fields are locked once any rate exists on the card —
-    # changing them would silently alter what the existing rates mean (currency
-    # of the amounts, advance/arrears validity of the rate models, proration of
-    # partial periods, pricing-unit conversions, invoicing and wallet
-    # eligibility of the fees): create a new card instead. Only name and
-    # description stay editable.
+    # Billing-semantic fields freeze once a rate exists — changing them would
+    # alter what the existing rates mean; create a new card instead.
     LOCKED_WITH_RATES = %i[currency applied_pricing_unit_code billing_timing proration regroup_paid_fees display_on_invoice wallet_targetable].freeze
 
     def initialize(rate_card:, params:)
@@ -28,9 +24,7 @@ module RateCards
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 
-      # An explicit null resets regroup_paid_fees to none — the column is NOT
-      # NULL, absence of regrouping is a real value. Normalised here so the
-      # locked-field comparison below doesn't read null as a phantom change.
+      # An explicit null means none — the column is NOT NULL.
       if params.key?(:regroup_paid_fees) && params[:regroup_paid_fees].nil?
         params[:regroup_paid_fees] = "none"
       end

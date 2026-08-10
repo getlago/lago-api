@@ -4,8 +4,9 @@ module RateCardRates
   class UpdateService < BaseService
     Result = BaseResult[:rate_card_rate]
 
-    # Per the editability matrix: a terminated rate is frozen, an active rate only
-    # accepts new pricing values, a pending rate is fully editable.
+    # Terminated rates are frozen, active rates only accept new pricing values,
+    # pending rates are fully editable. Frozen fields are rejected on presence:
+    # sending one on an active rate is an error even with an unchanged value.
     FROZEN_ON_ACTIVE = %i[effective_from rate_model min_amount_cents billing_interval_count billing_interval_unit].freeze
 
     def initialize(rate_card_rate:, params:)

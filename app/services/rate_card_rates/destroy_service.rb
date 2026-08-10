@@ -21,8 +21,7 @@ module RateCardRates
         return result.single_validation_failure!(field: :rate_card, error_code: "attached_to_subscriptions")
       end
 
-      # Active and terminated rates are kept for audit: the timeline only moves
-      # forward by appending new rates.
+      # Active and terminated rates are kept for audit.
       unless rate_card_rate.pending?
         return result.single_validation_failure!(field: :status, error_code: "only_pending_rates_can_be_deleted")
       end
