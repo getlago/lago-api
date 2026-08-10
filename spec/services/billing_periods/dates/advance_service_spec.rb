@@ -7,11 +7,10 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
     subject(:result) do
       described_class.call(
         billing_anchor_date:,
-        timezone: "UTC",
+        options:,
         started_at:,
         rates:,
-        range:,
-        exclude_out_of_range:
+        range:
       )
     end
 
@@ -22,6 +21,13 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
     let(:started_at) { Time.zone.parse("2022-02-01") }
     let(:range) { Date.parse("2022-03-01")..Date.parse("2022-03-31") }
     let(:exclude_out_of_range) { false }
+    let(:options) do
+      BillingPeriods::DatesService::Options.new(
+        timezone: "UTC",
+        exclude_out_of_range:,
+        realign_billing_anchor: false
+      )
+    end
     let(:rates) { [rate] }
     let(:rate) do
       create(
@@ -142,22 +148,22 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
         )
       end
 
-      it "uses each rate interval while splitting on effective dates" do
+      it "uses the interval active at the cycle start while splitting on effective dates" do
         expect(result.next_billing_at).to eq(Time.zone.parse("2026-06-01"))
         expect(result.periods.map { [it.period_from, it.period_to, it.rate] }).to eq(
           [
             [Time.zone.parse("2026-01-01"), end_of_day.call("2026-01-31"), rate],
             [Time.zone.parse("2026-02-01"), end_of_day.call("2026-02-28"), rate],
             [Time.zone.parse("2026-03-01"), Time.zone.parse("2026-03-14 23:59:59.999999"), rate],
-            [Time.zone.parse("2026-03-15"), end_of_day.call("2026-03-18"), second_rate],
-            [Time.zone.parse("2026-03-19"), end_of_day.call("2026-03-25"), second_rate],
-            [Time.zone.parse("2026-03-26"), end_of_day.call("2026-04-01"), second_rate],
+            [Time.zone.parse("2026-03-15"), end_of_day.call("2026-03-31"), second_rate],
+            [Time.zone.parse("2026-04-01"), end_of_day.call("2026-04-01"), second_rate],
             [Time.zone.parse("2026-04-02"), end_of_day.call("2026-04-08"), second_rate],
             [Time.zone.parse("2026-04-09"), end_of_day.call("2026-04-15"), second_rate],
             [Time.zone.parse("2026-04-16"), end_of_day.call("2026-04-22"), second_rate],
             [Time.zone.parse("2026-04-23"), end_of_day.call("2026-04-29"), second_rate],
             [Time.zone.parse("2026-04-30"), Time.zone.parse("2026-04-30 23:59:59.999999"), second_rate],
-            [Time.zone.parse("2026-05-01"), end_of_day.call("2026-05-31"), third_rate]
+            [Time.zone.parse("2026-05-01"), end_of_day.call("2026-05-06"), third_rate],
+            [Time.zone.parse("2026-05-07"), end_of_day.call("2026-05-31"), third_rate]
           ]
         )
       end

@@ -88,18 +88,10 @@ module Api
       def bill
         # `subscription_external_ids` is accepted as an alias so the body reads
         # unambiguously; the path form supplies a single `external_id`.
-        external_ids = Array.wrap(
-          params[:external_ids].presence ||
-            params[:subscription_external_ids].presence ||
-            params[:external_id]
-        ).map(&:to_s).reject(&:blank?).uniq
-        return not_found_error(resource: "subscription") if external_ids.empty?
-
-        subscriptions = current_organization.subscriptions
-          .where(external_id: external_ids, status: :active).to_a
+        subscriptions = active_subscriptions
+        return not_found_error(resource: "subscription") unless subscriptions
         # Fail on an unknown id rather than silently billing the subset: a typo in a test
         # call should be visible, not look like "that subscription had nothing to bill".
-        return not_found_error(resource: "subscription") if subscriptions.size != external_ids.size
 
         result = ::V2::Subscriptions::BillService.call(
           subscriptions:,
@@ -126,7 +118,159 @@ module Api
         end
       end
 
+      # Testing helper: returns the billing periods that would be generated for
+      # active product-catalog subscriptions without creating billing cycles or invoices.
+      def cycles
+        subscriptions = active_subscriptions
+        return not_found_error(resource: "subscription") unless subscriptions
+
+        preload_cycle_associations(subscriptions)
+        cycles, next_billing_at = cycles_payload_for(subscriptions)
+
+        render json: {cycles:, next_billing_at: next_billing_at&.iso8601}
+      end
+
       private
+
+      def subscription_external_ids
+        @subscription_external_ids ||= Array.wrap(
+          params[:external_ids].presence ||
+            params[:subscription_external_ids].presence ||
+            params[:external_id]
+        ).map(&:to_s).reject(&:blank?).uniq
+      end
+
+      def active_subscriptions_for(external_ids)
+        current_organization.subscriptions.where(external_id: external_ids, status: :active).to_a
+      end
+
+      def active_subscriptions
+        return if subscription_external_ids.empty?
+
+        subscriptions = active_subscriptions_for(subscription_external_ids)
+        return if subscriptions.size != subscription_external_ids.size
+
+        subscriptions
+      end
+
+      def cycles_payload_for(subscriptions)
+        cycles = []
+        next_billing_ats = []
+
+        subscriptions.each do |subscription|
+          subscription_cycles, subscription_next_billing_ats = cycles_for(subscription)
+          cycles.concat(subscription_cycles)
+          next_billing_ats.concat(subscription_next_billing_ats)
+        end
+
+        [cycles, next_billing_ats.compact.max]
+      end
+
+      def cycles_for(subscription)
+        cycles = []
+        next_billing_ats = []
+        plan_rate_cards = subscription.plan.applied_rate_cards.to_a
+
+        subscription.applied_rate_cards.each do |subscription_rate_card|
+          rates = rates_for(subscription_rate_card)
+          next if rates.empty?
+
+          dates = BillingPeriods::DatesService.from_subscription_rate_card(
+            subscription_rate_card,
+            rates:,
+            rate_phases: rate_phases_for(subscription_rate_card, plan_rate_cards:),
+            range: subscription.started_at..cycles_end_at,
+            options: cycles_date_options(subscription)
+          )
+
+          next_billing_ats << dates.next_billing_at
+          cycles.concat(dates.periods.map { |period| serialize_period(subscription_rate_card, period) })
+        end
+
+        [cycles, next_billing_ats]
+      end
+
+      def rates_for(subscription_rate_card)
+        subscription_rate_card.rate_card.rates.order(:effective_from)
+      end
+
+      def preload_cycle_associations(subscriptions)
+        ActiveRecord::Associations::Preloader.new(
+          records: subscriptions,
+          associations: [
+            :customer,
+            {applied_rate_cards: [:rate_phases, {rate_card: :rates}]},
+            {plan: {applied_rate_cards: :rate_phases}}
+          ]
+        ).call
+      end
+
+      def rate_phases_for(subscription_rate_card, plan_rate_cards:)
+        ::SubscriptionRateCards::ResolveRatePhasesService.call!(
+          subscription_rate_card:,
+          plan_rate_cards:
+        ).rate_phases
+      end
+
+      def cycles_end_at
+        @cycles_end_at ||= if params[:end_on].present?
+          params[:end_on].to_date.end_of_day
+        else
+          Time.current
+        end
+      end
+
+      def cycles_date_options(subscription)
+        BillingPeriods::DatesService::Options.new(
+          timezone: subscription.customer.applicable_timezone,
+          exclude_out_of_range: false,
+          realign_billing_anchor: true
+        )
+      end
+
+      def serialize_period(subscription_rate_card, period)
+        {
+          subscription_external_id: subscription_rate_card.subscription.external_id,
+          subscription_started_at: subscription_rate_card.subscription.started_at.iso8601,
+          applied_rate_card_id: subscription_rate_card.id,
+          applied_rate_card_code: subscription_rate_card.rate_card.code,
+          cycle_index: period.cycle_index,
+          period_from: period.period_from.iso8601,
+          period_to: period.period_to.iso8601,
+          billing_at: period.billing_at.iso8601,
+          rate_phase_code: period.rate_phase&.code,
+          rate_override: serialize_rate_override(period.rate_override),
+          rate: serialize_rate(period),
+          rate_code: period.rate.code
+        }
+      end
+
+      def serialize_rate(period)
+        return if period.rate_override
+
+        rate = period.rate
+
+        {
+          lago_id: rate.id,
+          code: rate.code,
+          rate_model: rate.rate_model,
+          rate_properties: rate.rate_properties,
+          billing_interval_count: rate.billing_interval_count,
+          billing_interval_unit: rate.billing_interval_unit
+        }
+      end
+
+      def serialize_rate_override(rate_override)
+        return unless rate_override
+
+        {
+          lago_id: rate_override.id,
+          rate_model: rate_override.rate_model,
+          rate_properties: rate_override.rate_properties,
+          billing_interval_count: rate_override.billing_interval_count,
+          billing_interval_unit: rate_override.billing_interval_unit
+        }
+      end
 
       def resource_name
         "subscription"

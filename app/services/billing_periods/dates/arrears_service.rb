@@ -11,24 +11,28 @@ module BillingPeriods
     class ArrearsService < BaseService
       private
 
-      def segment_start_for(current_rate)
-        [started_at.utc, current_rate.effective_from.utc].compact.max
+      def segment_range_for(cycle)
+        [cycle.period_from, cycle.period_to]
       end
 
-      def segment_end_for(next_rate)
-        rate_segment_end(next_rate)
+      def next_billing_at_for(boundaries, boundary_index)
+        boundaries.at(boundary_index + 2).utc
       end
 
-      def starting_index(boundaries, _segment_start)
-        boundaries.index_on_or_before(range_begin.in_time_zone(timezone))
+      def next_cycle_start_for(cycle)
+        cycle_due_at(cycle)
       end
 
-      def generation_end(_segment_end)
-        range_end
+      def cycle_due?(cycle)
+        cycle_due_at(cycle) <= range_end && cycle.next_billing_at > range_begin
       end
 
-      def period_index(index)
-        index - 1
+      def cycle_due_after_range?(cycle)
+        cycle_due_at(cycle) > range_end
+      end
+
+      def cycle_due_at(cycle)
+        cycle.period_to.in_time_zone(timezone).to_date.next_day.beginning_of_day.utc
       end
     end
   end

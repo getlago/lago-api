@@ -55,6 +55,8 @@ module Subscriptions
       # The rate at signing sets the interval/timing FirstPeriodService needs. Without a
       # resolvable rate there is no boundary to compute, so fall back to started_at and
       # let a later scheduler pass advance the clock once the catalog resolves.
+      #
+      # NOTE: Shall we consider the rate phases here as well?
       def initial_next_billing_at(item)
         rate = item.rate_card&.rate_active_at(started_at)
         return started_at unless rate
