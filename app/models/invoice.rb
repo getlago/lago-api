@@ -775,6 +775,8 @@ end
 #  payment_due_date                        :date
 #  payment_overdue                         :boolean          default(FALSE)
 #  payment_status                          :integer          default("pending"), not null
+#  payment_term                            :jsonb
+#  payment_term_source                     :string
 #  prepaid_credit_amount_cents             :bigint           default(0), not null
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
