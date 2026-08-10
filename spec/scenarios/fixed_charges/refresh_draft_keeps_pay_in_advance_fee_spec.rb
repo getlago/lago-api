@@ -23,8 +23,9 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
 
   let(:subscription_date) { DateTime.new(2024, 3, 1) }
   let(:subscription) { customer.subscriptions.sole }
-  # The grace period keeps this one as a draft, so it is the invoice the refresh rebuilds.
-  let(:draft) { subscription.invoices.order(:created_at).first }
+  let(:draft) { subscription.invoices.draft.sole }
+  # 2 units x 239.90, a full calendar month so proration is a no-op
+  let(:fee_amount_cents) { 47_980 }
 
   before do
     fixed_charge
@@ -39,7 +40,6 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
           plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2}]}
         }
       )
-      perform_all_enqueued_jobs
     end
 
     # Repeating units that are already billed leaves the pay in advance run with nothing
@@ -49,22 +49,20 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
         subscription,
         {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2, apply_units_immediately: true}]}}
       )
-      perform_all_enqueued_jobs
     end
   end
 
   # A refresh destroys the fees and builds them again. The zero-unit fee on the other
   # invoice billed nothing, so it is not proof of billing and must not stop the rebuild.
   it "keeps the fee and the invoice total when the draft is refreshed" do
-    # 2 units x 239.90, a full calendar month so proration is a no-op
-    expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(47_980)
+    expect(draft.fees.fixed_charge.sole.amount_cents).to eq(fee_amount_cents)
 
     travel_to subscription_date + 1.day do
       refresh_invoice(draft)
     end
 
     draft.reload
-    expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(47_980)
-    expect(draft.total_amount_cents).to eq(47_980)
+    expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(fee_amount_cents)
+    expect(draft.total_amount_cents).to eq(fee_amount_cents)
   end
 end
