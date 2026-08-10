@@ -68,7 +68,15 @@ class KarafkaApp < Karafka::App
           # Under load this is a no-op — batches fill via max_messages first,
           # so batch-collapse is unaffected.
           max_wait_time 100
-          max_messages 500
+          # The sink emits one trigger per event and batch-collapse costs
+          # O(distinct customers), so the batch must be allowed to grow with
+          # the backlog: a small cap (500) makes each poll cover a thin slice
+          # of the stream while still paying a full refresh cycle, and the
+          # consumer falls behind at high event rates (measured: 98k lag at a
+          # sustained 500 ev/s). With a large cap the collapse ratio scales
+          # with the backlog and the consumer self-stabilizes at a cycle-time
+          # latency of roughly refresh_duration x active wallet customers.
+          max_messages 10_000
         end
       end
     end

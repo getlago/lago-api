@@ -15,6 +15,11 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
       .compact # upsert-format retractions arrive as tombstones (nil payload)
       .group_by { |payload| [payload["organization_id"], payload["customer_id"]] }
       .each do |(organization_id, customer_id), payloads|
+        # The trigger sink emits for every metered customer; most have no
+        # wallet. One indexed exists-check per distinct customer per batch
+        # keeps the refresh loop bounded to actual wallet holders.
+        next unless Wallet.active.exists?(organization_id:, customer_id:)
+
         wallet_codes = payloads.filter_map { |p| p["target_wallet_code"].presence }.uniq
 
         # Per-subscription watermarks: the refresh waits for projections to

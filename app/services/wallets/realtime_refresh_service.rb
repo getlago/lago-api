@@ -74,10 +74,16 @@ module Wallets
         pending.delete_if do |subscription_id, watermark_ms|
           # Millisecond-granularity comparison on integers: float Time
           # conversion is off by up to a microsecond and can never match.
-          UsageRealtimeProjection
-            .where(subscription_id:)
-            .where("(EXTRACT(EPOCH FROM last_ingested_at) * 1000)::bigint >= ?", watermark_ms.to_i)
-            .exists?
+          # uncached: Karafka consumes inside the Rails executor, which turns
+          # on the AR query cache — without it, a poll that runs before the
+          # projection lands is replayed from cache every iteration and the
+          # wait can only time out.
+          UsageRealtimeProjection.uncached do
+            UsageRealtimeProjection
+              .where(subscription_id:)
+              .where("(EXTRACT(EPOCH FROM last_ingested_at) * 1000)::bigint >= ?", watermark_ms.to_i)
+              .exists?
+          end
         end
         break if pending.empty?
 
