@@ -154,6 +154,10 @@ module Invoices
       ]
     end
 
+    # NOTE: ChargeFilter#to_h only serializes the filter keys and values, so it cannot be used
+    #       alone here: two filters matching on keys/values but priced differently would be
+    #       treated as duplicates and one of the fees would be dropped from the usage.
+    #       Sorting makes the signature independent from the filters ordering.
     def charge_filters_signature(charge)
       charge.filters.map { |f| [f.properties, f.invoice_display_name, f.to_h.sort] }.sort_by(&:to_s)
     end
