@@ -47,10 +47,10 @@ RSpec.describe ProductsQuery do
     end
   end
 
-  context "with an product_types filter" do
-    let(:filters) { {product_types: %w[fixed]} }
+  context "with an product_type filter" do
+    let(:filters) { {product_type: "fixed"} }
 
-    it "returns only items of those types" do
+    it "returns only items of that type" do
       expect(result.products).to eq([fixed_item])
     end
   end

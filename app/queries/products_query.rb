@@ -2,7 +2,7 @@
 
 class ProductsQuery < BaseQuery
   Result = BaseResult[:products]
-  Filters = BaseFilters[:product_category_ids, :without_product_category, :product_types]
+  Filters = BaseFilters[:product_category_ids, :without_product_category, :product_type]
 
   def call
     products = base_scope.result.includes(:product_category, :billable_metric)
@@ -12,7 +12,7 @@ class ProductsQuery < BaseQuery
     if filters.product_category_ids.present? || filters.without_product_category.present?
       products = with_product_category(products)
     end
-    products = with_product_types(products) if filters.product_types.present?
+    products = with_product_type(products) if filters.product_type.present?
 
     result.products = products
     result
@@ -45,7 +45,7 @@ class ProductsQuery < BaseQuery
     end
   end
 
-  def with_product_types(scope)
-    scope.where(product_type: filters.product_types)
+  def with_product_type(scope)
+    scope.where(product_type: filters.product_type)
   end
 end
