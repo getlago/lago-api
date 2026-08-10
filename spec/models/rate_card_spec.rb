@@ -100,6 +100,26 @@ RSpec.describe RateCard do
       end
     end
 
+    describe "regroup_paid_fees compatibility" do
+      it "names the field that actually conflicts" do
+        arrears = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "arrears", display_on_invoice: false)
+        arrears.valid?
+        expect(arrears.errors.where(:regroup_paid_fees).map(&:type)).to eq([:not_allowed_for_billing_timing])
+
+        displayed = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: true)
+        displayed.valid?
+        expect(displayed.errors.where(:regroup_paid_fees).map(&:type)).to eq([:not_allowed_with_display_on_invoice])
+
+        both = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "arrears", display_on_invoice: true)
+        both.valid?
+        expect(both.errors.where(:regroup_paid_fees).map(&:type))
+          .to match_array(%i[not_allowed_for_billing_timing not_allowed_with_display_on_invoice])
+
+        valid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: false)
+        expect(valid).to be_valid
+      end
+    end
+
     describe "currency inclusion" do
       it "is valid with an accepted currency" do
         expect(build(:rate_card, currency: "USD")).to be_valid
@@ -154,6 +174,34 @@ RSpec.describe RateCard do
       create(:subscription_rate_card, organization: rate_card.organization, rate_card:)
 
       expect(rate_card.attached_to_plan_or_subscription?).to be(true)
+    end
+  end
+
+  describe "#attached_to_subscriptions?" do
+    subject(:rate_card) { create(:rate_card) }
+
+    it "is false without any subscription linkage" do
+      expect(rate_card.attached_to_subscriptions?).to be(false)
+    end
+
+    it "is false when on a plan without subscriptions" do
+      create(:plan_rate_card, organization: rate_card.organization, rate_card:)
+
+      expect(rate_card.attached_to_subscriptions?).to be(false)
+    end
+
+    it "is true when on a plan that has subscriptions" do
+      plan = create(:plan, organization: rate_card.organization)
+      create(:plan_rate_card, organization: rate_card.organization, plan:, rate_card:)
+      create(:subscription, plan:, organization: rate_card.organization)
+
+      expect(rate_card.attached_to_subscriptions?).to be(true)
+    end
+
+    it "is true when attached directly to a subscription" do
+      create(:subscription_rate_card, organization: rate_card.organization, rate_card:)
+
+      expect(rate_card.attached_to_subscriptions?).to be(true)
     end
   end
 end
