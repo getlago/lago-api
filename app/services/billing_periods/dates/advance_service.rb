@@ -11,24 +11,27 @@ module BillingPeriods
     class AdvanceService < BaseService
       private
 
-      def segment_start_for(current_rate)
-        [range_begin, started_at.utc, current_rate.effective_from.utc].compact.max
+      def segment_range_for(cycle)
+        [
+          [cycle.period_from, range_begin].max,
+          [cycle.period_to, range_end].min
+        ]
       end
 
-      def segment_end_for(next_rate)
-        [range_end, rate_segment_end(next_rate)].compact.min
+      def next_billing_at_for(boundaries, boundary_index)
+        boundaries.at(boundary_index + 1).utc
       end
 
-      def starting_index(boundaries, segment_start)
-        boundaries.index_on_or_before(segment_start.in_time_zone(timezone))
+      def next_cycle_start_for(cycle)
+        cycle.next_billing_at
       end
 
-      def generation_end(segment_end)
-        segment_end
+      def cycle_due?(cycle)
+        cycle.period_from <= range_end && cycle.next_billing_at > range_begin
       end
 
-      def period_index(index)
-        index
+      def cycle_due_after_range?(cycle)
+        cycle.period_from > range_end
       end
     end
   end

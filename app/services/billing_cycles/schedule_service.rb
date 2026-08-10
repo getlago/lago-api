@@ -51,6 +51,7 @@ module BillingCycles
       customer.subscription_rate_cards
         .where(started_at: ..range_end)
         .where("ended_at IS NULL OR ended_at >= ?", range_begin)
+        .includes(:rate_phases, subscription: {plan: {applied_rate_cards: :rate_phases}})
     end
 
     def schedule(subscription_rate_card)
@@ -58,7 +59,11 @@ module BillingCycles
       return if rates.empty?
 
       dates = BillingPeriods::DatesService.from_subscription_rate_card(
-        subscription_rate_card, rates:, range:, exclude_out_of_range: true
+        subscription_rate_card,
+        rates:,
+        rate_phases: rate_phases_for(subscription_rate_card),
+        range:,
+        options: dates_options(subscription_rate_card)
       )
       return if dates.periods.empty?
 
@@ -69,19 +74,13 @@ module BillingCycles
           subscription: subscription_rate_card.subscription,
           customer:,
           subscription_rate_card:,
-          billing_at: cycle_billing_at(period.period_to),
+          billing_at: period.billing_at,
           period_from: period.period_from,
           period_to: period.period_to
         )
       end
 
       advance_clock(subscription_rate_card, dates.next_billing_at)
-    end
-
-    def cycle_billing_at(period_to)
-      return Time.current if period_to < Time.current
-
-      period_to
     end
 
     def range_begin
@@ -106,6 +105,26 @@ module BillingCycles
         .where("effective_from <= ?", range_end)
         .where("next_effective_from IS NULL OR next_effective_from >= ?", range_begin)
         .order(:effective_from)
+    end
+
+    def dates_options(subscription_rate_card)
+      BillingPeriods::DatesService::Options.new(
+        timezone: subscription_rate_card.subscription.customer.applicable_timezone,
+        exclude_out_of_range: true,
+        realign_billing_anchor: true
+      )
+    end
+
+    def rate_phases_for(subscription_rate_card)
+      SubscriptionRateCards::ResolveRatePhasesService.call!(
+        subscription_rate_card:,
+        plan_rate_cards: plan_rate_cards_for(subscription_rate_card.subscription)
+      ).rate_phases
+    end
+
+    def plan_rate_cards_for(subscription)
+      @plan_rate_cards_by_subscription_id ||= {}
+      @plan_rate_cards_by_subscription_id[subscription.id] ||= subscription.plan.applied_rate_cards.to_a
     end
 
     def advance_clock(subscription_rate_card, next_billing_at)
