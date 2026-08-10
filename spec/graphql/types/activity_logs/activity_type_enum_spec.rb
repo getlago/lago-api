@@ -56,6 +56,9 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         feature_created
         feature_deleted
         feature_updated
+        product_filter_created
+        product_filter_updated
+        product_filter_deleted
         email_sent
       ]
     )
