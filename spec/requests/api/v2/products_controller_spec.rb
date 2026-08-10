@@ -145,6 +145,19 @@ RSpec.describe Api::V2::ProductsController do
           expect(json[:error_details][:product_category_code]).to eq(%w[attached_to_plan_or_subscription])
         end
       end
+
+      context "when the product_category_code is null" do
+        let(:product) { create(:product, organization:, product_category: other_product_category) }
+        let(:update_params) { {product_category_code: nil} }
+
+        it "detaches the item from its product_category" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:product][:product_category_code]).to be_nil
+          expect(product.reload.product_category).to be_nil
+        end
+      end
     end
 
     context "when the product does not exist" do
@@ -212,6 +225,17 @@ RSpec.describe Api::V2::ProductsController do
         subject
 
         expect(json[:products].map { it[:lago_id] }).to eq([fixed_item.id])
+      end
+
+      context "when the product_type is not a known type" do
+        let(:query_params) { "?product_type=bogus" }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:product_type]).to eq(%w[value_is_invalid])
+        end
       end
     end
 

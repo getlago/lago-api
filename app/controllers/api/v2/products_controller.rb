@@ -4,7 +4,7 @@ module Api
   module V2
     class ProductsController < Api::BaseController
       def create
-        if input_params.key?(:product_category_code) && product_category.nil?
+        if input_params[:product_category_code].present? && product_category.nil?
           return not_found_error(resource: "product_category")
         end
 
@@ -30,13 +30,14 @@ module Api
       def update
         product = current_organization.products.find_by(code: params[:code])
 
-        if update_params.key?(:product_category_code) && updated_product_category.nil?
+        if update_params[:product_category_code].present? && updated_product_category.nil?
           return not_found_error(resource: "product_category")
         end
 
         service_params = update_params.except(:product_category_code).to_h.symbolize_keys
+        # A blank code detaches the product from its product_category.
         if update_params.key?(:product_category_code)
-          service_params[:product_category_id] = updated_product_category.id
+          service_params[:product_category_id] = updated_product_category&.id
         end
 
         result = ::Products::UpdateService.call(product:, params: service_params)
@@ -70,6 +71,11 @@ module Api
       def index
         if index_product_category_codes.present? && index_product_categories.size != index_product_category_codes.size
           return not_found_error(resource: "product_category")
+        end
+
+        # The column is a PG enum: an unknown value would fail the SQL cast.
+        if params[:product_type].present? && !Product::PRODUCT_TYPES.value?(params[:product_type])
+          return validation_errors(errors: {product_type: ["value_is_invalid"]})
         end
 
         result = ::ProductsQuery.call(
