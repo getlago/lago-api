@@ -39,10 +39,14 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
       )
     end
 
-    # The units are already billed on the subscription invoice, so this second run
-    # writes a fee of zero units.
+    # Repeating units that are already billed leaves the pay in advance run with nothing
+    # to bill, so it writes a fee of zero units on a second invoice.
     travel_to subscription_date + 1.second do
-      Invoices::CreatePayInAdvanceFixedChargesService.call(subscription:, timestamp: Time.current.to_i)
+      update_subscription(
+        subscription,
+        {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2, apply_units_immediately: true}]}}
+      )
+      perform_all_enqueued_jobs
     end
   end
 
