@@ -324,13 +324,11 @@ RSpec.describe Customers::UpdateService do
           }
         end
 
-        it "fails" do
+        it "updates the currency" do
           result = customers_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+          expect(result).to be_success
+          expect(result.customer.currency).to eq("CAD")
         end
       end
     end
