@@ -44,12 +44,20 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
 
     # Repeating units that are already billed leaves the pay in advance run with nothing
     # to bill, so it writes a fee of zero units on a second invoice.
-    travel_to subscription_date + 1.second do
+    travel_to subscription_date + 1.hour do
       update_subscription(
         subscription,
         {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2, apply_units_immediately: true}]}}
       )
     end
+  end
+
+  # Pins the setup itself: without this fee on a second invoice there is nothing for the
+  # guard to misread, and the example below would pass whether or not the bug exists.
+  it "leaves a fee that billed nothing on a second invoice" do
+    placeholder = subscription.invoices.where.not(id: draft.id).sole
+
+    expect(placeholder.fees.fixed_charge.sole).to have_attributes(units: 0, amount_cents: 0)
   end
 
   # A refresh destroys the fees and builds them again. The zero-unit fee on the other
