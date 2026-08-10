@@ -443,6 +443,7 @@ end
 #  payment_provider                             :string
 #  payment_provider_code                        :string
 #  payment_receipt_counter                      :bigint           default(0), not null
+#  payment_term                                 :jsonb
 #  phone                                        :string
 #  shipping_address_line1                       :string
 #  shipping_address_line2                       :string
