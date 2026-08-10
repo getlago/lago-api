@@ -10757,7 +10757,7 @@ type ProductFilterValue {
 }
 
 """
-ProductCategory item filter value input arguments
+Product filter value input arguments
 """
 input ProductFilterValueInput {
   billableMetricFilterId: ID!

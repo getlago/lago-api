@@ -54761,7 +54761,7 @@
         {
           "kind": "INPUT_OBJECT",
           "name": "ProductFilterValueInput",
-          "description": "ProductCategory item filter value input arguments",
+          "description": "Product filter value input arguments",
           "fields": null,
           "inputFields": [
             {

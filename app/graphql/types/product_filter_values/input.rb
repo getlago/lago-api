@@ -4,7 +4,7 @@ module Types
   module ProductFilterValues
     class Input < BaseInputObject
       graphql_name "ProductFilterValueInput"
-      description "ProductCategory item filter value input arguments"
+      description "Product filter value input arguments"
 
       argument :billable_metric_filter_id, ID, required: true
       # Omitted for a key-only selection: the filter matches any value of the key.
