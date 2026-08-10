@@ -66,7 +66,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
     context "with both structural and business errors" do
       let(:plan_item) { super().merge("overrides" => {"amountCents" => -1}) }
       let(:quote_version) do
-        create(
+        build(
           :quote_version,
           quote:,
           organization:,

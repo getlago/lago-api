@@ -154,7 +154,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the currency is not ISO 4217" do
       let(:quote_version) do
-        create(
+        build(
           :quote_version,
           quote:,
           organization:,

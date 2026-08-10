@@ -9809,7 +9809,7 @@ enum OnTerminationInvoiceEnum {
 type Order {
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
-  currency: String
+  currency: CurrencyEnum
   customer: Customer!
   executeAt: ISO8601DateTime
   executedAt: ISO8601DateTime
@@ -11945,7 +11945,7 @@ type QuoteVersion {
   billingItems: JSON
   content: String
   createdAt: ISO8601DateTime!
-  currency: String
+  currency: CurrencyEnum
   endDate: ISO8601Date
   id: ID!
   mentionVariables: JSON!
@@ -14477,7 +14477,7 @@ input UpdateQuoteVersionInput {
   """
   clientMutationId: String
   content: String
-  currency: String
+  currency: CurrencyEnum
   endDate: ISO8601Date
   id: ID!
   startDate: ISO8601Date

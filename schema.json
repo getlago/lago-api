@@ -46773,8 +46773,8 @@
               "description": null,
               "args": [],
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -65118,8 +65118,8 @@
               "description": null,
               "args": [],
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -77367,8 +77367,8 @@
               "name": "currency",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
                 "ofType": null
               },
               "defaultValue": null,

@@ -9,7 +9,7 @@ module Types
       field :billing_items, GraphQL::Types::JSON, null: true
       field :content, String, null: true
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :currency, String, null: true
+      field :currency, Types::CurrencyEnum, null: true
       field :end_date, GraphQL::Types::ISO8601Date, null: true
       field :id, ID, null: false
       field :mention_variables, GraphQL::Types::JSON, null: false
