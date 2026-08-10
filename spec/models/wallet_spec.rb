@@ -15,6 +15,7 @@ RSpec.describe Wallet do
       expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
+      expect(subject).to have_many(:billing_object_connections).dependent(:destroy)
       expect(subject).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
       expect(subject).to have_many(:alerts).class_name("UsageMonitoring::Alert")
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")

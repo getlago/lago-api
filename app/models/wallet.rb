@@ -15,6 +15,7 @@ class Wallet < ApplicationRecord
 
   has_many :wallet_targets
   has_many :billable_metrics, through: :wallet_targets
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
 
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"

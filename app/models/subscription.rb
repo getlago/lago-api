@@ -19,6 +19,7 @@ class Subscription < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
   has_many :integration_resources, as: :syncable
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :fees
   has_many :applied_rate_cards, class_name: "SubscriptionRateCard"
   has_many :daily_usages
