@@ -10,7 +10,7 @@ RSpec.describe RateCardRates::DestroyService do
 
   context "with a pending rate" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
 
     it "soft deletes the rate" do
@@ -26,7 +26,7 @@ RSpec.describe RateCardRates::DestroyService do
 
   context "with an active rate" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.ago)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
     end
 
     it "returns a validation failure" do
@@ -46,7 +46,7 @@ RSpec.describe RateCardRates::DestroyService do
 
   context "when the card is attached to a subscription" do
     let(:rate_card_rate) do
-      create(:rate_card_rate, organization:, rate_card:, effective_datetime: 1.month.from_now)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
 
     before { create(:subscription_rate_card, organization:, rate_card:) }

@@ -27,7 +27,7 @@ module RateCardRates
       rate = rate_card.rates.create!(
         organization_id: rate_card.organization_id,
         code: params[:code].presence,
-        effective_datetime: params[:effective_datetime],
+        effective_from: params[:effective_from],
         rate_model: params[:rate_model],
         rate_properties: params[:rate_properties] || {},
         min_amount_cents: params[:min_amount_cents] || 0,

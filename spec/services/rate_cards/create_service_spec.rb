@@ -84,14 +84,14 @@ RSpec.describe RateCards::CreateService do
       params[:rates] = [
         {
           code: "launch_price",
-          effective_datetime: 1.minute.ago.iso8601,
+          effective_from: 1.minute.ago.beginning_of_day.iso8601,
           rate_model: "standard",
           rate_properties: {"amount" => "10"},
           billing_interval_unit: "month"
         },
         {
           code: "standard_price",
-          effective_datetime: 1.month.from_now.iso8601,
+          effective_from: 1.month.from_now.beginning_of_day.iso8601,
           rate_model: "standard",
           rate_properties: {"amount" => "12"},
           billing_interval_unit: "month"
@@ -102,7 +102,7 @@ RSpec.describe RateCards::CreateService do
     it "creates the card with its rates in one call" do
       expect { result }.to change(RateCardRate, :count).by(2)
 
-      rates = result.rate_card.rates.order(:effective_datetime)
+      rates = result.rate_card.rates.order(:effective_from)
       expect(rates.first.status).to eq("active")
       expect(rates.last.status).to eq("pending")
     end
@@ -113,7 +113,7 @@ RSpec.describe RateCards::CreateService do
     end
 
     context "when a nested rate is invalid" do
-      before { params[:rates] = [{code: "bad", rate_model: "standard", rate_properties: {}, billing_interval_unit: "month", effective_datetime: Time.current.iso8601}] }
+      before { params[:rates] = [{code: "bad", rate_model: "standard", rate_properties: {}, billing_interval_unit: "month", effective_from: Time.current.beginning_of_day.iso8601}] }
 
       it "returns a validation failure with prefixed keys and creates nothing" do
         expect { result }.not_to change(RateCard, :count)

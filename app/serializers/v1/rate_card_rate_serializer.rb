@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        effective_datetime: model.effective_datetime.iso8601,
+        effective_from: model.effective_from.iso8601,
         status: model.status,
         rate_model: model.rate_model,
         rate_properties: model.rate_properties,
