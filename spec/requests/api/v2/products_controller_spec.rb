@@ -218,6 +218,16 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:meta][:total_count]).to eq(2)
     end
 
+    it "returns the batched filters counts" do
+      create(:product_filter, organization:, product: usage_item)
+      create(:product_filter, organization:, product: usage_item, code: "second")
+
+      subject
+
+      counts = json[:products].to_h { [it[:lago_id], it[:filters_count]] }
+      expect(counts).to eq(usage_item.id => 2, fixed_item.id => 0)
+    end
+
     context "with an product_type filter" do
       let(:query_params) { "?product_type=fixed" }
 

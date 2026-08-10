@@ -59,7 +59,8 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.product_categories,
+              # Preloaded so products_count reads the loaded association.
+              result.product_categories.includes(:products),
               ::V1::ProductCategorySerializer,
               collection_name: "product_categories",
               meta: pagination_metadata(result.product_categories)

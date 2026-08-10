@@ -3,6 +3,8 @@
 module Api
   module V2
     class ProductsController < Api::BaseController
+      ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
+
       def create
         if input_params[:product_category_code].present? && product_category.nil?
           return not_found_error(resource: "product_category")
@@ -95,7 +97,8 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.products,
+              # Preloaded so filters_count reads the loaded association.
+              result.products.includes(:filters),
               ::V1::ProductSerializer,
               collection_name: "products",
               meta: pagination_metadata(result.products)
@@ -154,14 +157,9 @@ module Api
         render(json: ::V1::ProductSerializer.new(product, root_name: "product"))
       end
 
-      # billable_metric and product_category are supplied by code on the REST API, so a
-      # validation error about either must name the code field the caller sent,
-      # not the neutral association name the shared service/model emits.
-      REST_ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
-
       def render_item_error(result)
         if result.error.is_a?(BaseService::ValidationFailure)
-          messages = result.error.messages.transform_keys { |key| REST_ERROR_FIELDS[key.to_sym] || key }
+          messages = result.error.messages.transform_keys { |key| ERROR_FIELDS[key.to_sym] || key }
           return validation_errors(errors: messages)
         end
 

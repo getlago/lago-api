@@ -9,7 +9,7 @@ module V1
         code: model.code,
         description: model.description,
         invoice_display_name: model.invoice_display_name,
-        products_count: model.products.count,
+        products_count: model.products.size,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }

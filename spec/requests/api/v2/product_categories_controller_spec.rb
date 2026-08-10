@@ -151,6 +151,16 @@ RSpec.describe Api::V2::ProductCategoriesController do
       expect(json[:product_categories].first[:lago_id]).to be_present
     end
 
+    it "returns the batched products counts" do
+      product_category = create(:product_category, organization:)
+      create(:product, organization:, product_category:)
+
+      get_with_token(organization, "/api/v2/product_categories?per_page=10")
+
+      counts = json[:product_categories].to_h { [it[:lago_id], it[:products_count]] }
+      expect(counts[product_category.id]).to eq(1)
+    end
+
     it "does not return product_categories from other organizations" do
       other = create(:product_category)
 
