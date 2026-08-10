@@ -72,7 +72,7 @@ module Credits
 
     def apply_credit_to_fees(progressive_billing_invoice)
       # Use the loaded association so the credit stays visible to the caller's in-memory fees.
-      invoice_fees = invoice.fees.joins(charge: :parent).select(&:charge?)
+      invoice_fees = invoice.fees.select(&:charge?)
 
       progressive_billing_invoice.fees.charge.each do |progressive_fee|
         fee = invoice_fees.find { |f|
