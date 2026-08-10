@@ -72,12 +72,12 @@ module Credits
 
     def apply_credit_to_fees(progressive_billing_invoice)
       # Use the loaded association so the credit stays visible to the caller's in-memory fees.
-      invoice_fees = invoice.fees.select(&:charge?)
-      parent_charge_ids = parent_charge_ids_for(invoice_fees)
+      invoice_fees = invoice.fees.joins(charge: :parent).select(&:charge?)
 
       progressive_billing_invoice.fees.charge.each do |progressive_fee|
         fee = invoice_fees.find { |f|
-          matching_charge?(f, progressive_fee, parent_charge_ids) &&
+          matching_charge?(f, progressive_fee) &&
+            matching_charge_filter?(f, progressive_fee) &&
             f.charge_filter_id == progressive_fee.charge_filter_id &&
             f.grouped_by == progressive_fee.grouped_by
         }
@@ -89,18 +89,14 @@ module Credits
       end
     end
 
-    # Mirrors the charge matching used for total_charges_amount: a fee on an overridden (child)
-    # charge belongs to the progressive billing fee booked on its parent.
-    def matching_charge?(fee, progressive_fee, parent_charge_ids)
+    def matching_charge?(fee, progressive_fee)
       fee.charge_id == progressive_fee.charge_id ||
-        parent_charge_ids[fee.charge_id] == progressive_fee.charge_id
+        fee.charge&.parent_id == progressive_fee.charge_id
     end
 
-    def parent_charge_ids_for(fees)
-      charge_ids = fees.filter_map(&:charge_id).uniq
-      return {} if charge_ids.empty?
-
-      Charge.with_discarded.where(id: charge_ids).pluck(:id, :parent_id).to_h
+    def matching_charge_filter?(fee, progressive_fee)
+      fee.charge_filter_id == progressive_fee.charge_filter_id ||
+        fee.charge_filter&.code == progressive_fee.charge_filter&.code
     end
   end
 end
