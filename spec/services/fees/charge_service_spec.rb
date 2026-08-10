@@ -21,8 +21,9 @@ RSpec.describe Fees::ChargeService, :premium do
     )
   end
 
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:plan) { create_default(:plan, organization:) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:filtered_aggregations) { nil }
@@ -31,6 +32,7 @@ RSpec.describe Fees::ChargeService, :premium do
     create(
       :subscription,
       organization:,
+      plan:,
       status: :active,
       started_at: Time.zone.parse("2022-03-15"),
       customer:

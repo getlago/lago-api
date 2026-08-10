@@ -12,7 +12,7 @@ RSpec.describe Invoices::CalculateFeesService do
   end
 
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create_default(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:recurring) { false }
   let(:context) { nil }
@@ -103,8 +103,10 @@ RSpec.describe Invoices::CalculateFeesService do
 
   let(:event_timestamp) { [date_service.charges_to_datetime - 2.days, started_at].max }
 
+  let(:add_on) { create(:add_on, organization:) }
+
   let(:fixed_charge) do
-    create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "10"}, units: 10)
+    create(:fixed_charge, plan: subscription.plan, add_on:, charge_model: "standard", properties: {amount: "10"}, units: 10)
   end
 
   let(:fixed_charge_event) do
