@@ -22,26 +22,26 @@ module ProductFilters
         return resolved_values unless resolved_values.success?
       end
 
-      # NOTE: the code freezes as soon as the item is in a plan or subscription
-      if product_filter.attached_to_plan_or_subscription? &&
-          params.key?(:code) && params[:code]&.strip != product_filter.code
-        return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
-      end
+      product_filter.product.with_lock do
+        # NOTE: the code freezes as soon as the item is in a plan or subscription
+        if product_filter.attached_to_plan_or_subscription? &&
+            params.key?(:code) && params[:code]&.strip != product_filter.code
+          return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
+        end
 
-      if product_filter.attached_to_subscriptions? && params.key?(:values) && values_changed?
-        return result.single_validation_failure!(field: :values, error_code: "attached_to_subscriptions")
-      end
+        if product_filter.attached_to_subscriptions? && params.key?(:values) && values_changed?
+          return result.single_validation_failure!(field: :values, error_code: "attached_to_subscriptions")
+        end
 
-      if params.key?(:values)
-        values_validation = ProductFilters::ValidateValuesService.call(
-          product: product_filter.product,
-          values_params: resolved_values.values_params,
-          product_filter:
-        )
-        return values_validation unless values_validation.success?
-      end
+        if params.key?(:values)
+          values_validation = ProductFilters::ValidateValuesService.call(
+            product: product_filter.product,
+            values_params: resolved_values.values_params,
+            product_filter:
+          )
+          return values_validation unless values_validation.success?
+        end
 
-      ActiveRecord::Base.transaction do
         product_filter.name = params[:name] if params.key?(:name)
         product_filter.description = params[:description] if params.key?(:description)
         product_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)

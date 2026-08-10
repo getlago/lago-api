@@ -24,10 +24,10 @@ module ProductFilters
 
       return resolved_values unless resolved_values.success?
 
-      values_validation = ProductFilters::ValidateValuesService.call(product:, values_params: resolved_values.values_params)
-      return values_validation unless values_validation.success?
+      product.with_lock do
+        values_validation = ProductFilters::ValidateValuesService.call(product:, values_params: resolved_values.values_params)
+        return values_validation unless values_validation.success?
 
-      ActiveRecord::Base.transaction do
         product_filter = product.filters.create!(
           organization_id: product.organization_id,
           name: params[:name],
