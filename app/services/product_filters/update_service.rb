@@ -23,10 +23,6 @@ module ProductFilters
       end
 
       # NOTE: the code freezes as soon as the item is in a plan or subscription
-      #       (it is the filter's identity); the values only freeze once a
-      #       subscription bills through a card scoped to this filter. Clients
-      #       typically resend the whole payload on edit, so only an actual
-      #       change counts as a structural edit.
       if product_filter.attached_to_plan_or_subscription? &&
           params.key?(:code) && params[:code]&.strip != product_filter.code
         return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
@@ -71,12 +67,9 @@ module ProductFilters
 
     attr_reader :product_filter, :params
 
-    # value.to_s keeps key-only entries (nil) sortable next to valued entries
-    # for the same key — nil <=> String raises. It cannot conflate distinct
-    # entries: an empty-string value is invalid, so "" only ever means nil.
     def values_changed?
-      current = product_filter.values.map { |value| [value.billable_metric_filter_id.to_s, value.value.to_s] }.sort
-      submitted = resolved_values.values_params.map { |value| [value[:billable_metric_filter_id].to_s, value[:value].to_s] }.sort
+      current = product_filter.values.map { |v| [v.billable_metric_filter_id.to_s, v.value.to_s] }.sort
+      submitted = resolved_values.values_params.map { |v| [v[:billable_metric_filter_id].to_s, v[:value].to_s] }.sort
 
       current != submitted
     end

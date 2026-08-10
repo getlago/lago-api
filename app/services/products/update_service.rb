@@ -22,9 +22,6 @@ module Products
       product.description = params[:description] if params.key?(:description)
       product.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
 
-      # NOTE: code and product_category attachment can only be edited while the item is
-      #       not yet in a plan or subscription; changing them once attached is
-      #       a validation error.
       if product.attached_to_plan_or_subscription?
         if params.key?(:code) && params[:code]&.strip != product.code
           return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")

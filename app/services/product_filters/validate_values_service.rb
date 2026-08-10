@@ -4,9 +4,7 @@ module ProductFilters
   class ValidateValuesService < BaseService
     Result = BaseResult
 
-    # product_filter is the filter being updated, excluded from the duplicate
-    # scan so resending its own values stays a no-op instead of a
-    # self-collision.
+    # NOTE: product_filter is the filter being updated.
     def initialize(product:, values_params:, product_filter: nil)
       @product = product
       @values_params = values_params
@@ -34,11 +32,6 @@ module ProductFilters
         return result.single_validation_failure!(field: :values, error_code: "key_only_conflicts_with_values")
       end
 
-      # Two filters with the exact same value set price the same event slice:
-      # if both end up carded on a plan, the engine has no way to pick one.
-      # Partial overlaps stay legal — the engine resolves those by precedence.
-      # App-level check only (a product has a handful of filters); if it ever
-      # needs a DB backstop, the path is a values_digest column + unique index.
       if duplicate_value_set?
         return result.single_validation_failure!(field: :values, error_code: "value_already_exist")
       end
@@ -58,8 +51,6 @@ module ProductFilters
       end
     end
 
-    # value.to_s keeps key-only entries (nil) sortable next to valued entries;
-    # an empty-string value is invalid, so "" only ever means nil.
     def normalized(entries)
       entries.map { [it[:billable_metric_filter_id].to_s, it[:value].to_s] }.sort
     end
