@@ -17,6 +17,10 @@ module Products
     def call
       return result.not_found_failure!(resource: "product") unless product
 
+      if product.attached_to_plan_or_subscription?
+        return result.single_validation_failure!(field: :product, error_code: "attached_to_plan_or_subscription")
+      end
+
       ActiveRecord::Base.transaction do
         ProductFilterValue.where(product_filter_id: product.filters.ids).discard_all!
         product.filters.discard_all!

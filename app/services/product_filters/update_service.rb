@@ -20,21 +20,35 @@ module ProductFilters
 
       if params.key?(:values)
         return resolved_values unless resolved_values.success?
-
-        values_validation = ProductFilters::ValidateValuesService.call(
-          product: product_filter.product,
-          values_params: resolved_values.values_params
-        )
-        return values_validation unless values_validation.success?
       end
 
-      ActiveRecord::Base.transaction do
+      product_filter.product.with_lock do
+        # NOTE: the code freezes as soon as the item is in a plan or subscription
+        if product_filter.attached_to_plan_or_subscription? &&
+            params.key?(:code) && params[:code]&.strip != product_filter.code
+          return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
+        end
+
+        if product_filter.attached_to_subscriptions? && params.key?(:values) && values_changed?
+          return result.single_validation_failure!(field: :values, error_code: "attached_to_subscriptions")
+        end
+
+        if params.key?(:values)
+          values_validation = ProductFilters::ValidateValuesService.call(
+            product: product_filter.product,
+            values_params: resolved_values.values_params,
+            product_filter:
+          )
+          return values_validation unless values_validation.success?
+        end
+
         product_filter.name = params[:name] if params.key?(:name)
         product_filter.description = params[:description] if params.key?(:description)
         product_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+        product_filter.code = params[:code]&.strip if params.key?(:code)
         product_filter.save!
 
-        replace_values if params.key?(:values)
+        replace_values if params.key?(:values) && values_changed?
 
         result.product_filter = product_filter
       end
@@ -52,6 +66,13 @@ module ProductFilters
     private
 
     attr_reader :product_filter, :params
+
+    def values_changed?
+      current = product_filter.values.map { |v| [v.billable_metric_filter_id.to_s, v.value.to_s] }.sort
+      submitted = resolved_values.values_params.map { |v| [v[:billable_metric_filter_id].to_s, v[:value].to_s] }.sort
+
+      current != submitted
+    end
 
     def resolved_values
       @resolved_values ||= ProductFilters::ResolveValuesService.call(

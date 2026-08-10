@@ -19,15 +19,15 @@ module ProductFilters
       return result.not_found_failure!(resource: "product") unless product
 
       unless product.usage?
-        return result.single_validation_failure!(field: :product, error_code: "invalid_product_type")
+        return result.single_validation_failure!(field: :product, error_code: "not_allowed_for_product_type")
       end
 
       return resolved_values unless resolved_values.success?
 
-      values_validation = ProductFilters::ValidateValuesService.call(product:, values_params: resolved_values.values_params)
-      return values_validation unless values_validation.success?
+      product.with_lock do
+        values_validation = ProductFilters::ValidateValuesService.call(product:, values_params: resolved_values.values_params)
+        return values_validation unless values_validation.success?
 
-      ActiveRecord::Base.transaction do
         product_filter = product.filters.create!(
           organization_id: product.organization_id,
           name: params[:name],

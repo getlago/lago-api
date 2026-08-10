@@ -4,9 +4,11 @@ module ProductFilters
   class ValidateValuesService < BaseService
     Result = BaseResult
 
-    def initialize(product:, values_params:)
+    # NOTE: product_filter is the filter being updated.
+    def initialize(product:, values_params:, product_filter: nil)
       @product = product
       @values_params = values_params
+      @product_filter = product_filter
       super
     end
 
@@ -30,11 +32,27 @@ module ProductFilters
         return result.single_validation_failure!(field: :values, error_code: "key_only_conflicts_with_values")
       end
 
+      if duplicate_value_set?
+        return result.single_validation_failure!(field: :values, error_code: "value_already_exist")
+      end
+
       result
     end
 
     private
 
-    attr_reader :product, :values_params
+    attr_reader :product, :values_params, :product_filter
+
+    def duplicate_value_set?
+      submitted = normalized(values_params)
+
+      product.filters.where.not(id: product_filter&.id).includes(:values).any? do |filter|
+        normalized(filter.values.map { {billable_metric_filter_id: it.billable_metric_filter_id, value: it.value} }) == submitted
+      end
+    end
+
+    def normalized(entries)
+      entries.map { [it[:billable_metric_filter_id].to_s, it[:value].to_s] }.sort
+    end
   end
 end

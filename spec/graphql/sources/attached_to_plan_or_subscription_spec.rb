@@ -1,0 +1,48 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Sources::AttachedToPlanOrSubscription do
+  let(:organization) { create(:organization) }
+  let(:product) { create(:product, organization:) }
+
+  describe "#fetch" do
+    context "when grouped by product" do
+      subject(:source) { described_class.new(:product) }
+
+      it "flags products carded on a plan or a subscription" do
+        plan_attached = create(:product, organization:)
+        create(:plan_rate_card, organization:, rate_card: create(:rate_card, organization:, product: plan_attached))
+
+        subscription_attached = create(:product, organization:)
+        create(:subscription_rate_card, organization:, rate_card: create(:rate_card, organization:, product: subscription_attached))
+
+        result = source.fetch([plan_attached.id, subscription_attached.id, product.id])
+
+        expect(result).to eq([true, true, false])
+      end
+
+      it "ignores discarded rate cards" do
+        create(:plan_rate_card, organization:, rate_card: create(:rate_card, organization:, product:)).rate_card.discard!
+
+        expect(source.fetch([product.id])).to eq([false])
+      end
+    end
+
+    context "when grouped by product_category" do
+      subject(:source) { described_class.new(:product_category) }
+
+      it "flags categories through their products' cards" do
+        attached_category = create(:product_category, organization:)
+        carded_product = create(:product, organization:, product_category: attached_category)
+        create(:plan_rate_card, organization:, rate_card: create(:rate_card, organization:, product: carded_product))
+
+        empty_category = create(:product_category, organization:)
+
+        result = source.fetch([attached_category.id, empty_category.id])
+
+        expect(result).to eq([true, false])
+      end
+    end
+  end
+end
