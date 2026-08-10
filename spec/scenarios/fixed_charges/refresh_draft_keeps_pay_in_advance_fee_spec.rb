@@ -8,12 +8,13 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
   let(:add_on) { create(:add_on, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, interval: "monthly", pay_in_advance: true) }
 
+  # The plan carries no units; the subscription brings them as an override.
   let(:fixed_charge) do
     create(
       :fixed_charge,
       plan:,
       add_on:,
-      units: 2,
+      units: 0,
       properties: {amount: "239.9"},
       prorated: true,
       pay_in_advance: true
@@ -34,9 +35,11 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
           external_customer_id: customer.external_id,
           external_id: "sub_#{customer.external_id}",
           plan_code: plan.code,
-          billing_time: "calendar"
+          billing_time: "calendar",
+          plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2}]}
         }
       )
+      perform_all_enqueued_jobs
     end
 
     # Repeating units that are already billed leaves the pay in advance run with nothing
