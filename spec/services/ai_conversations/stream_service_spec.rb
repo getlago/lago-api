@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe AiConversations::StreamService do
   subject(:service) { described_class.new(ai_conversation:, message:) }
 
-  let(:ai_conversation) { create(:ai_conversation) }
+  let_it_be(:ai_conversation) { create(:ai_conversation) }
   let(:message) { "Hello, how are you?" }
 
   let(:mcp_client_mock) { instance_double(LagoMcpClient::Client) }

@@ -7,8 +7,8 @@ RSpec.describe AppliedCoupons::AmountService do
     described_class.new(applied_coupon:, base_amount_cents:)
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:base_amount_cents) { 300 }
   let(:coupon) { create(:coupon, organization:) }
   let(:applied_coupon) { create(:applied_coupon, amount_cents: 12, coupon:, customer:) }

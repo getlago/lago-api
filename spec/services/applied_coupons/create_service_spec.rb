@@ -7,10 +7,11 @@ RSpec.describe AppliedCoupons::CreateService do
     described_class.new(customer:, coupon:, params:)
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:membership) { create(:membership, organization:) }
+  let_it_be(:plan) { create_default(:plan) }
 
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create_default(:customer, organization:) }
   let(:coupon) { create(:coupon, status: "active", organization:) }
 
   let(:amount_cents) { nil }
@@ -115,7 +116,7 @@ RSpec.describe AppliedCoupons::CreateService do
     end
 
     context "when customer is not found" do
-      let(:customer) { nil }
+      let_it_be(:customer) { nil }
 
       it "returns a not found error" do
         expect(create_result).not_to be_success
@@ -148,7 +149,7 @@ RSpec.describe AppliedCoupons::CreateService do
     end
 
     context "when coupon is already applied with the plan limitation" do
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:plan) { create_default(:plan, organization:) }
       let(:coupon_old) { create(:coupon, status: "active", organization:, limited_plans: true) }
       let(:coupon) { create(:coupon, status: "active", organization:, limited_plans: true) }
       let(:coupon_plan_old) { create(:coupon_plan, coupon: coupon_old, plan:) }
