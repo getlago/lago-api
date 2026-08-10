@@ -29,6 +29,15 @@ RSpec.describe RateCards::CreateService do
     expect(rate_card.currency).to eq("USD")
     expect(rate_card.billing_timing).to eq("arrears")
     expect(rate_card.display_on_invoice).to be(true)
+    expect(rate_card.regroup_paid_fees).to eq("none")
+  end
+
+  context "when regroup_paid_fees is explicitly null" do
+    before { params[:regroup_paid_fees] = nil }
+
+    it "falls back to none instead of inserting NULL" do
+      expect(result.rate_card.regroup_paid_fees).to eq("none")
+    end
   end
 
   context "when proration is omitted" do
