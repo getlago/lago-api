@@ -26,7 +26,7 @@ module Products
       #       not yet in a plan or subscription; changing them once attached is
       #       a validation error.
       if product.attached_to_plan_or_subscription?
-        if params.key?(:code) && params[:code] != product.code
+        if params.key?(:code) && params[:code]&.strip != product.code
           return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
         end
 
@@ -34,7 +34,7 @@ module Products
           return result.single_validation_failure!(field: :product_category, error_code: "attached_to_plan_or_subscription")
         end
       else
-        product.code = params[:code] if params.key?(:code)
+        product.code = params[:code]&.strip if params.key?(:code)
         assign_product_category if params.key?(:product_category_id)
       end
 

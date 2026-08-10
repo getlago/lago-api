@@ -24,11 +24,11 @@ module ProductCategories
 
       # NOTE: code can only be edited while the product_category is not yet in a plan or
       #       subscription; changing it once attached is a validation error.
-      if params.key?(:code) && params[:code] != product_category.code && product_category.attached_to_plan_or_subscription?
+      if params.key?(:code) && params[:code]&.strip != product_category.code && product_category.attached_to_plan_or_subscription?
         return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
       end
 
-      product_category.code = params[:code] if params.key?(:code)
+      product_category.code = params[:code]&.strip if params.key?(:code)
 
       product_category.save!
 

@@ -28,7 +28,7 @@ module ProductFilters
       #       typically resend the whole payload on edit, so only an actual
       #       change counts as a structural edit.
       if product_filter.attached_to_plan_or_subscription? &&
-          params.key?(:code) && params[:code] != product_filter.code
+          params.key?(:code) && params[:code]&.strip != product_filter.code
         return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
       end
 
@@ -49,7 +49,7 @@ module ProductFilters
         product_filter.name = params[:name] if params.key?(:name)
         product_filter.description = params[:description] if params.key?(:description)
         product_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
-        product_filter.code = params[:code] if params.key?(:code)
+        product_filter.code = params[:code]&.strip if params.key?(:code)
         product_filter.save!
 
         replace_values if params.key?(:values) && values_changed?
