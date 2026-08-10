@@ -47,6 +47,9 @@ class Organization < ApplicationRecord
   has_many :charges
   has_many :fixed_charges
   has_many :charge_filters
+  has_many :product_categories
+  has_many :products
+  has_many :product_filters
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions

@@ -805,6 +805,42 @@
               "deprecationReason": null
             },
             {
+              "name": "product_category_created",
+              "description": "product_category.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category_updated",
+              "description": "product_category.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category_deleted",
+              "description": "product_category.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_created",
+              "description": "product.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_updated",
+              "description": "product.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_deleted",
+              "description": "product.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "product_filter_created",
               "description": "product_filter.created",
               "isDeprecated": false,
@@ -64322,6 +64358,18 @@
             {
               "name": "feature",
               "description": "Entitlement::Feature",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category",
+              "description": "ProductCategory",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product",
+              "description": "Product",
               "isDeprecated": false,
               "deprecationReason": null
             },
