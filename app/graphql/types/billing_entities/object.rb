@@ -26,6 +26,7 @@ module Types
       field :city, String
       field :country, Types::CountryCodeEnum
       field :net_payment_term, Integer, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :phone, String
       field :state, String
       field :zipcode, String
@@ -60,6 +61,12 @@ module Types
           subscription_invoice_issuing_date_anchor: object&.subscription_invoice_issuing_date_anchor,
           subscription_invoice_issuing_date_adjustment: object&.subscription_invoice_issuing_date_adjustment
         }
+      end
+
+      def payment_term
+        if object.payment_term.present?
+          PaymentTerm.from_h(object.payment_term)
+        end
       end
     end
   end

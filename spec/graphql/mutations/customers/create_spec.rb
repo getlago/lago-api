@@ -198,4 +198,40 @@ RSpec.describe Mutations::Customers::Create do
       expect(result["errors"]).to be_present
     end
   end
+
+  context "with payment_term" do
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: CreateCustomerInput!) {
+          createCustomer(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    it "creates a customer with a payment term" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permissions,
+        query: payment_term_mutation,
+        variables: {
+          input: {
+            name: "Payment term customer",
+            externalId: SecureRandom.uuid,
+            paymentTerm: {termType: "net_end_of_month", days: 15}
+          }
+        }
+      )
+
+      payment_term = result["data"]["createCustomer"]["paymentTerm"]
+      expect(payment_term["termType"]).to eq("net_end_of_month")
+      expect(payment_term["days"]).to eq(15)
+
+      customer = Customer.find(result["data"]["createCustomer"]["id"])
+      expect(customer.payment_term).to eq("term_type" => "net_end_of_month", "days" => 15)
+    end
+  end
 end
