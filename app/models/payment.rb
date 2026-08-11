@@ -86,7 +86,7 @@ class Payment < ApplicationRecord
   end
 
   def gated_subscription_activation?
-    payable.is_a?(Invoice) && payable.subscription_payment_gated?
+    payable.subscription_payment_gated?
   end
 
   def method_display_name
