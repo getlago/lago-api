@@ -57,9 +57,8 @@ module Commitments
       days / days_total.to_f
     end
 
-    # NOTE: A subscription terminated shortly after its period closed is still billed for that
-    #       closed period, so `terminated_at` sits past its end. Counting up to `terminated_at`
-    #       would then charge more than the full commitment.
+    # NOTE: A subscription terminated as DOWNGRADE will have `terminated_at` after the end of the latest
+    # billing period. Counting up to `terminated_at` would then charge more than the full commitment.
     def ending_at
       if subscription.terminated?
         [subscription.terminated_at, dates_service.end_of_period].min
