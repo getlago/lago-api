@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::EntraId::AuthorizeService do
   subject(:service) { described_class.new(email:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:entra_id_integration) { create(:entra_id_integration) }
   let(:email) { "foo@#{entra_id_integration.domain}" }
 

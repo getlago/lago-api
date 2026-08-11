@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Admin::Organizations::UpdateService do
   subject(:update_service) { described_class.new(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   let(:params) do
     {
@@ -28,7 +28,7 @@ RSpec.describe Admin::Organizations::UpdateService do
     end
 
     context "when organization is nil" do
-      let(:organization) { nil }
+      let_it_be(:organization) { nil }
 
       it "returns a not found error" do
         result = update_service.call

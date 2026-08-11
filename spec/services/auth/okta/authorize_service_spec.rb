@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Auth::Okta::AuthorizeService do
   subject(:service) { described_class.new(email:) }
 
-  let(:organization) { create(:organization) }
-  let(:okta_integration) { create(:okta_integration) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:okta_integration) { create(:okta_integration) }
   let(:email) { "foo@#{okta_integration.domain}" }
 
   before { okta_integration }

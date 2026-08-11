@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe AppliedPricingUnits::UpdateService do
   let(:update_service) { described_class.new(charge:, cascade_options:, params:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+
   describe ".call" do
     subject(:result) { update_service.call }
 

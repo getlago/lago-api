@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe AiConversations::FetchMessagesService do
   subject(:service) { described_class.new(ai_conversation:) }
 
-  let(:ai_conversation) { create(:ai_conversation, mistral_conversation_id: "conv_123") }
+  let_it_be(:ai_conversation) { create(:ai_conversation, mistral_conversation_id: "conv_123") }
   let(:http_client) { instance_double(LagoHttpClient::Client) }
 
   before do

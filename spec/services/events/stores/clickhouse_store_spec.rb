@@ -76,11 +76,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         )
       end
 
-      let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
-      let(:organization) { billable_metric.organization }
-      let(:charge) { create(:standard_charge, organization:, billable_metric:) }
-      let(:customer) { create(:customer, organization:) }
-      let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+      let_it_be(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+      let_it_be(:organization) { billable_metric.organization }
+      let_it_be(:plan) { create(:plan, organization:) }
+      let_it_be(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+      let_it_be(:customer) { create(:customer, organization:) }
+      let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at: DateTime.parse("2023-03-15")) }
       let(:subscription_started_at) { subscription.started_at.beginning_of_day }
       let(:boundaries) do
         {
@@ -149,11 +150,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       described_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
     end
 
-    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
-    let(:organization) { billable_metric.organization }
-    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let_it_be(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let_it_be(:organization) { billable_metric.organization }
+    let_it_be(:plan) { create(:plan, organization:) }
+    let_it_be(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+    let_it_be(:customer) { create(:customer, organization:) }
+    let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at: DateTime.parse("2023-03-15")) }
     let(:boundaries) do
       {
         from_datetime: subscription.started_at.beginning_of_day,
@@ -237,11 +239,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
     end
 
-    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
-    let(:organization) { billable_metric.organization }
-    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let_it_be(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let_it_be(:organization) { billable_metric.organization }
+    let_it_be(:plan) { create(:plan, organization:) }
+    let_it_be(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+    let_it_be(:customer) { create(:customer, organization:) }
+    let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at: DateTime.parse("2023-03-15")) }
     let(:boundaries) do
       {
         from_datetime: subscription.started_at.beginning_of_day,
@@ -312,11 +315,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
   # Events sharing the pay-in-advance boundary timestamp are tie-broken by
   # transaction_id so each gets a distinct position, not the batch's last unit.
   describe "#count with a pay-in-advance boundary" do
-    let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
-    let(:organization) { billable_metric.organization }
-    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
-    let(:customer) { create(:customer, organization:) }
-    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let_it_be(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+    let_it_be(:organization) { billable_metric.organization }
+    let_it_be(:plan) { create(:plan, organization:) }
+    let_it_be(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+    let_it_be(:customer) { create(:customer, organization:) }
+    let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at: DateTime.parse("2023-03-15")) }
     let(:boundary_timestamp) { subscription.started_at.beginning_of_day + 1.day }
 
     def event_store_for(boundary_transaction_id, deduplicate:)

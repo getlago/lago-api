@@ -5,14 +5,14 @@ require "rails_helper"
 RSpec.describe AdjustedFees::CreateService do
   subject(:create_service) { described_class.new(invoice:, params:) }
 
-  let(:customer) { create(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
   let(:invoice) { create(:invoice, :subscription, :draft, customer:, subscriptions: [subscription], organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:) }
-  let(:organization) { customer.organization }
-  let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:charge) { create(:standard_charge, billable_metric:, plan: subscription.plan) }
-  let(:charge_filter) { create(:charge_filter, charge:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:charge) { create(:standard_charge, billable_metric:, plan:) }
+  let_it_be(:charge_filter) { create(:charge_filter, charge:) }
 
   let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter:) }
   let(:code) { "tax_code" }
@@ -225,7 +225,8 @@ RSpec.describe AdjustedFees::CreateService do
 
         context "when adjusting a dynamic charge" do
           let(:billable_metric) { create(:sum_billable_metric, organization:) }
-          let(:charge) { create(:dynamic_charge, billable_metric:, plan: subscription.plan) }
+          let(:charge_filter) { create(:charge_filter, charge:) }
+          let(:charge) { create(:dynamic_charge, billable_metric:, plan:) }
 
           it "creates an adjusted fee and a fee" do
             expect { create_service.call }

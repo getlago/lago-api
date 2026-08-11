@@ -7,15 +7,15 @@ RSpec.describe Subscriptions::OrganizationBillingService do
 
   describe ".call" do
     let(:billing_entity_timezone) { "UTC" }
-    let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
-    let(:organization) { billing_entity.organization }
+    let_it_be(:billing_entity) { create(:billing_entity) }
+    let_it_be(:organization) { billing_entity.organization }
 
     let(:interval) { :monthly }
     let(:bill_charges_monthly) { false }
     let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:) }
 
     let(:customer_timezone) { nil }
-    let(:customer) { create(:customer, organization:, billing_entity: billing_entity, timezone: customer_timezone) }
+    let_it_be(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
     let(:created_at) { DateTime.parse("20 Feb 2020") }
     let(:subscription_at) { DateTime.parse("20 Feb 2021") }
@@ -35,6 +35,11 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         created_at:,
         ending_at:
       )
+    end
+
+    before do
+      billing_entity.update(timezone: billing_entity_timezone)
+      customer.update(timezone: customer_timezone)
     end
 
     before { subscription }
@@ -453,6 +458,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       context "when subscriptions have different currencies" do
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
         let(:usd_subscription) do
           create(
@@ -514,6 +520,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       context "when subscriptions share the same currency" do
         let(:plan1) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:plan2) { create(:plan, organization:, interval:, amount_currency: "USD") }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
         let(:subscription1) do
           create(
@@ -559,6 +566,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         let(:organization) { create(:organization, feature_flags: %w[multi_currency]) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
         let(:usd_provider_subscription) do
           create(
@@ -625,6 +633,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       before { subscription.destroy }
 
       context "when customer has multiple subscriptions with same payment method type (provider)" do
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:customer3) { create(:customer, organization:) }
         let(:subscription1) do
           create(
@@ -688,6 +697,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when customer has subscriptions with different payment method types" do
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:subscription1) do
           create(
             :subscription,
@@ -733,6 +743,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when subscriptions have different explicit payment_method_ids" do
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:customer3) { create(:customer, organization:) }
         let(:payment_method1) { create(:payment_method, customer:, organization:, is_default: true) }
         let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: false, provider_method_id: "ext_456") }
@@ -795,6 +806,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when subscription with nil payment_method_id resolves to same as explicit one" do
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
 
         let(:subscription1) do
@@ -842,6 +854,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when customer has default payment method" do
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
 
         let(:subscription1) do
@@ -889,6 +902,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when single subscription exists" do
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:subscription1) do
           create(
             :subscription,
@@ -917,6 +931,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:other_billing_entity) { create(:billing_entity, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
       let(:current_date) { subscription_at.next_month }
@@ -1214,6 +1229,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
 
       context "when combined with currency grouping" do
         let(:organization) { create(:organization, feature_flags: ["multi_currency"]) }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
 
@@ -1287,6 +1303,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       context "when combined with billing entity grouping" do
         let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
         let(:other_billing_entity) { create(:billing_entity, organization:) }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
         let(:default_entity_consolidated) do
           create(
@@ -1359,6 +1376,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
 
       context "when combined with payment method grouping" do
         let(:organization) { create(:organization) }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
         let(:provider_consolidated) do
           create(
@@ -1438,6 +1456,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         let(:other_billing_entity) { create(:billing_entity, organization:) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
+        let(:customer) { create(:customer, organization:, billing_entity: billing_entity) }
 
         let(:default_usd_provider) do
           create(

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe AppliedCoupons::RecreditService do
   subject(:recredit_service) { described_class.new(credit:) }
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:coupon) { create(:coupon, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
   let(:applied_coupon) { create(:applied_coupon, coupon:, customer:, organization:) }
