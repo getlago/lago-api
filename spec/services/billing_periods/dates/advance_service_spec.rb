@@ -44,13 +44,13 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
       let(:range) { Date.parse("2022-03-15")..Date.parse("2022-03-15") }
       let(:exclude_out_of_range) { true }
 
-      it "keeps periods overlapping the range" do
+      it "keeps full periods overlapping the range" do
         expect(result.next_billing_at).to eq(Time.zone.parse("2022-04-01"))
         expect(result.periods.map { [it.period_from, it.period_to, it.next_billing_at, it.rate] }).to eq(
           [
             [
-              Time.zone.parse("2022-03-15"),
-              end_of_day.call("2022-03-15"),
+              Time.zone.parse("2022-03-01"),
+              end_of_day.call("2022-03-31"),
               Time.zone.parse("2022-04-01"),
               rate
             ]
@@ -103,10 +103,10 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
         expect(result.next_billing_at).to eq(Time.zone.parse("2026-08-17"))
         expect(result.periods.map { [it.period_from, it.period_to, it.rate] }).to eq(
           [
-            [Time.zone.parse("2026-08-01"), end_of_day.call("2026-08-02"), rate],
+            [Time.zone.parse("2026-07-27"), end_of_day.call("2026-08-02"), rate],
             [Time.zone.parse("2026-08-03"), Time.zone.parse("2026-08-05 23:59:59.999999"), rate],
             [Time.zone.parse("2026-08-06"), end_of_day.call("2026-08-09"), second_rate],
-            [Time.zone.parse("2026-08-10"), end_of_day.call("2026-08-14"), second_rate]
+            [Time.zone.parse("2026-08-10"), end_of_day.call("2026-08-16"), second_rate]
           ]
         )
       end

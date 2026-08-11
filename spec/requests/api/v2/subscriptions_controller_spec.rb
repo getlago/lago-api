@@ -455,7 +455,28 @@ RSpec.describe Api::V2::SubscriptionsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([0, 1])
-        expect(json[:cycles].last[:period_to]).to eq(Time.zone.parse("2026-09-15 23:59:59").iso8601)
+        expect(json[:cycles].last[:period_to]).to eq(Time.zone.parse("2026-10-09 23:59:59").iso8601)
+      end
+    end
+
+    context "when end_on falls inside an advance cycle" do
+      subject do
+        travel_to(Time.zone.parse("2026-08-11")) do
+          get_with_token(
+            organization,
+            "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+            {end_on: "2026-08-11"}
+          )
+        end
+      end
+
+      it "returns the full cycle instead of clipping it to the requested range" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([0])
+        expect(json[:cycles].sole[:period_from]).to eq(Time.zone.parse("2026-08-10").iso8601)
+        expect(json[:cycles].sole[:period_to]).to eq(Time.zone.parse("2026-09-09 23:59:59").iso8601)
       end
     end
 

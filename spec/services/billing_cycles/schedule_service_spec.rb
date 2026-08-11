@@ -296,12 +296,12 @@ RSpec.describe BillingCycles::ScheduleService do
       context "with an advance rate card" do
         let(:rate_card) { create(:rate_card, :advance, organization:) }
 
-        it "schedules the requested day" do
+        it "schedules the full advance period due on the requested day" do
           expect { result }.to change(BillingCycle, :count).by(1)
 
           billing_cycle = result.billing_cycles.sole
           expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-09-10"))
-          expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-10 23:59:59.999999"))
+          expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-10-09 23:59:59.999999"))
           expect(billing_cycle.billing_at).to eq(billing_cycle.period_to)
           expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
         end

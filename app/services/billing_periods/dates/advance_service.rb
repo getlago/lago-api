@@ -12,10 +12,7 @@ module BillingPeriods
       private
 
       def segment_range_for(cycle)
-        [
-          [cycle.period_from, range_begin].max,
-          [cycle.period_to, range_end].min
-        ]
+        [cycle.period_from, cycle.period_to]
       end
 
       def next_billing_at_for(boundaries, boundary_index)
