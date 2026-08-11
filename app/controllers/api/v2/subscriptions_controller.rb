@@ -179,7 +179,7 @@ module Api
             subscription_rate_card,
             rates:,
             rate_phases: rate_phases_for(subscription_rate_card, plan_rate_cards:),
-            range: subscription.started_at..cycles_end_at,
+            range: cycles_start_at(subscription_rate_card)..cycles_end_at,
             options: cycles_date_options(subscription)
           )
 
@@ -220,6 +220,14 @@ module Api
         end
       end
 
+      def cycles_start_at(subscription_rate_card)
+        if params[:start_on].present?
+          params[:start_on].to_date.beginning_of_day
+        else
+          subscription_rate_card.subscription.started_at || subscription_rate_card.started_at
+        end
+      end
+
       def cycles_date_options(subscription)
         BillingPeriods::DatesService::Options.new(
           timezone: subscription.customer.applicable_timezone,
@@ -231,7 +239,7 @@ module Api
       def serialize_period(subscription_rate_card, period)
         {
           subscription_external_id: subscription_rate_card.subscription.external_id,
-          subscription_started_at: subscription_rate_card.subscription.started_at.iso8601,
+          subscription_started_at: subscription_rate_card.subscription.started_at&.iso8601,
           applied_rate_card_id: subscription_rate_card.id,
           applied_rate_card_code: subscription_rate_card.rate_card.code,
           cycle_index: period.cycle_index,
