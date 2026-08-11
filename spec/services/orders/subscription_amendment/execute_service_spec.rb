@@ -258,6 +258,76 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         end
       end
 
+      # The target already paid for the running period, so terminating it mid-period has to credit
+      # the days the customer will now be billed for on the amended plan.
+      context "when the target subscription is paid in advance" do
+        let(:target_plan) do
+          create(:plan, organization:, amount_currency: "EUR", amount_cents: 50_000, pay_in_advance: true)
+        end
+        let(:target_subscription) do
+          create(
+            :subscription,
+            customer:,
+            organization:,
+            plan: target_plan,
+            name: "Original deal",
+            external_id: "sub_ext_42",
+            billing_time: :anniversary,
+            subscription_at: Time.current.beginning_of_month - 1.month,
+            started_at: Time.current.beginning_of_month - 1.month
+          )
+        end
+        let(:date_service) do
+          Subscriptions::DatesService.new_instance(
+            target_subscription,
+            Time.current.beginning_of_month,
+            current_usage: false
+          )
+        end
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            currency: "EUR",
+            sub_total_excluding_taxes_amount_cents: 50_000,
+            fees_amount_cents: 50_000,
+            taxes_amount_cents: 10_000,
+            total_amount_cents: 60_000
+          )
+        end
+
+        before do
+          create(
+            :invoice_subscription,
+            invoice:,
+            subscription: target_subscription,
+            recurring: true,
+            from_datetime: date_service.from_datetime,
+            to_datetime: date_service.to_datetime,
+            charges_from_datetime: date_service.charges_from_datetime,
+            charges_to_datetime: date_service.charges_to_datetime
+          )
+          create(
+            :fee,
+            subscription: target_subscription,
+            invoice:,
+            amount_cents: 50_000,
+            taxes_amount_cents: 10_000,
+            taxes_rate: 20,
+            invoiceable_type: "Subscription",
+            invoiceable_id: target_subscription.id
+          )
+        end
+
+        it "credits the unconsumed days of the terminated subscription" do
+          expect { execute_service.call }.to change(CreditNote, :count).by(1)
+
+          credit_note = invoice.credit_notes.sole
+          expect(credit_note.credit_amount_cents).to be_positive
+          expect(credit_note.reason).to eq("order_cancellation")
+        end
+      end
+
       context "with a coupon and a wallet credit" do
         let(:coupon) { create(:coupon, organization:, amount_cents: 20_000, amount_currency: "EUR") }
         let(:billing_items) do
