@@ -22,7 +22,8 @@ module Api
               result.orders,
               ::V1::OrderSerializer,
               collection_name: "orders",
-              meta: pagination_metadata(result.orders)
+              meta: pagination_metadata(result.orders),
+              includes: %i[billing_snapshot]
             )
           )
         else
@@ -60,7 +61,7 @@ module Api
 
       def render_order(order)
         render(
-          json: ::V1::OrderSerializer.new(order, root_name: "order")
+          json: ::V1::OrderSerializer.new(order, root_name: "order", includes: %i[billing_snapshot])
         )
       end
 

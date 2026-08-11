@@ -25,6 +25,7 @@ RSpec.describe Api::V1::OrdersController do
 
       expect(response).to have_http_status(:ok)
       expect(json[:orders].count).to eq(2)
+      expect(json[:orders].first).to have_key(:billing_snapshot)
     end
 
     context "when filtering by status" do
@@ -76,6 +77,7 @@ RSpec.describe Api::V1::OrdersController do
       expect(json[:order][:lago_id]).to eq(order.id)
       expect(json[:order][:number]).to eq(order.number)
       expect(json[:order][:status]).to eq("created")
+      expect(json[:order]).to have_key(:billing_snapshot)
     end
 
     context "when order does not exist" do
