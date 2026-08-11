@@ -34,10 +34,11 @@ module Quotes
         )
         initialize_version!(quote:)
         add_owners!(quote:)
+
+        SendWebhookJob.perform_after_commit("quote.created", quote)
+
         result.quote = quote
       end
-
-      # TODO: SendWebhookJob.perform_after_commit("quote.created", quote)
 
       result
     rescue ActiveRecord::RecordInvalid => e

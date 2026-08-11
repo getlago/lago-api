@@ -27,6 +27,8 @@ module OrderForms
             void_reason: :manual
           )
 
+          SendWebhookJob.perform_after_commit("order_form.voided", order_form)
+
           QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_voided)
 
           result.order_form = order_form

@@ -40,6 +40,18 @@ RSpec.describe QuoteVersions::ApproveService do
         )
       end
 
+      it "enqueues a quote.approved webhook" do
+        expect { approve_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.approved", quote)
+      end
+
+      it "enqueues an order_form.created webhook" do
+        expect { approve_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("order_form.created", OrderForm)
+      end
+
       it "persists the raw computed mention variables snapshot" do
         expect(result).to be_success
         expect(result.quote_version.reload.mention_variables).to include(

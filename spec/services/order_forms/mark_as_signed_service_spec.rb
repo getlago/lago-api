@@ -126,6 +126,18 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.order.order_form).to eq(order_form)
           expect(result.order.execution_mode).to be_nil
         end
+
+        it "enqueues an order_form.signed webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order_form.signed", order_form)
+        end
+
+        it "enqueues an order.created webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order.created", Order)
+        end
       end
 
       context "when a signed_document is provided" do

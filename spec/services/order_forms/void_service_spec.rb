@@ -84,6 +84,18 @@ RSpec.describe OrderForms::VoidService do
           expect(quote_version.reload).to be_voided
           expect(quote_version.void_reason).to eq("cascade_of_voided")
         end
+
+        it "enqueues an order_form.voided webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order_form.voided", order_form)
+        end
+
+        it "enqueues a cascaded quote.voided webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("quote.voided", quote)
+        end
       end
     end
   end

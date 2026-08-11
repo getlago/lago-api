@@ -54,6 +54,12 @@ RSpec.describe Quotes::CreateService do
           expect(result.quote.current_version.end_date).to eq(end_date)
         end
       end
+
+      it "enqueues a quote.created webhook" do
+        expect { create_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.created", Quote)
+      end
     end
 
     context "when the customer has no currency", :premium do

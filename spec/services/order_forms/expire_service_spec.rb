@@ -77,6 +77,12 @@ RSpec.describe OrderForms::ExpireService do
           expect(result).to be_success
           expect(result.order_form).to be_expired
         end
+
+        it "does not enqueue a webhook" do
+          expect do
+            ApplicationRecord.transaction { service.call }
+          end.not_to have_enqueued_job(SendWebhookJob)
+        end
       end
 
       context "when order_form is already voided" do
@@ -118,6 +124,18 @@ RSpec.describe OrderForms::ExpireService do
 
           expect(quote_version.reload).to be_voided
           expect(quote_version.void_reason).to eq("cascade_of_expired")
+        end
+
+        it "enqueues an order_form.expired webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order_form.expired", order_form)
+        end
+
+        it "enqueues a cascaded quote.voided webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("quote.voided", quote)
         end
       end
     end

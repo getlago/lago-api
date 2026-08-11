@@ -27,6 +27,12 @@ RSpec.describe OrderForms::CreateService do
           expires_at: nil
         )
       end
+
+      it "enqueues an order_form.created webhook" do
+        expect { create_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("order_form.created", OrderForm)
+      end
     end
 
     context "when an expires_at in the future is provided", :premium do

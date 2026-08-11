@@ -26,6 +26,8 @@ module OrderForms
         expires_at:
       )
 
+      SendWebhookJob.perform_after_commit("order_form.created", order_form)
+
       result.order_form = order_form
       result
     rescue ActiveRecord::RecordInvalid => e

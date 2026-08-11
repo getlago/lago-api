@@ -38,7 +38,9 @@ module OrderForms
           order_form.signed_document.attach(attachment) if attachment
           order_form.save!
 
-          result.order = Order.create!(
+          SendWebhookJob.perform_after_commit("order_form.signed", order_form)
+
+          order = Order.create!(
             organization: order_form.organization,
             customer: order_form.customer,
             order_form:,
@@ -46,6 +48,9 @@ module OrderForms
             execute_at:
           )
 
+          SendWebhookJob.perform_after_commit("order.created", order)
+
+          result.order = order
           result.order_form = order_form
         end
       end

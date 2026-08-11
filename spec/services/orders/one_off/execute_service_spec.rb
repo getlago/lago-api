@@ -65,6 +65,12 @@ RSpec.describe Orders::OneOff::ExecuteService do
         expect(order.execution_record["wallet_ids"]).to eq([])
       end
 
+      it "enqueues an order.executed webhook" do
+        expect { execute_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("order.executed", order)
+      end
+
       it "bills the payload values" do
         execute_service.call
 
@@ -247,6 +253,12 @@ RSpec.describe Orders::OneOff::ExecuteService do
 
         expect(result).to be_success
         expect(result.order).to eq(order)
+      end
+
+      it "does not enqueue a webhook" do
+        expect do
+          ApplicationRecord.transaction { execute_service.call }
+        end.not_to have_enqueued_job(SendWebhookJob)
       end
     end
 
