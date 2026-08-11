@@ -421,21 +421,44 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         end
       end
 
-      # The catalog can be repriced between approval and execution, flipping the direction the
-      # billing engine will infer.
+      # Lago cannot prorate a mid-period reduction, so it keeps the target running and switches at
+      # the next billing day, exactly as the same plan change does through the API.
       context "when the amendment lowers the amount" do
         let(:plan_overrides) { super().merge("amountCents" => 10_000) }
 
-        it "records the failure and marks the order failed" do
+        it "schedules the replacement instead of terminating the target" do
           result = nil
-          expect { result = execute_service.call }.not_to change(Subscription, :count)
+          expect { result = execute_service.call }.to change(Subscription, :count).by(1)
 
-          expect(result).not_to be_success
+          expect(result).to be_success
           expect(target_subscription.reload).to be_active
 
+          replacement = target_subscription.next_subscription
+          expect(replacement).to be_pending
+          expect(replacement.external_id).to eq("sub_ext_42")
+          expect(replacement.plan.amount_cents).to eq(10_000)
+          expect(replacement.ending_at.to_date).to eq(quote_version.end_date)
+          expect(target_subscription.downgrade_plan_date).to be > Date.current
+
           order.reload
-          expect(order.failed?).to eq(true)
-          expect(order.execution_record["errors"]).to eq(["amendment_decreases_amount"])
+          expect(order.executed?).to eq(true)
+          expect(order.execution_record["subscription_ids"]).to eq([replacement.id])
+          expect(order.execution_record["terminated_subscription_ids"]).to eq([])
+        end
+
+        it "invoices nothing yet" do
+          expect { execute_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when the amendment keeps the same amount" do
+        let(:plan_overrides) { super().merge("amountCents" => target_plan.amount_cents) }
+
+        it "rotates the subscription right away" do
+          execute_service.call
+
+          expect(target_subscription.reload).to be_terminated
+          expect(customer.subscriptions.active.sole.plan.amount_cents).to eq(target_plan.amount_cents)
         end
       end
 
@@ -453,15 +476,15 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         end
       end
 
-      context "when the plan upgrade fails" do
+      context "when the plan change fails" do
         let(:failed_result) do
-          Subscriptions::PlanUpgradeService::Result.new.tap do |failed|
+          Subscriptions::CreateService::Result.new.tap do |failed|
             failed.single_validation_failure!(field: :ending_at, error_code: "invalid_date")
           end
         end
 
         before do
-          allow(Subscriptions::PlanUpgradeService).to receive(:call!).and_raise(failed_result.error)
+          allow(Subscriptions::CreateService).to receive(:call!).and_raise(failed_result.error)
         end
 
         it "records the failure and leaves the target active" do

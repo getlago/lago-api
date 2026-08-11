@@ -116,17 +116,10 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
       end
     end
 
+    # Execution schedules a reduction for the next billing day instead of applying it mid-period,
+    # so the direction of the amendment is not the approval gate's business.
     context "when the amendment lowers the amount" do
       let(:plan) { create(:plan, organization:, amount_cents: 5_000) }
-
-      it "refuses the amendment" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.id": ["amendment_decreases_amount"]})
-      end
-    end
-
-    context "when the amendment keeps the same amount" do
-      let(:plan) { create(:plan, organization:, amount_cents: 10_000) }
 
       it "is valid" do
         expect(validator).to be_valid
@@ -136,37 +129,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
     context "when an override lowers the amount below the target plan" do
       let(:plan_overrides) { {"amountCents" => 5_000} }
 
-      it "refuses the amendment" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.id": ["amendment_decreases_amount"]})
-      end
-    end
-
-    context "when an override raises the amount above the target plan" do
-      let(:plan) { create(:plan, organization:, amount_cents: 5_000) }
-      let(:plan_overrides) { {"amountCents" => 20_000} }
-
       it "is valid" do
         expect(validator).to be_valid
-      end
-    end
-
-    context "when the intervals differ" do
-      let(:target_plan) { create(:plan, organization:, interval: "yearly", amount_cents: 100_000) }
-      let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 10_000) }
-
-      it "compares both on a yearly basis" do
-        expect(validator).to be_valid
-      end
-    end
-
-    context "when a monthly amendment is cheaper than the target on a yearly basis" do
-      let(:target_plan) { create(:plan, organization:, interval: "yearly", amount_cents: 200_000) }
-      let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 10_000) }
-
-      it "refuses the amendment" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.id": ["amendment_decreases_amount"]})
       end
     end
 

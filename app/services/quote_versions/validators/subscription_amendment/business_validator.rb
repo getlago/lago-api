@@ -39,39 +39,15 @@ module QuoteVersions
         # The quote pins its target at creation, where Quote requires it for this order type and
         # Quotes::CreateService scopes it to the deal's organization and customer. Only the state
         # that can change afterwards is checked here.
+        # A quoted plan cheaper than the one the target runs on is legitimate: execution routes the
+        # change through Subscriptions::CreateService, which schedules a reduction for the next
+        # billing day rather than applying it mid-period.
         def validate_target_subscription
           subscription = quote_version.quote.subscription
           return add_error(field: :subscription_id, error_code: "value_is_mandatory") if subscription.nil?
+          return if subscription.active?
 
-          unless subscription.active?
-            return add_error(field: :subscription_id, error_code: "subscription_not_active")
-          end
-
-          validate_amendment_direction(subscription)
-        end
-
-        # Lago tells an upgrade from a downgrade by comparing plan prices when the invoice is built,
-        # not from the caller's intent: Subscriptions::ActivateService#upgrade?,
-        # Subscription#upgraded?, Fees::SubscriptionService#should_compute_terminated_amount?. A
-        # cheaper replacement therefore takes the downgrade path, which bills the terminated
-        # subscription for the whole current period and credits none of its unused pay-in-advance
-        # time, over-billing the amended period. Refused until the billing engine can prorate an
-        # immediate downgrade.
-        def validate_amendment_direction(subscription)
-          plan_item = plans.first
-          plan = known_plans_by_id[plan_item&.dig("id")]
-          return if plan.nil?
-          return if quoted_yearly_amount_cents(plan_item, plan) >= subscription.plan.yearly_amount_cents
-
-          add_error(field: plan_field(0, "id"), error_code: "amendment_decreases_amount")
-        end
-
-        # Mirrors what ActivateService will compare: Plans::OverrideService prices the child plan
-        # from the negotiated amount and inherits the catalog interval.
-        def quoted_yearly_amount_cents(plan_item, plan)
-          amount_cents = plan_item.dig("overrides", "amountCents") || plan.amount_cents
-
-          Plan.new(interval: plan.interval, amount_cents:).yearly_amount_cents
+          add_error(field: :subscription_id, error_code: "subscription_not_active")
         end
       end
     end

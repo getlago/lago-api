@@ -4,31 +4,34 @@ module Orders
   module SubscriptionAmendment
     # An amendment restates one plan on a live subscription, so the payload it carries is a
     # subscription_creation one and the whole mapping is inherited. Only the transition differs: the
-    # target is terminated and replaced, instead of a subscription being created.
+    # quoted plan replaces the one the target runs on, instead of a subscription being created.
     class ExecuteService < Orders::SubscriptionCreation::ExecuteService
       private
 
       def create_records
         validate_target_subscription!
 
-        super.merge(terminated_subscription_ids: [target_subscription.id])
+        super.merge(terminated_subscription_ids:)
       end
 
       def create_subscriptions
         [amend_subscription]
       end
 
-      # PlanUpgradeService is the existing composition of terminate then create on a single external
-      # id: it keeps subscription_at and billing_time so the billing anchor does not move, sets
-      # previous_subscription_id so the replacement's first fee is prorated from the amendment day,
-      # cancels a pending downgrade, and leaves ActivateService to terminate the target, credit its
-      # unconsumed pay-in-advance time and enqueue one combined invoice after commit.
+      # Subscriptions::CreateService is the entry point the API and the UI already use for a plan
+      # change, so the amendment inherits Lago's own semantics in both directions: a raise rotates
+      # the subscription now, keeping the external id and the billing anchor, while a reduction keeps
+      # the target running and schedules the replacement for the next billing day.
       def amend_subscription
-        subscription = ::Subscriptions::PlanUpgradeService.call!(
-          current_subscription: target_subscription,
+        subscription = ::Subscriptions::CreateService.call!(
+          customer: order.customer,
           plan: quoted_plan,
           params: amendment_params
         ).subscription
+
+        # CreateService loaded its own instance of the target, so ours is stale.
+        target_subscription.reload
+        subscription = target_subscription.next_subscription if subscription.id == target_subscription.id
 
         update_usage_thresholds!(subscription)
 
@@ -39,22 +42,37 @@ module Orders
         payload = plan_item["payload"] || {}
 
         {
-          # PlanUpgradeService strips this to a string, so the target's own name only survives when
-          # it is passed back.
+          # Resolves the target through editable_subscriptions, so the plan change always dispatches
+          # on it instead of creating a second subscription.
+          subscription_id: target_subscription.id,
+          external_id: target_subscription.external_id,
+          # CreateService strips this to a string, so the target's own name only survives when it is
+          # passed back.
           name: payload["subscriptionName"].presence || target_subscription.name,
           # The amendment restates the contract term. A quote carrying no ending date leaves the
           # target's own in place.
           ending_at: subscription_datetime(payload["endDate"], quote_version.end_date),
-          payment_method: payment_method_params(payload),
-          # Never .presence here, unlike the creation path: an empty override still has to mint a
-          # child plan. Were the replacement to share the target's plan id, ActivateService would
-          # take its standalone branch, leaving the target active and its external id duplicated.
-          plan_overrides: plan_overrides(plan_item, quoted_plan)
+          payment_method: payment_method_params(payload)
         }.compact
       end
 
-      # Thresholds ride on the subscription and PlanUpgradeService has no such parameter, so they
-      # reach the replacement the way Subscriptions::CreateService applies them to a new one.
+      # The negotiated plan is built here rather than passed as plan_overrides because the plan
+      # change dispatches on plan ids before prices: a repricing of the same catalog plan would match
+      # on id and return the target untouched. An override plan always carries a fresh id, so the
+      # comparison reaches the negotiated amount whatever the quote restates.
+      def quoted_plan
+        @quoted_plan ||= ::Plans::OverrideService.call!(
+          plan: catalog_plan,
+          params: plan_overrides(plan_item, catalog_plan).with_indifferent_access
+        ).plan
+      end
+
+      def catalog_plan
+        @catalog_plan ||= find_plan!(plan_item["id"])
+      end
+
+      # Thresholds ride on the subscription, and CreateService would apply them to whatever the plan
+      # change returns, which for a reduction is the target rather than the replacement it scheduled.
       def update_usage_thresholds!(subscription)
         thresholds = usage_thresholds(plan_item)
         return if thresholds.empty?
@@ -64,6 +82,11 @@ module Orders
           usage_thresholds_params: thresholds,
           partial: false
         )
+      end
+
+      # Empty for a scheduled amendment: the target keeps running until the end of the period.
+      def terminated_subscription_ids
+        target_subscription.reload.terminated? ? [target_subscription.id] : []
       end
 
       # Re-runs the approval gate: weeks pass between approval and execution and every state it
@@ -78,27 +101,10 @@ module Orders
           result.not_found_failure!(resource: "subscription").raise_if_error!
         end
 
-        unless target_subscription.active?
-          result
-            .single_validation_failure!(field: :subscription, error_code: "subscription_not_active")
-            .raise_if_error!
-        end
-
-        validate_amendment_direction!
-      end
-
-      # Mirrors Subscriptions::ActivateService#upgrade?, the price comparison that decides how both
-      # the terminated subscription and its replacement are prorated. A cheaper replacement takes
-      # the downgrade path, which bills the target for the whole current period and credits none of
-      # its unconsumed pay-in-advance time. Same check as the approval gate, see
-      # QuoteVersions::Validators::SubscriptionAmendment::BusinessValidator.
-      def validate_amendment_direction!
-        amount_cents = plan_item.dig("overrides", "amountCents") || quoted_plan.amount_cents
-        quoted = Plan.new(interval: quoted_plan.interval, amount_cents:)
-        return if quoted.yearly_amount_cents >= target_subscription.plan.yearly_amount_cents
+        return if target_subscription.active?
 
         result
-          .single_validation_failure!(field: :plan, error_code: "amendment_decreases_amount")
+          .single_validation_failure!(field: :subscription, error_code: "subscription_not_active")
           .raise_if_error!
       end
 
@@ -110,10 +116,6 @@ module Orders
 
       def plan_item
         @plan_item ||= plan_items.first
-      end
-
-      def quoted_plan
-        @quoted_plan ||= find_plan!(plan_item["id"])
       end
     end
   end
