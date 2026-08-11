@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Invoices::VoidJob do
+describe Integrations::Aggregator::Invoices::VoidJob do
   subject(:void_job) { described_class }
 
   let(:organization) { create(:organization) }

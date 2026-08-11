@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Invoices::VoidService do
+describe Integrations::Aggregator::Invoices::VoidService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:service) { described_class.new(invoice:) }
