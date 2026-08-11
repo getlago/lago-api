@@ -128,7 +128,7 @@ module Api
       # Testing helper: returns the billing periods that would be generated for
       # active product-catalog subscriptions without creating billing cycles or invoices.
       def cycles
-        subscriptions = active_subscriptions
+        subscriptions = cycle_subscriptions
         return not_found_error(resource: "subscription") unless subscriptions
 
         preload_cycle_associations(subscriptions)
@@ -155,6 +155,17 @@ module Api
         return if subscription_external_ids.empty?
 
         subscriptions = active_subscriptions_for(subscription_external_ids)
+        return if subscriptions.size != subscription_external_ids.size
+
+        subscriptions
+      end
+
+      def cycle_subscriptions
+        return if subscription_external_ids.empty?
+
+        subscriptions = current_organization.subscriptions
+          .where(external_id: subscription_external_ids, status: %i[active pending])
+          .to_a
         return if subscriptions.size != subscription_external_ids.size
 
         subscriptions
