@@ -190,4 +190,52 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       )
     end
   end
+
+  context "with payment_term" do
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: UpdateBillingEntityInput!) {
+          updateBillingEntity(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    def update_payment_term(payment_term)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: payment_term_mutation,
+        variables: {input: {id: billing_entity.id, paymentTerm: payment_term}}
+      )
+    end
+
+    it "sets the payment term" do
+      result = update_payment_term({termType: "end_of_month"})
+
+      payment_term = result["data"]["updateBillingEntity"]["paymentTerm"]
+      expect(payment_term["termType"]).to eq("end_of_month")
+      expect(payment_term["days"]).to be_nil
+      expect(billing_entity.reload.payment_term).to eq("term_type" => "end_of_month")
+    end
+
+    it "clears the payment term when null is sent" do
+      billing_entity.update!(payment_term: {term_type: "net", days: 30})
+
+      result = update_payment_term(nil)
+
+      expect(result["data"]["updateBillingEntity"]["paymentTerm"]).to be_nil
+      expect(billing_entity.reload.payment_term).to be_nil
+    end
+
+    it "rejects an invalid payment term" do
+      result = update_payment_term({termType: "day_of_month", dayOfMonth: 32})
+
+      expect_unprocessable_entity(result)
+      expect(billing_entity.reload.payment_term).to be_nil
+    end
+  end
 end

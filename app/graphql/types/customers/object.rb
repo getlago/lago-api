@@ -32,6 +32,7 @@ module Types
       field :net_payment_term, Integer, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :payment_provider_code, String, null: true
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :phone, String, null: true
       field :state, String, null: true
       field :tax_identification_number, String, null: true
@@ -189,6 +190,12 @@ module Types
 
       def has_overwritten_invoice_custom_sections_selection
         !object.skip_invoice_custom_sections && object.manual_selected_invoice_custom_sections.any?
+      end
+
+      def payment_term
+        if object.payment_term.present?
+          PaymentTerm.from_h(object.payment_term)
+        end
       end
     end
   end
