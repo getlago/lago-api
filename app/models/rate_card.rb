@@ -43,6 +43,7 @@ class RateCard < ApplicationRecord
   validate :validate_filter_belongs_to_item
   validate :validate_display_on_invoice
   validate :validate_proration
+  validate :validate_regroup_paid_fees
 
   default_scope -> { kept }
 
@@ -73,8 +74,30 @@ class RateCard < ApplicationRecord
     errors.add(:proration, :not_allowed_for_aggregation_type) if metric.weighted_sum_agg?
   end
 
+  # Paid-fee regrouping only exists for advance fees kept off the invoice
+  def validate_regroup_paid_fees
+    return if regroup_paid_fees_none?
+
+    errors.add(:regroup_paid_fees, :not_allowed_for_billing_timing) unless advance?
+    errors.add(:regroup_paid_fees, :not_allowed_with_display_on_invoice) if display_on_invoice?
+  end
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
+  end
+
+  # The card bills someone once it belongs to a plan that has subscriptions or
+  # is attached directly to a subscription. From that point its pricing is
+  # immutable: any price change goes through a new card and a plan migration.
+  def attached_to_subscriptions?
+    subscription_applied_rate_cards.exists? ||
+      Subscription.where(plan_id: plan_applied_rate_cards.select(:plan_id)).exists?
+  end
+
+  # The active rate is the latest effective rate; later rates are pending and
+  # earlier ones have been superseded (terminated).
+  def active_rate
+    rates.effective.order(effective_from: :desc).first
   end
 end
 
