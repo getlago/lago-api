@@ -185,4 +185,41 @@ RSpec.describe Events::Stores::PostgresStore do
       end
     end
   end
+
+  describe "#grouped_weighted_sum" do
+    let(:group_value) { "europe' OR TRUE --" }
+    let(:billable_metric) { create(:weighted_sum_billable_metric) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:started_at) { Time.zone.parse("2023-03-01") }
+    let(:subscription) { create(:subscription, customer:, started_at:) }
+    let(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        subscription:,
+        boundaries: {
+          from_datetime: started_at,
+          to_datetime: started_at.end_of_month.end_of_day,
+          charges_duration: 31
+        },
+        filters: {grouped_by: ["region"]}
+      ).tap do |store|
+        store.aggregation_property = billable_metric.field_name
+        store.numeric_property = true
+      end
+    end
+
+    it "safely handles special characters in grouped values" do
+      create(
+        :event,
+        organization:,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: started_at + 1.day,
+        properties: {billable_metric.field_name => 2, "region" => group_value}
+      )
+
+      expect(event_store.grouped_weighted_sum.sole.groups).to eq("region" => group_value)
+    end
+  end
 end
