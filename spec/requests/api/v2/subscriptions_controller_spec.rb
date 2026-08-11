@@ -439,6 +439,54 @@ RSpec.describe Api::V2::SubscriptionsController do
       end
     end
 
+    context "with a pending subscription and an explicit start_on" do
+      subject do
+        travel_to(Time.zone.parse("2026-08-11")) do
+          get_with_token(
+            organization,
+            "/api/v2/subscriptions/cycles",
+            {
+              subscription_external_ids: subscription.external_id,
+              start_on: "2026-08-01",
+              end_on: "2026-11-30"
+            }
+          )
+        end
+      end
+
+      let(:subscription) do
+        create(
+          :subscription,
+          :pending,
+          organization:,
+          customer:,
+          plan:,
+          external_id: "s_cs1cA_5"
+        )
+      end
+      let(:rate_card) { create(:rate_card, organization:, product:, code: "card_r1", currency: "USD") }
+      let(:subscription_rate_card) do
+        create(
+          :subscription_rate_card,
+          organization:,
+          subscription:,
+          customer:,
+          rate_card:,
+          billing_anchor_date: Date.parse("2026-09-01"),
+          started_at: Time.zone.parse("2026-09-01"),
+          next_billing_at: Time.zone.parse("2026-10-01")
+        )
+      end
+
+      it "uses the requested range start without requiring the subscription to be started" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:cycles].first[:subscription_started_at]).to be_nil
+        expect(json[:cycles].first[:period_from]).to eq(Time.zone.parse("2026-09-01").iso8601)
+      end
+    end
+
     context "without end_on" do
       subject do
         travel_to(Time.zone.parse("2026-09-15")) do
