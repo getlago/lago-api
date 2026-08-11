@@ -8,8 +8,8 @@ module DatabaseMigrations
     CHARGES_PER_BATCH = 1_000
     IDS_PER_UPDATE = 10_000
 
-    # One row per charge filter. The fields are positional: they follow the `pluck` in `filters_of`,
-    Filter = Struct.new(:charge_id, :id, :code, :signature)
+    # One row per charge filter, filled positionally from the `pluck` in `filters_of`
+    Filter = Data.define(:charge_id, :id, :code, :signature)
 
     SIGNATURE_SQL = <<~SQL.squish
       COALESCE(
