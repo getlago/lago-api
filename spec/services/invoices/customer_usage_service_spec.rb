@@ -822,8 +822,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     it "compares filters only between charges identical in everything else" do
-      other_metric = create(:billable_metric, organization:, aggregation_type: "count_agg")
-      create(:standard_charge, plan:, billable_metric: other_metric, properties: {amount: "5"})
+      create_charge_copy(code: "cheaper", properties: {amount: "5"})
 
       service = described_class.new(customer:, subscription:)
       allow(service).to receive(:charge_filters_signature).and_call_original
