@@ -29,6 +29,15 @@ RSpec.describe BillingCycles::BillSubscriptionService do
       expect(BillingCycles::ProcessService).to have_received(:call).with(customer:)
     end
 
+    context "without an explicit range" do
+      subject(:result) { described_class.call(subscription:) }
+
+      it "lets the scheduler choose the default range" do
+        expect(result).to be_success
+        expect(BillingCycles::ScheduleService).to have_received(:call).with(customer:, range: nil)
+      end
+    end
+
     context "when scheduling fails" do
       let(:schedule_error) do
         BaseService::ValidationFailure.new(schedule_result, messages: {billing_cycle: ["overlapping_periods"]})

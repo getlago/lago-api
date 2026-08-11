@@ -9,7 +9,7 @@ module BillingCycles
   class BillSubscriptionService < BaseService
     Result = BaseResult[:invoices]
 
-    def initialize(subscription:, range: Time.current..Time.current)
+    def initialize(subscription:, range: nil)
       @subscription = subscription
       @range = range
       super

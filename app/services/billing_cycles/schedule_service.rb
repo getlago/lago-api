@@ -20,9 +20,9 @@ module BillingCycles
 
     Result = BaseResult[:billing_cycles]
 
-    def initialize(customer:, range: Time.current..Time.current)
+    def initialize(customer:, range: nil)
       @customer = customer
-      @range = range
+      @requested_range = range
       super
     end
 
@@ -45,7 +45,21 @@ module BillingCycles
 
     private
 
-    attr_reader :customer, :range
+    attr_reader :customer, :requested_range
+
+    def range
+      @range ||= requested_range || default_range
+    end
+
+    # Clock and activation jobs schedule without an explicit window. Start from the
+    # customer's earliest seeded item clock so backdated advance subscriptions bill the
+    # cycle due at subscription start, not a one-day "today" window.
+    def default_range
+      billing_at = customer.subscription_rate_cards.minimum(:next_billing_at)
+      range_begin = [billing_at, Time.current].compact.min
+
+      range_begin..Time.current
+    end
 
     def due_items
       customer.subscription_rate_cards

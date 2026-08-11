@@ -64,6 +64,24 @@ RSpec.describe BillingCycles::ScheduleService do
       expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-08-01"))
     end
 
+    context "without an explicit range" do
+      subject(:result) { described_class.call(customer:) }
+
+      let(:rate_card) { create(:rate_card, :advance, organization:) }
+      let(:current_time) { Time.zone.parse("2026-08-11 12:00:00") }
+      let(:next_billing_at) { Time.zone.parse("2026-08-10") }
+      let(:billing_anchor_date) { Date.parse("2026-09-01") }
+      let(:started_at) { Time.zone.parse("2026-08-10") }
+
+      it "starts from the seeded item clock instead of the current day" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-31 23:59:59.999999"))
+      end
+    end
+
     context "with a closed date range" do
       let(:range) { "2026-07-15".."2026-08-14" }
       let(:next_billing_at) { Time.zone.parse("2026-07-01") }
