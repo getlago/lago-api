@@ -506,7 +506,9 @@ module Events
       end
 
       def presence_condition
-        "events.properties::jsonb ? '#{sanitize_sql_for_conditions(aggregation_property)}'"
+        sanitize_sql_for_conditions(
+          ["jsonb_exists(events.properties::jsonb, ?)", aggregation_property]
+        )
       end
 
       def numeric_condition
