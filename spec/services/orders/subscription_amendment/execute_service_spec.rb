@@ -419,7 +419,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         order.reload
         expect(order.executed?).to eq(true)
         expect(order.execution_record["subscription_ids"]).to eq([])
-        expect(order.execution_record["terminated_subscription_ids"]).to be_nil
+        expect(order.execution_record["terminated_subscription_ids"]).to eq([])
       end
     end
   end
