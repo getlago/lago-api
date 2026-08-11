@@ -535,6 +535,10 @@ class Invoice < ApplicationRecord
     !self_billed && finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
   end
 
+  def should_sync_voided_invoice?
+    !self_billed && voided? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+  end
+
   def should_sync_hubspot_invoice?
     finalized? && should_update_hubspot_invoice?
   end

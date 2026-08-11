@@ -438,6 +438,81 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#should_sync_voided_invoice?" do
+    subject(:method_call) { invoice.should_sync_voided_invoice? }
+
+    let(:invoice) { create(:invoice, customer:, organization:, status:) }
+
+    context "when invoice is not voided" do
+      let(:status) { %i[draft generating finalized].sample }
+
+      context "without integration customer" do
+        let(:customer) { create(:customer, organization:) }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context "with integration customer" do
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+        let(:integration) { create(:netsuite_integration, organization:, sync_invoices: true) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+    end
+
+    context "when invoice is voided" do
+      let(:status) { :voided }
+
+      context "without integration customer" do
+        let(:customer) { create(:customer, organization:) }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context "with integration customer" do
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+        let(:integration) { create(:netsuite_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context "when sync invoices is true" do
+          let(:sync_invoices) { true }
+
+          it "returns true" do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context "when sync invoices is false" do
+          let(:sync_invoices) { false }
+
+          it "returns false" do
+            expect(method_call).to eq(false)
+          end
+        end
+
+        context "when the invoice is self_billed" do
+          let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+          let(:sync_invoices) { true }
+
+          it "returns false" do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+  end
+
   describe "#should_sync_salesforce_invoice?" do
     subject(:method_call) { invoice.should_sync_salesforce_invoice? }
 
