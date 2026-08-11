@@ -17,7 +17,7 @@ module V1
         regroup_paid_fees: model.regroup_paid_fees,
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         wallet_targetable: model.wallet_targetable,
-        rates_count: model.rates.count,
+        rates_count: model.rates.size,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }

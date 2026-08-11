@@ -26,7 +26,7 @@ module Types
 
       # Lock signals for clients: deletion locks at any plan/subscription
       # attachment, rate edits lock once a subscription bills the card.
-      field :attached_to_plan_or_subscription, Boolean, null: false, method: :attached_to_plan_or_subscription?
+      field :attached_to_plan_or_subscription, Boolean, null: false
       field :attached_to_subscriptions, Boolean, null: false, method: :attached_to_subscriptions?
 
       field :product, Types::Products::Object, null: false
@@ -39,7 +39,11 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def rates_count
-        object.rates.count
+        dataloader.with(Sources::CountByForeignKey, RateCardRate, :rate_card_id).load(object.id)
+      end
+
+      def attached_to_plan_or_subscription
+        dataloader.with(Sources::AttachedToPlanOrSubscription, :rate_card).load(object.id)
       end
     end
   end
