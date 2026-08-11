@@ -338,7 +338,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             cycle_index: 0,
             period_from: Time.zone.parse("2026-08-10").iso8601,
             period_to: Time.zone.parse("2026-09-09 23:59:59").iso8601,
-            billing_at: Time.zone.parse("2026-09-15").iso8601,
+            billing_at: Time.zone.parse("2026-08-10").iso8601,
             rate_phase_code: intro_phase.code,
             rate_override: {
               lago_id: rate_override.id,
@@ -358,7 +358,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             cycle_index: 1,
             period_from: Time.zone.parse("2026-09-10").iso8601,
             period_to: Time.zone.parse("2026-10-09 23:59:59").iso8601,
-            billing_at: Time.zone.parse("2026-10-09 23:59:59").iso8601,
+            billing_at: Time.zone.parse("2026-09-10").iso8601,
             rate_phase_code: standard_phase.code,
             rate_override: nil,
             rate: {
