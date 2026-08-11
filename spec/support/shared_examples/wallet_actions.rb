@@ -719,23 +719,6 @@ RSpec.shared_examples "a wallet create endpoint" do
       end
     end
   end
-
-  context "when multi_entity_billing is not enabled" do
-    context "when billing_entity_code is provided" do
-      let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
-
-      before { create_params[:billing_entity_code] = billing_entity.code }
-
-      it "does not assign a billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-
-        wallet = Wallet.find(json[:wallet][:lago_id])
-        expect(wallet.billing_entity_id).to be_nil
-      end
-    end
-  end
 end
 
 RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
@@ -771,23 +754,6 @@ RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
         subject
 
         expect(response).to have_http_status(:not_found)
-      end
-    end
-  end
-
-  context "when multi_entity_billing is not enabled" do
-    context "when billing_entity_id is provided" do
-      let(:billing_entity) { create(:billing_entity, organization:) }
-
-      before { create_params[:billing_entity_id] = billing_entity.id }
-
-      it "does not assign a billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-
-        wallet = Wallet.find(json[:wallet][:lago_id])
-        expect(wallet.billing_entity_id).to be_nil
       end
     end
   end
@@ -1283,17 +1249,6 @@ RSpec.shared_examples "a wallet update endpoint" do
           expect(response).to be_not_found_error("billing_entity")
           expect(wallet.reload.billing_entity_id).to eq(initial_billing_entity.id)
         end
-      end
-    end
-
-    context "when multi_entity_billing is not enabled" do
-      let(:update_params) { {billing_entity_code: target_billing_entity.code} }
-
-      it "ignores billing_entity_code and leaves the wallet untouched" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(wallet.reload.billing_entity_id).to eq(initial_billing_entity.id)
       end
     end
   end
