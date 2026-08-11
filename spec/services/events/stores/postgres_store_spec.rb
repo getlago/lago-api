@@ -50,6 +50,40 @@ RSpec.describe Events::Stores::PostgresStore do
     end
   end
 
+  describe "#sum" do
+    let(:field_name) { "value' OR FALSE) --" }
+    let(:billable_metric) { create(:sum_billable_metric, field_name:) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: 1.day.ago) }
+    let(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        subscription:,
+        boundaries: {
+          from_datetime: subscription.started_at.beginning_of_day,
+          to_datetime: Time.current.end_of_day
+        }
+      ).tap do |store|
+        store.aggregation_property = field_name
+        store.numeric_property = true
+      end
+    end
+
+    it "safely handles special characters in the aggregation property" do
+      create(
+        :event,
+        organization:,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: Time.current,
+        properties: {field_name => 2}
+      )
+
+      expect(event_store.sum.value).to eq(2)
+    end
+  end
+
   describe "#count" do
     context "when the upper boundary is a pay-in-advance event (max_timestamp)" do
       let(:billable_metric) { create(:billable_metric) }
