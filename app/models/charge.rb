@@ -231,6 +231,7 @@ end
 #  index_charges_on_plan_id                                      (plan_id)
 #  index_charges_on_plan_id_and_billable_metric_id_and_prorated  (plan_id,billable_metric_id,prorated) WHERE (deleted_at IS NULL)
 #  index_charges_on_plan_id_and_code                             (plan_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
+#  index_charges_on_plan_id_and_parent_id                        (plan_id,parent_id) UNIQUE WHERE ((parent_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_charges_pay_in_advance                                  (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
 #
 # Foreign Keys
