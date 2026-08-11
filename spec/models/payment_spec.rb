@@ -605,6 +605,48 @@ RSpec.describe Payment do
     end
   end
 
+  describe "#gated_subscription_activation?" do
+    subject(:method_call) { payment.gated_subscription_activation? }
+
+    let(:payment) { create(:payment, payable:) }
+    let(:subscription) { create(:subscription, :incomplete) }
+
+    context "when the payable is the activation invoice of a payment-gated subscription" do
+      let(:payable) do
+        create(
+          :invoice,
+          :open,
+          :with_subscriptions,
+          subscriptions: [subscription],
+          organization: subscription.organization,
+          customer: subscription.customer
+        )
+      end
+
+      before { create(:subscription_activation_rule, subscription:, status: "pending") }
+
+      it "returns true" do
+        expect(method_call).to eq(true)
+      end
+    end
+
+    context "when the payable is a regular invoice" do
+      let(:payable) { create(:invoice) }
+
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+    end
+
+    context "when the payable is a payment request" do
+      let(:payable) { create(:payment_request) }
+
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+    end
+  end
+
   describe ".for_organization" do
     subject(:result) { described_class.for_organization(organization) }
 

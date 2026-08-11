@@ -63,7 +63,7 @@ module Invoices
       def authentication_retry_pending?(payment, status)
         return false unless status.to_s == "failed"
 
-        payment.payment_provider&.retriable_authentication_failure?(payment.error_code) ||
+        payment.payment_provider&.retriable_authentication_failure?(payment.error_code, payment:) ||
           payment.payable.payments.excluding(payment).where(status: :requires_action).any?
       end
 
