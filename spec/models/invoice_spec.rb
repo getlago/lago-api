@@ -24,6 +24,29 @@ RSpec.describe Invoice do
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:usage_thresholds).through(:applied_usage_thresholds) }
   it { is_expected.to have_one(:regenerated_invoice).class_name("Invoice").with_foreign_key(:voided_invoice_id) }
+  it { is_expected.to have_many(:invoice_connections).dependent(:destroy) }
+  it { is_expected.to have_one(:payment_connection).class_name("InvoiceConnection") }
+  it { is_expected.to have_one(:tax_connection).class_name("InvoiceConnection") }
+  it { is_expected.to have_one(:accounting_connection).class_name("InvoiceConnection") }
+  it { is_expected.to have_one(:crm_connection).class_name("InvoiceConnection") }
+
+  describe "per-category connection snapshots" do
+    subject(:invoice) { create(:invoice, organization:, customer:) }
+
+    let(:customer) { create(:customer, organization:) }
+    let!(:payment) { create(:invoice_connection, invoice:, organization:, category: :payment) }
+    let!(:tax) do
+      create(:invoice_connection, invoice:, organization:, category: :tax, payment_provider_customer: nil,
+        integration_customer: create(:anrok_customer, customer:, organization:))
+    end
+
+    it "exposes each snapshot by category" do
+      expect(invoice.payment_connection).to eq(payment)
+      expect(invoice.tax_connection).to eq(tax)
+      expect(invoice.accounting_connection).to be_nil
+      expect(invoice.crm_connection).to be_nil
+    end
+  end
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
