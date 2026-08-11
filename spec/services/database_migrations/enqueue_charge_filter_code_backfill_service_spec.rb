@@ -43,6 +43,23 @@ RSpec.describe DatabaseMigrations::EnqueueChargeFilterCodeBackfillService do
         .once
     end
 
+    # The walk is one cursor per organization, so it has to carry on into the next one
+    it "hands out charges from every organization that is billing" do
+      build_filter(charge, ["us"])
+
+      other_organization = create(:organization)
+      create(:subscription, organization: other_organization, status: :active)
+      other_metric = create(:billable_metric, organization: other_organization)
+      other_charge = create(:standard_charge, plan: create(:plan, organization: other_organization), billable_metric: other_metric)
+      other_bm_filter = create(:billable_metric_filter, billable_metric: other_metric, key: "region", values: %w[us])
+      create(:charge_filter_value, charge_filter: create(:charge_filter, charge: other_charge),
+        billable_metric_filter: other_bm_filter, values: %w[us])
+
+      expect { service }
+        .to have_enqueued_job(DatabaseMigrations::BackfillChargeFilterCodesJob).with(charge.id).once
+        .and have_enqueued_job(DatabaseMigrations::BackfillChargeFilterCodesJob).with(other_charge.id).once
+    end
+
     it "hands out every charge that needs one" do
       other = create(:standard_charge, plan:, billable_metric:)
       build_filter(charge, ["us"])

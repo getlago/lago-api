@@ -19,18 +19,7 @@ module DatabaseMigrations
     end
 
     def call
-      cursor = nil
-
-      loop do
-        wait_for_room
-
-        charge_ids = next_charge_ids(cursor)
-        break if charge_ids.empty?
-
-        cursor = charge_ids.last
-
-        charge_ids.each { BackfillChargeFilterCodesJob.perform_later(it) }
-      end
+      billing_organization_ids.each { enqueue_charges_of(it) }
 
       result
     end
@@ -38,6 +27,24 @@ module DatabaseMigrations
     private
 
     attr_reader :batch_size, :max_queue_size, :poll_interval
+
+    # One organization at a time, each with its own cursor, rather than one walk over every charge
+    # with the organizations as an `IN` list: that list is as long as the number of organizations
+    # billing anything and would be repeated in every batch query.
+    def enqueue_charges_of(organization_id)
+      cursor = nil
+
+      loop do
+        wait_for_room
+
+        charge_ids = next_charge_ids(organization_id, cursor)
+        break if charge_ids.empty?
+
+        cursor = charge_ids.last
+
+        charge_ids.each { BackfillChargeFilterCodesJob.perform_later(it) }
+      end
+    end
 
     def wait_for_room
       sleep(poll_interval) while queue.size > max_queue_size
@@ -52,14 +59,14 @@ module DatabaseMigrations
     # Both conditions, as the job checks again before it writes. `charges.parent_id` goes back to
     # NULL when the parent charge is deleted (has_many :children, dependent: :nullify), so on its
     # own it cannot tell a plan's own charge from an override that lost its parent
-    def next_charge_ids(cursor)
+    def next_charge_ids(organization_id, cursor)
       pending = ChargeFilter.unscope(:order)
         .where(code: nil)
         .where("charge_filters.charge_id = charges.id")
 
       scope = Charge.kept
         .joins(:plan)
-        .where(parent_id: nil, organization_id: billing_organization_ids)
+        .where(parent_id: nil, organization_id:)
         .where(plans: {parent_id: nil, deleted_at: nil})
         .where(pending.arel.exists)
         .order(:id)
@@ -72,10 +79,7 @@ module DatabaseMigrations
 
     # An organization with nothing active or pending should be skipped.
     def billing_organization_ids
-      @billing_organization_ids ||= Subscription
-        .where(status: %i[active pending])
-        .distinct
-        .pluck(:organization_id)
+      Subscription.where(status: %i[active pending]).distinct.pluck(:organization_id)
     end
   end
 end
