@@ -4,13 +4,14 @@ module ChargeFilters
   class CascadeService < BaseService
     Result = BaseResult
 
-    def initialize(charge:, action:, filter_values:, old_properties: nil, new_properties: nil, invoice_display_name: nil)
+    def initialize(charge:, action:, filter_values:, old_properties: nil, new_properties: nil, invoice_display_name: nil, parent_code: nil)
       @charge = charge
       @action = action
       @filter_values = filter_values
       @old_properties = old_properties
       @new_properties = new_properties
       @invoice_display_name = invoice_display_name
+      @parent_code = parent_code
 
       super
     end
@@ -45,7 +46,7 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :action, :filter_values, :old_properties, :new_properties, :invoice_display_name
+    attr_reader :charge, :action, :filter_values, :old_properties, :new_properties, :invoice_display_name, :parent_code
 
     def child_ids
       @child_ids ||= charge.children
@@ -105,6 +106,7 @@ module ChargeFilters
       ActiveRecord::Base.transaction do
         child_filter = child_charge.filters.new(
           organization_id: child_charge.organization_id,
+          code: parent_code,
           invoice_display_name:,
           properties: ChargeModels::FilterPropertiesService.call(
             chargeable: child_charge,

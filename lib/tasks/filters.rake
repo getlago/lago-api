@@ -23,4 +23,34 @@ namespace :filters do
       end
     end
   end
+
+  # Charge filters the backfill deliberately left alone. Two situations produce them, and neither
+  # is a failure:
+  #
+  #   - two filters on one charge hold the same values, because removing a value from a billable
+  #     metric trimmed them onto the same predicate. Whichever kept the code would be the one that
+  #     bills from then on, and that is not a migration's call.
+  #
+  #   - an override kept a filter its plan no longer has. There is nothing left to link it to —
+  #     the plan's filter is gone, or the parent charge was deleted and `dependent: :nullify` cut
+  #     the link. This is damage already done and no backfill undoes it.
+  #
+  # Cleaning up the first kind and running upgrade:perform_required_jobs again converges.
+  desc "Report the charge filters left without a code"
+  task report_codes: :environment do
+    scope = ChargeFilter.where(code: nil, deleted_at: nil)
+
+    puts "##################################"
+    puts "Charge filters without a code: #{scope.count}"
+    puts ""
+    puts "They are either two filters sharing one predicate on the same charge — where picking"
+    puts "which keeps the code would decide which one bills — or an override holding a filter its"
+    puts "plan no longer has, which has nothing left to link to."
+    puts ""
+    puts "The charges to look at first:"
+
+    scope.group(:charge_id).order(Arel.sql("count(*) DESC")).limit(25).count.each do |charge_id, filters|
+      pp "- charge #{charge_id}: #{filters} filters"
+    end
+  end
 end
