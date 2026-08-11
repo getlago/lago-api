@@ -338,5 +338,93 @@ RSpec.describe Wallets::ThresholdTopUpService do
         end
       end
     end
+
+    # Reporting only. Refusing a top-up would leave the wallet short, and the allocator
+    # routes all of a customer's usage into a threshold wallet on the assumption that its
+    # rule always refills it.
+    describe "runaway top-ups", :sentry do
+      shared_examples "no burst is reported" do
+        it "tops up" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+
+        it "reports nothing" do
+          top_up_service.call
+
+          expect(sentry_events).to be_empty
+        end
+      end
+
+      context "when the wallet topped up fewer times than the burst threshold" do
+        before { create_list(:wallet_transaction, described_class::BURST_TOP_UPS - 1, wallet:, source: :threshold) }
+
+        it_behaves_like "no burst is reported"
+      end
+
+      context "when the top-ups are older than the window" do
+        before do
+          create_list(
+            :wallet_transaction,
+            described_class::BURST_TOP_UPS,
+            wallet:,
+            source: :threshold,
+            created_at: described_class::BURST_WINDOW.ago - 1.minute
+          )
+        end
+
+        it_behaves_like "no burst is reported"
+      end
+
+      context "when the earlier transactions were not automatic top-ups" do
+        before { create_list(:wallet_transaction, described_class::BURST_TOP_UPS, wallet:, source: :manual) }
+
+        it_behaves_like "no burst is reported"
+      end
+
+      context "when the earlier top-ups only moved credits out" do
+        before do
+          create_list(
+            :wallet_transaction,
+            described_class::BURST_TOP_UPS,
+            wallet:,
+            source: :threshold,
+            transaction_type: :outbound
+          )
+        end
+
+        it_behaves_like "no burst is reported"
+      end
+
+      # One top-up writes a second row when the rule also grants credits. Only the
+      # purchased row is a charge, so only that one counts.
+      context "when the earlier top-ups also granted credits" do
+        before do
+          create_list(:wallet_transaction, described_class::BURST_TOP_UPS - 1, wallet:, source: :threshold)
+          create_list(
+            :wallet_transaction,
+            described_class::BURST_TOP_UPS,
+            wallet:,
+            source: :threshold,
+            transaction_status: :granted
+          )
+        end
+
+        it_behaves_like "no burst is reported"
+      end
+
+      context "when the wallet topped up repeatedly in the last few minutes" do
+        before { create_list(:wallet_transaction, described_class::BURST_TOP_UPS, wallet:, source: :threshold) }
+
+        it "still tops up, because the shortfall is real" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+
+        it "reports the burst, so a person hears about it" do
+          top_up_service.call
+
+          expect(sentry_events.map(&:message)).to eq(["Automatic wallet top-up burst"])
+        end
+      end
+    end
   end
 end

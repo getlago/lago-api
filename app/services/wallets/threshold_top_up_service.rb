@@ -4,6 +4,9 @@ module Wallets
   class ThresholdTopUpService < BaseService
     Result = BaseResult
 
+    BURST_TOP_UPS = 3
+    BURST_WINDOW = 10.minutes
+
     def initialize(wallet:)
       @wallet = wallet
       super
@@ -13,6 +16,11 @@ module Wallets
       return result if rule.nil?
       return result if wallet.credits_ongoing_balance > rule.threshold_credits
       return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
+
+      burst_top_ups = top_ups_since(BURST_WINDOW)
+      if burst_top_ups >= BURST_TOP_UPS
+        report("Automatic wallet top-up burst", count: burst_top_ups)
+      end
 
       params = {
         wallet_id: wallet.id,
@@ -47,6 +55,17 @@ module Wallets
 
     def pending_transactions_amount
       @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:amount)
+    end
+
+    def top_ups_since(window)
+      wallet.wallet_transactions.threshold.inbound.purchased.where(created_at: window.ago..).count
+    end
+
+    def report(message, count:)
+      context = {wallet_id: wallet.id, organization_id: wallet.organization_id, top_ups: count}
+
+      Rails.logger.warn("#{message} #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
+      Sentry.capture_message(message, level: :warning, extra: context)
     end
   end
 end
