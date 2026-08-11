@@ -170,7 +170,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the dates are missing" do
+    context "when the quote carries no dates" do
       let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
 
       it "is valid at update scope" do
@@ -180,9 +180,11 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires the start date" do
+        it "requires a start date on the plan" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({start_date: ["value_is_mandatory"]})
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.payload.startDate": ["value_is_mandatory"]}
+          )
         end
       end
     end
@@ -805,6 +807,43 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
       it "is valid" do
         expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+    end
+
+    context "when the quote carries no dates and the plan start date is blank" do
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+      let(:plan_payload) { super().merge("startDate" => "") }
+      let(:scope) { :approve }
+
+      it "returns an invalid_date error only" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date"]})
+      end
+    end
+
+    context "when the quote carries no dates and only one plan carries its own" do
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
+      let(:other_plan) { create(:plan, organization:) }
+      let(:undated_plan_item) do
+        {"id" => other_plan.id, "type" => "plan", "payload" => {"code" => other_plan.code}}
+      end
+      let(:billing_items) { {"plans" => [plan_item, undated_plan_item]} }
+      let(:scope) { :approve }
+
+      it "reports only the plan carrying none" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.1.payload.startDate": ["value_is_mandatory"]}
+        )
       end
     end
 

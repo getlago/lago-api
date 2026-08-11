@@ -39,10 +39,6 @@ module QuoteVersions
           start_date = quote_version.start_date
           end_date = quote_version.end_date
 
-          if scope == :approve && start_date.blank?
-            add_error(field: :start_date, error_code: "value_is_mandatory")
-          end
-
           # An open-ended deal is legitimate, the subscription simply carries no ending date, but
           # Subscriptions::ValidateService requires the ending date to be strictly after the
           # subscription date, and these are the dates a plan without its own falls back to, so a
@@ -79,6 +75,7 @@ module QuoteVersions
 
             validate_plan_currency(plan, index)
             validate_minimum_commitment(plan, plan_item, index)
+            validate_plan_start_date_presence(plan_item, index)
             validate_plan_dates(plan_item, index)
             validate_plan_payment_method(plan_item, index)
             validate_charge_overrides(plan_item, plan, index)
@@ -286,6 +283,13 @@ module QuoteVersions
           )
         end
 
+        def validate_plan_start_date_presence(plan_item, index)
+          return unless scope == :approve
+          return unless (plan_item.dig("payload", "startDate") || quote_version.start_date).nil?
+
+          add_error(field: plan_field(index, "payload.startDate"), error_code: "value_is_mandatory")
+        end
+
         # The execution flow resolves each date on its own, falling back to the quote's, and
         # Subscriptions::ValidateService then requires the pair, compared as dates, to be strictly
         # increasing. Both fallbacks are applied here so a plan overriding one side only is still
@@ -297,7 +301,7 @@ module QuoteVersions
           valid_start = validate_plan_date(start_date, plan_field(index, "payload.startDate"))
           valid_end = validate_plan_date(end_date, plan_field(index, "payload.endDate"))
           return unless valid_start && valid_end
-          # A plan carrying neither date bills the quote pair, which validate_dates already checked.
+          # A plan carrying neither date bills the quote pair.
           return if start_date.nil? && end_date.nil?
 
           # The quote's own ending date is checked by validate_dates, so only a payload one is
