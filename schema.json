@@ -30248,6 +30248,12 @@
               "deprecationReason": null
             },
             {
+              "name": "QUOTES",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "PAYMENTS",
               "description": null,
               "isDeprecated": false,
@@ -30574,6 +30580,42 @@
               "deprecationReason": null
             },
             {
+              "name": "order_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_executed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_signed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_expired",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_voided",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "payment_succeeded",
               "description": null,
               "isDeprecated": false,
@@ -30635,6 +30677,24 @@
             },
             {
               "name": "plan_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_approved",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_voided",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

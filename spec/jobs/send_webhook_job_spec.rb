@@ -741,6 +741,54 @@ RSpec.describe SendWebhookJob do
         Webhooks::BillableMetrics::DeletedService
     end
 
+    context "with quote webhooks" do
+      let(:object) { create(:quote, organization:) }
+
+      it_behaves_like "a webhook service",
+        "quote.created",
+        Webhooks::Quotes::CreatedService
+
+      it_behaves_like "a webhook service",
+        "quote.approved",
+        Webhooks::Quotes::ApprovedService
+
+      it_behaves_like "a webhook service",
+        "quote.voided",
+        Webhooks::Quotes::VoidedService
+    end
+
+    context "with order form webhooks" do
+      let(:object) { create(:order_form, organization:) }
+
+      it_behaves_like "a webhook service",
+        "order_form.created",
+        Webhooks::OrderForms::CreatedService
+
+      it_behaves_like "a webhook service",
+        "order_form.signed",
+        Webhooks::OrderForms::SignedService
+
+      it_behaves_like "a webhook service",
+        "order_form.expired",
+        Webhooks::OrderForms::ExpiredService
+
+      it_behaves_like "a webhook service",
+        "order_form.voided",
+        Webhooks::OrderForms::VoidedService
+    end
+
+    context "with order webhooks" do
+      let(:object) { create(:order, organization:) }
+
+      it_behaves_like "a webhook service",
+        "order.created",
+        Webhooks::Orders::CreatedService
+
+      it_behaves_like "a webhook service",
+        "order.executed",
+        Webhooks::Orders::ExecutedService
+    end
+
     context "when webhook_type is dunning_campaign.finished" do
       let(:webhook_service) { instance_double(Webhooks::DunningCampaigns::FinishedService) }
       let(:customer) { create(:customer) }

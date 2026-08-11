@@ -6216,6 +6216,7 @@ enum EventCategoryEnum {
   PAYMENTS
   PAYMENT_RECEIPTS
   PLANS
+  QUOTES
   SUBSCRIPTIONS_AND_FEES
   WALLETS_AND_CREDITS
 }
@@ -6277,6 +6278,12 @@ enum EventTypeEnum {
   invoice_ready_to_finalize
   invoice_resynced
   invoice_voided
+  order_created
+  order_executed
+  order_form_created
+  order_form_expired
+  order_form_signed
+  order_form_voided
   payment_provider_error
   payment_receipt_created
   payment_receipt_generated
@@ -6288,6 +6295,9 @@ enum EventTypeEnum {
   plan_created
   plan_deleted
   plan_updated
+  quote_approved
+  quote_created
+  quote_voided
   subscription_canceled
   subscription_incomplete
   subscription_started
