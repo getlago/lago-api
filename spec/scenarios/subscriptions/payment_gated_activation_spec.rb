@@ -249,6 +249,36 @@ describe "Payment Gated Subscription Activation Scenarios" do
         expect(invoice.payment_status).not_to eq("failed")
       end
     end
+
+    context "when the Stripe connection does not support 3DS" do
+      before { stub_off_session_rejection_then_on_session_retry }
+
+      it "keeps the subscription incomplete so the customer can still authenticate" do
+        # Stage 1: the off-session charge is rejected, the authentication retry takes over
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+
+        subscription = customer.subscriptions.sole
+        invoice = subscription.invoices.sole
+        rejected_payment = invoice.payments.find_by(error_code: "authentication_required")
+
+        expect(rejected_payment).to be_present
+        expect(subscription).to be_incomplete
+        expect(subscription.cancellation_reason).to be_nil
+        expect(subscription.activation_rules.sole).to be_pending
+        expect(invoice.reload).to be_open
+        expect(invoice.payment_status).not_to eq("failed")
+
+        # Stage 2: Stripe reports the rejected off-session intent as failed
+        simulate_rejected_intent_failure_webhook(rejected_payment)
+
+        expect(subscription.reload).to be_incomplete
+        expect(subscription.cancellation_reason).to be_nil
+        expect(subscription.activation_rules.sole).to be_pending
+        expect(invoice.reload).to be_open
+        expect(invoice.payment_status).not_to eq("failed")
+      end
+    end
   end
 
   describe "payment failure: subscription canceled" do
