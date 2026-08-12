@@ -23,7 +23,9 @@ module RateCardRates
     def call
       return result.not_found_failure!(resource: "rate_card_rate") unless rate_card_rate
 
-      if rate_card_rate.rate_card.attached_to_subscriptions?
+      # On a card billed by subscriptions only pending rates stay editable:
+      # the active rate prices live subscriptions, changes go through appends.
+      if rate_card_rate.rate_card.attached_to_subscriptions? && !rate_card_rate.pending?
         return result.single_validation_failure!(field: :rate_card, error_code: "attached_to_subscriptions")
       end
 

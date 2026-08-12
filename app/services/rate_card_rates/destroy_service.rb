@@ -17,10 +17,6 @@ module RateCardRates
     def call
       return result.not_found_failure!(resource: "rate_card_rate") unless rate_card_rate
 
-      if rate_card_rate.rate_card.attached_to_subscriptions?
-        return result.single_validation_failure!(field: :rate_card, error_code: "attached_to_subscriptions")
-      end
-
       # Active and terminated rates are kept for audit.
       unless rate_card_rate.pending?
         return result.single_validation_failure!(field: :status, error_code: "only_pending_rates_can_be_deleted")

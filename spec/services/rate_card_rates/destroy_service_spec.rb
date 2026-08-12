@@ -51,9 +51,9 @@ RSpec.describe RateCardRates::DestroyService do
 
     before { create(:subscription_rate_card, organization:, rate_card:) }
 
-    it "forbids deleting the rate" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:rate_card]).to include("attached_to_subscriptions")
+    it "deletes the pending rate" do
+      expect(result).to be_success
+      expect(rate_card_rate.reload).to be_discarded
     end
   end
 end

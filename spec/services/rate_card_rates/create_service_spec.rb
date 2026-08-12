@@ -157,9 +157,20 @@ RSpec.describe RateCardRates::CreateService do
   context "when the card is attached to a subscription" do
     before { create(:subscription_rate_card, organization:, rate_card:) }
 
-    it "forbids appending a rate" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:rate_card]).to include("attached_to_subscriptions")
+    it "appends the rate" do
+      expect(result).to be_success
+      expect(result.rate_card_rate).to be_persisted
+    end
+
+    context "when the rate is not after the active rate" do
+      before { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day) }
+
+      it "still enforces the timeline placement" do
+        params[:effective_from] = 2.months.ago.beginning_of_day.iso8601
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
+      end
     end
   end
 
@@ -170,9 +181,9 @@ RSpec.describe RateCardRates::CreateService do
       create(:subscription, plan:, organization:)
     end
 
-    it "forbids appending a rate" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:rate_card]).to include("attached_to_subscriptions")
+    it "appends the rate" do
+      expect(result).to be_success
+      expect(result.rate_card_rate).to be_persisted
     end
   end
 end
