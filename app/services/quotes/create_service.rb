@@ -36,6 +36,9 @@ module Quotes
         add_owners!(quote:)
 
         SendWebhookJob.perform_after_commit("quote.created", quote_version)
+        # The webhook needs the version for its payload; the activity log records the quote, whose
+        # number, order type and owners are what a reader looks for on a creation entry.
+        Utils::ActivityLog.produce_after_commit(quote, "quote.created")
 
         result.quote = quote
       end

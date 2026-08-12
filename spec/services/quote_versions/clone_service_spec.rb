@@ -40,6 +40,11 @@ RSpec.describe QuoteVersions::CloneService do
           expect(quote_version.void_reason).to eq("manual")
           expect(quote_version.voided_at).not_to eq(nil)
         end
+
+        it "produces a quote.version_created activity log for the clone" do
+          expect(Utils::ActivityLog)
+            .to have_produced("quote.version_created").after_commit.with(result.quote_version)
+        end
       end
 
       context "when the source version is draft" do
@@ -70,6 +75,12 @@ RSpec.describe QuoteVersions::CloneService do
           expect { clone_service.call }
             .to have_enqueued_job_after_commit(SendWebhookJob)
             .with("quote.voided", quote_version)
+        end
+
+        it "produces a quote.voided activity log for the superseded source" do
+          clone_service.call
+
+          expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
         end
       end
     end

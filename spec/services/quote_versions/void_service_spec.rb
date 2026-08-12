@@ -28,6 +28,12 @@ RSpec.describe QuoteVersions::VoidService do
           .to have_enqueued_job_after_commit(SendWebhookJob)
           .with("quote.voided", quote_version)
       end
+
+      it "produces a quote.voided activity log" do
+        void_service.call
+
+        expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
+      end
     end
 
     context "when the version is superseded by a clone", :premium do
@@ -39,6 +45,12 @@ RSpec.describe QuoteVersions::VoidService do
           .with("quote.voided", quote_version)
 
         expect(quote_version.reload.void_reason).to eq("superseded")
+      end
+
+      it "produces a quote.voided activity log for the superseded version" do
+        void_service.call
+
+        expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
       end
     end
 

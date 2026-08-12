@@ -138,6 +138,24 @@ RSpec.describe OrderForms::MarkAsSignedService do
             .to have_enqueued_job_after_commit(SendWebhookJob)
             .with("order.created", Order)
         end
+
+        it "produces an order_form.signed activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.signed").after_commit.with(order_form)
+        end
+
+        it "produces an order.created activity log" do
+          result = service.call
+
+          expect(Utils::ActivityLog).to have_produced("order.created").after_commit.with(result.order)
+        end
+
+        it "does not produce an order_form.file_uploaded activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).not_to have_produced("order_form.file_uploaded")
+        end
       end
 
       context "when a signed_document is provided" do
@@ -152,6 +170,12 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.order_form).to be_signed
           expect(result.order_form.signed_document).to be_attached
           expect(result.order_form.signed_document.blob.content_type).to eq("application/pdf")
+        end
+
+        it "produces an order_form.file_uploaded activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.file_uploaded").after_commit.with(order_form)
         end
       end
 

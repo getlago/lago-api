@@ -37,6 +37,14 @@ RSpec.describe QuoteVersions::UpdateService do
         expect(result.quote_version.start_date).to eq(start_date)
         expect(result.quote_version.end_date).to eq(end_date)
       end
+
+      # Called through the class so the request goes through the activity log middleware, which an
+      # instance #call bypasses.
+      it "produces a quote.updated activity log" do
+        described_class.call(quote_version:, params: update_params)
+
+        expect(Utils::ActivityLog).to have_produced("quote.updated").after_commit.with(quote_version)
+      end
     end
 
     context "when the quote is one_off", :premium do

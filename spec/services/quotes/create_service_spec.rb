@@ -60,6 +60,16 @@ RSpec.describe Quotes::CreateService do
           .to have_enqueued_job_after_commit(SendWebhookJob)
           .with("quote.created", QuoteVersion)
       end
+
+      it "produces a quote.created activity log for the quote" do
+        expect(Utils::ActivityLog).to have_produced("quote.created").after_commit.with(result.quote)
+      end
+
+      it "does not produce a quote.version_created activity log for the initial version" do
+        result
+
+        expect(Utils::ActivityLog).not_to have_produced("quote.version_created")
+      end
     end
 
     context "when the customer has no currency", :premium do

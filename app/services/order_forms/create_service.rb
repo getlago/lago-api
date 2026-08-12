@@ -27,6 +27,7 @@ module OrderForms
       )
 
       SendWebhookJob.perform_after_commit("order_form.created", order_form)
+      Utils::ActivityLog.produce_after_commit(order_form, "order_form.created")
 
       result.order_form = order_form
       result

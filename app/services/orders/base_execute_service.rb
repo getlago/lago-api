@@ -65,6 +65,7 @@ module Orders
       )
 
       SendWebhookJob.perform_after_commit("order.executed", order)
+      Utils::ActivityLog.produce_after_commit(order, "order.executed")
     end
 
     # The transaction has already rolled back, so this trace is the only durable outcome of the
