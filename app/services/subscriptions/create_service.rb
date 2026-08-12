@@ -180,7 +180,7 @@ module Subscriptions
     end
 
     def handle_past_subscription(new_subscription)
-      new_subscription.mark_as_active!(new_subscription.subscription_at)
+      new_subscription.mark_as_active!(started_at_for(new_subscription))
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [new_subscription],
@@ -200,6 +200,27 @@ module Subscriptions
     def handle_future_subscription(new_subscription)
       new_subscription.pending!
       apply_activation_rules(new_subscription)
+    end
+
+    # NOTE: Backdating normally means "this subscription really started then, bill it from then".
+    #       But when a previous subscription on the same external_id was terminated after that date,
+    #       its terminating invoice already closed that window. Starting the new subscription at the
+    #       backdated date would re-open it and bill the same period a second time.
+    def started_at_for(new_subscription)
+      return Time.current if invoiced_period_covers?(new_subscription.subscription_at)
+
+      new_subscription.subscription_at
+    end
+
+    # NOTE: A subscription terminated with `on_termination_invoice: skip` never billed its last
+    #       window, so there is nothing to double bill and the backdated period must stay billable.
+    def invoiced_period_covers?(date)
+      customer.subscriptions
+        .terminated
+        .where(external_id:)
+        .where(on_termination_invoice: :generate)
+        .where("subscriptions.terminated_at > ?", date)
+        .exists?
     end
 
     def upgrade_subscription

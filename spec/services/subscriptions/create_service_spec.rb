@@ -899,6 +899,81 @@ RSpec.describe Subscriptions::CreateService do
           expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
+
+      context "when a terminated subscription on the same external_id covered that period" do
+        let(:terminated_at) { 2.days.ago }
+        let(:on_termination_invoice) { :generate }
+
+        let(:previous_subscription) do
+          create(
+            :subscription,
+            :terminated,
+            customer:,
+            plan:,
+            organization:,
+            external_id:,
+            started_at: 1.month.ago,
+            terminated_at:,
+            on_termination_invoice:
+          )
+        end
+
+        before { previous_subscription }
+
+        it "starts now so the already invoiced period is not billed twice" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          subscription = result.subscription
+          expect(subscription).to be_active
+          expect(subscription.started_at).to be_within(2.seconds).of(Time.current)
+          expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
+        end
+
+        context "when the previous subscription skipped its termination invoice" do
+          let(:on_termination_invoice) { :skip }
+
+          it "starts at subscription_at since that period was never invoiced" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at.to_s).to eq(subscription_at.to_s)
+          end
+        end
+
+        context "when the previous subscription was terminated before subscription_at" do
+          let(:terminated_at) { subscription_at - 1.day }
+
+          it "starts at subscription_at since the periods do not overlap" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at.to_s).to eq(subscription_at.to_s)
+          end
+        end
+
+        context "when the previous subscription has a different external_id" do
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              :terminated,
+              customer:,
+              plan:,
+              organization:,
+              started_at: 1.month.ago,
+              terminated_at:
+            )
+          end
+
+          it "starts at subscription_at" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at.to_s).to eq(subscription_at.to_s)
+          end
+        end
+      end
     end
 
     context "when subscription_at is earlier today" do
