@@ -42,12 +42,12 @@ class Invoice < ApplicationRecord
           currency invoice_type status payment_status settlement_types
           payment_dispute_lost payment_overdue self_billed partially_paid
           purchase_order_number],
-        features: { facetSearch: false, filter: { equality: true, comparison: false } }
+        features: {facetSearch: false, filter: {equality: true, comparison: false}}
       },
       {
         # range queries
         attributePatterns: %w[issuing_date total_amount_cents due_amount_cents],
-        features: { facetSearch: false, filter: { equality: true, comparison: true } }
+        features: {facetSearch: false, filter: {equality: true, comparison: true}}
       }
     ]
     sortable_attributes %i[issuing_date created_at id]
