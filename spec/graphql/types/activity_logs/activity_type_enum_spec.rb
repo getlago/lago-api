@@ -69,6 +69,18 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         rate_card_updated
         rate_card_deleted
         email_sent
+        quote_created
+        quote_updated
+        quote_approved
+        quote_voided
+        quote_version_created
+        order_form_created
+        order_form_signed
+        order_form_file_uploaded
+        order_form_expired
+        order_form_voided
+        order_created
+        order_executed
       ]
     )
   end

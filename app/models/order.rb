@@ -36,6 +36,11 @@ class Order < ApplicationRecord
   has_one :quote_version, through: :order_form
   has_one :quote, through: :quote_version
 
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
+
   enum :status, STATUSES,
     default: :created,
     validate: true

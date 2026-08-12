@@ -40,7 +40,10 @@ module Clickhouse
       product_category: "ProductCategory",
       product: "Product",
       product_filter: "ProductFilter",
-      rate_card: "RateCard"
+      rate_card: "RateCard",
+      quote: "Quote",
+      order_form: "OrderForm",
+      order: "Order"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -106,7 +109,19 @@ module Clickhouse
       product_filter_deleted: "product_filter.deleted",
       rate_card_created: "rate_card.created",
       rate_card_updated: "rate_card.updated",
-      rate_card_deleted: "rate_card.deleted"
+      rate_card_deleted: "rate_card.deleted",
+      quote_created: "quote.created",
+      quote_updated: "quote.updated",
+      quote_approved: "quote.approved",
+      quote_voided: "quote.voided",
+      quote_version_created: "quote.version_created",
+      order_form_created: "order_form.created",
+      order_form_signed: "order_form.signed",
+      order_form_file_uploaded: "order_form.file_uploaded",
+      order_form_expired: "order_form.expired",
+      order_form_voided: "order_form.voided",
+      order_created: "order.created",
+      order_executed: "order.executed"
     }
 
     before_save :ensure_activity_id

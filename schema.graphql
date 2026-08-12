@@ -73,7 +73,6 @@ type ActivityLogCollection {
 Activity log resource
 """
 union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | RateCard | Subscription | Wallet
-
 """
 Activity Logs source enums
 """
@@ -256,6 +255,41 @@ enum ActivityTypeEnum {
   invoice.voided
   """
   invoice_voided
+
+  """
+  order.created
+  """
+  order_created
+
+  """
+  order.executed
+  """
+  order_executed
+
+  """
+  order_form.created
+  """
+  order_form_created
+
+  """
+  order_form.expired
+  """
+  order_form_expired
+
+  """
+  order_form.file_uploaded
+  """
+  order_form_file_uploaded
+
+  """
+  order_form.signed
+  """
+  order_form_signed
+
+  """
+  order_form.voided
+  """
+  order_form_voided
 
   """
   payment_receipt.created
@@ -10001,6 +10035,7 @@ enum OnTerminationInvoiceEnum {
 }
 
 type Order {
+  activityLogs: [ActivityLog!]
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
   currency: CurrencyEnum
@@ -10055,6 +10090,7 @@ type OrderExecutionRecord {
 }
 
 type OrderForm {
+  activityLogs: [ActivityLog!]
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
   customer: Customer!
@@ -12134,6 +12170,7 @@ type Query {
 }
 
 type Quote {
+  activityLogs: [ActivityLog!]
   createdAt: ISO8601DateTime!
   currentVersion: QuoteVersion!
   customer: Customer!
@@ -12591,6 +12628,16 @@ enum ResourceTypeEnum {
   Invoice
   """
   invoice
+
+  """
+  Order
+  """
+  order
+
+  """
+  OrderForm
+  """
+  order_form
 
   """
   PaymentReceipt

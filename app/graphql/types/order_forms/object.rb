@@ -17,6 +17,7 @@ module Types
 
       field :signed_document_url, String, null: true
 
+      field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :customer, Types::Customers::Object, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
       field :quote, Types::Quotes::Object, null: false

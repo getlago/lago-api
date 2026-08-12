@@ -140,6 +140,36 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         end
       end
 
+      context "when the object is a quote version" do
+        let(:quote) { create(:quote, organization:) }
+        let(:quote_version) { create(:quote_version, quote:, organization:) }
+
+        it "uses quote as resource" do
+          activity_log.produce(quote_version, "quote.approved", activity_id: "activity-id") { BaseService::Result.new }
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "activity_logs",
+            key: "#{organization.id}--activity-id",
+            payload: {
+              activity_source: "api",
+              api_key_id: api_key.id,
+              user_id: nil,
+              activity_type: "quote.approved",
+              activity_id: "activity-id",
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1],
+              resource_id: quote.id,
+              resource_type: "Quote",
+              organization_id: organization.id,
+              activity_object: V1::QuoteVersionSerializer.new(quote_version, includes: %i[billing_items]).serialize,
+              activity_object_changes: {},
+              external_customer_id: quote.customer.external_id,
+              external_subscription_id: nil
+            }.to_json
+          )
+        end
+      end
+
       context "when the object is a payment receipt" do
         let(:payment_receipt) { create(:payment_receipt, organization:) }
 
@@ -431,6 +461,22 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
       it "returns the default includes for the object" do
         expect(method_call).to eq(serialized_includes)
+      end
+    end
+
+    context "when object is a quote" do
+      let(:object) { create(:quote, organization:) }
+
+      it "includes the owners" do
+        expect(method_call).to eq(%i[owners])
+      end
+    end
+
+    context "when object is a quote version" do
+      let(:object) { create(:quote_version, organization:) }
+
+      it "includes the billing items but not the content" do
+        expect(method_call).to eq(%i[billing_items])
       end
     end
 
