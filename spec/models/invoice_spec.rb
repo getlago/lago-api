@@ -2629,13 +2629,24 @@ RSpec.describe Invoice do
       expect(described_class.meilisearch_settings.to_settings).to eq(
         searchable_attributes: %i[number customer_name customer_firstname customer_lastname
           customer_legal_name customer_external_id customer_email purchase_order_number],
-        filterable_attributes: %i[id organization_id billing_entity_id currency customer_id
-          customer_external_id invoice_type status payment_status payment_dispute_lost
-          payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
-          partially_paid subscription_ids settlement_types metadata metadata_keys purchase_order_number],
+        filterable_attributes: [
+          {
+            attributePatterns: %w[id organization_id billing_entity_id customer_id
+              customer_external_id subscription_ids metadata metadata_keys
+              currency invoice_type status payment_status settlement_types
+              payment_dispute_lost payment_overdue self_billed partially_paid
+              purchase_order_number],
+            features: {facetSearch: false, filter: {equality: true, comparison: false}}
+          },
+          {
+            attributePatterns: %w[issuing_date total_amount_cents due_amount_cents],
+            features: {facetSearch: false, filter: {equality: true, comparison: true}}
+          }
+        ],
         sortable_attributes: %i[issuing_date created_at id],
         pagination: {"maxTotalHits" => 100_000},
-        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]}
+        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]},
+        proximity_precision: "byAttribute"
       )
     end
   end
