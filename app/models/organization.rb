@@ -47,6 +47,9 @@ class Organization < ApplicationRecord
   has_many :charges
   has_many :fixed_charges
   has_many :charge_filters
+  has_many :product_categories
+  has_many :products
+  has_many :product_filters
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
@@ -88,7 +91,7 @@ class Organization < ApplicationRecord
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
-  has_many :triggered_alerts, class_name: "UsageMonitoring::TriggeredAlert"
+  has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
   has_many :pending_vies_checks
 
   has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"

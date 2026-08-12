@@ -252,6 +252,18 @@ module Types
     field :create_pricing_unit, mutation: Mutations::PricingUnits::Create
     field :update_pricing_unit, mutation: Mutations::PricingUnits::Update
 
+    field :create_product_category, mutation: Mutations::ProductCategories::Create
+    field :destroy_product_category, mutation: Mutations::ProductCategories::Destroy
+    field :update_product_category, mutation: Mutations::ProductCategories::Update
+
+    field :create_product, mutation: Mutations::Products::Create
+    field :destroy_product, mutation: Mutations::Products::Destroy
+    field :update_product, mutation: Mutations::Products::Update
+
+    field :create_product_filter, mutation: Mutations::ProductFilters::Create
+    field :destroy_product_filter, mutation: Mutations::ProductFilters::Destroy
+    field :update_product_filter, mutation: Mutations::ProductFilters::Update
+
     field :create_role, mutation: Mutations::Roles::Create
     field :destroy_role, mutation: Mutations::Roles::Destroy
     field :update_role, mutation: Mutations::Roles::Update

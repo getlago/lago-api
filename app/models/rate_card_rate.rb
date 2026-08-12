@@ -2,6 +2,7 @@
 
 class RateCardRate < ApplicationRecord
   include PaperTrailTraceable
+  include ChargePropertiesValidation
   include Discard::Model
 
   self.discard_column = :deleted_at
@@ -54,8 +55,51 @@ class RateCardRate < ApplicationRecord
   validate :validate_effective_from_parseable
   validate :validate_effective_from_is_appended
   validate :validate_pricing_unit_conversion_rate
+  validate :validate_rate_model_compatibility
+  validate :validate_min_amount_timing
+  validate :validate_properties
 
   default_scope -> { kept }
+
+  scope :pending, -> { where("effective_from > ?", Time.current) }
+  scope :effective, -> { where(effective_from: ..Time.current) }
+
+  # The charge validators read pricing data from a `properties` attribute.
+  def properties
+    rate_properties
+  end
+
+  # Status is derived from the card's append-only timeline rather than stored:
+  # the latest effective rate is active, future rates are pending, and earlier
+  # effective rates have been superseded and are terminated.
+  def status
+    return STATUSES[:pending] if effective_from > Time.current
+
+    superseded = rate_card.rates
+      .where("effective_from > ?", effective_from)
+      .where(effective_from: ..Time.current)
+      .exists?
+
+    superseded ? STATUSES[:terminated] : STATUSES[:active]
+  end
+
+  def pending?
+    status == STATUSES[:pending]
+  end
+
+  def active?
+    status == STATUSES[:active]
+  end
+
+  def terminated?
+    status == STATUSES[:terminated]
+  end
+
+  # The property validators are shared with v1 charges and read the metric
+  # from the record; expose the card's item metric under the same name.
+  def billable_metric
+    rate_card&.product&.billable_metric
+  end
 
   private
 
@@ -75,12 +119,27 @@ class RateCardRate < ApplicationRecord
     errors.add(:effective_from, :invalid)
   end
 
+  def validate_rate_model_compatibility
+    code = RateCardRates::ModelCompatibility.error_code(rate_model:, rate_card:)
+    errors.add(:rate_model, code.to_sym) if code
+  end
+
+  # Minimum spending true-ups against a closed period, so it only exists on
+  # arrears cards.
+  def validate_min_amount_timing
+    return unless min_amount_cents&.positive?
+    return unless rate_card&.advance?
+
+    errors.add(:min_amount_cents, :not_allowed_for_billing_timing)
+  end
+
   # Append-only timeline: a new rate's effective_from must be strictly greater
   # than the latest existing rate on the same card. No insertion between rates.
   # The past is immutable, the future is editable
   def validate_effective_from_is_appended
     return if effective_from.blank?
     return if rate_card.blank?
+    return unless new_record? || effective_from_changed?
 
     others = rate_card.rates.where.not(id:)
     if others.where(effective_from:).exists?
@@ -100,6 +159,19 @@ class RateCardRate < ApplicationRecord
     return if applied_pricing_unit_conversion_rate.present?
 
     errors.add(:applied_pricing_unit_conversion_rate, :blank)
+  end
+
+  def validate_properties
+    return unless rate_model
+    return if errors[:rate_model].any?
+
+    validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS[rate_model.to_sym]
+    validator ||= Charges::Validators::BaseService
+
+    instance = validator.new(charge: self)
+    return if instance.valid?
+
+    instance.result.error.messages.values.flatten.each { errors.add(:rate_properties, it) }
   end
 end
 

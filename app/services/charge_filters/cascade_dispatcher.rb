@@ -6,7 +6,8 @@ module ChargeFilters
 
     # Diffs `before` against `after` and enqueues one ChargeFilters::CascadeJob
     # per change. `before` and `after` are arrays of:
-    #   { values: {"key" => [...]}, properties: {...} | nil, invoice_display_name: "..." }
+    #   { values: {"key" => [...]}, properties: {...} | nil, invoice_display_name: "...",
+    #     code: "..." | nil }
     # `values` and `properties` must be string-keyed.
     def call(charge:, before:, after:)
       before_by_values = before.index_by { |f| f[:values] }
@@ -24,7 +25,8 @@ module ChargeFilters
           new_filter[:values],
           existing&.dig(:properties),
           new_filter[:properties],
-          new_filter[:invoice_display_name]
+          new_filter[:invoice_display_name],
+          new_filter[:code]
         )
       end
 
@@ -35,7 +37,8 @@ module ChargeFilters
           old[:values],
           old[:properties],
           nil,
-          old[:invoice_display_name]
+          old[:invoice_display_name],
+          old[:code]
         )
       end
     end

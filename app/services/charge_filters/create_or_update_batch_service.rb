@@ -8,9 +8,6 @@ module ChargeFilters
       @charge = charge
       @filters_params = filters_params
       @organization = charge.organization
-      @new_filter_rows = []
-      @new_filter_value_rows = []
-      @new_filter_ids = []
 
       # We only care about order when you have less than 100 filters.
       @should_touch = filters_params.size < 100
@@ -28,6 +25,32 @@ module ChargeFilters
       end
 
       return result.single_validation_failure!(field: :values, error_code: "value_is_mandatory") if empty_filter_values?
+
+      retrying_on_code_collision { create_or_update_filters }
+
+      result
+    end
+
+    private
+
+    # Codes are read before the insert, so two concurrent requests creating filters with the same
+    # values on one charge can pick the same one. The index is what rejects it; retrying recomputes
+    # against the row that won, rather than failing a request nobody got wrong.
+    def retrying_on_code_collision
+      attempted = false
+
+      begin
+        yield
+      rescue ActiveRecord::RecordNotUnique
+        raise if attempted
+
+        attempted = true
+        retry
+      end
+    end
+
+    def create_or_update_filters
+      start_attempt
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
@@ -56,11 +79,21 @@ module ChargeFilters
           remove_filter(it)
         end
       end
-
-      result
     end
 
-    private
+    # Everything an attempt accumulates is built here rather than in the constructor, so a retry
+    # starts clean without a second list of things to undo
+    def start_attempt
+      @new_filter_rows = []
+      @new_filter_value_rows = []
+      @new_filter_ids = []
+      @taken_filter_codes = nil
+      @filters = nil
+      @filters_by_values_key = nil
+
+      result.filters = []
+      charge.filters.reset
+    end
 
     attr_reader :charge, :filters_params, :organization, :should_touch, :new_filter_rows, :new_filter_value_rows, :new_filter_ids
 
@@ -119,12 +152,14 @@ module ChargeFilters
       )
       filter_instance.validate!
 
+      # insert_all! skips callbacks, so the code the model would assign is built here
       new_filter_rows << {
         id: filter_id,
         charge_id: charge.id,
         organization_id: organization.id,
         invoice_display_name: filter_param[:invoice_display_name],
-        properties: properties
+        properties: properties,
+        code: claim_filter_code(values_params)
       }
       new_filter_ids << filter_id
 
@@ -146,6 +181,20 @@ module ChargeFilters
           values: values
         }
       end
+    end
+
+    def claim_filter_code(values_params)
+      code = ChargeFilter.next_free_code(ChargeFilter.generate_code(values_params), taken_filter_codes)
+      taken_filter_codes << code
+
+      code
+    end
+
+    # Read once rather than per filter: this runs inside a loop that then bulk inserts, so a
+    # query per filter would undo what insert_all! is here for. Codes assigned during the run
+    # are added as they go, since they are not in the table yet.
+    def taken_filter_codes
+      @taken_filter_codes ||= charge.filters.unscope(:order).pluck(:code).compact.to_set
     end
 
     def bulk_insert_new_filters

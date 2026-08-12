@@ -21,7 +21,7 @@ module Charges
       end
 
       def validate_billable_metric
-        return unless charge.billable_metric.latest_agg?
+        return unless charge.billable_metric&.latest_agg?
 
         add_error(field: :billable_metric, error_code: "invalid_value")
       end

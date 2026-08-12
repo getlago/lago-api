@@ -17,7 +17,7 @@ class Wallet < ApplicationRecord
   has_many :billable_metrics, through: :wallet_targets
 
   has_many :alerts, class_name: "UsageMonitoring::Alert"
-  has_many :triggered_alerts, class_name: "UsageMonitoring::TriggeredAlert"
+  has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },

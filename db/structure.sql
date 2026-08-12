@@ -853,6 +853,7 @@ DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_charges_on_accepts_target_wallet;
 DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id_and_code;
 DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
@@ -1322,6 +1323,7 @@ DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
+DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
 DROP TYPE IF EXISTS public.tax_status;
@@ -1876,6 +1878,17 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
 
 
 --
+-- Name: usage_monitoring_triggered_alert_kinds; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
+    'triggered',
+    'resolved',
+    'seeded'
+);
+
+
+--
 -- Name: ensure_role_consistency(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2389,7 +2402,8 @@ CREATE TABLE public.charge_filters (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
     invoice_display_name character varying,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying
 );
 
 
@@ -4390,7 +4404,8 @@ CREATE TABLE public.usage_monitoring_alert_thresholds (
     code character varying,
     recurring boolean DEFAULT false NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    notify_on character varying[] DEFAULT '{triggered}'::character varying[] NOT NULL
 );
 
 
@@ -4426,6 +4441,9 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     wallet_id uuid,
+    kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
+    in_alarm_thresholds jsonb,
+    fully_resolved boolean,
     CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
 );
 
@@ -8095,6 +8113,13 @@ CREATE INDEX index_charge_filter_values_on_organization_id ON public.charge_filt
 --
 
 CREATE INDEX index_charge_filters_on_charge_id ON public.charge_filters USING btree (charge_id);
+
+
+--
+-- Name: index_charge_filters_on_charge_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_charge_filters_on_charge_id_and_code ON public.charge_filters USING btree (charge_id, code) WHERE (deleted_at IS NULL);
 
 
 --
@@ -14262,6 +14287,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805110509'),
+('20260805110508'),
+('20260804131008'),
 ('20260803162623'),
 ('20260803120212'),
 ('20260803120211'),
