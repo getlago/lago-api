@@ -87,8 +87,9 @@ class RateCard < ApplicationRecord
   end
 
   # The card bills someone once it belongs to a plan that has subscriptions or
-  # is attached directly to a subscription. From that point its pricing is
-  # immutable: any price change goes through a new card and a plan migration.
+  # is attached directly to a subscription. From that point the billed
+  # timeline freezes — card fields, active and past rates — and price changes
+  # go through appended rates.
   def attached_to_subscriptions?
     subscription_applied_rate_cards.exists? ||
       Subscription.where(plan_id: plan_applied_rate_cards.select(:plan_id)).exists?

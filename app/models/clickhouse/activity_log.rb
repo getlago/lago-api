@@ -22,7 +22,7 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
-    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductCategory Product ProductFilter].freeze
+    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard].freeze
 
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
@@ -39,7 +39,8 @@ module Clickhouse
       feature: "Entitlement::Feature",
       product_category: "ProductCategory",
       product: "Product",
-      product_filter: "ProductFilter"
+      product_filter: "ProductFilter",
+      rate_card: "RateCard"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -102,7 +103,10 @@ module Clickhouse
       product_deleted: "product.deleted",
       product_filter_created: "product_filter.created",
       product_filter_updated: "product_filter.updated",
-      product_filter_deleted: "product_filter.deleted"
+      product_filter_deleted: "product_filter.deleted",
+      rate_card_created: "rate_card.created",
+      rate_card_updated: "rate_card.updated",
+      rate_card_deleted: "rate_card.deleted"
     }
 
     before_save :ensure_activity_id

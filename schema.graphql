@@ -338,6 +338,21 @@ enum ActivityTypeEnum {
   product_updated
 
   """
+  rate_card.created
+  """
+  rate_card_created
+
+  """
+  rate_card.deleted
+  """
+  rate_card_deleted
+
+  """
+  rate_card.updated
+  """
+  rate_card_updated
+
+  """
   subscription.canceled
   """
   subscription_canceled
@@ -12276,6 +12291,11 @@ enum ResourceTypeEnum {
   ProductFilter
   """
   product_filter
+
+  """
+  RateCard
+  """
+  rate_card
 
   """
   Subscription
