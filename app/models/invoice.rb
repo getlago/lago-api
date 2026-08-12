@@ -33,13 +33,6 @@ class Invoice < ApplicationRecord
 
     searchable_attributes %i[number customer_name customer_firstname customer_lastname
       customer_legal_name customer_external_id customer_email purchase_order_number]
-<<<<<<< Updated upstream
-    filterable_attributes %i[id organization_id billing_entity_id currency customer_id
-      customer_external_id invoice_type status payment_status payment_dispute_lost
-      payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
-      partially_paid subscription_ids settlement_types metadata metadata_keys
-      purchase_order_number]
-=======
 
     # NOTE: The gem compares these rules against the server response via Hash#to_s
     #       (meilisearch_settings_changed?), so keys must be strings and stay in the
@@ -61,7 +54,6 @@ class Invoice < ApplicationRecord
         "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => true}}
       }
     ]
->>>>>>> Stashed changes
     sortable_attributes %i[issuing_date created_at id]
     typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
     pagination max_total_hits: 100_000
