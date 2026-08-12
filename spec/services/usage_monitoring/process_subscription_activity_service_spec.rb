@@ -222,4 +222,23 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       end
     end
   end
+
+  context "when the subscription is no longer active" do
+    let(:premium_integrations) { ["lifetime_usage"] }
+    let(:alert) { create(:alert, organization:, subscription_external_id: subscription.external_id, thresholds: [10]) }
+
+    before do
+      alert
+      allow(UsageMonitoring::ProcessAlertService).to receive(:call)
+      subscription.mark_as_terminated!
+    end
+
+    it "does not evaluate alerts and drops the stale activity" do
+      service.call
+
+      expect(UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+  end
 end
