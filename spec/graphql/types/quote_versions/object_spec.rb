@@ -19,7 +19,7 @@ RSpec.describe Types::QuoteVersions::Object do
     expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
-    expect(subject).to have_field(:currency).of_type("String")
+    expect(subject).to have_field(:currency).of_type("CurrencyEnum")
     expect(subject).to have_field(:start_date).of_type("ISO8601Date")
     expect(subject).to have_field(:end_date).of_type("ISO8601Date")
   end

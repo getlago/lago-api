@@ -62,7 +62,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
     end
 
     context "when the currency is not ISO 4217" do
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "DOUBLOON") }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "DOUBLOON") }
 
       it "returns an invalid_currency error" do
         expect(validator).not_to be_valid

@@ -23,7 +23,6 @@ RSpec.describe Quotes::CreateService do
       content: "Test content",
       order_type: :subscription_creation,
       owners: [owner.id],
-      currency: "USD",
       start_date:,
       end_date:
     }
@@ -50,10 +49,20 @@ RSpec.describe Quotes::CreateService do
           expect(result.quote.current_version.draft?).to eq(true)
           expect(result.quote.current_version.content).to eq("Test content")
           expect(result.quote.current_version.billing_items).to eq({})
-          expect(result.quote.current_version.currency).to eq("USD")
+          expect(result.quote.current_version.currency).to eq("EUR")
           expect(result.quote.current_version.start_date).to eq(start_date)
           expect(result.quote.current_version.end_date).to eq(end_date)
         end
+      end
+    end
+
+    context "when the customer has no currency", :premium do
+      let(:customer) { create(:customer, organization:, currency: nil) }
+
+      it "falls back to the billing entity default currency" do
+        expect(result).to be_success
+        expect(customer.billing_entity.default_currency).to eq("USD")
+        expect(result.quote.current_version.currency).to eq("USD")
       end
     end
 
@@ -62,7 +71,6 @@ RSpec.describe Quotes::CreateService do
       let(:create_params) do
         {
           order_type: :one_off,
-          currency: "EUR",
           billing_items: {
             "addOns" => [
               {
@@ -91,7 +99,6 @@ RSpec.describe Quotes::CreateService do
         let(:create_params) do
           {
             order_type: :one_off,
-            currency: "EUR",
             billing_items: {
               "addOns" => [{"id" => "not-a-uuid", "localId" => "l1", "type" => "add_on", "payload" => {}}]
             }
@@ -108,7 +115,8 @@ RSpec.describe Quotes::CreateService do
     end
 
     context "when subscription is required and provided correctly", :premium do
-      let(:subscription) { create(:subscription, organization:, customer:) }
+      let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
       let(:create_params) do
         {
           billing_items: {},
@@ -122,6 +130,11 @@ RSpec.describe Quotes::CreateService do
         expect(result).to be_success
         expect(result.quote.subscription_id).to eq(subscription.id)
         expect(result.quote.order_type).to eq("subscription_amendment")
+      end
+
+      it "takes the currency from the subscription plan" do
+        expect(customer.currency).to eq("EUR")
+        expect(result.quote.current_version.currency).to eq("USD")
       end
     end
 

@@ -39,10 +39,6 @@ module QuoteVersions
           start_date = quote_version.start_date
           end_date = quote_version.end_date
 
-          if scope == :approve && start_date.blank?
-            add_error(field: :start_date, error_code: "value_is_mandatory")
-          end
-
           # An open-ended deal is legitimate, the subscription simply carries no ending date, but
           # Subscriptions::ValidateService requires the ending date to be strictly after the
           # subscription date, and these are the dates a plan without its own falls back to, so a
@@ -50,6 +46,22 @@ module QuoteVersions
           if start_date.present? && end_date.present? && end_date <= start_date
             add_error(field: :start_date, error_code: "invalid_date_range")
           end
+
+          validate_future_end_date(end_date, :end_date)
+        end
+
+        # Subscriptions::ValidateService also requires the ending date to be after today, and the
+        # quote pair is what a plan without its own dates falls back to. NOTE: futureness is only
+        # guaranteed at approval time. An order scheduled far enough ahead can still reach execution
+        # with a past ending date, which that service rejects then.
+        def validate_future_end_date(value, field)
+          return unless scope == :approve
+
+          end_date = Utils::Datetime.parse_iso8601(value)&.to_date
+          return if end_date.nil?
+          return if end_date > Time.current.to_date
+
+          add_error(field:, error_code: "invalid_date")
         end
 
         def validate_plans
@@ -63,8 +75,11 @@ module QuoteVersions
 
             validate_plan_currency(plan, index)
             validate_minimum_commitment(plan, plan_item, index)
-            validate_charge_overrides(plan_item, index)
-            validate_fixed_charge_overrides(plan_item, index)
+            validate_plan_start_date_presence(plan_item, index)
+            validate_plan_dates(plan_item, index)
+            validate_plan_payment_method(plan_item, index)
+            validate_charge_overrides(plan_item, plan, index)
+            validate_fixed_charge_overrides(plan_item, plan, index)
           end
         end
 
@@ -95,31 +110,163 @@ module QuoteVersions
           )
         end
 
-        def validate_charge_overrides(plan_item, index)
-          charge_overrides = (plan_item["overrides"] || {})["charges"] || []
-
-          charge_overrides.each_with_index do |charge_override, charge_index|
-            unless known_charge_metric_codes.include?([plan_item["id"], charge_override["billableMetricCode"]])
-              add_error(
-                field: plan_field(index, "overrides.charges.#{charge_index}.billableMetricCode"),
-                error_code: "charge_not_found"
-              )
+        # Plans::OverrideService matches overrides by charge id and silently ignores an id it
+        # cannot find, which would bill the catalog price instead of the negotiated one. So the
+        # id the execution flow will use is resolved here, from the payload snapshot, and must
+        # still exist on the plan.
+        def validate_charge_overrides(plan_item, plan, index)
+          charge_overrides(plan_item).each_with_index do |charge_override, charge_index|
+            field = plan_field(index, "overrides.charges.#{charge_index}.billableMetricCode")
+            snapshots = snapshot_charges(plan_item).each_with_index.select do |snapshot, _|
+              snapshot.dig("billableMetric", "code") == charge_override["billableMetricCode"]
             end
+
+            next add_error(field:, error_code: "charge_not_found") if snapshots.empty?
+            next add_error(field:, error_code: "ambiguous_charge_override") if snapshots.count > 1
+
+            snapshot, snapshot_index = snapshots.first
+            charge = plan.charges.find { |plan_charge| plan_charge.id == snapshot["id"] }
+
+            next add_error(field:, error_code: "charge_not_found") if charge.nil?
+
+            validate_charge_model(charge_override, charge, index, charge_index)
+            validate_snapshot_charge_model(
+              snapshot,
+              charge,
+              plan_field(index, "payload.charges.#{snapshot_index}.chargeModel")
+            )
+            # The negotiated properties only mean something against the model they were drafted
+            # for, and a model that moved is already reported above.
+            next if model_changed?(charge_override["chargeModel"], charge) ||
+              model_changed?(snapshot["chargeModel"], charge)
+
+            validate_charge_properties(charge_override, charge, index, charge_index)
+            validate_charge_min_amount(charge_override, charge, index, charge_index)
           end
         end
 
-        def validate_fixed_charge_overrides(plan_item, index)
-          fixed_charge_overrides = (plan_item["overrides"] || {})["fixedCharges"] || []
+        # The snapshot pins the charge model the approver was looking at, and an override omitting
+        # chargeModel would otherwise let the catalog drift away from it unnoticed, landing the
+        # negotiated properties on another model.
+        def validate_snapshot_charge_model(snapshot, charge, field)
+          return unless model_changed?(snapshot["chargeModel"], charge)
 
-          fixed_charge_overrides.each_with_index do |fixed_charge_override, fixed_charge_index|
+          add_error(field:, error_code: "charge_model_changed")
+        end
+
+        # Charges::OverrideService cannot switch a charge model and ignores the key, so properties
+        # negotiated for another model would land on the catalog one.
+        def validate_charge_model(charge_override, charge, index, charge_index)
+          return unless model_changed?(charge_override["chargeModel"], charge)
+
+          add_error(
+            field: plan_field(index, "overrides.charges.#{charge_index}.chargeModel"),
+            error_code: "cannot_override_charge_model"
+          )
+        end
+
+        # A quote that pinned no model follows whatever the catalog holds.
+        def model_changed?(quoted_charge_model, chargeable)
+          return false if quoted_charge_model.nil?
+
+          quoted_charge_model != chargeable.charge_model
+        end
+
+        def validate_charge_properties(charge_override, charge, index, charge_index)
+          properties = charge_override["properties"]
+          return if properties.nil?
+
+          field = plan_field(index, "overrides.charges.#{charge_index}.properties")
+          validate_properties(charge, properties, field)
+        # The model validators below assume a hash shaped for their charge model and raise on
+        # anything else, while a quoted payload is free-form.
+        rescue
+          add_error(field:, error_code: "invalid_value")
+        end
+
+        # Charge#validate_min_amount_cents refuses a minimum on a charge billed in advance, and
+        # Plans::OverrideService swallows that failure the same way.
+        def validate_charge_min_amount(charge_override, charge, index, charge_index)
+          return unless charge.pay_in_advance?
+          return unless charge_override["minAmountCents"].to_i.positive?
+
+          add_error(
+            field: plan_field(index, "overrides.charges.#{charge_index}.minAmountCents"),
+            error_code: "not_compatible_with_pay_in_advance"
+          )
+        end
+
+        def validate_fixed_charge_overrides(plan_item, plan, index)
+          fixed_charge_overrides(plan_item).each_with_index do |fixed_charge_override, fixed_charge_index|
             validate_fixed_charge_units(fixed_charge_override, index, fixed_charge_index)
 
-            unless known_fixed_charge_add_on_codes.include?([plan_item["id"], fixed_charge_override["addOnCode"]])
-              add_error(
-                field: plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.addOnCode"),
-                error_code: "fixed_charge_not_found"
-              )
+            field = plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.addOnCode")
+            snapshots = snapshot_fixed_charges(plan_item).each_with_index.select do |snapshot, _|
+              snapshot.dig("addOn", "code") == fixed_charge_override["addOnCode"]
             end
+
+            next add_error(field:, error_code: "fixed_charge_not_found") if snapshots.empty?
+            next add_error(field:, error_code: "ambiguous_fixed_charge_override") if snapshots.count > 1
+
+            snapshot, snapshot_index = snapshots.first
+            fixed_charge = plan.fixed_charges.find { |plan_fixed_charge| plan_fixed_charge.id == snapshot["id"] }
+
+            next add_error(field:, error_code: "fixed_charge_not_found") if fixed_charge.nil?
+
+            validate_snapshot_fixed_charge_model(
+              snapshot,
+              fixed_charge,
+              plan_field(index, "payload.fixedCharges.#{snapshot_index}.chargeModel")
+            )
+            next if model_changed?(snapshot["chargeModel"], fixed_charge)
+
+            validate_fixed_charge_properties(fixed_charge_override, fixed_charge, index, fixed_charge_index)
+          end
+        end
+
+        # FixedCharges::OverrideService does refuse a model switch, but Plans::OverrideService never
+        # checks its result and the override carries no model of its own, so the snapshot is the only
+        # place the approved model survives.
+        def validate_snapshot_fixed_charge_model(snapshot, fixed_charge, field)
+          return unless model_changed?(snapshot["chargeModel"], fixed_charge)
+
+          add_error(field:, error_code: "fixed_charge_model_changed")
+        end
+
+        # FixedCharges::OverrideService slices the properties down to the keys its charge model knows
+        # before saving, and FixedCharge requires them to be present, so an override drafted for
+        # another model filters down to nothing and takes the fixed charge with it.
+        def validate_fixed_charge_properties(fixed_charge_override, fixed_charge, index, fixed_charge_index)
+          properties = fixed_charge_override["properties"]
+          return if properties.nil?
+
+          field = plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.properties")
+          filtered = ChargeModels::FilterPropertiesService
+            .call(chargeable: fixed_charge, properties: properties.presence)
+            .properties
+
+          return add_error(field:, error_code: "invalid_value") if filtered.blank?
+
+          validate_properties(fixed_charge, filtered, field)
+        # Neither the filter nor the model validators tolerate a hash shaped for something else,
+        # while a quoted payload is free-form.
+        rescue
+          add_error(field:, error_code: "invalid_value")
+        end
+
+        # Plans::OverrideService calls the two override services without raise_if_error! and both
+        # rescue RecordInvalid, so properties the charge model rejects drop the charge from the
+        # override plan instead of failing execution: the subscription would then bill nothing at all
+        # for it. These are the validators the models themselves run.
+        def validate_properties(chargeable, properties, field)
+          validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS
+            .fetch(chargeable.charge_model.to_sym, ::Charges::Validators::BaseService)
+            .new(charge: chargeable, properties:)
+
+          return if validator.valid?
+
+          validator.result.error.messages.each do |key, error_codes|
+            error_codes.each { add_error(field: :"#{field}.#{key}", error_code: it) }
           end
         end
 
@@ -136,7 +283,70 @@ module QuoteVersions
           )
         end
 
+        def validate_plan_start_date_presence(plan_item, index)
+          return unless scope == :approve
+          return unless (plan_item.dig("payload", "startDate") || quote_version.start_date).nil?
+
+          add_error(field: plan_field(index, "payload.startDate"), error_code: "value_is_mandatory")
+        end
+
+        # The execution flow resolves each date on its own, falling back to the quote's, and
+        # Subscriptions::ValidateService then requires the pair, compared as dates, to be strictly
+        # increasing. Both fallbacks are applied here so a plan overriding one side only is still
+        # checked against the quote's other side.
+        def validate_plan_dates(plan_item, index)
+          start_date = plan_item.dig("payload", "startDate")
+          end_date = plan_item.dig("payload", "endDate")
+
+          valid_start = validate_plan_date(start_date, plan_field(index, "payload.startDate"))
+          valid_end = validate_plan_date(end_date, plan_field(index, "payload.endDate"))
+          return unless valid_start && valid_end
+          # A plan carrying neither date bills the quote pair.
+          return if start_date.nil? && end_date.nil?
+
+          # The quote's own ending date is checked by validate_dates, so only a payload one is
+          # reported here.
+          validate_future_end_date(end_date, plan_field(index, "payload.endDate"))
+
+          effective_start = effective_date(start_date, quote_version.start_date)
+          effective_end = effective_date(end_date, quote_version.end_date)
+          return if effective_start.nil? || effective_end.nil?
+          return if effective_end > effective_start
+
+          add_error(
+            field: plan_field(index, end_date.nil? ? "payload.startDate" : "payload.endDate"),
+            error_code: "invalid_date_range"
+          )
+        end
+
+        # Same ISO 8601 check as Subscriptions::ValidateService, the service these dates feed.
+        def validate_plan_date(value, field)
+          return true if value.nil?
+          return true if Utils::Datetime.valid_format?(value)
+
+          add_error(field:, error_code: "invalid_date")
+          false
+        end
+
+        # Same parsing as Subscriptions::ValidateService: the payload carries ISO 8601 strings while
+        # the quote carries date columns, and the service compares both as dates.
+        def effective_date(payload_value, quote_value)
+          Utils::Datetime.parse_iso8601(payload_value || quote_value)&.to_date
+        end
+
+        # Subscriptions::CreateService resolves the payment method by id and organization only, so
+        # ownership is checked here: another customer's method would otherwise be attached.
+        def validate_plan_payment_method(plan_item, index)
+          payment_method_id = plan_item.dig("payload", "paymentMethodId")
+          return if payment_method_id.nil?
+          return if known_payment_method_ids.include?(payment_method_id)
+
+          add_error(field: plan_field(index, "payload.paymentMethodId"), error_code: "payment_method_not_found")
+        end
+
         def validate_coupons
+          earlier_coupons = []
+
           coupons.each_with_index do |coupon_item, index|
             coupon = known_coupons_by_id[coupon_item["id"]]
 
@@ -147,8 +357,81 @@ module QuoteVersions
 
             validate_coupon_currency(coupon, index)
             validate_coupon_frequency(coupon, coupon_item, index)
+            validate_coupon_preconditions(coupon, earlier_coupons, index)
             validate_coupon_snapshot(coupon, coupon_item, index) if scope == :approve
+
+            earlier_coupons << coupon
           end
+        end
+
+        # AppliedCoupons::CreateService refuses a non-reusable coupon the customer already carries and
+        # a limited coupon overlapping one already applied. The deal applies its coupons one by one,
+        # so the first application is what makes a second one fail, halfway through execution.
+        # NOTE: the customer's own applied coupons are deliberately not checked here, that state can
+        # change between approval and execution.
+        def validate_coupon_preconditions(coupon, earlier_coupons, index)
+          if !coupon.reusable? && earlier_coupons.any? { |earlier| earlier.id == coupon.id }
+            add_error(field: coupon_field(index, "id"), error_code: "coupon_is_not_reusable")
+          end
+
+          return unless limited?(coupon)
+          return if earlier_coupons.none? { |earlier| overlapping_limitations?(coupon, earlier) }
+
+          add_error(field: coupon_field(index, "id"), error_code: "plan_overlapping")
+        end
+
+        def limited?(coupon)
+          coupon.limited_plans? || coupon.limited_billable_metrics?
+        end
+
+        # The four comparisons AppliedCoupons::CreateService makes: plans against plans, metrics
+        # against metrics, and each against the other through the charges connecting them.
+        def overlapping_limitations?(coupon, earlier)
+          plan_ids = target_ids(coupon, :plan_id)
+          metric_ids = target_ids(coupon, :billable_metric_id)
+          earlier_plan_ids = target_ids(earlier, :plan_id)
+          earlier_metric_ids = target_ids(earlier, :billable_metric_id)
+
+          plan_ids.intersect?(earlier_plan_ids) ||
+            metric_ids.intersect?(earlier_metric_ids) ||
+            earlier_plan_ids.intersect?(plans_charging(metric_ids)) ||
+            earlier_metric_ids.intersect?(metrics_charged_by(plan_ids))
+        end
+
+        def target_ids(coupon, attribute)
+          coupon.coupon_targets.filter_map(&attribute)
+        end
+
+        def plans_charging(metric_ids)
+          metric_ids.flat_map { plans_by_metric_id[it] || [] }
+        end
+
+        def metrics_charged_by(plan_ids)
+          plan_ids.flat_map { metrics_by_plan_id[it] || [] }
+        end
+
+        # The charges connecting the two limitation kinds, resolved once for every coupon the quote
+        # carries rather than once per pair compared.
+        def plans_by_metric_id
+          @plans_by_metric_id ||= Charge
+            .joins(:billable_metric)
+            .where(billable_metric: {id: quoted_target_ids(:billable_metric_id)})
+            .pluck(:billable_metric_id, :plan_id)
+            .group_by(&:first)
+            .transform_values { |rows| rows.map(&:last) }
+        end
+
+        def metrics_by_plan_id
+          @metrics_by_plan_id ||= Charge
+            .joins(:plan)
+            .where(plan: {id: quoted_target_ids(:plan_id)})
+            .pluck(:plan_id, :billable_metric_id)
+            .group_by(&:first)
+            .transform_values { |rows| rows.map(&:last) }
+        end
+
+        def quoted_target_ids(attribute)
+          known_coupons_by_id.each_value.flat_map { |coupon| target_ids(coupon, attribute) }.uniq
         end
 
         def validate_coupon_currency(coupon, index)
@@ -209,9 +492,24 @@ module QuoteVersions
 
             validate_wallet_credit_amounts(payload, index)
             validate_wallet_credit_currency(payload, index)
+            validate_wallet_credit_applies_to(payload, index)
             validate_expiration(payload["expirationAt"], wallet_credit_field(index, "payload.expirationAt"))
             validate_recurring_rules(payload, index)
           end
+        end
+
+        # Outside api context Wallets::CreateService resolves metric limitations by id, so a code
+        # that does not resolve means the wallet is created without its limitation instead of
+        # failing.
+        def validate_wallet_credit_applies_to(payload, index)
+          codes = Array(payload.dig("appliesTo", "billableMetricCodes"))
+          return if codes.empty?
+          return if (codes - known_billable_metric_codes).empty?
+
+          add_error(
+            field: wallet_credit_field(index, "payload.appliesTo.billableMetricCodes"),
+            error_code: "billable_metric_not_found"
+          )
         end
 
         # Unless the multi_currency flag is on, Wallets::CreateService forces the customer currency
@@ -346,6 +644,22 @@ module QuoteVersions
           billing_items["walletCredits"] || []
         end
 
+        def charge_overrides(plan_item)
+          Array(plan_item.dig("overrides", "charges"))
+        end
+
+        def fixed_charge_overrides(plan_item)
+          Array(plan_item.dig("overrides", "fixedCharges"))
+        end
+
+        def snapshot_charges(plan_item)
+          Array(plan_item.dig("payload", "charges"))
+        end
+
+        def snapshot_fixed_charges(plan_item)
+          Array(plan_item.dig("payload", "fixedCharges"))
+        end
+
         def plan_field(index, suffix)
           :"billing_items.plans.#{index}.#{suffix}"
         end
@@ -367,27 +681,27 @@ module QuoteVersions
             .organization
             .plans
             .with_discarded
-            .includes(:minimum_commitment)
+            .includes(:charges, :fixed_charges, :minimum_commitment)
             .where(id: plans.map { |plan_item| plan_item["id"] })
             .index_by(&:id)
         end
 
-        def known_charge_metric_codes
-          @known_charge_metric_codes ||= Charge
-            .with_discarded
-            .joins(:billable_metric)
-            .where(plan_id: known_plans_by_id.keys)
-            .pluck(:plan_id, "billable_metrics.code")
+        def known_payment_method_ids
+          @known_payment_method_ids ||= quote_version
+            .quote
+            .customer
+            .payment_methods
+            .where(id: plans.filter_map { |plan_item| plan_item.dig("payload", "paymentMethodId") })
+            .pluck(:id)
             .to_set
         end
 
-        def known_fixed_charge_add_on_codes
-          @known_fixed_charge_add_on_codes ||= FixedCharge
-            .with_discarded
-            .joins(:add_on)
-            .where(plan_id: known_plans_by_id.keys)
-            .pluck(:plan_id, "add_ons.code")
-            .to_set
+        def known_billable_metric_codes
+          @known_billable_metric_codes ||= quote_version
+            .organization
+            .billable_metrics
+            .where(code: wallet_credits.flat_map { |item| Array(item.dig("payload", "appliesTo", "billableMetricCodes")) })
+            .pluck(:code)
         end
 
         def known_coupons_by_id
@@ -395,6 +709,7 @@ module QuoteVersions
             .organization
             .coupons
             .with_discarded
+            .includes(:coupon_targets)
             .where(id: coupons.map { |coupon_item| coupon_item["id"] })
             .index_by(&:id)
         end

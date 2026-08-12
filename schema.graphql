@@ -3468,7 +3468,6 @@ input CreateQuoteInput {
   """
   clientMutationId: String
   content: String
-  currency: String
   customerId: ID!
   endDate: ISO8601Date
   orderType: OrderTypeEnum!
@@ -9810,7 +9809,7 @@ enum OnTerminationInvoiceEnum {
 type Order {
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
-  currency: String
+  currency: CurrencyEnum
   customer: Customer!
   executeAt: ISO8601DateTime
   executedAt: ISO8601DateTime
@@ -9851,10 +9850,13 @@ enum OrderExecutionModeEnum {
 }
 
 type OrderExecutionRecord {
+  appliedCouponIds: [ID!]!
   errors: [String!]!
   executedAt: ISO8601DateTime
   executionMode: OrderExecutionModeEnum
   invoiceId: ID
+  subscriptionIds: [ID!]!
+  walletIds: [ID!]!
 }
 
 type OrderForm {
@@ -11943,7 +11945,7 @@ type QuoteVersion {
   billingItems: JSON
   content: String
   createdAt: ISO8601DateTime!
-  currency: String
+  currency: CurrencyEnum
   endDate: ISO8601Date
   id: ID!
   mentionVariables: JSON!
@@ -14475,7 +14477,7 @@ input UpdateQuoteVersionInput {
   """
   clientMutationId: String
   content: String
-  currency: String
+  currency: CurrencyEnum
   endDate: ISO8601Date
   id: ID!
   startDate: ISO8601Date

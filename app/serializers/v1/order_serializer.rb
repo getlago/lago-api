@@ -12,13 +12,21 @@ module V1
         billing_snapshot: model.billing_snapshot,
         currency: model.currency,
         executed_at: model.executed_at&.iso8601,
-        execution_record: model.execution_record,
+        execution_record:,
         lago_organization_id: model.organization_id,
         lago_customer_id: model.customer_id,
         lago_order_form_id: model.order_form_id,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
+    end
+
+    private
+
+    # A record written before a key existed carries no such key at all, so the shape is completed
+    # here. Types::Orders::ExecutionRecord does the same for GraphQL.
+    def execution_record
+      Order::EXECUTION_RECORD_DEFAULTS.merge(model.execution_record || {})
     end
   end
 end

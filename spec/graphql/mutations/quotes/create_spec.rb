@@ -23,8 +23,8 @@ RSpec.describe Mutations::Quotes::Create do
           organization { id },
           number,
           orderType
-          currentVersion { id version status content billingItems }
-          versions { id version status content billingItems }
+          currentVersion { id version status content billingItems currency }
+          versions { id version status content billingItems currency }
         }
       }
     GQL
@@ -60,7 +60,8 @@ RSpec.describe Mutations::Quotes::Create do
           "status" => "draft",
           "version" => 1,
           "content" => "Test content",
-          "billingItems" => {}
+          "billingItems" => {},
+          "currency" => customer.currency
         }
       )
       expect(quote["versions"].size).to eq(1)
