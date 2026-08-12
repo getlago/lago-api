@@ -43,7 +43,7 @@ RSpec.describe QuoteVersions::ApproveService do
       it "enqueues a quote.approved webhook" do
         expect { approve_service.call }
           .to have_enqueued_job_after_commit(SendWebhookJob)
-          .with("quote.approved", quote)
+          .with("quote.approved", quote_version)
       end
 
       it "enqueues an order_form.created webhook" do

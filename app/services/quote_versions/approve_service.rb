@@ -32,7 +32,7 @@ module QuoteVersions
             mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
           )
 
-          SendWebhookJob.perform_after_commit("quote.approved", quote_version.quote)
+          SendWebhookJob.perform_after_commit("quote.approved", quote_version)
 
           result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
           result.quote_version = quote_version

@@ -26,17 +26,17 @@ RSpec.describe QuoteVersions::VoidService do
       it "enqueues a quote.voided webhook" do
         expect { void_service.call }
           .to have_enqueued_job_after_commit(SendWebhookJob)
-          .with("quote.voided", quote_version.quote)
+          .with("quote.voided", quote_version)
       end
     end
 
     context "when the version is superseded by a clone", :premium do
       let(:reason) { "superseded" }
 
-      it "voids the version without enqueueing a quote.voided webhook" do
-        expect do
-          ApplicationRecord.transaction { void_service.call }
-        end.not_to have_enqueued_job(SendWebhookJob)
+      it "enqueues a quote.voided webhook for the superseded version" do
+        expect { void_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.voided", quote_version)
 
         expect(quote_version.reload.void_reason).to eq("superseded")
       end

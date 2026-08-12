@@ -8,7 +8,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V1::QuoteSerializer.new(object, root_name: "quote")
+        ::V1::QuoteWithVersionSerializer.new(object, root_name: "quote")
       end
 
       def webhook_type

@@ -65,6 +65,12 @@ RSpec.describe QuoteVersions::CloneService do
           expect(quote_version.void_reason).to eq("superseded")
           expect(quote_version.voided_at).not_to eq(nil)
         end
+
+        it "enqueues a quote.voided webhook for the superseded source" do
+          expect { clone_service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("quote.voided", quote_version)
+        end
       end
     end
 

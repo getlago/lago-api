@@ -32,10 +32,10 @@ module Quotes
           subscription:,
           **params.slice(:order_type)
         )
-        initialize_version!(quote:)
+        quote_version = initialize_version!(quote:)
         add_owners!(quote:)
 
-        SendWebhookJob.perform_after_commit("quote.created", quote)
+        SendWebhookJob.perform_after_commit("quote.created", quote_version)
 
         result.quote = quote
       end
@@ -73,7 +73,7 @@ module Quotes
           :start_date,
           :end_date
         ).merge(currency: deal_currency)
-      )
+      ).quote_version
     end
 
     # The deal currency follows the billing object when there is one, and only then the customer's

@@ -31,11 +31,7 @@ module QuoteVersions
             approved_at: nil
           )
 
-          # Superseding is the clone path: the quote lives on through a fresh draft,
-          # so it is not a quote.voided event.
-          unless superseded?
-            SendWebhookJob.perform_after_commit("quote.voided", quote_version.quote)
-          end
+          SendWebhookJob.perform_after_commit("quote.voided", quote_version)
 
           result.quote_version = quote_version
         end
@@ -56,10 +52,6 @@ module QuoteVersions
 
     def cascade_reason?
       QuoteVersion::CASCADE_VOID_REASONS.key?(reason.to_sym)
-    end
-
-    def superseded?
-      reason.to_s == QuoteVersion::VOID_REASONS[:superseded]
     end
 
     def valid_reason?

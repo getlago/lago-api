@@ -55,10 +55,10 @@ RSpec.describe Quotes::CreateService do
         end
       end
 
-      it "enqueues a quote.created webhook" do
+      it "enqueues a quote.created webhook carrying the initial version" do
         expect { create_service.call }
           .to have_enqueued_job_after_commit(SendWebhookJob)
-          .with("quote.created", Quote)
+          .with("quote.created", QuoteVersion)
       end
     end
 

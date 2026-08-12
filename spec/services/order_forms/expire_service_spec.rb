@@ -135,7 +135,7 @@ RSpec.describe OrderForms::ExpireService do
         it "enqueues a cascaded quote.voided webhook" do
           expect { service.call }
             .to have_enqueued_job_after_commit(SendWebhookJob)
-            .with("quote.voided", quote)
+            .with("quote.voided", quote_version)
         end
       end
     end

@@ -742,7 +742,7 @@ RSpec.describe SendWebhookJob do
     end
 
     context "with quote webhooks" do
-      let(:object) { create(:quote, organization:) }
+      let(:object) { create(:quote_version, organization:) }
 
       it_behaves_like "a webhook service",
         "quote.created",
