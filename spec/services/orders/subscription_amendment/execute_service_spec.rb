@@ -201,6 +201,33 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         end
       end
 
+      # The replacement starts on the anniversary date of the one it amends, so the quoted start
+      # date is never read.
+      context "when the quote carries no start date" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            currency: "EUR",
+            start_date: nil,
+            end_date: 1.year.from_now.to_date,
+            billing_items:
+          )
+        end
+
+        it "amends the subscription anyway" do
+          result = execute_service.call
+
+          expect(result).to be_success
+
+          replacement = customer.subscriptions.active.sole
+          expect(replacement.subscription_at.to_i).to eq(target_subscription.subscription_at.to_i)
+          expect(replacement.ending_at.to_date).to eq(quote_version.end_date)
+        end
+      end
+
       # The trial anchors on the oldest start of the external id, which the replacement inherits.
       context "when the amended plan carries a trial" do
         let(:plan) do

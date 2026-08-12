@@ -75,7 +75,6 @@ module QuoteVersions
 
             validate_plan_currency(plan, index)
             validate_minimum_commitment(plan, plan_item, index)
-            validate_plan_start_date_presence(plan_item, index)
             validate_plan_dates(plan_item, index)
             validate_plan_payment_method(plan_item, index)
             validate_charge_overrides(plan_item, plan, index)
@@ -295,6 +294,8 @@ module QuoteVersions
         # increasing. Both fallbacks are applied here so a plan overriding one side only is still
         # checked against the quote's other side.
         def validate_plan_dates(plan_item, index)
+          validate_plan_start_date_presence(plan_item, index)
+
           start_date = plan_item.dig("payload", "startDate")
           end_date = plan_item.dig("payload", "endDate")
 

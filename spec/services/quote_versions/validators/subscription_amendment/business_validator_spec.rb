@@ -59,17 +59,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
       end
     end
 
+    # The replacement subscription then inherits the term of the one it amends.
     context "when the ending date is missing" do
-      let(:end_date) { nil }
-
-      it "refuses the amendment" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({end_date: ["value_is_mandatory"]})
-      end
-    end
-
-    context "when the ending date is missing at update scope" do
-      let(:scope) { :update }
       let(:end_date) { nil }
 
       it "is valid" do
@@ -80,6 +71,52 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
     context "when only the plan carries an ending date" do
       let(:end_date) { nil }
       let(:plan_payload) { super().merge("endDate" => 1.year.from_now.iso8601) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the ending date is in the past" do
+      let(:end_date) { 1.day.ago.to_date }
+
+      it "refuses the amendment" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({end_date: ["invalid_date"]})
+      end
+    end
+
+    context "when the plan carries an ending date in the past" do
+      let(:end_date) { nil }
+      let(:plan_payload) { super().merge("endDate" => 1.day.ago.iso8601) }
+
+      it "refuses the amendment" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date"]})
+      end
+    end
+
+    # The amendment starts on the target's own anniversary date, so the quoted start date is a
+    # commercial term the approval gate does not read.
+    context "when the quote carries no start date" do
+      let(:start_date) { nil }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan carries a start date that is not a date" do
+      let(:plan_payload) { super().merge("startDate" => "whenever") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the ending date is before the start date" do
+      let(:start_date) { 2.years.from_now.to_date }
+      let(:end_date) { 1.year.from_now.to_date }
 
       it "is valid" do
         expect(validator).to be_valid

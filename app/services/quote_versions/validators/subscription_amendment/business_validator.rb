@@ -4,12 +4,12 @@ module QuoteVersions
   module Validators
     module SubscriptionAmendment
       # An amendment payload is a subscription_creation one with extra constraints, so currency,
-      # dates, plan overrides, coupons and wallet credits are all inherited. Only what is specific
-      # to restating one plan on a live subscription is added here.
+      # plan overrides, coupons and wallet credits are all inherited. Only what is specific to
+      # restating one plan on a live subscription is added here, and the inherited date validation
+      # is narrowed down to the ending date, the one an amendment carries over.
       class BusinessValidator < SubscriptionCreation::BusinessValidator
         def valid?
           validate_single_plan
-          validate_end_date_presence
           validate_target_subscription
 
           # Errors accumulate in a hash, so the inherited pass still reports everything at once.
@@ -26,14 +26,22 @@ module QuoteVersions
           add_error(field: :"billing_items.plans", error_code: "single_plan_expected")
         end
 
-        # subscription_creation deliberately allows an open-ended deal. An amendment restates the
-        # contract term instead, and its ending date is what the replacement subscription carries.
-        def validate_end_date_presence
-          return unless scope == :approve
-          return if quote_version.end_date.present?
-          return if plans.first&.dig("payload", "endDate").present?
+        # An amendment restates the term of a subscription that is already running: its start is the
+        # target's own anniversary date, which the plan change carries over, so a quoted start date
+        # is a commercial term only and is not validated here.
+        def validate_dates
+          validate_future_end_date(quote_version.end_date, :end_date)
+        end
 
-          add_error(field: :end_date, error_code: "value_is_mandatory")
+        # An absent ending date leaves the target's own in place, see the plan change services. The
+        # start date being out of the picture, there is no range left to compare: the ending date
+        # only has to be after the target's anniversary date, which its futureness already implies
+        # since the target must be running.
+        def validate_plan_dates(plan_item, index)
+          end_date = plan_item.dig("payload", "endDate")
+          return unless validate_plan_date(end_date, plan_field(index, "payload.endDate"))
+
+          validate_future_end_date(end_date, plan_field(index, "payload.endDate"))
         end
 
         # The quote pins its target at creation, where Quote requires it for this order type and
