@@ -34,20 +34,24 @@ class Invoice < ApplicationRecord
     searchable_attributes %i[number customer_name customer_firstname customer_lastname
       customer_legal_name customer_external_id customer_email purchase_order_number]
 
+    # NOTE: The gem compares these rules against the server response via Hash#to_s
+    #       (meilisearch_settings_changed?), so keys must be strings and stay in the
+    #       server's serialization order, otherwise every ms_index call enqueues a
+    #       settingsUpdate task.
     filterable_attributes [
       {
         # Exact match only
-        attributePatterns: %w[id organization_id billing_entity_id customer_id
+        "attributePatterns" => %w[id organization_id billing_entity_id customer_id
           customer_external_id subscription_ids metadata metadata_keys
           currency invoice_type status payment_status settlement_types
           payment_dispute_lost payment_overdue self_billed partially_paid
           purchase_order_number],
-        features: {facetSearch: false, filter: {equality: true, comparison: false}}
+        "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => false}}
       },
       {
         # range queries
-        attributePatterns: %w[issuing_date total_amount_cents due_amount_cents],
-        features: {facetSearch: false, filter: {equality: true, comparison: true}}
+        "attributePatterns" => %w[issuing_date total_amount_cents due_amount_cents],
+        "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => true}}
       }
     ]
     sortable_attributes %i[issuing_date created_at id]

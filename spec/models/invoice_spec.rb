@@ -2631,16 +2631,16 @@ RSpec.describe Invoice do
           customer_legal_name customer_external_id customer_email purchase_order_number],
         filterable_attributes: [
           {
-            attributePatterns: %w[id organization_id billing_entity_id customer_id
+            "attributePatterns" => %w[id organization_id billing_entity_id customer_id
               customer_external_id subscription_ids metadata metadata_keys
               currency invoice_type status payment_status settlement_types
               payment_dispute_lost payment_overdue self_billed partially_paid
               purchase_order_number],
-            features: {facetSearch: false, filter: {equality: true, comparison: false}}
+            "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => false}}
           },
           {
-            attributePatterns: %w[issuing_date total_amount_cents due_amount_cents],
-            features: {facetSearch: false, filter: {equality: true, comparison: true}}
+            "attributePatterns" => %w[issuing_date total_amount_cents due_amount_cents],
+            "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => true}}
           }
         ],
         sortable_attributes: %i[issuing_date created_at id],
@@ -2648,6 +2648,13 @@ RSpec.describe Invoice do
         typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]},
         proximity_precision: "byAttribute"
       )
+    end
+
+    it "matches the server settings format so settings are not re-applied on every index call" do
+      settings = described_class.meilisearch_settings.to_settings
+      server_state = JSON.parse(settings.transform_keys { |key| key.to_s.camelize(:lower) }.to_json)
+
+      expect(described_class.send(:meilisearch_settings_changed?, server_state, settings)).to be(false)
     end
   end
 
