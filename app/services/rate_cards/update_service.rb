@@ -32,6 +32,14 @@ module RateCards
       boolean_failure = boolean_params_failure
       return boolean_failure if boolean_failure
 
+      if params[:wallet_targetable] && !rate_card.organization.events_targeting_wallets_enabled?
+        return result.single_validation_failure!(field: :wallet_targetable, error_code: "feature_unavailable")
+      end
+
+      if params[:applied_pricing_unit_code].present? && !rate_card.organization.pricing_units.exists?(code: params[:applied_pricing_unit_code])
+        return result.single_validation_failure!(field: :applied_pricing_unit_code, error_code: "value_is_invalid")
+      end
+
       if rate_card.rates.exists?
         locked_field = LOCKED_WITH_RATES.find { params.key?(it) && params[it] != rate_card[it] }
         if locked_field
