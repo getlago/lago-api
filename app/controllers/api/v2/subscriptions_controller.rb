@@ -253,7 +253,7 @@ module Api
           subscription_started_at: subscription_rate_card.subscription.started_at&.iso8601,
           applied_rate_card_id: subscription_rate_card.id,
           applied_rate_card_code: subscription_rate_card.rate_card.code,
-          cycle_index: period.cycle_index,
+          cycle_index: period.cycle_index + 1, # Display one-based indexes to make QA easier.
           period_from: period.period_from.iso8601,
           period_to: period.period_to.iso8601,
           billing_at: period.billing_at.iso8601,
