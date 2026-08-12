@@ -131,8 +131,6 @@ RSpec.describe Invoices::SubscriptionService do
     context "when a subscription is moved between billing entities mid-lifecycle" do
       let(:eu_entity) { create(:billing_entity, organization:) }
 
-      before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
       it "stamps the past invoice with the original entity, then the next billing cycle with the new one" do
         past_invoice = described_class.call(
           subscriptions:,

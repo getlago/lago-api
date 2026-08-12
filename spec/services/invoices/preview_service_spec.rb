@@ -62,26 +62,15 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
-      context "when currencies do not match" do
+      context "when the customer currency differs from the subscription" do
         let(:customer) { build(:customer, organization:, billing_entity:, currency: "USD") }
 
-        it "returns an error" do
-          result = preview_service.call
+        it "allows the preview" do
+          travel_to(timestamp) do
+            result = preview_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("customer_currency_does_not_match")
-        end
-
-        context "when multi_currency flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_currency) }
-
-          it "allows the preview" do
-            travel_to(timestamp) do
-              result = preview_service.call
-
-              expect(result).to be_success
-              expect(result.invoice).to be_present
-            end
+            expect(result).to be_success
+            expect(result.invoice).to be_present
           end
         end
       end
@@ -89,33 +78,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
       context "with multi-entity billing" do
         let(:other_billing_entity) { create(:billing_entity, organization:) }
 
-        context "when multi_entity_billing flag is disabled" do
-          let(:subscription) do
-            build(
-              :subscription,
-              customer:,
-              plan:,
-              billing_entity: other_billing_entity,
-              billing_time:,
-              subscription_at: timestamp,
-              started_at: timestamp,
-              created_at: timestamp
-            )
-          end
-
-          it "ignores the subscription's billing entity and uses the customer's entity" do
-            travel_to(timestamp) do
-              result = preview_service.call
-
-              expect(result).to be_success
-              expect(result.invoice.billing_entity).to eq(billing_entity)
-            end
-          end
-        end
-
-        context "when multi_entity_billing flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_entity_billing) }
-
+        context "with a subscription-specific billing entity" do
           context "when the subscription has its own billing entity" do
             let(:subscription) do
               build(

@@ -59,7 +59,7 @@ module Wallets
         attributes[:payment_method_id] = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
+      if params[:billing_entity_id].present? || params[:billing_entity_code].present?
         return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
         attributes[:billing_entity_id] = billing_entity.id
@@ -69,11 +69,11 @@ module Wallets
       recurring_transaction_rule = nil
 
       ActiveRecord::Base.transaction do
-        if currency.present? && (!organization_flag_enabled?(:multi_currency) || customer.currency.blank?)
+        if currency.present? && customer.currency.blank?
           Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = organization_flag_enabled?(:multi_currency) ? (currency || wallet.customer.currency) : wallet.customer.currency
+        wallet.currency = currency || wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet

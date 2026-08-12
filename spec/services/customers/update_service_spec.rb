@@ -135,20 +135,10 @@ RSpec.describe Customers::UpdateService do
           create(:subscription, customer:)
         end
 
-        it "does not update the billing entity" do
+        it "updates the billing entity" do
           result = customers_service.call
           expect(result).to be_success
-          expect(result.customer.billing_entity).to eq(billing_entity)
-        end
-
-        context "when multi_entity_billing feature flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_entity_billing) }
-
-          it "updates the billing entity" do
-            result = customers_service.call
-            expect(result).to be_success
-            expect(result.customer.billing_entity).to eq(billing_entity_2)
-          end
+          expect(result.customer.billing_entity).to eq(billing_entity_2)
         end
       end
     end
@@ -324,13 +314,11 @@ RSpec.describe Customers::UpdateService do
           }
         end
 
-        it "fails" do
+        it "updates the currency" do
           result = customers_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+          expect(result).to be_success
+          expect(result.customer.currency).to eq("CAD")
         end
       end
     end

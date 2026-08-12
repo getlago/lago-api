@@ -24,7 +24,7 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
 
-      if organization_flag_enabled?(:multi_entity_billing) && billing_entity_param_sent?
+      if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
           return result.not_found_failure!(resource: "billing_entity")
         end
