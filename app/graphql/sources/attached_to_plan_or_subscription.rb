@@ -15,7 +15,9 @@ module Sources
   class AttachedToPlanOrSubscription < GraphQL::Dataloader::Source
     GROUPINGS = {
       product: [:rate_card, "rate_cards.product_id"],
-      product_category: [{rate_card: :product}, "products.product_category_id"]
+      product_category: [{rate_card: :product}, "products.product_category_id"],
+      # The applied tables carry rate_card_id directly, no join needed.
+      rate_card: [nil, "rate_card_id"]
     }.freeze
 
     def initialize(group_by)
@@ -23,10 +25,16 @@ module Sources
     end
 
     def fetch(ids)
-      attached = PlanRateCard.joins(@joins).where(@column => ids).distinct.pluck(Arel.sql(@column)) |
-        SubscriptionRateCard.joins(@joins).where(@column => ids).distinct.pluck(Arel.sql(@column))
+      attached = grouped_ids(PlanRateCard, ids) | grouped_ids(SubscriptionRateCard, ids)
 
       ids.map { attached.include?(it) }
+    end
+
+    private
+
+    def grouped_ids(model, ids)
+      scope = @joins ? model.joins(@joins) : model.all
+      scope.where(@column => ids).distinct.pluck(Arel.sql(@column))
     end
   end
 end

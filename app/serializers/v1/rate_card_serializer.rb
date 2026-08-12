@@ -17,15 +17,25 @@ module V1
         regroup_paid_fees: model.regroup_paid_fees,
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         wallet_targetable: model.wallet_targetable,
+        rates_count: model.rates.size,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
 
+      payload[:active_rate] = active_rate if include?(:active_rate)
+      # Full timeline for activity-log payloads; API payloads stay lean.
       payload.merge!(rates) if include?(:rates)
       payload
     end
 
     private
+
+    def active_rate
+      rate = model.active_rate
+      return if rate.nil?
+
+      ::V1::RateCardRateSerializer.new(rate).serialize
+    end
 
     def rates
       ::CollectionSerializer.new(

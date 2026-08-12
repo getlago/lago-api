@@ -29,6 +29,24 @@ RSpec.describe Sources::AttachedToPlanOrSubscription do
       end
     end
 
+    context "when grouped by rate_card" do
+      subject(:source) { described_class.new(:rate_card) }
+
+      it "flags cards attached to a plan or a subscription" do
+        plan_attached = create(:rate_card, organization:, product:)
+        create(:plan_rate_card, organization:, rate_card: plan_attached)
+
+        subscription_attached = create(:rate_card, organization:, product:)
+        create(:subscription_rate_card, organization:, rate_card: subscription_attached)
+
+        free_card = create(:rate_card, organization:, product:)
+
+        result = source.fetch([plan_attached.id, subscription_attached.id, free_card.id])
+
+        expect(result).to eq([true, true, false])
+      end
+    end
+
     context "when grouped by product_category" do
       subject(:source) { described_class.new(:product_category) }
 

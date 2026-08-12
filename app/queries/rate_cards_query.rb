@@ -2,7 +2,13 @@
 
 class RateCardsQuery < BaseQuery
   Result = BaseResult[:rate_cards]
-  Filters = BaseFilters[:product_id, :product_filter_id]
+  Filters = BaseFilters[
+    :product_id,
+    :product_filter_id,
+    :code,
+    :product_code,
+    :product_filter_code
+  ]
 
   def call
     rate_cards = base_scope.result
@@ -11,6 +17,9 @@ class RateCardsQuery < BaseQuery
 
     rate_cards = with_product(rate_cards) if filters.product_id.present?
     rate_cards = with_product_filter(rate_cards) if filters.product_filter_id.present?
+    rate_cards = with_code(rate_cards) if filters.code.present?
+    rate_cards = with_product_code(rate_cards) if filters.product_code.present?
+    rate_cards = with_product_filter_code(rate_cards) if filters.product_filter_code.present?
 
     result.rate_cards = rate_cards
     result
@@ -38,5 +47,17 @@ class RateCardsQuery < BaseQuery
 
   def with_product_filter(scope)
     scope.where(product_filter_id: filters.product_filter_id)
+  end
+
+  def with_code(scope)
+    scope.where(code: filters.code)
+  end
+
+  def with_product_code(scope)
+    scope.where(product_id: organization.products.where(code: filters.product_code).select(:id))
+  end
+
+  def with_product_filter_code(scope)
+    scope.where(product_filter_id: organization.product_filters.where(code: filters.product_filter_code).select(:id))
   end
 end
