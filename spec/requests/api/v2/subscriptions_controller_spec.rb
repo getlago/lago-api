@@ -379,7 +379,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             subscription_started_at: subscription.started_at.iso8601,
             applied_rate_card_id: subscription_rate_card.id,
             applied_rate_card_code: rate_card.code,
-            cycle_index: 0,
+            cycle_index: 1,
             period_from: Time.zone.parse("2026-08-10").iso8601,
             period_to: Time.zone.parse("2026-09-09 23:59:59").iso8601,
             billing_at: Time.zone.parse("2026-08-10").iso8601,
@@ -399,7 +399,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             subscription_started_at: subscription.started_at.iso8601,
             applied_rate_card_id: subscription_rate_card.id,
             applied_rate_card_code: rate_card.code,
-            cycle_index: 1,
+            cycle_index: 2,
             period_from: Time.zone.parse("2026-09-10").iso8601,
             period_to: Time.zone.parse("2026-10-09 23:59:59").iso8601,
             billing_at: Time.zone.parse("2026-09-10").iso8601,
@@ -498,7 +498,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([0, 1])
+        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([1, 2])
         expect(json[:cycles].last[:period_to]).to eq(Time.zone.parse("2026-10-09 23:59:59").iso8601)
       end
     end
@@ -518,7 +518,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([0])
+        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([1])
         expect(json[:cycles].sole[:period_from]).to eq(Time.zone.parse("2026-08-10").iso8601)
         expect(json[:cycles].sole[:period_to]).to eq(Time.zone.parse("2026-09-09 23:59:59").iso8601)
       end
@@ -549,7 +549,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       it "continues the base interval from the weekly override end" do
         subject
 
-        period = json[:cycles].find { |cycle| cycle[:cycle_index] == 6 }
+        period = json[:cycles].find { |cycle| cycle[:cycle_index] == 7 }
         expect(period[:period_from]).to eq(Time.zone.parse("2026-09-21").iso8601)
         expect(period[:period_to]).to eq(Time.zone.parse("2026-10-20").end_of_day.iso8601)
       end
