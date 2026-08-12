@@ -23,6 +23,8 @@ module V1
       }
 
       payload[:active_rate] = active_rate if include?(:active_rate)
+      # Full timeline for activity-log payloads; API payloads stay lean.
+      payload.merge!(rates) if include?(:rates)
       payload
     end
 
@@ -33,6 +35,14 @@ module V1
       return if rate.nil?
 
       ::V1::RateCardRateSerializer.new(rate).serialize
+    end
+
+    def rates
+      ::CollectionSerializer.new(
+        model.rates,
+        ::V1::RateCardRateSerializer,
+        collection_name: "rates"
+      ).serialize
     end
   end
 end
