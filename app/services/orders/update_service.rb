@@ -60,6 +60,9 @@ module Orders
       return if result.failure?
 
       validate_execute_at(execute_at: params[:execute_at])
+      return if result.failure?
+
+      validate_deal_expiration(execute_at: effective_execute_at, quote_version: order.quote_version)
     end
   end
 end

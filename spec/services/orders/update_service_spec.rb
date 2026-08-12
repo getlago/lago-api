@@ -141,6 +141,51 @@ RSpec.describe Orders::UpdateService do
         end
       end
 
+      context "when execute_at outlives the deal" do
+        let(:quote) { create(:quote, organization:, customer:) }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, end_date: 1.month.from_now.to_date)
+        end
+        let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
+        let(:order) { create(:order, organization:, customer:, order_form:) }
+        let(:params) { {execution_mode: "execute_in_lago", execute_at: 2.months.from_now.iso8601} }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:execute_at]).to eq(["after_deal_expiration"])
+        end
+      end
+
+      # The stored date is what execution will use, so it is bounded even when the update leaves it
+      # alone.
+      context "when the stored execute_at outlives the deal" do
+        let(:quote) { create(:quote, organization:, customer:) }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, end_date: 1.month.from_now.to_date)
+        end
+        let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
+        let(:order) do
+          create(
+            :order,
+            organization:,
+            customer:,
+            order_form:,
+            execution_mode: "execute_in_lago",
+            execute_at: 2.months.from_now
+          )
+        end
+        let(:params) { {execution_mode: "order_only"} }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:execute_at]).to eq(["after_deal_expiration"])
+        end
+      end
+
       context "when clearing execute_at while keeping an execution_mode" do
         let(:order) { create(:order, organization:, customer:, execution_mode: "execute_in_lago", execute_at: 1.month.from_now) }
         let(:params) { {execute_at: nil} }

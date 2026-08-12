@@ -66,6 +66,9 @@ module OrderForms
       return if result.failure?
 
       validate_execute_at(execute_at:)
+      return if result.failure?
+
+      validate_deal_expiration(execute_at:, quote_version: order_form.quote_version)
     end
 
     def signed_document_attachment
