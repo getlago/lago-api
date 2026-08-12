@@ -55,6 +55,7 @@ class Invoice < ApplicationRecord
       }
     ]
     sortable_attributes %i[issuing_date created_at id]
+    proximity_precision "byAttribute"
     typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
     pagination max_total_hits: 100_000
   end

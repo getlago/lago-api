@@ -2,7 +2,7 @@
 
 module Orders
   # Dispatches execution to the concrete service for the order's order_type.
-  # Only one_off is supported for now.
+  # subscription_amendment is not supported yet.
   class ExecuteService < BaseService
     include OrderForms::Premium
 
@@ -20,6 +20,8 @@ module Orders
       case order.order_type
       when Quote::ORDER_TYPES[:one_off]
         Orders::OneOff::ExecuteService.call(order:)
+      when Quote::ORDER_TYPES[:subscription_creation]
+        Orders::SubscriptionCreation::ExecuteService.call(order:)
       else
         result.single_validation_failure!(field: :order_type, error_code: "unsupported_order_type")
       end

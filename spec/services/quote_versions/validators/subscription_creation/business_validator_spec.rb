@@ -15,8 +15,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.parse("2026-01-01"),
-      end_date: Date.parse("2026-12-31")
+      start_date: Date.current,
+      end_date: 1.year.from_now.to_date
     )
   end
   let(:plan) { create(:plan, organization:) }
@@ -30,8 +30,29 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     {
       "id" => plan.id,
       "type" => "plan",
-      "payload" => {"code" => plan.code},
+      "payload" => plan_payload,
       "overrides" => plan_overrides
+    }
+  end
+  let(:plan_payload) do
+    {
+      "code" => plan.code,
+      "charges" => [charge_snapshot],
+      "fixedCharges" => [fixed_charge_snapshot]
+    }
+  end
+  let(:charge_snapshot) do
+    {
+      "id" => charge.id,
+      "billableMetric" => {"code" => billable_metric.code},
+      "chargeModel" => charge.charge_model
+    }
+  end
+  let(:fixed_charge_snapshot) do
+    {
+      "id" => fixed_charge.id,
+      "addOn" => {"code" => fixed_charge.add_on.code},
+      "chargeModel" => fixed_charge.charge_model
     }
   end
   let(:plan_overrides) do
@@ -44,8 +65,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:charge_override) do
     {
       "billableMetricCode" => charge.billable_metric.code,
-      "chargeModel" => "graduated",
-      "properties" => {"graduatedRanges" => []}
+      "chargeModel" => charge.charge_model,
+      "properties" => {"amount" => "100"}
     }
   end
   let(:fixed_charge_override) { {"addOnCode" => fixed_charge.add_on.code, "units" => "3"} }
@@ -112,8 +133,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: nil,
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-12-31")
+          start_date: Date.current,
+          end_date: 1.year.from_now.to_date
         )
       end
 
@@ -133,13 +154,13 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the currency is not ISO 4217" do
       let(:quote_version) do
-        create(
+        build(
           :quote_version,
           quote:,
           organization:,
           currency: "DOUBLOON",
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-12-31")
+          start_date: Date.current,
+          end_date: 1.year.from_now.to_date
         )
       end
 
@@ -149,7 +170,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the dates are missing" do
+    context "when the quote carries no dates" do
       let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
 
       it "is valid at update scope" do
@@ -159,9 +180,11 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires the start date" do
+        it "requires a start date on the plan" do
           expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({start_date: ["value_is_mandatory"]})
+          expect(result.error.messages).to eq(
+            {"billing_items.plans.0.payload.startDate": ["value_is_mandatory"]}
+          )
         end
       end
     end
@@ -191,8 +214,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: "EUR",
-          start_date: Date.parse("2026-12-31"),
-          end_date: Date.parse("2026-01-01")
+          start_date: 1.year.from_now.to_date,
+          end_date: 1.month.from_now.to_date
         )
       end
 
@@ -209,14 +232,40 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
           quote:,
           organization:,
           currency: "EUR",
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-01-01")
+          start_date: 1.month.from_now.to_date,
+          end_date: 1.month.from_now.to_date
         )
       end
 
       it "returns an invalid_date_range error at update scope" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({start_date: ["invalid_date_range"]})
+      end
+    end
+
+    context "when the end date is today" do
+      let(:quote_version) do
+        create(
+          :quote_version,
+          quote:,
+          organization:,
+          currency: "EUR",
+          start_date: 1.month.ago.to_date,
+          end_date: Date.current
+        )
+      end
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_date error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({end_date: ["invalid_date"]})
+        end
       end
     end
 
@@ -285,6 +334,172 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
     context "when the charge is discarded" do
       before { charge.discard! }
 
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the plan has two charges on the overridden metric" do
+      before { create(:standard_charge, plan:, billable_metric:) }
+
+      let(:plan_payload) { super().merge("charges" => [charge_snapshot, charge_snapshot.merge("id" => plan.charges.last.id)]) }
+
+      it "returns an ambiguous_charge_override error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["ambiguous_charge_override"]}
+        )
+      end
+    end
+
+    context "when the snapshot carries no charges" do
+      let(:plan_payload) { super().except("charges") }
+
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the snapshot charge belongs to another plan" do
+      let(:other_charge) { create(:standard_charge, plan: create(:plan, organization:), billable_metric:) }
+      let(:charge_snapshot) { super().merge("id" => other_charge.id) }
+
+      it "returns a charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.billableMetricCode": ["charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the override charge model differs from the charge" do
+      let(:charge_override) { super().merge("chargeModel" => "graduated") }
+
+      it "returns a cannot_override_charge_model error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.chargeModel": ["cannot_override_charge_model"]}
+        )
+      end
+    end
+
+    context "when the snapshot charge model differs from the charge" do
+      let(:charge_snapshot) { super().merge("chargeModel" => "graduated") }
+
+      it "returns a charge_model_changed error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.charges.0.chargeModel": ["charge_model_changed"]}
+        )
+      end
+    end
+
+    context "when the snapshot charge carries no charge model" do
+      let(:charge_snapshot) { super().except("chargeModel") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated charge properties are invalid for the charge model" do
+      let(:charge_override) { super().merge("properties" => {"amount" => "not a number"}) }
+
+      it "returns the error the charge model itself raises" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties.amount": ["invalid_amount"]}
+        )
+      end
+    end
+
+    context "when the negotiated charge properties are empty" do
+      let(:charge_override) { super().merge("properties" => {}) }
+
+      it "returns an invalid_amount error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties.amount": ["invalid_amount"]}
+        )
+      end
+    end
+
+    context "when the negotiated charge properties were drafted for another charge model" do
+      let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+      let(:charge_override) { super().merge("chargeModel" => nil, "properties" => {"amount" => "100"}) }
+
+      it "returns a missing_graduated_ranges error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties.graduated_ranges": ["missing_graduated_ranges"]}
+        )
+      end
+    end
+
+    context "when the negotiated charge properties are not shaped for any charge model" do
+      let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+      let(:charge_override) do
+        super().merge("chargeModel" => nil, "properties" => {"graduated_ranges" => "one to ten"})
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.properties": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the charge override carries no properties" do
+      let(:charge_override) { super().except("properties") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the charge model moved and the properties no longer fit it" do
+      let(:charge_snapshot) { super().merge("chargeModel" => "graduated") }
+      let(:charge_override) { super().merge("chargeModel" => nil, "properties" => {"amount" => "100"}) }
+
+      it "only reports the charge model" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.charges.0.chargeModel": ["charge_model_changed"]}
+        )
+      end
+    end
+
+    context "when the negotiated minimum lands on a charge billed in advance" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true) }
+      let(:charge_override) { super().merge("minAmountCents" => 1_000) }
+
+      it "returns a not_compatible_with_pay_in_advance error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.charges.0.minAmountCents": ["not_compatible_with_pay_in_advance"]}
+        )
+      end
+    end
+
+    context "when the negotiated minimum is zero on a charge billed in advance" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true) }
+      let(:charge_override) { super().merge("minAmountCents" => 0) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated minimum lands on a charge billed in arrears" do
+      let(:charge_override) { super().merge("minAmountCents" => 1_000) }
+
       it "is valid" do
         expect(validator).to be_valid
       end
@@ -314,6 +529,87 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the fixed charge is discarded" do
       before { fixed_charge.discard! }
+
+      it "returns a fixed_charge_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.addOnCode": ["fixed_charge_not_found"]}
+        )
+      end
+    end
+
+    context "when the plan has two fixed charges on the overridden add-on" do
+      before { create(:fixed_charge, plan:, add_on: fixed_charge.add_on) }
+
+      let(:plan_payload) do
+        super().merge("fixedCharges" => [fixed_charge_snapshot, fixed_charge_snapshot.merge("id" => plan.fixed_charges.last.id)])
+      end
+
+      it "returns an ambiguous_fixed_charge_override error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.addOnCode": ["ambiguous_fixed_charge_override"]}
+        )
+      end
+    end
+
+    context "when the snapshot fixed charge model differs from the fixed charge" do
+      let(:fixed_charge_snapshot) { super().merge("chargeModel" => "graduated") }
+
+      it "returns a fixed_charge_model_changed error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.fixedCharges.0.chargeModel": ["fixed_charge_model_changed"]}
+        )
+      end
+    end
+
+    context "when the snapshot fixed charge carries no charge model" do
+      let(:fixed_charge_snapshot) { super().except("chargeModel") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated fixed charge properties are invalid for the charge model" do
+      let(:fixed_charge_override) { super().merge("properties" => {"amount" => "not a number"}) }
+
+      it "returns the error the charge model itself raises" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.properties.amount": ["invalid_amount"]}
+        )
+      end
+    end
+
+    # FixedCharges::OverrideService slices these away and FixedCharge then refuses blank properties.
+    context "when the negotiated fixed charge properties were drafted for another charge model" do
+      let(:fixed_charge_override) do
+        super().merge("properties" => {"graduated_ranges" => [{"from_value" => 0, "per_unit_amount" => "1"}]})
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.properties": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the negotiated fixed charge properties are empty" do
+      let(:fixed_charge_override) { super().merge("properties" => {}) }
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.overrides.fixedCharges.0.properties": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the negotiated fixed charge properties are valid" do
+      let(:fixed_charge_override) { super().merge("properties" => {"amount" => "42"}) }
 
       it "is valid" do
         expect(validator).to be_valid
@@ -408,6 +704,170 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the plan payload dates are not ISO 8601" do
+      let(:plan_payload) { super().merge("startDate" => "not-a-date") }
+
+      it "returns an invalid_date error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date"]})
+      end
+    end
+
+    context "when the plan payload endDate is before its startDate" do
+      let(:plan_payload) do
+        super().merge("startDate" => 6.months.from_now.iso8601, "endDate" => 3.months.from_now.iso8601)
+      end
+
+      it "returns an invalid_date_range error on the end date" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload dates are date-only" do
+      let(:plan_payload) do
+        super().merge("startDate" => Date.current.iso8601, "endDate" => 1.year.from_now.to_date.iso8601)
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan payload dates fall on the same day" do
+      let(:plan_payload) do
+        super().merge(
+          "startDate" => 6.months.from_now.beginning_of_day.iso8601,
+          "endDate" => 6.months.from_now.end_of_day.iso8601
+        )
+      end
+
+      it "returns an invalid_date_range error on the end date" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload only overrides the start date, past the quote end date" do
+      let(:plan_payload) { super().merge("startDate" => 2.years.from_now.iso8601) }
+
+      it "returns an invalid_date_range error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload only overrides the end date, before the quote start date" do
+      let(:plan_payload) { super().merge("endDate" => 1.day.ago.iso8601) }
+
+      it "returns an invalid_date_range error on the end date" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
+      end
+    end
+
+    context "when the plan payload endDate is today" do
+      let(:quote_version) do
+        create(
+          :quote_version,
+          quote:,
+          organization:,
+          currency: "EUR",
+          start_date: 1.month.ago.to_date,
+          end_date: 1.year.from_now.to_date
+        )
+      end
+      let(:plan_payload) { super().merge("endDate" => Time.current.iso8601) }
+
+      it "is valid at update scope" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "returns an invalid_date error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date"]})
+        end
+      end
+    end
+
+    context "when the plan payload only overrides the start date, inside the quote range" do
+      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the quote carries no dates and the plan overrides one" do
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when the scope is approve" do
+        let(:scope) { :approve }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+    end
+
+    context "when the quote carries no dates and the plan start date is blank" do
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+      let(:plan_payload) { super().merge("startDate" => "") }
+      let(:scope) { :approve }
+
+      it "returns an invalid_date error only" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date"]})
+      end
+    end
+
+    context "when the quote carries no dates and only one plan carries its own" do
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
+      let(:other_plan) { create(:plan, organization:) }
+      let(:undated_plan_item) do
+        {"id" => other_plan.id, "type" => "plan", "payload" => {"code" => other_plan.code}}
+      end
+      let(:billing_items) { {"plans" => [plan_item, undated_plan_item]} }
+      let(:scope) { :approve }
+
+      it "reports only the plan carrying none" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.1.payload.startDate": ["value_is_mandatory"]}
+        )
+      end
+    end
+
+    context "when the plan payload payment method belongs to the customer" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+      let(:plan_payload) { super().merge("paymentMethodId" => payment_method.id) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the plan payload payment method belongs to another customer" do
+      let(:payment_method) { create(:payment_method, organization:, customer: create(:customer, organization:)) }
+      let(:plan_payload) { super().merge("paymentMethodId" => payment_method.id) }
+
+      it "returns a payment_method_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.plans.0.payload.paymentMethodId": ["payment_method_not_found"]}
+        )
+      end
+    end
+
     context "when the coupon does not exist" do
       let(:coupon_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
 
@@ -431,6 +891,100 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
       it "is valid" do
         expect(validator).to be_valid
+      end
+    end
+
+    context "when the same non-reusable coupon is applied twice" do
+      let(:coupon) { create(:coupon, organization:, reusable: false) }
+      let(:billing_items) { super().merge("coupons" => [coupon_item, coupon_item]) }
+
+      it "returns a coupon_is_not_reusable error on the second one" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["coupon_is_not_reusable"]})
+      end
+    end
+
+    context "when the same reusable coupon is applied twice" do
+      let(:billing_items) { super().merge("coupons" => [coupon_item, coupon_item]) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "with a second coupon" do
+      let(:other_coupon) { create(:coupon, organization:) }
+      let(:other_coupon_item) do
+        {
+          "id" => other_coupon.id,
+          "localId" => "4c0e5e21-9f38-4a2b-8c7d-6e5f4a3b2c1d",
+          "payload" => {"code" => other_coupon.code, "type" => "fixed_amount", "amountCents" => 10_000}
+        }
+      end
+      let(:billing_items) { super().merge("coupons" => [coupon_item, other_coupon_item]) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+
+      context "when both are limited to the same plan" do
+        let(:coupon) { create(:coupon, organization:, limited_plans: true) }
+        let(:other_coupon) { create(:coupon, organization:, limited_plans: true) }
+
+        before do
+          create(:coupon_plan, coupon:, plan:)
+          create(:coupon_plan, coupon: other_coupon, plan:)
+        end
+
+        it "returns a plan_overlapping error on the second one" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["plan_overlapping"]})
+        end
+      end
+
+      context "when they are limited to different plans" do
+        let(:coupon) { create(:coupon, organization:, limited_plans: true) }
+        let(:other_coupon) { create(:coupon, organization:, limited_plans: true) }
+
+        before do
+          create(:coupon_plan, coupon:, plan:)
+          create(:coupon_plan, coupon: other_coupon, plan: create(:plan, organization:))
+        end
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when one is limited to a plan and the other to a metric that plan charges" do
+        let(:coupon) { create(:coupon, organization:, limited_plans: true) }
+        let(:other_coupon) { create(:coupon, organization:, limited_billable_metrics: true) }
+
+        before do
+          create(:coupon_plan, coupon:, plan:)
+          create(:coupon_billable_metric, coupon: other_coupon, billable_metric:)
+        end
+
+        it "returns a plan_overlapping error on the second one" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.1.id": ["plan_overlapping"]})
+        end
+
+        # overlapping_limitations? transcribes plan_limitation_overlapping? from the service below,
+        # and nothing else would fail if that one changed. Running the same pair through it keeps the
+        # two verdicts in step.
+        context "when the same pair reaches AppliedCoupons::CreateService" do
+          before { charge }
+
+          it "is refused there too" do
+            AppliedCoupons::CreateService.call!(customer:, coupon:, params: {})
+
+            applied = AppliedCoupons::CreateService.call(customer:, coupon: other_coupon, params: {})
+
+            expect(applied).not_to be_success
+            expect(applied.error.code).to eq("plan_overlapping")
+          end
+        end
       end
     end
 
@@ -718,6 +1272,31 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq(
           {"billing_items.walletCredits.0.payload.currency": ["currencies_does_not_match"]}
+        )
+      end
+    end
+
+    context "when the wallet credit limits itself to a known billable metric" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"feeTypes" => ["charge"], "billableMetricCodes" => [billable_metric.code]})
+      end
+
+      before { billable_metric }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the wallet credit limits itself to an unknown billable metric" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"billableMetricCodes" => ["unknown_metric"]})
+      end
+
+      it "returns a billable_metric_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.appliesTo.billableMetricCodes": ["billable_metric_not_found"]}
         )
       end
     end

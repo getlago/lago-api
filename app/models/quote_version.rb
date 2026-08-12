@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class QuoteVersion < ApplicationRecord
+  include Currencies
   include Sequenced
 
   STATUSES = {
@@ -34,6 +35,8 @@ class QuoteVersion < ApplicationRecord
   enum :void_reason, VOID_REASONS,
     instance_methods: false,
     validate: {allow_nil: true}
+
+  validates :currency, inclusion: {in: currency_list}, allow_nil: true
 
   validates :void_reason, :voided_at,
     presence: true,

@@ -61,6 +61,17 @@ RSpec.describe QuoteVersion do
         expect(quote_version).to be_valid
       end
     end
+
+    describe "currency" do
+      it "must be an ISO 4217 code when set" do
+        expect(build(:quote_version, currency: "EUR")).to be_valid
+        expect(build(:quote_version, currency: "DOUBLOON")).not_to be_valid
+      end
+
+      it "is allowed to be nil while the deal is not approved yet" do
+        expect(build(:quote_version, currency: nil)).to be_valid
+      end
+    end
   end
 
   describe "sequencing" do

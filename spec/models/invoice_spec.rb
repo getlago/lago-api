@@ -2645,7 +2645,8 @@ RSpec.describe Invoice do
         ],
         sortable_attributes: %i[issuing_date created_at id],
         pagination: {"maxTotalHits" => 100_000},
-        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]}
+        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]},
+        proximity_precision: "byAttribute"
       )
     end
 

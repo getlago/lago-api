@@ -75,10 +75,14 @@ class RateCardRate < ApplicationRecord
   def status
     return STATUSES[:pending] if effective_from > Time.current
 
-    superseded = rate_card.rates
-      .where("effective_from > ?", effective_from)
-      .where(effective_from: ..Time.current)
-      .exists?
+    now = Time.current
+    siblings = rate_card.rates
+    superseded =
+      if siblings.loaded?
+        siblings.any? { it.effective_from > effective_from && it.effective_from <= now }
+      else
+        siblings.where("effective_from > ?", effective_from).where(effective_from: ..now).exists?
+      end
 
     superseded ? STATUSES[:terminated] : STATUSES[:active]
   end
