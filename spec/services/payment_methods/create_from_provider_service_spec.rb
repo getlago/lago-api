@@ -94,22 +94,6 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
     end
 
     describe "provider_method_type" do
-      context "when the details expose the provider type" do
-        subject(:create_service) do
-          described_class.new(customer:, params:, provider_method_id:, payment_provider_id:, payment_provider_customer:, details:)
-        end
-
-        let(:params) { {provider_payment_methods: %w[card link]} }
-        let(:details) { {type: "link"} }
-
-        it "saves the type reported by the provider" do
-          result = create_service.call
-          payment_method = result.payment_method
-
-          expect(payment_method.provider_method_type).to eq("link")
-        end
-      end
-
       context "when included in params" do
         let(:params) do
           {provider_payment_methods: %w[link card sepa_debit]}

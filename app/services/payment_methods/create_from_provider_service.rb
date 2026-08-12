@@ -38,15 +38,6 @@ module PaymentMethods
     attr_accessor :customer, :params, :provider_method_id, :payment_provider_id, :payment_provider_customer, :details
 
     def provider_method_type
-      details_method_type.presence || configured_method_type
-    end
-
-    # Providers reporting the real payment method type expose it in the details
-    def details_method_type
-      details.to_h.with_indifferent_access[:type]
-    end
-
-    def configured_method_type
       if (provider_payment_methods = params[:provider_payment_methods]).present?
         Array.wrap(provider_payment_methods).first
       else

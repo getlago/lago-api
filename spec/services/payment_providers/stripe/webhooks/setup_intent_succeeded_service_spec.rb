@@ -115,14 +115,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
             end
           end
 
-          it "stores the type reported by stripe as the provider method type" do
-            webhook_service.call
-
-            payment_method = customer.payment_methods.order(created_at: :desc).first
-
-            expect(payment_method.provider_method_type).to eq("sepa_debit")
-          end
-
           it "creates a payment method with nil card details" do
             result = webhook_service.call
 
