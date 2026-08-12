@@ -16,8 +16,10 @@ class RateCardRatesQuery < BaseQuery
 
   private
 
+  # rate_card: :rates preloaded so each rate's status derives from the loaded
+  # timeline instead of one query per row.
   def base_scope
-    RateCardRate.where(organization:)
+    RateCardRate.where(organization:).includes(rate_card: :rates)
   end
 
   def with_rate_card(scope)
