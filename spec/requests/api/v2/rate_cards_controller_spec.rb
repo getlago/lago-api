@@ -133,6 +133,25 @@ RSpec.describe Api::V2::RateCardsController do
           expect(response).to be_not_found_error("product_filter")
         end
       end
+
+      context "when the product_filter_code is null" do
+        let(:create_params) do
+          {
+            product_code: product.code,
+            product_filter_code: nil,
+            name: "Standard",
+            code: "standard",
+            currency: "EUR"
+          }
+        end
+
+        it "creates an unfiltered rate card" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:rate_card][:product_filter_code]).to be_nil
+        end
+      end
     end
 
     context "when the currency is invalid" do

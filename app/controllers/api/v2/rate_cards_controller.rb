@@ -4,7 +4,7 @@ module Api
   module V2
     class RateCardsController < Api::BaseController
       def create
-        if create_params.key?(:product_filter_code) && product && product_filter.nil?
+        if create_params[:product_filter_code].present? && product && product_filter.nil?
           return not_found_error(resource: "product_filter")
         end
 
@@ -24,7 +24,6 @@ module Api
       end
 
       def update
-        rate_card = current_organization.rate_cards.find_by(code: params[:code])
         result = ::RateCards::UpdateService.call(
           rate_card:,
           params: update_params.to_h.deep_symbolize_keys
@@ -38,7 +37,6 @@ module Api
       end
 
       def destroy
-        rate_card = current_organization.rate_cards.find_by(code: params[:code])
         result = ::RateCards::DestroyService.call(rate_card:)
 
         if result.success?
@@ -49,8 +47,6 @@ module Api
       end
 
       def show
-        rate_card = current_organization.rate_cards.find_by(code: params[:code])
-
         return not_found_error(resource: "rate_card") unless rate_card
 
         render_rate_card(rate_card)
@@ -76,7 +72,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.rate_cards,
+              result.rate_cards.includes(:product, :product_filter, :rates),
               ::V1::RateCardSerializer,
               collection_name: "rate_cards",
               meta: pagination_metadata(result.rate_cards)
@@ -89,12 +85,16 @@ module Api
 
       private
 
+      def rate_card
+        @rate_card ||= current_organization.rate_cards.find_by(code: params[:code])
+      end
+
       def product
         @product ||= current_organization.products.find_by(code: create_params[:product_code])
       end
 
       def product_filter
-        return nil unless product && create_params[:product_filter_code]
+        return nil unless product && create_params[:product_filter_code].present?
 
         @product_filter ||= product.filters.find_by(code: create_params[:product_filter_code])
       end
