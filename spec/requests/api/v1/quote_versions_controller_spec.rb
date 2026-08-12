@@ -64,6 +64,16 @@ RSpec.describe Api::V1::QuoteVersionsController do
   describe "POST /api/v1/quote_versions/:id/approve" do
     subject { post_with_token(organization, "/api/v1/quote_versions/#{quote_version_id}/approve") }
 
+    let(:quote_version) do
+      create(
+        :quote_version,
+        :with_subscription_creation_billing_items,
+        quote:,
+        organization:,
+        start_date: Date.new(2026, 1, 1),
+        end_date: Date.new(2027, 1, 1)
+      )
+    end
     let(:quote_version_id) { quote_version.id }
 
     before { quote_version }

@@ -30,16 +30,16 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
         expect(customer.payment_methods.count).to eq(1)
       end
 
-      context "when the default flip fails mid-transaction" do
+      context "when the default flip fails" do
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_old") }
 
         before do
           allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::Deadlocked)
         end
 
-        it "rolls back the settings accessor so it cannot split from the record" do
+        it "keeps the already saved settings, to be reconciled by the retry" do
           expect { update_service.call }.to raise_error(ActiveRecord::Deadlocked)
-          expect(stripe_customer.reload.payment_method_id).to eq("pm_old")
+          expect(stripe_customer.reload.payment_method_id).to eq(payment_method_id)
         end
       end
 

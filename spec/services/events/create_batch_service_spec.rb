@@ -349,7 +349,7 @@ RSpec.describe Events::CreateBatchService do
               expect(payload["precise_total_amount_cents"]).to eq(precise_total_amount_cents)
               expect(payload["properties"]).to eq(expected_params[:properties].stringify_keys)
               expect(payload["timestamp"]).to eq(timestamp.to_s)
-              expect(payload["ingested_at"]).to eq(Time.zone.now.iso8601[...-1])
+              expect(payload["ingested_at"]).to eq(Time.zone.now.iso8601(3)[...-1])
               expect(payload["source"]).to eq("http_ruby")
               expect(payload["source_metadata"]).to eq({"api_post_processed" => true})
             end

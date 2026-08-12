@@ -103,7 +103,7 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
         []
       end
 

@@ -123,6 +123,23 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       end
     end
 
+    context "when the provider was disconnected and reconnected" do
+      let(:reconnected_provider) { create(:stripe_provider, organization:, code: "stripe_reconnected") }
+      let(:reconnected_customer) { create(:stripe_customer, customer:, payment_provider: reconnected_provider) }
+
+      before do
+        stripe_customer.discard!
+        reconnected_customer
+      end
+
+      it "attaches the refund to the provider customer that holds the payment" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund.payment_provider_customer_id).to eq(stripe_customer.id)
+      end
+    end
+
     context "with an error on stripe" do
       let(:error_message) { "error" }
 
@@ -355,7 +372,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
     context "when status is failed" do
       before do
-        stripe_customer
+        payment
       end
 
       it "delivers an error webhook" do

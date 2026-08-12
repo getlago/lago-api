@@ -25,6 +25,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         invoice_payment_status_updated
         invoice_payment_overdue
         invoice_voided
+        invoice_deleted
         invoice_regenerated
         invoice_payment_failure
         payment_receipt_created
@@ -55,6 +56,15 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         feature_created
         feature_deleted
         feature_updated
+        product_category_created
+        product_category_updated
+        product_category_deleted
+        product_created
+        product_updated
+        product_deleted
+        product_filter_created
+        product_filter_updated
+        product_filter_deleted
         email_sent
       ]
     )

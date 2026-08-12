@@ -37,6 +37,26 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#effective_billing_anchor_date" do
+    it "returns the explicit anchor when set" do
+      subscription = build(:subscription, billing_anchor_date: Date.new(2026, 1, 1), started_at: Time.zone.parse("2026-01-15"))
+
+      expect(subscription.effective_billing_anchor_date).to eq(Date.new(2026, 1, 1))
+    end
+
+    it "falls back to the start date" do
+      subscription = build(:subscription, billing_anchor_date: nil, started_at: Time.zone.parse("2026-01-15"))
+
+      expect(subscription.effective_billing_anchor_date).to eq(Date.new(2026, 1, 15))
+    end
+
+    it "falls back to subscription_at when the subscription has not started" do
+      subscription = build(:subscription, billing_anchor_date: nil, started_at: nil, subscription_at: Time.zone.parse("2026-02-03"))
+
+      expect(subscription.effective_billing_anchor_date).to eq(Date.new(2026, 2, 3))
+    end
+  end
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:customer)

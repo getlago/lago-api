@@ -11,7 +11,8 @@ RSpec.describe Mutations::QuoteVersions::Update do
     {
       id: quote_version.id,
       billingItems: {},
-      content: "Test content"
+      content: "Test content",
+      currency: "EUR"
     }
   end
 
@@ -24,7 +25,8 @@ RSpec.describe Mutations::QuoteVersions::Update do
           version,
           status,
           billingItems,
-          content
+          content,
+          currency
         }
       }
     GQL
@@ -57,7 +59,8 @@ RSpec.describe Mutations::QuoteVersions::Update do
         "version" => quote_version.version,
         "status" => quote_version.status,
         "billingItems" => {},
-        "content" => "Test content"
+        "content" => "Test content",
+        "currency" => "EUR"
       )
     end
   end
@@ -67,7 +70,8 @@ RSpec.describe Mutations::QuoteVersions::Update do
       {
         id: "00000000-0000-0000-0000-000000000000",
         billingItems: {},
-        content: "Test content"
+        content: "Test content",
+        currency: "EUR"
       }
     end
 

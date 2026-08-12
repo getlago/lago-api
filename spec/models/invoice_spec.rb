@@ -1944,6 +1944,26 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#web_url" do
+    it "returns the lago frontend url of the invoice overview page" do
+      expect(invoice.web_url).to eq(
+        URI.join(
+          Rails.application.config.lago_front_url,
+          "/#{invoice.organization.slug}/customer/#{invoice.customer_id}/",
+          "invoice/#{invoice.id}/overview"
+        ).to_s
+      )
+    end
+
+    context "when the invoice is not visible" do
+      let(:invoice) { create(:invoice, status: :closed) }
+
+      it "returns nil" do
+        expect(invoice.web_url).to be_nil
+      end
+    end
+  end
+
   describe "#creditable_amount_cents" do
     let(:invoice) { create(:invoice, version_number:, status:, payment_status:, fees_amount_cents:, taxes_amount_cents:, coupons_amount_cents:, progressive_billing_credit_amount_cents:) }
     let(:fees_amount_cents) { 1000 }
@@ -2530,7 +2550,8 @@ RSpec.describe Invoice do
         self_billed: false,
         total_amount_cents: 1000,
         total_paid_amount_cents: 400,
-        issuing_date: Date.new(2026, 1, 15)
+        issuing_date: Date.new(2026, 1, 15),
+        purchase_order_number: "PO-123"
       )
     end
 
@@ -2562,7 +2583,8 @@ RSpec.describe Invoice do
         "subscription_ids" => [],
         "settlement_types" => [],
         "metadata" => [],
-        "metadata_keys" => []
+        "metadata_keys" => [],
+        "purchase_order_number" => "PO-123"
       )
     end
 
@@ -2606,11 +2628,11 @@ RSpec.describe Invoice do
     it "declares the searchable, filterable, sortable and index settings" do
       expect(described_class.meilisearch_settings.to_settings).to eq(
         searchable_attributes: %i[number customer_name customer_firstname customer_lastname
-          customer_legal_name customer_external_id customer_email],
+          customer_legal_name customer_external_id customer_email purchase_order_number],
         filterable_attributes: %i[id organization_id billing_entity_id currency customer_id
           customer_external_id invoice_type status payment_status payment_dispute_lost
           payment_overdue self_billed issuing_date total_amount_cents due_amount_cents
-          partially_paid subscription_ids settlement_types metadata metadata_keys],
+          partially_paid subscription_ids settlement_types metadata metadata_keys purchase_order_number],
         sortable_attributes: %i[issuing_date created_at id],
         pagination: {"maxTotalHits" => 100_000},
         typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]}

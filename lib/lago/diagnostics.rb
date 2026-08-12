@@ -45,7 +45,8 @@ module Lago
     INTEGRATION_LABEL_SUFFIXES = {
       "Anrok" => " (tax)",
       "Avalara" => " (tax)",
-      "Okta" => " (SSO)"
+      "Okta" => " (SSO)",
+      "EntraId" => " (SSO)"
     }.freeze
 
     RECENT_ERRORS_LIMIT = 100

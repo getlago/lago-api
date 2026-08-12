@@ -46,4 +46,15 @@ RSpec.describe PaymentProviders::StripeProvider do
       expect(stripe_provider.success_redirect_url).to eq success_redirect_url
     end
   end
+
+  describe "require_terms_of_service_consent" do
+    it "assigns and retrieve a setting" do
+      stripe_provider.require_terms_of_service_consent = true
+      expect(stripe_provider.require_terms_of_service_consent).to eq(true)
+    end
+
+    it "defaults to false when not set" do
+      expect(stripe_provider.require_terms_of_service_consent).to be(false)
+    end
+  end
 end

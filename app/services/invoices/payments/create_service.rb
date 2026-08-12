@@ -91,7 +91,7 @@ module Invoices
 
         deliver_error_webhook(e) unless skip_error_webhook?(e)
 
-        update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
+        update_invoice_payment_status(payment_status: invoice_payment_status_after(e))
 
         raise RetriableError if e.result.should_retry
 
@@ -147,7 +147,21 @@ module Invoices
         return false if current_payment_provider.blank?
 
         current_payment_provider_customer&.provider_customer_id &&
-          (determine_payment_method.present? || provider_payment_method_pending_backfill?)
+          (determine_payment_method.present? ||
+            provider_payment_method_pending_backfill? ||
+            stripe_customer_balance_only?)
+      end
+
+      # NOTE: A Stripe customer_balance (V-BAN) customer has no instrument to pull from, so no
+      #       PaymentMethod record ever exists for it. Such customers are still chargeable: the
+      #       attempt opens an awaiting-funds PaymentIntent for the wire to land on, which is what
+      #       makes the payment reconcilable. Scoped to customer_balance rather than every
+      #       setup-less method because it is the only one the Stripe payment payload builder
+      #       supports off-session; crypto would be attempted with no payment method and fail.
+      #       Guarded on the class since provider_payment_methods is Stripe-specific.
+      def stripe_customer_balance_only?
+        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+          current_payment_provider_customer.provider_payment_methods == ["customer_balance"]
       end
 
       # NOTE: While the OSS payment methods backfill is still running
@@ -168,6 +182,17 @@ module Invoices
       def current_payment_provider_customer
         @current_payment_provider_customer ||= customer.payment_provider_customers
           .find_by(payment_provider_id: current_payment_provider.id)
+      end
+
+      # A retried failure leaves the invoice awaiting payment. Recording it as
+      # failed would be terminal for a payment-gated subscription, which cancels
+      # before the retry can offer the customer an authentication challenge.
+      def invoice_payment_status_after(failure)
+        if failure.result.should_retry
+          :pending
+        else
+          failure.result.payment.payable_payment_status
+        end
       end
 
       def update_invoice_payment_status(payment_status:)

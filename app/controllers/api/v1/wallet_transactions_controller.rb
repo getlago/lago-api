@@ -33,7 +33,9 @@ module Api
           filters: {
             status: params[:status],
             transaction_type: params[:transaction_type],
-            transaction_status: params[:transaction_status]
+            transaction_status: params[:transaction_status],
+            # Only a nested hash param (?metadata[key]=value) responds to permit!; scalar/array shapes are ignored.
+            metadata: params[:metadata].respond_to?(:permit!) ? params[:metadata].permit!.to_h : {}
           }
         )
 
@@ -127,6 +129,7 @@ module Api
           :voided_credits,
           :invoice_requires_successful_payment,
           :name,
+          :purchase_order_number,
           :ignore_paid_top_up_limits,
           :priority,
           payment_method: [

@@ -16,7 +16,8 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
     it "updates an organization" do
       admin_put(
         "/admin/organizations/#{organization.id}",
-        update_params
+        update_params,
+        admin_headers
       )
 
       expect(response).to have_http_status(:success)
@@ -40,17 +41,12 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
       }
     end
 
-    before do
-      create(:role, :admin)
-      allow(ENV).to receive(:[]).and_call_original
-      allow(ENV).to receive(:[]).with("ADMIN_API_KEY").and_return("super-secret")
-    end
+    before { create(:role, :admin) }
 
     context "with a valid admin key" do
       it "creates an organization and returns 201" do
-        headers = {"X-Admin-API-Key" => "super-secret"}
         expect do
-          admin_post_without_bearer("/admin/organizations", create_params, headers)
+          admin_post("/admin/organizations", create_params, admin_headers)
         end.to change(Organization, :count).by(1)
 
         expect(response).to have_http_status(:created)
@@ -62,8 +58,14 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
     context "with an invalid admin key" do
       it "returns unauthorized" do
-        headers = {"X-Admin-API-Key" => "wrong"}
-        admin_post_without_bearer("/admin/organizations", create_params, headers)
+        admin_post("/admin/organizations", create_params, admin_headers("wrong"))
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context "without an admin key" do
+      it "returns unauthorized" do
+        admin_post("/admin/organizations", create_params)
         expect(response).to have_http_status(:unauthorized)
       end
     end

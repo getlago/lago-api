@@ -26,6 +26,7 @@ module ChargeFilters
         )
 
         create_filter_values(charge_filter)
+        charge_filter.assign_code!
 
         result.charge_filter = charge_filter
       end

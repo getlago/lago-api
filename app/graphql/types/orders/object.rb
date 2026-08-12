@@ -12,7 +12,7 @@ module Types
       field :status, Types::Orders::StatusEnum, null: false
 
       field :billing_snapshot, GraphQL::Types::JSON, null: false
-      field :currency, String, null: true
+      field :currency, Types::CurrencyEnum, null: true
       field :execute_at, GraphQL::Types::ISO8601DateTime, null: true
       field :executed_at, GraphQL::Types::ISO8601DateTime, null: true
       field :execution_record, Types::Orders::ExecutionRecord, null: false

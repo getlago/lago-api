@@ -24,10 +24,11 @@ module Events
 
       # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
       # enriched_at of the most recent event for that charge/filter in the period.
-      def distinct_charges_and_filters(codes: nil)
+      def distinct_charges_and_filters(codes: nil, include_all_history: false)
+        lower_bound = include_all_history ? nil : from_datetime
         scope = EnrichedEvent.where(organization_id: subscription.organization_id)
           .where(subscription_id: subscription.id)
-          .where(timestamp: from_datetime..to_datetime)
+          .where(timestamp: lower_bound..to_datetime)
 
         scope = scope.where(code: codes) unless codes.nil?
         scope.group(:charge_id, :charge_filter_id)
@@ -39,12 +40,12 @@ module Events
       # holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
       # last_seen_at is the created_at of the most recent event in the combination.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
         scope = Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization_id)
           .where(code: codes)
-          .from_datetime(from_datetime)
           .to_datetime(applicable_to_datetime)
+        scope = scope.from_datetime(from_datetime) unless include_all_history
 
         scope
           .select(Arel.sql(<<~SQL.squish))
@@ -505,7 +506,9 @@ module Events
       end
 
       def presence_condition
-        "events.properties::jsonb ? '#{sanitize_sql_for_conditions(aggregation_property)}'"
+        sanitize_sql_for_conditions(
+          ["jsonb_exists(events.properties::jsonb, ?)", aggregation_property]
+        )
       end
 
       def numeric_condition

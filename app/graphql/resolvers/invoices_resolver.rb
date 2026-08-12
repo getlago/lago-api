@@ -25,6 +25,7 @@ module Resolvers
     argument :payment_overdue, Boolean, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
     argument :positive_due_amount, Boolean, required: false
+    argument :purchase_order_number, String, required: false
     argument :search_term, String, required: false
     argument :self_billed, Boolean, required: false
     argument :settlements, [Types::Invoices::SettlementTypeEnum], required: false
@@ -50,6 +51,7 @@ module Resolvers
       partially_paid: nil,
       positive_due_amount: nil,
       payment_status: nil,
+      purchase_order_number: nil,
       search_term: nil,
       self_billed: nil,
       status: nil,
@@ -76,6 +78,7 @@ module Resolvers
           payment_overdue:,
           payment_status:,
           positive_due_amount:,
+          purchase_order_number:,
           self_billed:,
           status:,
           settlements:,

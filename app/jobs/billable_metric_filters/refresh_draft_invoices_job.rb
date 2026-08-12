@@ -8,7 +8,10 @@ module BillableMetricFilters
       billable_metric = BillableMetric.find_by(id: billable_metric_id)
       return unless billable_metric
 
+      # The organization_id is redundant with the plans join but added as an optimisation:
+      # it avoids a full scan of the invoices table by using the idx_invoices_organization_id_status index.
       Invoice.draft
+        .where(organization_id: billable_metric.organization_id)
         .joins(plans: [:billable_metrics])
         .where(billable_metrics: {id: billable_metric.id})
         .distinct

@@ -140,18 +140,10 @@ module Events
 
         def grouped_initial_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = store.grouped_by.map do |g|
-              if initial_value[:groups][g]
-                "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
-              else
-                "NULL"
-              end
-            end
-
             [
-              groups,
+              quoted_group_values(initial_value),
               "timestamp without time zone :from_datetime",
-              initial_value[:value],
+              quoted_initial_value(initial_value),
               "timestamp without time zone :from_datetime"
             ].flatten.join(", ")
           end
@@ -166,16 +158,8 @@ module Events
 
         def grouped_end_of_period_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = store.grouped_by.map do |g|
-              if initial_value[:groups][g]
-                "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
-              else
-                "NULL"
-              end
-            end
-
             [
-              groups,
+              quoted_group_values(initial_value),
               "timestamp without time zone :to_datetime",
               0,
               "timestamp without time zone :to_datetime"
@@ -188,6 +172,17 @@ module Events
               VALUES #{values.map { "(#{it})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
+        end
+
+        def quoted_group_values(initial_value)
+          store.grouped_by.map do |group|
+            value = initial_value[:groups][group]
+            value ? ActiveRecord::Base.connection.quote(value.to_s) : "NULL"
+          end
+        end
+
+        def quoted_initial_value(initial_value)
+          "#{ActiveRecord::Base.connection.quote(initial_value[:value])}::numeric"
         end
 
         def grouped_period_ratio_sql

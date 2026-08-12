@@ -9,6 +9,7 @@ en:
         country_code_invalid: not_a_valid_country_code
         country_must_be_present: country_must_be_present
         country_not_supported: country_not_supported
+        does_not_belong_to_product: does_not_belong_to_product
         exclusion: value_is_reserved
         feature_unavailable: feature_unavailable
         file_size_not_less_than: file_too_large
@@ -47,10 +48,16 @@ en:
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
         modification_not_allowed: modification_not_allowed
+        must_be_after_active_rate: must_be_after_active_rate
         must_be_array: must_be_array
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         must_be_greater_than_or_equal_threshold: must_be_greater_than_or_equal_threshold
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
+        not_allowed_for_aggregation_type: not_allowed_for_aggregation_type
+        not_allowed_for_billing_timing: not_allowed_for_billing_timing
+        not_allowed_for_product: not_allowed_for_product
+        not_allowed_with_display_on_invoice: not_allowed_with_display_on_invoice
+        not_allowed_with_proration: not_allowed_with_proration
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
         one_of_plan_or_subscription_required: one_of_plan_or_subscription_required
@@ -58,6 +65,7 @@ en:
         payment_request_is_already_succeeded: payment_request_is_already_succeeded
         present: value_must_be_blank
         required: relation_must_exist
+        requires_recurring_metric: requires_recurring_metric
         taken: value_already_exist
         too_long: value_is_too_long
         too_short: value_is_too_short

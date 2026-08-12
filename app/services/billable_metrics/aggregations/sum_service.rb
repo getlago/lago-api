@@ -60,7 +60,7 @@ module BillableMetrics
         end
 
         result.aggregations = aggregations.map do |aggregation|
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
 
           aggregation_value = aggregation.value

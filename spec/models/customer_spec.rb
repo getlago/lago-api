@@ -120,7 +120,7 @@ RSpec.describe Customer do
 
   describe "validations" do
     subject(:customer) do
-      described_class.new(organization:, external_id:)
+      described_class.new(organization:, external_id:, billing_entity:)
     end
 
     let(:external_id) { SecureRandom.uuid }
@@ -150,6 +150,21 @@ RSpec.describe Customer do
 
       customer.timezone = "America/Guadeloupe"
       expect(customer).not_to be_valid
+    end
+
+    it "validates the name length" do
+      customer.name = "a" * 255
+      expect(customer).to be_valid
+
+      customer.name = "a" * 256
+      expect(customer).not_to be_valid
+    end
+
+    it "does not validate the name length when the name is unchanged" do
+      customer.save
+      customer.update_column(:name, "a" * 256) # rubocop:disable Rails/SkipsModelValidations
+      customer.timezone = "Europe/Paris"
+      expect(customer).to be_valid
     end
 
     describe "of email" do

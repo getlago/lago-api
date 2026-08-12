@@ -4,10 +4,11 @@ module SettingsStorable
   extend ActiveSupport::Concern
 
   class_methods do
-    def settings_accessors(*method_names)
+    def settings_accessors(*method_names, default: nil)
       method_names.each do |name|
         define_method(name) do
-          get_from_settings(name.to_s)
+          value = get_from_settings(name.to_s)
+          value.nil? ? default : value
         end
 
         define_method(:"#{name}=") do |value|

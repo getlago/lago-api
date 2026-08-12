@@ -100,6 +100,34 @@ RSpec.describe PaymentRequests::Payments::StripeService do
         )
     end
 
+    it "does not require terms of service consent by default" do
+      described_class.call(:generate_payment_url, payment_request)
+
+      expect(::Stripe::Checkout::Session)
+        .to have_received(:create)
+        .with(
+          hash_excluding(:consent_collection),
+          hash_including({api_key: an_instance_of(String)})
+        )
+    end
+
+    context "when consent collection is enabled on the provider" do
+      let(:stripe_payment_provider) do
+        create(:stripe_provider, organization:, code:, require_terms_of_service_consent: true)
+      end
+
+      it "requires terms of service consent on the checkout session" do
+        described_class.call(:generate_payment_url, payment_request)
+
+        expect(::Stripe::Checkout::Session)
+          .to have_received(:create)
+          .with(
+            hash_including(consent_collection: {terms_of_service: "required"}),
+            hash_including({api_key: an_instance_of(String)})
+          )
+      end
+    end
+
     context "when payment request is related to a single overdue invoice" do
       let(:invoices) { [invoice_1] }
 

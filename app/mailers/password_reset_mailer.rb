@@ -8,8 +8,8 @@ class PasswordResetMailer < ApplicationMailer
     return if @password_reset.token.blank?
     return if @email.blank?
 
-    @reset_url = "#{ENV["LAGO_FRONT_URL"]}/reset-password/#{@password_reset.token}"
-    @forgot_url = "#{ENV["LAGO_FRONT_URL"]}/forgot-password"
+    @reset_url = "#{Rails.application.config.lago_front_url}/reset-password/#{@password_reset.token}"
+    @forgot_url = "#{Rails.application.config.lago_front_url}/forgot-password"
 
     I18n.with_locale(:en) do
       mail(

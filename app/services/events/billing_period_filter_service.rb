@@ -59,9 +59,19 @@ module Events
     # filters for non-recurring charges and refresh last_seen_at for recurring ones.
     def charges_and_filters_from_events
       combinations = event_store.distinct_codes_and_property_combinations(
-        codes: plan_codes,
+        codes: non_recurring_plan_codes,
         filter_keys: billable_metric_filter_keys
       )
+
+      # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
+      # for prior periods
+      if recurring_plan_codes.any?
+        combinations += event_store.distinct_codes_and_property_combinations(
+          codes: recurring_plan_codes,
+          filter_keys: billable_metric_filter_keys,
+          include_all_history: true
+        )
+      end
 
       # Group the [code, properties, last_seen_at] tuples by code
       combinations_by_code = combinations.group_by(&:first)
@@ -137,7 +147,13 @@ module Events
     # the period, including the recurring ones.
     # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     def charges_and_filters_from_pre_enriched_events
-      values = event_store.distinct_charges_and_filters(codes: plan_codes)
+      values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes)
+
+      # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
+      # for prior periods
+      if recurring_plan_codes.any?
+        values += event_store.distinct_charges_and_filters(codes: recurring_plan_codes, include_all_history: true)
+      end
 
       charge_filter_ids = values.map { |v| v[1] }.reject(&:blank?)
       charge_ids = values.map(&:first).uniq
@@ -205,6 +221,14 @@ module Events
         record(result, charge.id, nil, period_start)
       end
       result
+    end
+
+    def recurring_plan_codes
+      @recurring_plan_codes ||= plan.billable_metrics.where(recurring: true).distinct.pluck(:code)
+    end
+
+    def non_recurring_plan_codes
+      @non_recurring_plan_codes ||= plan_codes - recurring_plan_codes
     end
 
     # Fetches all recurring charges for the current plan

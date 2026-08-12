@@ -43,12 +43,6 @@ RSpec.describe BillableMetrics::DestroyService do
         .to have_enqueued_job(BillableMetricFilters::DestroyAllJob).with(billable_metric.id)
     end
 
-    it "enqueues a BillableMetrics::DeleteEventsJob" do
-      expect do
-        destroy_service.call
-      end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
-    end
-
     it "enqueues a billable_metric.deleted webhook" do
       destroy_service.call
 

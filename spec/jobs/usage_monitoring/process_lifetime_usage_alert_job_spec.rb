@@ -12,6 +12,21 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertJob do
     let(:job_args) { [{alert:, subscription:}] }
   end
 
+  it_behaves_like "a configurable queue", "alerts", "SIDEKIQ_ALERTS" do
+    let(:arguments) { {alert:, subscription:} }
+  end
+
+  describe "queue routing" do
+    context "when the organization is targeted for the dedicated queue" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [organization.id]) }
+
+      it "routes to the dedicated queue" do
+        expect { described_class.perform_later(alert:, subscription:) }
+          .to have_enqueued_job(described_class).on_queue("dedicated_alerts")
+      end
+    end
+  end
+
   describe "#perform" do
     before do
       allow(UsageMonitoring::ProcessLifetimeUsageAlertService).to receive(:call!)

@@ -255,6 +255,13 @@ RSpec.describe Plans::OverrideService do
         expect { override_service.call }.not_to change(Plan, :count)
         expect(override_service.call).not_to be_success
       end
+
+      it "returns the service's own result exposing plan" do
+        result = override_service.call
+
+        expect(result).to be_a(described_class::Result)
+        expect(result.plan).to be_nil
+      end
     end
 
     context "when subscription parameter is provided" do

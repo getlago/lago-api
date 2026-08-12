@@ -175,6 +175,30 @@ RSpec.describe ChargeFilters::CascadeService do
         expect(new_filter.to_h).to eq({"region" => ["eu"]})
       end
 
+      # The code links a plan's filter to the copies on its overrides, so the child has to take
+      # the parent's rather than derive one from its own values
+      it "gives the new child filter the parent's code" do
+        described_class.call(
+          charge: parent_charge,
+          action: "create",
+          filter_values: {"region" => ["eu"]},
+          new_properties: {"amount" => "20"},
+          invoice_display_name: "EU region",
+          parent_code: "a-code-only-the-parent-could-have"
+        )
+
+        expect(child_charge.filters.find_by(invoice_display_name: "EU region").code)
+          .to eq("a-code-only-the-parent-could-have")
+      end
+
+      # The parent is still waiting on the backfill. Deriving a code here would hand the child
+      # one the parent never gets, and the backfill would then never pair them.
+      it "leaves the code nil when the parent has none yet" do
+        service
+
+        expect(child_charge.filters.find_by(invoice_display_name: "EU region").code).to be_nil
+      end
+
       context "when child already has the filter" do
         before do
           existing = create(:charge_filter, charge: child_charge, properties: {amount: "20"})

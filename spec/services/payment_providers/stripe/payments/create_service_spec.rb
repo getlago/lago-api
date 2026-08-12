@@ -108,6 +108,19 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
+    context "when consent collection is enabled on the provider" do
+      let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:, require_terms_of_service_consent: true) }
+
+      it "does not add consent collection to the payment intent" do
+        create_service.call
+
+        expect(Stripe::PaymentIntent).to have_received(:create).with(
+          hash_excluding(:consent_collection),
+          anything
+        )
+      end
+    end
+
     context "when the invoice has already been paid" do
       before { invoice.update!(payment_status: :succeeded) }
 

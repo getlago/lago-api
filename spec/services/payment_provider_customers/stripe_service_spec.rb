@@ -517,6 +517,32 @@ RSpec.describe PaymentProviderCustomers::StripeService do
         .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
     end
 
+    it "does not require terms of service consent by default" do
+      allow(::Stripe::Checkout::Session).to receive(:create).and_return({"url" => "https://example.com"})
+
+      described_class.call(:generate_checkout_url, stripe_customer)
+
+      expect(::Stripe::Checkout::Session).to have_received(:create).with(
+        hash_excluding(:consent_collection),
+        anything
+      )
+    end
+
+    context "when consent collection is enabled on the provider" do
+      let(:stripe_provider) { create(:stripe_provider, require_terms_of_service_consent: true) }
+
+      it "requires terms of service consent on the checkout session" do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_return({"url" => "https://example.com"})
+
+        described_class.call(:generate_checkout_url, stripe_customer)
+
+        expect(::Stripe::Checkout::Session).to have_received(:create).with(
+          hash_including(consent_collection: {terms_of_service: "required"}),
+          anything
+        )
+      end
+    end
+
     context "without any customer" do
       let(:customer) { create(:customer, :deleted, organization:) }
 
