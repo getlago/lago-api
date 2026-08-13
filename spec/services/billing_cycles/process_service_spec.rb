@@ -32,7 +32,8 @@ RSpec.describe BillingCycles::ProcessService do
     let(:rate_override) { create(:rate_override, organization:, rate_properties: {"amount" => "15.00"}) }
 
     before do
-      BillingCycle.create!(
+      create(
+        :billing_cycle,
         organization:,
         subscription:,
         customer:,
