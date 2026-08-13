@@ -63,7 +63,7 @@ module BillingCycles
 
     # The catalog per-unit rate in cents (before proration).
     def rate_amount_cents
-      (BigDecimal(rate.rate_properties.fetch("amount", "0")) * subunit).round
+      (BigDecimal(billing_cycle.rate_properties.fetch("amount", "0")) * subunit).round
     end
 
     # Effective per-unit amount shown on the invoice — proration baked in so that
