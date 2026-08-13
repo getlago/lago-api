@@ -2269,7 +2269,7 @@ CREATE TABLE public.billing_entities (
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
     invoice_footer text,
     invoice_grace_period integer DEFAULT 0 NOT NULL,
-    net_payment_term integer DEFAULT 0 NOT NULL,
+    net_payment_term integer DEFAULT 0,
     email character varying,
     email_settings character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     eu_tax_management boolean DEFAULT false,
@@ -3609,7 +3609,7 @@ CREATE TABLE public.invoices (
     sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
     sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
     payment_due_date date,
-    net_payment_term integer DEFAULT 0 NOT NULL,
+    net_payment_term integer DEFAULT 0,
     voided_at timestamp(6) without time zone,
     organization_sequential_id integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
@@ -14176,6 +14176,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260813134550'),
+('20260813134021'),
 ('20260810135202'),
 ('20260805201143'),
 ('20260805110509'),
@@ -15277,4 +15279,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

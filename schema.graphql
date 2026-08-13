@@ -1011,7 +1011,7 @@ type BillingEntity {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   organization: Organization!
   paymentTerm: PaymentTerm
   phone: String
