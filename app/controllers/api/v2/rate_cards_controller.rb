@@ -129,6 +129,7 @@ module Api
       def update_params
         params.require(:rate_card).permit(
           :name,
+          :code,
           :description,
           :currency,
           :billing_timing,

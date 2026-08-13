@@ -17,8 +17,34 @@ RSpec.describe RateCards::UpdateService do
     expect(result.rate_card.billing_timing).to eq("advance")
   end
 
-  it "does not change the code" do
-    expect { result }.not_to change { rate_card.reload.code }
+  describe "code editability" do
+    let(:params) { {code: "after"} }
+
+    it "updates the code when the card is not attached" do
+      expect { result }.to change { rate_card.reload.code }.to("after")
+    end
+
+    it "updates the code even when the card has rates" do
+      create(:rate_card_rate, organization:, rate_card:)
+
+      expect { result }.to change { rate_card.reload.code }.to("after")
+    end
+
+    context "when the card is attached to a plan" do
+      before { create(:plan_rate_card, organization:, rate_card:) }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:code]).to eq(["attached_to_plan_or_subscription"])
+      end
+
+      it "still accepts a payload resending the current code" do
+        update_result = described_class.call(rate_card:, params: {name: "renamed", code: rate_card.code})
+
+        expect(update_result).to be_success
+        expect(rate_card.reload.name).to eq("renamed")
+      end
+    end
   end
 
   it "produces an activity log" do
