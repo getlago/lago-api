@@ -30,6 +30,8 @@ class BillingCycle < ApplicationRecord
     rate_override || rate_card_rate
   end
 
+  delegate :properties, to: :rate, prefix: true
+
   def currency
     rate_card_rate.rate_card.currency
   end
