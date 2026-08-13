@@ -106,4 +106,25 @@ RSpec.describe PaymentMethodsQuery do
       expect(returned_ids).to contain_exactly(payment_method_first.id, payment_method_second.id, payment_method_third.id)
     end
   end
+
+  context "when filtering by payment_provider_customer_id" do
+    let(:pm_customer) { create(:customer, organization:) }
+    let(:connection) { create(:stripe_customer, customer: pm_customer, organization:) }
+    let(:other_connection) { create(:gocardless_customer, customer: pm_customer, organization:) }
+    let(:filters) { {payment_provider_customer_id: connection.id} }
+    let(:matching) { create(:payment_method, organization:, customer: pm_customer, payment_provider_customer: connection) }
+    let(:other) do
+      create(:payment_method, organization:, customer: pm_customer, payment_provider_customer: other_connection, is_default: false)
+    end
+
+    before do
+      matching
+      other
+    end
+
+    it "returns only the payment methods of that connection" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(matching.id)
+    end
+  end
 end
