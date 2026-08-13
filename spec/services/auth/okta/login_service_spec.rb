@@ -104,6 +104,17 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when okta userinfo email only differs in casing" do
+      let(:okta_userinfo_response) { {"email" => "FOO@BAR.COM"} }
+
+      it "authenticates the user" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.token).to be_present
+      end
+    end
+
     context "when the user exists but does not belong to the organization" do
       before { create(:user, email: "foo@bar.com") }
 
