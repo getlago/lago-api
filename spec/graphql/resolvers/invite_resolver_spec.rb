@@ -10,6 +10,7 @@ RSpec.describe Resolvers::InviteResolver do
           id
           token
           email
+          existingUser
           organization {
             id
             name
@@ -35,7 +36,18 @@ RSpec.describe Resolvers::InviteResolver do
 
     expect(data["token"]).to eq(invite.token)
     expect(data["email"]).to eq(invite.email)
+    expect(data["existingUser"]).to eq(false)
     expect(data["organization"]["name"]).to eq(organization.name)
+  end
+
+  context "when the invited email belongs to an existing user" do
+    before { create(:user, email: invite.email) }
+
+    it "flags the invite as targeting an existing user" do
+      result = execute_graphql(query:, variables: {token: invite.token})
+
+      expect(result["data"]["invite"]["existingUser"]).to eq(true)
+    end
   end
 
   context "when invite is not found" do
