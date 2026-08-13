@@ -77,10 +77,15 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
         context "when customer is deleted" do
           let(:customer) { create(:customer, :deleted, organization:) }
 
+          before { stripe_customer.reload }
+
           it "returns a failed result and discards payment method" do
             result = check_service.call
 
             expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:payment_method_id]).to eq(["value_is_invalid"])
+            expect(stripe_customer.reload.payment_method_id).to be_nil
             expect(default_payment_method.reload.deleted_at).to be_present
           end
         end
@@ -89,6 +94,8 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
 
     context "when customer is deleted" do
       let(:customer) { create(:customer, :deleted, organization:) }
+
+      before { stripe_customer.reload }
 
       it "checks for the existence of the payment method" do
         allow(stripe_api_customer)
