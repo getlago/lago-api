@@ -152,6 +152,7 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.rate_card_rate).to eq(rate_card_rate)
         expect(billing_cycle.rate_override).to eq(rate_override)
+        expect(billing_cycle.rate_properties).to eq("amount" => "5.00")
       end
     end
 
@@ -190,7 +191,8 @@ RSpec.describe BillingCycles::ScheduleService do
         let(:range) { "2026-08-03".."2026-09-08" }
 
         before do
-          BillingCycle.create!(
+          create(
+            :billing_cycle,
             organization:,
             subscription:,
             customer:,
@@ -370,7 +372,8 @@ RSpec.describe BillingCycles::ScheduleService do
       let(:range) { "2026-07-15".."2026-08-14" }
 
       before do
-        BillingCycle.create!(
+        create(
+          :billing_cycle,
           organization:,
           subscription:,
           customer:,
@@ -395,7 +398,8 @@ RSpec.describe BillingCycles::ScheduleService do
       let(:range) { "2026-07-15".."2026-08-14" }
 
       before do
-        BillingCycle.create!(
+        create(
+          :billing_cycle,
           organization:,
           subscription:,
           customer:,

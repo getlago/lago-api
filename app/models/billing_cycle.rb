@@ -30,8 +30,6 @@ class BillingCycle < ApplicationRecord
     rate_override || rate_card_rate
   end
 
-  delegate :properties, to: :rate, prefix: true
-
   def currency
     rate_card_rate.rate_card.currency
   end
@@ -47,6 +45,7 @@ end
 #  billing_at                :datetime         not null
 #  period_from               :datetime         not null
 #  period_to                 :datetime         not null
+#  rate_properties           :jsonb            not null
 #  status                    :enum             default("pending"), not null
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null

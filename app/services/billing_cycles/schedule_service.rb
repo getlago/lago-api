@@ -13,7 +13,7 @@ module BillingCycles
   # scale lives in the fan-out (one job per customer), not in bulk-writing one customer.
   #
   # Rate effective dates are used only to split service periods. Pricing is still
-  # computed later by resolving the rate at each billing_cycle.period_from.
+  # computed later from the rate properties snapshot stored on each billing cycle.
   class ScheduleService < BaseService
     OVERLAP_CONSTRAINT = "billing_cycles_no_overlapping_periods"
     UNIQUE_PERIOD_INDEX = "index_billing_cycles_on_product_and_period"
@@ -92,7 +92,8 @@ module BillingCycles
           period_from: period.period_from,
           period_to: period.period_to,
           rate_card_rate: period.rate,
-          rate_override: period.rate_override
+          rate_override: period.rate_override,
+          rate_properties: period.rate_properties
         )
       end
 

@@ -23,18 +23,26 @@ RSpec.describe BillingCycle do
     subject(:rate_properties) { billing_cycle.rate_properties }
 
     let(:rate_card_rate) { build_stubbed(:rate_card_rate, rate_properties: {"amount" => "10.00"}) }
-    let(:billing_cycle) { described_class.new(rate_card_rate:) }
+    let(:billing_cycle) { described_class.new(rate_card_rate:, rate_properties: {"amount" => "10.00"}) }
 
-    it "returns the rate card rate properties" do
+    it "returns the stored rate properties" do
       expect(rate_properties).to eq({"amount" => "10.00"})
     end
 
     context "with a rate override" do
       let(:rate_override) { build_stubbed(:rate_override, rate_properties: {"amount" => "5.00"}) }
-      let(:billing_cycle) { described_class.new(rate_card_rate:, rate_override:) }
+      let(:billing_cycle) { described_class.new(rate_card_rate:, rate_override:, rate_properties: {"amount" => "5.00"}) }
 
-      it "returns the override properties" do
+      it "returns the stored override properties" do
         expect(rate_properties).to eq({"amount" => "5.00"})
+      end
+
+      context "when the override changes after scheduling" do
+        before { rate_override.rate_properties = {"amount" => "8.00"} }
+
+        it "keeps the stored snapshot" do
+          expect(rate_properties).to eq({"amount" => "5.00"})
+        end
       end
     end
   end

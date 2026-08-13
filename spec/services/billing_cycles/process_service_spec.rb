@@ -40,6 +40,7 @@ RSpec.describe BillingCycles::ProcessService do
         subscription_rate_card:,
         rate_card_rate:,
         rate_override:,
+        rate_properties: {"amount" => "15.00"},
         billing_at: Time.zone.parse("2026-08-31 23:59:59"),
         period_from: Time.zone.parse("2026-08-01"),
         period_to: Time.zone.parse("2026-08-31 23:59:59")
@@ -47,6 +48,8 @@ RSpec.describe BillingCycles::ProcessService do
     end
 
     it "prices the fee from the billing cycle rate override" do
+      rate_override.update!(rate_properties: {"amount" => "20.00"})
+
       expect(result).to be_success
 
       invoice = result.invoices.sole

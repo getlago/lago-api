@@ -2324,7 +2324,8 @@ CREATE TABLE public.billing_cycles (
     updated_at timestamp(6) without time zone NOT NULL,
     customer_id uuid NOT NULL,
     rate_card_rate_id uuid,
-    rate_override_id uuid
+    rate_override_id uuid,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -14436,6 +14437,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260817120927'),
 ('20260814095016'),
 ('20260814095015'),
+('20260813161751'),
 ('20260813113757'),
 ('20260813113756'),
 ('20260813113217'),
