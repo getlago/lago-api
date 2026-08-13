@@ -68,6 +68,10 @@ module BillingPeriods
       delegate :billing_interval_count, to: :cycle
 
       delegate :billing_interval_unit, to: :cycle
+
+      def rate_properties
+        (rate_override || rate).properties
+      end
     end
 
     def self.from_subscription_rate_card(
