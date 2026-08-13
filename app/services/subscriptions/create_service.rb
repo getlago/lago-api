@@ -203,24 +203,21 @@ module Subscriptions
     end
 
     # NOTE: Backdating normally means "this subscription really started then, bill it from then".
-    #       But when a previous subscription on the same external_id was terminated after that date,
-    #       its terminating invoice already closed that window. Starting the new subscription at the
-    #       backdated date would re-open it and bill the same period a second time.
+    #       But a previous subscription on the same external_id may have already invoiced part of that
+    #       window when it terminated. Clamping to that boundary honours the backdate as far back as
+    #       is safe, instead of re-opening a period the terminating invoice already closed.
     def started_at_for(new_subscription)
-      return Time.current if invoiced_period_covers?(new_subscription.subscription_at)
-
-      new_subscription.subscription_at
+      [new_subscription.subscription_at, last_invoiced_termination_time].compact.max
     end
 
     # NOTE: A subscription terminated with `on_termination_invoice: skip` never billed its last
-    #       window, so there is nothing to double bill and the backdated period must stay billable.
-    def invoiced_period_covers?(date)
+    #       window, so it closes nothing and the backdated period must stay billable.
+    def last_invoiced_termination_time
       customer.subscriptions
         .terminated
         .where(external_id:)
         .where(on_termination_invoice: :generate)
-        .where("subscriptions.terminated_at > ?", date)
-        .exists?
+        .maximum(:terminated_at)
     end
 
     def upgrade_subscription

@@ -920,15 +920,39 @@ RSpec.describe Subscriptions::CreateService do
 
         before { previous_subscription }
 
-        it "starts now so the already invoiced period is not billed twice" do
+        it "starts at the termination so the already invoiced period is not billed twice" do
           result = create_service.call
 
           expect(result).to be_success
 
           subscription = result.subscription
           expect(subscription).to be_active
-          expect(subscription.started_at).to be_within(2.seconds).of(Time.current)
+          expect(subscription.started_at).to eq(previous_subscription.reload.terminated_at)
           expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
+        end
+
+        context "when several terminated subscriptions share the external_id" do
+          let(:latest_terminated_at) { 1.day.ago }
+
+          before do
+            create(
+              :subscription,
+              :terminated,
+              customer:,
+              plan:,
+              organization:,
+              external_id:,
+              started_at: terminated_at,
+              terminated_at: latest_terminated_at
+            )
+          end
+
+          it "starts at the most recent invoiced termination" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at).to be_within(1.second).of(latest_terminated_at)
+          end
         end
 
         context "when the previous subscription skipped its termination invoice" do
