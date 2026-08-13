@@ -17,6 +17,8 @@ class SubscriptionRateCard < ApplicationRecord
   has_many :rate_phases, -> { order(:position) }
   has_many :billing_cycles
 
+  delegate :proration?, to: :rate_card
+
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
   validates :started_at, presence: true

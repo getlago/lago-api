@@ -128,6 +128,16 @@ RSpec.describe BillingPeriods::DatesService do
       end
     end
 
+    context "with an invalid billing timing" do
+      before do
+        allow(subscription_rate_card.rate_card).to receive(:billing_timing).and_return("invalid")
+      end
+
+      it "raises an exception" do
+        expect { result }.to raise_error(ArgumentError, "Invalid billing timing: invalid")
+      end
+    end
+
     context "with plan-level phases" do
       let(:range) { "2026-08-03".."2026-11-10" }
       let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, rate_card:) }

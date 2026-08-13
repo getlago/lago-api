@@ -46,7 +46,10 @@ module BillingCycles
     attr_reader :customer
 
     def pending_cycles
-      BillingCycle.pending.where(customer_id: customer.id).includes(subscription: :plan).to_a
+      BillingCycle.pending
+        .where(customer_id: customer.id)
+        .includes(:rate_card_rate, :rate_override, subscription: :plan)
+        .to_a
     end
 
     # The dimensions that must NOT be mixed on one invoice. Subscriptions differing on

@@ -17,12 +17,22 @@ class BillingCycle < ApplicationRecord
   belongs_to :customer
   belongs_to :subscription_rate_card
   belongs_to :invoice, optional: true
+  belongs_to :rate_card_rate, optional: true
+  belongs_to :rate_override, optional: true
 
   enum :status, STATUSES, validate: true
 
   validates :billing_at, presence: true
   validates :period_from, presence: true
   validates :period_to, presence: true
+
+  def rate
+    rate_override || rate_card_rate
+  end
+
+  def currency
+    rate_card_rate.rate_card.currency
+  end
 end
 
 # == Schema Information
@@ -41,6 +51,8 @@ end
 #  customer_id               :uuid             not null
 #  invoice_id                :uuid
 #  organization_id           :uuid             not null
+#  rate_card_rate_id         :uuid
+#  rate_override_id          :uuid
 #  subscription_id           :uuid             not null
 #  subscription_rate_card_id :uuid             not null
 #
@@ -52,6 +64,8 @@ end
 #  index_billing_cycles_on_invoice_id                   (invoice_id)
 #  index_billing_cycles_on_organization_id              (organization_id)
 #  index_billing_cycles_on_product_and_period           (subscription_rate_card_id,period_from) UNIQUE
+#  index_billing_cycles_on_rate_card_rate_id            (rate_card_rate_id)
+#  index_billing_cycles_on_rate_override_id             (rate_override_id)
 #  index_billing_cycles_on_subscription_id              (subscription_id)
 #  index_billing_cycles_on_subscription_rate_card_id    (subscription_rate_card_id)
 #
@@ -60,6 +74,8 @@ end
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
+#  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #  fk_rails_...  (subscription_rate_card_id => subscription_rate_cards.id)
 #

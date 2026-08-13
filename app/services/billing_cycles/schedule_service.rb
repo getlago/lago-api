@@ -90,7 +90,9 @@ module BillingCycles
           subscription_rate_card:,
           billing_at: period.billing_at,
           period_from: period.period_from,
-          period_to: period.period_to
+          period_to: period.period_to,
+          rate_card_rate: period.rate,
+          rate_override: period.rate_override
         )
       end
 

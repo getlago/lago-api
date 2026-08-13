@@ -104,6 +104,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DR
 ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS fk_rails_b8f3cabc8e;
 ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS fk_rails_b749d2045d;
 ALTER TABLE IF EXISTS ONLY public.orders DROP CONSTRAINT IF EXISTS fk_rails_b687c6e23a;
+ALTER TABLE IF EXISTS ONLY public.billing_cycles DROP CONSTRAINT IF EXISTS fk_rails_b66394cc9b;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_b61aa73940;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_b3864df641;
@@ -125,6 +126,7 @@ ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_a5a0718a08;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_a3fff9bd72;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
+ALTER TABLE IF EXISTS ONLY public.billing_cycles DROP CONSTRAINT IF EXISTS fk_rails_a26c5bfb7e;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab65f1f7;
 ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS fk_rails_a026c79cab;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_9f724c2094;
@@ -874,6 +876,8 @@ DROP INDEX IF EXISTS public.index_billing_entities_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_billing_entities_on_applied_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_subscription_rate_card_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_subscription_id;
+DROP INDEX IF EXISTS public.index_billing_cycles_on_rate_override_id;
+DROP INDEX IF EXISTS public.index_billing_cycles_on_rate_card_rate_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_product_and_period;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_invoice_id;
@@ -2314,7 +2318,9 @@ CREATE TABLE public.billing_cycles (
     attempts integer DEFAULT 0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    customer_id uuid NOT NULL
+    customer_id uuid NOT NULL,
+    rate_card_rate_id uuid,
+    rate_override_id uuid
 );
 
 
@@ -8055,6 +8061,20 @@ CREATE UNIQUE INDEX index_billing_cycles_on_product_and_period ON public.billing
 
 
 --
+-- Name: index_billing_cycles_on_rate_card_rate_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_cycles_on_rate_card_rate_id ON public.billing_cycles USING btree (rate_card_rate_id);
+
+
+--
+-- Name: index_billing_cycles_on_rate_override_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_cycles_on_rate_override_id ON public.billing_cycles USING btree (rate_override_id);
+
+
+--
 -- Name: index_billing_cycles_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13435,6 +13455,14 @@ ALTER TABLE ONLY public.quotes
 
 
 --
+-- Name: billing_cycles fk_rails_a26c5bfb7e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_cycles
+    ADD CONSTRAINT fk_rails_a26c5bfb7e FOREIGN KEY (rate_override_id) REFERENCES public.rate_overrides(id);
+
+
+--
 -- Name: group_properties fk_rails_a2d2cb3819; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13600,6 +13628,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.entitlement_entitlements
     ADD CONSTRAINT fk_rails_b61aa73940 FOREIGN KEY (entitlement_feature_id) REFERENCES public.entitlement_features(id);
+
+
+--
+-- Name: billing_cycles fk_rails_b66394cc9b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_cycles
+    ADD CONSTRAINT fk_rails_b66394cc9b FOREIGN KEY (rate_card_rate_id) REFERENCES public.rate_card_rates(id);
 
 
 --
@@ -14371,6 +14407,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260817175013'),
 ('20260817175012'),
+('20260813113757'),
+('20260813113756'),
+('20260813113217'),
 ('20260810135202'),
 ('20260805201143'),
 ('20260805110509'),
