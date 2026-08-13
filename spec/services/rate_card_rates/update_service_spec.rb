@@ -97,6 +97,33 @@ RSpec.describe RateCardRates::UpdateService do
     end
   end
 
+  describe "code editability" do
+    let(:rate_card_rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
+    end
+    let(:params) { {code: "after"} }
+
+    it "updates the code when the card is not attached" do
+      expect { result }.to change { rate_card_rate.reload.code }.to("after")
+    end
+
+    context "when the card is attached to a plan" do
+      before { create(:plan_rate_card, organization:, rate_card:) }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:code]).to eq(["attached_to_plan_or_subscription"])
+      end
+
+      it "still accepts a payload resending the current code" do
+        update_result = described_class.call(rate_card_rate:, params: {code: rate_card_rate.code, rate_properties: {"amount" => "9"}})
+
+        expect(update_result).to be_success
+        expect(update_result.rate_card_rate.rate_properties).to eq("amount" => "9")
+      end
+    end
+  end
+
   context "when the card is attached to a subscription" do
     let(:params) { {rate_properties: {"amount" => "25"}} }
 

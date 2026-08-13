@@ -110,6 +110,17 @@ RSpec.describe Api::V2::RateCards::RatesController do
     let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day) }
     let(:update_params) { {min_amount_cents: 500} }
 
+    context "when updating the code on an unattached card" do
+      let(:update_params) { {code: "renamed"} }
+
+      it "updates the code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate][:code]).to eq("renamed")
+      end
+    end
+
     it "updates the pending rate" do
       subject
 

@@ -8,16 +8,18 @@ module Api
         before_action :find_rate, only: %i[show update destroy]
 
         def index
-          rates = rate_card.rates
-            .page(params[:page])
-            .per(params[:per_page] || PER_PAGE)
+          result = ::RateCardRatesQuery.call(
+            organization: current_organization,
+            pagination: {page: params[:page], limit: params[:per_page] || PER_PAGE},
+            filters: {rate_card_id: rate_card.id}
+          )
 
           render(
             json: ::CollectionSerializer.new(
-              rates,
+              result.rate_card_rates,
               ::V1::RateCardRateSerializer,
               collection_name: "rates",
-              meta: pagination_metadata(rates)
+              meta: pagination_metadata(result.rate_card_rates)
             )
           )
         end
