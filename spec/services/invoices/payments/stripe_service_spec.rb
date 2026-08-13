@@ -343,6 +343,44 @@ RSpec.describe Invoices::Payments::StripeService do
             ready_for_payment_processing: true
           )
         end
+
+        context "when the invoice activates a payment-gated subscription" do
+          let(:subscription) { create(:subscription, :incomplete, organization:, customer:) }
+          let(:invoice) do
+            create(
+              :invoice,
+              :open,
+              :with_subscriptions,
+              subscriptions: [subscription],
+              organization:,
+              customer:,
+              total_amount_cents: 200,
+              currency: "EUR",
+              ready_for_payment_processing: true
+            )
+          end
+
+          before { create(:subscription_activation_rule, subscription:, status: "pending") }
+
+          # The activation payment always gets the on-session retry, so the failure of the
+          # rejected off-session intent is not terminal and must not cancel the subscription.
+          it "updates the payment status but not the invoice status" do
+            result = described_class.call(
+              :update_payment_status,
+              organization_id: organization.id,
+              status: "failed",
+              stripe_payment:
+            )
+
+            expect(result).to be_success
+            expect(result.payment.status).to eq("failed")
+            expect(result.payment.error_code).to eq("authentication_required")
+            expect(result.invoice.reload).to have_attributes(
+              payment_status: "pending",
+              ready_for_payment_processing: true
+            )
+          end
+        end
       end
 
       context "when there is another payment in requires_action state for the invoice" do

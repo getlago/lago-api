@@ -40,6 +40,10 @@ class PaymentRequest < ApplicationRecord
     invoices
   end
 
+  def subscription_payment_gated?
+    false
+  end
+
   def invoice_ids
     applied_invoices.pluck(:invoice_id)
   end
