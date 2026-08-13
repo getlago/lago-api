@@ -13,12 +13,12 @@ class BillingCycle < ApplicationRecord
   }.freeze
 
   belongs_to :organization
-  belongs_to :subscription
-  belongs_to :customer
-  belongs_to :subscription_rate_card
+  belongs_to :subscription, -> { with_discarded }
+  belongs_to :customer, -> { with_discarded }
+  belongs_to :subscription_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true
-  belongs_to :rate_card_rate, optional: true
-  belongs_to :rate_override, optional: true
+  belongs_to :rate_card_rate, -> { with_discarded }, optional: true
+  belongs_to :rate_override, -> { with_discarded }, optional: true
 
   enum :status, STATUSES, validate: true
 
