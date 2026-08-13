@@ -401,6 +401,89 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "when a plan charge was soft deleted" do
+      let(:parent_charge) { create(:standard_charge, plan:, organization:) }
+      let(:charge) do
+        create(
+          :graduated_charge,
+          plan:,
+          organization:,
+          parent: parent_charge,
+          code: "client_files_count_2",
+          invoice_display_name: "Active files",
+          properties: {
+            graduated_ranges: [
+              {from_value: 0, to_value: 1, flat_amount: "0", per_unit_amount: "0"},
+              {from_value: 2, to_value: nil, flat_amount: "0", per_unit_amount: "2.37"}
+            ]
+          }
+        )
+      end
+
+      let(:original_invoice) do
+        travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
+        invoice = subscription.invoices.first
+
+        invoice.update!(status: :finalized, voided_at: nil, voided_invoice_id: nil)
+        invoice
+      end
+
+      let(:fees_params) do
+        [
+          {
+            id: original_fee.id,
+            subscription_id: subscription.id,
+            units: original_fee.units
+          },
+          {
+            charge_id: charge.id,
+            subscription_id: subscription.id,
+            units: 2
+          }
+        ]
+      end
+
+      before do
+        original_invoice
+        charge.discard!
+      end
+
+      it "regenerates the adjusted fee using the discarded charge" do
+        expect(voided_invoice).to be_finalized
+        expect(voided_invoice.voided_at).to be_nil
+        expect(voided_invoice.voided_invoice_id).to be_nil
+
+        regenerated_fee = regenerate_result.invoice.fees.find_by(charge_id: charge.id)
+
+        expect(regenerated_fee.units).to eq(2)
+        expect(regenerated_fee.amount_cents).to eq(237)
+        expect(regenerated_fee.amount_details).to eq(
+          {
+            "graduated_ranges" => [
+              {
+                "from_value" => 0,
+                "to_value" => 1,
+                "flat_unit_amount" => "0.0",
+                "per_unit_amount" => "0.0",
+                "per_unit_total_amount" => "0.0",
+                "total_with_flat_amount" => "0.0",
+                "units" => "1.0"
+              },
+              {
+                "from_value" => 2,
+                "to_value" => nil,
+                "flat_unit_amount" => "0.0",
+                "per_unit_amount" => "2.37",
+                "per_unit_total_amount" => "2.37",
+                "total_with_flat_amount" => "2.37",
+                "units" => "1.0"
+              }
+            ]
+          }
+        )
+      end
+    end
+
     context "with fixed charge fees" do
       let(:fixed_charge) do
         create(
