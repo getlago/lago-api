@@ -11,6 +11,14 @@ module PaymentProviderCustomers
 
     self.table_name = "payment_provider_customers"
 
+    MANUAL_CODE = "manual"
+
+    CONNECTION_STATUSES = {
+      not_connected: "not_connected",
+      manual: "manual",
+      connected: "connected"
+    }.freeze
+
     belongs_to :customer
     belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
     belongs_to :organization
@@ -21,9 +29,11 @@ module PaymentProviderCustomers
 
     validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
     validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
+    validate :code_is_not_reserved
 
     settings_accessors :provider_mandate_id, :sync_with_provider
 
+    scope :by_code, ->(code) { where(code:) }
     scope :by_provider_id_from_organization, ->(organization_id, provider_id) do
       joins(:customer)
         .where(customers: {organization_id: organization_id})
@@ -40,6 +50,23 @@ module PaymentProviderCustomers
 
     def legacy_provider_method_id
       get_from_settings("payment_method_id") || get_from_settings("provider_mandate_id")
+    end
+
+    # A manual payment row is the reserved null-provider connection: a base-class row (no provider
+    # subclass) coded "manual".
+    def manual?
+      instance_of?(BaseCustomer) && code == MANUAL_CODE
+    end
+
+    private
+
+    # The "manual" code is reserved for the null-provider manual connection; a provider-backed
+    # connection (any subclass) cannot use it.
+    def code_is_not_reserved
+      return unless code == MANUAL_CODE
+      return if instance_of?(BaseCustomer)
+
+      errors.add(:code, "value_is_reserved")
     end
   end
 end

@@ -379,6 +379,24 @@ class Customer < ApplicationRecord
     anrok_customer || avalara_customer
   end
 
+  def payment_connection(code = nil)
+    return payment_provider_customers.by_code(code).first if code.present?
+
+    payment_provider_customers.find_by(is_default: true)
+  end
+
+  def payment_connection_status
+    connection = payment_connection
+
+    if connection.nil?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:not_connected]
+    elsif connection.manual?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:manual]
+    else
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:connected]
+    end
+  end
+
   def address_changed?
     ADDRESS_FIELDS.any? { |field| send(:"#{field}_changed?") }
   end
