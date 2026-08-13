@@ -73,17 +73,11 @@ module BillingPeriods
     def self.from_subscription_rate_card(
       subscription_rate_card,
       rates:,
-      rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
-      range: nil,
+      range:, rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
       options: Options.default
     )
       call(
-        billing_anchor_date: subscription_rate_card.billing_anchor_date,
-        # NOTE: Fix this, if the rates is empty, how do we should generate dates?
-        # right now is falling back to the Dates::AdvanceService
-        billing_timing: rates.first.rate_card.billing_timing,
         options:,
-        started_at: subscription_rate_card.started_at.in_time_zone(options.timezone).beginning_of_day.utc,
         subscription_rate_card:,
         rates:,
         rate_phases:,
@@ -92,17 +86,17 @@ module BillingPeriods
     end
 
     def initialize(
-      billing_anchor_date:,
-      billing_timing:,
-      started_at:, rates:, range:, options: Options.default,
-      subscription_rate_card: nil,
+      subscription_rate_card:,
+      rates:,
+      range:,
+      options: Options.default,
       rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: [])
     )
-      @billing_anchor_date = billing_anchor_date
-      @billing_timing = billing_timing.to_sym
-      @options = options
-      @started_at = started_at
       @subscription_rate_card = subscription_rate_card
+      @options = options
+      @billing_anchor_date = subscription_rate_card.billing_anchor_date
+      @billing_timing = subscription_rate_card.rate_card.billing_timing.to_sym
+      @started_at = subscription_rate_card.started_at.in_time_zone(options.timezone).beginning_of_day.utc
       @rates = rates
       @rate_phases = rate_phases
       @range = range
@@ -134,7 +128,14 @@ module BillingPeriods
     end
 
     def dates_service
-      arrears? ? Dates::ArrearsService : Dates::AdvanceService
+      case billing_timing
+      when :arrears
+        Dates::ArrearsService
+      when :advance
+        Dates::AdvanceService
+      else
+        raise ArgumentError, "Invalid billing timing: #{billing_timing}"
+      end
     end
   end
 end

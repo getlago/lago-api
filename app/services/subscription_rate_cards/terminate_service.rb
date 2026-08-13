@@ -53,7 +53,8 @@ module SubscriptionRateCards
         subscription_rate_card:,
         billing_at: terminated_at,
         period_from: period_start,
-        period_to: terminated_at.utc
+        period_to: terminated_at.utc,
+        rate_card_rate: rate
       )
     end
 

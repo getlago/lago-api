@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module BillingCycles
-  # Builds the (unsaved) fee for one billing cycle: resolves the rate at the period
-  # start, then prices it. For now it handles fixed (subscription) items priced with
-  # the standard model; usage aggregation is a later slice.
+  # Builds the (unsaved) fee for one billing cycle. The scheduler stores the exact
+  # pricing records on the cycle, so processing retries price the same slice without
+  # resolving the catalog timeline again.
   #
   # Proration: when rate_card.proration is true, a partial period (a clamped first
   # period or a mid-period termination) is charged pro-rata by day count
@@ -27,7 +27,8 @@ module BillingCycles
         subscription:,
         invoiceable: product,
         fee_type: :product,
-        rate_card_rate: rate,
+        rate_card_rate:,
+        rate_override:,
         amount_cents:,
         amount_currency: currency,
         unit_amount_cents: fee_unit_amount_cents,
@@ -49,18 +50,8 @@ module BillingCycles
 
     attr_reader :billing_cycle
 
-    delegate :subscription_rate_card, to: :billing_cycle
+    delegate :currency, :rate, :rate_card_rate, :rate_override, :subscription_rate_card, to: :billing_cycle
     delegate :subscription, :product, to: :subscription_rate_card
-
-    def rate
-      @rate ||= SubscriptionRateCards::ResolveRateService
-        .call(subscription_rate_card:, datetime: billing_cycle.period_from)
-        .rate
-    end
-
-    def currency
-      rate.rate_card.currency
-    end
 
     def amount_cents
       (full_amount_cents * proration_ratio).round
@@ -96,7 +87,7 @@ module BillingCycles
     # 1 for a full period; the prorated fraction for a partial period. The day math
     # lives on Boundaries (the billing calendar), matching the legacy engine.
     def proration_ratio
-      return 1 unless rate.rate_card.proration?
+      return 1 unless subscription_rate_card.proration?
 
       boundaries.proration_ratio(billing_cycle.period_from, billing_cycle.period_to)
     end

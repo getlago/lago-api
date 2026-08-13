@@ -34,8 +34,7 @@ RSpec.describe BillingCycles::ScheduleService do
     let(:ended_at) { nil }
     let(:billing_interval_count) { 1 }
     let(:billing_interval_unit) { "month" }
-
-    before do
+    let!(:rate_card_rate) do
       create(
         :rate_card_rate,
         organization:,
@@ -44,6 +43,9 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_interval_count:,
         billing_interval_unit:
       )
+    end
+
+    before do
       create(
         :subscription_rate_card,
         organization:,
@@ -93,6 +95,8 @@ RSpec.describe BillingCycles::ScheduleService do
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
         expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.rate_card_rate).to eq(rate_card_rate)
+        expect(billing_cycle.rate_override).to be_nil
         expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
       end
     end
@@ -100,8 +104,7 @@ RSpec.describe BillingCycles::ScheduleService do
     context "with rate changes inside the range" do
       let(:range) { "2026-07-01".."2026-09-01" }
       let(:next_billing_at) { Time.zone.parse("2026-07-01") }
-
-      before do
+      let!(:second_rate_card_rate) do
         create(
           :rate_card_rate,
           organization:,
@@ -121,6 +124,34 @@ RSpec.describe BillingCycles::ScheduleService do
             [Time.zone.parse("2026-08-01"), Time.zone.parse("2026-08-31 23:59:59.999999")]
           ]
         )
+        expect(result.billing_cycles.map(&:rate_card_rate)).to eq([rate_card_rate, second_rate_card_rate])
+      end
+    end
+
+    context "with a phase rate override" do
+      let(:range) { "2026-07-15".."2026-08-14" }
+      let(:next_billing_at) { Time.zone.parse("2026-07-01") }
+      let(:subscription_rate_card) { customer.subscription_rate_cards.sole }
+      let(:rate_override) { create(:rate_override, organization:, rate_properties: {"amount" => "5.00"}) }
+
+      before do
+        create(
+          :rate_phase,
+          :subscription_level,
+          organization:,
+          subscription_rate_card:,
+          position: 1,
+          billing_interval_cycle_count: nil,
+          rate_override:
+        )
+      end
+
+      it "stores the base rate and override on the billing cycle" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.rate_card_rate).to eq(rate_card_rate)
+        expect(billing_cycle.rate_override).to eq(rate_override)
       end
     end
 
@@ -164,6 +195,7 @@ RSpec.describe BillingCycles::ScheduleService do
             subscription:,
             customer:,
             subscription_rate_card: customer.subscription_rate_cards.sole,
+            rate_card_rate:,
             billing_at: Time.zone.parse("2026-08-03"),
             period_from: Time.zone.parse("2026-07-27"),
             period_to: Time.zone.parse("2026-08-02 23:59:59.999999")
@@ -343,6 +375,7 @@ RSpec.describe BillingCycles::ScheduleService do
           subscription:,
           customer:,
           subscription_rate_card: customer.subscription_rate_cards.sole,
+          rate_card_rate:,
           billing_at: Time.zone.parse("2026-08-15"),
           period_from: Time.zone.parse("2026-07-15"),
           period_to: Time.zone.parse("2026-08-15 23:59:59.999999")
@@ -367,6 +400,7 @@ RSpec.describe BillingCycles::ScheduleService do
           subscription:,
           customer:,
           subscription_rate_card: customer.subscription_rate_cards.sole,
+          rate_card_rate:,
           billing_at: Time.zone.parse("2026-08-14"),
           period_from: Time.zone.parse("2026-07-01"),
           period_to: Time.zone.parse("2026-07-31 23:59:59.999999")
