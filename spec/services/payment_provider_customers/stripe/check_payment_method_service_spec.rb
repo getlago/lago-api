@@ -60,7 +60,9 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
       end
 
       context "when a payment method exists" do
-        let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: payment_method_id) }
+        let(:default_payment_method) do
+          create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: payment_method_id)
+        end
 
         before { default_payment_method }
 
