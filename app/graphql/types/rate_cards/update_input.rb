@@ -9,6 +9,7 @@ module Types
 
       argument :applied_pricing_unit_code, String, required: false
       argument :billing_timing, Types::RateCards::BillingTimingEnum, required: false
+      argument :code, String, required: false
       argument :currency, Types::CurrencyEnum, required: false
       argument :description, String, required: false
       argument :display_on_invoice, Boolean, required: false

@@ -47,6 +47,11 @@ module RateCards
         end
       end
 
+      # Code is identity: editable until the card is in a plan or subscription.
+      if params.key?(:code) && params[:code]&.strip != rate_card.code && rate_card.attached_to_plan_or_subscription?
+        return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
+      end
+
       assign_attributes
       rate_card.save!
 
@@ -61,6 +66,7 @@ module RateCards
     attr_reader :rate_card, :params
 
     def assign_attributes
+      rate_card.code = params[:code]&.strip if params.key?(:code)
       rate_card.name = params[:name] if params.key?(:name)
       rate_card.description = params[:description] if params.key?(:description)
       rate_card.currency = params[:currency] if params.key?(:currency)

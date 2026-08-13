@@ -14837,6 +14837,7 @@ input UpdateRateCardInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   currency: CurrencyEnum
   description: String
   displayOnInvoice: Boolean
