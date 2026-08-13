@@ -20,6 +20,10 @@ module Auth
         query_okta_access_token
         check_userinfo(result.email)
 
+        if existing_user_outside_organization?
+          return result.single_validation_failure!(error_code: "user_does_not_belong_to_organization")
+        end
+
         find_or_create_user
         find_or_create_membership
 
@@ -40,6 +44,13 @@ module Auth
       private
 
       attr_reader :code, :state
+
+      def existing_user_outside_organization?
+        user = User.find_by(email: result.email)
+        return false if user.nil?
+
+        !user.memberships.active.exists?(organization_id: result.okta_integration.organization_id)
+      end
 
       def generate_token
         result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
