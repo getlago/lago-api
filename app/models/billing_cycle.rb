@@ -13,7 +13,7 @@ class BillingCycle < ApplicationRecord
   }.freeze
 
   belongs_to :organization
-  belongs_to :subscription, -> { with_discarded }
+  belongs_to :subscription
   belongs_to :customer, -> { with_discarded }
   belongs_to :subscription_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true

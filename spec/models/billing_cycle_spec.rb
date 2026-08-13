@@ -12,7 +12,6 @@ RSpec.describe BillingCycle do
       expect(subject).to belong_to(:invoice).optional
       expect(subject).to belong_to(:rate_card_rate).optional
       expect(subject).to belong_to(:rate_override).optional
-      expect(described_class.reflect_on_association(:subscription).scope).to be_present
       expect(described_class.reflect_on_association(:customer).scope).to be_present
       expect(described_class.reflect_on_association(:subscription_rate_card).scope).to be_present
       expect(described_class.reflect_on_association(:rate_card_rate).scope).to be_present
