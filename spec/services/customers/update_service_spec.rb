@@ -67,6 +67,19 @@ RSpec.describe Customers::UpdateService do
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
     end
 
+    it "refreshes the invoices search terms when a searchable field changes" do
+      expect { customers_service.call }
+        .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+    end
+
+    context "when no searchable field changes" do
+      let(:update_args) { {id: customer.id, net_payment_term: 8} }
+
+      it "does not refresh the invoices search terms" do
+        expect { customers_service.call }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+      end
+    end
+
     context "when Meilisearch is enabled" do
       before do
         customer

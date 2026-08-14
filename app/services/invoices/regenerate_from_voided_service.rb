@@ -274,6 +274,8 @@ module Invoices
           voided_invoice_id: voided_invoice.id,
           purchase_order_number: resolved_purchase_order_number
         )
+
+        Invoices::RefreshSearchTermsService.call!(invoice:)
       end
     end
 
