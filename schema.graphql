@@ -11938,7 +11938,7 @@ type Query {
   """
   Query memberships of an organization
   """
-  memberships(limit: Int, page: Int): MembershipCollection!
+  memberships(limit: Int, page: Int, roleIds: [ID!], searchTerm: String): MembershipCollection!
 
   """
   Query MRR of an organization
