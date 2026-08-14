@@ -82,6 +82,27 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when okta is disabled on the integration's organization but enabled on another of the user's organizations" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before do
+        create(:membership, user:, organization: okta_integration.organization)
+        okta_integration.organization.disable_okta_authentication!
+
+        other_organization = create(:organization)
+        other_organization.update!(premium_integrations: ["okta"])
+        other_organization.enable_okta_authentication!
+        create(:membership, user:, organization: other_organization)
+      end
+
+      it "does not authenticate the user" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
+      end
+    end
+
     context "when domain is not configured with an integration" do
       let(:okta_integration) { nil }
 

@@ -27,7 +27,7 @@ module Auth
         find_or_create_user
         find_or_create_membership
 
-        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::OKTA)
+        unless okta_enabled_for_login?
           return result.single_validation_failure!(
             error_code: "login_method_not_authorized",
             field: Organizations::AuthenticationMethods::OKTA
@@ -50,6 +50,13 @@ module Auth
         return false if user.nil?
 
         !user.memberships.active.exists?(organization_id: result.okta_integration.organization_id)
+      end
+
+      def okta_enabled_for_login?
+        organization = result.okta_integration.organization
+
+        result.user.active_organizations.include?(organization) &&
+          organization.authentication_methods.include?(Organizations::AuthenticationMethods::OKTA)
       end
 
       def generate_token
