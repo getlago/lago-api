@@ -82,6 +82,40 @@ RSpec.describe BillingCycles::ScheduleService do
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-31 23:59:59.999999"))
       end
+
+      context "when the generated advance period starts in the past" do
+        let(:current_time) { Time.zone.parse("2026-08-12 12:00:00") }
+        let(:next_billing_at) { Time.zone.parse("2026-08-10") }
+        let(:billing_anchor_date) { Date.parse("2026-08-20") }
+        let(:started_at) { Time.zone.parse("2026-08-10") }
+
+        it "sets billing_at to the scheduling time" do
+          expect { result }.to change(BillingCycle, :count).by(1)
+
+          billing_cycle = result.billing_cycles.sole
+          expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
+          expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-19 23:59:59.999999"))
+          expect(billing_cycle.billing_at).to eq(current_time)
+        end
+      end
+    end
+
+    context "when the generated advance period starts in the future" do
+      let(:rate_card) { create(:rate_card, :advance, organization:) }
+      let(:current_time) { Time.zone.parse("2026-08-12 12:00:00") }
+      let(:range) { "2026-08-20".."2026-08-20" }
+      let(:next_billing_at) { Time.zone.parse("2026-08-20") }
+      let(:billing_anchor_date) { Date.parse("2026-08-20") }
+      let(:started_at) { Time.zone.parse("2026-08-10") }
+
+      it "keeps billing_at on the future billing boundary" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-20"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-19 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-08-20"))
+      end
     end
 
     context "with a closed date range" do
@@ -94,7 +128,7 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
         expect(billing_cycle.rate_card_rate).to eq(rate_card_rate)
         expect(billing_cycle.rate_override).to be_nil
         expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
@@ -249,7 +283,7 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
       end
     end
 
@@ -263,7 +297,7 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
       end
     end
 
@@ -309,7 +343,7 @@ RSpec.describe BillingCycles::ScheduleService do
           billing_cycle = result.billing_cycles.sole
           expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
           expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
-          expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
+          expect(billing_cycle.billing_at).to eq(current_time)
           expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
         end
 
@@ -336,7 +370,7 @@ RSpec.describe BillingCycles::ScheduleService do
           billing_cycle = result.billing_cycles.sole
           expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-09-10"))
           expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-10-09 23:59:59.999999"))
-          expect(billing_cycle.billing_at).to eq(billing_cycle.period_from)
+          expect(billing_cycle.billing_at).to eq(current_time)
           expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
         end
       end

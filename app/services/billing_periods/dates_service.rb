@@ -52,11 +52,13 @@ module BillingPeriods
     # billing cycle.
     Period = Data.define(:period_from, :period_to, :next_billing_at, :rate, :cycle) do
       def billing_at
-        if rate.rate_card.advance?
+        billing_boundary = if rate.rate_card.advance?
           period_from
         else
           period_to
         end
+
+        [billing_boundary, Time.current].max
       end
 
       delegate :index, to: :cycle, prefix: true
