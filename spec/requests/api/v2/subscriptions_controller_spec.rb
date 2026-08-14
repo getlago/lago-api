@@ -282,9 +282,10 @@ RSpec.describe Api::V2::SubscriptionsController do
         organization:,
         rate_card:,
         code: "rate_r1_v1",
-        effective_from: Time.zone.parse("2026-01-01")
+        effective_from: rate_effective_from
       )
     end
+    let(:rate_effective_from) { Time.zone.parse("2026-01-01") }
     let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, rate_card:) }
     let!(:intro_phase) do
       create(
@@ -392,6 +393,33 @@ RSpec.describe Api::V2::SubscriptionsController do
         expect(response).to have_http_status(:success)
         expect(json[:cycles].map { |cycle| cycle[:subscription_external_id] })
           .to eq([subscription.external_id] * 2)
+      end
+    end
+
+    context "when no rate is available in the requested range" do
+      subject do
+        travel_to(Time.zone.parse("2026-08-10")) do
+          get_with_token(
+            organization,
+            "/api/v2/subscriptions/cycles",
+            {
+              subscription_external_ids: [subscription.external_id],
+              start_on: "2026-08-10",
+              end_on: "2026-09-10"
+            }
+          )
+        end
+      end
+
+      let(:rate_card) { create(:rate_card, organization:, product:, code: "card_r2", currency: "USD") }
+      let(:rate_effective_from) { Time.zone.parse("2027-01-01") }
+
+      it "does not return a next billing date" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:cycles]).to eq([])
+        expect(json).not_to have_key(:next_billing_at)
       end
     end
 

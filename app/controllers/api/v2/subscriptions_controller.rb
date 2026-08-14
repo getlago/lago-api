@@ -126,8 +126,10 @@ module Api
 
         preload_cycle_associations(subscriptions)
         cycles, next_billing_at = cycles_payload_for(subscriptions)
+        payload = {cycles:}
+        payload[:next_billing_at] = next_billing_at.iso8601 if next_billing_at
 
-        render json: {cycles:, next_billing_at: next_billing_at&.iso8601}
+        render json: payload
       end
 
       private
@@ -174,7 +176,9 @@ module Api
           next_billing_ats.concat(subscription_next_billing_ats)
         end
 
-        [cycles, next_billing_ats.compact.max]
+        next_billing_at = cycles.empty? ? nil : next_billing_ats.compact.max
+
+        [cycles, next_billing_at]
       end
 
       def cycles_for(subscription)
