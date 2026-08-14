@@ -3649,6 +3649,7 @@ CREATE TABLE public.invoices (
     purchase_order_number character varying,
     payment_term jsonb,
     payment_term_source character varying,
+    search_terms text,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -14212,6 +14213,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260817175013'),
 ('20260817175012'),
 ('20260817120927'),
+('20260814095015'),
 ('20260810135202'),
 ('20260805201143'),
 ('20260805110509'),
@@ -15314,4 +15316,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
