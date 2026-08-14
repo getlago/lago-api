@@ -41,3 +41,7 @@ lazy_charge_usage_cache:
 product_catalog:
   description: "Use the product catalog (billing v2): product_categories, products, rate cards and plan rate phases"
   owners: ["@rsempe"]
+
+invoice_search_terms:
+  description: "Search the invoice list on the denormalized invoices.search_terms column instead of joining customers"
+  owners: ["@toommz"]
