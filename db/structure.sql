@@ -632,6 +632,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_search_terms_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
@@ -9559,6 +9560,13 @@ CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.inv
 
 
 --
+-- Name: index_invoices_on_organization_id_search_terms_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_search_terms_gin_trgm_ops ON public.invoices USING gin (organization_id, search_terms public.gin_trgm_ops);
+
+
+--
 -- Name: index_invoices_on_payment_due_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14173,6 +14181,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260814095016'),
 ('20260814095015'),
 ('20260805201143'),
 ('20260805110509'),
