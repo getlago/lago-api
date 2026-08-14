@@ -29,8 +29,8 @@ RSpec.describe QuoteVersions::Validators do
     context "when the quote is subscription_amendment" do
       let(:order_type) { :subscription_amendment }
 
-      it "returns no validator" do
-        expect(validator).to be_nil
+      it "returns a subscription_amendment validator" do
+        expect(validator).to be_a(QuoteVersions::Validators::SubscriptionAmendmentValidator)
       end
     end
   end

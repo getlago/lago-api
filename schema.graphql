@@ -10040,6 +10040,7 @@ type OrderExecutionRecord {
   executionMode: OrderExecutionModeEnum
   invoiceId: ID
   subscriptionIds: [ID!]!
+  terminatedSubscriptionIds: [ID!]!
   walletIds: [ID!]!
 }
 

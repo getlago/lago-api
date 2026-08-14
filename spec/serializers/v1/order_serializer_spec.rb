@@ -47,6 +47,7 @@ RSpec.describe ::V1::OrderSerializer do
         "execution_mode" => "execute_in_lago",
         "invoice_id" => nil,
         "subscription_ids" => [],
+        "terminated_subscription_ids" => [],
         "applied_coupon_ids" => [],
         "wallet_ids" => [],
         "errors" => ["currencies_does_not_match"]

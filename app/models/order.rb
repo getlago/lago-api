@@ -22,6 +22,7 @@ class Order < ApplicationRecord
     "execution_mode" => nil,
     "invoice_id" => nil,
     "subscription_ids" => [],
+    "terminated_subscription_ids" => [],
     "applied_coupon_ids" => [],
     "wallet_ids" => [],
     "errors" => []
