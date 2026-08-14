@@ -399,152 +399,220 @@ RSpec.describe InvoicesQuery do
     end
   end
 
-  context "when searching for a full invoice id (UUID)" do
-    let(:search_term) { invoice_fourth.id }
+  shared_examples "invoice search" do
+    context "when searching for a full invoice id (UUID)" do
+      let(:search_term) { invoice_fourth.id }
 
-    it "returns the matching invoice" do
-      expect(returned_ids).to eq([invoice_fourth.id])
+      it "returns the matching invoice" do
+        expect(returned_ids).to eq([invoice_fourth.id])
+      end
+    end
+
+    context "when searching for a partial UUID-like string" do
+      let(:search_term) { invoice_fourth.id.first(10) }
+
+      it "does not match by invoice id" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when searching for a non-UUID string that resembles part of an id" do
+      let(:search_term) { "abcdef12" }
+
+      it "does not raise and returns no id-matched invoices" do
+        expect { result }.not_to raise_error
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when searching an invoice number" do
+      let(:search_term) { invoice_first.number }
+
+      it "returns 1 invoices" do
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+
+    context "when searching a customer external id" do
+      let(:search_term) { customer_second.external_id }
+
+      it "returns 2 invoices" do
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+
+    context "when searching for /rick/ term" do
+      let(:search_term) { "rick" }
+
+      it "returns 3 invoices" do
+        expect(returned_ids.count).to eq(4)
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).to include(invoice_fifth.id)
+        expect(returned_ids).to include(invoice_sixth.id)
+      end
+    end
+
+    context "when searching for /gmail/ term" do
+      let(:search_term) { "gmail" }
+
+      it "returns 2 invoices" do
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+
+    context "when searching for /44444444/ term" do
+      let(:search_term) { "44444444" }
+      let(:filters) { {customer_id: customer_second.id} }
+
+      it "returns 1 invoices" do
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+
+    context "when searching for another customer with no invoice" do
+      let(:filters) { {customer_id: create(:customer, organization:).id} }
+
+      it "returns 0 invoices" do
+        expect(returned_ids.count).to eq(0)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+      end
+    end
+
+    context 'when searching for lastname "SanchezLast"' do
+      let(:search_term) { "SanchezLast" }
+
+      it "returns the correct invoices for this customer" do
+        expect(returned_ids.count).to eq(4)
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).to include(invoice_fifth.id)
+        expect(returned_ids).to include(invoice_sixth.id)
+      end
+    end
+
+    context 'when searching for firstname "MortyFirst"' do
+      let(:search_term) { "MortyFirst" }
+
+      it "returns the correct invoices for this customer" do
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+        expect(returned_ids).not_to include(invoice_sixth.id)
+      end
+    end
+
+    context "when search_term matches invoice number and customer name across different invoices" do
+      let(:search_term) { "Rick" }
+      let!(:invoice_with_matching_number) do
+        create(:invoice, organization:, customer: customer_second, number: "RICK-001")
+      end
+
+      it "returns invoices matched by customer name and by invoice number" do
+        expect(returned_ids).to contain_exactly(
+          invoice_first.id,
+          invoice_third.id,
+          invoice_fifth.id,
+          invoice_sixth.id,
+          invoice_with_matching_number.id
+        )
+      end
     end
   end
 
-  context "when searching for a partial UUID-like string" do
-    let(:search_term) { invoice_fourth.id.first(10) }
+  context "with the CTE search path" do
+    it_behaves_like "invoice search"
 
-    it "does not match by invoice id" do
-      expect(returned_ids).to be_empty
+    context "when the term only matches a customer legal name" do
+      let(:search_term) { "Sanchez Holdings" }
+
+      before { customer_first.update!(legal_name: "Sanchez Holdings") }
+
+      it "does not match, the CTE does not search legal_name" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when the term only matches a purchase order number" do
+      let(:search_term) { "PO-4242" }
+
+      before { invoice_first.update!(purchase_order_number: "PO-4242") }
+
+      it "does not match, the CTE does not search purchase_order_number" do
+        expect(returned_ids).to be_empty
+      end
     end
   end
 
-  context "when searching for a non-UUID string that resembles part of an id" do
-    let(:search_term) { "abcdef12" }
+  context "with the search_terms path" do
+    before { organization.enable_feature_flag!(:invoice_search_terms) }
 
-    it "does not raise and returns no id-matched invoices" do
-      expect { result }.not_to raise_error
-      expect(returned_ids).to be_empty
-    end
-  end
-
-  context "when searching an invoice number" do
-    let(:search_term) { invoice_first.number }
-
-    it "returns 1 invoices" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).not_to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
-    end
-  end
-
-  context "when searching a customer external id" do
-    let(:search_term) { customer_second.external_id }
-
-    it "returns 2 invoices" do
-      expect(returned_ids.count).to eq(2)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
-    end
-  end
-
-  context "when searching for /rick/ term" do
-    let(:search_term) { "rick" }
-
-    it "returns 3 invoices" do
-      expect(returned_ids.count).to eq(4)
-      expect(returned_ids).to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).to include(invoice_third.id)
-      expect(returned_ids).not_to include(invoice_fourth.id)
-      expect(returned_ids).to include(invoice_fifth.id)
-      expect(returned_ids).to include(invoice_sixth.id)
-    end
-  end
-
-  context "when searching for /gmail/ term" do
-    let(:search_term) { "gmail" }
-
-    it "returns 2 invoices" do
-      expect(returned_ids.count).to eq(2)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
-    end
-  end
-
-  context "when searching for /44444444/ term" do
-    let(:search_term) { "44444444" }
-    let(:filters) { {customer_id: customer_second.id} }
-
-    it "returns 1 invoices" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
-    end
-  end
-
-  context "when searching for another customer with no invoice" do
-    let(:filters) { {customer_id: create(:customer, organization:).id} }
-
-    it "returns 0 invoices" do
-      expect(returned_ids.count).to eq(0)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).not_to include(invoice_fourth.id)
-    end
-  end
-
-  context 'when searching for lastname "SanchezLast"' do
-    let(:search_term) { "SanchezLast" }
-
-    it "returns the correct invoices for this customer" do
-      expect(returned_ids.count).to eq(4)
-      expect(returned_ids).to include(invoice_first.id)
-      expect(returned_ids).not_to include(invoice_second.id)
-      expect(returned_ids).to include(invoice_third.id)
-      expect(returned_ids).not_to include(invoice_fourth.id)
-      expect(returned_ids).to include(invoice_fifth.id)
-      expect(returned_ids).to include(invoice_sixth.id)
-    end
-  end
-
-  context 'when searching for firstname "MortyFirst"' do
-    let(:search_term) { "MortyFirst" }
-
-    it "returns the correct invoices for this customer" do
-      expect(returned_ids.count).to eq(2)
-      expect(returned_ids).not_to include(invoice_first.id)
-      expect(returned_ids).to include(invoice_second.id)
-      expect(returned_ids).not_to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).not_to include(invoice_fifth.id)
-      expect(returned_ids).not_to include(invoice_sixth.id)
-    end
-  end
-
-  context "when search_term matches invoice number and customer name across different invoices" do
-    let(:search_term) { "Rick" }
-    let!(:invoice_with_matching_number) do
-      create(:invoice, organization:, customer: customer_second, number: "RICK-001")
+    # Refreshed here rather than in a before hook so that fixtures created by an inner
+    # let! are covered too: the factory does not go through the services.
+    let(:returned_ids) do
+      organization.invoices.find_each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
+      result.invoices.pluck(:id)
     end
 
-    it "returns invoices matched by customer name and by invoice number" do
-      expect(returned_ids).to contain_exactly(
-        invoice_first.id,
-        invoice_third.id,
-        invoice_fifth.id,
-        invoice_sixth.id,
-        invoice_with_matching_number.id
-      )
+    it_behaves_like "invoice search"
+
+    context "when the term only matches a customer legal name" do
+      let(:search_term) { "Sanchez Holdings" }
+
+      before { customer_first.update!(legal_name: "Sanchez Holdings") }
+
+      it "matches, unlike the CTE path" do
+        expect(returned_ids).to contain_exactly(invoice_first.id, invoice_third.id, invoice_fifth.id, invoice_sixth.id)
+      end
+    end
+
+    context "when the term only matches a purchase order number" do
+      let(:search_term) { "PO-4242" }
+
+      before { invoice_first.update!(purchase_order_number: "PO-4242") }
+
+      it "matches, unlike the CTE path" do
+        expect(returned_ids).to eq([invoice_first.id])
+      end
+    end
+
+    context "when a customer filter is applied" do
+      let(:filters) { {customer_id: customer_first.id} }
+      let(:search_term) { "Rick" }
+
+      it "searches the invoice number only" do
+        expect(returned_ids).to be_empty
+      end
     end
   end
 
