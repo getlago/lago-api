@@ -17,6 +17,8 @@ module IntegrationCustomers
 
       integration_customer.external_customer_id = external_customer_id if external_customer_id.present?
       integration_customer.targeted_object = targeted_object if targeted_object.present?
+      integration_customer.code = code if code.present?
+      integration_customer.is_default = is_default unless is_default.nil?
       integration_customer.save!
 
       if integration_customer.external_customer_id.present?

@@ -64,6 +64,28 @@ RSpec.describe IntegrationCustomers::CreateService do
             expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
           end
 
+          context "when code and is_default are provided" do
+            let(:params) do
+              {
+                integration_type:,
+                integration_code:,
+                sync_with_provider:,
+                external_customer_id:,
+                subsidiary_id:,
+                code: "ns_custom",
+                is_default: true
+              }
+            end
+
+            it "persists the explicit code and is_default" do
+              result = service_call
+
+              expect(result).to be_success
+              expect(result.integration_customer.code).to eq("ns_custom")
+              expect(result.integration_customer.is_default).to be(true)
+            end
+          end
+
           context "when the integration type is salesforce" do
             let(:integration) { create(:salesforce_integration, organization:) }
             let(:integration_type) { "salesforce" }
