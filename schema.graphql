@@ -7059,11 +7059,13 @@ enum IntegrationConnectionCategoryEnum {
 union IntegrationCustomer = AnrokCustomer | AvalaraCustomer | HubspotCustomer | NetsuiteCustomer | SalesforceCustomer | XeroCustomer
 
 input IntegrationCustomerInput {
+  code: String
   externalCustomerId: String
   id: ID
   integrationCode: String
   integrationId: ID
   integrationType: IntegrationTypeEnum
+  isDefault: Boolean
   subsidiaryId: String
   syncWithProvider: Boolean
   targetedObject: HubspotTargetedObjectsEnum
