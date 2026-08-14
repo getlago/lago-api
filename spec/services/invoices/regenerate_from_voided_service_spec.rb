@@ -206,6 +206,42 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    describe "issuing_date and payment_due_date" do
+      let(:regeneration_date) { DateTime.new(2023, 3, 10) }
+
+      before do
+        customer.update!(invoice_grace_period: 30, net_payment_term: 30)
+        # rubocop:disable Rails/SkipsModelValidations
+        voided_invoice.invoice_subscriptions.update_all(recurring: true)
+        # rubocop:enable Rails/SkipsModelValidations
+      end
+
+      context "when aligning the issuing date with the finalization date" do
+        before { customer.update!(subscription_invoice_issuing_date_adjustment: "align_with_finalization_date") }
+
+        it "issues the regenerated invoice at the regeneration date" do
+          travel_to(regeneration_date) do
+            invoice = regenerate_result.invoice
+
+            expect(invoice.issuing_date).to eq(regeneration_date.to_date)
+            expect(invoice.payment_due_date).to eq(regeneration_date.to_date + 30.days)
+          end
+        end
+      end
+
+      context "when keeping the anchor" do
+        before { customer.update!(subscription_invoice_issuing_date_adjustment: "keep_anchor") }
+
+        it "keeps the issuing date anchored on the voided invoice" do
+          travel_to(regeneration_date) do
+            invoice = regenerate_result.invoice
+
+            expect(invoice.issuing_date).to eq(voided_invoice.created_at.to_date + 30.days)
+          end
+        end
+      end
+    end
+
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
