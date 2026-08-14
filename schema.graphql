@@ -11844,7 +11844,7 @@ type Query {
   """
   Query pending invites of an organization
   """
-  invites(limit: Int, page: Int): InviteCollection!
+  invites(limit: Int, page: Int, roleIds: [ID!], searchTerm: String): InviteCollection!
 
   """
   Query a single Invoice of an organization
