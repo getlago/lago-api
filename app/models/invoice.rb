@@ -782,6 +782,7 @@ end
 #  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
+#  search_terms                            :text
 #  self_billed                             :boolean          default(FALSE), not null
 #  skip_automatic_payment                  :boolean
 #  skip_charges                            :boolean          default(FALSE), not null

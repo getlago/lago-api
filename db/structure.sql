@@ -3631,6 +3631,7 @@ CREATE TABLE public.invoices (
     payment_method_id uuid,
     skip_automatic_payment boolean,
     purchase_order_number character varying,
+    search_terms text,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -14172,6 +14173,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260814095015'),
 ('20260805201143'),
 ('20260805110509'),
 ('20260805110508'),
