@@ -151,9 +151,11 @@ module Api
           integration_customers: [
             [
               :id,
+              :code,
               :external_customer_id,
               :integration_type,
               :integration_code,
+              :is_default,
               :subsidiary_id,
               :sync_with_provider,
               :targeted_object

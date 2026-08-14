@@ -14,6 +14,9 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
       "lago_id" => integration_customer.id,
       "external_customer_id" => integration_customer.external_customer_id,
       "type" => "netsuite",
+      "code" => integration_customer.code,
+      "is_default" => integration_customer.is_default,
+      "category" => integration_customer.category,
       "sync_with_provider" => integration_customer.sync_with_provider,
       "subsidiary_id" => integration_customer.subsidiary_id
     )
