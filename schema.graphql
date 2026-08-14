@@ -6348,6 +6348,7 @@ Organization Feature Flag Values
 enum FeatureFlagEnum {
   enriched_events_aggregation
   fixed_charge_usage_delta_migration
+  invoice_search_terms
   lazy_charge_usage_cache
   meilisearch
   multi_connection
