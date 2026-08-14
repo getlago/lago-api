@@ -32,6 +32,7 @@ module Customers
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
       original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+      original_searchable_values = customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS)
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         shipping_address = args[:shipping_address]&.to_h || {}
@@ -152,6 +153,10 @@ module Customers
         customer.save!
         customer.error_details.tax_error.delete_all if @address_changed
         customer.reload
+
+        if customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS) != original_searchable_values
+          Customers::RefreshInvoicesSearchTermsJob.perform_after_commit(customer.id)
+        end
 
         tax_attributes_changed = original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
 
