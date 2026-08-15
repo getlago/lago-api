@@ -19,7 +19,6 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
   end
 
   before do
-    subscription.organization.enable_feature_flag!(:lazy_charge_usage_cache)
     Rails.cache.clear
   end
 
