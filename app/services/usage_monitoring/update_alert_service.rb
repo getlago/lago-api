@@ -42,6 +42,10 @@ module UsageMonitoring
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 
+      if params.key?(:code) && wallet_alert_code_taken?(wallet_id: alert.wallet_id, code: params[:code], alert_type: alert.alert_type, excluding_id: alert.id)
+        return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
+      end
+
       ActiveRecord::Base.transaction do
         alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)

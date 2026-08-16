@@ -221,14 +221,38 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
       end
 
-      context "when code already exists on the same wallet" do
+      context "when renaming it to a code already used on the same wallet" do
         let(:params) { {code: "taken"} }
 
-        it "returns a record validation failure result" do
-          create(:wallet_credits_balance_alert, organization:, wallet: alert.wallet, code: "taken")
+        before { create(:wallet_credits_balance_alert, organization:, wallet: alert.wallet, code: "taken") }
 
+        it "rejects it before reaching the database" do
           expect(result).to be_failure
           expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never saves the alert, so no update is attempted" do
+          allow(alert).to receive(:save!).and_call_original
+
+          expect(result).to be_failure
+          expect(alert).not_to have_received(:save!)
+        end
+
+        context "when a concurrent update slipped past the check" do
+          before { allow_any_instance_of(described_class).to receive(:wallet_alert_code_taken?).and_return(false) } # rubocop:disable RSpec/AnyInstance
+
+          it "still rejects it, on the unique index" do
+            expect(result).to be_failure
+            expect(result.error.messages[:code]).to eq(["value_already_exist"])
+          end
+        end
+      end
+
+      context "when keeping its own code" do
+        let(:params) { {code: alert.code} }
+
+        it "allows it" do
+          expect(result).to be_success
         end
       end
 
