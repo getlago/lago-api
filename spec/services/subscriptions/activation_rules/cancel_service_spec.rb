@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::CancelService do
+RSpec.describe Subscriptions::ActivationRules::CancelService do
   subject(:result) { described_class.call(subscription:, rule_status:, cancellation_reason:) }
 
   let(:rule_status) { :declined }
@@ -14,7 +14,7 @@ RSpec.describe Subscriptions::CancelService do
   let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
 
   before do
-    create(:invoice_subscription, invoice:, subscription:)
+    create(:invoice_subscription, invoice:, subscription:) if invoice
   end
 
   context "when the subscription is incomplete with a pending payment rule" do
@@ -164,6 +164,42 @@ RSpec.describe Subscriptions::CancelService do
       result
 
       expect(PaymentProviders::CancelPaymentJob).not_to have_been_enqueued
+    end
+  end
+
+  context "when a tax provider failure left the gating invoice failed" do
+    let(:invoice) { create(:invoice, :failed, customer:, organization:, invoice_type: :subscription) }
+    let(:applied_coupon) { create(:applied_coupon, customer:, organization:, status: :terminated) }
+    let(:credit) { create(:credit, invoice:, organization:, applied_coupon:) }
+
+    before do
+      create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+      credit
+    end
+
+    it "closes the failed invoice and gives the coupon back" do
+      result
+
+      expect(result).to be_success
+      expect(subscription.reload).to be_canceled
+      expect(invoice.reload).to be_closed
+      expect(AppliedCoupons::RecreditJob).to have_been_enqueued.with(credit)
+    end
+  end
+
+  context "when the gating invoice has not been created yet" do
+    let(:invoice) { nil }
+
+    before do
+      create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+    end
+
+    it "still cancels the subscription" do
+      result
+
+      expect(result).to be_success
+      expect(subscription.reload).to be_canceled
+      expect(subscription.cancellation_reason).to eq("manual")
     end
   end
 end

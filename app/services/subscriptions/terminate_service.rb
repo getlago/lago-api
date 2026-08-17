@@ -92,12 +92,8 @@ module Subscriptions
 
     attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
 
-    # An incomplete subscription never activated and was never billed for a
-    # period, so the on_termination behaviours have nothing to act on: there is
-    # no consumed period to credit and no usage to invoice. Cancelling it tears
-    # the gated activation down, which emits subscription.canceled on its own.
     def cancel_incomplete
-      cancel_result = Subscriptions::CancelService.call!(
+      cancel_result = Subscriptions::ActivationRules::CancelService.call!(
         subscription:,
         rule_status: :declined,
         cancellation_reason: :manual

@@ -11,7 +11,7 @@ module Subscriptions
       end
 
       def call
-        cancel_result = Subscriptions::CancelService.call!(
+        cancel_result = CancelService.call!(
           subscription:,
           rule_status: :expired,
           cancellation_reason: :timeout
