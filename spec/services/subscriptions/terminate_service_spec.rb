@@ -95,11 +95,51 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context "when subscription is incomplete" do
-      let(:subscription) { create(:subscription, :incomplete) }
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+      let(:subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }
+      let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
 
-      it "returns a validation error" do
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
+      before do
+        create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+
+      it "cancels the subscription" do
+        expect(result).to be_success
+        expect(result.subscription).to be_canceled
+        expect(result.subscription.cancellation_reason).to eq("manual")
+        expect(result.subscription.terminated_at).to be_nil
+      end
+
+      it "declines the payment activation rule and closes the gating invoice" do
+        result
+
+        expect(subscription.activation_rules.payment.sole).to be_declined
+        expect(invoice.reload).to be_closed
+      end
+
+      it "enqueues a subscription.canceled webhook" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.canceled", subscription)
+      end
+
+      it "does not enqueue a subscription.terminated webhook" do
+        result
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.terminated", subscription)
+      end
+
+      context "when on_termination_credit_note and on_termination_invoice are given" do
+        subject(:result) do
+          described_class.call(subscription:, on_termination_credit_note: "refund", on_termination_invoice: "generate")
+        end
+
+        it "ignores them because nothing was ever billed" do
+          expect { result }.not_to have_enqueued_job(BillSubscriptionJob)
+          expect(subscription.reload.on_termination_credit_note).to be_nil
+          expect(CreditNote.count).to eq(0)
+        end
       end
     end
 
