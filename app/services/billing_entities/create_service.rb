@@ -19,12 +19,17 @@ module BillingEntities
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]&.to_h).valid?
+        return result
+      end
+
       ActiveRecord::Base.transaction do
         billing_entity.assign_attributes(create_attributes)
         billing_entity.id = params[:id] if params[:id]
         billing_entity.invoice_footer = billing_config[:invoice_footer]
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]
         billing_entity.einvoicing = params[:einvoicing] if params[:einvoicing]
+        billing_entity.payment_term = params[:payment_term].to_h if params[:payment_term]
 
         handle_eu_tax_management if params[:eu_tax_management]
         handle_base64_logo

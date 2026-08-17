@@ -44,6 +44,7 @@ module Types
       # Customer settings
       argument :invoice_grace_period, Integer, required: false, permissions: %w[customers:update]
       argument :net_payment_term, Integer, required: false, permissions: %w[customers:update]
+      argument :payment_term, Types::PaymentTerms::Input, required: false, permissions: %w[customers:update]
       argument :tax_codes, [String], required: false, permissions: %w[customers:update]
 
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false

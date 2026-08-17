@@ -19,6 +19,12 @@ module BillingEntities
     def call
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
+      if params.key?(:payment_term)
+        unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]&.to_h).valid?
+          return result
+        end
+      end
+
       original_attributes = billing_entity.attributes
       old_tax_codes = billing_entity.taxes.pluck(:code)
 
@@ -38,6 +44,7 @@ module BillingEntities
       billing_entity.state = params[:state] if params.key?(:state)
       billing_entity.country = params[:country]&.upcase if params.key?(:country)
       billing_entity.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
+      billing_entity.payment_term = params[:payment_term]&.to_h if params.key?(:payment_term)
 
       ActiveRecord::Base.transaction do
         if params.key?(:document_numbering)

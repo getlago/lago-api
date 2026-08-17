@@ -1013,6 +1013,7 @@ type BillingEntity {
   name: String!
   netPaymentTerm: Int!
   organization: Organization!
+  paymentTerm: PaymentTerm
   phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   state: String
@@ -2889,6 +2890,7 @@ input CreateBillingEntityInput {
   logo: String
   name: String!
   netPaymentTerm: Int
+  paymentTerm: PaymentTermInput
   phone: String
   state: String
   taxIdentificationNumber: String
@@ -2972,6 +2974,7 @@ input CreateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentTerm: PaymentTermInput
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -4702,6 +4705,7 @@ type Customer {
   overdueBalances: [CustomerOverdueBalance!]!
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentTerm: PaymentTerm
   phone: String
   providerCustomer: ProviderCustomer
   salesforceCustomer: SalesforceCustomer
@@ -10314,6 +10318,38 @@ input PaymentRequestCreateInput {
   paymentMethod: PaymentMethodReferenceInput
 }
 
+"""
+Structured payment term
+"""
+type PaymentTerm {
+  dayOfMonth: Int
+  days: Int
+  monthOffset: Int
+  termType: PaymentTermTypeEnum!
+}
+
+"""
+Structured payment term input
+"""
+input PaymentTermInput {
+  dayOfMonth: Int
+  days: Int
+  monthOffset: Int
+  termType: PaymentTermTypeEnum!
+}
+
+"""
+Payment term type
+"""
+enum PaymentTermTypeEnum {
+  day_of_month
+  days_end_of_month
+  due_on_receipt
+  end_of_month
+  net
+  net_end_of_month
+}
+
 enum PaymentTypeEnum {
   manual
   provider
@@ -14160,6 +14196,7 @@ input UpdateBillingEntityInput {
   logo: String
   name: String
   netPaymentTerm: Int
+  paymentTerm: PaymentTermInput
   phone: String
   state: String
   taxIdentificationNumber: String
@@ -14260,6 +14297,7 @@ input UpdateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentTerm: PaymentTermInput
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
