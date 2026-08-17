@@ -11,21 +11,15 @@ module Api
         end
 
         def update
-          wallet = customer.wallets.find_by(code: params[:code])
-
-          wallet_update(wallet)
+          wallet_update(find_wallet)
         end
 
         def terminate
-          wallet = customer.wallets.find_by(code: params[:code])
-
-          wallet_terminate(wallet)
+          wallet_terminate(find_wallet)
         end
 
         def show
-          wallet = customer.wallets.find_by(code: params[:code])
-
-          wallet_show(wallet)
+          wallet_show(find_wallet)
         end
 
         def index
@@ -38,6 +32,12 @@ module Api
         end
 
         private
+
+        # Codes are only unique among active wallets, so a customer may own several
+        # wallets sharing a code. Ordering by status resolves to the active one first.
+        def find_wallet
+          customer.wallets.order(:status).find_by(code: params[:code])
+        end
 
         def resource_name
           "wallet"
