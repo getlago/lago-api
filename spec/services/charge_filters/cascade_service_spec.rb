@@ -329,6 +329,13 @@ RSpec.describe ChargeFilters::CascadeService do
 
             expect(existing.reload.code).to eq("its_own_code_1a2b3c4d")
           end
+
+          # Nor is the plan's filter created beside it. The code does not reach this filter but the
+          # predicate does, and that is what keeps a create from duplicating. Narrowing the predicate
+          # lookup to codeless filters would hide this one and land a second filter on the predicate.
+          it "does not create a second filter on the same predicate" do
+            expect { service }.not_to change { child_charge.filters.reload.count }
+          end
         end
       end
 
