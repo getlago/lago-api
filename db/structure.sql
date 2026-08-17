@@ -3669,7 +3669,8 @@ CREATE TABLE public.plans (
     pending_deletion boolean DEFAULT false NOT NULL,
     invoice_display_name character varying,
     bill_fixed_charges_monthly boolean DEFAULT false,
-    pricing_type public.plan_pricing_type DEFAULT 'legacy'::public.plan_pricing_type NOT NULL
+    pricing_type public.plan_pricing_type DEFAULT 'legacy'::public.plan_pricing_type NOT NULL,
+    CONSTRAINT check_plans_on_legacy_billing_fields CHECK (((pricing_type <> 'legacy'::public.plan_pricing_type) OR (("interval" IS NOT NULL) AND (amount_cents IS NOT NULL) AND (pay_in_advance IS NOT NULL))))
 );
 
 
@@ -14184,6 +14185,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260817175013'),
+('20260817175012'),
 ('20260805201143'),
 ('20260805110509'),
 ('20260805110508'),
