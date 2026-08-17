@@ -153,7 +153,7 @@ group :development, :test do
   gem "rubocop-thread_safety", require: false
 
   gem "vernier", "~> 1.10", require: false
-  gem "super_diff", "~> 0.18.0"
+  gem "super_diff", "~> 0.19.0"
 end
 
 group :test do

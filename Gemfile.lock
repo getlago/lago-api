@@ -997,10 +997,10 @@ GEM
     stripe (6.5.0)
     strong_migrations (2.5.2)
       activerecord (>= 7.1)
-    super_diff (0.18.0)
-      attr_extras (>= 6.2.4)
-      diff-lcs
-      patience_diff
+    super_diff (0.19.0)
+      attr_extras (>= 6.2.4, < 8)
+      diff-lcs (~> 1.5)
+      patience_diff (~> 1.2)
     temple (0.10.4)
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
@@ -1179,7 +1179,7 @@ DEPENDENCIES
   standard
   stripe
   strong_migrations
-  super_diff (~> 0.18.0)
+  super_diff (~> 0.19.0)
   throttling
   timecop
   tzinfo-data
