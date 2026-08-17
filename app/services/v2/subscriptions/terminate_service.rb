@@ -34,10 +34,6 @@ module V2
           subscription.mark_as_terminated!(terminated_at)
         end
 
-        # Bill the final (arrears) cycle right away instead of waiting for the periodic
-        # clock — the final invoice should land on termination, matching the legacy engine.
-        after_commit { BillingCycles::BillSubscriptionJob.perform_later(subscription) }
-
         result.subscription = subscription
         result
       end

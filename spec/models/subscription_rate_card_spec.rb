@@ -11,9 +11,65 @@ RSpec.describe SubscriptionRateCard do
     it do
       expect(subscription_rate_card).to belong_to(:organization)
       expect(subscription_rate_card).to belong_to(:subscription)
+      expect(subscription_rate_card).to belong_to(:customer)
       expect(subscription_rate_card).to belong_to(:rate_card)
       expect(subscription_rate_card).to have_many(:rate_phases).order(:position)
+      expect(subscription_rate_card).to have_many(:billing_cycles)
       expect(subscription_rate_card).to have_one(:product).through(:rate_card)
+    end
+  end
+
+  describe "Scopes" do
+    describe ".due_for_range" do
+      subject(:due_items) { described_class.due_for_range(range) }
+
+      let(:range) { Time.zone.parse("2026-08-15 12:00:00")..Time.zone.parse("2026-08-15 12:00:00") }
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+      let!(:due_by_next_billing_at) do
+        create_item(
+          started_at: Time.zone.parse("2026-08-01"),
+          next_billing_at: Time.zone.parse("2026-08-15 23:00:00")
+        )
+      end
+
+      before do
+        create_item(
+          started_at: Time.zone.parse("2026-08-01"),
+          ended_at: Time.zone.parse("2026-08-15 08:00:00"),
+          next_billing_at: Time.zone.parse("2026-09-01")
+        )
+        create_item(
+          started_at: Time.zone.parse("2026-08-16"),
+          next_billing_at: Time.zone.parse("2026-08-15")
+        )
+        create_item(
+          started_at: Time.zone.parse("2026-08-01"),
+          ended_at: Time.zone.parse("2026-08-14 23:59:59"),
+          next_billing_at: Time.zone.parse("2026-08-15")
+        )
+        create_item(
+          started_at: Time.zone.parse("2026-08-01"),
+          next_billing_at: Time.zone.parse("2026-08-16")
+        )
+      end
+
+      it "returns items active in the range with due clocks" do
+        expect(due_items).to eq([due_by_next_billing_at])
+      end
+
+      def create_item(attributes)
+        create(
+          :subscription_rate_card,
+          organization:,
+          customer:,
+          subscription:,
+          rate_card: create(:rate_card, organization:),
+          **attributes
+        )
+      end
     end
   end
 

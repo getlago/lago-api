@@ -34,6 +34,14 @@ class SubscriptionRateCard < ApplicationRecord
   # versions visible.
   scope :active_at, ->(time) { where(started_at: ..time).where("ended_at IS NULL OR ended_at > ?", time) }
   scope :current_and_scheduled, -> { where("ended_at IS NULL OR ended_at > ?", Time.current) }
+  scope :due_for_range, ->(range) {
+    range_begin = range.begin.to_date.beginning_of_day.utc
+    range_end = range.end.to_date.end_of_day.utc
+
+    where(started_at: ..range_end)
+      .where("ended_at IS NULL OR ended_at >= ?", range_begin)
+      .where(next_billing_at: ..range_end)
+  }
 
   private
 
