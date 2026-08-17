@@ -2288,7 +2288,8 @@ CREATE TABLE public.billing_entities (
     einvoicing boolean DEFAULT false NOT NULL,
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors DEFAULT 'next_period_start'::public.subscription_invoice_issuing_date_anchors NOT NULL,
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL,
-    phone character varying
+    phone character varying,
+    payment_term jsonb
 );
 
 
@@ -2683,6 +2684,7 @@ CREATE TABLE public.customers (
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
     dunning_currency_attempts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payment_term jsonb,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -3631,6 +3633,8 @@ CREATE TABLE public.invoices (
     payment_method_id uuid,
     skip_automatic_payment boolean,
     purchase_order_number character varying,
+    payment_term jsonb,
+    payment_term_source character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -14172,6 +14176,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260810135202'),
 ('20260805201143'),
 ('20260805110509'),
 ('20260805110508'),
