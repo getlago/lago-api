@@ -50,7 +50,7 @@ module BillingPeriods
     # A concrete date slice priced with one catalog rate. Several periods can
     # belong to the same Cycle when a rate effective date cuts the logical
     # billing cycle.
-    Period = Data.define(:period_from, :period_to, :next_billing_at, :rate, :cycle) do
+    Period = Data.define(:period_from, :period_to, :next_billing_at, :rate, :cycle, :ratio) do
       def billing_at
         billing_boundary = if rate.rate_card.advance?
           period_from

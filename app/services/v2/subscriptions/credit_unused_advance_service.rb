@@ -2,17 +2,19 @@
 
 module V2
   module Subscriptions
-    # Credits the paid-but-unused remainder of a terminated subscription's ADVANCE items.
-    # Advance bills the whole period up front, so ending mid-period leaves an unused
-    # portion on each item's fee. Because a credit note belongs to a single invoice, the
-    # creditable fees are grouped by invoice and one credit note is issued per invoice
-    # (one item per fee) — so items billed together (same billing_at → same invoice)
-    # collapse into a single credit note instead of one per item.
+    # Credits the paid-but-unused remainder of a terminated subscription's advance
+    # items. Arrears items are skipped: their final usage is billed by the pending
+    # BillingCycle created during item termination.
     #
-    # The credited fraction is the complement of the consumed fraction (symmetric with
-    # how an arrears termination charges only the used days). Net of any credit notes
-    # already issued on the fee, so it is idempotent. Reuses Lago's CreditNotes machinery
-    # (CreateService + ApplyTaxesService); only :credit for now, refund/offset later.
+    # Advance bills the whole period up front, so ending mid-period leaves an unused
+    # portion on the already-invoiced fee. The billed period is resolved through
+    # BillingPeriods::DatesService, and Period#ratio gives the consumed share up to
+    # terminated_at. The credited share is the complement of that ratio, net of any
+    # credit notes already issued on the fee.
+    #
+    # Because a credit note belongs to a single invoice, creditable fees are grouped
+    # by invoice and one credit note is issued per invoice. Items billed together
+    # collapse into a single credit note instead of one per item.
     class CreditUnusedAdvanceService < BaseService
       Result = BaseResult[:credit_notes]
 
@@ -40,16 +42,17 @@ module V2
       end
 
       def creditable_entry(subscription_rate_card)
-        rate = resolve_rate(subscription_rate_card)
-        return unless rate&.rate_card&.billing_timing == "advance"
+        return unless subscription_rate_card.rate_card.advance?
 
         cycle = open_cycle(subscription_rate_card)
         return unless cycle
 
+        period = dates_for(subscription_rate_card).periods.sole
+
         fee = cycle.invoice.fees.find_by(invoiceable: subscription_rate_card.product)
         return unless fee
 
-        amount_cents = creditable_amount_cents(fee, cycle, subscription_rate_card, rate)
+        amount_cents = creditable_amount_cents(fee, period)
         return unless amount_cents.positive?
 
         {fee:, amount_cents:}
@@ -67,8 +70,8 @@ module V2
       end
 
       # Unused fraction of the billed period × the fee, net of credit notes already on it.
-      def creditable_amount_cents(fee, cycle, subscription_rate_card, rate)
-        credit_ratio = 1 - boundaries(subscription_rate_card, rate).proration_ratio(cycle.period_from, terminated_at)
+      def creditable_amount_cents(fee, period)
+        credit_ratio = 1 - period.ratio
         amount = BigDecimal(fee.amount_cents) * credit_ratio
         amount -= fee.credit_note_items.sum(:amount_cents)
         amount.positive? ? amount : BigDecimal(0)
@@ -103,18 +106,43 @@ module V2
         ).round
       end
 
-      def resolve_rate(subscription_rate_card)
-        SubscriptionRateCards::ResolveRateService
-          .call(subscription_rate_card:, datetime: terminated_at)
-          .rate
+      def dates_for(subscription_rate_card)
+        BillingPeriods::DatesService.from_subscription_rate_card(
+          subscription_rate_card,
+          rates: rates_for(subscription_rate_card),
+          rate_phases: rate_phases_for(subscription_rate_card),
+          range: terminated_at..terminated_at,
+          options: dates_options
+        )
       end
 
-      def boundaries(subscription_rate_card, rate)
-        BillingPeriods::Boundaries.new(
-          billing_anchor_date: subscription_rate_card.billing_anchor_date,
-          interval_count: rate.billing_interval_count,
-          interval_unit: rate.billing_interval_unit,
-          timezone: subscription.customer.applicable_timezone
+      def rates_for(subscription_rate_card)
+        ranked_rates = subscription_rate_card.rate_card.rates
+          .select(
+            "rate_card_rates.*, " \
+              "LEAD(rate_card_rates.effective_from) OVER " \
+              "(ORDER BY rate_card_rates.effective_from) AS next_effective_from"
+          )
+
+        RateCardRate
+          .from(ranked_rates, :rate_card_rates)
+          .where("effective_from <= ?", terminated_at)
+          .where("next_effective_from IS NULL OR next_effective_from >= ?", terminated_at.beginning_of_day)
+          .order(:effective_from)
+      end
+
+      def rate_phases_for(subscription_rate_card)
+        SubscriptionRateCards::ResolveRatePhasesService.call!(
+          subscription_rate_card:,
+          plan_rate_cards: subscription.plan.applied_rate_cards.to_a
+        ).rate_phases
+      end
+
+      def dates_options
+        BillingPeriods::DatesService::Options.new(
+          timezone: subscription.customer.applicable_timezone,
+          exclude_out_of_range: true,
+          realign_billing_anchor: true
         )
       end
     end
