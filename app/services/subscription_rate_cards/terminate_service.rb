@@ -53,6 +53,9 @@ module SubscriptionRateCards
       dates.periods.filter_map { |period| billing_cycle_for(period) }.sole
     end
 
+    # Arrears periods are only emitted when their billing boundary is reached.
+    # Extend the range to the item's current clock so DatesService returns the
+    # open cycle that contains terminated_at; billing_cycle_for then clamps it.
     def dates
       @dates ||= BillingPeriods::DatesService.from_subscription_rate_card(
         subscription_rate_card,
