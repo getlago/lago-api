@@ -230,6 +230,11 @@ class Subscription < ApplicationRecord
 
   def downgrade_plan_date
     return unless next_subscription
+    # Downgrades compare plan-level amounts and land at the end of the current
+    # period, neither of which product-catalog plans have: their price and their
+    # billing cycles live on the rate cards.
+    return if plan.product_catalog?
+
     if next_subscription.active? && downgraded?
       return next_subscription.started_at&.to_date
     end

@@ -830,6 +830,25 @@ RSpec.describe Subscription do
       end
     end
 
+    context "with a product-catalog plan" do
+      let(:plan) do
+        create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
+      end
+      let(:subscription) { create(:subscription, plan:) }
+
+      it "returns nil rather than deriving a plan-level period" do
+        create(:subscription, previous_subscription: subscription, status: :pending)
+
+        expect(subscription.downgrade_plan_date).to be_nil
+      end
+
+      it "returns nil without comparing plan amounts when the next subscription is active" do
+        create(:subscription, previous_subscription: subscription, status: :active)
+
+        expect(subscription.downgrade_plan_date).to be_nil
+      end
+    end
+
     it "returns the date when the plan will be downgraded" do
       current_date = DateTime.parse("20 Jun 2022")
       create(:subscription, previous_subscription: subscription, status: :pending)

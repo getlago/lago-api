@@ -66,8 +66,8 @@ RSpec.describe Plan do
         plan.interval = nil
         plan.amount_cents = nil
         expect(plan).not_to be_valid
-        expect(plan.errors).to be_added(:interval, :blank)
-        expect(plan.errors).to be_added(:amount_cents, :blank)
+        expect(plan.errors.messages[:interval]).to eq(["value_is_invalid"])
+        expect(plan.errors.messages[:amount_cents]).to eq(["value_is_mandatory"])
       end
     end
   end
