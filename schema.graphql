@@ -10665,7 +10665,7 @@ type Permissions {
 type Plan {
   activeSubscriptionsCount: Int!
   activityLogs: [ActivityLog!]
-  amountCents: BigInt!
+  amountCents: BigInt
   amountCurrency: CurrencyEnum!
   applicableUsageThresholds: [UsageThreshold!]
   billChargesMonthly: Boolean
@@ -10701,7 +10701,7 @@ type Plan {
   hasOverriddenPlans: Boolean
   hasSubscriptions: Boolean!
   id: ID!
-  interval: PlanInterval!
+  interval: PlanInterval
   invoiceDisplayName: String
   isOverridden: Boolean!
   metadata: [ItemMetadata!]
@@ -10709,7 +10709,7 @@ type Plan {
   name: String!
   organization: Organization
   parent: Plan
-  payInAdvance: Boolean!
+  payInAdvance: Boolean
   subscriptionsCount: Int!
   taxes: [Tax!]
   trialPeriod: Float
