@@ -1,19 +1,17 @@
 # frozen_string_literal: true
 
 module SubscriptionRateCards
-  # Terminates a single product: sets ended_at (stops the clock) and, for arrears
-  # items, emits a final billing cycle for the still-open period clamped to the
-  # termination instant. ComputeFeeService prorates that partial cycle, so the
-  # processor turns it into the prorated final invoice.
+  # Terminates a single product-catalog item.
   #
-  # No-back-bill applies: the open period starts at the current boundary (never before
-  # the item start), so a backdated subscription terminated today bills only the
-  # current partial period, not the whole elapsed time.
+  # Arrears items create one pending BillingCycle for the open period that contains
+  # terminated_at. The period is resolved through BillingPeriods::DatesService using
+  # the item's current clock, then clamped to terminated_at and left pending for the
+  # clock processor to invoice. The item's next_billing_at is set to terminated_at so
+  # the due-items scope will no longer treat it as an unbilled future cycle.
   #
-  # Advance items are already paid for the current period, so they get no final cycle;
-  # the paid-but-unused remainder is credited at the subscription level after all items
-  # are ended (V2::Subscriptions::CreditUnusedAdvanceService), so items sharing an
-  # invoice collapse into a single credit note.
+  # Advance items do not create a BillingCycle: the current period was already billed
+  # up front. This service only sets ended_at; the subscription-level termination flow
+  # handles any unused-period credit note separately.
   class TerminateService < BaseService
     Result = BaseResult[:subscription_rate_card, :billing_cycle]
 
@@ -29,7 +27,7 @@ module SubscriptionRateCards
 
       ActiveRecord::Base.transaction do
         result.billing_cycle = final_cycle
-        subscription_rate_card.update!(ended_at: terminated_at)
+        subscription_rate_card.update!(termination_attributes)
       end
 
       result.subscription_rate_card = subscription_rate_card
@@ -42,9 +40,32 @@ module SubscriptionRateCards
 
     delegate :organization, :subscription, :customer, to: :subscription_rate_card
 
+    def termination_attributes
+      attributes = {ended_at: terminated_at}
+      return attributes unless arrears?
+
+      attributes.merge(next_billing_at: terminated_at)
+    end
+
     def final_cycle
-      return unless rate&.rate_card&.billing_timing == "arrears"
-      return if terminated_at <= period_start
+      return unless arrears?
+
+      dates.periods.filter_map { |period| billing_cycle_for(period) }.sole
+    end
+
+    def dates
+      @dates ||= BillingPeriods::DatesService.from_subscription_rate_card(
+        subscription_rate_card,
+        rates:,
+        rate_phases:,
+        range: terminated_at..subscription_rate_card.next_billing_at,
+        options: dates_options
+      )
+    end
+
+    def billing_cycle_for(period)
+      period_to = [period.period_to, terminated_at.utc].min
+      return if period.period_from >= period_to
 
       BillingCycle.create!(
         organization:,
@@ -52,36 +73,50 @@ module SubscriptionRateCards
         customer:,
         subscription_rate_card:,
         billing_at: terminated_at,
-        period_from: period_start,
-        period_to: terminated_at.utc,
-        rate_card_rate: rate,
-        rate_properties: rate.properties
+        period_from: period.period_from,
+        period_to:,
+        rate_card_rate: period.rate,
+        rate_override: period.rate_override,
+        rate_properties: period.rate_properties
       )
     end
 
-    # Start of the open period the termination falls in, never before the item start.
-    def period_start
-      @period_start ||= [
-        boundaries.at(boundaries.index_on_or_before(terminated_at.in_time_zone(timezone))),
-        subscription_rate_card.started_at.in_time_zone(timezone).beginning_of_day
-      ].max.utc
+    def rates
+      ranked_rates = subscription_rate_card.rate_card.rates
+        .select(
+          "rate_card_rates.*, " \
+            "LEAD(rate_card_rates.effective_from) OVER " \
+            "(ORDER BY rate_card_rates.effective_from) AS next_effective_from"
+        )
+
+      RateCardRate
+        .from(ranked_rates, :rate_card_rates)
+        .where("effective_from <= ?", terminated_at.end_of_day)
+        .where("next_effective_from IS NULL OR next_effective_from >= ?", terminated_at.beginning_of_day)
+        .order(:effective_from)
     end
 
-    def boundaries
-      @boundaries ||= BillingPeriods::Boundaries.new(
-        billing_anchor_date: subscription_rate_card.billing_anchor_date,
-        interval_count: rate.billing_interval_count,
-        interval_unit: rate.billing_interval_unit,
-        timezone:
+    def rate_phases
+      SubscriptionRateCards::ResolveRatePhasesService.call!(
+        subscription_rate_card:,
+        plan_rate_cards:
+      ).rate_phases
+    end
+
+    def plan_rate_cards
+      subscription.plan.applied_rate_cards.to_a
+    end
+
+    def dates_options
+      BillingPeriods::DatesService::Options.new(
+        timezone: subscription.customer.applicable_timezone,
+        exclude_out_of_range: true,
+        realign_billing_anchor: true
       )
     end
 
-    def rate
-      @rate ||= ResolveRateService.call(subscription_rate_card:, datetime: terminated_at).rate
-    end
-
-    def timezone
-      @timezone ||= subscription.customer.applicable_timezone
+    def arrears?
+      subscription_rate_card.rate_card.arrears?
     end
   end
 end

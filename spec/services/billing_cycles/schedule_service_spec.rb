@@ -66,6 +66,21 @@ RSpec.describe BillingCycles::ScheduleService do
       expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-08-01"))
     end
 
+    context "with a single-day range overlapping an advance period" do
+      let(:rate_card) { create(:rate_card, :advance, organization:) }
+      let(:next_billing_at) { Time.zone.parse("2026-08-01") }
+
+      it "schedules the advance period due for the item" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-01"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-31 23:59:59.999999"))
+        expect(billing_cycle.billing_at).to eq(current_time)
+        expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
+      end
+    end
+
     context "without an explicit range" do
       subject(:result) { described_class.call(customer:) }
 
@@ -120,7 +135,7 @@ RSpec.describe BillingCycles::ScheduleService do
 
     context "with a closed date range" do
       let(:range) { "2026-07-15".."2026-08-14" }
-      let(:next_billing_at) { Time.zone.parse("2026-07-01") }
+      let(:next_billing_at) { Time.zone.parse("2026-08-01") }
 
       it "schedules billing cycles overlapping the range" do
         expect { result }.to change(BillingCycle, :count).by(1)
@@ -137,7 +152,7 @@ RSpec.describe BillingCycles::ScheduleService do
 
     context "with rate changes inside the range" do
       let(:range) { "2026-07-01".."2026-09-01" }
-      let(:next_billing_at) { Time.zone.parse("2026-07-01") }
+      let(:next_billing_at) { Time.zone.parse("2026-08-01") }
       let!(:second_rate_card_rate) do
         create(
           :rate_card_rate,
@@ -164,7 +179,7 @@ RSpec.describe BillingCycles::ScheduleService do
 
     context "with a phase rate override" do
       let(:range) { "2026-07-15".."2026-08-14" }
-      let(:next_billing_at) { Time.zone.parse("2026-07-01") }
+      let(:next_billing_at) { Time.zone.parse("2026-08-01") }
       let(:subscription_rate_card) { customer.subscription_rate_cards.sole }
       let(:rate_override) { create(:rate_override, organization:, rate_properties: {"amount" => "5.00"}) }
 
@@ -288,16 +303,14 @@ RSpec.describe BillingCycles::ScheduleService do
     end
 
     context "with an ended item overlapping the range" do
-      let(:range) { "2026-07-15".."2026-08-14" }
       let(:ended_at) { Time.zone.parse("2026-08-07") }
+      let(:range) { Time.zone.parse("2026-07-15")..ended_at }
+      let(:next_billing_at) { Time.zone.parse("2026-09-01") }
 
-      it "schedules the overlapping period" do
-        expect { result }.to change(BillingCycle, :count).by(1)
+      it "does not schedule a terminating period" do
+        expect { result }.not_to change(BillingCycle, :count)
 
-        billing_cycle = result.billing_cycles.sole
-        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
-        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(current_time)
+        expect(result.billing_cycles).to eq([])
       end
     end
 
@@ -390,7 +403,7 @@ RSpec.describe BillingCycles::ScheduleService do
           rate_card: second_rate_card,
           billing_anchor_date: Date.parse("2026-01-01"),
           started_at: Time.zone.parse("2026-01-01"),
-          next_billing_at: Time.zone.parse("2026-08-03")
+          next_billing_at: Time.zone.parse("2026-08-01")
         )
       end
 

@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
 module BillingCycles
-  # Producer lane, scoped to ONE customer. For every due product overlapping the
-  # scheduling range it writes a billing_cycle and advances that item's clock — catching a
-  # behind clock up one period at a time. The whole customer runs in one transaction, so
-  # the consumer sees the customer's whole set or nothing (completeness), and the clock
-  # never advances without a durable record (money-safety). The per-customer advisory
-  # lock serialises concurrent runs; the unique (product, period_from) index is the
-  # idempotency backstop.
+  # Producer lane, scoped to ONE customer. It selects subscription rate cards whose
+  # next_billing_at is due within the scheduling range, generates the normal periods
+  # that overlap that range, writes pending BillingCycle rows, and advances each
+  # item's clock. Termination final cycles are not scheduled here; they are created
+  # by SubscriptionRateCards::TerminateService.
+  #
+  # The whole customer runs in one transaction, so the consumer sees the customer's
+  # whole set or nothing (completeness), and the clock never advances without a
+  # durable record (money-safety). The per-customer advisory lock serialises
+  # concurrent runs; the unique (product, period_from) index is the idempotency
+  # backstop.
   #
   # A customer holds few items, so plain create!/update! is both readable and fast; the
   # scale lives in the fan-out (one job per customer), not in bulk-writing one customer.
@@ -63,8 +67,7 @@ module BillingCycles
 
     def due_items
       customer.subscription_rate_cards
-        .where(started_at: ..range_end)
-        .where("ended_at IS NULL OR ended_at >= ?", range_begin)
+        .due_for_range(range)
         .includes(:rate_phases, subscription: {plan: {applied_rate_cards: :rate_phases}})
     end
 
