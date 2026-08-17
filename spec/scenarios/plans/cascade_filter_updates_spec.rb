@@ -140,12 +140,14 @@ RSpec.describe "Cascade filter updates", :premium do
 
     delete_plan_charge_filter(parent_plan, parent_charge.code, filter_eu.id)
 
-    # Destroy via API doesn't pass cascade_updates through the helper,
-    # so cascade manually to test the destroy path
+    # Destroy via API doesn't pass cascade_updates through the helper, so cascade manually to
+    # test the destroy path. The code is what the dispatcher would carry, and what the child's
+    # copy holds since the override deep-copied it.
     ChargeFilters::CascadeService.call!(
       charge: parent_charge,
       action: "destroy",
-      filter_values: {"region" => ["eu"]}
+      filter_values: {"region" => ["eu"]},
+      parent_code: filter_eu.code
     )
 
     child_charge.reload

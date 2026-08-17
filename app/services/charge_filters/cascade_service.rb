@@ -4,6 +4,10 @@ module ChargeFilters
   class CascadeService < BaseService
     Result = BaseResult
 
+    # An update with nothing to identify the filter by would leave the override on the old
+    # price with nobody the wiser, so it fails instead of guessing at the predicate.
+    class MissingParentCode < StandardError; end
+
     def initialize(charge:, action:, filter_values:, old_properties: nil, new_properties: nil, invoice_display_name: nil, parent_code: nil)
       @charge = charge
       @action = action
@@ -19,17 +23,19 @@ module ChargeFilters
     BATCH_SIZE = 1_000
 
     def call
+      raise MissingParentCode, "charge #{charge.id} filter #{filter_values} has no code" if action == "update" && parent_code.blank?
+
       # NOTE: The cascade runs one job per changed filter
       # Each job has a single target (filter_values), so the matching child filter
       # is resolved for a whole batch of children in one query rather than loading
       # every child's full filter set, which keeps each job lightweight.
       child_ids.each_slice(BATCH_SIZE) do |ids|
-        matches = matching_child_filters(ids)
+        child_filters = child_filters_by_charge(ids)
 
         Charge.where(id: ids).includes(:billable_metric).find_each do |child_charge|
           Charge.no_touching do
             Plan.no_touching do
-              child_filter = matches[child_charge.id]
+              child_filter = child_filters[child_charge.id]
 
               case action
               when "update" then update_child_filter(child_charge, child_filter)
@@ -55,11 +61,30 @@ module ChargeFilters
         .distinct.pluck(:id)
     end
 
+    # The code says which filter this is. The predicate is only a guess at it, and the
+    # legacy path until every filter has a code — so it is asked about the children the
+    # code could not reach, and about none once they all have one.
+    def child_filters_by_charge(batch_child_ids)
+      by_code = child_filters_holding_parent_code(batch_child_ids)
+
+      # Only a create still guesses, and it has to: anything already sitting on the predicate
+      # means there is nothing to add, and missing it would leave a duplicate. An update or a
+      # destroy acts on one filter, where acting on the wrong one is worse than not acting.
+      return by_code unless action == "create"
+
+      remaining = batch_child_ids.reject { by_code.key?(it) }
+      by_predicate = matching_child_filters(remaining)
+
+      by_code.merge(by_predicate)
+    end
+
     # Resolve the child filter matching filter_values for an entire batch of
     # children in two bounded queries: narrow candidates by a shared value via the
     # database, then confirm the exact match in Ruby. This avoids both loading each
     # child's full filter set (memory) and querying once per child (N+1).
     def matching_child_filters(batch_child_ids)
+      return {} if batch_child_ids.empty?
+
       _key, values = filter_values.first
       return {} if values.blank?
 
@@ -76,6 +101,16 @@ module ChargeFilters
         .where(id: candidate_ids)
         .includes(values: :billable_metric_filter)
         .select { |filter| filter.to_h == filter_values }
+        # Two filters can share a predicate once a metric change shortened them onto it, and this
+        # keeps one. Only a create gets here, and only for filters without a code.
+        .index_by(&:charge_id)
+    end
+
+    def child_filters_holding_parent_code(batch_child_ids)
+      return {} if parent_code.blank?
+
+      ChargeFilter
+        .where(charge_id: batch_child_ids, code: parent_code)
         .index_by(&:charge_id)
     end
 
@@ -97,7 +132,10 @@ module ChargeFilters
     end
 
     def create_child_filter(child_charge, existing_filter)
-      return if existing_filter
+      if existing_filter
+        adopt_parent_code(existing_filter)
+        return
+      end
 
       # NOTE: Resolve against the current state of the billable metric filters
       # to avoid any changes that may have occurred since the job was enqueued
@@ -123,6 +161,18 @@ module ChargeFilters
           )
         end
       end
+    end
+
+    # A filter already sitting on the predicate when the plan gains one is that filter's copy,
+    # and this is the only moment we can say so. Left unlinked it is unreachable for good: an
+    # update would raise and a destroy would pass it by, both for want of the code.
+    #
+    # A code of its own means the opposite — it was created on the override and is not a copy
+    # of anything, so it keeps it.
+    def adopt_parent_code(existing_filter)
+      return if parent_code.blank? || existing_filter.code.present?
+
+      existing_filter.update!(code: parent_code)
     end
 
     def resolved_filter_values
