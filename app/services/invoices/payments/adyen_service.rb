@@ -34,7 +34,10 @@ module Invoices
         payment.payable_payment_status = payable_payment_status
         payment.save!
 
-        deliver_webhook if payable_payment_status.to_sym == :succeeded
+        if payable_payment_status.to_sym == :succeeded
+          deliver_webhook
+          Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+        end
 
         update_invoice_payment_status(payment_status: payable_payment_status)
 
