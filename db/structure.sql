@@ -1778,7 +1778,8 @@ CREATE TYPE public.subscription_cancelation_reasons AS ENUM (
 
 CREATE TYPE public.subscription_cancellation_reasons AS ENUM (
     'payment_failed',
-    'timeout'
+    'timeout',
+    'manual'
 );
 
 
@@ -14191,6 +14192,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260817175013'),
 ('20260817175012'),
+('20260817120927'),
 ('20260810135202'),
 ('20260805201143'),
 ('20260805110509'),

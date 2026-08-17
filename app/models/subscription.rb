@@ -60,7 +60,7 @@ class Subscription < ApplicationRecord
     :incomplete
   ].freeze
 
-  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout", manual: "manual"}.freeze
 
   BILLING_TIME = %i[
     calendar
