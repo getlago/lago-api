@@ -10123,6 +10123,7 @@ type OrderForm {
   expiresAt: ISO8601DateTime
   id: ID!
   number: String!
+  order: Order
   organization: Organization!
   quote: Quote!
   signedAt: ISO8601DateTime
@@ -12203,6 +12204,7 @@ type Quote {
   id: ID!
   images: JSON!
   number: String!
+  orderForms: [OrderForm!]!
   orderType: OrderTypeEnum!
   organization: Organization!
   owners: [User!]
@@ -12235,6 +12237,7 @@ type QuoteVersion {
   endDate: ISO8601Date
   id: ID!
   mentionVariables: JSON!
+  orderForm: OrderForm
   organization: Organization!
   quote: Quote!
   startDate: ISO8601Date

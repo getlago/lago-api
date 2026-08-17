@@ -19,6 +19,7 @@ module Types
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :customer, Types::Customers::Object, null: false
+      field :order, Types::Orders::Object, null: true
       field :organization, Types::Organizations::OrganizationType, null: false
       field :quote, Types::Quotes::Object, null: false
 
@@ -26,6 +27,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       dataload_association :customer
+      dataload_association :order
       dataload_association :organization
       dataload_association :quote
     end

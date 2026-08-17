@@ -17,6 +17,7 @@ RSpec.describe Types::OrderForms::Object do
     expect(subject).to have_field(:signed_document_url).of_type("String")
     expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
     expect(subject).to have_field(:customer).of_type("Customer!")
+    expect(subject).to have_field(:order).of_type("Order")
     expect(subject).to have_field(:organization).of_type("Organization!")
     expect(subject).to have_field(:quote).of_type("Quote!")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
