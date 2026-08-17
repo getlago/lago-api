@@ -450,6 +450,23 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when the organization reads from search terms" do
+      before do
+        stub_const("BaseQuery::MAX_COUNTED_RECORDS", 1)
+        organization.enable_feature_flag!(:invoice_search_terms)
+        create(:invoice, customer:, organization:)
+        create(:invoice, customer:, organization:)
+      end
+
+      it "still returns the exact total count" do
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta]).not_to have_key(:total_count_capped)
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)

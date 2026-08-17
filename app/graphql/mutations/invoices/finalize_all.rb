@@ -11,7 +11,7 @@ module Mutations
       graphql_name "FinalizeAllInvoices"
       description "Finalize all draft invoices"
 
-      type Types::Invoices::Object.collection_type
+      type Types::Invoices::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata)
 
       def resolve
         result = ::Invoices::FinalizeBatchService.new(organization: current_organization).call_async
