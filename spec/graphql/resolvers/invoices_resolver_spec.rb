@@ -839,7 +839,7 @@ RSpec.describe Resolvers::InvoicesResolver do
 
     context "when the organization reads from search terms" do
       before do
-        stub_const("BaseQuery::MAX_COUNTED_RECORDS", 1)
+        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
         organization.enable_feature_flag!(:invoice_search_terms)
       end
 
@@ -858,6 +858,20 @@ RSpec.describe Resolvers::InvoicesResolver do
 
         it "reports no next page" do
           expect(metadata).to include("totalCountCapped" => true, "hasNextPage" => false)
+        end
+      end
+
+      context "when the results land exactly on the limit" do
+        before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 2) }
+
+        it "reports the total as exact" do
+          expect(metadata).to eq(
+            "currentPage" => 1,
+            "totalCount" => 2,
+            "totalPages" => 2,
+            "totalCountCapped" => false,
+            "hasNextPage" => true
+          )
         end
       end
 
