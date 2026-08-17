@@ -138,21 +138,29 @@ RSpec.describe "Cascade filter updates", :premium do
 
     expect(child_charge.filters.count).to eq(2)
 
-    delete_plan_charge_filter(parent_plan, parent_charge.code, filter_eu.id)
-
-    # Destroy via API doesn't pass cascade_updates through the helper, so cascade manually to
-    # test the destroy path. The code is what the dispatcher would carry, and what the child's
-    # copy holds since the override deep-copied it.
-    ChargeFilters::CascadeService.call!(
-      charge: parent_charge,
-      action: "destroy",
-      filter_values: {"region" => ["eu"]},
-      parent_code: filter_eu.code
-    )
+    delete_plan_charge_filter(parent_plan, parent_charge.code, filter_eu.id, {cascade_updates: true})
 
     child_charge.reload
     expect(child_charge.filters.count).to eq(1)
     expect(child_charge.filters.first.invoice_display_name).to eq("US region")
+  end
+
+  # The copy is found by the code the override inherited. Without one there is nothing to identify
+  # it by, and whatever sits on the predicate may be a filter the customer negotiated, so it stays.
+  it "leaves a child copy with no code alone when the plan's filter is deleted" do
+    ctx = setup_plan_with_subscription
+    parent_plan = ctx[:parent_plan]
+    parent_charge = ctx[:parent_charge]
+    child_charge = ctx[:child_charge]
+    filter_eu = parent_charge.filters.find_by(invoice_display_name: "EU region")
+
+    child_copy = child_charge.filters.find_by(invoice_display_name: "EU region")
+    child_copy.update!(code: nil)
+
+    delete_plan_charge_filter(parent_plan, parent_charge.code, filter_eu.id, {cascade_updates: true})
+
+    expect(child_copy.reload).not_to be_discarded
+    expect(child_charge.filters.reload.count).to eq(2)
   end
 
   it "does not overwrite a customer-customized filter" do

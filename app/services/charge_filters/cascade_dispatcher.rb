@@ -33,9 +33,9 @@ module ChargeFilters
       before_by_code.each_value { enqueue_destroy(charge, it) }
     end
 
-    # The legacy path, for the filters the backfill left without a code. Two of them can share
-    # a predicate once a metric change shortened them onto it, and this keeps one — the same
-    # loss the cascade service takes on the same filters. Delete it once none are left.
+    # The legacy path, for the filters the backfill left without a code. Two of them can share a
+    # predicate once a metric change shortened them onto it, and this keeps one: nothing here can
+    # tell them apart. Delete it once no filter is left without a code.
     def diff_by_predicate(charge, before, after)
       before_by_values = before.index_by { it[:values] }
 

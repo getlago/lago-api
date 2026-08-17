@@ -548,6 +548,20 @@ RSpec.describe ChargeFilters::CascadeService do
 
         expect(child_filter.reload.properties).to eq({"amount" => "10"})
       end
+
+      # A missing code costs nothing when there is nobody to cascade to, so it is not reported
+      it "does not report a missing code either" do
+        expect {
+          described_class.call(
+            charge: parent_charge,
+            action: "update",
+            filter_values: {"region" => ["us"]},
+            old_properties: {"amount" => "10"},
+            new_properties: {"amount" => "15"},
+            invoice_display_name: "US region"
+          )
+        }.not_to raise_error
+      end
     end
   end
 end

@@ -27,6 +27,10 @@ module ChargeFilters
     BATCH_SIZE = 1_000
 
     def call
+      # Before the check below, so that a charge with nothing to cascade to stays quiet rather
+      # than reporting a filter whose missing code is costing nothing
+      return result if child_ids.empty?
+
       raise MissingParentCode, "charge #{charge.id} filter #{filter_values} has no code" if action == "update" && parent_code.blank?
 
       # NOTE: The cascade runs one job per changed filter
