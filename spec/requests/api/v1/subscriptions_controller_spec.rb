@@ -998,6 +998,36 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when subscription is incomplete" do
+      let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+
+      context "when status is given" do
+        let(:params) { {status: "incomplete"} }
+        let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
+
+        before do
+          create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+          create(:invoice_subscription, invoice:, subscription:)
+        end
+
+        it "cancels the subscription" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:lago_id]).to eq(subscription.id)
+          expect(json[:subscription][:status]).to eq("canceled")
+          expect(json[:subscription][:canceled_at]).to be_present
+          expect(json[:subscription][:cancellation_reason]).to eq("manual")
+        end
+      end
+    end
+
     context "with not existing subscription" do
       let(:external_id) { SecureRandom.uuid }
 

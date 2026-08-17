@@ -99,6 +99,8 @@ module Api
         query = current_organization.subscriptions.where(external_id: params[:external_id])
         subscription = if params[:status] == "pending"
           query.pending
+        elsif params[:status] == "incomplete"
+          query.incomplete
         else
           query.active
         end.first
