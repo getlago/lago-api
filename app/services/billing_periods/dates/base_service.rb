@@ -135,7 +135,8 @@ module BillingPeriods
             period_to: end_at,
             next_billing_at: cycle.next_billing_at,
             rate:,
-            cycle:
+            cycle:,
+            ratio: ratio_for(cycle, start_at)
           )
 
           period if include_period?(period)
@@ -179,6 +180,19 @@ module BillingPeriods
         return true unless exclude_out_of_range
 
         period.period_to >= range_begin && period.period_from <= range_end
+      end
+
+      # The ratio represents how much of this period slice is consumed by the
+      # requested range, not how much of the generated period exists. For example,
+      # advance termination asks for a one-instant range inside a full paid cycle:
+      # the Period must stay full-sized for billing boundaries, while the ratio uses
+      # range.end to express consumption up to the termination instant.
+      def ratio_for(cycle, start_at)
+        boundaries_for(
+          cycle.billing_interval_count,
+          cycle.billing_interval_unit,
+          anchor_date: cycle.billing_anchor_date
+        ).proration_ratio(start_at, range.end)
       end
 
       def moment_before(datetime)

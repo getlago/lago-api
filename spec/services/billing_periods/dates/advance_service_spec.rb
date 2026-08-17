@@ -57,6 +57,14 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
           ]
         )
       end
+
+      it "does not clamp the period to the requested range" do
+        period = result.periods.sole
+
+        expect(period.period_from).to eq(Time.zone.parse("2022-03-01"))
+        expect(period.period_to).to eq(end_of_day.call("2022-03-31"))
+        expect(period.ratio).to eq(15.fdiv(31))
+      end
     end
 
     it "returns the period starting at the billing boundary" do
