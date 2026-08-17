@@ -8,6 +8,10 @@ module ChargeFilters
     # price with nobody the wiser, so it fails instead of guessing at the predicate.
     class MissingParentCode < StandardError; end
 
+    # Two filters on one predicate leave nothing to choose between them, and adopting the plan's
+    # code into one picked by row order would settle which of the two bills from then on.
+    class DuplicatePredicate < StandardError; end
+
     def initialize(charge:, action:, filter_values:, old_properties: nil, new_properties: nil, invoice_display_name: nil, parent_code: nil)
       @charge = charge
       @action = action
@@ -97,13 +101,18 @@ module ChargeFilters
         .pluck(:id)
       return {} if candidate_ids.empty?
 
-      ChargeFilter
+      matched = ChargeFilter
         .where(id: candidate_ids)
         .includes(values: :billable_metric_filter)
         .select { |filter| filter.to_h == filter_values }
-        # Two filters can share a predicate once a metric change shortened them onto it, and this
-        # keeps one. Only a create gets here, and only for filters without a code.
-        .index_by(&:charge_id)
+        .group_by(&:charge_id)
+
+      duplicated = matched.select { |_charge_id, filters| filters.many? }
+      if duplicated.any?
+        raise DuplicatePredicate, "charges #{duplicated.keys.join(", ")} hold #{filter_values} more than once"
+      end
+
+      matched.transform_values(&:first)
     end
 
     def child_filters_holding_parent_code(batch_child_ids)

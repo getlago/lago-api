@@ -301,6 +301,21 @@ RSpec.describe ChargeFilters::CascadeService do
           expect(existing.reload.code).to eq("the-parents-code")
         end
 
+        # Which of the two adopts the code decides which one bills from then on, and row order is
+        # not a way to decide that. The pair has to be cleaned up first.
+        context "when the child holds the predicate twice" do
+          before do
+            other = create(:charge_filter, charge: child_charge, properties: {amount: "35"})
+            create(:charge_filter_value, charge_filter: other, billable_metric_filter: bm_filter, values: ["eu"])
+          end
+
+          it "raises rather than linking one at random" do
+            expect { service }.to raise_error(
+              described_class::DuplicatePredicate, /#{child_charge.id}/
+            )
+          end
+        end
+
         context "when it already has a code of its own" do
           let(:existing) do
             filter = create(:charge_filter, charge: child_charge, properties: {amount: "20"}, code: "its_own_code_1a2b3c4d")
