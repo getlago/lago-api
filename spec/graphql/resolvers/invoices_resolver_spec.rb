@@ -834,4 +834,101 @@ RSpec.describe Resolvers::InvoicesResolver do
       expect(result["data"]["invoices"]["collection"].count).to eq(2)
     end
   end
+
+  describe "total count" do
+    let(:page) { 1 }
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(page: #{page}, limit: 1) {
+            collection { id }
+            metadata { currentPage totalCount totalPages totalCountCapped hasNextPage }
+          }
+        }
+      GQL
+    end
+
+    let(:metadata) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )["data"]["invoices"]["metadata"]
+    end
+
+    it "returns the exact total" do
+      expect(metadata).to eq(
+        "currentPage" => 1,
+        "totalCount" => 2,
+        "totalPages" => 2,
+        "totalCountCapped" => false,
+        "hasNextPage" => true
+      )
+    end
+
+    context "when the organization reads from search terms" do
+      before do
+        stub_const("BaseQuery::MAX_COUNTED_RECORDS", 1)
+        organization.enable_feature_flag!(:invoice_search_terms)
+      end
+
+      it "caps the total and keeps advertising the next page" do
+        expect(metadata).to eq(
+          "currentPage" => 1,
+          "totalCount" => 1,
+          "totalPages" => 1,
+          "totalCountCapped" => true,
+          "hasNextPage" => true
+        )
+      end
+
+      context "when on the last page" do
+        let(:page) { 2 }
+
+        it "reports no next page" do
+          expect(metadata).to include("totalCountCapped" => true, "hasNextPage" => false)
+        end
+      end
+
+      context "when past the last page" do
+        let(:page) { 3 }
+
+        it "reports no next page" do
+          expect(metadata).to include("hasNextPage" => false)
+        end
+      end
+
+      context "when the search is delegated to Meilisearch" do
+        let(:query) do
+          <<~GQL
+            query {
+              invoices(page: 1, limit: 1, searchTerm: "Acme") {
+                collection { id }
+                metadata { totalCount totalCountCapped hasNextPage }
+              }
+            }
+          GQL
+        end
+
+        before do
+          organization.enable_feature_flag!(:meilisearch)
+          stub_const(
+            "ENV",
+            ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700", "LAGO_MEILISEARCH_SEARCH_ENABLED" => "true")
+          )
+          allow(Invoice).to receive(:search)
+            .and_return(Kaminari.paginate_array([invoice_first], total_count: 42).page(1).per(1))
+        end
+
+        it "leaves the Meilisearch total untouched" do
+          expect(metadata).to eq(
+            "totalCount" => 42,
+            "totalCountCapped" => false,
+            "hasNextPage" => true
+          )
+        end
+      end
+    end
+  end
 end
