@@ -15,13 +15,15 @@ module Wallets
 
       def call
         wallet.update!(update_params)
+        state_changed = wallet.saved_change_to_ongoing_usage_balance_cents? ||
+          wallet.saved_change_to_ongoing_balance_cents?
 
         after_commit do
           if update_params[:depleted_ongoing_balance] == true
             SendWebhookJob.perform_later("wallet.depleted_ongoing_balance", wallet)
           end
 
-          ::Wallets::ThresholdTopUpService.call(wallet:)
+          ::Wallets::ThresholdTopUpService.call(wallet:, state_changed:)
           UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
         end
 
