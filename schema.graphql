@@ -72,7 +72,8 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | RateCard | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
+
 """
 Activity Logs source enums
 """
@@ -370,6 +371,31 @@ enum ActivityTypeEnum {
   product.updated
   """
   product_updated
+
+  """
+  quote.approved
+  """
+  quote_approved
+
+  """
+  quote.created
+  """
+  quote_created
+
+  """
+  quote.updated
+  """
+  quote_updated
+
+  """
+  quote.version_created
+  """
+  quote_version_created
+
+  """
+  quote.voided
+  """
+  quote_voided
 
   """
   rate_card.created
@@ -12668,6 +12694,11 @@ enum ResourceTypeEnum {
   ProductFilter
   """
   product_filter
+
+  """
+  Quote
+  """
+  quote
 
   """
   RateCard

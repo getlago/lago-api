@@ -476,6 +476,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "Quote",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "RateCard",
               "ofType": null
             },
@@ -903,6 +908,78 @@
             {
               "name": "rate_card_deleted",
               "description": "rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_created",
+              "description": "quote.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_updated",
+              "description": "quote.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_approved",
+              "description": "quote.approved",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_voided",
+              "description": "quote.voided",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote_version_created",
+              "description": "quote.version_created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_created",
+              "description": "order_form.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_signed",
+              "description": "order_form.signed",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_file_uploaded",
+              "description": "order_form.file_uploaded",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_expired",
+              "description": "order_form.expired",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form_voided",
+              "description": "order_form.voided",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_created",
+              "description": "order.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_executed",
+              "description": "order.executed",
               "isDeprecated": false,
               "deprecationReason": null
             }
@@ -68810,6 +68887,24 @@
             {
               "name": "rate_card",
               "description": "RateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "quote",
+              "description": "Quote",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order_form",
+              "description": "OrderForm",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "order",
+              "description": "Order",
               "isDeprecated": false,
               "deprecationReason": null
             }
