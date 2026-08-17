@@ -37,6 +37,24 @@ module Api
         render_order(order)
       end
 
+      def execute
+        order = current_organization.orders.find_by(id: params[:id])
+        return not_found_error(resource: "order") unless order
+
+        update_result = update_execution_mode(order)
+        return render_error_response(update_result) if update_result&.failure?
+
+        result = ::Orders::ExecuteService.call(order:)
+
+        if result.success?
+          render_order(result.order)
+        else
+          render_error_response(result)
+        end
+      rescue BaseLockService::FailedToAcquireLock
+        lock_acquisition_error(code: "lock_acquisition_failed")
+      end
+
       private
 
       def ensure_feature_flag!
@@ -56,6 +74,20 @@ module Api
           executed_at_from: params[:executed_at_from],
           executed_at_to: params[:executed_at_to]
         }
+      end
+
+      # execution_mode is normally chosen when the order form is signed. REST has no order update
+      # endpoint, so restating it here is the only way to set or change it. Skipping the update
+      # when the value is unchanged keeps a retry of a failed order from tripping not_editable.
+      def update_execution_mode(order)
+        execution_mode = execute_params[:execution_mode]
+        return if execution_mode.blank? || order.execution_mode == execution_mode
+
+        ::Orders::UpdateService.call(order:, params: {execution_mode:})
+      end
+
+      def execute_params
+        params.permit(order: [:execution_mode]).fetch(:order, {})
       end
 
       def render_order(order)

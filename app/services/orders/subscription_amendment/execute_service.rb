@@ -46,6 +46,8 @@ module Orders
           # on it instead of creating a second subscription.
           subscription_id: target_subscription.id,
           external_id: target_subscription.external_id,
+          # Mandatory under the api source, see Orders::SubscriptionCreation::ExecuteService.
+          external_customer_id: order.customer.external_id,
           # CreateService strips this to a string, so the target's own name only survives when it is
           # passed back.
           name: payload["subscriptionName"].presence || target_subscription.name,

@@ -154,6 +154,17 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
 
       # A replacement sharing the target's plan id would make ActivateService take its standalone
       # branch, leaving the target active.
+      context "when triggered under the api source" do
+        before { CurrentContext.source = "api" }
+
+        it "amends the same subscription" do
+          expect { execute_service.call }.to change(Subscription, :count).by(1)
+
+          expect(target_subscription.reload).to be_terminated
+          expect(customer.subscriptions.active.sole.external_id).to eq("sub_ext_42")
+        end
+      end
+
       context "without overrides" do
         let(:plan_overrides) { nil }
 
