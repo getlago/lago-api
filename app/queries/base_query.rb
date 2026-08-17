@@ -9,17 +9,15 @@ class BaseQuery < BaseService
   Pagination = Struct.new(:page, :limit, keyword_init: true)
   Filters = BaseFilters
 
-  # Highest number of records the pagination will count. Beyond it, the total is
-  # reported as MAX_COUNTED_RECORDS and callers must treat it as "at least that many".
-  MAX_COUNTED_RECORDS = 10_000
-
   # Restores a capped `total_count` on a `without_count` relation, so that pagination
   # metadata keeps working without counting every matching row.
   module CappedTotalCount
+    # Highest number of records the pagination will report. Beyond it, the total is
+    # MAX_COUNTED_RECORDS and callers must treat it as "at least that many".
+    MAX_COUNTED_RECORDS = 10_000
+
     def total_count(*)
-      @capped_total_count ||= except(:offset, :limit, :order, :includes, :preload, :eager_load)
-        .limit(MAX_COUNTED_RECORDS)
-        .count
+      [counted_records, MAX_COUNTED_RECORDS].min
     end
 
     def total_pages
@@ -27,7 +25,7 @@ class BaseQuery < BaseService
     end
 
     def capped_total_count?
-      total_count == MAX_COUNTED_RECORDS
+      counted_records > MAX_COUNTED_RECORDS
     end
 
     # Exact even beyond the cap: `without_count` fetches one extra record to know
@@ -35,6 +33,16 @@ class BaseQuery < BaseService
     # `last_page?` is false for an out of range page, hence the two conditions.
     def has_next_page?
       !out_of_range? && !last_page?
+    end
+
+    private
+
+    # Counts one past the cap, so that a result set landing exactly on it is reported
+    # as an exact total rather than as a lower bound.
+    def counted_records
+      @counted_records ||= except(:offset, :limit, :order, :includes, :preload, :eager_load)
+        .limit(MAX_COUNTED_RECORDS + 1)
+        .count
     end
   end
 

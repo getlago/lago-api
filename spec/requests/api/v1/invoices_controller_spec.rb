@@ -463,7 +463,7 @@ RSpec.describe Api::V1::InvoicesController do
 
     context "when the organization reads from search terms" do
       before do
-        stub_const("BaseQuery::MAX_COUNTED_RECORDS", 1)
+        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
         organization.enable_feature_flag!(:invoice_search_terms)
         create(:invoice, customer:, organization:)
         create(:invoice, customer:, organization:)
