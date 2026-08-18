@@ -117,10 +117,6 @@ module Subscriptions
         build_date(year, month, anniversary_day_in(year, month))
       end
 
-      def anniversary_day_in(year, month)
-        [subscription_at.day, Time.days_in_month(month, year)].min
-      end
-
       def should_find_billing_date_in_previous_year?(date, billing_months)
         return true if date.month < billing_months[0]
 

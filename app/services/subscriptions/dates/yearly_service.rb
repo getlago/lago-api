@@ -126,18 +126,12 @@ module Subscriptions
         compute_to_date(compute_fixed_charges_from_date)
       end
 
+      # NOTE: the period is resolved from its own anniversary rather than re-walked from the billing
+      #       date, so there is a single derivation of the anniversary day.
       def compute_next_end_of_period
         return billing_date.end_of_year if calendar?
 
-        year = billing_date.year
-        month = subscription_at.month
-        day = subscription_at.day
-
-        # NOTE: we need the last day of the period, and not the first of the next one
-        result_date = build_date(year, month, day) - 1.day
-        return result_date if result_date >= billing_date
-
-        build_date(year + 1, month, day) - 1.day
+        compute_to_date(previous_anniversary_day(billing_date))
       end
 
       def compute_previous_beginning_of_period(date)
@@ -179,10 +173,6 @@ module Subscriptions
         # NOTE: a Feb 29 subscription has its anniversary on Feb 28 in a common year, so the raw
         #       subscription day would leave Feb 28 trailing the previous period.
         date.day < anniversary_day_in(date.year, subscription_at.month)
-      end
-
-      def anniversary_day_in(year, month)
-        [subscription_at.day, Time.days_in_month(month, year)].min
       end
     end
   end
