@@ -238,6 +238,31 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
     end
   end
 
+  describe "locking" do
+    # The overlap constraint is deferred, so a concurrent writer is only caught at COMMIT, and by
+    # then it is the enclosing lifecycle transaction that fails. The lock therefore has to be held
+    # to commit rather than released at the end of the block.
+    it "holds the advisory lock until the transaction commits" do
+      allow(SubscriptionBillingPeriod).to receive(:with_advisory_lock!).and_call_original
+
+      result
+
+      expect(SubscriptionBillingPeriod).to have_received(:with_advisory_lock!).with(
+        "subscription_billing_periods_#{subscription.id}",
+        transaction: true,
+        timeout_seconds: described_class::LOCK_TIMEOUT
+      )
+    end
+
+    it "raises rather than writing when the lock cannot be acquired" do
+      allow(SubscriptionBillingPeriod).to receive(:with_advisory_lock!)
+        .and_raise(WithAdvisoryLock::FailedToAcquireLock, "subscription_billing_periods")
+
+      expect { result }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+        .and not_change(SubscriptionBillingPeriod, :count)
+    end
+  end
+
   describe "idempotency" do
     it "writes the same rows and preserves created_at" do
       described_class.call(subscription:, timestamp:)

@@ -15,6 +15,11 @@ module Subscriptions
       # processor keeps terminated subscriptions cached for.
       TERMINATED_GRACE_PERIOD = 1.month
 
+      # The write is short, so a writer that has to wait for another is waiting on a couple of
+      # statements. Bounded anyway: this runs inside a subscription lifecycle transaction, which
+      # must not be left waiting on a lock that is never released.
+      LOCK_TIMEOUT = 10.seconds
+
       def initialize(subscription:, timestamp: Time.current)
         @subscription = subscription
         @timestamp = timestamp
@@ -29,23 +34,32 @@ module Subscriptions
         periods = desired_periods
 
         SubscriptionBillingPeriod.transaction do
-          # Deleted before the upsert, and the overlap constraint is deferred to commit: a customer
-          # timezone change snaps period_from to the previous invoice's charges_to
-          # (Subscriptions::DatesService#charges_from_datetime), so a moved boundary is a new row
-          # rather than an update to the old one, and the two overlap until the old one is gone.
-          discarded_periods.delete_all
+          # Every writer takes this, jobs and lifecycle services alike, and holds it until the
+          # transaction commits rather than until the end of the block.
+          #
+          # The write is convergent, but the overlap constraint is deferred, so a writer that
+          # commits between our delete and our own commit turns the enclosing transaction into a
+          # constraint violation at COMMIT — and that transaction is a subscription being created,
+          # terminated or upgraded, which must not fail over its billing periods.
+          SubscriptionBillingPeriod.with_advisory_lock!(lock_key, transaction: true, timeout_seconds: LOCK_TIMEOUT) do
+            # Deleted before the upsert: a customer timezone change snaps period_from to the
+            # previous invoice's charges_to (Subscriptions::DatesService#charges_from_datetime), so
+            # a moved boundary is a new row rather than an update to the old one, and the two
+            # overlap until the old one is gone.
+            discarded_periods.delete_all
 
-          if periods.present?
-            # Validations are not the guard here: the upsert has to be a single statement so a
-            # concurrent writer conflicts on the unique index rather than raising, and the table
-            # enforces the ordering, the non-null columns and the non-overlap itself.
-            SubscriptionBillingPeriod.upsert_all( # rubocop:disable Rails/SkipsModelValidations
-              periods.map { |period| row_for(period) },
-              unique_by: %i[scope_id period_from],
-              # created_at is left out so a period that is merely refreshed keeps the one it was
-              # first written with; Rails bumps updated_at itself.
-              update_only: %i[period_to]
-            )
+            if periods.present?
+              # Validations are not the guard here: the upsert has to be a single statement so a
+              # concurrent writer conflicts on the unique index rather than raising, and the table
+              # enforces the ordering, the non-null columns and the non-overlap itself.
+              SubscriptionBillingPeriod.upsert_all( # rubocop:disable Rails/SkipsModelValidations
+                periods.map { |period| row_for(period) },
+                unique_by: %i[scope_id period_from],
+                # created_at is left out so a period that is merely refreshed keeps the one it was
+                # first written with; Rails bumps updated_at itself.
+                update_only: %i[period_to]
+              )
+            end
           end
         end
 
@@ -56,6 +70,10 @@ module Subscriptions
       private
 
       attr_reader :subscription, :timestamp
+
+      def lock_key
+        "subscription_billing_periods_#{subscription.id}"
+      end
 
       def skip?
         return true if subscription.organization.feature_flag_disabled?(:subscription_billing_periods)
