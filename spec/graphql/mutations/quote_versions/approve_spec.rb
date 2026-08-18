@@ -11,9 +11,7 @@ RSpec.describe Mutations::QuoteVersions::Approve do
       :quote_version,
       :with_subscription_creation_billing_items,
       quote:,
-      organization: membership.organization,
-      start_date: Date.new(2026, 1, 1),
-      end_date: Date.new(2027, 1, 1)
+      organization: membership.organization
     )
   end
 

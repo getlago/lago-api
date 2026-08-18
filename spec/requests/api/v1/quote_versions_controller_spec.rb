@@ -69,9 +69,7 @@ RSpec.describe Api::V1::QuoteVersionsController do
         :quote_version,
         :with_subscription_creation_billing_items,
         quote:,
-        organization:,
-        start_date: Date.new(2026, 1, 1),
-        end_date: Date.new(2027, 1, 1)
+        organization:
       )
     end
     let(:quote_version_id) { quote_version.id }

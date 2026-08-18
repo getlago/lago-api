@@ -72,7 +72,14 @@ RSpec.describe OrderForms::CreateService do
       subject(:create_service) { described_class.new(quote_version:, expires_at:) }
 
       let(:quote_version) do
-        create(:quote_version, :approved, quote:, organization:, end_date: 1.month.from_now.to_date)
+        create(
+          :quote_version,
+          :approved,
+          :with_subscription_creation_billing_items,
+          quote:,
+          organization:,
+          plan_end_date: 1.month.from_now.to_date.iso8601
+        )
       end
       let(:expires_at) { 2.months.from_now }
 
@@ -90,7 +97,16 @@ RSpec.describe OrderForms::CreateService do
       subject(:create_service) { described_class.new(quote_version:, expires_at:) }
 
       let(:end_date) { 1.month.from_now.to_date }
-      let(:quote_version) { create(:quote_version, :approved, quote:, organization:, end_date:) }
+      let(:quote_version) do
+        create(
+          :quote_version,
+          :approved,
+          :with_subscription_creation_billing_items,
+          quote:,
+          organization:,
+          plan_end_date: end_date.iso8601
+        )
+      end
       let(:expires_at) { end_date.to_time }
 
       it "returns a validation failure" do
@@ -103,7 +119,14 @@ RSpec.describe OrderForms::CreateService do
       subject(:create_service) { described_class.new(quote_version:, expires_at:) }
 
       let(:quote_version) do
-        create(:quote_version, :approved, quote:, organization:, end_date: 2.months.from_now.to_date)
+        create(
+          :quote_version,
+          :approved,
+          :with_subscription_creation_billing_items,
+          quote:,
+          organization:,
+          plan_end_date: 2.months.from_now.to_date.iso8601
+        )
       end
       let(:expires_at) { 1.month.from_now }
 

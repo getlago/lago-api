@@ -5,46 +5,43 @@ require "rails_helper"
 RSpec.describe QuoteVersions::DealExpiration do
   let(:organization) { create(:organization) }
   let(:quote) { create(:quote, organization:) }
-  let(:end_date) { Date.new(2026, 6, 1) }
-  let(:billing_items) { {} }
-  let(:quote_version) { build(:quote_version, quote:, organization:, end_date:, billing_items:) }
+  let(:billing_items) { {"plans" => [{"payload" => {"endDate" => "2026-06-01T00:00:00Z"}}]} }
+  let(:quote_version) { build(:quote_version, quote:, organization:, billing_items:) }
 
   describe ".earliest" do
-    it "returns the ending date of the deal" do
+    it "returns the plan ending date" do
       expect(described_class.earliest(quote_version)).to eq(Date.new(2026, 6, 1))
     end
 
     context "when the deal carries no dates" do
-      let(:end_date) { nil }
+      let(:billing_items) { {} }
 
       it "returns nil" do
         expect(described_class.earliest(quote_version)).to be_nil
       end
     end
 
-    context "when a plan ends before the deal" do
+    context "when the plans end at different dates" do
       let(:billing_items) do
-        {"plans" => [{"payload" => {"endDate" => "2026-03-15T00:00:00Z"}}]}
+        {
+          "plans" => [
+            {"payload" => {"endDate" => "2027-03-15T00:00:00Z"}},
+            {"payload" => {"endDate" => "2026-03-15T00:00:00Z"}}
+          ]
+        }
       end
 
-      it "returns the plan ending date" do
+      it "returns the earliest plan ending date" do
         expect(described_class.earliest(quote_version)).to eq(Date.new(2026, 3, 15))
       end
     end
 
-    context "when a plan ends after the deal" do
+    context "when a wallet expires before the plans" do
       let(:billing_items) do
-        {"plans" => [{"payload" => {"endDate" => "2027-03-15T00:00:00Z"}}]}
-      end
-
-      it "returns the deal ending date" do
-        expect(described_class.earliest(quote_version)).to eq(Date.new(2026, 6, 1))
-      end
-    end
-
-    context "when a wallet expires before the deal" do
-      let(:billing_items) do
-        {"walletCredits" => [{"payload" => {"expirationAt" => "2026-02-01T00:00:00Z"}}]}
+        {
+          "plans" => [{"payload" => {"endDate" => "2026-06-01T00:00:00Z"}}],
+          "walletCredits" => [{"payload" => {"expirationAt" => "2026-02-01T00:00:00Z"}}]
+        }
       end
 
       it "returns the wallet expiration" do
@@ -55,6 +52,7 @@ RSpec.describe QuoteVersions::DealExpiration do
     context "when a recurring rule expires before everything else" do
       let(:billing_items) do
         {
+          "plans" => [{"payload" => {"endDate" => "2026-06-01T00:00:00Z"}}],
           "walletCredits" => [
             {
               "payload" => {
@@ -76,10 +74,7 @@ RSpec.describe QuoteVersions::DealExpiration do
 
     # The only dates a one_off deal carries are fee service periods, legitimately in the past.
     context "when the deal is one_off" do
-      let(:end_date) { nil }
-      let(:quote_version) do
-        build(:quote_version, :with_one_off_billing_items, quote:, organization:, end_date:)
-      end
+      let(:quote_version) { build(:quote_version, :with_one_off_billing_items, quote:, organization:) }
 
       it "returns nil" do
         expect(described_class.earliest(quote_version)).to be_nil
@@ -87,7 +82,6 @@ RSpec.describe QuoteVersions::DealExpiration do
     end
 
     context "when the billing items are nil" do
-      let(:end_date) { nil }
       let(:billing_items) { nil }
 
       it "returns nil" do
@@ -96,7 +90,6 @@ RSpec.describe QuoteVersions::DealExpiration do
     end
 
     context "when the billing items are not an object" do
-      let(:end_date) { nil }
       let(:billing_items) { ["plans"] }
 
       it "returns nil" do
@@ -105,10 +98,7 @@ RSpec.describe QuoteVersions::DealExpiration do
     end
 
     context "when a quoted date is not a date" do
-      let(:end_date) { nil }
-      let(:billing_items) do
-        {"plans" => [{"payload" => {"endDate" => "whenever"}}]}
-      end
+      let(:billing_items) { {"plans" => [{"payload" => {"endDate" => "whenever"}}]} }
 
       it "ignores it" do
         expect(described_class.earliest(quote_version)).to be_nil
@@ -116,9 +106,11 @@ RSpec.describe QuoteVersions::DealExpiration do
     end
 
     context "when a plan carries no payload" do
-      let(:billing_items) { {"plans" => [{"id" => "plan-id"}]} }
+      let(:billing_items) do
+        {"plans" => [{"id" => "plan-id"}, {"payload" => {"endDate" => "2026-06-01T00:00:00Z"}}]}
+      end
 
-      it "returns the deal ending date" do
+      it "ignores it" do
         expect(described_class.earliest(quote_version)).to eq(Date.new(2026, 6, 1))
       end
     end
@@ -151,7 +143,7 @@ RSpec.describe QuoteVersions::DealExpiration do
     end
 
     context "when the deal carries no dates" do
-      let(:end_date) { nil }
+      let(:billing_items) { {} }
 
       it "covers any date" do
         expect(described_class.covers?(quote_version, "2099-01-01T00:00:00Z")).to eq(true)

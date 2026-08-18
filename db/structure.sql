@@ -5398,8 +5398,6 @@ CREATE TABLE public.quote_versions (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     currency character varying,
-    start_date date,
-    end_date date,
     mention_variables jsonb,
     CONSTRAINT quote_versions_constraint_approved_at_matches_status CHECK (((status = 'approved'::public.quote_status) = (approved_at IS NOT NULL))),
     CONSTRAINT quote_versions_constraint_sequential_id_positive CHECK ((sequential_id > 0)),
@@ -14189,6 +14187,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260819000710'),
 ('20260817175013'),
 ('20260817175012'),
 ('20260810135202'),

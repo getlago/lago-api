@@ -60,21 +60,20 @@ module Orders
           external_customer_id: order.customer.external_id,
           name: payload["subscriptionName"],
           billing_time: payload["billingTime"],
-          subscription_at: subscription_datetime(payload["startDate"], quote_version.start_date),
-          ending_at: subscription_datetime(payload["endDate"], quote_version.end_date),
+          subscription_at: subscription_datetime(payload["startDate"]),
+          ending_at: subscription_datetime(payload["endDate"]),
           payment_method: payment_method_params(payload),
           plan_overrides: plan_overrides(item, plan).presence,
           usage_thresholds: usage_thresholds(item).presence
         }.compact
       end
 
-      # quote_versions.start_date and end_date are date columns, and the payload may carry a bare
-      # date too. A date reaches a datetime attribute as midnight UTC, which is the previous day for
-      # a customer west of UTC: Subscriptions::CreateService would then take its past subscription
-      # path and anniversary date. A calendar date means that day for the customer, so it is read in
-      # their timezone.
-      def subscription_datetime(payload_value, version_value)
-        value = payload_value.presence || version_value
+      # The payload may carry a bare date. A date reaches a datetime attribute as midnight UTC,
+      # which is the previous day for a customer west of UTC: Subscriptions::CreateService would
+      # then take its past subscription path and anniversary date. A calendar date means that day
+      # for the customer, so it is read in their timezone.
+      def subscription_datetime(payload_value)
+        value = payload_value.presence
         date = calendar_date(value)
         return value if date.nil?
 
@@ -84,7 +83,6 @@ module Orders
       # A string that only looks like a date is left alone for Subscriptions::ValidateService to
       # reject.
       def calendar_date(value)
-        return value.to_date if value.is_a?(Date)
         return nil unless value.is_a?(String) && CALENDAR_DATE.match?(value)
 
         Utils::Datetime.parse_iso8601_date(value)
@@ -331,10 +329,6 @@ module Orders
           .coupons
           .where(id: coupon_items.map { |item| item["id"] })
           .index_by(&:id)
-      end
-
-      def quote_version
-        order.quote_version
       end
     end
   end

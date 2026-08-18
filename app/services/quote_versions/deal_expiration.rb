@@ -10,7 +10,6 @@ module QuoteVersions
       items = billing_items(quote_version)
 
       [
-        quote_version.end_date,
         *plan_end_dates(items),
         *wallet_expirations(items)
       ].filter_map { Utils::Datetime.parse_iso8601(it)&.to_date }.min

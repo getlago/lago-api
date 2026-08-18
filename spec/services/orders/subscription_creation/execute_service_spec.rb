@@ -29,6 +29,8 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
       "subscriptionExternalId" => "sub_ext_42",
       "subscriptionName" => "Enterprise deal",
       "billingTime" => "anniversary",
+      "startDate" => Date.current.iso8601,
+      "endDate" => 1.year.from_now.to_date.iso8601,
       "charges" => [
         {
           "id" => charge.id,
@@ -60,8 +62,6 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.current,
-      end_date: 1.year.from_now.to_date,
       billing_items:
     )
   end
@@ -88,7 +88,7 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(subscription.external_id).to eq("sub_ext_42")
         expect(subscription.name).to eq("Enterprise deal")
         expect(subscription.billing_time).to eq("anniversary")
-        expect(subscription.ending_at.to_date).to eq(quote_version.end_date)
+        expect(subscription.ending_at.to_date).to eq(1.year.from_now.to_date)
 
         order.reload
         expect(order.executed?).to eq(true)
@@ -281,12 +281,12 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
-      context "when the payload carries dates" do
+      context "when the payload carries full datetimes" do
         let(:plan_payload) do
           super().merge("startDate" => 2.days.from_now.iso8601, "endDate" => 2.years.from_now.iso8601)
         end
 
-        it "uses them over the version dates" do
+        it "uses them as given" do
           execute_service.call
 
           subscription = customer.subscriptions.sole
@@ -300,31 +300,13 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           create(:customer, organization:, billing_entity:, currency: "EUR", timezone: "America/New_York")
         end
 
-        it "reads the version dates as calendar dates in the customer timezone" do
+        it "reads the quoted calendar dates in the customer timezone" do
           execute_service.call
 
           subscription = customer.subscriptions.sole
           timezone = customer.applicable_timezone
-          expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(quote_version.start_date)
-          expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(quote_version.end_date)
-        end
-
-        context "when the payload carries bare dates" do
-          let(:plan_payload) do
-            super().merge(
-              "startDate" => 3.days.from_now.to_date.iso8601,
-              "endDate" => 1.year.from_now.to_date.iso8601
-            )
-          end
-
-          it "reads them in the customer timezone too" do
-            execute_service.call
-
-            subscription = customer.subscriptions.sole
-            timezone = customer.applicable_timezone
-            expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(3.days.from_now.to_date)
-            expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(1.year.from_now.to_date)
-          end
+          expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(Date.current)
+          expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(1.year.from_now.to_date)
         end
       end
 

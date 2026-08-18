@@ -53,7 +53,7 @@ module Orders
           name: payload["subscriptionName"].presence || target_subscription.name,
           # The amendment restates the contract term. A quote carrying no ending date leaves the
           # target's own in place.
-          ending_at: subscription_datetime(payload["endDate"], quote_version.end_date),
+          ending_at: subscription_datetime(payload["endDate"]),
           payment_method: payment_method_params(payload)
         }.compact
       end

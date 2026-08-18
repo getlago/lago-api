@@ -10,13 +10,11 @@ module Types
       field :content, String, null: true
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :currency, Types::CurrencyEnum, null: true
-      field :end_date, GraphQL::Types::ISO8601Date, null: true
       field :id, ID, null: false
       field :mention_variables, GraphQL::Types::JSON, null: false
       field :order_form, Types::OrderForms::Object, null: true
       field :organization, Types::Organizations::OrganizationType, null: false
       field :quote, Types::Quotes::Object, null: false
-      field :start_date, GraphQL::Types::ISO8601Date, null: true
       field :status, Types::QuoteVersions::StatusEnum, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :version, Integer, null: false

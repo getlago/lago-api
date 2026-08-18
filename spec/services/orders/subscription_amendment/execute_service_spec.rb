@@ -44,6 +44,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
     {
       "code" => plan.code,
       "subscriptionName" => "Amended deal",
+      "endDate" => 1.year.from_now.to_date.iso8601,
       "charges" => [
         {
           "id" => charge.id,
@@ -83,8 +84,6 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.current,
-      end_date: 1.year.from_now.to_date,
       billing_items:
     )
   end
@@ -114,7 +113,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         expect(replacement.external_id).to eq("sub_ext_42")
         expect(replacement.name).to eq("Amended deal")
         expect(replacement.previous_subscription_id).to eq(target_subscription.id)
-        expect(replacement.ending_at.to_date).to eq(quote_version.end_date)
+        expect(replacement.ending_at.to_date).to eq(1.year.from_now.to_date)
 
         order.reload
         expect(order.executed?).to eq(true)
@@ -191,18 +190,6 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
 
       context "when the quote carries no ending date" do
         let(:plan_payload) { super().except("endDate") }
-        let(:quote_version) do
-          create(
-            :quote_version,
-            :approved,
-            quote:,
-            organization:,
-            currency: "EUR",
-            start_date: Date.current,
-            end_date: nil,
-            billing_items:
-          )
-        end
 
         it "keeps the term of the terminated subscription" do
           execute_service.call
@@ -214,19 +201,8 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
 
       # The replacement starts on the anniversary date of the one it amends, so the quoted start
       # date is never read.
-      context "when the quote carries no start date" do
-        let(:quote_version) do
-          create(
-            :quote_version,
-            :approved,
-            quote:,
-            organization:,
-            currency: "EUR",
-            start_date: nil,
-            end_date: 1.year.from_now.to_date,
-            billing_items:
-          )
-        end
+      context "when the quote carries a start date" do
+        let(:plan_payload) { super().merge("startDate" => 6.months.from_now.to_date.iso8601) }
 
         it "amends the subscription anyway" do
           result = execute_service.call
@@ -235,7 +211,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
 
           replacement = customer.subscriptions.active.sole
           expect(replacement.subscription_at.to_i).to eq(target_subscription.subscription_at.to_i)
-          expect(replacement.ending_at.to_date).to eq(quote_version.end_date)
+          expect(replacement.ending_at.to_date).to eq(1.year.from_now.to_date)
         end
       end
 
@@ -475,7 +451,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
           expect(replacement).to be_pending
           expect(replacement.external_id).to eq("sub_ext_42")
           expect(replacement.plan.amount_cents).to eq(10_000)
-          expect(replacement.ending_at.to_date).to eq(quote_version.end_date)
+          expect(replacement.ending_at.to_date).to eq(1.year.from_now.to_date)
           expect(target_subscription.downgrade_plan_date).to be > Date.current
 
           order.reload
