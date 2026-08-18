@@ -6,23 +6,18 @@ module V2
     # fast-forward one or more subscriptions to a date range and inspect the result synchronously
     # (the invoices land in the response instead of waiting for the clock).
     #
-    # - terminate: false => run the producer + consumer for `range`, emitting the
-    #   cycles that would have been billed during it.
-    # - terminate: true  => terminate each subscription at the range end (final prorated cycle
-    #   + advance credit notes), then bill inline. TerminateService also enqueues the billing
-    #   job after commit; running it inline here just materialises the invoice in the
-    #   response, and the async job then finds nothing left to bill.
+    # Runs the producer + consumer for `range`, emitting the cycles that would
+    # have been billed during it.
     #
     # Only product_catalog subscriptions are billed by this engine, so the call is rejected
     # if any of them is on a legacy plan rather than silently skipping it.
     class BillService < BaseService
       Result = BaseResult[:invoices, :credit_notes]
 
-      def initialize(subscriptions:, start_on: nil, end_on: nil, terminate: false)
+      def initialize(subscriptions:, start_on: nil, end_on: nil)
         @subscriptions = Array.wrap(subscriptions)
         @start_on = start_on
         @end_on = end_on
-        @terminate = terminate
         super
       end
 
@@ -39,25 +34,13 @@ module V2
         result.invoices = []
         result.credit_notes = []
 
-        terminate_all if terminate
-        return result if result.error
-
         bill_all
         result
       end
 
       private
 
-      attr_reader :subscriptions, :start_on, :end_on, :terminate
-
-      def terminate_all
-        subscriptions.each do |subscription|
-          termination = ::V2::Subscriptions::TerminateService.call(subscription:, terminated_at: Time.current)
-          return result.fail_with_error!(termination.error) unless termination.success?
-
-          result.credit_notes.concat(Array.wrap(termination.credit_notes))
-        end
-      end
+      attr_reader :subscriptions, :start_on, :end_on
 
       # The engine bills per customer (ScheduleService and ProcessService are both
       # customer-scoped, so one pass emits every due cycle that customer has). Billing once
