@@ -32,7 +32,7 @@ gem "json_schemer"
 
 # Security
 gem "bcrypt"
-gem "googleauth", "~> 1.16.2"
+gem "googleauth", "~> 1.17.0"
 gem "jwt"
 gem "oauth2"
 gem "rack-cors"
