@@ -73,6 +73,10 @@ module Api
               result.subscription_rate_cards,
               ::V1::SubscriptionRateCardSerializer,
               collection_name: "applied_rate_cards"
+            ).serialize.merge(
+              ::CollectionSerializer.new(
+                result.credit_notes, ::V1::CreditNoteSerializer, collection_name: "credit_notes"
+              ).serialize
             )
           )
         else
@@ -81,10 +85,8 @@ module Api
       end
 
       # Testing helper: fast-forwards one or more product-catalog subscriptions to
-      # a date range and returns what they produced, synchronously. With
-      # `terminate: true` it simulates a termination at the range end (final prorated cycle +
-      # advance credit notes) instead of periodic billing. Takes the id from the path, or
-      # an `external_ids` array to bill several at once.
+      # a date range and returns what they produced, synchronously. Takes the id
+      # from the path, or an `external_ids` array to bill several at once.
       def bill
         # `subscription_external_ids` is accepted as an alias so the body reads
         # unambiguously; the path form supplies a single `external_id`.
@@ -96,8 +98,7 @@ module Api
         result = ::V2::Subscriptions::BillService.call(
           subscriptions:,
           start_on: params[:start_on],
-          end_on: params[:end_on],
-          terminate: ActiveModel::Type::Boolean.new.cast(params[:terminate]) || false
+          end_on: params[:end_on]
         )
 
         if result.success?

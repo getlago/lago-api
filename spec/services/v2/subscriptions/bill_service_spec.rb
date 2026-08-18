@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe V2::Subscriptions::BillService do
   describe ".call" do
-    subject(:result) { described_class.call(subscriptions:, start_on:, end_on:, terminate:) }
+    subject(:result) { described_class.call(subscriptions:, start_on:, end_on:) }
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
@@ -13,7 +13,6 @@ RSpec.describe V2::Subscriptions::BillService do
     let(:subscriptions) { [subscription] }
     let(:start_on) { "2026-08-01" }
     let(:end_on) { "2026-08-14" }
-    let(:terminate) { false }
     let(:billing_result) do
       BillingCycles::BillSubscriptionService::Result.new.tap do |result|
         result.invoices = []
@@ -31,31 +30,6 @@ RSpec.describe V2::Subscriptions::BillService do
         subscription:,
         range: Time.zone.parse("2026-08-01")..Time.zone.parse("2026-08-14").end_of_day
       )
-    end
-
-    context "with terminate enabled" do
-      let(:terminate) { true }
-      let(:current_time) { Time.zone.parse("2026-08-18 08:53:07") }
-      let(:termination_result) do
-        V2::Subscriptions::TerminateService::Result.new.tap do |result|
-          result.credit_notes = []
-        end
-      end
-
-      around { |example| travel_to(current_time) { example.run } }
-
-      before do
-        allow(V2::Subscriptions::TerminateService).to receive(:call).and_return(termination_result)
-      end
-
-      it "terminates subscriptions at the current time" do
-        result
-
-        expect(V2::Subscriptions::TerminateService).to have_received(:call).with(
-          subscription:,
-          terminated_at: current_time
-        )
-      end
     end
 
     context "with an invalid range" do

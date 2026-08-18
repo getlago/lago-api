@@ -55,6 +55,69 @@ RSpec.describe Api::V2::SubscriptionsController do
     end
   end
 
+  describe "DELETE /api/v2/subscriptions/:external_id" do
+    subject { delete_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}", params) }
+
+    let(:params) { {terminated_at:} }
+    let(:terminated_at) { "2026-08-14T12:34:56Z" }
+    let(:termination_result) do
+      V2::Subscriptions::TerminateService::Result.new.tap do |result|
+        result.subscription_rate_cards = [subscription_rate_card]
+        result.credit_notes = []
+      end
+    end
+    let!(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:, customer:) }
+
+    before do
+      allow(V2::Subscriptions::TerminateService).to receive(:call).and_return(termination_result)
+    end
+
+    include_examples "requires API permission", "subscription", "write"
+
+    it "terminates the active subscription with the requested timestamp" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(V2::Subscriptions::TerminateService).to have_received(:call).with(
+        subscription:,
+        terminated_at:
+      )
+      expect(json[:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
+      expect(json[:credit_notes]).to eq([])
+    end
+
+    context "without terminated_at" do
+      subject do
+        travel_to(current_time) do
+          delete_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}")
+        end
+      end
+
+      let(:current_time) { Time.zone.parse("2026-08-18 08:53:07") }
+
+      it "terminates the subscription at the current time" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(V2::Subscriptions::TerminateService).to have_received(:call).with(
+          subscription:,
+          terminated_at: current_time
+        )
+      end
+    end
+
+    context "when the subscription does not exist" do
+      subject { delete_with_token(organization, "/api/v2/subscriptions/unknown", params) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("subscription")
+        expect(V2::Subscriptions::TerminateService).not_to have_received(:call)
+      end
+    end
+  end
+
   describe "POST /api/v2/subscriptions/:external_id/bill" do
     subject do
       post_with_token(
@@ -82,8 +145,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       expect(V2::Subscriptions::BillService).to have_received(:call).with(
         subscriptions: [subscription],
         start_on: "2026-08-01",
-        end_on: "2026-08-14",
-        terminate: false
+        end_on: "2026-08-14"
       )
     end
 
@@ -103,8 +165,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         expect(V2::Subscriptions::BillService).to have_received(:call).with(
           subscriptions: [subscription],
           start_on: nil,
-          end_on: "2026-08-14",
-          terminate: false
+          end_on: "2026-08-14"
         )
       end
     end
@@ -125,8 +186,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         expect(V2::Subscriptions::BillService).to have_received(:call).with(
           subscriptions: [subscription],
           start_on: nil,
-          end_on: '"2026-09-10"',
-          terminate: false
+          end_on: '"2026-09-10"'
         )
       end
     end
@@ -147,8 +207,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         expect(V2::Subscriptions::BillService).to have_received(:call).with(
           subscriptions: [subscription],
           start_on: nil,
-          end_on: "hello",
-          terminate: false
+          end_on: "hello"
         )
       end
     end
@@ -160,8 +219,7 @@ RSpec.describe Api::V2::SubscriptionsController do
           "/api/v2/subscriptions/bill",
           {
             subscription_external_ids: ["sub_r1"],
-            end_on: "2026-09-10",
-            terminate: false
+            end_on: "2026-09-10"
           }
         )
       end
@@ -247,8 +305,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             "/api/v2/subscriptions/bill",
             {
               subscription_external_ids: ["sub_r1"],
-              end_on: "2026-09-10",
-              terminate: false
+              end_on: "2026-09-10"
             }
           )
         end.not_to change(BillingCycle, :count)
