@@ -14,21 +14,13 @@ module Subscriptions
 
       def call
         subscription.with_lock do
-          # A payment webhook may resolve the subscription while we wait for the lock.
-          next unless subscription.incomplete?
-
-          payment_rule = subscription.activation_rules.payment.sole
-          Payment::EvaluateService.call!(rule: payment_rule, status: rule_status)
-
-          invoice = gating_invoice
-          invoice&.closed!
-
-          ResolveSubscriptionStatusService.call!(subscription:)
-          subscription.update!(cancellation_reason:)
-
-          if invoice
-            enqueue_psp_cancel(invoice)
-            enqueue_recredit_jobs(invoice)
+          if subscription.incomplete?
+            cancel_incomplete_subscription
+          else
+            result.single_validation_failure!(
+              field: :subscription,
+              error_code: "subscription_already_resolved"
+            )
           end
         end
 
@@ -40,10 +32,32 @@ module Subscriptions
 
       attr_reader :subscription, :rule_status, :cancellation_reason
 
+      def cancel_incomplete_subscription
+        invoice = gating_invoice
+
+        if invoice.blank?
+          result.single_validation_failure!(
+            field: :subscription,
+            error_code: "activation_invoice_not_ready"
+          )
+          return
+        end
+
+        payment_rule = subscription.activation_rules.payment.sole
+        Payment::EvaluateService.call!(rule: payment_rule, status: rule_status)
+
+        invoice.closed!
+
+        ResolveSubscriptionStatusService.call!(subscription:)
+        subscription.update!(cancellation_reason:)
+
+        enqueue_psp_cancel(invoice)
+        enqueue_recredit_jobs(invoice)
+      end
+
       # A tax provider failure leaves the invoice failed rather than open, and it still has
       # to be closed: Invoices::RetryService would otherwise let a merchant reopen it on a
-      # subscription that is no longer activating. It is absent altogether in the window
-      # between gating the subscription and BillSubscriptionJob creating it.
+      # subscription that is no longer activating.
       def gating_invoice
         subscription.invoices.subscription.where(status: %i[open failed]).first
       end

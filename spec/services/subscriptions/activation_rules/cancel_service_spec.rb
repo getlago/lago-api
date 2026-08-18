@@ -129,9 +129,12 @@ RSpec.describe Subscriptions::ActivationRules::CancelService do
       subscription.update!(status: :active)
     end
 
-    it "returns a successful result without mutating state" do
+    it "returns a validation failure without mutating state" do
       result
 
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({subscription: ["subscription_already_resolved"]})
       expect(subscription.reload).to be_active
       expect(payment_rule.reload).to be_satisfied
       expect(invoice.reload).to be_open
@@ -194,12 +197,15 @@ RSpec.describe Subscriptions::ActivationRules::CancelService do
       create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
     end
 
-    it "still cancels the subscription" do
+    it "returns a validation failure without mutating state" do
       result
 
-      expect(result).to be_success
-      expect(subscription.reload).to be_canceled
-      expect(subscription.cancellation_reason).to eq("manual")
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({subscription: ["activation_invoice_not_ready"]})
+      expect(subscription.reload).to be_incomplete
+      expect(subscription.cancellation_reason).to be_nil
+      expect(subscription.activation_rules.payment.sole).to be_pending
     end
   end
 end

@@ -130,6 +130,31 @@ RSpec.describe Subscriptions::TerminateService do
         expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.terminated", subscription)
       end
 
+      context "when activation cancellation loses a concurrent resolution" do
+        let(:cancel_result) do
+          Subscriptions::ActivationRules::CancelService::Result.new.tap do |result|
+            result.single_validation_failure!(
+              field: :subscription,
+              error_code: "subscription_already_resolved"
+            )
+          end
+        end
+
+        before do
+          allow(Subscriptions::ActivationRules::CancelService)
+            .to receive(:call!)
+            .and_raise(cancel_result.error)
+        end
+
+        it "returns the cancellation failure" do
+          result
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({subscription: ["subscription_already_resolved"]})
+        end
+      end
+
       context "when on_termination_credit_note and on_termination_invoice are given" do
         subject(:result) do
           described_class.call(subscription:, on_termination_credit_note: "refund", on_termination_invoice: "generate")

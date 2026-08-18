@@ -4,6 +4,8 @@ module Invoices
   class SubscriptionService < BaseService
     Result = BaseResult[:invoice, :non_invoiceable_fees]
 
+    ACTIVATION_BILLING_REASONS = %i[subscription_starting upgrading].freeze
+
     def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
@@ -23,6 +25,17 @@ module Invoices
     end
 
     def call
+      if activation_billing?
+        with_subscription_locks { perform_call }
+      else
+        perform_call
+      end
+    end
+
+    private
+
+    def perform_call
+      return result if stale_activation_billing?
       return result if active_subscriptions.empty? && recurring
 
       if mixed_billing_entities?
@@ -118,8 +131,6 @@ module Invoices
       result.fail_with_error!(e)
     end
 
-    private
-
     attr_accessor :subscriptions,
       :timestamp,
       :invoicing_reason,
@@ -128,6 +139,39 @@ module Invoices
       :currency,
       :invoice,
       :skip_charges
+
+    # Cancellation uses the same subscription lock before closing the gating invoice.
+    # Holding it here prevents stale activation billing from committing after cancellation.
+    def with_subscription_locks
+      ActiveRecord::Base.transaction do
+        lock_subscriptions!
+        yield
+      end
+    end
+
+    def lock_subscriptions!
+      subscription_ids = subscriptions.map(&:id)
+
+      if subscription_ids.empty?
+        return
+      end
+
+      locked_subscriptions = Subscription
+        .where(id: subscription_ids)
+        .order(:id)
+        .lock
+        .index_by(&:id)
+
+      self.subscriptions = subscriptions.map { |subscription| locked_subscriptions.fetch(subscription.id) }
+    end
+
+    def activation_billing?
+      skip_charges && ACTIVATION_BILLING_REASONS.include?(invoicing_reason.to_sym)
+    end
+
+    def stale_activation_billing?
+      activation_billing? && subscriptions.none? { |subscription| subscription.active? || subscription.gated? }
+    end
 
     def active_subscriptions
       @active_subscriptions ||= subscriptions.select(&:active?)
