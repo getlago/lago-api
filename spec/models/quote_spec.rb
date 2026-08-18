@@ -33,6 +33,10 @@ RSpec.describe Quote do
     end
   end
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   describe "validations" do
     describe "subscription_id" do
       it "requires subscription_id when order_type is subscription_amendment" do

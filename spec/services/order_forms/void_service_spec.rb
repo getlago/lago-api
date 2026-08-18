@@ -96,6 +96,18 @@ RSpec.describe OrderForms::VoidService do
             .to have_enqueued_job_after_commit(SendWebhookJob)
             .with("quote.voided", quote_version)
         end
+
+        it "produces an order_form.voided activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.voided").after_commit.with(order_form)
+        end
+
+        it "produces a cascaded quote.voided activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
+        end
       end
     end
   end

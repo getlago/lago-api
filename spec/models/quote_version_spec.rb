@@ -89,4 +89,13 @@ RSpec.describe QuoteVersion do
       expect(quote_version.version).to eq(42)
     end
   end
+
+  describe "#customer" do
+    it "delegates to the quote" do
+      quote = create(:quote)
+      quote_version = create(:quote_version, quote:, organization: quote.organization)
+
+      expect(quote_version.customer).to eq(quote.customer)
+    end
+  end
 end

@@ -39,6 +39,8 @@ module OrderForms
           order_form.save!
 
           SendWebhookJob.perform_after_commit("order_form.signed", order_form)
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.signed")
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.file_uploaded") if attachment
 
           order = Order.create!(
             organization: order_form.organization,
@@ -49,6 +51,7 @@ module OrderForms
           )
 
           SendWebhookJob.perform_after_commit("order.created", order)
+          Utils::ActivityLog.produce_after_commit(order, "order.created")
 
           result.order = order
           result.order_form = order_form

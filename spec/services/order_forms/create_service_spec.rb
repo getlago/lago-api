@@ -33,6 +33,12 @@ RSpec.describe OrderForms::CreateService do
           .to have_enqueued_job_after_commit(SendWebhookJob)
           .with("order_form.created", OrderForm)
       end
+
+      it "produces an order_form.created activity log" do
+        result = create_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order_form.created").after_commit.with(result.order_form)
+      end
     end
 
     context "when an expires_at in the future is provided", :premium do

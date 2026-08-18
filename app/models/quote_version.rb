@@ -51,6 +51,8 @@ class QuoteVersion < ApplicationRecord
     lock_key: ->(quote_version) { quote_version.quote_id }
   )
 
+  delegate :customer, to: :quote
+
   def version = sequential_id
 end
 

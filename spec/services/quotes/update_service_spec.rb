@@ -24,6 +24,24 @@ RSpec.describe Quotes::UpdateService do
       expect(result.quote.owner_ids).to eq([owner.id])
     end
 
+    # Called through the class so the request goes through the activity log middleware, which an
+    # instance #call bypasses.
+    it "produces a quote.updated activity log", :premium do
+      described_class.call(quote:, params: update_params)
+
+      expect(Utils::ActivityLog).to have_produced("quote.updated").after_commit.with(quote)
+    end
+
+    context "when owners are not part of the params", :premium do
+      let(:update_params) { {} }
+
+      it "does not produce an activity log" do
+        described_class.call(quote:, params: update_params)
+
+        expect(Utils::ActivityLog).not_to have_produced("quote.updated")
+      end
+    end
+
     context "when owners include invalid user ids", :premium do
       let(:update_params) { {owners: ["invalid_user_id"]} }
 

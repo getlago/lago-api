@@ -32,6 +32,7 @@ module QuoteVersions
           )
 
           SendWebhookJob.perform_after_commit("quote.voided", quote_version)
+          Utils::ActivityLog.produce_after_commit(quote_version, "quote.voided")
 
           result.quote_version = quote_version
         end

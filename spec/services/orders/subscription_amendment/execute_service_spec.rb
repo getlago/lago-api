@@ -541,6 +541,12 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
         expect(order.execution_record["subscription_ids"]).to eq([])
         expect(order.execution_record["terminated_subscription_ids"]).to eq([])
       end
+
+      it "produces an order.executed activity log" do
+        execute_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order.executed").after_commit.with(order)
+      end
     end
   end
 end

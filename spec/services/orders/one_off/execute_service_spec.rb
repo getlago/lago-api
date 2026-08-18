@@ -71,6 +71,12 @@ RSpec.describe Orders::OneOff::ExecuteService do
           .with("order.executed", order)
       end
 
+      it "produces an order.executed activity log" do
+        execute_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order.executed").after_commit.with(order)
+      end
+
       it "bills the payload values" do
         execute_service.call
 
@@ -259,6 +265,12 @@ RSpec.describe Orders::OneOff::ExecuteService do
         expect do
           ApplicationRecord.transaction { execute_service.call }
         end.not_to have_enqueued_job(SendWebhookJob)
+      end
+
+      it "does not produce an activity log" do
+        execute_service.call
+
+        expect(Utils::ActivityLog).not_to have_produced("order.executed")
       end
     end
 

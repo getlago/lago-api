@@ -33,6 +33,7 @@ module QuoteVersions
           )
 
           SendWebhookJob.perform_after_commit("quote.approved", quote_version)
+          Utils::ActivityLog.produce_after_commit(quote_version, "quote.approved")
 
           result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
           result.quote_version = quote_version

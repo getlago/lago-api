@@ -52,6 +52,18 @@ RSpec.describe QuoteVersions::ApproveService do
           .with("order_form.created", OrderForm)
       end
 
+      it "produces a quote.approved activity log" do
+        approve_service.call
+
+        expect(Utils::ActivityLog).to have_produced("quote.approved").after_commit.with(quote_version)
+      end
+
+      it "produces an order_form.created activity log" do
+        result = approve_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order_form.created").after_commit.with(result.order_form)
+      end
+
       it "persists the raw computed mention variables snapshot" do
         expect(result).to be_success
         expect(result.quote_version.reload.mention_variables).to include(

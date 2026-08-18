@@ -83,6 +83,12 @@ RSpec.describe OrderForms::ExpireService do
             ApplicationRecord.transaction { service.call }
           end.not_to have_enqueued_job(SendWebhookJob)
         end
+
+        it "does not produce an activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).not_to have_produced("order_form.expired")
+        end
       end
 
       context "when order_form is already voided" do
@@ -136,6 +142,18 @@ RSpec.describe OrderForms::ExpireService do
           expect { service.call }
             .to have_enqueued_job_after_commit(SendWebhookJob)
             .with("quote.voided", quote_version)
+        end
+
+        it "produces an order_form.expired activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.expired").after_commit.with(order_form)
+        end
+
+        it "produces a cascaded quote.voided activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
         end
       end
     end

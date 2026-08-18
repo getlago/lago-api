@@ -608,6 +608,12 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(order.execution_record["subscription_ids"]).to eq([])
         expect(order.execution_record["errors"]).to eq([])
       end
+
+      it "produces an order.executed activity log" do
+        execute_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order.executed").after_commit.with(order)
+      end
     end
 
     context "when the order is already executed" do
