@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::PercentageService do
   subject(:apply_percentage_service) do
     described_class.apply(
-      charge:,
+      chargeable: ChargeModels::ChargeableData.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
