@@ -117,4 +117,42 @@ describe "Anniversary current usage period boundaries Scenarios" do
       expect(period_on(DateTime.new(2021, 4, 30), subscription:).first).to eq(Time.utc(2021, 1, 31))
     end
   end
+
+  context "with a quarterly subscription starting on the end of a 30-day month" do
+    let(:subscription) { subscribe_on(DateTime.new(2021, 4, 30), interval: :quarterly) }
+
+    # May is not a billing month, but its own month end used to be taken for an anniversary, which
+    # moved the period start to 30 May.
+    it "ignores month ends outside a billing month" do
+      expect(period_on(DateTime.new(2021, 5, 31), subscription:).first).to eq(Time.utc(2021, 4, 30))
+    end
+
+    # July has 31 days, so the anniversary stays on the subscription day instead of following the
+    # month end.
+    it "keeps the anniversary on the subscription day in a longer month" do
+      expect(period_on(DateTime.new(2021, 8, 15), subscription:).first).to eq(Time.utc(2021, 7, 30))
+    end
+
+    it "returns periods that meet without overlapping" do
+      closing = period_on(DateTime.new(2021, 7, 29), subscription:)
+      opening = period_on(DateTime.new(2021, 7, 30), subscription:)
+
+      expect(closing.last).to eq(Time.utc(2021, 7, 29, 23, 59, 59))
+      expect(opening.first).to eq(Time.utc(2021, 7, 30))
+    end
+  end
+
+  context "with a semiannual subscription starting on the end of a 30-day month" do
+    let(:subscription) { subscribe_on(DateTime.new(2021, 4, 30), interval: :semiannual) }
+
+    # June is neither a billing month nor the anniversary, yet its month end used to open a period.
+    it "ignores month ends outside a billing month" do
+      expect(period_on(DateTime.new(2021, 6, 30), subscription:).first).to eq(Time.utc(2021, 4, 30))
+    end
+
+    # October has 31 days, so the anniversary stays on the subscription day.
+    it "keeps the anniversary on the subscription day in a longer month" do
+      expect(period_on(DateTime.new(2021, 11, 15), subscription:).first).to eq(Time.utc(2021, 10, 30))
+    end
+  end
 end
