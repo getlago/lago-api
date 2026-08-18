@@ -40,7 +40,7 @@ gem "rack-cors"
 # Database
 gem "after_commit_everywhere"
 gem "clickhouse-activerecord", "~> 1.6.1"
-gem "discard", "~> 1.2"
+gem "discard", "~> 2.0"
 gem "kaminari-activerecord"
 gem "meilisearch-rails"
 gem "paper_trail"
