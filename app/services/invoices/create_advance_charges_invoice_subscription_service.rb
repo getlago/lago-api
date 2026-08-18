@@ -17,7 +17,6 @@ module Invoices
     # we apply the `charges_(from|to)_date for both charges and subscriptions period
     # See https://github.com/getlago/lago-api/pull/3327 for details
     def call
-      latest_subscription = all_subscriptions.max_by(&:started_at)
       boundaries = calculate_boundaries(latest_subscription)
 
       subscriptions_with_fees.each do |subscription|
@@ -41,6 +40,19 @@ module Invoices
     private
 
     attr_reader :invoice, :timestamp, :subscriptions_with_fees, :all_subscriptions
+
+    # NOTE: A subscription already terminated at `timestamp` must not drive the boundaries: the re-expanded
+    #       set (see Invoices::AdvanceChargesService#subscriptions) can contain a terminated subscription
+    #       with a later `started_at` than the running one that replaced it, after a backdated
+    #       re-subscription. Its charges period ended on its termination date, so it would stamp the group
+    #       with a period preceding the one being billed.
+    #       We only fall back to it for an actual termination flow, where every subscription is terminated
+    #       and `timestamp` is the termination date.
+    def latest_subscription
+      running_subscriptions = all_subscriptions.reject { |subscription| subscription.terminated_at?(timestamp) }
+
+      (running_subscriptions.presence || all_subscriptions).max_by(&:started_at)
+    end
 
     def calculate_boundaries(subscription)
       date_service = Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: false)
