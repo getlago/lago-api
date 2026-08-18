@@ -191,16 +191,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         )
       end
 
-      before do
-        allow(V2::Subscriptions::BillService).to receive(:call).and_call_original
-        create(
-          :rate_card_rate,
-          organization:,
-          rate_card:,
-          code: "rate_r1_v2",
-          effective_from: Time.zone.parse("2026-12-01"),
-          rate_properties: {"amount" => "40.00"}
-        )
+      let!(:subscription_rate_card) do
         create(
           :subscription_rate_card,
           organization:,
@@ -211,6 +202,18 @@ RSpec.describe Api::V2::SubscriptionsController do
           billing_anchor_date: Date.parse("2026-08-10"),
           started_at: Time.zone.parse("2026-08-10"),
           next_billing_at: Time.zone.parse("2026-08-10")
+        )
+      end
+
+      before do
+        allow(V2::Subscriptions::BillService).to receive(:call).and_call_original
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          code: "rate_r1_v2",
+          effective_from: Time.zone.parse("2026-12-01"),
+          rate_properties: {"amount" => "40.00"}
         )
       end
 
@@ -226,11 +229,17 @@ RSpec.describe Api::V2::SubscriptionsController do
         expect(fee.rate_card_rate).to eq(rate)
         expect(fee.amount_cents).to eq(15_000)
         expect(json[:invoices].sole[:fees].sole[:lago_id]).to eq(fee.id)
+        expect(subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
       end
 
       it "returns a validation error when billing the same period twice" do
         subject
         expect(response).to have_http_status(:success)
+
+        # Put back the clock to the already-billed period, as if the item were due
+        # for it again (e.g. a clock re-run), so the second attempt collides with
+        # the billing cycle created above instead of scheduling the next period.
+        subscription_rate_card.reload.update!(next_billing_at: Time.zone.parse("2026-08-10"))
 
         expect do
           post_with_token(
@@ -339,7 +348,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             cycle_index: 1,
             period_from: Time.zone.parse("2026-08-10").iso8601,
             period_to: Time.zone.parse("2026-09-09 23:59:59").iso8601,
-            billing_at: Time.zone.parse("2026-08-10").iso8601,
+            billing_at: Time.zone.parse("2026-09-15").iso8601,
             rate_phase_code: intro_phase.code,
             rate_override: {
               lago_id: rate_override.id,
@@ -359,7 +368,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             cycle_index: 2,
             period_from: Time.zone.parse("2026-09-10").iso8601,
             period_to: Time.zone.parse("2026-10-09 23:59:59").iso8601,
-            billing_at: Time.zone.parse("2026-09-10").iso8601,
+            billing_at: Time.zone.parse("2026-09-15").iso8601,
             rate_phase_code: standard_phase.code,
             rate_override: nil,
             rate: {
