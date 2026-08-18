@@ -255,6 +255,14 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    context "when the ongoing balance write changed nothing" do
+      subject(:top_up_service) { described_class.new(wallet:, state_changed: false) }
+
+      it "does not call wallet transaction create job" do
+        expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+    end
+
     context "with pending transactions" do
       it "does not call wallet transaction create job" do
         create(:wallet_transaction, wallet:, amount: 1.0, credit_amount: 1.0, status: "pending")

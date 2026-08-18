@@ -7,12 +7,14 @@ module Wallets
     BURST_TOP_UPS = 3
     BURST_WINDOW = 10.minutes
 
-    def initialize(wallet:)
+    def initialize(wallet:, state_changed: true)
       @wallet = wallet
+      @state_changed = state_changed
       super
     end
 
     def call
+      return result unless state_changed
       return result if rule.nil?
       return result if wallet.credits_ongoing_balance > rule.threshold_credits
       return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
@@ -47,7 +49,7 @@ module Wallets
 
     private
 
-    attr_reader :wallet
+    attr_reader :wallet, :state_changed
 
     def rule
       @rule ||= wallet.recurring_transaction_rules.active.where(trigger: :threshold).first
