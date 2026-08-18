@@ -311,6 +311,14 @@ RSpec.describe RecurringTransactionRule do
           expect(subject).to eq 450.0
         end
 
+        context "when the gap is exactly one top-up" do
+          let(:ongoing_balance) { -50.0 }
+
+          it "tops up past the threshold instead of landing on it" do
+            expect(subject).to eq 100.0
+          end
+        end
+
         context "when the gap divides exactly by the top-up amount" do
           let(:ongoing_balance) { -100.0 }
 

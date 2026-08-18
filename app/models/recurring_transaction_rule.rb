@@ -129,7 +129,7 @@ class RecurringTransactionRule < ApplicationRecord
     return paid_credits if paid_credits.zero? || threshold_credits.nil?
 
     gap = threshold_credits - ongoing_balance - granted_credits - pending_credits
-    return paid_credits if gap <= paid_credits
+    return paid_credits if gap < paid_credits
 
     apply_max_top_up_limits(credit_amount: paid_credits * ((gap / paid_credits).floor + 1))
   end
