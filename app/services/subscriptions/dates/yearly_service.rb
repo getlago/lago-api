@@ -45,6 +45,16 @@ module Subscriptions
       end
 
       def compute_base_date
+        # NOTE: if subscription anniversary is on last day of month and current month days count
+        #       is less than month anniversary day count, we need to use the last day of the previous month
+        if subscription.anniversary? && last_day_of_month?(billing_date) && (billing_date.day < subscription_at.day)
+          if (billing_date - 1.year).end_of_month.day >= subscription_at.day
+            return (billing_date - 1.year).end_of_month.change(day: subscription_at.day)
+          end
+
+          return (billing_date - 1.year).end_of_month
+        end
+
         billing_date - 1.year
       end
 
@@ -147,11 +157,7 @@ module Subscriptions
       def compute_duration(from_date:)
         return Time.days_in_year(from_date.year) if calendar?
 
-        year = from_date.year
-        # NOTE: if after February we must check if next year is a leap year
-        year += 1 if from_date.month > 2
-
-        Time.days_in_year(year)
+        (compute_to_date(from_date).to_date + 1.day - from_date.to_date).to_i
       end
 
       def compute_charges_duration(from_date:)

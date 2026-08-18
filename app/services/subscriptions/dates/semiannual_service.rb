@@ -153,24 +153,12 @@ module Subscriptions
         )
       end
 
+      # NOTE: the period is resolved from its own anniversary, not from `billing_date.month`, which is
+      #       not necessarily a billing month and would advance the period one month at a time.
       def compute_next_end_of_period
         return billing_date.end_of_half_year if calendar?
 
-        year = billing_date.year
-        month = billing_date.month
-        day = subscription_at.day
-
-        # NOTE: we need the last day of the period, and not the first of the next one
-        result_date = build_date(year, month, day) - 1.day
-        return result_date if result_date >= billing_date
-
-        month += 6
-        if month > 12
-          month = (month % 12).zero? ? 12 : (month % 12)
-          year += 1
-        end
-
-        build_date(year, month, day) - 1.day
+        compute_to_date(previous_anniversary_day(billing_date))
       end
 
       def compute_previous_beginning_of_period(date)

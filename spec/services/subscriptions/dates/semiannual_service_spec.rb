@@ -983,25 +983,25 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
       let(:billing_at) { Time.zone.parse("07 May 2022") }
 
       it "returns the end of the billing month" do
-        expect(result).to eq("2022-11-01 23:59:59 UTC")
+        expect(result).to eq("2022-08-01 23:59:59 UTC")
       end
 
       context "with customer timezone" do
         let(:timezone) { "America/New_York" }
 
         it "takes customer timezone into account" do
-          expect(result).to eq("2022-11-01 03:59:59 UTC")
+          expect(result).to eq("2022-08-01 03:59:59 UTC")
         end
       end
 
       context "when end of billing month is in next year" do
         let(:billing_at) { Time.zone.parse("02 Nov 2021") }
 
-        it { expect(result).to eq("2022-05-01 23:59:59 UTC") }
+        it { expect(result).to eq("2022-02-01 23:59:59 UTC") }
       end
 
       context "when date is the end of the period" do
-        let(:billing_at) { Time.zone.parse("01 May 2022") }
+        let(:billing_at) { Time.zone.parse("01 Feb 2022") }
 
         it "returns the date" do
           expect(result).to eq(billing_at.utc.end_of_day.to_s)

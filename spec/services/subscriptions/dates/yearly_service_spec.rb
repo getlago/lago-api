@@ -115,6 +115,18 @@ RSpec.describe Subscriptions::Dates::YearlyService do
         end
       end
 
+      context "when subscription date on 29/02 of a leap year" do
+        let(:subscription_at) { Time.zone.parse("29 Feb 2020") }
+        let(:billing_at) { Time.zone.parse("28 Feb 2025") }
+
+        # The period being billed is the one that opened on the leap day. Resolving the base date from
+        # `billing_date - 1.year` alone lands on 28 Feb 2024, one day before that anniversary, and
+        # would walk the period back a further year.
+        it "returns the leap day of the previous period" do
+          expect(result).to eq("2024-02-29 00:00:00 UTC")
+        end
+      end
+
       context "when subscription is just terminated" do
         before { subscription.mark_as_terminated!("1 Feb 2022") }
 
@@ -226,6 +238,14 @@ RSpec.describe Subscriptions::Dates::YearlyService do
         # ends used to land on the 28th, putting that day in two periods.
         it "returns the day before the anniversary" do
           expect(result).to eq("2022-02-27 23:59:59 UTC")
+        end
+
+        context "when billing on the clamped anniversary of a common year" do
+          let(:billing_at) { Time.zone.parse("28 Feb 2025") }
+
+          it "closes the period that opened on the leap day" do
+            expect(result).to eq("2025-02-27 23:59:59 UTC")
+          end
         end
       end
 
@@ -1063,6 +1083,17 @@ RSpec.describe Subscriptions::Dates::YearlyService do
 
         it "returns the price of single day" do
           expect(result).to eq(plan.amount_cents.fdiv(366))
+        end
+      end
+
+      context "when subscription date on 29/02 of a leap year" do
+        let(:subscription_at) { Time.zone.parse("29 Feb 2020") }
+        let(:billing_at) { Time.zone.parse("28 Feb 2025") }
+
+        # The period runs from 29 Feb 2024 to 27 Feb 2025, which is 365 days and not the 366 days of
+        # the leap year it starts in.
+        it "returns the price of single day of the computed period" do
+          expect(result).to eq(plan.amount_cents.fdiv(365))
         end
       end
     end
