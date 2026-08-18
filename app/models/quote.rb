@@ -27,6 +27,11 @@ class Quote < ApplicationRecord
   has_one :current_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
   has_many :order_forms, through: :versions
 
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
+
   has_many_attached :images
 
   enum :order_type, ORDER_TYPES,

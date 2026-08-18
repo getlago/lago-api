@@ -12,6 +12,7 @@ RSpec.describe Types::Orders::ExecutionRecord do
     expect(subject).to have_field(:invoice_id).of_type("ID")
     expect(subject).to have_field(:applied_coupon_ids).of_type("[ID!]!")
     expect(subject).to have_field(:subscription_ids).of_type("[ID!]!")
+    expect(subject).to have_field(:terminated_subscription_ids).of_type("[ID!]!")
     expect(subject).to have_field(:wallet_ids).of_type("[ID!]!")
   end
 end

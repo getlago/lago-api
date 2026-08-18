@@ -32,7 +32,7 @@ gem "json_schemer"
 
 # Security
 gem "bcrypt"
-gem "googleauth", "~> 1.16.2"
+gem "googleauth", "~> 1.17.0"
 gem "jwt"
 gem "oauth2"
 gem "rack-cors"
@@ -40,7 +40,7 @@ gem "rack-cors"
 # Database
 gem "after_commit_everywhere"
 gem "clickhouse-activerecord", "~> 1.6.1"
-gem "discard", "~> 1.2"
+gem "discard", "~> 2.0"
 gem "kaminari-activerecord"
 gem "meilisearch-rails"
 gem "paper_trail"
@@ -153,7 +153,7 @@ group :development, :test do
   gem "rubocop-thread_safety", require: false
 
   gem "vernier", "~> 1.10", require: false
-  gem "super_diff", "~> 0.18.0"
+  gem "super_diff", "~> 0.19.0"
 end
 
 group :test do

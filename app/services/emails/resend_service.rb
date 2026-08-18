@@ -116,7 +116,7 @@ module Emails
     end
 
     def valid_email?(email)
-      email.match?(URI::MailTo::EMAIL_REGEXP)
+      email.match?(Regex::EMAIL)
     end
   end
 end

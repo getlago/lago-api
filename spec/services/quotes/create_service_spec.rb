@@ -54,6 +54,22 @@ RSpec.describe Quotes::CreateService do
           expect(result.quote.current_version.end_date).to eq(end_date)
         end
       end
+
+      it "enqueues a quote.created webhook carrying the initial version" do
+        expect { create_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.created", QuoteVersion)
+      end
+
+      it "produces a quote.created activity log for the quote" do
+        expect(Utils::ActivityLog).to have_produced("quote.created").after_commit.with(result.quote)
+      end
+
+      it "does not produce a quote.version_created activity log for the initial version" do
+        result
+
+        expect(Utils::ActivityLog).not_to have_produced("quote.version_created")
+      end
     end
 
     context "when the customer has no currency", :premium do

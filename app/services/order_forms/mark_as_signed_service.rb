@@ -38,7 +38,11 @@ module OrderForms
           order_form.signed_document.attach(attachment) if attachment
           order_form.save!
 
-          result.order = Order.create!(
+          SendWebhookJob.perform_after_commit("order_form.signed", order_form)
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.signed")
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.file_uploaded") if attachment
+
+          order = Order.create!(
             organization: order_form.organization,
             customer: order_form.customer,
             order_form:,
@@ -46,6 +50,10 @@ module OrderForms
             execute_at:
           )
 
+          SendWebhookJob.perform_after_commit("order.created", order)
+          Utils::ActivityLog.produce_after_commit(order, "order.created")
+
+          result.order = order
           result.order_form = order_form
         end
       end
@@ -66,6 +74,9 @@ module OrderForms
       return if result.failure?
 
       validate_execute_at(execute_at:)
+      return if result.failure?
+
+      validate_deal_expiration(execute_at:, quote_version: order_form.quote_version)
     end
 
     def signed_document_attachment

@@ -15,6 +15,10 @@ module Utils
       customer: %i[taxes integration_customers applicable_invoice_custom_sections],
       invoice: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections],
       plan: %i[charges usage_thresholds taxes minimum_commitment],
+      quote: %i[owners],
+      # content is an unbounded rich-text document and produce serializes the record three times
+      # per log, so only the billing state is auditable here.
+      quote_version: %i[billing_items],
       subscription: %i[plan],
       wallet: %i[recurring_transaction_rules]
     }.freeze
@@ -176,6 +180,10 @@ module Utils
         object.coupon
       when "WalletTransaction"
         object.wallet
+      when "QuoteVersion"
+        # The quote lifecycle events are named quote.*: anchor them on the quote so a single
+        # resource carries the whole timeline, while activity_object keeps the version payload.
+        object.quote
       else
         object
       end

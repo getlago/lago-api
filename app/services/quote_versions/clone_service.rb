@@ -33,10 +33,10 @@ module QuoteVersions
 
           void_active_version!
           result.quote_version = create_next_version(quote_version:)
+
+          Utils::ActivityLog.produce_after_commit(result.quote_version, "quote.version_created")
         end
       end
-
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.cloned", result.quote_version)
 
       result
     rescue ActiveRecord::RecordInvalid => e

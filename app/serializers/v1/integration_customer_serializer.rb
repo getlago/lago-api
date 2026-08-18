@@ -21,6 +21,8 @@ module V1
         "netsuite"
       when "IntegrationCustomers::AnrokCustomer"
         "anrok"
+      when "IntegrationCustomers::AvalaraCustomer"
+        "avalara"
       when "IntegrationCustomers::XeroCustomer"
         "xero"
       when "IntegrationCustomers::HubspotCustomer"

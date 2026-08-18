@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ::V1::OrderSerializer do
-  subject(:serializer) { described_class.new(order, root_name: "order") }
+  subject(:serializer) { described_class.new(order, root_name: "order", includes:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -11,6 +11,7 @@ RSpec.describe ::V1::OrderSerializer do
   let(:quote_version) { create(:quote_version, organization:, quote:, currency: "EUR") }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
   let(:order) { create(:order, organization:, customer:, order_form:) }
+  let(:includes) { %i[billing_snapshot] }
 
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
@@ -33,6 +34,16 @@ RSpec.describe ::V1::OrderSerializer do
     )
   end
 
+  context "when billing_snapshot is not included" do
+    let(:includes) { [] }
+
+    it "omits the billing snapshot" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["order"]).not_to have_key("billing_snapshot")
+    end
+  end
+
   context "when the order failed" do
     let(:order) { create(:order, :failed, organization:, customer:, order_form:) }
 
@@ -47,6 +58,7 @@ RSpec.describe ::V1::OrderSerializer do
         "execution_mode" => "execute_in_lago",
         "invoice_id" => nil,
         "subscription_ids" => [],
+        "terminated_subscription_ids" => [],
         "applied_coupon_ids" => [],
         "wallet_ids" => [],
         "errors" => ["currencies_does_not_match"]

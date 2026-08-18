@@ -32,12 +32,16 @@ module Quotes
           subscription:,
           **params.slice(:order_type)
         )
-        initialize_version!(quote:)
+        quote_version = initialize_version!(quote:)
         add_owners!(quote:)
+
+        SendWebhookJob.perform_after_commit("quote.created", quote_version)
+        # The webhook needs the version for its payload; the activity log records the quote, whose
+        # number, order type and owners are what a reader looks for on a creation entry.
+        Utils::ActivityLog.produce_after_commit(quote, "quote.created")
+
         result.quote = quote
       end
-
-      # TODO: SendWebhookJob.perform_after_commit("quote.created", quote)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -72,7 +76,7 @@ module Quotes
           :start_date,
           :end_date
         ).merge(currency: deal_currency)
-      )
+      ).quote_version
     end
 
     # The deal currency follows the billing object when there is one, and only then the customer's

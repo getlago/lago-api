@@ -31,11 +31,12 @@ module QuoteVersions
             approved_at: nil
           )
 
+          SendWebhookJob.perform_after_commit("quote.voided", quote_version)
+          Utils::ActivityLog.produce_after_commit(quote_version, "quote.voided")
+
           result.quote_version = quote_version
         end
       end
-
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.voided", quote_version)
 
       result
     rescue ActiveRecord::RecordInvalid => e

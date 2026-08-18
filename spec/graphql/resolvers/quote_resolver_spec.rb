@@ -93,6 +93,74 @@ RSpec.describe Resolvers::QuoteResolver do
     end
   end
 
+  context "when the quote has an order form and an order" do
+    let(:quote) { create(:quote, organization:, customer:) }
+    let(:quote_version) { create(:quote_version, :approved, organization:, quote:) }
+    let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
+    let(:order) { create(:order, organization:, customer:, order_form:) }
+
+    let(:query) do
+      <<~GQL
+        query($quoteId: ID!) {
+          quote(id: $quoteId) {
+            id
+            orderForms { id order { id } }
+            versions { id orderForm { id } }
+          }
+        }
+      GQL
+    end
+
+    before { order }
+
+    it "exposes the order form and the order it produced" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {quoteId: quote.id}
+      )
+
+      response = result.dig("data", "quote")
+
+      expect(response["orderForms"]).to eq([{"id" => order_form.id, "order" => {"id" => order.id}}])
+      expect(response["versions"]).to eq([{"id" => quote_version.id, "orderForm" => {"id" => order_form.id}}])
+    end
+  end
+
+  context "when a version has no order form" do
+    let(:quote) { create(:quote, :with_version, organization:, customer:) }
+
+    let(:query) do
+      <<~GQL
+        query($quoteId: ID!) {
+          quote(id: $quoteId) {
+            orderForms { id }
+            versions { orderForm { id } }
+          }
+        }
+      GQL
+    end
+
+    before { quote }
+
+    it "returns an empty list and a null order form" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {quoteId: quote.id}
+      )
+
+      response = result.dig("data", "quote")
+
+      expect(response["orderForms"]).to eq([])
+      expect(response["versions"]).to eq([{"orderForm" => nil}])
+    end
+  end
+
   context "when the quote has images" do
     let(:quote) { create(:quote, organization:, customer:) }
     let(:query) do
@@ -161,7 +229,8 @@ RSpec.describe Resolvers::QuoteResolver do
             organization { id }
             subscription { id }
             owners { id }
-            versions { id quote { id } organization { id } }
+            orderForms { id order { id } }
+            versions { id quote { id } organization { id } orderForm { id } }
             currentVersion { id quote { id } organization { id } }
           }
         }
@@ -172,7 +241,16 @@ RSpec.describe Resolvers::QuoteResolver do
       quote
       QuoteOwner.create!(organization:, quote:, user: membership.user)
       QuoteOwner.create!(organization:, quote:, user: other_user)
-      create(:quote_version, :voided, organization:, quote:)
+
+      # Two voided versions, each carrying an order form, so that `orderForm` and `order` are
+      # resolved for several parents and an unbatched association would surface as an N+1.
+      first_voided = create(:quote_version, :voided, organization:, quote:)
+      second_voided = create(:quote_version, :voided, organization:, quote:)
+      create(:order, organization:, customer:,
+        order_form: create(:order_form, :signed, organization:, customer:, quote_version: first_voided))
+      create(:order, organization:, customer:,
+        order_form: create(:order_form, :signed, organization:, customer:, quote_version: second_voided))
+
       create(:quote_version, organization:, quote:)
     end
 

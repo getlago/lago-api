@@ -109,6 +109,20 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(overridden_plan.charges.sole.properties["amount"]).to eq("30")
       end
 
+      # The transports that trigger an execution set different sources, and the billing services
+      # resolve their input by code under api and by id otherwise. The snapshot must replay the
+      # same either way.
+      context "when triggered under the api source" do
+        before { CurrentContext.source = "api" }
+
+        it "creates the same subscription" do
+          expect { execute_service.call }.to change(Subscription, :count).by(1)
+
+          expect(customer.subscriptions.sole.external_id).to eq("sub_ext_42")
+          expect(order.reload.executed?).to eq(true)
+        end
+      end
+
       context "without overrides" do
         let(:plan_overrides) { nil }
 
@@ -523,6 +537,18 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           expect(order.execution_record["wallet_ids"]).to eq([wallet.id])
         end
 
+        context "when triggered under the api source" do
+          before { CurrentContext.source = "api" }
+
+          it "creates the same wallet and limitation" do
+            expect { execute_service.call }.to change(Wallet, :count).by(1)
+
+            wallet = customer.wallets.sole
+            expect(wallet.allowed_fee_types).to eq(["charge"])
+            expect(wallet.billable_metrics).to eq([billable_metric])
+          end
+        end
+
         context "with a recurring rule" do
           let(:wallet_credit_payload) do
             super().merge(
@@ -607,6 +633,12 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(order.execution_record["execution_mode"]).to eq("order_only")
         expect(order.execution_record["subscription_ids"]).to eq([])
         expect(order.execution_record["errors"]).to eq([])
+      end
+
+      it "produces an order.executed activity log" do
+        execute_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order.executed").after_commit.with(order)
       end
     end
 

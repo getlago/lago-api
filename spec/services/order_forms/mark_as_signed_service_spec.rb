@@ -126,6 +126,36 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.order.order_form).to eq(order_form)
           expect(result.order.execution_mode).to be_nil
         end
+
+        it "enqueues an order_form.signed webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order_form.signed", order_form)
+        end
+
+        it "enqueues an order.created webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order.created", Order)
+        end
+
+        it "produces an order_form.signed activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.signed").after_commit.with(order_form)
+        end
+
+        it "produces an order.created activity log" do
+          result = service.call
+
+          expect(Utils::ActivityLog).to have_produced("order.created").after_commit.with(result.order)
+        end
+
+        it "does not produce an order_form.file_uploaded activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).not_to have_produced("order_form.file_uploaded")
+        end
       end
 
       context "when a signed_document is provided" do
@@ -140,6 +170,12 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.order_form).to be_signed
           expect(result.order_form.signed_document).to be_attached
           expect(result.order_form.signed_document.blob.content_type).to eq("application/pdf")
+        end
+
+        it "produces an order_form.file_uploaded activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.file_uploaded").after_commit.with(order_form)
         end
       end
 
@@ -320,6 +356,47 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:execute_at]).to eq(["invalid_date"])
+        end
+      end
+
+      context "when execute_at outlives the wallet the deal funds" do
+        let(:order_form) { create(:order_form, customer:, organization:, quote_version:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            end_date: 1.year.from_now.to_date,
+            billing_items: {
+              "walletCredits" => [{"payload" => {"expirationAt" => 1.month.from_now.iso8601}}]
+            }
+          )
+        end
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { 2.months.from_now.iso8601 }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:execute_at]).to eq(["after_deal_expiration"])
+        end
+      end
+
+      context "when execute_at falls inside the deal" do
+        let(:order_form) { create(:order_form, customer:, organization:, quote_version:) }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, end_date: 1.year.from_now.to_date)
+        end
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { 1.month.from_now.iso8601 }
+
+        it "signs the order form" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.order.execute_at).to be_within(1.second).of(Time.zone.parse(execute_at))
         end
       end
     end

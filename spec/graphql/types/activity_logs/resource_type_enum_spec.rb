@@ -22,6 +22,9 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         product
         product_filter
         rate_card
+        quote
+        order_form
+        order
       ]
     )
   end

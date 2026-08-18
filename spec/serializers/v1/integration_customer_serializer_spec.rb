@@ -38,6 +38,14 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
       end
     end
 
+    context "when customer is an avalara customer" do
+      let(:integration_customer) { create(:avalara_customer) }
+
+      it "returns avalara" do
+        expect(subject).to eq("avalara")
+      end
+    end
+
     context "when customer is a xero customer" do
       let(:integration_customer) { create(:xero_customer) }
 

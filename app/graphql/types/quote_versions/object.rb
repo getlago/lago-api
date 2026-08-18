@@ -13,6 +13,7 @@ module Types
       field :end_date, GraphQL::Types::ISO8601Date, null: true
       field :id, ID, null: false
       field :mention_variables, GraphQL::Types::JSON, null: false
+      field :order_form, Types::OrderForms::Object, null: true
       field :organization, Types::Organizations::OrganizationType, null: false
       field :quote, Types::Quotes::Object, null: false
       field :start_date, GraphQL::Types::ISO8601Date, null: true
@@ -21,9 +22,8 @@ module Types
       field :version, Integer, null: false
       field :void_reason, Types::QuoteVersions::VoidReasonEnum, null: true
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
-      # TODO: field :order_form, Types::OrderForms::Object, null: true
 
-      dataload_association :organization, :quote
+      dataload_association :organization, :quote, :order_form
 
       # The persisted snapshot is a raw, locale-independent dict (or computed live while the
       # version is editable). It is localized on every read with the customer's current
