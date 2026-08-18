@@ -107,7 +107,7 @@ module Subscriptions
             Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
           end
 
-          SendWebhookJob.perform_after_commit("subscription.updated", subscription)
+          notify_updated
 
           if subscription.should_sync_hubspot_subscription?
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
@@ -175,6 +175,23 @@ module Subscriptions
           Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
         end
       end
+
+      # NOTE: Reaching this point means the subscription went from pending to active, so it emits
+      #       `subscription.started` like every other activation path, and `subscription.updated`
+      #       like every other edit going through this service.
+      notify_started
+      notify_updated
+    end
+
+    # Mirrors Subscriptions::ActivateService#notify_started, without the Hubspot sync.
+    def notify_started
+      SendWebhookJob.perform_after_commit("subscription.started", subscription)
+      Utils::ActivityLog.produce_after_commit(subscription, "subscription.started")
+    end
+
+    # The `subscription.updated` activity log is handled by the `activity_loggable` declaration.
+    def notify_updated
+      SendWebhookJob.perform_after_commit("subscription.updated", subscription)
     end
 
     def handle_plan_override

@@ -370,10 +370,52 @@ RSpec.describe Subscriptions::UpdateService do
     context "when subscription is starting in the future" do
       let(:subscription) { create(:subscription, :pending) }
 
-      it "does not produce activity log" do
+      it "does not produce the subscription.updated activity log" do
         update_service.call
 
-        expect(Utils::ActivityLog).not_to have_received(:produce)
+        expect(Utils::ActivityLog).not_to have_produced("subscription.updated").after_commit.with(subscription)
+      end
+
+      context "when subscription_at is moved to today" do
+        let(:subscription) { create(:subscription, :pending, subscription_at: 1.week.from_now) }
+        let(:params) { {subscription_at: Time.current.iso8601} }
+
+        it "activates the subscription" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+        end
+
+        it "sends the subscription.started webhook" do
+          expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.started", subscription)
+        end
+
+        it "sends the subscription.updated webhook" do
+          expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
+        end
+
+        it "produces the subscription.started activity log" do
+          update_service.call
+
+          expect(Utils::ActivityLog).to have_produced("subscription.started").after_commit.with(subscription)
+        end
+      end
+
+      context "when subscription_at is moved to another future date" do
+        let(:subscription) { create(:subscription, :pending, subscription_at: 1.week.from_now) }
+        let(:params) { {subscription_at: 2.weeks.from_now.iso8601} }
+
+        it "keeps the subscription pending" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_pending
+        end
+
+        it "does not send any webhook" do
+          expect { update_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
       end
 
       context "when subscription is pay_in_advance" do
