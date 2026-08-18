@@ -129,6 +129,18 @@ RSpec.describe Emails::ResendService do
         end
       end
 
+      context "when custom recipient has a unicode local-part" do
+        let(:status) { :finalized }
+        let(:to) { ["joão.silva@example.com"] }
+
+        it "sends the email successfully" do
+          expect do
+            result = service.call
+            expect(result).to be_success
+          end.to have_enqueued_mail(InvoiceMailer, :created)
+        end
+      end
+
       context "when customer has no email and no custom recipient" do
         let(:status) { :finalized }
 
