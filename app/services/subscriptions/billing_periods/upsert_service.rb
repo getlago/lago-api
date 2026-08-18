@@ -36,7 +36,10 @@ module Subscriptions
           discarded_periods.delete_all
 
           if periods.present?
-            SubscriptionBillingPeriod.upsert_all(
+            # Validations are not the guard here: the upsert has to be a single statement so a
+            # concurrent writer conflicts on the unique index rather than raising, and the table
+            # enforces the ordering, the non-null columns and the non-overlap itself.
+            SubscriptionBillingPeriod.upsert_all( # rubocop:disable Rails/SkipsModelValidations
               periods.map { |period| row_for(period) },
               unique_by: %i[scope_id period_from],
               # created_at is left out so a period that is merely refreshed keeps the one it was

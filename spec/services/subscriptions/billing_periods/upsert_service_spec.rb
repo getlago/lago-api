@@ -185,7 +185,9 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
   end
 
   context "when the subscription has no started_at" do
-    before { subscription.update_column(:started_at, nil) }
+    let(:subscription) do
+      create(:subscription, organization:, customer:, plan:, billing_time:, subscription_at:, started_at: nil, status: :active)
+    end
 
     it "does nothing" do
       expect { result }.not_to change(SubscriptionBillingPeriod, :count)

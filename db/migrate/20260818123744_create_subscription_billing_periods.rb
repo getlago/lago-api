@@ -20,6 +20,10 @@ class CreateSubscriptionBillingPeriods < ActiveRecord::Migration[8.0]
 
       t.timestamps
 
+      # The rows are written with upsert_all, which skips model validations, so the ordering the
+      # model validates is enforced here too.
+      t.check_constraint "period_to > period_from", name: "subscription_billing_periods_period_order"
+
       t.index %i[scope_id period_from], unique: true
       # Drives the rollover sweep, which is what keeps it an index scan rather than a walk over
       # every active subscription.
