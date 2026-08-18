@@ -46,11 +46,16 @@ module Charges
     end
 
     def charge_model
-      @charge_model ||= ChargeModels::Factory.in_advance_charge_model_class(chargeable: charge)
+      @charge_model ||= ChargeModels::Factory.in_advance_charge_model_class(
+        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(properties:)
+      )
     end
 
     def applied_charge_model
-      @applied_charge_model ||= charge_model.apply(charge:, aggregation_result:, properties:)
+      @applied_charge_model ||= charge_model.apply(
+        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(properties:),
+        aggregation_result:
+      )
     end
 
     # Compute aggregation and apply charge for all events including the current one
@@ -72,9 +77,10 @@ module Charges
       )
 
       @applied_charge_model_excluding_persisted_event ||= charge_model.apply(
-        charge:,
-        aggregation_result: result_without_event,
-        properties: (properties || {}).merge(exclude_event: true)
+        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(
+          properties: (properties || {}).merge(exclude_event: true)
+        ),
+        aggregation_result: result_without_event
       )
     end
 
@@ -97,9 +103,10 @@ module Charges
       )
 
       @applied_charge_model_including_non_persisted_event ||= charge_model.apply(
-        charge:,
-        aggregation_result: result_with_event,
-        properties: (properties || {}).merge(include_event_value: true)
+        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(
+          properties: (properties || {}).merge(include_event_value: true)
+        ),
+        aggregation_result: result_with_event
       )
     end
 

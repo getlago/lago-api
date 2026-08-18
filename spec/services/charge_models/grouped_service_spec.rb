@@ -6,9 +6,8 @@ RSpec.describe ChargeModels::GroupedService do
   subject(:apply_grouped_service) do
     described_class.apply(
       charge_model:,
-      charge:,
+      chargeable: ChargeModels::ChargeableData.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end

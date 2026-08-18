@@ -162,9 +162,14 @@ RSpec.describe Fees::ProjectionService do
         service.call
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          chargeable: charge,
+          chargeable: have_attributes(
+            charge_model: charge.charge_model,
+            properties: charge.properties,
+            prorated: charge.prorated?,
+            accepts_target_wallet: charge.accepts_target_wallet,
+            currency: charge.plan.amount.currency
+          ),
           aggregation_result:,
-          properties: charge.properties,
           period_ratio: expected_period_ratio,
           calculate_projected_usage: true
         )
@@ -235,9 +240,14 @@ RSpec.describe Fees::ProjectionService do
         )
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          chargeable: charge,
+          chargeable: have_attributes(
+            charge_model: charge.charge_model,
+            properties: charge_filter.properties,
+            prorated: charge.prorated?,
+            accepts_target_wallet: charge.accepts_target_wallet,
+            currency: charge.plan.amount.currency
+          ),
           aggregation_result:,
-          properties: charge_filter.properties,
           period_ratio: 0.5,
           calculate_projected_usage: true
         )

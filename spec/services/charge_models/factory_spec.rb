@@ -9,15 +9,15 @@ RSpec.describe ChargeModels::Factory do
 
   describe "#new_instance" do
     let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
-    let(:properties) { charge.properties }
+    let(:chargeable) { ChargeModels::ChargeableData.from_charge(charge) }
 
-    let(:result) { factory.new_instance(chargeable: charge, aggregation_result:, properties:) }
+    let(:result) { factory.new_instance(chargeable:, aggregation_result:) }
 
-    context "when chargeable is not a charge or a fixed charge" do
+    context "when chargeable is not chargeable data" do
       let(:chargeable) { build(:fee) }
 
       it "raises an error" do
-        expect { factory.new_instance(chargeable:, aggregation_result:, properties:) }.to raise_error(NotImplementedError)
+        expect { factory.new_instance(chargeable:, aggregation_result:) }.to raise_error(NotImplementedError)
       end
     end
 
@@ -99,18 +99,21 @@ RSpec.describe ChargeModels::Factory do
     context "when chargeable is a fixed charge" do
       context "with standard charge model" do
         let(:charge) { build(:fixed_charge, charge_model: :standard) }
+        let(:chargeable) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
 
         it { expect(result).to be_a(ChargeModels::StandardService) }
       end
 
       context "with graduated charge model" do
         let(:charge) { build(:fixed_charge, charge_model: :graduated) }
+        let(:chargeable) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
 
         it { expect(result).to be_a(ChargeModels::GraduatedService) }
       end
 
       context "with volume charge model" do
         let(:charge) { build(:fixed_charge, charge_model: :volume) }
+        let(:chargeable) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
 
         it { expect(result).to be_a(ChargeModels::VolumeService) }
       end
@@ -118,7 +121,7 @@ RSpec.describe ChargeModels::Factory do
   end
 
   describe ".in_advance_charge_model_class" do
-    let(:result) { factory.in_advance_charge_model_class(chargeable: charge) }
+    let(:result) { factory.in_advance_charge_model_class(chargeable: ChargeModels::ChargeableData.from_charge(charge)) }
 
     context "when chargeable is a charge" do
       context "with standard charge model" do

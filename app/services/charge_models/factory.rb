@@ -2,8 +2,10 @@
 
 module ChargeModels
   class Factory
-    def self.new_instance(chargeable:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
-      raise NotImplementedError, "Chargeable: #{chargeable.class.name} is not implemented" unless chargeable.is_a?(Charge) || chargeable.is_a?(FixedCharge)
+    def self.new_instance(chargeable:, aggregation_result:, period_ratio: 1.0, calculate_projected_usage: false)
+      unless chargeable.is_a?(ChargeModels::ChargeableData)
+        raise NotImplementedError, "Chargeable: #{chargeable.class.name} is not implemented"
+      end
 
       charge_model_class = charge_model_class(
         chargeable: chargeable,
@@ -11,16 +13,15 @@ module ChargeModels
       )
 
       common_args = {
-        charge: chargeable,
+        chargeable:,
         aggregation_result:,
-        properties:,
         period_ratio:,
         calculate_projected_usage:
       }
 
       # TODO(pricing_group_keys): remove after deprecation of grouped_by
-      pricing_group_keys = properties["pricing_group_keys"].presence || properties["grouped_by"]
-      use_grouped_service = pricing_group_keys.present? || (chargeable.is_a?(Charge) && chargeable.accepts_target_wallet)
+      pricing_group_keys = chargeable.properties["pricing_group_keys"].presence || chargeable.properties["grouped_by"]
+      use_grouped_service = pricing_group_keys.present? || chargeable.accepts_target_wallet
 
       if use_grouped_service && !aggregation_result.aggregations.nil?
         ChargeModels::GroupedService.new(**common_args.merge(charge_model: charge_model_class))
@@ -38,7 +39,7 @@ module ChargeModels
       when :standard
         ChargeModels::StandardService
       when :graduated
-        if chargeable.prorated? && has_aggregator
+        if chargeable.prorated && has_aggregator
           ChargeModels::ProratedGraduatedService
         else
           ChargeModels::GraduatedService
