@@ -35,22 +35,25 @@ RSpec.describe V2::Subscriptions::BillService do
 
     context "with terminate enabled" do
       let(:terminate) { true }
+      let(:current_time) { Time.zone.parse("2026-08-18 08:53:07") }
       let(:termination_result) do
         V2::Subscriptions::TerminateService::Result.new.tap do |result|
           result.credit_notes = []
         end
       end
 
+      around { |example| travel_to(current_time) { example.run } }
+
       before do
         allow(V2::Subscriptions::TerminateService).to receive(:call).and_return(termination_result)
       end
 
-      it "terminates subscriptions at the parsed range end" do
+      it "terminates subscriptions at the current time" do
         result
 
         expect(V2::Subscriptions::TerminateService).to have_received(:call).with(
           subscription:,
-          terminated_at: Time.zone.parse("2026-08-14").end_of_day
+          terminated_at: current_time
         )
       end
     end
