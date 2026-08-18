@@ -4,7 +4,9 @@ class CreateSubscriptionBillingPeriods < ActiveRecord::Migration[8.0]
   def change
     create_table :subscription_billing_periods, id: :uuid do |t|
       t.references :organization, type: :uuid, null: false, foreign_key: true, index: true
-      t.references :subscription, type: :uuid, null: false, foreign_key: true, index: false
+      # Indexed: the missing-period detector correlates on it, and it also backs the foreign key
+      # and the cascade that clears the rows when a subscription is deleted.
+      t.references :subscription, type: :uuid, null: false, foreign_key: true, index: true
       t.references :customer, type: :uuid, null: false, foreign_key: true, index: true
 
       # The aggregation unit. Legacy plans write ("Subscription", subscription_id): all of a

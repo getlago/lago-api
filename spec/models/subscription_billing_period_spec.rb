@@ -76,6 +76,64 @@ RSpec.describe SubscriptionBillingPeriod, type: :model do
         expect(described_class.expired(Time.utc(2024, 3, 15))).to be_empty
       end
     end
+
+    describe ".awaiting_rollover" do
+      # `period` covers March. Steady state adds the period covering now and the one after it.
+      let(:current) do
+        create(
+          :subscription_billing_period,
+          subscription:,
+          period_from: Time.utc(2024, 4, 1),
+          period_to: Time.utc(2024, 4, 30).end_of_day
+        )
+      end
+
+      let(:following) do
+        create(
+          :subscription_billing_period,
+          subscription:,
+          period_from: Time.utc(2024, 5, 1),
+          period_to: Time.utc(2024, 5, 31).end_of_day
+        )
+      end
+
+      it "matches a period that ended with nothing materialized after it" do
+        period
+
+        expect(described_class.awaiting_rollover(Time.utc(2024, 4, 1))).to eq([period])
+      end
+
+      it "does not match a period that has not ended" do
+        period
+
+        expect(described_class.awaiting_rollover(Time.utc(2024, 3, 15))).to be_empty
+      end
+
+      # Closed periods are kept, so an ended period is only a rollover to materialize until the
+      # next one exists.
+      it "does not match once the next period has been materialized" do
+        period
+        current
+        following
+
+        expect(described_class.awaiting_rollover(Time.utc(2024, 4, 1, 12))).to be_empty
+      end
+
+      it "matches again at the following rollover" do
+        period
+        current
+        following
+
+        expect(described_class.awaiting_rollover(Time.utc(2024, 5, 1))).to eq([current])
+      end
+
+      it "does not match a period that ended before the lookback window" do
+        period
+
+        expect(described_class.awaiting_rollover(Time.utc(2024, 4, 15))).to be_empty
+        expect(described_class.awaiting_rollover(Time.utc(2024, 4, 15), lookback: 1.month)).to eq([period])
+      end
+    end
   end
 
   describe "the overlap constraint" do

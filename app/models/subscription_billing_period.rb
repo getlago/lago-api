@@ -13,6 +13,10 @@
 class SubscriptionBillingPeriod < ApplicationRecord
   SCOPE_TYPES = %w[Subscription].freeze
 
+  # How far back the rollover sweep looks for periods that have just ended. Has to cover a clock
+  # outage: a rollover that falls out of the window is only materialized at the following one.
+  ROLLOVER_LOOKBACK = 1.day
+
   belongs_to :organization
   belongs_to :subscription
   belongs_to :customer
@@ -23,6 +27,23 @@ class SubscriptionBillingPeriod < ApplicationRecord
 
   scope :covering, ->(time) { where(period_from: ..time, period_to: time..) }
   scope :expired, ->(time = Time.current) { where(period_to: ..time) }
+
+  # Periods that ended within `lookback` of `time` and whose scope has no period starting after
+  # `time`: the rollover has not been materialized yet.
+  #
+  # Both halves matter. Closed periods are kept, so `expired` alone matches every period a
+  # subscription ever had and a sweep driven by it would re-enqueue the whole history on every
+  # tick, forever. And without the successor check the same subscription would come back on every
+  # tick until the window slid past it, rather than dropping out as soon as it has been rolled.
+  scope :awaiting_rollover, ->(time = Time.current, lookback: ROLLOVER_LOOKBACK) {
+    successor = unscoped
+      .select(1)
+      .from("subscription_billing_periods later")
+      .where("later.scope_id = subscription_billing_periods.scope_id")
+      .where("later.period_from > ?", time)
+
+    where(period_to: (time - lookback)..time).where.not(successor.arel.exists)
+  }
 
   private
 
