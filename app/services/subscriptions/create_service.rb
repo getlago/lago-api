@@ -181,6 +181,7 @@ module Subscriptions
 
     def handle_past_subscription(new_subscription)
       new_subscription.mark_as_active!(started_at_for(new_subscription))
+      BillingPeriods::UpsertService.call!(subscription: new_subscription)
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [new_subscription],

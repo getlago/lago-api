@@ -30,6 +30,7 @@ module Subscriptions
           end
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
+          Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
           update_on_termination_actions!
 
           if subscription.should_sync_hubspot_subscription?

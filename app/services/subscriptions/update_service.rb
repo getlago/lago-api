@@ -162,6 +162,7 @@ module Subscriptions
       end
 
       subscription.mark_as_active!(subscription.subscription_at)
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [subscription],

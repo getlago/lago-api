@@ -69,6 +69,9 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription: previous_subscription)
+
       billable_subscriptions = [previous_subscription]
 
       emit_fixed_charge_events unless from_incomplete
@@ -99,6 +102,9 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription: previous_subscription)
+
       billable_subscriptions = [previous_subscription]
 
       emit_fixed_charge_events unless from_incomplete
@@ -126,6 +132,7 @@ module Subscriptions
       from_incomplete = subscription.incomplete?
 
       subscription.mark_as_active!(timestamp)
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
 
       emit_fixed_charge_events unless from_incomplete
 
