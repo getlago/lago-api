@@ -1279,6 +1279,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         end
       end
     end
+
     context "when grouping subscriptions by purchase order number" do
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
