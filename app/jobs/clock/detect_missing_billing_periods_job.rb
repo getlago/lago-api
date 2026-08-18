@@ -16,6 +16,8 @@ module Clock
     private
 
     def heal(organization)
+      return if organization.feature_flag_disabled?(:subscription_billing_periods)
+
       missing = organization.subscriptions.active.where.not(
         SubscriptionBillingPeriod
           .covering(Time.current)

@@ -167,6 +167,15 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
     end
   end
 
+  context "when the feature flag is disabled" do
+    let(:organization) { create(:organization, feature_flags: []) }
+
+    it "does nothing" do
+      expect { result }.not_to change(SubscriptionBillingPeriod, :count)
+      expect(result.periods).to be_empty
+    end
+  end
+
   context "when the subscription is pending" do
     let(:subscription) { create(:subscription, :pending, organization:, customer:, plan:, billing_time:) }
 

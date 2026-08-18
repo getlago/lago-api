@@ -37,3 +37,7 @@ multi_connection:
 lazy_charge_usage_cache:
   description: "Validate the charge usage cache lazily at read time (compare cache creation time to the last event) instead of expiring it on every event reception"
   owners: ["@vincent-pochet"]
+
+subscription_billing_periods:
+  description: "Persist the charge period boundaries of a subscription in subscription_billing_periods, so usage can be keyed by billing period"
+  owners: ["@vincent-pochet"]

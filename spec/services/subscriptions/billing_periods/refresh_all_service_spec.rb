@@ -50,6 +50,16 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
     end
   end
 
+  context "when the feature flag is disabled" do
+    let(:organization) { create(:organization, feature_flags: []) }
+    let(:owner) { plan }
+
+    it "enqueues nothing" do
+      expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+      expect(result.enqueued_count).to eq(0)
+    end
+  end
+
   context "when the owner is not supported" do
     let(:owner) { organization }
 

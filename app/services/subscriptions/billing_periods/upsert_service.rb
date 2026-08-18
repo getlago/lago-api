@@ -55,6 +55,7 @@ module Subscriptions
       attr_reader :subscription, :timestamp
 
       def skip?
+        return true if subscription.organization.feature_flag_disabled?(:subscription_billing_periods)
         return true if subscription.started_at.nil?
         return true if subscription.plan.interval.nil?
         return true unless subscription.active? || subscription.terminated?

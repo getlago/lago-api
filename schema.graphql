@@ -6425,6 +6425,7 @@ enum FeatureFlagEnum {
   payment_gated_subscriptions
   postgres_enriched_events
   stripe_shared_payment_token
+  subscription_billing_periods
   wallet_traceability
 }
 

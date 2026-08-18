@@ -27,6 +27,21 @@ RSpec.describe Clock::DetectMissingBillingPeriodsJob, job: true do
     end
   end
 
+  context "when the feature flag is disabled" do
+    let(:organization) { create(:organization, feature_flags: []) }
+
+    before { subscription }
+
+    # Otherwise every active subscription of a disabled organization is enqueued and reported as
+    # missing, every night.
+    it "neither enqueues nor reports" do
+      allow(Rails.logger).to receive(:warn)
+
+      expect { perform }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
   context "when the subscription has a covering period" do
     before do
       create(

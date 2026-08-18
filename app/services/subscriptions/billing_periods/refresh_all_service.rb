@@ -15,9 +15,15 @@ module Subscriptions
       end
 
       def call
+        # Resolved first so an unsupported owner is rejected whether the flag is on or off.
+        scope = subscriptions
+
+        result.enqueued_count = 0
+        return result if organization.feature_flag_disabled?(:subscription_billing_periods)
+
         count = 0
 
-        subscriptions.find_each do |subscription|
+        scope.find_each do |subscription|
           Subscriptions::BillingPeriods::UpsertJob.perform_later(subscription.id)
           count += 1
         end
@@ -29,6 +35,10 @@ module Subscriptions
       private
 
       attr_reader :owner
+
+      def organization
+        @organization ||= owner.organization
+      end
 
       def subscriptions
         scope = case owner

@@ -15,6 +15,10 @@ module Subscriptions
       end
 
       def call
+        result.processed_count = 0
+        result.failed_count = 0
+        return result if organization.feature_flag_disabled?(:subscription_billing_periods)
+
         processed = 0
         failed = 0
 
