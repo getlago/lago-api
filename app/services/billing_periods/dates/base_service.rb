@@ -91,7 +91,8 @@ module BillingPeriods
           next_billing_at: next_billing_at_for(boundaries, boundary_index),
           rate_phase:,
           billing_interval_count: count,
-          billing_interval_unit: unit
+          billing_interval_unit: unit,
+          billing_anchor_date: anchor_date
         )
       end
 

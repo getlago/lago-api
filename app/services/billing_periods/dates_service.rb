@@ -40,7 +40,8 @@ module BillingPeriods
       :next_billing_at,
       :rate_phase,
       :billing_interval_count,
-      :billing_interval_unit
+      :billing_interval_unit,
+      :billing_anchor_date
     ) do
       def rate_override
         rate_phase&.rate_override
