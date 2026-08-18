@@ -130,7 +130,6 @@ RSpec.describe Api::V2::SubscriptionsController do
     let(:billing_result) do
       V2::Subscriptions::BillService::Result.new.tap do |result|
         result.invoices = []
-        result.credit_notes = []
       end
     end
 

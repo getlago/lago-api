@@ -108,10 +108,6 @@ module Api
               ::V1::InvoiceSerializer,
               collection_name: "invoices",
               includes: %i[customer billing_periods subscriptions fees]
-            ).serialize.merge(
-              ::CollectionSerializer.new(
-                result.credit_notes, ::V1::CreditNoteSerializer, collection_name: "credit_notes"
-              ).serialize
             )
           )
         else

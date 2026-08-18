@@ -12,7 +12,7 @@ module V2
     # Only product_catalog subscriptions are billed by this engine, so the call is rejected
     # if any of them is on a legacy plan rather than silently skipping it.
     class BillService < BaseService
-      Result = BaseResult[:invoices, :credit_notes]
+      Result = BaseResult[:invoices]
 
       def initialize(subscriptions:, start_on: nil, end_on: nil)
         @subscriptions = Array.wrap(subscriptions)
@@ -32,7 +32,6 @@ module V2
         return result if result.error
 
         result.invoices = []
-        result.credit_notes = []
 
         bill_all
         result
