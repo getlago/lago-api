@@ -89,11 +89,8 @@ module BillingPeriods
           period_from:,
           period_to:,
           next_billing_at: next_billing_at_for(boundaries, boundary_index),
-          rate_phase:,
-          billing_interval_count: count,
-          billing_interval_unit: unit,
-          billing_anchor_date: anchor_date
-        )
+          rate_phase:
+        ).tap { |cycle| boundaries_by_cycle[cycle] = boundaries }
       end
 
       def interval_for_cycle(cycle_start, cycle_index)
@@ -189,11 +186,11 @@ module BillingPeriods
       # the Period must stay full-sized for billing boundaries, while the ratio uses
       # range.end to express consumption up to the termination instant.
       def ratio_for(cycle, start_at)
-        boundaries_for(
-          cycle.billing_interval_count,
-          cycle.billing_interval_unit,
-          anchor_date: cycle.billing_anchor_date
-        ).proration_ratio(start_at, range.end)
+        boundaries_by_cycle.fetch(cycle).proration_ratio(start_at, range.end)
+      end
+
+      def boundaries_by_cycle
+        @boundaries_by_cycle ||= {}
       end
 
       def moment_before(datetime)

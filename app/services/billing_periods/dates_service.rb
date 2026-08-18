@@ -38,10 +38,7 @@ module BillingPeriods
       :period_from,
       :period_to,
       :next_billing_at,
-      :rate_phase,
-      :billing_interval_count,
-      :billing_interval_unit,
-      :billing_anchor_date
+      :rate_phase
     ) do
       def rate_override
         rate_phase&.rate_override
@@ -51,7 +48,14 @@ module BillingPeriods
     # A concrete date slice priced with one catalog rate. Several periods can
     # belong to the same Cycle when a rate effective date cuts the logical
     # billing cycle.
-    Period = Data.define(:period_from, :period_to, :next_billing_at, :rate, :cycle, :ratio) do
+    Period = Data.define(
+      :period_from,
+      :period_to,
+      :next_billing_at,
+      :rate,
+      :cycle,
+      :ratio
+    ) do
       def billing_at
         billing_boundary = if rate.rate_card.advance?
           period_from
@@ -67,10 +71,6 @@ module BillingPeriods
       delegate :rate_phase, to: :cycle
 
       delegate :rate_override, to: :cycle
-
-      delegate :billing_interval_count, to: :cycle
-
-      delegate :billing_interval_unit, to: :cycle
 
       def rate_properties
         (rate_override || rate).properties
