@@ -28,7 +28,14 @@ module BillableMetrics
         end
 
         def boundaries_agree?(row)
-          charges_from = boundaries.respond_to?(:charges_from_datetime) ? boundaries.charges_from_datetime : boundaries[:charges_from_datetime]
+          charges_from = if boundaries.respond_to?(:charges_from_datetime)
+            boundaries.charges_from_datetime
+          else
+            # Fees::ChargeService#aggregator hands aggregators a plain hash
+            # whose :from_datetime already is the charges window start;
+            # :charges_from_datetime only exists on other boundary shapes.
+            boundaries[:charges_from_datetime] || boundaries[:from_datetime]
+          end
           return false if charges_from.nil?
 
           (row.period_charges_from - charges_from).abs <= BOUNDARY_TOLERANCE

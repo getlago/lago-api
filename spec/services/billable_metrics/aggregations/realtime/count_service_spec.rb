@@ -10,11 +10,13 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
       event_store_class: Events::Stores::PostgresStore,
       charge:,
       subscription:,
+      # Same hash shape as Fees::ChargeService#aggregator: :from_datetime is
+      # the charges window start and there is no :charges_from_datetime key.
       boundaries: {
         from_datetime: charges_from,
         to_datetime: charges_to,
-        charges_from_datetime: charges_from,
-        charges_to_datetime: charges_to
+        charges_duration: nil,
+        max_timestamp: nil
       }
     )
   end
@@ -82,8 +84,8 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
         boundaries: {
           from_datetime: charges_from,
           to_datetime: charges_to,
-          charges_from_datetime: charges_from,
-          charges_to_datetime: charges_to
+          charges_duration: nil,
+          max_timestamp: nil
         },
         filters: {grouped_by: ["region"]}
       )
