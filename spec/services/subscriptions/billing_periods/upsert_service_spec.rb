@@ -150,6 +150,47 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
     end
   end
 
+  # A downgrade takes effect on the billing day, so the previous subscription is terminated at the
+  # very instant the next period opens: DatesService clamps charges_to to terminated_at and the
+  # boundaries collapse onto each other.
+  context "when the subscription is terminated at the instant a period opens" do
+    let(:billing_time) { :calendar }
+    let(:subscription) do
+      create(
+        :subscription,
+        organization:, customer:, plan:, billing_time:, subscription_at:,
+        started_at: subscription_at,
+        status: :terminated,
+        terminated_at: Time.utc(2024, 3, 1)
+      )
+    end
+
+    it "stores no period rather than one that does not move forward" do
+      expect { result }.not_to change(SubscriptionBillingPeriod, :count)
+      expect(result.periods).to be_empty
+    end
+
+    it "still discards the periods that can no longer happen" do
+      stale = create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: Time.utc(2024, 3, 1),
+        period_to: Time.utc(2024, 3, 31).end_of_day
+      )
+      closed = create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: Time.utc(2024, 2, 1),
+        period_to: Time.utc(2024, 2, 29).end_of_day
+      )
+
+      result
+
+      expect(SubscriptionBillingPeriod.where(id: stale.id)).to be_empty
+      expect(SubscriptionBillingPeriod.where(id: closed.id)).to be_present
+    end
+  end
+
   context "when the subscription was terminated beyond the grace period" do
     let(:subscription) do
       create(

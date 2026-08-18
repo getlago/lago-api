@@ -94,12 +94,21 @@ module Subscriptions
       # period shifted, so its old row overlaps the new one) and a period that can no longer happen,
       # such as the next one after a termination.
       def discarded_periods
-        return SubscriptionBillingPeriod.none if desired_periods.empty?
+        return SubscriptionBillingPeriod.none if discarded_from.nil?
 
         SubscriptionBillingPeriod
           .where(scope_type: "Subscription", scope_id: subscription.id)
-          .where(period_to: desired_periods.first.period_from..)
+          .where(period_to: discarded_from..)
           .where.not(period_from: desired_periods.map(&:period_from))
+      end
+
+      # The termination is a boundary of its own: a subscription terminated at the very instant a
+      # period opens has nothing left to store, and the periods stored past that instant still have
+      # to go.
+      def discarded_from
+        return desired_periods.first.period_from if desired_periods.any?
+
+        subscription.terminated_at if subscription.terminated?
       end
 
       def desired_periods
@@ -127,6 +136,11 @@ module Subscriptions
         period_from = dates_service.charges_from_datetime
         period_to = dates_service.charges_to_datetime
         return nil if period_from.nil? || period_to.nil?
+        # DatesService clamps charges_to to terminated_at, so a subscription terminated at the very
+        # instant a period opens — a downgrade taking effect on the billing day, for one — collapses
+        # it to nothing. There is no usage to key off it, and the table refuses a period that does
+        # not move forward.
+        return nil if period_to <= period_from
 
         Period.new(scope_type: "Subscription", scope_id: subscription.id, period_from:, period_to:)
       end
