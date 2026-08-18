@@ -2,9 +2,11 @@
 
 module Subscriptions
   module BillingPeriods
-    # Re-derives the periods of every subscription affected by a change to an input they share: a
-    # plan's interval or monthly-charges flag, or the applicable timezone of a customer or billing
-    # entity.
+    # Re-derives the periods of every subscription affected by a change to an input they share: the
+    # applicable timezone of a customer or of a billing entity.
+    #
+    # The plan is not one of them: its interval and monthly-charges flag would move the boundaries,
+    # but a plan attached to a subscription refuses both.
     class RefreshAllService < BaseService
       Result = BaseResult[:enqueued_count]
 
@@ -42,7 +44,6 @@ module Subscriptions
 
       def subscriptions
         scope = case owner
-        when Plan then Subscription.where(plan_id: owner.id)
         when Customer then Subscription.where(customer_id: owner.id)
         when BillingEntity then Subscription.joins(:customer).where(customers: {billing_entity_id: owner.id})
         else raise ArgumentError, "unsupported owner: #{owner.class}"

@@ -12,19 +12,11 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
 
   before { create(:subscription, organization:, customer:, plan:, status: :active) }
 
-  context "when the owner is a plan" do
-    let(:owner) { plan }
-
-    it "enqueues one job per subscription of the plan" do
-      expect { result }.to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
-      expect(result.enqueued_count).to eq(1)
-    end
-  end
-
   context "when the owner is a customer" do
     let(:owner) { customer }
 
     it "enqueues one job per subscription of the customer" do
+      expect { result }.to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
       expect(result.enqueued_count).to eq(1)
     end
   end
@@ -38,7 +30,7 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
   end
 
   context "with pending and canceled subscriptions" do
-    let(:owner) { plan }
+    let(:owner) { customer }
 
     before do
       create(:subscription, :pending, organization:, customer:, plan:)
@@ -52,7 +44,7 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
 
   context "when the feature flag is disabled" do
     let(:organization) { create(:organization, feature_flags: []) }
-    let(:owner) { plan }
+    let(:owner) { customer }
 
     it "enqueues nothing" do
       expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
@@ -60,8 +52,10 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
     end
   end
 
+  # A plan moves the boundaries of its subscriptions, but a plan attached to one refuses the
+  # attributes that would, so it is not an owner here.
   context "when the owner is not supported" do
-    let(:owner) { organization }
+    let(:owner) { plan }
 
     it "raises" do
       expect { result }.to raise_error(ArgumentError, /unsupported owner/)
