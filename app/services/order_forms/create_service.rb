@@ -18,6 +18,10 @@ module OrderForms
       return result.single_validation_failure!(field: :quote_version, error_code: "not_approved") unless quote_version.approved?
       return result.single_validation_failure!(field: :expires_at, error_code: "invalid_date") unless valid_expires_at?
 
+      unless QuoteVersions::DealExpiration.covers?(quote_version, expires_at)
+        return result.single_validation_failure!(field: :expires_at, error_code: "after_deal_expiration")
+      end
+
       order_form = OrderForm.create!(
         organization: quote_version.organization,
         customer: quote_version.quote.customer,

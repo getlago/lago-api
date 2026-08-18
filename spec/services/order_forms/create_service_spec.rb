@@ -68,6 +68,65 @@ RSpec.describe OrderForms::CreateService do
       end
     end
 
+    context "when an expires_at outliving the deal is provided", :premium do
+      subject(:create_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:quote_version) do
+        create(:quote_version, :approved, quote:, organization:, end_date: 1.month.from_now.to_date)
+      end
+      let(:expires_at) { 2.months.from_now }
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(expires_at: ["after_deal_expiration"])
+      end
+    end
+
+    context "when an expires_at falls on the day the deal ends", :premium do
+      subject(:create_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:end_date) { 1.month.from_now.to_date }
+      let(:quote_version) { create(:quote_version, :approved, quote:, organization:, end_date:) }
+      let(:expires_at) { end_date.to_time }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(expires_at: ["after_deal_expiration"])
+      end
+    end
+
+    context "when an expires_at inside the deal is provided", :premium do
+      subject(:create_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:quote_version) do
+        create(:quote_version, :approved, quote:, organization:, end_date: 2.months.from_now.to_date)
+      end
+      let(:expires_at) { 1.month.from_now }
+
+      it "creates an order form" do
+        expect(result).to be_success
+        expect(result.order_form.expires_at).to be_within(1.second).of(expires_at)
+      end
+    end
+
+    # A one_off deal carries no date the execution flow can outlive.
+    context "when the deal is one_off", :premium do
+      subject(:create_service) { described_class.new(quote_version:, expires_at:) }
+
+      let(:quote_version) do
+        create(:quote_version, :approved, :with_one_off_billing_items, quote:, organization:)
+      end
+      let(:expires_at) { 10.years.from_now }
+
+      it "creates an order form" do
+        expect(result).to be_success
+      end
+    end
+
     context "when the quote version is not approved", :premium do
       let(:quote_version) { create(:quote_version, quote:, organization:) }
 

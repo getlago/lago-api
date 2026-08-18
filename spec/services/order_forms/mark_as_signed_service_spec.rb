@@ -358,6 +358,47 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result.error.messages[:execute_at]).to eq(["invalid_date"])
         end
       end
+
+      context "when execute_at outlives the wallet the deal funds" do
+        let(:order_form) { create(:order_form, customer:, organization:, quote_version:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            end_date: 1.year.from_now.to_date,
+            billing_items: {
+              "walletCredits" => [{"payload" => {"expirationAt" => 1.month.from_now.iso8601}}]
+            }
+          )
+        end
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { 2.months.from_now.iso8601 }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:execute_at]).to eq(["after_deal_expiration"])
+        end
+      end
+
+      context "when execute_at falls inside the deal" do
+        let(:order_form) { create(:order_form, customer:, organization:, quote_version:) }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, end_date: 1.year.from_now.to_date)
+        end
+        let(:execution_mode) { "execute_in_lago" }
+        let(:execute_at) { 1.month.from_now.iso8601 }
+
+        it "signs the order form" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.order.execute_at).to be_within(1.second).of(Time.zone.parse(execute_at))
+        end
+      end
     end
   end
 end
