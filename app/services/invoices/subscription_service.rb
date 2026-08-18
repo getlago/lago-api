@@ -35,7 +35,6 @@ module Invoices
     private
 
     def perform_call
-      return result if stale_activation_billing?
       return result if active_subscriptions.empty? && recurring
 
       if mixed_billing_entities?
@@ -140,8 +139,8 @@ module Invoices
       :invoice,
       :skip_charges
 
-    # Cancellation uses the same subscription lock before closing the gating invoice.
-    # Holding it here prevents stale activation billing from committing after cancellation.
+    # Cancelling a gated subscription takes the same lock, so holding it here orders the two:
+    # cancellation either finds the gating invoice and closes it, or refuses until it exists.
     def with_subscription_locks
       ActiveRecord::Base.transaction do
         lock_subscriptions!
@@ -167,10 +166,6 @@ module Invoices
 
     def activation_billing?
       skip_charges && ACTIVATION_BILLING_REASONS.include?(invoicing_reason.to_sym)
-    end
-
-    def stale_activation_billing?
-      activation_billing? && subscriptions.none? { |subscription| subscription.active? || subscription.gated? }
     end
 
     def active_subscriptions

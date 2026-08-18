@@ -990,36 +990,6 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
-    context "when activation billing runs after a payment-gated subscription was canceled" do
-      subject(:invoice_service) do
-        described_class.new(
-          subscriptions:,
-          timestamp: timestamp.to_i,
-          invoicing_reason:,
-          skip_charges: true
-        )
-      end
-
-      let(:invoicing_reason) { :subscription_starting }
-      let(:pay_in_advance) { true }
-      let(:subscription) do
-        create(:subscription, :canceled, :with_activation_rules,
-          activation_rules_config: [{type: "payment", timeout_hours: 48, status: "declined"}],
-          plan:, customer:, organization: customer.organization,
-          subscription_at: started_at.to_date, started_at:, created_at: started_at, activated_at: nil)
-      end
-
-      it "does not create an invoice or trigger payment" do
-        result = nil
-
-        expect { result = invoice_service.call }.not_to change(Invoice, :count)
-
-        expect(result).to be_success
-        expect(result.invoice).to be_nil
-        expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
-      end
-    end
-
     context "when an error occurs" do
       context "with a stale object error" do
         it "propagates the error" do
