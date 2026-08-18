@@ -72,7 +72,7 @@ RSpec.describe Wallets::ThresholdTopUpService do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(invoice_requires_successful_payment: true, ignore_paid_top_up_limits: true),
+            params: hash_including(invoice_requires_successful_payment: true, ignore_paid_top_up_limits: false),
             unique_transaction: true
           )
       end
