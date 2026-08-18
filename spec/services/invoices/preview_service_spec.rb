@@ -477,25 +477,57 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               end.to change { Rails.cache.exist?(key) }.from(false).to(true)
             end
 
-            context "when the lazy charge usage cache flag is enabled", transaction: false do
-              before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+            it "resolves the charges and filters that received usage", transaction: false do
+              allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
 
-              it "resolves the last-seen timestamps to feed the lazy cache" do
-                allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+              travel_to(timestamp) { preview_service.call }
 
-                travel_to(timestamp) { preview_service.call }
-
-                expect(Events::BillingPeriodFilterService).to have_received(:call!)
-              end
+              expect(Events::BillingPeriodFilterService).to have_received(:call!)
             end
 
-            context "when the lazy charge usage cache flag is disabled", transaction: false do
-              it "does not resolve the last-seen timestamps" do
-                allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+            context "with charge filters" do
+              let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
 
-                travel_to(timestamp) { preview_service.call }
+              let(:region_filter) do
+                create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+              end
 
-                expect(Events::BillingPeriodFilterService).not_to have_received(:call!)
+              let(:eu_charge_filter) { create(:charge_filter, charge:, properties: {amount: "10"}) }
+              let(:us_charge_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+              let(:events) do
+                create(
+                  :event,
+                  organization:,
+                  subscription:,
+                  customer:,
+                  code: billable_metric.code,
+                  timestamp: timestamp + 10.hours,
+                  properties: {region: "eu"}
+                )
+              end
+
+              before do
+                create(:charge_filter_value, charge_filter: eu_charge_filter, billable_metric_filter: region_filter, values: ["eu"])
+                create(:charge_filter_value, charge_filter: us_charge_filter, billable_metric_filter: region_filter, values: ["us"])
+              end
+
+              it "only aggregates the filters that received usage", transaction: false do
+                allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+
+                result = travel_to(timestamp) { preview_service.call }
+
+                expect(result).to be_success
+
+                # The filters without usage and the default bucket are not aggregated, so their
+                # exclusions are never serialized into the store query.
+                expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
+                  .with(charge:, filter: eu_charge_filter).once
+                expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call).once
+
+                charge_fees = result.invoice.fees.select { |fee| fee.charge_id == charge.id }
+                expect(charge_fees.map(&:charge_filter_id)).to eq([eu_charge_filter.id])
+                expect(charge_fees.first.units).to eq(1)
               end
             end
           end
