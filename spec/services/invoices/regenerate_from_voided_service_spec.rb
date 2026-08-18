@@ -178,7 +178,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           create(:invoice, :voided, invoice_type: :one_off, customer:, organization:, currency: "EUR")
         end
         let(:original_fee) do
-          create(:one_off_fee, invoice: voided_invoice, add_on:, amount_cents: 1000, unit_amount_cents: 1000)
+          create(:one_off_fee, invoice: voided_invoice, add_on:, subscription:, amount_cents: 1000, unit_amount_cents: 1000)
         end
         let(:fees_params) do
           [{id: original_fee.id, units: 2, unit_amount_cents: 1000}]
@@ -448,39 +448,12 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         charge.discard!
       end
 
-      it "regenerates the adjusted fee using the discarded charge" do
+      it "raises a not found error" do
         expect(voided_invoice).to be_finalized
         expect(voided_invoice.voided_at).to be_nil
         expect(voided_invoice.voided_invoice_id).to be_nil
 
-        regenerated_fee = regenerate_result.invoice.fees.find_by(charge_id: charge.id)
-
-        expect(regenerated_fee.units).to eq(2)
-        expect(regenerated_fee.amount_cents).to eq(237)
-        expect(regenerated_fee.amount_details).to eq(
-          {
-            "graduated_ranges" => [
-              {
-                "from_value" => 0,
-                "to_value" => 1,
-                "flat_unit_amount" => "0.0",
-                "per_unit_amount" => "0.0",
-                "per_unit_total_amount" => "0.0",
-                "total_with_flat_amount" => "0.0",
-                "units" => "1.0"
-              },
-              {
-                "from_value" => 2,
-                "to_value" => nil,
-                "flat_unit_amount" => "0.0",
-                "per_unit_amount" => "2.37",
-                "per_unit_total_amount" => "2.37",
-                "total_with_flat_amount" => "2.37",
-                "units" => "1.0"
-              }
-            ]
-          }
-        )
+        expect { regenerate_result }.to raise_error(BaseService::NotFoundFailure, "charge_not_found")
       end
     end
 
