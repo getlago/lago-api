@@ -124,7 +124,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       expect(response).to have_http_status(:success)
       expect(V2::Subscriptions::TerminateService).to have_received(:call).with(
         subscription:,
-        terminated_at:
+        terminated_at: Time.zone.parse(terminated_at)
       )
       expect(json[:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
       expect(json[:credit_notes]).to eq([])
@@ -158,6 +158,318 @@ RSpec.describe Api::V2::SubscriptionsController do
 
         expect(response).to be_not_found_error("subscription")
         expect(V2::Subscriptions::TerminateService).not_to have_received(:call)
+      end
+    end
+
+    context "with the real termination flow" do
+      before do
+        allow(V2::Subscriptions::TerminateService).to receive(:call).and_call_original
+      end
+
+      context "with a monthly arrears rate card" do
+        let(:terminated_at) { "2026-08-17T12:34:56Z" }
+        let(:subscription) do
+          create(
+            :subscription,
+            customer:,
+            organization:,
+            plan:,
+            external_id: "sub_monthly_arrears",
+            started_at: Time.zone.parse("2026-08-01"),
+            activated_at: Time.zone.parse("2026-08-01"),
+            subscription_at: Time.zone.parse("2026-08-01")
+          )
+        end
+        let(:product) { create(:product, :fixed, organization:) }
+        let(:rate_card) { create(:rate_card, organization:, product:, code: "monthly_arrears", currency: "EUR") }
+        let!(:rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            code: "monthly_arrears_v1",
+            effective_from: Time.zone.parse("2026-01-01"),
+            billing_interval_count: 1,
+            billing_interval_unit: "month",
+            rate_properties: {"amount" => "31.00"}
+          )
+        end
+        let!(:subscription_rate_card) do
+          create(
+            :subscription_rate_card,
+            organization:,
+            subscription:,
+            customer:,
+            rate_card:,
+            billing_anchor_date: Date.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"),
+            next_billing_at: Time.zone.parse("2026-09-01")
+          )
+        end
+
+        it "creates the final pending billing cycle clamped to the termination time" do
+          expect { subject }.to change(BillingCycle, :count).by(1)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes]).to eq([])
+
+          billing_cycle = BillingCycle.sole
+          expect(billing_cycle).to have_attributes(
+            subscription:,
+            subscription_rate_card:,
+            rate_card_rate: rate,
+            rate_override: nil,
+            period_from: Time.zone.parse("2026-08-01"),
+            period_to: Time.zone.parse(terminated_at),
+            billing_at: Time.zone.parse(terminated_at),
+            status: "pending"
+          )
+          expect(subscription_rate_card.reload).to have_attributes(
+            ended_at: Time.zone.parse(terminated_at),
+            next_billing_at: Time.zone.parse(terminated_at)
+          )
+        end
+      end
+
+      context "with multiple rates and phased interval overrides" do
+        let(:terminated_at) { "2026-09-25T08:00:00Z" }
+        let(:subscription) do
+          create(
+            :subscription,
+            customer:,
+            organization:,
+            plan:,
+            external_id: "sub_phased_arrears",
+            started_at: Time.zone.parse("2026-08-03"),
+            activated_at: Time.zone.parse("2026-08-03"),
+            subscription_at: Time.zone.parse("2026-08-03")
+          )
+        end
+        let(:product) { create(:product, :fixed, organization:) }
+        let(:rate_card) { create(:rate_card, organization:, product:, code: "phased_arrears", currency: "EUR") }
+        let!(:initial_rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            code: "phased_v1",
+            effective_from: Time.zone.parse("2026-01-01"),
+            billing_interval_count: 1,
+            billing_interval_unit: "month",
+            rate_properties: {"amount" => "90.00"}
+          )
+        end
+        let!(:active_rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            code: "phased_v2",
+            effective_from: Time.zone.parse("2026-09-01"),
+            billing_interval_count: 1,
+            billing_interval_unit: "month",
+            rate_properties: {"amount" => "120.00"}
+          )
+        end
+        let!(:future_rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            code: "phased_v3",
+            effective_from: Time.zone.parse("2026-12-01"),
+            billing_interval_count: 2,
+            billing_interval_unit: "month",
+            rate_properties: {"amount" => "250.00"}
+          )
+        end
+        let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, rate_card:) }
+        let(:intro_override) do
+          create(
+            :rate_override,
+            organization:,
+            billing_interval_count: 1,
+            billing_interval_unit: "week",
+            rate_properties: {"amount" => "19.00"}
+          )
+        end
+        let!(:intro_phase) do
+          create(
+            :rate_phase,
+            organization:,
+            plan_rate_card:,
+            code: "weekly_intro",
+            position: 1,
+            billing_interval_cycle_count: 6,
+            rate_override: intro_override
+          )
+        end
+        let!(:standard_phase) do
+          create(
+            :rate_phase,
+            organization:,
+            plan_rate_card:,
+            code: "monthly_standard",
+            position: 2,
+            billing_interval_cycle_count: nil
+          )
+        end
+        let!(:subscription_rate_card) do
+          create(
+            :subscription_rate_card,
+            organization:,
+            subscription:,
+            customer:,
+            rate_card:,
+            billing_anchor_date: Date.parse("2026-08-03"),
+            started_at: Time.zone.parse("2026-08-03"),
+            next_billing_at: Time.zone.parse("2026-10-14")
+          )
+        end
+
+        it "uses the active rate and the phase-adjusted final period" do
+          expect { subject }.to change(BillingCycle, :count).by(1)
+
+          expect(response).to have_http_status(:success)
+
+          billing_cycle = BillingCycle.sole
+          expect(billing_cycle).to have_attributes(
+            rate_card_rate: active_rate,
+            rate_override: nil,
+            rate_properties: active_rate.rate_properties,
+            period_from: Time.zone.parse("2026-09-14"),
+            period_to: Time.zone.parse(terminated_at),
+            billing_at: Time.zone.parse(terminated_at)
+          )
+          expect(json[:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
+          expect([initial_rate, future_rate]).not_to include(billing_cycle.rate_card_rate)
+          expect([intro_phase, standard_phase].map(&:code)).to eq(%w[weekly_intro monthly_standard])
+        end
+      end
+
+      context "with a billed monthly advance rate card" do
+        let(:terminated_at) { "2026-08-17T12:34:56Z" }
+        let(:subscription) do
+          create(
+            :subscription,
+            customer:,
+            organization:,
+            plan:,
+            external_id: "sub_monthly_advance",
+            started_at: Time.zone.parse("2026-08-01"),
+            activated_at: Time.zone.parse("2026-08-01"),
+            subscription_at: Time.zone.parse("2026-08-01")
+          )
+        end
+        let(:product) { create(:product, :fixed, organization:) }
+        let(:rate_card) { create(:rate_card, :advance, organization:, product:, code: "monthly_advance", currency: "EUR") }
+        let!(:rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            code: "monthly_advance_v1",
+            effective_from: Time.zone.parse("2026-01-01"),
+            billing_interval_count: 1,
+            billing_interval_unit: "month",
+            rate_properties: {"amount" => "31.00"}
+          )
+        end
+        let!(:subscription_rate_card) do
+          create(
+            :subscription_rate_card,
+            organization:,
+            subscription:,
+            customer:,
+            rate_card:,
+            billing_anchor_date: Date.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"),
+            next_billing_at: Time.zone.parse("2026-09-01")
+          )
+        end
+        let(:invoice) do
+          create(
+            :invoice,
+            :subscription,
+            organization:,
+            customer:,
+            subscriptions: [subscription],
+            status: :finalized,
+            currency: "EUR",
+            fees_amount_cents: 3_100,
+            total_amount_cents: 3_100
+          )
+        end
+        let!(:billing_cycle) do
+          create(
+            :billing_cycle,
+            organization:,
+            subscription:,
+            customer:,
+            subscription_rate_card:,
+            rate_card_rate: rate,
+            billing_at: Time.zone.parse("2026-08-01"),
+            period_from: Time.zone.parse("2026-08-01"),
+            period_to: Time.zone.parse("2026-08-31 23:59:59.999999"),
+            invoice:,
+            status: :done
+          )
+        end
+        let!(:fee) do
+          create(
+            :fee,
+            organization:,
+            subscription:,
+            invoice:,
+            invoiceable: product,
+            amount_cents: 3_100,
+            precise_amount_cents: 3_100,
+            amount_currency: "EUR",
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0
+          )
+        end
+        let(:taxes_result) do
+          CreditNotes::ApplyTaxesService::Result.new.tap do |result|
+            result.applied_taxes = []
+            result.coupons_adjustment_amount_cents = 0
+            result.taxes_amount_cents = 0
+            result.precise_taxes_amount_cents = 0
+            result.taxes_rate = 0
+          end
+        end
+
+        before do
+          allow(CreditNotes::ApplyTaxesService).to receive(:call).and_return(taxes_result)
+        end
+
+        it "does not create a final billing cycle and credits the unused period" do
+          expect { subject }
+            .to change(CreditNote, :count).by(1)
+            .and change(CreditNoteItem, :count).by(1)
+            .and not_change(BillingCycle, :count)
+
+          expect(response).to have_http_status(:success)
+
+          credit_note = CreditNote.sole
+          credit_note_item = CreditNoteItem.sole
+          expect(credit_note).to have_attributes(
+            invoice:,
+            reason: "order_cancellation",
+            credit_amount_cents: credit_note_item.amount_cents,
+            total_amount_cents: credit_note_item.amount_cents,
+            status: "finalized"
+          )
+          expect(credit_note_item.fee).to eq(fee)
+          expect(credit_note_item.amount_cents).to be_positive
+          expect(credit_note_item.amount_cents).to be < fee.amount_cents
+          expect(json[:credit_notes].sole[:lago_id]).to eq(credit_note.id)
+          expect(subscription_rate_card.reload).to have_attributes(
+            ended_at: Time.zone.parse(terminated_at),
+            next_billing_at: Time.zone.parse("2026-09-01")
+          )
+          expect(billing_cycle.reload).to be_done
+        end
       end
     end
   end
