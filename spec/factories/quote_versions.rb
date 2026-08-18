@@ -40,6 +40,10 @@ FactoryBot.define do
     trait :with_subscription_creation_billing_items do
       transient do
         plan { create(:plan, organization: quote.organization) }
+        plan_start_date { Date.current.iso8601 }
+        # Left blank on purpose: an ending date bounds the whole deal, see
+        # QuoteVersions::DealExpiration. Specs that want that bound pass one.
+        plan_end_date { nil }
       end
 
       currency { "EUR" }
@@ -50,7 +54,11 @@ FactoryBot.define do
               "id" => plan.id,
               "localId" => SecureRandom.uuid,
               "type" => "plan",
-              "payload" => {"code" => plan.code}
+              "payload" => {
+                "code" => plan.code,
+                "startDate" => plan_start_date,
+                "endDate" => plan_end_date
+              }.compact
             }
           ]
         }

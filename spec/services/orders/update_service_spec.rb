@@ -144,7 +144,14 @@ RSpec.describe Orders::UpdateService do
       context "when execute_at outlives the deal" do
         let(:quote) { create(:quote, organization:, customer:) }
         let(:quote_version) do
-          create(:quote_version, :approved, quote:, organization:, end_date: 1.month.from_now.to_date)
+          create(
+            :quote_version,
+            :approved,
+            :with_subscription_creation_billing_items,
+            quote:,
+            organization:,
+            plan_end_date: 1.month.from_now.to_date.iso8601
+          )
         end
         let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
         let(:order) { create(:order, organization:, customer:, order_form:) }
@@ -163,7 +170,14 @@ RSpec.describe Orders::UpdateService do
       context "when the stored execute_at outlives the deal" do
         let(:quote) { create(:quote, organization:, customer:) }
         let(:quote_version) do
-          create(:quote_version, :approved, quote:, organization:, end_date: 1.month.from_now.to_date)
+          create(
+            :quote_version,
+            :approved,
+            :with_subscription_creation_billing_items,
+            quote:,
+            organization:,
+            plan_end_date: 1.month.from_now.to_date.iso8601
+          )
         end
         let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
         let(:order) do

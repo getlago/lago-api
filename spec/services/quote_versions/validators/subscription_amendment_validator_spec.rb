@@ -22,8 +22,6 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendmentValidator do
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.current,
-      end_date: 1.year.from_now.to_date,
       billing_items:
     )
   end

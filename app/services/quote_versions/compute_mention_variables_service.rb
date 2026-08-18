@@ -25,7 +25,7 @@ module QuoteVersions
         "quote_version" => quote_version.version.to_s,
         "quote_currency" => quote_version.currency,
         "commercial_terms_term_duration" => term_duration,
-        "commercial_terms_start_date" => quote_version.start_date&.iso8601,
+        "commercial_terms_start_date" => term_start_date&.iso8601,
         "commercial_terms_payment_terms" => customer.applicable_net_payment_term
       }
 
@@ -64,8 +64,8 @@ module QuoteVersions
     # Picks the largest whole unit between the two dates (years, then months, then days)
     # and returns a raw { "unit", "count" } pair. A 12-month span becomes 1 year.
     def term_duration
-      start_date = quote_version.start_date
-      end_date = quote_version.end_date
+      start_date = term_start_date
+      end_date = term_end_date
       return if start_date.blank? || end_date.blank?
 
       months = whole_months_between(start_date, end_date)
@@ -77,6 +77,42 @@ module QuoteVersions
       else
         {"unit" => "months", "count" => months}
       end
+    end
+
+    # The deal term is not a quote-level field: every plan carries its own dates in the billing
+    # items, so the commercial term is the span the quoted plans cover. one_off quotes carry no
+    # plans, hence no term at all.
+    #
+    # An amendment restates a subscription that is already running and its plan need not carry a
+    # start date, since the replacement inherits the target's anniversary date. That date is then
+    # the term the customer signs.
+    def term_start_date
+      plan_dates("startDate").min || amended_subscription_date
+    end
+
+    def amended_subscription_date
+      return unless quote.order_type == "subscription_amendment"
+
+      quote.subscription&.subscription_at&.in_time_zone(customer.applicable_timezone)&.to_date
+    end
+
+    def term_end_date
+      plan_dates("endDate").max
+    end
+
+    # Same parsing as Orders::SubscriptionCreation::ExecuteService, the service these dates feed:
+    # a bare calendar date and a full datetime are both accepted.
+    def plan_dates(key)
+      Array(billing_items["plans"]).filter_map do
+        Utils::Datetime.parse_iso8601(it.dig("payload", key))&.to_date
+      end
+    end
+
+    # The structural pass rejects a payload that is not an object, but a version can be read
+    # before it ever went through one.
+    def billing_items
+      items = quote_version.billing_items
+      items.is_a?(Hash) ? items : {}
     end
 
     # Whole calendar months between two dates, rounding down a partial trailing month.

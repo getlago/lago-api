@@ -9,8 +9,6 @@ RSpec.describe Types::QuoteVersions::UpdateInput do
     expect(subject).to accept_argument(:billing_items).of_type("JSON")
     expect(subject).to accept_argument(:content).of_type("String")
     expect(subject).to accept_argument(:currency).of_type("CurrencyEnum")
-    expect(subject).to accept_argument(:end_date).of_type("ISO8601Date")
     expect(subject).to accept_argument(:id).of_type("ID!")
-    expect(subject).to accept_argument(:start_date).of_type("ISO8601Date")
   end
 end

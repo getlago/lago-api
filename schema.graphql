@@ -3557,10 +3557,8 @@ input CreateQuoteInput {
   clientMutationId: String
   content: String
   customerId: ID!
-  endDate: ISO8601Date
   orderType: OrderTypeEnum!
   owners: [ID!]
-  startDate: ISO8601Date
   subscriptionId: ID
 }
 
@@ -12295,13 +12293,11 @@ type QuoteVersion {
   content: String
   createdAt: ISO8601DateTime!
   currency: CurrencyEnum
-  endDate: ISO8601Date
   id: ID!
   mentionVariables: JSON!
   orderForm: OrderForm
   organization: Organization!
   quote: Quote!
-  startDate: ISO8601Date
   status: StatusEnum!
   updatedAt: ISO8601DateTime!
   version: Int!
@@ -14974,9 +14970,7 @@ input UpdateQuoteVersionInput {
   clientMutationId: String
   content: String
   currency: CurrencyEnum
-  endDate: ISO8601Date
   id: ID!
-  startDate: ISO8601Date
 }
 
 """

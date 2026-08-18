@@ -70,12 +70,7 @@ module Quotes
     def initialize_version!(quote:)
       QuoteVersions::CreateService.call!(
         quote: quote,
-        params: params.slice(
-          :billing_items,
-          :content,
-          :start_date,
-          :end_date
-        ).merge(currency: deal_currency)
+        params: params.slice(:billing_items, :content).merge(currency: deal_currency)
       ).quote_version
     end
 

@@ -15,9 +15,9 @@ module QuoteVersions
           super
         end
 
+        # NOTE: payment terms are not validated yet, the quote-level field lands with LAGO-1529
         def valid?
           validate_currency
-          validate_dates
           validate_plans
           validate_coupons
           validate_wallet_credits
@@ -34,26 +34,9 @@ module QuoteVersions
 
         attr_reader :quote_version, :billing_items, :scope
 
-        # NOTE: payment terms are not validated yet, the quote-level field lands with LAGO-1529
-        def validate_dates
-          start_date = quote_version.start_date
-          end_date = quote_version.end_date
-
-          # An open-ended deal is legitimate, the subscription simply carries no ending date, but
-          # Subscriptions::ValidateService requires the ending date to be strictly after the
-          # subscription date, and these are the dates a plan without its own falls back to, so a
-          # zero-length range cannot produce a subscription.
-          if start_date.present? && end_date.present? && end_date <= start_date
-            add_error(field: :start_date, error_code: "invalid_date_range")
-          end
-
-          validate_future_end_date(end_date, :end_date)
-        end
-
-        # Subscriptions::ValidateService also requires the ending date to be after today, and the
-        # quote pair is what a plan without its own dates falls back to. NOTE: futureness is only
-        # guaranteed at approval time. An order scheduled far enough ahead can still reach execution
-        # with a past ending date, which that service rejects then.
+        # Subscriptions::ValidateService requires the ending date to be after today. NOTE:
+        # futureness is only guaranteed at approval time. An order scheduled far enough ahead can
+        # still reach execution with a past ending date, which that service rejects then.
         def validate_future_end_date(value, field)
           return unless scope == :approve
 
@@ -282,17 +265,18 @@ module QuoteVersions
           )
         end
 
+        # The subscription date is the plan's own, so an approved plan carrying none could not
+        # produce a subscription at all.
         def validate_plan_start_date_presence(plan_item, index)
           return unless scope == :approve
-          return unless (plan_item.dig("payload", "startDate") || quote_version.start_date).nil?
+          return unless plan_item.dig("payload", "startDate").nil?
 
           add_error(field: plan_field(index, "payload.startDate"), error_code: "value_is_mandatory")
         end
 
-        # The execution flow resolves each date on its own, falling back to the quote's, and
-        # Subscriptions::ValidateService then requires the pair, compared as dates, to be strictly
-        # increasing. Both fallbacks are applied here so a plan overriding one side only is still
-        # checked against the quote's other side.
+        # Subscriptions::ValidateService requires the pair, compared as dates, to be strictly
+        # increasing. An open-ended deal is legitimate, the subscription simply carries no ending
+        # date, so only a plan stating both sides has a range to check.
         def validate_plan_dates(plan_item, index)
           validate_plan_start_date_presence(plan_item, index)
 
@@ -302,22 +286,15 @@ module QuoteVersions
           valid_start = validate_plan_date(start_date, plan_field(index, "payload.startDate"))
           valid_end = validate_plan_date(end_date, plan_field(index, "payload.endDate"))
           return unless valid_start && valid_end
-          # A plan carrying neither date bills the quote pair.
-          return if start_date.nil? && end_date.nil?
 
-          # The quote's own ending date is checked by validate_dates, so only a payload one is
-          # reported here.
           validate_future_end_date(end_date, plan_field(index, "payload.endDate"))
 
-          effective_start = effective_date(start_date, quote_version.start_date)
-          effective_end = effective_date(end_date, quote_version.end_date)
+          effective_start = effective_date(start_date)
+          effective_end = effective_date(end_date)
           return if effective_start.nil? || effective_end.nil?
           return if effective_end > effective_start
 
-          add_error(
-            field: plan_field(index, end_date.nil? ? "payload.startDate" : "payload.endDate"),
-            error_code: "invalid_date_range"
-          )
+          add_error(field: plan_field(index, "payload.endDate"), error_code: "invalid_date_range")
         end
 
         # Same ISO 8601 check as Subscriptions::ValidateService, the service these dates feed.
@@ -329,10 +306,10 @@ module QuoteVersions
           false
         end
 
-        # Same parsing as Subscriptions::ValidateService: the payload carries ISO 8601 strings while
-        # the quote carries date columns, and the service compares both as dates.
-        def effective_date(payload_value, quote_value)
-          Utils::Datetime.parse_iso8601(payload_value || quote_value)&.to_date
+        # Same parsing as Subscriptions::ValidateService: the payload carries ISO 8601 strings and
+        # the service compares them as dates.
+        def effective_date(value)
+          Utils::Datetime.parse_iso8601(value)&.to_date
         end
 
         # Subscriptions::CreateService resolves the payment method by id and organization only, so

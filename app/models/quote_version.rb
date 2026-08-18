@@ -66,9 +66,7 @@ end
 #  billing_items     :jsonb
 #  content           :text
 #  currency          :string
-#  end_date          :date
 #  mention_variables :jsonb
-#  start_date        :date
 #  status            :enum             default("draft"), not null
 #  void_reason       :enum
 #  voided_at         :datetime

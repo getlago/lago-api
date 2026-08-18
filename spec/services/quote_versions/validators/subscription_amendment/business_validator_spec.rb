@@ -12,14 +12,12 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
   let(:subscription) { create(:subscription, customer:, organization:, plan: target_plan) }
   let(:plan) { create(:plan, organization:, amount_cents: 20_000) }
   let(:scope) { :approve }
-  let(:start_date) { Date.current }
-  let(:end_date) { 1.year.from_now.to_date }
 
   let(:quote) do
     create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment)
   end
   let(:quote_version) do
-    create(:quote_version, quote:, organization:, currency: "EUR", start_date:, end_date:, billing_items:)
+    create(:quote_version, quote:, organization:, currency: "EUR", billing_items:)
   end
   let(:plan_payload) { {"code" => plan.code} }
   let(:plan_overrides) { nil }
@@ -60,16 +58,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
     end
 
     # The replacement subscription then inherits the term of the one it amends.
-    context "when the ending date is missing" do
-      let(:end_date) { nil }
-
-      it "is valid" do
-        expect(validator).to be_valid
-      end
-    end
-
-    context "when only the plan carries an ending date" do
-      let(:end_date) { nil }
+    context "when the plan carries an ending date" do
       let(:plan_payload) { super().merge("endDate" => 1.year.from_now.iso8601) }
 
       it "is valid" do
@@ -77,17 +66,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
       end
     end
 
-    context "when the ending date is in the past" do
-      let(:end_date) { 1.day.ago.to_date }
-
-      it "refuses the amendment" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({end_date: ["invalid_date"]})
-      end
-    end
-
     context "when the plan carries an ending date in the past" do
-      let(:end_date) { nil }
       let(:plan_payload) { super().merge("endDate" => 1.day.ago.iso8601) }
 
       it "refuses the amendment" do
@@ -98,14 +77,6 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
 
     # The amendment starts on the target's own anniversary date, so the quoted start date is a
     # commercial term the approval gate does not read.
-    context "when the quote carries no start date" do
-      let(:start_date) { nil }
-
-      it "is valid" do
-        expect(validator).to be_valid
-      end
-    end
-
     context "when the plan carries a start date that is not a date" do
       let(:plan_payload) { super().merge("startDate" => "whenever") }
 
@@ -114,9 +85,10 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
       end
     end
 
-    context "when the ending date is before the start date" do
-      let(:start_date) { 2.years.from_now.to_date }
-      let(:end_date) { 1.year.from_now.to_date }
+    context "when the plan ending date is before its start date" do
+      let(:plan_payload) do
+        super().merge("startDate" => 2.years.from_now.iso8601, "endDate" => 1.year.from_now.iso8601)
+      end
 
       it "is valid" do
         expect(validator).to be_valid
@@ -144,7 +116,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
     context "when the quote carries no target subscription" do
       let(:quote) { build(:quote, organization:, customer:, order_type: :subscription_amendment) }
       let(:quote_version) do
-        build(:quote_version, quote:, organization:, currency: "EUR", start_date:, end_date:, billing_items:)
+        build(:quote_version, quote:, organization:, currency: "EUR", billing_items:)
       end
 
       it "refuses the amendment" do

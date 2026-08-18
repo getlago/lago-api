@@ -13,8 +13,8 @@ RSpec.describe QuoteVersions::ApproveService do
       :with_subscription_creation_billing_items,
       quote:,
       organization:,
-      start_date: Date.new(2026, 1, 1),
-      end_date: Date.new(2027, 1, 1)
+      plan_start_date: "2026-01-01",
+      plan_end_date: "2027-01-01"
     )
   end
 
@@ -127,7 +127,7 @@ RSpec.describe QuoteVersions::ApproveService do
 
     context "when the billing items are incomplete", :premium do
       let(:quote_version) do
-        create(:quote_version, quote:, organization:, start_date: Date.new(2026, 1, 1), end_date: Date.new(2027, 1, 1))
+        create(:quote_version, quote:, organization:)
       end
 
       it "does not approve the quote version" do
@@ -150,9 +150,7 @@ RSpec.describe QuoteVersions::ApproveService do
           :quote_version,
           :with_one_off_billing_items,
           quote:,
-          organization:,
-          start_date: Date.new(2026, 1, 1),
-          end_date: Date.new(2027, 1, 1)
+          organization:
         )
       end
 
