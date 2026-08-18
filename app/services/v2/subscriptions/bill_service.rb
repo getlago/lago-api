@@ -52,7 +52,7 @@ module V2
 
       def terminate_all
         subscriptions.each do |subscription|
-          termination = ::V2::Subscriptions::TerminateService.call(subscription:, terminated_at: billing_range.end)
+          termination = ::V2::Subscriptions::TerminateService.call(subscription:, terminated_at: Time.current)
           return result.fail_with_error!(termination.error) unless termination.success?
 
           result.credit_notes.concat(Array.wrap(termination.credit_notes))
