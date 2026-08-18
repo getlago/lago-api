@@ -64,7 +64,7 @@ module Api
 
         result = ::V2::Subscriptions::TerminateService.call(
           subscription:,
-          terminated_at: params[:terminated_at] || Time.current
+          terminated_at: termination_time
         )
 
         if result.success?
@@ -130,6 +130,14 @@ module Api
       end
 
       private
+
+      def termination_time
+        if params[:terminated_at].present?
+          Time.zone.parse(params[:terminated_at].to_s)
+        else
+          Time.current
+        end
+      end
 
       def subscription_external_ids
         @subscription_external_ids ||= Array.wrap(
