@@ -10,6 +10,16 @@ describe "Subscription Billing Periods Scenarios" do
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:plan) { create(:plan, organization:, interval: :monthly, amount_cents: 1000) }
 
+  def current_period_for(subscription)
+    SubscriptionBillingPeriod.covering(Time.current).where(scope_id: subscription.id)
+      .pick(:period_from, :period_to)
+  end
+
+  def expect_period(actual, expected)
+    expect(actual.first).to match_datetime(expected.first)
+    expect(actual.last).to match_datetime(expected.last)
+  end
+
   def periods_for(subscription)
     SubscriptionBillingPeriod.where(scope_id: subscription.id).order(:period_from)
       .pluck(:period_from, :period_to)
@@ -83,6 +93,41 @@ describe "Subscription Billing Periods Scenarios" do
       # own.
       expect(periods_for(subscription)).not_to be_empty
       expect(periods_for(upgraded)).not_to be_empty
+    end
+  end
+
+  # While the applicable timezone differs from the one of the last invoice, DatesService snaps the
+  # charges boundaries to that invoice so that the periods neither overlap nor leave a hole. The
+  # snap is bounded to the period adjacent to that invoice, and the invoice closing that period is
+  # computed with the same rule, so the stored period and the invoice it is billed by agree.
+  it "keeps the periods aligned with the invoices across a timezone change", :premium, transaction: false do
+    subscription = nil
+
+    travel_to(Time.utc(2024, 3, 10)) { subscription = subscribe }
+
+    # First invoice, issued in UTC.
+    travel_to(Time.utc(2024, 4, 1, 1)) { perform_billing }
+
+    travel_to(Time.utc(2024, 4, 5)) do
+      clock_job do
+        create_or_update_customer({external_id: customer.external_id, timezone: "America/New_York"})
+      end
+    end
+
+    # Second invoice, issued in the new timezone: it closes the snapped period.
+    travel_to(Time.utc(2024, 5, 1, 5)) do
+      perform_billing
+
+      expect(subscription.invoice_subscriptions.count).to eq(2)
+
+      invoiced = subscription.invoice_subscriptions.order(:charges_to_datetime).last
+      billed_period = periods_for(subscription).find { |from, _| from == invoiced.charges_from_datetime }
+
+      expect(billed_period).not_to be_nil
+      expect(billed_period.last).to match_datetime(invoiced.charges_to_datetime)
+
+      dates = Subscriptions::DatesService.new_instance(subscription.reload, Time.current, current_usage: true)
+      expect_period(current_period_for(subscription), [dates.charges_from_datetime, dates.charges_to_datetime])
     end
   end
 
