@@ -162,7 +162,9 @@ Rails.application.routes.draw do
         post :clone, on: :member
       end
 
-      resources :orders, only: %i[show index]
+      resources :orders, only: %i[show index] do
+        post :execute, on: :member
+      end
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
         resources :charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/charges" do

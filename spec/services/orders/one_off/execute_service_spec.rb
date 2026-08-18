@@ -132,6 +132,18 @@ RSpec.describe Orders::OneOff::ExecuteService do
         end
       end
 
+      context "when triggered under the api source" do
+        before { CurrentContext.source = "api" }
+
+        it "bills the same add-on" do
+          result = nil
+          expect { result = execute_service.call }.to change(Invoice, :count).by(1)
+
+          expect(result).to be_success
+          expect(customer.invoices.sole.fees.sole.add_on_id).to eq(add_on.id)
+        end
+      end
+
       context "when the invoice creation fails" do
         let(:failed_result) do
           Invoices::CreateOneOffService::Result.new.tap do |failed|

@@ -55,6 +55,9 @@ module Orders
           # id. NOTE: localId is optional on plan items, so an item carrying neither mints a new
           # external id on every attempt.
           external_id: payload["subscriptionExternalId"].presence || item["localId"].presence || SecureRandom.uuid,
+          # Mandatory under the api source, where the customer is normally identified by it rather
+          # than passed. Inert otherwise, but the customer here is always the order's own.
+          external_customer_id: order.customer.external_id,
           name: payload["subscriptionName"],
           billing_time: payload["billingTime"],
           subscription_at: subscription_datetime(payload["startDate"], quote_version.start_date),
@@ -261,6 +264,9 @@ module Orders
 
         {
           fee_types: applies_to["feeTypes"].presence,
+          # Wallets::CreateService reads the codes under the api source and the ids otherwise, so
+          # the limitation must be stated both ways for the execution to be transport independent.
+          billable_metric_codes: applies_to["billableMetricCodes"].presence,
           billable_metric_ids: billable_metric_ids!(applies_to["billableMetricCodes"])
         }.compact.presence
       end
