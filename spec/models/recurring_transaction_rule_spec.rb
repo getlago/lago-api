@@ -292,6 +292,132 @@ RSpec.describe RecurringTransactionRule do
       it "returns paid credits specified on rule" do
         expect(subject).to eq rule.paid_credits
       end
+
+      context "when the gap is larger than one top-up" do
+        let(:rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            method: :fixed,
+            trigger: :threshold,
+            threshold_credits: 10.0,
+            paid_credits: 50.0
+          )
+        end
+        let(:wallet) { create(:wallet, rate_amount: 1.0) }
+        let(:ongoing_balance) { -429.8 }
+
+        it "returns the whole gap rounded up to a multiple of paid credits" do
+          expect(subject).to eq 450.0
+        end
+
+        context "when the gap divides exactly by the top-up amount" do
+          let(:ongoing_balance) { -100.0 }
+
+          it "tops up past the threshold instead of landing on it" do
+            expect(subject).to eq 150.0
+          end
+        end
+
+        context "when a top-up is already in flight" do
+          subject { rule.compute_paid_credits(ongoing_balance:, pending_credits: 50.0) }
+
+          let(:rule) do
+            create(
+              :recurring_transaction_rule,
+              wallet:,
+              method: :fixed,
+              trigger: :threshold,
+              threshold_credits: 10.0,
+              paid_credits: 50.0,
+              granted_credits: 0.0
+            )
+          end
+
+          it "counts the pending credits towards the gap" do
+            expect(subject).to eq 400.0
+          end
+        end
+
+        context "when the rule also grants credits" do
+          let(:rule) do
+            create(
+              :recurring_transaction_rule,
+              wallet:,
+              method: :fixed,
+              trigger: :threshold,
+              threshold_credits: 10.0,
+              paid_credits: 50.0,
+              granted_credits: 50.0
+            )
+          end
+
+          it "counts the granted credits towards the gap" do
+            expect(subject).to eq 400.0
+          end
+        end
+
+        context "when the gap exceeds the wallet maximum top-up" do
+          let(:wallet) { create(:wallet, rate_amount: 1.0, paid_top_up_max_amount_cents: 100_00) }
+
+          it "returns the wallet maximum" do
+            expect(subject).to eq 100.0
+          end
+        end
+
+        context "when the rule ignores the top-up limits" do
+          let(:wallet) { create(:wallet, rate_amount: 1.0, paid_top_up_max_amount_cents: 100_00) }
+          let(:rule) do
+            create(
+              :recurring_transaction_rule,
+              wallet:,
+              method: :fixed,
+              trigger: :threshold,
+              threshold_credits: 10.0,
+              paid_credits: 50.0,
+              ignore_paid_top_up_limits: true
+            )
+          end
+
+          it "returns the whole gap" do
+            expect(subject).to eq 450.0
+          end
+        end
+
+        context "when the rule is triggered by an interval" do
+          let(:rule) do
+            create(
+              :recurring_transaction_rule,
+              wallet:,
+              method: :fixed,
+              trigger: :interval,
+              threshold_credits: 10.0,
+              paid_credits: 50.0
+            )
+          end
+
+          it "returns the configured amount, not the gap" do
+            expect(subject).to eq 50.0
+          end
+        end
+
+        context "when the rule pays nothing" do
+          let(:rule) do
+            create(
+              :recurring_transaction_rule,
+              wallet:,
+              method: :fixed,
+              trigger: :threshold,
+              threshold_credits: 10.0,
+              paid_credits: 0.0
+            )
+          end
+
+          it "returns zero" do
+            expect(subject).to eq 0.0
+          end
+        end
+      end
     end
 
     context "when method is target" do

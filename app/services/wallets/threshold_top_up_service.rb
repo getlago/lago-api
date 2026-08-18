@@ -20,7 +20,10 @@ module Wallets
       return result if wallet.credits_ongoing_balance > rule.threshold_credits
       return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
 
-      paid_credits = rule.compute_paid_credits(ongoing_balance: wallet.credits_ongoing_balance)
+      paid_credits = rule.compute_paid_credits(
+        ongoing_balance: wallet.credits_ongoing_balance,
+        pending_credits: pending_transactions_amount
+      )
       return result if paid_credits.positive? && backing_off_after_decline?
 
       burst_top_ups = top_ups_since(BURST_WINDOW)
@@ -60,7 +63,7 @@ module Wallets
     end
 
     def pending_transactions_amount
-      @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:amount)
+      @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:credit_amount)
     end
 
     def backing_off_after_decline?
