@@ -72,7 +72,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | RateCard | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -258,6 +258,41 @@ enum ActivityTypeEnum {
   invoice_voided
 
   """
+  order.created
+  """
+  order_created
+
+  """
+  order.executed
+  """
+  order_executed
+
+  """
+  order_form.created
+  """
+  order_form_created
+
+  """
+  order_form.expired
+  """
+  order_form_expired
+
+  """
+  order_form.file_uploaded
+  """
+  order_form_file_uploaded
+
+  """
+  order_form.signed
+  """
+  order_form_signed
+
+  """
+  order_form.voided
+  """
+  order_form_voided
+
+  """
   payment_receipt.created
   """
   payment_receipt_created
@@ -336,6 +371,31 @@ enum ActivityTypeEnum {
   product.updated
   """
   product_updated
+
+  """
+  quote.approved
+  """
+  quote_approved
+
+  """
+  quote.created
+  """
+  quote_created
+
+  """
+  quote.updated
+  """
+  quote_updated
+
+  """
+  quote.version_created
+  """
+  quote_version_created
+
+  """
+  quote.voided
+  """
+  quote_voided
 
   """
   rate_card.created
@@ -6216,6 +6276,7 @@ enum EventCategoryEnum {
   PAYMENTS
   PAYMENT_RECEIPTS
   PLANS
+  QUOTES
   SUBSCRIPTIONS_AND_FEES
   WALLETS_AND_CREDITS
 }
@@ -6277,6 +6338,12 @@ enum EventTypeEnum {
   invoice_ready_to_finalize
   invoice_resynced
   invoice_voided
+  order_created
+  order_executed
+  order_form_created
+  order_form_expired
+  order_form_signed
+  order_form_voided
   payment_provider_error
   payment_receipt_created
   payment_receipt_generated
@@ -6288,6 +6355,9 @@ enum EventTypeEnum {
   plan_created
   plan_deleted
   plan_updated
+  quote_approved
+  quote_created
+  quote_voided
   subscription_canceled
   subscription_incomplete
   subscription_started
@@ -9991,6 +10061,7 @@ enum OnTerminationInvoiceEnum {
 }
 
 type Order {
+  activityLogs: [ActivityLog!]
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
   currency: CurrencyEnum
@@ -10045,12 +10116,14 @@ type OrderExecutionRecord {
 }
 
 type OrderForm {
+  activityLogs: [ActivityLog!]
   billingSnapshot: JSON!
   createdAt: ISO8601DateTime!
   customer: Customer!
   expiresAt: ISO8601DateTime
   id: ID!
   number: String!
+  order: Order
   organization: Organization!
   quote: Quote!
   signedAt: ISO8601DateTime
@@ -12124,12 +12197,14 @@ type Query {
 }
 
 type Quote {
+  activityLogs: [ActivityLog!]
   createdAt: ISO8601DateTime!
   currentVersion: QuoteVersion!
   customer: Customer!
   id: ID!
   images: JSON!
   number: String!
+  orderForms: [OrderForm!]!
   orderType: OrderTypeEnum!
   organization: Organization!
   owners: [User!]
@@ -12162,6 +12237,7 @@ type QuoteVersion {
   endDate: ISO8601Date
   id: ID!
   mentionVariables: JSON!
+  orderForm: OrderForm
   organization: Organization!
   quote: Quote!
   startDate: ISO8601Date
@@ -12583,6 +12659,16 @@ enum ResourceTypeEnum {
   invoice
 
   """
+  Order
+  """
+  order
+
+  """
+  OrderForm
+  """
+  order_form
+
+  """
   PaymentReceipt
   """
   payment_receipt
@@ -12611,6 +12697,11 @@ enum ResourceTypeEnum {
   ProductFilter
   """
   product_filter
+
+  """
+  Quote
+  """
+  quote
 
   """
   RateCard

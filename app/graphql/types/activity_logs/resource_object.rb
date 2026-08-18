@@ -22,7 +22,10 @@ module Types
         Types::ProductCategories::Object,
         Types::Products::Object,
         Types::ProductFilters::Object,
-        Types::RateCards::Object
+        Types::RateCards::Object,
+        Types::Quotes::Object,
+        Types::OrderForms::Object,
+        Types::Orders::Object
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -58,6 +61,12 @@ module Types
           Types::ProductFilters::Object
         when "RateCard"
           Types::RateCards::Object
+        when "Quote"
+          Types::Quotes::Object
+        when "OrderForm"
+          Types::OrderForms::Object
+        when "Order"
+          Types::Orders::Object
         else
           raise "Unexpected activity log resource type: #{object.inspect}"
         end

@@ -13,6 +13,7 @@ RSpec.describe Types::QuoteVersions::Object do
     expect(subject).to have_field(:billing_items).of_type("JSON")
     expect(subject).to have_field(:content).of_type("String")
     expect(subject).to have_field(:mention_variables).of_type("JSON!")
+    expect(subject).to have_field(:order_form).of_type("OrderForm")
     expect(subject).to have_field(:status).of_type("StatusEnum!")
     expect(subject).to have_field(:version).of_type("Int!")
     expect(subject).to have_field(:void_reason).of_type("VoidReasonEnum")

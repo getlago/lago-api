@@ -8,6 +8,10 @@ module QuoteVersions
 
     Result = BaseResult[:quote_version]
 
+    # The middleware is used rather than an inline produce because the diff is what makes this
+    # entry useful, and object_changes is only computed when produce wraps the call.
+    activity_loggable(action: "quote.updated", record: -> { quote_version })
+
     def initialize(quote_version:, params:)
       @quote_version = quote_version
       @params = params
@@ -34,9 +38,6 @@ module QuoteVersions
 
       quote_version.save!
       result.quote_version = quote_version
-
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.updated", quote_version)
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
