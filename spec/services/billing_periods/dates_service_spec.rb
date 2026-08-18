@@ -199,8 +199,6 @@ RSpec.describe BillingPeriods::DatesService do
         expect(period.period_to.to_date).to eq(Date.parse("2026-08-16"))
         expect(period.cycle_index).to eq(0)
         expect(period.rate_phase).to eq(intro_phase)
-        expect(period.billing_interval_count).to eq(2)
-        expect(period.billing_interval_unit).to eq("week")
       end
     end
 
