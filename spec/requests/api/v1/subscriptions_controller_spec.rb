@@ -874,6 +874,14 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       test_termination(expected_on_termination_credit_note: nil)
     end
 
+    context "when external_id contains dots" do
+      let(:subscription) { create(:subscription, customer:, plan:, external_id: "coker.com") }
+
+      it "terminates a subscription" do
+        test_termination(expected_on_termination_credit_note: nil)
+      end
+    end
+
     context "when plan is pay_in_arrears" do
       let(:params) { {on_termination_credit_note: "credit"} }
 
@@ -1098,6 +1106,20 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     end
 
     include_examples "requires API permission", "subscription", "write"
+
+    context "when external_id contains dots" do
+      let(:subscription) { create(:subscription, :pending, customer:, plan:, external_id: "coker.com") }
+
+      it "updates a subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription]).to include(
+          external_id: "coker.com",
+          name: "subscription name new"
+        )
+      end
+    end
 
     it "updates a subscription" do
       subject
@@ -1895,6 +1917,20 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when external_id contains dots" do
+      let(:subscription) { create(:subscription, customer:, plan:, external_id: "coker.com") }
+
+      it "returns a subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription]).to include(
+          lago_id: subscription.id,
+          external_id: "coker.com"
+        )
       end
     end
 

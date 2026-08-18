@@ -78,7 +78,7 @@ Rails.application.routes.draw do
         end
       end
 
-      resources :subscriptions, only: %i[create update show index], param: :external_id do
+      resources :subscriptions, only: %i[create update show index], param: :external_id, constraints: {external_id: /[^\/]+/} do
         resource :lifetime_usage, only: %i[show update], controller: "subscriptions/lifetime_usages"
         resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts" do
           collection do
@@ -94,7 +94,7 @@ Rails.application.routes.draw do
           resources :filters, only: %i[index show create update destroy], controller: "subscriptions/charges/filters"
         end
       end
-      delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
+      delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate, constraints: {external_id: /[^\/]+/}
 
       resources :add_ons, param: :code, code: /.*/
       resources :billable_metrics, param: :code, code: /.*/ do
