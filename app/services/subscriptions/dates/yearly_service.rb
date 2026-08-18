@@ -67,7 +67,13 @@ module Subscriptions
         month = from_date.month
         day = subscription_at.day - 1
 
-        build_date(year, month, day)
+        date = build_date(year, month, day)
+
+        # NOTE: if subscription anniversary day is higher than the current last day of the month,
+        #       subscription period, will end on the previous end of day
+        return date - 1.day if last_day_of_month?(date) && subscription_at.day > date.day
+
+        date
       end
 
       def compute_charges_from_date
@@ -162,9 +168,15 @@ module Subscriptions
 
       def period_started_in_last_year?(date)
         return true if date.month < subscription_at.month
-        return true if (date.month == subscription_at.month) && (date.day < subscription_at.day)
+        return false unless date.month == subscription_at.month
 
-        false
+        # NOTE: a Feb 29 subscription has its anniversary on Feb 28 in a common year, so the raw
+        #       subscription day would leave Feb 28 trailing the previous period.
+        date.day < anniversary_day_in(date.year, subscription_at.month)
+      end
+
+      def anniversary_day_in(year, month)
+        [subscription_at.day, Time.days_in_month(month, year)].min
       end
     end
   end

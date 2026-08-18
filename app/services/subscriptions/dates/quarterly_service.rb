@@ -60,22 +60,19 @@ module Subscriptions
           return from_date.end_of_quarter
         end
 
-        year = from_date.year
-        month = from_date.month + 3
-        day = subscription_at.day - 1
+        next_anniversary(from_date) - 1.day
+      end
 
-        if month > 12
-          month = (month % 12).zero? ? 12 : (month % 12)
-          year += 1
-        end
+      # `compute_to_date` is the day before this, so an anniversary always opens a period and never
+      # also closes the previous one.
+      def next_anniversary(from_date)
+        next_period_month = from_date.to_date >> 3
 
-        date = build_date(year, month, day)
-
-        # NOTE: if subscription anniversary day is higher than the current last day of the month,
-        #       subscription period, will end on the previous end of day
-        return date - 1.day if last_day_of_month?(date) && subscription_at.day > date.day
-
-        date
+        build_date(
+          next_period_month.year,
+          next_period_month.month,
+          anniversary_day_in(next_period_month.year, next_period_month.month)
+        )
       end
 
       def compute_next_end_of_period
@@ -108,14 +105,6 @@ module Subscriptions
         year = nil
         month = nil
 
-        # NOTE: if subscription anniversary day is higher than the current last day of the month,
-        #       anniversary day is on the current day
-        day = if subscription.anniversary? && last_day_of_month?(date) && (date.day < subscription_at.day)
-          date.day
-        else
-          subscription_at.day
-        end
-
         billing_months = [
           (subscription_at.month % 12).zero? ? 12 : (subscription_at.month % 12),
           ((subscription_at.month + 3) % 12).zero? ? 12 : ((subscription_at.month + 3) % 12),
@@ -125,38 +114,40 @@ module Subscriptions
 
         # This is the case when we terminate subscription on On February 10 but anniversary date is on
         # 5 of March. In that case we need to fetch billing period in previous year
-        if should_find_billing_date_in_previous_year?(date, billing_months, day)
+        if should_find_billing_date_in_previous_year?(date, billing_months)
           year = date.year - 1
           month = billing_months[3]
-          day = Time.days_in_month(month, year) if last_day_of_month?(subscription_at)
         # In case of termination that is in the middle of the year, previous period anniversary date has to be returned
-        elsif should_find_previous_billing_date?(date, billing_months, day)
+        elsif should_find_previous_billing_date?(date, billing_months)
           year = date.year
-          month = billing_months.reverse.find { |m| m < date.month }
-          day = Time.days_in_month(month, year) if last_day_of_month?(subscription_at)
+          month = billing_months.rfind { |m| m < date.month }
         else
           year = date.year
           month = date.month
         end
 
-        build_date(year, month, day)
+        build_date(year, month, anniversary_day_in(year, month))
       end
 
-      def should_find_billing_date_in_previous_year?(date, billing_months, day)
+      def anniversary_day_in(year, month)
+        [subscription_at.day, Time.days_in_month(month, year)].min
+      end
+
+      def should_find_billing_date_in_previous_year?(date, billing_months)
         return true if date.month < billing_months[0]
 
-        (date.month == billing_months[0]) && should_find_previous_billing_date?(date, billing_months, day)
+        (date.month == billing_months[0]) && should_find_previous_billing_date?(date, billing_months)
       end
 
-      def should_find_previous_billing_date?(date, billing_months, day)
-        return false if last_day_of_month?(date) && last_day_of_month?(subscription_at)
-
-        return true if date.day < day && terminated_pay_in_arrears?
-        return true if (date.day + 1) < day && last_day_of_month?(subscription_at)
-        return true if date.day < day && !last_day_of_month?(subscription_at)
+      def should_find_previous_billing_date?(date, billing_months)
+        # NOTE: checked first. A non-billing month always resolves to an earlier billing month, and
+        #       falling through to the same-month branch below would instead walk the period forward
+        #       one month at a time.
         return true if billing_months.exclude?(date.month)
 
-        false
+        anniversary_day = anniversary_day_in(date.year, date.month)
+
+        date.day < anniversary_day
       end
     end
   end

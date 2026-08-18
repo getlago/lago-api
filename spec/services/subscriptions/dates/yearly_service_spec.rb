@@ -222,8 +222,10 @@ RSpec.describe Subscriptions::Dates::YearlyService do
         let(:subscription_at) { Time.zone.parse("29 Feb 2020") }
         let(:billing_at) { Time.zone.parse("01 Mar 2022") }
 
-        it "returns the previous month last day" do
-          expect(result).to eq("2022-02-28 23:59:59 UTC")
+        # The anniversary clamps to 28 Feb in a common year, so the period ends on the 27th. Both
+        # ends used to land on the 28th, putting that day in two periods.
+        it "returns the day before the anniversary" do
+          expect(result).to eq("2022-02-27 23:59:59 UTC")
         end
       end
 

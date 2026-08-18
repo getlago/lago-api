@@ -151,7 +151,9 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
           let(:billing_at) { Time.zone.parse("27 Feb 2022") }
           let(:subscription_at) { Time.zone.parse("28 Feb 2021") }
 
-          before { subscription.mark_as_terminated!("25 Feb 2022") }
+          # The enclosing context already terminated the subscription, and mark_as_terminated! sets
+          # terminated_at with ||=, so it has to be assigned to move it earlier than billing_at.
+          before { subscription.update!(terminated_at: Time.zone.parse("25 Feb 2022")) }
 
           it "returns the previous half year last day" do
             expect(result).to eq("2021-08-28 00:00:00 UTC")
@@ -165,8 +167,10 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
         let(:billing_at) { Time.zone.parse("30 Apr 2021") }
         let(:subscription_at) { Time.zone.parse("31 Jan 2021") }
 
-        it "returns the current day" do
-          expect(result).to eq("2021-04-30 00:00:00 UTC")
+        # April is not a billing month here (January and July are), so 30 Apr belongs to the period
+        # opened in January. It used to open a period of its own, sliding the cycle monthly.
+        it "returns the anniversary of the period covering that day" do
+          expect(result).to eq("2021-01-31 00:00:00 UTC")
         end
       end
 
