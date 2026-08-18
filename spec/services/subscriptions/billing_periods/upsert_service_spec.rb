@@ -184,8 +184,8 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
   end
 
   describe "convergence" do
-    it "removes periods that are no longer wanted" do
-      stale = create(
+    it "keeps periods that have already closed" do
+      past = create(
         :subscription_billing_period,
         subscription:,
         period_from: Time.utc(2020, 1, 1),
@@ -194,12 +194,23 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
 
       result
 
-      expect(SubscriptionBillingPeriod.where(id: stale.id)).to be_empty
-      expect(persisted_periods.size).to eq(2)
+      expect(SubscriptionBillingPeriod.where(id: past.id)).to be_present
+      expect(persisted_periods.size).to eq(3)
     end
 
-    # A moved boundary is a new row rather than an update, so the stale one it overlaps has to go in
-    # the same transaction. The overlap constraint is deferred to commit for exactly this.
+    it "keeps the period it rolled out of" do
+      described_class.call(subscription:, timestamp: Time.utc(2024, 2, 10))
+
+      expect { described_class.call(subscription:, timestamp:) }
+        .to change(SubscriptionBillingPeriod, :count).by(1)
+
+      # February, March and April, rather than March and April alone.
+      expect(persisted_periods.size).to eq(3)
+      expect(persisted_periods.first.first).to match_datetime(Time.utc(2024, 2, 1))
+    end
+
+    # A moved boundary is the same period shifted, so the row it replaces overlaps it and cannot
+    # stay. The overlap constraint is deferred to commit for exactly this.
     it "replaces a period whose boundary moved, despite the overlap" do
       current_from, current_to = boundaries_at(timestamp)
       shifted = create(

@@ -10,8 +10,9 @@ module Subscriptions
     class UpsertService < BaseService
       Result = BaseResult[:periods]
 
-      # Matches the window the events processor keeps terminated subscriptions cached for, so
-      # backfilled events on a recently terminated subscription still resolve to a period.
+      # A subscription terminated longer ago than this has its final period already stored and
+      # nothing left to move, so re-deriving it is wasted work. Matches the window the events
+      # processor keeps terminated subscriptions cached for.
       TERMINATED_GRACE_PERIOD = 1.month
 
       def initialize(subscription:, timestamp: Time.current)
@@ -65,11 +66,18 @@ module Subscriptions
         false
       end
 
+      # Everything that closed before the current period is kept: a closed period is still needed to
+      # attribute a late event and to bill the usage it covers. From the current period onwards only
+      # the periods being written survive, which discards both a boundary that moved (the same
+      # period shifted, so its old row overlaps the new one) and a period that can no longer happen,
+      # such as the next one after a termination.
       def discarded_periods
-        scope = SubscriptionBillingPeriod.where(scope_type: "Subscription", scope_id: subscription.id)
-        return scope if desired_periods.empty?
+        return SubscriptionBillingPeriod.none if desired_periods.empty?
 
-        scope.where.not(period_from: desired_periods.map(&:period_from))
+        SubscriptionBillingPeriod
+          .where(scope_type: "Subscription", scope_id: subscription.id)
+          .where(period_to: desired_periods.first.period_from..)
+          .where.not(period_from: desired_periods.map(&:period_from))
       end
 
       def desired_periods

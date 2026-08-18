@@ -6,16 +6,11 @@ module Clock
   #
   # A non-zero count is a bug, not routine — it means a path that moves a subscription's billing
   # dates is not maintaining its periods. Watch it.
-  #
-  # Also prunes the periods of subscriptions terminated beyond the grace window, which the upsert
-  # service stops maintaining and would otherwise leave behind.
   class DetectMissingBillingPeriodsJob < ClockJob
     unique :until_executed, on_conflict: :log, lock_ttl: 30.minutes
 
     def perform
       Organization.find_each { |organization| heal(organization) }
-
-      prune
     end
 
     private
@@ -39,13 +34,6 @@ module Clock
         "[billing_periods] #{count} active subscriptions without a covering period " \
         "organization_id=#{organization.id}"
       )
-    end
-
-    def prune
-      SubscriptionBillingPeriod
-        .expired(Subscriptions::BillingPeriods::UpsertService::TERMINATED_GRACE_PERIOD.ago)
-        .in_batches
-        .delete_all
     end
   end
 end
