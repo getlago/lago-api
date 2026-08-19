@@ -123,9 +123,17 @@ class Subscription < ApplicationRecord
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.activated_at ||= timestamp
-    self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
+    self.lifetime_usage ||= previous_subscription&.lifetime_usage || find_or_create_lifetime_usage!
     self.lifetime_usage.recalculate_invoiced_usage = true
     active!
+  end
+
+  # Two concurrent requests activating the same subscription (e.g. a manual update racing
+  # a scheduled job) can both find `lifetime_usage` blank and both attempt to build one,
+  # tripping the `index_lifetime_usages_on_subscription_id` unique index. `create_or_find_by!`
+  # runs the insert in a savepoint and falls back to the row the other request created.
+  def find_or_create_lifetime_usage!
+    LifetimeUsage.create_with(organization:).create_or_find_by!(subscription: self)
   end
 
   def mark_as_terminated!(timestamp = Time.current)

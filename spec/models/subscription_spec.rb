@@ -1057,6 +1057,22 @@ RSpec.describe Subscription do
         expect(lifetime_usage.reload.subscription).to eq(subscription)
       end
     end
+
+    context "when a concurrent request already created the lifetime usage" do
+      subject(:subscription) { create(:subscription, :pending) }
+
+      # Simulates a concurrent request that already inserted the row: the real
+      # `index_lifetime_usages_on_subscription_id` unique constraint fires when
+      # `mark_as_active!` tries to create its own.
+      let!(:concurrent_lifetime_usage) { create(:lifetime_usage, subscription:, organization: subscription.organization) }
+
+      it "reuses the existing record instead of raising" do
+        expect { subscription.mark_as_active! }
+          .to change(subscription, :status).from("pending").to("active")
+
+        expect(subscription.lifetime_usage).to eq(concurrent_lifetime_usage)
+      end
+    end
   end
 
   describe "#terminated_at?" do
