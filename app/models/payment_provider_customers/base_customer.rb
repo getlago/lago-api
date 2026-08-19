@@ -52,19 +52,18 @@ module PaymentProviderCustomers
       get_from_settings("payment_method_id") || get_from_settings("provider_mandate_id")
     end
 
-    # A manual payment row is the reserved null-provider connection: a base-class row (no provider
-    # subclass) coded "manual".
+    # A manual payment row is the reserved null-provider connection (no payment provider) coded "manual".
     def manual?
-      instance_of?(BaseCustomer) && code == MANUAL_CODE
+      payment_provider_id.nil? && code == MANUAL_CODE
     end
 
     private
 
     # The "manual" code is reserved for the null-provider manual connection; a provider-backed
-    # connection (any subclass) cannot use it.
+    # connection cannot use it.
     def code_is_not_reserved
       return unless code == MANUAL_CODE
-      return if instance_of?(BaseCustomer)
+      return if manual?
 
       errors.add(:code, "value_is_reserved")
     end

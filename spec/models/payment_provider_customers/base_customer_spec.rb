@@ -14,7 +14,9 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
 
     describe "code_is_not_reserved" do
       it "rejects a provider-backed connection using the reserved manual code" do
-        connection = create(:stripe_customer)
+        customer = create(:customer)
+        provider = create(:stripe_provider, organization: customer.organization)
+        connection = create(:stripe_customer, customer:, organization: customer.organization, payment_provider: provider)
         connection.code = "manual"
 
         expect(connection).not_to be_valid
@@ -52,8 +54,8 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
       expect(described_class.new(payment_provider_id: nil, code: "manual").manual?).to be(true)
     end
 
-    it "is false for a provider-backed connection" do
-      expect(build(:stripe_customer).manual?).to be(false)
+    it "is false for a provider-backed connection coded manual" do
+      expect(described_class.new(payment_provider_id: SecureRandom.uuid, code: "manual").manual?).to be(false)
     end
 
     it "is false for a null-provider row with a different code" do
