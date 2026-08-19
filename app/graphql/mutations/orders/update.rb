@@ -20,8 +20,6 @@ module Mutations
         result = ::Orders::UpdateService.call(order:, params: args.except(:id))
 
         result.success? ? result.order : result_error(result)
-      rescue BaseLockService::FailedToAcquireLock
-        validation_error(messages: {base: ["concurrency_conflict"]})
       end
     end
   end

@@ -37,6 +37,8 @@ module OrderForms
       end
 
       result
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

@@ -168,6 +168,18 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
+      end
+    end
+
     context "when the billing items are incomplete", :premium do
       let(:quote_version) do
         create(:quote_version, quote:, organization:)

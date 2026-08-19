@@ -45,6 +45,8 @@ module QuoteVersions
       result.single_validation_failure!(field: :status, error_code: "active_version_exists")
     rescue CloneError => e
       result.service_failure!(code: "clone_failed", message: e.message, error: e)
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

@@ -20,8 +20,6 @@ module Mutations
         result = ::QuoteVersions::CloneService.call(quote_version:)
 
         result.success? ? result.quote_version : result_error(result)
-      rescue BaseLockService::FailedToAcquireLock
-        validation_error(messages: {base: ["concurrency_conflict"]})
       end
     end
   end

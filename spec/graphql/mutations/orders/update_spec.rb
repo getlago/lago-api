@@ -115,22 +115,4 @@ RSpec.describe Mutations::Orders::Update do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end
-
-  context "when the quote lock cannot be acquired", :premium do
-    before do
-      allow(Orders::UpdateService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
-    end
-
-    it "returns an unprocessable entity error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {input: {id: order.id, executionMode: "execute_in_lago"}}
-      )
-
-      expect_unprocessable_entity(result, details: {base: ["concurrency_conflict"]})
-    end
-  end
 end
