@@ -2,26 +2,26 @@
 
 module ChargeModels
   class Factory
-    def self.new_instance(chargeable:, aggregation_result:, period_ratio: 1.0, calculate_projected_usage: false)
-      unless chargeable.is_a?(ChargeModels::ChargeableData)
-        raise NotImplementedError, "Chargeable: #{chargeable.class.name} is not implemented"
+    def self.new_instance(structure:, aggregation_result:, period_ratio: 1.0, calculate_projected_usage: false)
+      unless structure.is_a?(ChargeModels::PricingStructure)
+        raise NotImplementedError, "Pricing structure: #{structure.class.name} is not implemented"
       end
 
       charge_model_class = charge_model_class(
-        chargeable: chargeable,
+        structure: structure,
         has_aggregator: aggregation_result.respond_to?(:aggregator) && !aggregation_result.aggregator.nil?
       )
 
       common_args = {
-        chargeable:,
+        structure:,
         aggregation_result:,
         period_ratio:,
         calculate_projected_usage:
       }
 
       # TODO(pricing_group_keys): remove after deprecation of grouped_by
-      pricing_group_keys = chargeable.properties["pricing_group_keys"].presence || chargeable.properties["grouped_by"]
-      use_grouped_service = pricing_group_keys.present? || chargeable.accepts_target_wallet
+      pricing_group_keys = structure.properties["pricing_group_keys"].presence || structure.properties["grouped_by"]
+      use_grouped_service = pricing_group_keys.present? || structure.accepts_target_wallet
 
       if use_grouped_service && !aggregation_result.aggregations.nil?
         ChargeModels::GroupedService.new(**common_args.merge(charge_model: charge_model_class))
@@ -34,12 +34,12 @@ module ChargeModels
     # When forecasting (no aggregator available), prorated graduated charges fall back to
     # the non-prorated GraduatedService since per-event aggregation data is not available.
     # This allows forecasting to work for all charge types without failing on nil aggregator.
-    def self.charge_model_class(chargeable:, has_aggregator: true)
-      case chargeable.charge_model.to_sym
+    def self.charge_model_class(structure:, has_aggregator: true)
+      case structure.charge_model.to_sym
       when :standard
         ChargeModels::StandardService
       when :graduated
-        if chargeable.prorated && has_aggregator
+        if structure.prorated && has_aggregator
           ChargeModels::ProratedGraduatedService
         else
           ChargeModels::GraduatedService
@@ -57,12 +57,12 @@ module ChargeModels
       when :dynamic
         ChargeModels::DynamicService
       else
-        raise NotImplementedError, "Charge model #{chargeable.charge_model} is not implemented"
+        raise NotImplementedError, "Charge model #{structure.charge_model} is not implemented"
       end
     end
 
-    def self.in_advance_charge_model_class(chargeable:)
-      case chargeable.charge_model.to_sym
+    def self.in_advance_charge_model_class(structure:)
+      case structure.charge_model.to_sym
       when :standard
         ChargeModels::StandardService
       when :graduated
@@ -78,7 +78,7 @@ module ChargeModels
       when :dynamic
         ChargeModels::DynamicService
       else
-        raise NotImplementedError, "Charge model #{chargeable.charge_model} is not implemented"
+        raise NotImplementedError, "Charge model #{structure.charge_model} is not implemented"
       end
     end
   end

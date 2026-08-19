@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ChargeModels::StandardService do
   subject(:apply_standard_service) do
     described_class.apply(
-      chargeable: chargeable_data,
+      structure: pricing_structure,
       aggregation_result:,
       period_ratio: 1.0
     )
@@ -21,7 +21,7 @@ RSpec.describe ChargeModels::StandardService do
   let(:aggregation) { 10 }
   let(:total_aggregated_units) { nil }
   let(:full_units_number) { nil }
-  let(:chargeable_data) { ChargeModels::ChargeableData.from_charge(charge) }
+  let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge) }
 
   let(:charge) do
     create(
@@ -56,7 +56,7 @@ RSpec.describe ChargeModels::StandardService do
 
   context "when charge is a fixed charge" do
     let(:charge) { build(:fixed_charge, charge_model: :standard, properties: {amount: "10"}) }
-    let(:chargeable_data) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
+    let(:pricing_structure) { ChargeModels::PricingStructure.from_fixed_charge(charge) }
 
     it "applies the charge model to the value" do
       expect(apply_standard_service.amount).to eq(100)

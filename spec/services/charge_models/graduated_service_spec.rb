@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ChargeModels::GraduatedService do
   subject(:apply_graduated_service) do
     described_class.apply(
-      chargeable: chargeable_data,
+      structure: pricing_structure,
       aggregation_result:,
       period_ratio: 1.0
     )
@@ -16,7 +16,7 @@ RSpec.describe ChargeModels::GraduatedService do
   end
 
   let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
-  let(:chargeable_data) { ChargeModels::ChargeableData.from_charge(charge) }
+  let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge) }
 
   let(:charge) do
     create(
@@ -329,7 +329,7 @@ RSpec.describe ChargeModels::GraduatedService do
         ]
       })
     end
-    let(:chargeable_data) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
+    let(:pricing_structure) { ChargeModels::PricingStructure.from_fixed_charge(charge) }
 
     it "applies the charge model to the value" do
       # 2 + 100 + 3 + 50 + 3 + 5 = 163

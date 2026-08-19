@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ChargeModels
-  ChargeableData = Data.define(
+  PricingStructure = Data.define(
     :charge_model,
     :properties,
     :prorated,
@@ -30,7 +30,7 @@ module ChargeModels
         properties: charge.properties,
         prorated: charge.prorated?,
         accepts_target_wallet: charge.accepts_target_wallet,
-        currency: charge.plan.amount.currency
+        currency: Money::Currency.new(charge.plan.amount_currency)
       )
     end
 
@@ -44,7 +44,7 @@ module ChargeModels
         properties: fixed_charge.properties,
         prorated: fixed_charge.prorated?,
         accepts_target_wallet: false,
-        currency: fixed_charge.plan.amount.currency
+        currency: Money::Currency.new(fixed_charge.plan.amount_currency)
       )
     end
   end
