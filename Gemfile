@@ -135,7 +135,7 @@ group :development, :test do
   gem "webmock"
   gem "awesome_print"
   gem "pry-byebug"
-  gem "knapsack_pro", "~> 9.0"
+  gem "knapsack_pro", "~> 10.0"
   gem "parallel_tests", "~> 5.3"
 
   gem "database_cleaner-active_record"
