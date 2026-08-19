@@ -52,11 +52,11 @@ RSpec.describe SubscriptionRateCards::TerminateService do
       expect { result }.to change(BillingCycle, :count).by(1)
 
       expect(result).to be_success
-      expect(result.billing_cycle).to be_present
+      expect(result.billing_cycles).to be_present
       expect(subscription_rate_card.reload.ended_at).to eq(terminated_at)
       expect(subscription_rate_card.next_billing_at).to eq(terminated_at)
 
-      billing_cycle = result.billing_cycle
+      billing_cycle = result.billing_cycles.sole
       expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-01"))
       expect(billing_cycle.period_to).to eq(terminated_at)
       expect(billing_cycle.billing_at).to eq(terminated_at)
@@ -70,7 +70,39 @@ RSpec.describe SubscriptionRateCards::TerminateService do
       it "stores the final cycle proration ratio" do
         expect { result }.to change(BillingCycle, :count).by(1)
 
-        expect(result.billing_cycle.proration_ratio).to eq(BigDecimal("0.5483870968"))
+        expect(result.billing_cycles.sole.proration_ratio).to eq(BigDecimal("0.5483870968"))
+      end
+    end
+
+    context "with a future termination date" do
+      around do |example|
+        travel_to(Time.zone.parse("2026-08-17 12:00:00")) { example.run }
+      end
+
+      let(:terminated_at) { Time.zone.parse("2026-10-10 12:34:56") }
+      let(:subscription_rate_card) do
+        create(
+          :subscription_rate_card,
+          organization:,
+          subscription:,
+          customer:,
+          rate_card:,
+          billing_anchor_date: Date.parse("2026-01-01"),
+          started_at: Time.zone.parse("2026-01-01"),
+          next_billing_at: Time.zone.parse("2026-09-01")
+        )
+      end
+
+      it "creates billing cycles overlapping now through the termination date" do
+        expect { result }.to change(BillingCycle, :count).by(3)
+
+        expect(result.billing_cycles.map { [it.period_from, it.period_to] }).to eq(
+          [
+            [Time.zone.parse("2026-08-01"), Time.zone.parse("2026-08-31 23:59:59.999999")],
+            [Time.zone.parse("2026-09-01"), Time.zone.parse("2026-09-30 23:59:59.999999")],
+            [Time.zone.parse("2026-10-01"), terminated_at]
+          ]
+        )
       end
     end
 
@@ -93,7 +125,7 @@ RSpec.describe SubscriptionRateCards::TerminateService do
         expect { result }.not_to change(BillingCycle, :count)
 
         expect(result).to be_success
-        expect(result.billing_cycle).to be_nil
+        expect(result.billing_cycles).to eq([])
         expect(subscription_rate_card.reload.ended_at).to eq(terminated_at)
         expect(subscription_rate_card.next_billing_at).to eq(Time.zone.parse("2026-08-01"))
       end

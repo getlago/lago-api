@@ -232,7 +232,11 @@ RSpec.describe Api::V2::SubscriptionsController do
       end
 
       context "with multiple rates and phased interval overrides" do
-        let(:terminated_at) { "2026-09-25T08:00:00Z" }
+        around do |example|
+          travel_to(Time.zone.parse("2026-08-19 00:00:00")) { example.run }
+        end
+
+        let(:terminated_at) { 1.second.ago.iso8601 }
         let(:subscription) do
           create(
             :subscription,
@@ -327,22 +331,29 @@ RSpec.describe Api::V2::SubscriptionsController do
           )
         end
 
-        it "uses the active rate and the phase-adjusted final period" do
+        it "creates the pending billing cycle overlapping the termination time" do
           expect { subject }.to change(BillingCycle, :count).by(1)
 
           expect(response).to have_http_status(:success)
 
-          billing_cycle = BillingCycle.sole
-          expect(billing_cycle).to have_attributes(
-            rate_card_rate: active_rate,
-            rate_override: nil,
-            rate_properties: active_rate.rate_properties,
-            period_from: Time.zone.parse("2026-09-14"),
+          billing_cycles = BillingCycle.order(:period_from, :period_to).to_a
+          expect(billing_cycles.map { [it.period_from, it.period_to, it.rate_card_rate, it.rate_override] }).to eq(
+            [
+              [Time.zone.parse("2026-08-17"), Time.zone.parse(terminated_at), initial_rate, intro_override]
+            ]
+          )
+
+          final_billing_cycle = billing_cycles.last
+          expect(final_billing_cycle).to have_attributes(
+            rate_card_rate: initial_rate,
+            rate_override: intro_override,
+            rate_properties: intro_override.rate_properties,
+            period_from: Time.zone.parse("2026-08-17"),
             period_to: Time.zone.parse(terminated_at),
             billing_at: Time.zone.parse(terminated_at)
           )
           expect(json[:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
-          expect([initial_rate, future_rate]).not_to include(billing_cycle.rate_card_rate)
+          expect(billing_cycles.map(&:rate_card_rate)).not_to include(active_rate, future_rate)
           expect([intro_phase, standard_phase].map(&:code)).to eq(%w[weekly_intro monthly_standard])
         end
       end

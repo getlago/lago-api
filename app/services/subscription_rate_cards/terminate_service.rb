@@ -3,17 +3,16 @@
 module SubscriptionRateCards
   # Terminates a single product-catalog item.
   #
-  # Arrears items create one pending BillingCycle for the open period that contains
-  # terminated_at. The period is resolved through BillingPeriods::DatesService using
-  # the item's current clock, then clamped to terminated_at and left pending for the
-  # clock processor to invoice. The item's next_billing_at is set to terminated_at so
-  # the due-items scope will no longer treat it as an unbilled future cycle.
+  # Arrears items create pending BillingCycles for periods overlapping the termination
+  # window. The final period is clamped to terminated_at and left pending for the clock
+  # processor to invoice. The item's next_billing_at is set to terminated_at so the
+  # due-items scope will no longer treat it as an unbilled future cycle.
   #
   # Advance items do not create a BillingCycle: the current period was already billed
   # up front. This service only sets ended_at; the subscription-level termination flow
   # handles any unused-period credit note separately.
   class TerminateService < BaseService
-    Result = BaseResult[:subscription_rate_card, :billing_cycle]
+    Result = BaseResult[:subscription_rate_card, :billing_cycles]
 
     def initialize(subscription_rate_card:, terminated_at: Time.current)
       @subscription_rate_card = subscription_rate_card
@@ -23,10 +22,12 @@ module SubscriptionRateCards
 
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless subscription_rate_card
+
+      result.billing_cycles = []
       return result if subscription_rate_card.ended_at.present?
 
       ActiveRecord::Base.transaction do
-        result.billing_cycle = final_cycle
+        result.billing_cycles = final_cycles
         subscription_rate_card.update!(termination_attributes)
       end
 
@@ -47,30 +48,33 @@ module SubscriptionRateCards
       attributes.merge(next_billing_at: terminated_at)
     end
 
-    def final_cycle
-      return unless arrears?
+    def final_cycles
+      return [] unless arrears?
 
-      dates.periods.filter_map { |period| billing_cycle_for(period) }.sole
+      dates.periods.filter_map { |period| billing_cycle_for(period) }
     end
 
-    # Arrears periods are only emitted when their billing boundary is reached.
-    # Extend the range to the item's current clock so DatesService returns the
-    # open cycle that contains terminated_at; billing_cycle_for then clamps it.
+    # Termination emits every period overlapping the termination window instead of
+    # waiting for the regular arrears/advance billing boundary.
     def dates
       @dates ||= BillingPeriods::DatesService.from_subscription_rate_card(
         subscription_rate_card,
         rates:,
         rate_phases:,
-        range: terminated_at..subscription_rate_card.next_billing_at,
-        options: dates_options,
-        ratio_end_at: terminated_at
+        range: termination_range,
+        options: dates_options
       )
     end
 
-    def billing_cycle_for(period)
-      period_to = [period.period_to, terminated_at.utc].min
-      return if period.period_from >= period_to
+    def termination_range
+      if terminated_at.future?
+        Time.current..terminated_at
+      else
+        terminated_at..terminated_at
+      end
+    end
 
+    def billing_cycle_for(period)
       BillingCycle.create!(
         organization:,
         subscription:,
@@ -78,7 +82,7 @@ module SubscriptionRateCards
         subscription_rate_card:,
         billing_at: terminated_at,
         period_from: period.period_from,
-        period_to:,
+        period_to: period.period_to,
         rate_card_rate: period.rate,
         rate_override: period.rate_override,
         rate_properties: period.rate_properties,
@@ -96,8 +100,8 @@ module SubscriptionRateCards
 
       RateCardRate
         .from(ranked_rates, :rate_card_rates)
-        .where("effective_from <= ?", terminated_at.end_of_day)
-        .where("next_effective_from IS NULL OR next_effective_from >= ?", terminated_at.beginning_of_day)
+        .where("effective_from <= ?", termination_range.end.end_of_day)
+        .where("next_effective_from IS NULL OR next_effective_from >= ?", termination_range.begin.beginning_of_day)
         .order(:effective_from)
     end
 
@@ -116,7 +120,8 @@ module SubscriptionRateCards
       BillingPeriods::DatesService::Options.new(
         timezone: subscription.customer.applicable_timezone,
         exclude_out_of_range: true,
-        realign_billing_anchor: true
+        realign_billing_anchor: true,
+        termination: true
       )
     end
 

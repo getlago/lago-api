@@ -9,7 +9,8 @@ RSpec.describe BillingPeriods::DatesService do
         described_class::Options.new(
           timezone: "UTC",
           exclude_out_of_range: true,
-          realign_billing_anchor: true
+          realign_billing_anchor: true,
+          termination: false
         )
       )
     end
@@ -46,7 +47,8 @@ RSpec.describe BillingPeriods::DatesService do
       described_class::Options.new(
         timezone: "UTC",
         exclude_out_of_range: true,
-        realign_billing_anchor:
+        realign_billing_anchor:,
+        termination: false
       )
     end
     let(:subscription_rate_card) do
@@ -135,6 +137,29 @@ RSpec.describe BillingPeriods::DatesService do
 
       it "raises an exception" do
         expect { result }.to raise_error(ArgumentError, "Invalid billing timing: invalid")
+      end
+    end
+
+    context "with termination mode" do
+      let(:range) { Time.zone.parse("2026-08-05")..Time.zone.parse("2026-08-17 12:34:56") }
+      let(:options) do
+        described_class::Options.new(
+          timezone: "UTC",
+          exclude_out_of_range: true,
+          realign_billing_anchor: false,
+          termination: true
+        )
+      end
+
+      it "returns periods overlapping the range regardless of billing timing and clamps the final period" do
+        expect(result.periods.map { [it.period_from, it.period_to] }).to eq(
+          [
+            [Time.zone.parse("2026-08-03"), Time.zone.parse("2026-08-05 23:59:59.999999")],
+            [Time.zone.parse("2026-08-06"), Time.zone.parse("2026-08-09").end_of_day],
+            [Time.zone.parse("2026-08-10"), Time.zone.parse("2026-08-16").end_of_day],
+            [Time.zone.parse("2026-08-17"), Time.zone.parse("2026-08-17 12:34:56")]
+          ]
+        )
       end
     end
 

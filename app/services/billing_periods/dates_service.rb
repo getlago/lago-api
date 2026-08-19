@@ -24,9 +24,15 @@ module BillingPeriods
     # - true: when the interval changes, use the transition date as the new
     #   anchor. Same example => the next monthly period runs Feb 15 to Mar 14
     #   and then continues on the 15th of each month
-    Options = Data.define(:timezone, :exclude_out_of_range, :realign_billing_anchor) do
+    #
+    # termination:
+    # - false: select the date service from the rate card billing timing
+    # - true: generate every period overlapping `range`, regardless of billing timing.
+    #   Use for termination, where a future cancellation may need several unbilled
+    #   cycles up to the termination instant.
+    Options = Data.define(:timezone, :exclude_out_of_range, :realign_billing_anchor, :termination) do
       def self.default
-        new(timezone: "UTC", exclude_out_of_range: true, realign_billing_anchor: true)
+        new(timezone: "UTC", exclude_out_of_range: true, realign_billing_anchor: true, termination: false)
       end
     end
 
@@ -82,16 +88,14 @@ module BillingPeriods
       subscription_rate_card,
       rates:,
       range:, rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
-      options: Options.default,
-      ratio_end_at: nil
+      options: Options.default
     )
       call(
         options:,
         subscription_rate_card:,
         rates:,
         rate_phases:,
-        range:,
-        ratio_end_at:
+        range:
       )
     end
 
@@ -100,8 +104,7 @@ module BillingPeriods
       rates:,
       range:,
       options: Options.default,
-      rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
-      ratio_end_at: nil
+      rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: [])
     )
       @subscription_rate_card = subscription_rate_card
       @options = options
@@ -114,7 +117,6 @@ module BillingPeriods
       @rates = rates
       @rate_phases = rate_phases
       @range = range
-      @ratio_end_at = ratio_end_at
       super
     end
 
@@ -126,8 +128,7 @@ module BillingPeriods
         subscription_rate_card:,
         rates:,
         rate_phases:,
-        range:,
-        ratio_end_at:
+        range:
       )
 
       result.periods = dates.periods
@@ -137,13 +138,15 @@ module BillingPeriods
 
     private
 
-    attr_reader :billing_anchor_date, :billing_timing, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range, :ratio_end_at
+    attr_reader :billing_anchor_date, :billing_timing, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range
 
     def arrears?
       billing_timing == :arrears
     end
 
     def dates_service
+      return Dates::TerminationService if options.termination
+
       case billing_timing
       when :arrears
         Dates::ArrearsService
