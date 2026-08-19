@@ -428,7 +428,7 @@ RSpec.describe Invoices::Payments::CreateService do
     context "when invoice is closed" do
       before { invoice.closed! }
 
-      it "does not creates a payment" do
+      it "does not create a payment" do
         result = create_service.call
 
         expect(result).to be_success
