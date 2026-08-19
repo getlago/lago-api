@@ -26,6 +26,15 @@ module QuoteVersions
           add_error(field: :"billing_items.plans", error_code: "single_plan_expected")
         end
 
+        # The target subscription is already bound to an entity, and the plan change carries that
+        # binding over. Re-pinning it here would move a running subscription to another entity's
+        # invoice-numbering series mid-life, so an amendment cannot name one at all.
+        def validate_billing_entity
+          return if quote_version.billing_entity_id.blank?
+
+          add_error(field: :billing_entity_id, error_code: "not_supported_for_order_type")
+        end
+
         # An amendment restates the term of a subscription that is already running: its start is the
         # target's own anniversary date, which the plan change carries over, so a quoted start date
         # is a commercial term only and is not validated here.

@@ -87,6 +87,34 @@ RSpec.describe Orders::OneOff::ExecuteService do
         expect(fee.description).to eq(add_on.description)
       end
 
+      it "issues the invoice under the customer's entity when the deal names none" do
+        execute_service.call
+
+        expect(quote_version.billing_entity_id).to eq(nil)
+        expect(customer.invoices.sole.billing_entity_id).to eq(billing_entity.id)
+      end
+
+      context "when the deal names another billing entity" do
+        let(:issuing_entity) { create(:billing_entity, organization:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items:,
+            billing_entity: issuing_entity
+          )
+        end
+
+        it "issues the invoice under that entity" do
+          execute_service.call
+
+          expect(customer.invoices.sole.billing_entity_id).to eq(issuing_entity.id)
+        end
+      end
+
       context "with overrides" do
         let(:overrides) do
           {

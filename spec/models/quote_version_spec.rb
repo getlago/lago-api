@@ -30,6 +30,7 @@ RSpec.describe QuoteVersion do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:quote)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_one(:order_form)
     end
   end
@@ -96,6 +97,41 @@ RSpec.describe QuoteVersion do
       quote_version = create(:quote_version, quote:, organization: quote.organization)
 
       expect(quote_version.customer).to eq(quote.customer)
+    end
+  end
+
+  describe "#billing_entity" do
+    let(:quote) { create(:quote) }
+
+    it "falls back to the customer's billing entity" do
+      quote_version = create(:quote_version, quote:, organization: quote.organization)
+
+      expect(quote_version.billing_entity_id).to eq(nil)
+      expect(quote_version.billing_entity).to eq(quote.customer.billing_entity)
+    end
+
+    it "returns its own billing entity when the deal names one" do
+      billing_entity = create(:billing_entity, organization: quote.organization)
+      quote_version = create(:quote_version, quote:, organization: quote.organization, billing_entity:)
+
+      expect(quote_version.billing_entity).to eq(billing_entity)
+    end
+  end
+
+  describe "#applicable_billing_entity_id" do
+    let(:quote) { create(:quote) }
+
+    it "returns the customer's billing entity id when the deal names none" do
+      quote_version = create(:quote_version, quote:, organization: quote.organization)
+
+      expect(quote_version.applicable_billing_entity_id).to eq(quote.customer.billing_entity_id)
+    end
+
+    it "returns its own billing entity id when the deal names one" do
+      billing_entity = create(:billing_entity, organization: quote.organization)
+      quote_version = create(:quote_version, quote:, organization: quote.organization, billing_entity:)
+
+      expect(quote_version.applicable_billing_entity_id).to eq(billing_entity.id)
     end
   end
 end

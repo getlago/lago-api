@@ -13,6 +13,9 @@ module Orders
         Invoices::CreateOneOffService.call!(
           customer: order.customer,
           currency: order.currency,
+          # Nil leaves CreateOneOffService falling back to the customer's own entity, which is what a
+          # deal naming none asks for.
+          billing_entity_id: order.quote_version.billing_entity_id,
           fees: build_fees,
           timestamp: Time.current.to_i,
           with_discarded_add_ons: true

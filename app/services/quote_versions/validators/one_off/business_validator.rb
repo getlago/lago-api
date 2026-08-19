@@ -6,6 +6,7 @@ module QuoteVersions
       class BusinessValidator < ::BaseValidator
         include Currencies
         include CurrencyValidation
+        include BillingEntityValidation
 
         def initialize(result, quote_version:, billing_items:, scope:)
           @quote_version = quote_version
@@ -17,6 +18,7 @@ module QuoteVersions
 
         def valid?
           validate_currency
+          validate_billing_entity
           validate_add_ons
 
           if errors?

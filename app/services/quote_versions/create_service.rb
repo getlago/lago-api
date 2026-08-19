@@ -21,7 +21,7 @@ module QuoteVersions
 
       quote_version = quote.versions.new(
         organization: quote.organization,
-        **params.slice(:billing_items, :content, :currency)
+        **params.slice(:billing_items, :content, :currency, :billing_entity_id)
       )
 
       validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)

@@ -6,6 +6,7 @@ module QuoteVersions
       class BusinessValidator < ::BaseValidator
         include Currencies
         include CurrencyValidation
+        include BillingEntityValidation
 
         def initialize(result, quote_version:, billing_items:, scope:)
           @quote_version = quote_version
@@ -18,6 +19,7 @@ module QuoteVersions
         # NOTE: payment terms are not validated yet, the quote-level field lands with LAGO-1529
         def valid?
           validate_currency
+          validate_billing_entity
           validate_plans
           validate_coupons
           validate_wallet_credits

@@ -6,6 +6,7 @@ RSpec.describe Types::Quotes::CreateInput do
   subject { described_class }
 
   it do
+    expect(subject).to accept_argument(:billing_entity_id).of_type("ID")
     expect(subject).to accept_argument(:billing_items).of_type("JSON")
     expect(subject).to accept_argument(:content).of_type("String")
     expect(subject).to accept_argument(:customer_id).of_type("ID!")

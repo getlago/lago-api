@@ -27,6 +27,7 @@ class QuoteVersion < ApplicationRecord
 
   belongs_to :organization
   belongs_to :quote
+  belongs_to :billing_entity, optional: true
   has_one :order_form
 
   enum :status, STATUSES,
@@ -54,6 +55,17 @@ class QuoteVersion < ApplicationRecord
   delegate :customer, to: :quote
 
   def version = sequential_id
+
+  # A blank billing entity means the deal follows the customer's own, resolved at billing time
+  # rather than frozen here, the same semantic Subscription and Wallet carry. The customer is reached
+  # through the quote, so both hops are guarded: a version with no quote yet reads as having none.
+  def billing_entity
+    super || quote&.customer&.billing_entity
+  end
+
+  def applicable_billing_entity_id
+    billing_entity_id || quote&.customer&.billing_entity_id
+  end
 end
 
 # == Schema Information
@@ -72,12 +84,14 @@ end
 #  voided_at         :datetime
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
+#  billing_entity_id :uuid
 #  organization_id   :uuid             not null
 #  quote_id          :uuid             not null
 #  sequential_id     :integer          not null
 #
 # Indexes
 #
+#  index_quote_versions_on_billing_entity_id           (billing_entity_id)
 #  index_quote_versions_on_organization_id             (organization_id)
 #  index_quote_versions_on_quote_id                    (quote_id)
 #  index_unique_quote_versions_on_quote_active_status  (quote_id) UNIQUE WHERE (status = ANY (ARRAY['draft'::quote_status, 'approved'::quote_status]))
@@ -85,6 +99,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (quote_id => quotes.id)
 #

@@ -483,6 +483,56 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
+      context "when the deal names a billing entity" do
+        let(:issuing_entity) { create(:billing_entity, organization:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items:,
+            billing_entity: issuing_entity
+          )
+        end
+
+        it "pins the subscription to it" do
+          execute_service.call
+
+          expect(customer.subscriptions.sole.billing_entity_id).to eq(issuing_entity.id)
+        end
+
+        context "with a wallet credit" do
+          let(:billing_items) do
+            super().merge(
+              "walletCredits" => [
+                {
+                  "localId" => "d9169d94-b322-4d70-a2b1-9e6a58e3f74a",
+                  "type" => "wallet_credit",
+                  "payload" => {"currency" => "EUR", "rateAmount" => "1", "paidCredits" => "100", "grantedCredits" => "10"}
+                }
+              ]
+            )
+          end
+
+          it "pins the wallet to it too" do
+            execute_service.call
+
+            expect(customer.wallets.sole.billing_entity_id).to eq(issuing_entity.id)
+          end
+        end
+      end
+
+      # NULL means "follow the customer at billing time", so nothing is frozen onto the records.
+      it "leaves the subscription inheriting the customer's entity when the deal names none" do
+        execute_service.call
+
+        expect(quote_version.billing_entity_id).to eq(nil)
+        expect(customer.subscriptions.sole.billing_entity_id).to eq(nil)
+        expect(customer.subscriptions.sole.billing_entity).to eq(billing_entity)
+      end
+
       context "with a wallet credit" do
         let(:billing_items) do
           super().merge(

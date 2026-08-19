@@ -100,6 +100,44 @@ RSpec.describe QuoteVersions::UpdateService do
           expect(result.error.messages).to eq({currency: ["invalid_currency"]})
         end
       end
+
+      context "when a billing entity is named" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:update_params) { {billing_entity_id: billing_entity.id} }
+
+        it "pins it on the version" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_entity_id).to eq(billing_entity.id)
+        end
+      end
+
+      context "when the named billing entity belongs to another organization" do
+        let(:billing_entity) { create(:billing_entity) }
+        let(:update_params) { {billing_entity_id: billing_entity.id} }
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+        end
+
+        it "leaves the version untouched" do
+          result
+
+          expect(quote_version.reload.billing_entity_id).to eq(nil)
+        end
+      end
+
+      context "when the billing entity is cleared" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:quote_version) { create(:quote_version, quote:, organization:, billing_entity:) }
+        let(:update_params) { {billing_entity_id: nil} }
+
+        it "lets the deal follow the customer's own entity again" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_entity_id).to eq(nil)
+        end
+      end
     end
 
     context "when approved quote version", :premium do

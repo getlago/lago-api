@@ -23,7 +23,7 @@ module QuoteVersions
       return result.forbidden_failure! unless order_forms_enabled?(quote_version.organization)
       return result.single_validation_failure!(field: :status, error_code: "not_editable") unless editable?
 
-      quote_version.assign_attributes(params.slice(:billing_items, :content, :currency))
+      quote_version.assign_attributes(params.slice(:billing_items, :content, :currency, :billing_entity_id))
 
       validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)
       return result if validator && !validator.valid?

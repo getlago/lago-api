@@ -5,6 +5,7 @@ module Types
     class CreateInput < BaseInputObject
       graphql_name "CreateQuoteInput"
 
+      argument :billing_entity_id, ID, required: false
       argument :billing_items, GraphQL::Types::JSON, required: false
       argument :content, String, required: false
       argument :customer_id, ID, required: true
