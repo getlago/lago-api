@@ -36,6 +36,7 @@ module BillingCycles
         units:,
         taxes_amount_cents: 0,
         precise_amount_cents: BigDecimal(amount_cents),
+        amount_details: charge_model_result.amount_details,
         # The actual service window, shown as the billing period on the invoice
         # (same keys the legacy engine stores).
         properties: {
@@ -54,16 +55,11 @@ module BillingCycles
     delegate :subscription, :product, to: :subscription_rate_card
 
     def amount_cents
-      (full_amount_cents * proration_ratio).round
+      charge_model_amount_cents
     end
 
-    def full_amount_cents
-      rate_amount_cents * units
-    end
-
-    # The catalog per-unit rate in cents (before proration).
-    def rate_amount_cents
-      (BigDecimal(billing_cycle.rate_properties.fetch("amount", "0")) * subunit).round
+    def charge_model_amount_cents
+      (charge_model_result.amount.round(money_currency.exponent) * subunit).round
     end
 
     # Effective per-unit amount shown on the invoice — proration baked in so that
@@ -92,6 +88,28 @@ module BillingCycles
       ).units
     end
 
+    def charge_model_result
+      @charge_model_result ||= ChargeModels::Factory.new_instance(
+        structure: ChargeModels::PricingStructure.from_billing_cycle(billing_cycle),
+        aggregation_result:,
+        period_ratio: proration_ratio,
+        calculate_projected_usage: false
+      ).apply
+    end
+
+    def aggregation_result
+      prorated_units = units * proration_ratio
+
+      BillableMetrics::Aggregations::BaseService::Result.new.tap do |aggregation_result|
+        aggregation_result.aggregation = prorated_units
+        aggregation_result.current_usage_units = prorated_units
+        aggregation_result.full_units_number = units
+        aggregation_result.count = 1
+        aggregation_result.precise_total_amount_cents = 0
+        aggregation_result.options = {running_total: []}
+      end
+    end
+
     # 1 for a full period; the prorated fraction for a partial period. The day math
     # lives on Boundaries (the billing calendar), matching the legacy engine.
     def proration_ratio
@@ -110,7 +128,11 @@ module BillingCycles
     end
 
     def subunit
-      Money::Currency.new(currency).subunit_to_unit
+      money_currency.subunit_to_unit
+    end
+
+    def money_currency
+      @money_currency ||= Money::Currency.new(currency)
     end
   end
 end

@@ -47,5 +47,19 @@ module ChargeModels
         currency: Money::Currency.new(fixed_charge.plan.amount_currency)
       )
     end
+
+    def self.from_billing_cycle(billing_cycle)
+      unless billing_cycle.is_a?(BillingCycle)
+        raise NotImplementedError, "Chargeable: #{billing_cycle.class.name} is not implemented"
+      end
+
+      new(
+        charge_model: billing_cycle.rate.rate_model,
+        properties: billing_cycle.rate_properties,
+        prorated: billing_cycle.subscription_rate_card.proration?,
+        accepts_target_wallet: false,
+        currency: Money::Currency.new(billing_cycle.currency)
+      )
+    end
   end
 end
