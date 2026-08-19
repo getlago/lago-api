@@ -64,7 +64,7 @@ RSpec.describe IntegrationCustomers::CreateService do
             expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
           end
 
-          context "when code and is_default are provided" do
+          context "when a code is provided" do
             let(:params) do
               {
                 integration_type:,
@@ -72,17 +72,29 @@ RSpec.describe IntegrationCustomers::CreateService do
                 sync_with_provider:,
                 external_customer_id:,
                 subsidiary_id:,
-                code: "ns_custom",
-                is_default: true
+                code: "ns_custom"
               }
             end
 
-            it "persists the explicit code and is_default" do
+            it "persists the explicit code and defaults the first connection of the category" do
               result = service_call
 
               expect(result).to be_success
               expect(result.integration_customer.code).to eq("ns_custom")
               expect(result.integration_customer.is_default).to be(true)
+            end
+          end
+
+          context "when the customer already has a default connection in the category" do
+            before do
+              create(:xero_customer, customer:, organization:, category: :accounting, is_default: true)
+            end
+
+            it "does not mark the new connection as default" do
+              result = service_call
+
+              expect(result).to be_success
+              expect(result.integration_customer.is_default).to be(false)
             end
           end
 

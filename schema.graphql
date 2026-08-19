@@ -7065,7 +7065,6 @@ input IntegrationCustomerInput {
   integrationCode: String
   integrationId: ID
   integrationType: IntegrationTypeEnum
-  isDefault: Boolean
   subsidiaryId: String
   syncWithProvider: Boolean
   targetedObject: HubspotTargetedObjectsEnum

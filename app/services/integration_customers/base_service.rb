@@ -43,11 +43,5 @@ module IntegrationCustomers
     def code
       @code ||= params[:code]
     end
-
-    def is_default
-      return @is_default if defined?(@is_default)
-
-      @is_default = params[:is_default].nil? ? nil : ActiveModel::Type::Boolean.new.cast(params[:is_default])
-    end
   end
 end

@@ -155,7 +155,6 @@ module Api
               :external_customer_id,
               :integration_type,
               :integration_code,
-              :is_default,
               :subsidiary_id,
               :sync_with_provider,
               :targeted_object

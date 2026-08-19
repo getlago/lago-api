@@ -33,14 +33,18 @@ module IntegrationCustomers
 
     attr_reader :customer
 
-    # Honor an explicit routing code / default from the input; category and a fallback code are
-    # derived on the model. The connection is created by link/sync first, then restated here so
-    # both paths behave the same.
     def assign_routing_attributes!
       integration_customer = result.integration_customer
       integration_customer.code = code if code.present?
-      integration_customer.is_default = is_default unless is_default.nil?
+      integration_customer.is_default = first_connection_for_category?(integration_customer)
       integration_customer.save! if integration_customer.changed?
+    end
+
+    def first_connection_for_category?(integration_customer)
+      customer.integration_customers
+        .where(category: integration_customer.category)
+        .where.not(id: integration_customer.id)
+        .none?
     end
 
     def sync_customer!

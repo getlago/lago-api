@@ -144,6 +144,42 @@ RSpec.describe Mutations::Customers::Create do
     expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
+  context "with an integration customer" do
+    let(:integration) { create(:netsuite_integration, organization:, code: "netsuite_1") }
+
+    it "creates the connection with the given code, defaulted for its category" do
+      integration
+
+      perform_enqueued_jobs(only: IntegrationCustomers::CreateJob) do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permissions,
+          query: mutation,
+          variables: {
+            input: {
+              name: "Acme",
+              externalId: "acme_1",
+              integrationCustomers: [
+                {
+                  integrationType: "netsuite",
+                  integrationCode: integration.code,
+                  externalCustomerId: "ext_123",
+                  code: "ns_eu"
+                }
+              ]
+            }
+          }
+        )
+      end
+
+      connection = organization.customers.find_by(external_id: "acme_1").integration_customers.sole
+      expect(connection.code).to eq("ns_eu")
+      expect(connection.category).to eq("accounting")
+      expect(connection.is_default).to be(true)
+    end
+  end
+
   context "with premium feature", :premium do
     it "creates a customer" do
       stripe_provider

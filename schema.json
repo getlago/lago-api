@@ -36088,18 +36088,6 @@
               "deprecationReason": null
             },
             {
-              "name": "isDefault",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "subsidiaryId",
               "description": null,
               "type": {
