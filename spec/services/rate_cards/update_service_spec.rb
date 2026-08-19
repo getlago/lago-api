@@ -47,6 +47,33 @@ RSpec.describe RateCards::UpdateService do
     end
   end
 
+  describe "currency" do
+    it "updates the currency when the card is not attached" do
+      update_result = described_class.call(rate_card:, params: {currency: "USD"})
+
+      expect(update_result).to be_success
+      expect(rate_card.reload.currency).to eq("USD")
+    end
+
+    context "when the card is attached to a plan" do
+      before { create(:plan_rate_card, organization:, rate_card:) }
+
+      it "returns a validation failure" do
+        update_result = described_class.call(rate_card:, params: {currency: "USD"})
+
+        expect(update_result).not_to be_success
+        expect(update_result.error.messages[:currency]).to eq(["attached_to_plan_or_subscription"])
+      end
+
+      it "still accepts a payload resending the current currency" do
+        update_result = described_class.call(rate_card:, params: {name: "renamed", currency: rate_card.currency})
+
+        expect(update_result).to be_success
+        expect(rate_card.reload.name).to eq("renamed")
+      end
+    end
+  end
+
   it "produces an activity log" do
     result
     expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)

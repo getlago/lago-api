@@ -47,6 +47,12 @@ module RateCards
         end
       end
 
+      # An attachment is created only when the card and its plan share a
+      # currency, so the currency freezes once the card is attached.
+      if params.key?(:currency) && params[:currency] != rate_card.currency && rate_card.attached_to_plan_or_subscription?
+        return result.single_validation_failure!(field: :currency, error_code: "attached_to_plan_or_subscription")
+      end
+
       # Code is identity: editable until the card is in a plan or subscription.
       if params.key?(:code) && params[:code]&.strip != rate_card.code && rate_card.attached_to_plan_or_subscription?
         return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
