@@ -509,6 +509,29 @@ RSpec.describe Customers::UpdateService do
     end
 
     context "when updating net payment term" do
+      before do
+        customer.update!(net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      it "writes the structured payment term alias" do
+        result = customers_service.call
+
+        expect(result.customer).to have_attributes(
+          net_payment_term: 8,
+          payment_term: {"term_type" => "net", "days" => 8}
+        )
+      end
+
+      context "when the net payment term is cleared" do
+        let(:update_args) { {id: customer.id, net_payment_term: nil} }
+
+        it "clears the structured payment term alias" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(net_payment_term: nil, payment_term: nil)
+        end
+      end
+
       it "updates the net payment term of all draft invoices" do
         create(:invoice, :draft, customer:, net_payment_term: 30)
         create(:invoice, customer:, net_payment_term: 30)
