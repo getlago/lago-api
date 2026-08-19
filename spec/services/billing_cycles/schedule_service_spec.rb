@@ -148,6 +148,30 @@ RSpec.describe BillingCycles::ScheduleService do
         expect(billing_cycle.rate_override).to be_nil
         expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
       end
+
+      context "with a rate card pricing unit" do
+        let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits") }
+        let(:rate_card) { create(:rate_card, organization:, applied_pricing_unit_code: pricing_unit.code) }
+        let!(:rate_card_rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            effective_from: Time.zone.parse("2026-01-01"),
+            billing_interval_count:,
+            billing_interval_unit:,
+            applied_pricing_unit_conversion_rate: 0.5
+          )
+        end
+
+        before { pricing_unit }
+
+        it "stores the pricing unit on the billing cycle" do
+          expect { result }.to change(BillingCycle, :count).by(1)
+
+          expect(result.billing_cycles.sole.pricing_unit).to eq(pricing_unit)
+        end
+      end
     end
 
     context "with rate changes inside the range" do

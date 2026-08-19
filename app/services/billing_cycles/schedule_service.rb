@@ -96,6 +96,7 @@ module BillingCycles
           period_to: period.period_to,
           rate_card_rate: period.rate,
           rate_override: period.rate_override,
+          pricing_unit: pricing_unit_for(subscription_rate_card),
           rate_properties: period.rate_properties
         )
       end
@@ -145,6 +146,17 @@ module BillingCycles
     def plan_rate_cards_for(subscription)
       @plan_rate_cards_by_subscription_id ||= {}
       @plan_rate_cards_by_subscription_id[subscription.id] ||= subscription.plan.applied_rate_cards.to_a
+    end
+
+    def pricing_unit_for(subscription_rate_card)
+      code = subscription_rate_card.rate_card.applied_pricing_unit_code
+      return if code.blank?
+
+      pricing_units_by_code[code]
+    end
+
+    def pricing_units_by_code
+      @pricing_units_by_code ||= customer.organization.pricing_units.index_by(&:code)
     end
 
     def advance_clock(subscription_rate_card, next_billing_at)

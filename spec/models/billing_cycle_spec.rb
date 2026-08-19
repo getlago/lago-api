@@ -12,6 +12,7 @@ RSpec.describe BillingCycle do
       expect(subject).to belong_to(:invoice).optional
       expect(subject).to belong_to(:rate_card_rate).optional
       expect(subject).to belong_to(:rate_override).optional
+      expect(subject).to belong_to(:pricing_unit).optional
       expect(described_class.reflect_on_association(:customer).scope).to be_present
       expect(described_class.reflect_on_association(:subscription_rate_card).scope).to be_present
       expect(described_class.reflect_on_association(:rate_card_rate).scope).to be_present
@@ -43,6 +44,26 @@ RSpec.describe BillingCycle do
         it "keeps the stored snapshot" do
           expect(rate_properties).to eq({"amount" => "5.00"})
         end
+      end
+    end
+  end
+
+  describe "#pricing_unit_conversion_rate" do
+    subject(:pricing_unit_conversion_rate) { billing_cycle.pricing_unit_conversion_rate }
+
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, applied_pricing_unit_conversion_rate: 0.5) }
+    let(:billing_cycle) { described_class.new(rate_card_rate:) }
+
+    it "returns the rate conversion rate" do
+      expect(pricing_unit_conversion_rate).to eq(0.5)
+    end
+
+    context "with a rate override" do
+      let(:rate_override) { build_stubbed(:rate_override, pricing_unit_conversion_rate: 0.25) }
+      let(:billing_cycle) { described_class.new(rate_card_rate:, rate_override:) }
+
+      it "returns the override conversion rate" do
+        expect(pricing_unit_conversion_rate).to eq(0.25)
       end
     end
   end

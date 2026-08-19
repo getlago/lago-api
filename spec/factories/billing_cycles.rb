@@ -8,6 +8,7 @@ FactoryBot.define do
     subscription_rate_card { association(:subscription_rate_card, organization:, subscription:, customer:) }
     rate_card_rate { association(:rate_card_rate, organization:) }
     rate_override { nil }
+    pricing_unit { nil }
     rate_properties { (rate_override || rate_card_rate).properties }
     billing_at { Time.current }
     period_from { Time.current.beginning_of_day }
