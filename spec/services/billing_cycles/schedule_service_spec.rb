@@ -15,6 +15,7 @@ RSpec.describe BillingCycles::ScheduleService do
     let(:customer) { create(:customer, organization:, timezone:) }
     let(:timezone) { "UTC" }
     let(:plan) { create(:plan, organization:) }
+    let(:fixed_product) { create(:product, :fixed, organization:) }
     let(:subscription) do
       create(
         :subscription,
@@ -67,7 +68,7 @@ RSpec.describe BillingCycles::ScheduleService do
     end
 
     context "with a single-day range overlapping an advance period" do
-      let(:rate_card) { create(:rate_card, :advance, organization:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product: fixed_product, proration: true) }
       let(:next_billing_at) { Time.zone.parse("2026-08-01") }
 
       it "schedules the advance period due for the item" do
@@ -77,6 +78,7 @@ RSpec.describe BillingCycles::ScheduleService do
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-31 23:59:59.999999"))
         expect(billing_cycle.billing_at).to eq(current_time)
+        expect(billing_cycle.proration_ratio).to eq(1)
         expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
       end
     end
@@ -258,6 +260,21 @@ RSpec.describe BillingCycles::ScheduleService do
             [Time.zone.parse("2026-08-06"), Time.zone.parse("2026-08-09 23:59:59.999999")]
           ]
         )
+        expect(result.billing_cycles.map(&:proration_ratio)).to eq([1, 1, 1])
+      end
+
+      context "with proration enabled" do
+        let(:rate_card) { create(:rate_card, organization:, product: fixed_product, proration: true) }
+
+        it "stores the fee proration ratio for each split period" do
+          expect { result }.to change(BillingCycle, :count).by(3)
+
+          expect(result.billing_cycles.map(&:proration_ratio)).to eq([
+            BigDecimal("1"),
+            BigDecimal("0.4285714286"),
+            BigDecimal("0.5714285714")
+          ])
+        end
       end
 
       context "when an earlier out-of-range period is already persisted" do

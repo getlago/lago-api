@@ -41,12 +41,14 @@ RSpec.describe BillingCycles::Fees::ComputeService do
         subscription_rate_card:,
         rate_card_rate:,
         rate_properties:,
+        proration_ratio:,
         period_from: Time.zone.parse("2026-08-01"),
         period_to: Time.zone.parse("2026-08-31 23:59:59")
       )
     end
     let(:units) { 15 }
     let(:min_amount_cents) { 0 }
+    let(:proration_ratio) { 1 }
 
     context "with a standard rate model" do
       let(:rate_model) { "standard" }
@@ -76,6 +78,22 @@ RSpec.describe BillingCycles::Fees::ComputeService do
             true_up_parent_fee: result.fee,
             pricing_unit_usage: nil
           )
+        end
+      end
+
+      context "with a partial billing cycle" do
+        let(:proration_ratio) { 0.5 }
+        let(:min_amount_cents) { 100_000 }
+
+        before do
+          allow(BillingPeriods::Boundaries).to receive(:new).and_call_original
+        end
+
+        it "uses the stored proration ratio" do
+          expect(result).to be_success
+          expect(result.fee.amount_cents).to eq(22_500)
+          expect(result.true_up_fee.amount_cents).to eq(27_500)
+          expect(BillingPeriods::Boundaries).not_to have_received(:new)
         end
       end
 
@@ -113,6 +131,7 @@ RSpec.describe BillingCycles::Fees::ComputeService do
             rate_card_rate:,
             pricing_unit:,
             rate_properties:,
+            proration_ratio:,
             period_from: Time.zone.parse("2026-08-01"),
             period_to: Time.zone.parse("2026-08-31 23:59:59")
           )

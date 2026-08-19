@@ -26,6 +26,7 @@ class BillingCycle < ApplicationRecord
   validates :billing_at, presence: true
   validates :period_from, presence: true
   validates :period_to, presence: true
+  validates :proration_ratio, numericality: {greater_than_or_equal_to: 0, less_than_or_equal_to: 1}
 
   def rate
     rate_override || rate_card_rate
@@ -62,6 +63,7 @@ end
 #  billing_at                :datetime         not null
 #  period_from               :datetime         not null
 #  period_to                 :datetime         not null
+#  proration_ratio           :decimal(30, 10)  default(1.0), not null
 #  rate_properties           :jsonb            not null
 #  status                    :enum             default("pending"), not null
 #  created_at                :datetime         not null

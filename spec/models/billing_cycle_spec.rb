@@ -20,6 +20,14 @@ RSpec.describe BillingCycle do
     end
   end
 
+  describe "validations" do
+    it do
+      expect(subject).to validate_numericality_of(:proration_ratio)
+        .is_greater_than_or_equal_to(0)
+        .is_less_than_or_equal_to(1)
+    end
+  end
+
   describe "#rate_properties" do
     subject(:rate_properties) { billing_cycle.rate_properties }
 

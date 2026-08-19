@@ -102,7 +102,8 @@ module BillingCycles
           rate_card_rate: period.rate,
           rate_override: period.rate_override,
           pricing_unit: pricing_unit_for(subscription_rate_card),
-          rate_properties: period.rate_properties
+          rate_properties: period.rate_properties,
+          proration_ratio: period.proration_ratio
         )
       end
 

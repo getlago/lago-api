@@ -2324,7 +2324,8 @@ CREATE TABLE public.billing_cycles (
     rate_card_rate_id uuid,
     rate_override_id uuid,
     rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    pricing_unit_id uuid
+    pricing_unit_id uuid,
+    proration_ratio numeric(30,10) DEFAULT 1.0 NOT NULL
 );
 
 
@@ -14424,6 +14425,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260819160309'),
 ('20260819144543'),
 ('20260819144542'),
 ('20260817175013'),

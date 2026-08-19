@@ -10,9 +10,9 @@ module BillingCycles
     # Keep pricing and amount calculations out of this service; it should only coordinate
     # the services that compute them and map their results onto Fee records.
     #
-    # Proration: when rate_card.proration is true, a partial period (a clamped first
-    # period or a mid-period termination) is charged pro-rata by day count
-    # (cycle_days / full_period_days). When false the full period amount is charged.
+    # Proration: the scheduler stores the fee ratio on the billing cycle. It is 1 for
+    # a full period, or the prorated fraction for a partial period when the rate card
+    # allows proration. When proration is disabled, the stored value is always 1.
     #
     #   $20/month, period [Jun 1, Jun 30] (30/30 days) => $20.00
     #   $20/month, period [Jun 1, Jun 23] (23/30 days) => $15.33
@@ -92,8 +92,7 @@ module BillingCycles
           billing_cycle:,
           charge_model_result:,
           currency: Money::Currency.new(currency),
-          units:,
-          proration_ratio:
+          units:
         )
       end
 
@@ -105,13 +104,13 @@ module BillingCycles
         @charge_model_result ||= ChargeModels::Factory.new_instance(
           structure: ChargeModels::PricingStructure.from_billing_cycle(billing_cycle),
           aggregation_result:,
-          period_ratio: proration_ratio,
+          period_ratio: billing_cycle.proration_ratio,
           calculate_projected_usage: false
         ).apply
       end
 
       def aggregation_result
-        prorated_units = units * proration_ratio
+        prorated_units = units * billing_cycle.proration_ratio
 
         BillableMetrics::Aggregations::BaseService::Result.new.tap do |aggregation_result|
           aggregation_result.aggregation = prorated_units
@@ -121,25 +120,6 @@ module BillingCycles
           aggregation_result.precise_total_amount_cents = 0
           aggregation_result.options = {running_total: []}
         end
-      end
-
-      # 1 for a full period; the prorated fraction for a partial period. The day math
-      # lives on Boundaries (the billing calendar), matching the legacy engine.
-      def proration_ratio
-        return @proration_ratio if defined?(@proration_ratio)
-
-        unless subscription_rate_card.proration?
-          @proration_ratio = 1
-          return @proration_ratio
-        end
-
-        boundaries = BillingPeriods::Boundaries.new(
-          billing_anchor_date: subscription_rate_card.billing_anchor_date,
-          interval_count: rate.billing_interval_count,
-          interval_unit: rate.billing_interval_unit,
-          timezone: subscription.customer.applicable_timezone
-        )
-        @proration_ratio = boundaries.proration_ratio(billing_cycle.period_from, billing_cycle.period_to)
       end
     end
   end
