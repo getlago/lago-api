@@ -47,6 +47,12 @@ RSpec.describe BillingEntities::CreateService do
         before { result }
       end
 
+      it "mirrors the default alias into the structured payment term when net_payment_term is not provided" do
+        expect(result).to be_success
+        expect(result.billing_entity.reload.net_payment_term).to eq(0)
+        expect(result.billing_entity.reload.payment_term).to eq("term_type" => "net", "days" => 0)
+      end
+
       it "does not set eu_tax_management when not provided" do
         expect(result).to be_success
         expect(result.billing_entity.eu_tax_management).to be false
@@ -177,6 +183,7 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.legal_name).to eq("Legal Name")
           expect(result.billing_entity.legal_number).to eq("Legal Number")
           expect(result.billing_entity.net_payment_term).to eq(90)
+          expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 90)
           expect(result.billing_entity.state).to eq("State")
           expect(result.billing_entity.tax_identification_number).to eq("EU123456789")
           expect(result.billing_entity.vat_rate).to eq(1)
