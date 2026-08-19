@@ -425,6 +425,19 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when invoice is closed" do
+      before { invoice.closed! }
+
+      it "does not creates a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when invoice amount is 0" do
       let(:invoice) do
         create(
