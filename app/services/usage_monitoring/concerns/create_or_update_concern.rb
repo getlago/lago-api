@@ -69,7 +69,6 @@ module UsageMonitoring
         Array(values).map(&:to_s)
       end
 
-      # Codes duplicated between thresholds that do not ask for resolution stay legal.
       def opted_in_code_not_unique?(thresholds, opting_in)
         codes = thresholds.filter_map { it[:code].presence }
         opting_in.any? { codes.count(it[:code]) > 1 }
