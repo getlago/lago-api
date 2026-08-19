@@ -140,6 +140,99 @@ RSpec.describe QuoteVersions::UpdateService do
       end
     end
 
+    context "when the currency changes", :premium do
+      let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+      let(:plan_item) do
+        {
+          "id" => plan.id,
+          "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+          "type" => "plan",
+          "payload" => {"code" => plan.code, "startDate" => Date.current.iso8601}
+        }
+      end
+      let(:quote_version) do
+        create(:quote_version, quote:, organization:, currency: "EUR", billing_items: {"plans" => [plan_item]})
+      end
+      let(:update_params) { {currency: "USD"} }
+
+      it "reprices the quoted plan in the new currency" do
+        expect(result).to be_success
+        expect(result.quote_version.billing_items.dig("plans", 0, "overrides", "amountCurrency")).to eq("USD")
+      end
+
+      context "when the catalog plan is already priced in the new currency" do
+        let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+
+        # An overrides object would make the execution service mint a duplicate override plan for a
+        # plan that needs none.
+        it "leaves the item without an overrides object" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_items.dig("plans", 0, "overrides")).to eq(nil)
+        end
+      end
+
+      context "when a wallet credit states its own currency" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {
+              "walletCredits" => [
+                {"localId" => "d9169d94", "type" => "wallet_credit", "payload" => {"currency" => "EUR", "paidCredits" => "100"}},
+                {"localId" => "a1b2c3d4", "type" => "wallet_credit", "payload" => {"paidCredits" => "50"}}
+              ]
+            }
+          )
+        end
+
+        it "realigns the stated one and leaves the silent one alone" do
+          expect(result).to be_success
+
+          credits = result.quote_version.billing_items["walletCredits"]
+          expect(credits.first["payload"]["currency"]).to eq("USD")
+          expect(credits.second["payload"]).not_to have_key("currency")
+        end
+      end
+
+      context "when a fixed-amount coupon is priced in another currency" do
+        let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_currency: "EUR") }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {
+              "coupons" => [{"id" => coupon.id, "localId" => "c1", "type" => "coupon", "payload" => {"code" => coupon.code}}]
+            }
+          )
+        end
+
+        # The coupon is applied in its own currency, so it cannot follow the deal.
+        it "refuses the change on the currency field" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({currency: ["currencies_does_not_match"]})
+        end
+      end
+
+      context "when the quote amends a running subscription" do
+        let(:subscription) { create(:subscription, organization:, customer: quote.customer) }
+        let(:quote) do
+          create(:quote, organization:, subscription: create(:subscription, organization:), order_type: :subscription_amendment)
+        end
+
+        # Repricing would switch a running subscription mid-life, leaving its invoices behind in the
+        # currency it started in.
+        it "refuses the change" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq({currency: ["not_supported_for_order_type"]})
+        end
+      end
+    end
+
     context "when approved quote version", :premium do
       let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 
