@@ -47,13 +47,13 @@ module Charges
 
     def charge_model
       @charge_model ||= ChargeModels::Factory.in_advance_charge_model_class(
-        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(properties:)
+        structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:)
       )
     end
 
     def applied_charge_model
       @applied_charge_model ||= charge_model.apply(
-        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(properties:),
+        structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
         aggregation_result:
       )
     end
@@ -77,7 +77,7 @@ module Charges
       )
 
       @applied_charge_model_excluding_persisted_event ||= charge_model.apply(
-        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(
+        structure: ChargeModels::PricingStructure.from_charge(charge).with(
           properties: (properties || {}).merge(exclude_event: true)
         ),
         aggregation_result: result_without_event
@@ -103,7 +103,7 @@ module Charges
       )
 
       @applied_charge_model_including_non_persisted_event ||= charge_model.apply(
-        chargeable: ChargeModels::ChargeableData.from_charge(charge).with(
+        structure: ChargeModels::PricingStructure.from_charge(charge).with(
           properties: (properties || {}).merge(include_event_value: true)
         ),
         aggregation_result: result_with_event

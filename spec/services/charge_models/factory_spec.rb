@@ -9,19 +9,19 @@ RSpec.describe ChargeModels::Factory do
 
   describe "#new_instance" do
     let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
-    let(:chargeable) { ChargeModels::ChargeableData.from_charge(charge) }
+    let(:structure) { ChargeModels::PricingStructure.from_charge(charge) }
 
-    let(:result) { factory.new_instance(chargeable:, aggregation_result:) }
+    let(:result) { factory.new_instance(structure:, aggregation_result:) }
 
-    context "when chargeable is not chargeable data" do
-      let(:chargeable) { build(:fee) }
+    context "when structure is not pricing structure" do
+      let(:structure) { build(:fee) }
 
       it "raises an error" do
-        expect { factory.new_instance(chargeable:, aggregation_result:) }.to raise_error(NotImplementedError)
+        expect { factory.new_instance(structure:, aggregation_result:) }.to raise_error(NotImplementedError)
       end
     end
 
-    context "when chargeable is a charge" do
+    context "when structure is built from a charge" do
       context "with standard charge model" do
         it { expect(result).to be_a(ChargeModels::StandardService) }
 
@@ -96,24 +96,24 @@ RSpec.describe ChargeModels::Factory do
       end
     end
 
-    context "when chargeable is a fixed charge" do
+    context "when structure is built from a fixed charge" do
       context "with standard charge model" do
         let(:charge) { build(:fixed_charge, charge_model: :standard) }
-        let(:chargeable) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
+        let(:structure) { ChargeModels::PricingStructure.from_fixed_charge(charge) }
 
         it { expect(result).to be_a(ChargeModels::StandardService) }
       end
 
       context "with graduated charge model" do
         let(:charge) { build(:fixed_charge, charge_model: :graduated) }
-        let(:chargeable) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
+        let(:structure) { ChargeModels::PricingStructure.from_fixed_charge(charge) }
 
         it { expect(result).to be_a(ChargeModels::GraduatedService) }
       end
 
       context "with volume charge model" do
         let(:charge) { build(:fixed_charge, charge_model: :volume) }
-        let(:chargeable) { ChargeModels::ChargeableData.from_fixed_charge(charge) }
+        let(:structure) { ChargeModels::PricingStructure.from_fixed_charge(charge) }
 
         it { expect(result).to be_a(ChargeModels::VolumeService) }
       end
@@ -121,9 +121,9 @@ RSpec.describe ChargeModels::Factory do
   end
 
   describe ".in_advance_charge_model_class" do
-    let(:result) { factory.in_advance_charge_model_class(chargeable: ChargeModels::ChargeableData.from_charge(charge)) }
+    let(:result) { factory.in_advance_charge_model_class(structure: ChargeModels::PricingStructure.from_charge(charge)) }
 
-    context "when chargeable is a charge" do
+    context "when structure is built from a charge" do
       context "with standard charge model" do
         it { expect(result).to eq(ChargeModels::StandardService) }
       end

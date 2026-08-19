@@ -10,8 +10,8 @@ module ChargeModels
       :projected_units
     ]
 
-    def initialize(charge_model:, chargeable:, aggregation_result:, period_ratio:, calculate_projected_usage: false)
-      super(chargeable:, aggregation_result:, period_ratio:, calculate_projected_usage:)
+    def initialize(charge_model:, structure:, aggregation_result:, period_ratio:, calculate_projected_usage: false)
+      super(structure:, aggregation_result:, period_ratio:, calculate_projected_usage:)
       @charge_model = charge_model
     end
 
@@ -19,7 +19,7 @@ module ChargeModels
       result.grouped_results = aggregation_result.aggregations.map do |aggregation|
         aggregation.aggregator = aggregation_result.aggregator
         group_result = charge_model.apply(
-          chargeable:,
+          structure:,
           aggregation_result: aggregation,
           period_ratio:,
           calculate_projected_usage:

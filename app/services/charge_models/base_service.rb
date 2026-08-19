@@ -21,13 +21,13 @@ module ChargeModels
       new(...).apply
     end
 
-    def initialize(chargeable:, aggregation_result:, period_ratio: nil, calculate_projected_usage: false)
-      unless chargeable.is_a?(ChargeModels::ChargeableData)
-        raise NotImplementedError, "Chargeable: #{chargeable.class.name} is not implemented"
+    def initialize(structure:, aggregation_result:, period_ratio: nil, calculate_projected_usage: false)
+      unless structure.is_a?(ChargeModels::PricingStructure)
+        raise NotImplementedError, "Pricing structure: #{structure.class.name} is not implemented"
       end
 
       super(nil)
-      @chargeable = chargeable
+      @structure = structure
       @aggregation_result = aggregation_result
       @period_ratio = period_ratio
       @calculate_projected_usage = calculate_projected_usage
@@ -57,13 +57,13 @@ module ChargeModels
 
     protected
 
-    attr_accessor :chargeable, :aggregation_result, :period_ratio, :calculate_projected_usage
+    attr_accessor :structure, :aggregation_result, :period_ratio, :calculate_projected_usage
 
     delegate :units, to: :result
     delegate :grouped_by, to: :aggregation_result
 
     def properties
-      chargeable.properties
+      structure.properties
     end
 
     def projected_units
