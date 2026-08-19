@@ -49,7 +49,9 @@ module Invoices
       invoice.status = :open if subscription_gated?
       result.invoice = invoice
 
-      fee_result = ActiveRecord::Base.transaction do
+      # Activation billing runs inside the lock's transaction, so this needs its own
+      # savepoint to keep rolling partial fees back when it fails.
+      fee_result = ActiveRecord::Base.transaction(requires_new: true) do
         context = grace_period? ? :draft : :finalize
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
