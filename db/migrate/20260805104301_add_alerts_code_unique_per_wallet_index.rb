@@ -6,7 +6,16 @@ class AddAlertsCodeUniquePerWalletIndex < ActiveRecord::Migration[8.0]
   INDEX_NAME = "idx_alerts_code_unique_per_wallet"
 
   def up
-    drop_leftover_invalid_index
+    case index_state
+    when :valid
+      say "#{INDEX_NAME} is already in place, skipping the rename and the build"
+      return
+    when :invalid
+      # A failed concurrent build leaves an invalid index still holding the name, which if_not_exists skips.
+      say "Dropping #{INDEX_NAME} left invalid by an earlier failed build, so it can be rebuilt"
+      remove_index :usage_monitoring_alerts, name: INDEX_NAME, algorithm: :concurrently
+    end
+
     rename_codes_already_taken_on_the_same_wallet
 
     add_index :usage_monitoring_alerts, %i[code wallet_id organization_id],
@@ -23,17 +32,20 @@ class AddAlertsCodeUniquePerWalletIndex < ActiveRecord::Migration[8.0]
 
   private
 
-  # A failed concurrent build leaves an invalid index still holding the name, which if_not_exists skips.
-  def drop_leftover_invalid_index
-    leftover = select_value(<<~SQL.squish)
-      SELECT 1 FROM pg_class c
+  def index_state
+    validity = select_value(<<~SQL.squish)
+      SELECT i.indisvalid FROM pg_class c
       JOIN pg_index i ON i.indexrelid = c.oid
-      WHERE c.relname = '#{INDEX_NAME}' AND NOT i.indisvalid
+      WHERE c.relname = '#{INDEX_NAME}'
     SQL
-    return if leftover.nil?
 
-    say "Dropping #{INDEX_NAME} left invalid by an earlier failed build, so it can be rebuilt"
-    remove_index :usage_monitoring_alerts, name: INDEX_NAME, algorithm: :concurrently
+    if validity.nil?
+      :missing
+    elsif validity
+      :valid
+    else
+      :invalid
+    end
   end
 
   def rename_codes_already_taken_on_the_same_wallet
