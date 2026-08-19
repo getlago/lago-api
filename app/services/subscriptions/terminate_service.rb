@@ -17,6 +17,7 @@ module Subscriptions
     def call
       return result.not_found_failure!(resource: "subscription") if subscription.blank?
       return cancel_incomplete if subscription.incomplete?
+      return result.single_validation_failure!(error_code: "subscription_canceled") if subscription.canceled?
       return result.single_validation_failure!(error_code: "next_subscription_incomplete") if !upgrade && subscription.next_subscription&.incomplete?
 
       ActiveRecord::Base.transaction do

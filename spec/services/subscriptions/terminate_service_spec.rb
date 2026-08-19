@@ -94,6 +94,22 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
+    context "when subscription is canceled" do
+      let(:subscription) { create(:subscription, :canceled) }
+
+      it "returns a validation error" do
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["subscription_canceled"]})
+      end
+
+      it "does not terminate it" do
+        result
+
+        expect(subscription.reload).to be_canceled
+        expect(subscription.terminated_at).to be_nil
+      end
+    end
+
     context "when subscription is incomplete" do
       let(:organization) { create(:organization) }
       let(:customer) { create(:customer, organization:) }
