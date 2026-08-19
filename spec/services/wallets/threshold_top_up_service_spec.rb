@@ -390,6 +390,101 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    describe "declined top-ups" do
+      let(:failed_top_up) do
+        create(:wallet_transaction, :failed, wallet:, source: :threshold, failed_at: 10.minutes.ago)
+      end
+
+      before { failed_top_up }
+
+      it "does not call wallet transaction create job while the failure is recent" do
+        expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+
+      context "when the failure is older than the back-off window" do
+        let(:failed_top_up) do
+          create(
+            :wallet_transaction,
+            :failed,
+            wallet:,
+            source: :threshold,
+            failed_at: described_class::DECLINE_BACKOFF.ago - 1.minute
+          )
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when a top-up settled after the failure" do
+        before { create(:wallet_transaction, wallet:, source: :threshold, created_at: 1.minute.ago) }
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when only granted credits arrived after the failure" do
+        before do
+          create(
+            :wallet_transaction,
+            wallet:,
+            source: :threshold,
+            transaction_status: :granted,
+            settled_at: 1.minute.ago
+          )
+        end
+
+        it "does not call wallet transaction create job" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when a top-up created before the failure settled after it" do
+        before do
+          create(
+            :wallet_transaction,
+            wallet:,
+            source: :manual,
+            created_at: 2.hours.ago,
+            settled_at: 1.minute.ago
+          )
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when the rule only grants credits" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            trigger: "threshold",
+            threshold_credits: "6.0",
+            paid_credits: "0.0",
+            granted_credits: "3.0"
+          )
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when the failed transaction was not an automatic top-up" do
+        let(:failed_top_up) do
+          create(:wallet_transaction, :failed, wallet:, source: :manual, failed_at: 10.minutes.ago)
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+    end
+
     # Reporting only. Refusing a top-up would leave the wallet short, and the allocator
     # routes all of a customer's usage into a threshold wallet on the assumption that its
     # rule always refills it.
