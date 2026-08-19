@@ -19,6 +19,7 @@ class BillingCycle < ApplicationRecord
   belongs_to :invoice, optional: true
   belongs_to :rate_card_rate, -> { with_discarded }, optional: true
   belongs_to :rate_override, -> { with_discarded }, optional: true
+  belongs_to :pricing_unit, optional: true
 
   enum :status, STATUSES, validate: true
 
@@ -32,6 +33,14 @@ class BillingCycle < ApplicationRecord
 
   def currency
     rate_card_rate.rate_card.currency
+  end
+
+  def pricing_unit_conversion_rate
+    if rate_override
+      rate_override.pricing_unit_conversion_rate
+    else
+      rate_card_rate.applied_pricing_unit_conversion_rate
+    end
   end
 end
 
@@ -52,6 +61,7 @@ end
 #  customer_id               :uuid             not null
 #  invoice_id                :uuid
 #  organization_id           :uuid             not null
+#  pricing_unit_id           :uuid
 #  rate_card_rate_id         :uuid
 #  rate_override_id          :uuid
 #  subscription_id           :uuid             not null
@@ -64,6 +74,7 @@ end
 #  index_billing_cycles_on_customer_id                  (customer_id)
 #  index_billing_cycles_on_invoice_id                   (invoice_id)
 #  index_billing_cycles_on_organization_id              (organization_id)
+#  index_billing_cycles_on_pricing_unit_id              (pricing_unit_id)
 #  index_billing_cycles_on_product_and_period           (subscription_rate_card_id,period_from) UNIQUE
 #  index_billing_cycles_on_rate_card_rate_id            (rate_card_rate_id)
 #  index_billing_cycles_on_rate_override_id             (rate_override_id)
@@ -75,6 +86,7 @@ end
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (pricing_unit_id => pricing_units.id)
 #  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
 #  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)

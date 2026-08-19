@@ -145,6 +145,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_96fc54cd9a;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
+ALTER TABLE IF EXISTS ONLY public.billing_cycles DROP CONSTRAINT IF EXISTS fk_rails_938f04c2e5;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_91802dc891;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
@@ -879,6 +880,7 @@ DROP INDEX IF EXISTS public.index_billing_cycles_on_subscription_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_rate_override_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_rate_card_rate_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_product_and_period;
+DROP INDEX IF EXISTS public.index_billing_cycles_on_pricing_unit_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_invoice_id;
 DROP INDEX IF EXISTS public.index_billing_cycles_on_customer_id;
@@ -2321,7 +2323,8 @@ CREATE TABLE public.billing_cycles (
     customer_id uuid NOT NULL,
     rate_card_rate_id uuid,
     rate_override_id uuid,
-    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    pricing_unit_id uuid
 );
 
 
@@ -8055,6 +8058,13 @@ CREATE INDEX index_billing_cycles_on_organization_id ON public.billing_cycles US
 
 
 --
+-- Name: index_billing_cycles_on_pricing_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_cycles_on_pricing_unit_id ON public.billing_cycles USING btree (pricing_unit_id);
+
+
+--
 -- Name: index_billing_cycles_on_product_and_period; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13312,6 +13322,14 @@ ALTER TABLE ONLY public.data_export_parts
 
 
 --
+-- Name: billing_cycles fk_rails_938f04c2e5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_cycles
+    ADD CONSTRAINT fk_rails_938f04c2e5 FOREIGN KEY (pricing_unit_id) REFERENCES public.pricing_units(id);
+
+
+--
 -- Name: customers fk_rails_94cc21031f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14406,6 +14424,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260819144543'),
+('20260819144542'),
 ('20260817175013'),
 ('20260817175012'),
 ('20260813161751'),

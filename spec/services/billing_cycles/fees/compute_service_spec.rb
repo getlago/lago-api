@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingCycles::ComputeFeeService do
+RSpec.describe BillingCycles::Fees::ComputeService do
   describe ".call" do
     subject(:result) { described_class.call(billing_cycle:) }
 
@@ -55,6 +55,64 @@ RSpec.describe BillingCycles::ComputeFeeService do
         expect(result.fee.amount_cents).to eq(45_000)
         expect(result.fee.unit_amount_cents).to eq(3_000)
         expect(result.fee.precise_unit_amount).to eq(30)
+      end
+
+      context "with a fixed product and pricing unit" do
+        let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits", short_name: "cr") }
+        let(:rate_card) do
+          create(
+            :rate_card,
+            organization:,
+            product: fixed_product,
+            currency: "USD",
+            applied_pricing_unit_code: pricing_unit.code
+          )
+        end
+        let(:rate_properties) { {"amount" => "10"} }
+        let(:rate_card_rate) do
+          create(
+            :rate_card_rate,
+            organization:,
+            rate_card:,
+            rate_model:,
+            rate_properties:,
+            applied_pricing_unit_conversion_rate: 0.5
+          )
+        end
+        let(:units) { 5 }
+        let(:billing_cycle) do
+          create(
+            :billing_cycle,
+            organization:,
+            subscription:,
+            customer:,
+            subscription_rate_card:,
+            rate_card_rate:,
+            pricing_unit:,
+            rate_properties:,
+            period_from: Time.zone.parse("2026-08-01"),
+            period_to: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        before { pricing_unit }
+
+        it "converts the pricing unit amount to fiat currency" do
+          expect(result).to be_success
+          expect(result.fee.amount_cents).to eq(2_500)
+          expect(result.fee.unit_amount_cents).to eq(500)
+          expect(result.fee.precise_unit_amount).to eq(5)
+
+          expect(result.fee.pricing_unit_usage).to have_attributes(
+            pricing_unit:,
+            short_name: "cr",
+            amount_cents: 5_000,
+            precise_amount_cents: 5_000,
+            unit_amount_cents: 1_000,
+            precise_unit_amount: 10,
+            conversion_rate: 0.5
+          )
+        end
       end
     end
 

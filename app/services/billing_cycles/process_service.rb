@@ -48,7 +48,7 @@ module BillingCycles
     def pending_cycles
       BillingCycle.pending
         .where(customer_id: customer.id)
-        .includes(:rate_card_rate, :rate_override, subscription: :plan)
+        .includes(:pricing_unit, :rate_override, rate_card_rate: :rate_card, subscription: :plan)
         .to_a
     end
 
@@ -105,7 +105,7 @@ module BillingCycles
         invoice = invoice_result.invoice
 
         cycles.each do |cycle|
-          fee = BillingCycles::ComputeFeeService.call!(billing_cycle: cycle).fee
+          fee = BillingCycles::Fees::ComputeService.call!(billing_cycle: cycle).fee
           fee.invoice = invoice
           fee.billing_entity = invoice.billing_entity
           fee.save!
