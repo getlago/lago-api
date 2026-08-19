@@ -20,8 +20,6 @@ module Mutations
         result = ::OrderForms::VoidService.call(order_form:)
 
         result.success? ? result.order_form : result_error(result)
-      rescue BaseLockService::FailedToAcquireLock
-        validation_error(messages: {base: ["concurrency_conflict"]})
       end
     end
   end

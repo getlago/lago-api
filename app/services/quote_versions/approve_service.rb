@@ -45,6 +45,8 @@ module QuoteVersions
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

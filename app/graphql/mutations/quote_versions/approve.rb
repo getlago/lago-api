@@ -21,8 +21,6 @@ module Mutations
         result = ::QuoteVersions::ApproveService.call(quote_version:, expires_at: args[:expires_at])
 
         result.success? ? result.quote_version : result_error(result)
-      rescue BaseLockService::FailedToAcquireLock
-        validation_error(messages: {base: ["concurrency_conflict"]})
       end
     end
   end

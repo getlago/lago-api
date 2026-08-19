@@ -164,7 +164,7 @@ RSpec.describe Mutations::QuoteVersions::Approve do
 
   context "when the quote lock cannot be acquired", :premium do
     before do
-      allow(QuoteVersions::ApproveService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
     end
 
     it "returns an unprocessable entity error" do
