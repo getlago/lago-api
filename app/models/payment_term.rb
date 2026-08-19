@@ -2,7 +2,14 @@
 
 # Value object for a structured payment term, stored as jsonb tagged by term_type
 class PaymentTerm
-  TERM_TYPES = %w[due_on_receipt net end_of_month net_end_of_month days_end_of_month day_of_month].freeze
+  FIELDS_BY_TERM_TYPE = {
+    "due_on_receipt" => [],
+    "net" => ["days"],
+    "end_of_month" => [],
+    "net_end_of_month" => ["days"],
+    "days_end_of_month" => ["days"],
+    "day_of_month" => ["day_of_month", "month_offset"]
+  }.freeze
 
   attr_reader :term_type, :days, :day_of_month, :month_offset
 
@@ -19,8 +26,8 @@ class PaymentTerm
 
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
     @term_type = term_type.to_s
-    @days = days&.to_i
-    @day_of_month = day_of_month&.to_i
+    @days = days&.to_i if carries?("days")
+    @day_of_month = day_of_month&.to_i if carries?("day_of_month")
     @month_offset = normalized_month_offset(month_offset)
   end
 
@@ -42,6 +49,8 @@ class PaymentTerm
   end
 
   def due_date_for(issuing_date)
+    issuing_date = issuing_date.to_date
+
     case term_type
     when "due_on_receipt" then issuing_date
     when "net" then issuing_date + days
@@ -49,15 +58,20 @@ class PaymentTerm
     when "net_end_of_month" then issuing_date.end_of_month + days # US: EOM, then +N
     when "days_end_of_month" then (issuing_date + days).end_of_month # EU: +N, then EOM
     when "day_of_month" then day_of_month_due_date(issuing_date)
+    else raise ArgumentError, "unknown term_type: #{term_type}"
     end
   end
 
   private
 
+  def carries?(field)
+    FIELDS_BY_TERM_TYPE.fetch(term_type, []).include?(field)
+  end
+
   # Only day_of_month terms carry a month_offset.
   # If absent - next month (1) by default.
   def normalized_month_offset(month_offset)
-    if term_type == "day_of_month"
+    if carries?("month_offset")
       (month_offset || 1).to_i
     end
   end
@@ -75,6 +89,6 @@ class PaymentTerm
 
   # Clamp the configured day to the target month: day 31 → Sep 30 / Feb 28 (29 on leap years)
   def clamped_day_in_month(date)
-    Date.new(date.year, date.month, [day_of_month, date.end_of_month.day].min)
+    date.change(day: [day_of_month, date.end_of_month.day].min)
   end
 end
