@@ -1073,6 +1073,22 @@ RSpec.describe Subscription do
         expect(subscription.lifetime_usage).to eq(concurrent_lifetime_usage)
       end
     end
+
+    context "when the subscription is not persisted yet" do
+      subject(:subscription) { build(:subscription, :pending) }
+
+      # A new subscription being created has nothing to race against yet, so it must not
+      # eagerly persist the lifetime usage before `active!` sets the subscription status -
+      # `create_or_find_by!` would autosave the new (still status-less) parent to get an FK,
+      # violating the `status` NOT NULL constraint.
+      it "activates without prematurely saving the subscription" do
+        expect { subscription.mark_as_active! }
+          .to change(subscription, :status).from("pending").to("active")
+
+        expect(subscription).to be_persisted
+        expect(subscription.lifetime_usage).to be_persisted
+      end
+    end
   end
 
   describe "#terminated_at?" do
