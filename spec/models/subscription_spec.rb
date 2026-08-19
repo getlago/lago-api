@@ -1061,10 +1061,15 @@ RSpec.describe Subscription do
     context "when a concurrent request already created the lifetime usage" do
       subject(:subscription) { create(:subscription, :pending) }
 
-      # Simulates a concurrent request that already inserted the row: the real
-      # `index_lifetime_usages_on_subscription_id` unique constraint fires when
-      # `mark_as_active!` tries to create its own.
-      let!(:concurrent_lifetime_usage) { create(:lifetime_usage, subscription:, organization: subscription.organization) }
+      # Simulates the actual race: `subscription`'s association cache is memoized to nil
+      # (as it would be mid-request) before a *different* Ruby object inserts the row for
+      # the same row, via a separate `Subscription.find`. When `mark_as_active!` then tries
+      # to create its own, it hits the real `index_lifetime_usages_on_subscription_id`
+      # unique constraint instead of finding the row through its stale cache.
+      let!(:concurrent_lifetime_usage) do
+        subscription.lifetime_usage
+        create(:lifetime_usage, subscription: described_class.find(subscription.id), organization: subscription.organization)
+      end
 
       it "reuses the existing record instead of raising" do
         expect { subscription.mark_as_active! }
