@@ -45,6 +45,12 @@ RSpec.describe PaymentTerm do
 
       expect(described_class.from_h(hash).to_h).to eq(hash)
     end
+
+    it "drops fields not carried by the term type" do
+      term = described_class.from_h(term_type: "end_of_month", days: 5, day_of_month: 10, month_offset: 2)
+
+      expect(term.to_h).to eq("term_type" => "end_of_month")
+    end
   end
 
   describe "#net_payment_term_alias" do
@@ -64,6 +70,26 @@ RSpec.describe PaymentTerm do
         term = described_class.from_h(term_type: "due_on_receipt")
 
         expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 15))
+      end
+    end
+
+    context "when the issuing date is a Time" do
+      it "coerces to a Date so days are added as days, not seconds" do
+        term = described_class.from_h(term_type: "net", days: 30)
+
+        due_date = term.due_date_for(Time.zone.parse("2026-07-15 10:30:00"))
+
+        expect(due_date).to eq(Date.new(2026, 8, 14))
+        expect(due_date).to be_a(Date)
+      end
+    end
+
+    context "when the term type is unknown" do
+      it "raises an ArgumentError" do
+        term = described_class.from_h(term_type: "fortnightly")
+
+        expect { term.due_date_for(issuing_date) }
+          .to raise_error(ArgumentError, "unknown term_type: fortnightly")
       end
     end
 
