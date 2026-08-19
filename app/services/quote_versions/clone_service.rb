@@ -55,6 +55,9 @@ module QuoteVersions
       !quote_version.quote.versions.approved.exists?
     end
 
+    # The mention variables are the snapshot taken when a version was approved, and the clone has not
+    # been approved. Carrying them over would also break what the read path assumes, that a filled
+    # column means an approved version, and freeze the new draft on the source's values forever.
     def create_next_version(quote_version:)
       quote_version.dup.tap do |cloned|
         cloned.status = :draft
@@ -62,6 +65,7 @@ module QuoteVersions
         cloned.void_reason = nil
         cloned.voided_at = nil
         cloned.approved_at = nil
+        cloned.mention_variables = nil
         cloned.save!
       end
     end

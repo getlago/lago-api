@@ -45,6 +45,19 @@ RSpec.describe QuoteVersions::CloneService do
           expect(Utils::ActivityLog)
             .to have_produced("quote.version_created").after_commit.with(result.quote_version)
         end
+
+        # The snapshot belongs to the approval the source went through, not to the clone. Carrying it
+        # over would leave the new draft rendering the source's values whatever it is edited to.
+        context "when the source carries an approval snapshot" do
+          before do
+            quote_version.update!(mention_variables: {"billing_entity_name" => "Globex SARL"})
+          end
+
+          it "leaves the clone without one, so its variables are computed live" do
+            expect(result).to be_success
+            expect(result.quote_version.mention_variables).to eq(nil)
+          end
+        end
       end
 
       context "when the source version is draft" do
