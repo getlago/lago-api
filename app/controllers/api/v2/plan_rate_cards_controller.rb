@@ -64,7 +64,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.plan_rate_cards,
+              result.plan_rate_cards.includes(:plan, :rate_card, :rate_phases),
               ::V1::PlanRateCardSerializer,
               collection_name: "applied_rate_cards",
               meta: pagination_metadata(result.plan_rate_cards)
@@ -77,10 +77,6 @@ module Api
 
       private
 
-      # All routes are nested under the plan: an entry is addressed by its
-      # natural key — the plan code and the rate card code (unique together
-      # thanks to the one-card-per-slice rule) — so consumers never have to
-      # persist Lago-generated ids.
       def find_plan
         current_organization.plans.parents.find_by(code: params[:plan_code])
       end
