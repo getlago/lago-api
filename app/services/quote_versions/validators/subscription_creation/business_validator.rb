@@ -58,7 +58,7 @@ module QuoteVersions
               next
             end
 
-            validate_plan_currency(plan, index)
+            validate_plan_currency(plan, plan_item, index)
             validate_minimum_commitment(plan, plan_item, index)
             validate_plan_dates(plan_item, index)
             validate_plan_payment_method(plan_item, index)
@@ -67,14 +67,19 @@ module QuoteVersions
           end
         end
 
-        # NOTE: overrides carry no plan-level currency, so the plan's own currency is the one
-        # billed: a EUR deal on a USD plan would invoice the customer in USD.
-        def validate_plan_currency(plan, index)
+        # Whatever currency the plan is priced in ends up billed, so it has to be the deal's own.
+        # A catalog plan priced elsewhere is quoted by overriding the currency, which
+        # Plans::OverrideService applies to the plan it duplicates for the subscription.
+        def validate_plan_currency(plan, plan_item, index)
           return if self.class.currency_list.exclude?(quote_version.currency)
 
-          if plan.amount_currency != quote_version.currency
+          if effective_plan_currency(plan, plan_item) != quote_version.currency
             add_error(field: plan_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        def effective_plan_currency(plan, plan_item)
+          plan_item.dig("overrides", "amountCurrency").presence || plan.amount_currency
         end
 
         # Plans::OverrideService builds a fresh Commitment rather than duplicating the plan's own,

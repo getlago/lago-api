@@ -108,6 +108,7 @@ module Orders
 
         {
           amount_cents: overrides["amountCents"],
+          amount_currency: overrides["amountCurrency"],
           invoice_display_name: overrides["invoiceDisplayName"],
           name: overrides["name"],
           description: overrides["description"],

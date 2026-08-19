@@ -163,6 +163,13 @@ module QuoteVersions
                         "minimum" => 0,
                         "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
                       },
+                      # Plans::OverrideService reprices the duplicated plan in this currency, which is
+                      # how a plan from the catalog is quoted in the currency of the deal.
+                      "amountCurrency" => {
+                        "type" => %w[string null],
+                        "enum" => CURRENCIES + [nil],
+                        "x-error" => {"type" => "invalid_type", "enum" => "invalid_currency"}
+                      },
                       "invoiceDisplayName" => {
                         "type" => %w[string null],
                         "minLength" => 1,

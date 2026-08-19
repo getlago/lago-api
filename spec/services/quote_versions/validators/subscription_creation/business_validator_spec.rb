@@ -204,6 +204,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
       end
+
+      # Plans::OverrideService reprices the duplicated plan, so a catalog plan priced elsewhere is
+      # quoted by naming the deal's currency here.
+      context "when an override reprices the plan in the version currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "EUR") }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when an override reprices the plan in a third currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "GBP") }
+
+        it "returns a currencies_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
+        end
+      end
     end
 
     context "when the charge override references a metric with no charge on the plan" do

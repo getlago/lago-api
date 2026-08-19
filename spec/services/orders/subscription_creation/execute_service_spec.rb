@@ -109,6 +109,21 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(overridden_plan.charges.sole.properties["amount"]).to eq("30")
       end
 
+      context "when the override reprices the plan in another currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "USD") }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, currency: "USD", billing_items:)
+        end
+
+        it "bills the override plan in that currency" do
+          execute_service.call
+
+          overridden_plan = customer.subscriptions.sole.plan
+          expect(overridden_plan.parent_id).to eq(plan.id)
+          expect(overridden_plan.amount_currency).to eq("USD")
+        end
+      end
+
       # The transports that trigger an execution set different sources, and the billing services
       # resolve their input by code under api and by id otherwise. The snapshot must replay the
       # same either way.
