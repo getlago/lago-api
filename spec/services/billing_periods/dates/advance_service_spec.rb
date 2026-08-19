@@ -10,12 +10,22 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
         options:,
         started_at:,
         rates:,
-        range:
+        range:,
+        subscription_rate_card:
       )
     end
 
     let(:organization) { create(:organization) }
     let(:rate_card) { create(:rate_card, :advance, organization:) }
+    let(:subscription_rate_card) do
+      create(
+        :subscription_rate_card,
+        organization:,
+        rate_card:,
+        billing_anchor_date:,
+        started_at:
+      )
+    end
     let(:end_of_day) { ->(date) { Time.zone.parse(date).end_of_day } }
     let(:billing_anchor_date) { Date.parse("2022-02-01") }
     let(:started_at) { Time.zone.parse("2022-02-01") }
@@ -63,7 +73,8 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
 
         expect(period.period_from).to eq(Time.zone.parse("2022-03-01"))
         expect(period.period_to).to eq(end_of_day.call("2022-03-31"))
-        expect(period.ratio).to eq(15.fdiv(31))
+        expect(period.proration_ratio).to eq(1)
+        expect(period.consumed_ratio).to eq(15.fdiv(31))
       end
     end
 

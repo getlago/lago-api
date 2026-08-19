@@ -62,7 +62,8 @@ module SubscriptionRateCards
         rates:,
         rate_phases:,
         range: terminated_at..subscription_rate_card.next_billing_at,
-        options: dates_options
+        options: dates_options,
+        ratio_end_at: terminated_at
       )
     end
 
@@ -80,7 +81,8 @@ module SubscriptionRateCards
         period_to:,
         rate_card_rate: period.rate,
         rate_override: period.rate_override,
-        rate_properties: period.rate_properties
+        rate_properties: period.rate_properties,
+        proration_ratio: period.proration_ratio
       )
     end
 

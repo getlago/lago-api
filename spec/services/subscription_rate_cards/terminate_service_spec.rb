@@ -10,6 +10,7 @@ RSpec.describe SubscriptionRateCards::TerminateService do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:) }
+    let(:fixed_product) { create(:product, :fixed, organization:) }
     let(:subscription) do
       create(
         :subscription,
@@ -59,7 +60,18 @@ RSpec.describe SubscriptionRateCards::TerminateService do
       expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-01"))
       expect(billing_cycle.period_to).to eq(terminated_at)
       expect(billing_cycle.billing_at).to eq(terminated_at)
+      expect(billing_cycle.proration_ratio).to eq(1)
       expect(billing_cycle.status).to eq("pending")
+    end
+
+    context "with proration enabled" do
+      let(:rate_card) { create(:rate_card, organization:, product: fixed_product, proration: true) }
+
+      it "stores the final cycle proration ratio" do
+        expect { result }.to change(BillingCycle, :count).by(1)
+
+        expect(result.billing_cycle.proration_ratio).to eq(BigDecimal("0.5483870968"))
+      end
     end
 
     context "with an advance rate card" do

@@ -12,12 +12,11 @@ module BillingCycles
         :pricing_unit_usage
       )
 
-      def initialize(billing_cycle:, charge_model_result:, currency:, units:, proration_ratio: 1)
+      def initialize(billing_cycle:, charge_model_result:, currency:, units:)
         @billing_cycle = billing_cycle
         @charge_model_result = charge_model_result
         @currency = currency
         @units = units
-        @proration_ratio = proration_ratio
         super
       end
 
@@ -29,7 +28,7 @@ module BillingCycles
 
       private
 
-      attr_reader :billing_cycle, :charge_model_result, :currency, :units, :proration_ratio
+      attr_reader :billing_cycle, :charge_model_result, :currency, :units
 
       def amount
         @amount ||= amounts.amount_for(charge_model_result:, units:)
@@ -62,7 +61,7 @@ module BillingCycles
       end
 
       def minimum_amount_cents
-        (billing_cycle.min_amount_cents * proration_ratio).round
+        (billing_cycle.min_amount_cents * billing_cycle.proration_ratio).round
       end
 
       def amounts

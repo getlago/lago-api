@@ -9,8 +9,7 @@ RSpec.describe BillingCycles::Fees::AmountsService do
         billing_cycle:,
         charge_model_result:,
         currency: Money::Currency.new("USD"),
-        units:,
-        proration_ratio:
+        units:
       )
     end
 
@@ -49,7 +48,8 @@ RSpec.describe BillingCycles::Fees::AmountsService do
         subscription:,
         subscription_rate_card:,
         rate_card_rate:,
-        pricing_unit:
+        pricing_unit:,
+        proration_ratio:
       )
     end
     let(:charge_model_result) do

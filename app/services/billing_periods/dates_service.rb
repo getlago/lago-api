@@ -54,7 +54,8 @@ module BillingPeriods
       :next_billing_at,
       :rate,
       :cycle,
-      :ratio
+      :proration_ratio,
+      :consumed_ratio
     ) do
       def billing_at
         billing_boundary = if rate.rate_card.advance?
@@ -81,14 +82,16 @@ module BillingPeriods
       subscription_rate_card,
       rates:,
       range:, rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
-      options: Options.default
+      options: Options.default,
+      ratio_end_at: nil
     )
       call(
         options:,
         subscription_rate_card:,
         rates:,
         rate_phases:,
-        range:
+        range:,
+        ratio_end_at:
       )
     end
 
@@ -97,7 +100,8 @@ module BillingPeriods
       rates:,
       range:,
       options: Options.default,
-      rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: [])
+      rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
+      ratio_end_at: nil
     )
       @subscription_rate_card = subscription_rate_card
       @options = options
@@ -110,6 +114,7 @@ module BillingPeriods
       @rates = rates
       @rate_phases = rate_phases
       @range = range
+      @ratio_end_at = ratio_end_at
       super
     end
 
@@ -121,7 +126,8 @@ module BillingPeriods
         subscription_rate_card:,
         rates:,
         rate_phases:,
-        range:
+        range:,
+        ratio_end_at:
       )
 
       result.periods = dates.periods
@@ -131,7 +137,7 @@ module BillingPeriods
 
     private
 
-    attr_reader :billing_anchor_date, :billing_timing, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range
+    attr_reader :billing_anchor_date, :billing_timing, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range, :ratio_end_at
 
     def arrears?
       billing_timing == :arrears

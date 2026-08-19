@@ -7,9 +7,11 @@ module BillingPeriods
 
       def initialize(
         billing_anchor_date:,
-        started_at:, rates:, range:, options: BillingPeriods::DatesService::Options.default,
+        started_at:, rates:, range:,
+        subscription_rate_card:,
+        options: BillingPeriods::DatesService::Options.default,
         rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
-        subscription_rate_card: nil
+        ratio_end_at: nil
       )
         @billing_anchor_date = billing_anchor_date
         @options = options
@@ -18,6 +20,7 @@ module BillingPeriods
         @rates = rates
         @rate_phases = rate_phases
         @range = range
+        @ratio_end_at = ratio_end_at
         super
       end
 
@@ -30,7 +33,7 @@ module BillingPeriods
 
       private
 
-      attr_reader :billing_anchor_date, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range
+      attr_reader :billing_anchor_date, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range, :ratio_end_at
 
       delegate :timezone, :exclude_out_of_range, :realign_billing_anchor, to: :options
 
@@ -134,7 +137,8 @@ module BillingPeriods
             next_billing_at: cycle.next_billing_at,
             rate:,
             cycle:,
-            ratio: ratio_for(cycle, start_at)
+            proration_ratio: proration_ratio_for(cycle, start_at, end_at),
+            consumed_ratio: consumed_ratio_for(cycle, start_at)
           )
 
           period if include_period?(period)
@@ -180,12 +184,16 @@ module BillingPeriods
         period.period_to >= range_begin && period.period_from <= range_end
       end
 
-      # The ratio represents how much of this period slice is consumed by the
-      # requested range, not how much of the generated period exists. For example,
-      # advance termination asks for a one-instant range inside a full paid cycle:
-      # the Period must stay full-sized for billing boundaries, while the ratio uses
-      # range.end to express consumption up to the termination instant.
-      def ratio_for(cycle, start_at)
+      def proration_ratio_for(cycle, start_at, end_at)
+        return 1 unless subscription_rate_card.proration?
+
+        boundaries_by_cycle.fetch(cycle).proration_ratio(start_at, ratio_end_at || end_at)
+      end
+
+      # The consumed ratio represents how much of this period slice has elapsed within
+      # the requested range. Advance termination crediting uses this to refund the
+      # unused remainder of an already-paid full period.
+      def consumed_ratio_for(cycle, start_at)
         boundaries_by_cycle.fetch(cycle).proration_ratio(start_at, range.end)
       end
 

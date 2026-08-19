@@ -71,7 +71,7 @@ module V2
 
       # Unused fraction of the billed period × the fee, net of credit notes already on it.
       def creditable_amount_cents(fee, period)
-        credit_ratio = 1 - period.ratio
+        credit_ratio = 1 - period.consumed_ratio
         amount = BigDecimal(fee.amount_cents) * credit_ratio
         amount -= fee.credit_note_items.sum(:amount_cents)
         amount.positive? ? amount : BigDecimal(0)
