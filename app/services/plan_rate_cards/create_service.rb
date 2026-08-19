@@ -22,14 +22,6 @@ module PlanRateCards
       rate_card = organization.rate_cards.find_by(code: params[:rate_card_code])
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 
-      # One card per pricing slice: a plan may hold several cards of the same
-      # item only when they cover different filter slices (default + EU, ...).
-      # A second card on the same (item, filter) pair would price the same
-      # events twice.
-      if slice_already_priced?(rate_card)
-        return result.single_validation_failure!(field: :rate_card, error_code: slice_error_code(rate_card))
-      end
-
       # Fees are billed in the card currency and the invoice in the plan
       # currency; a mismatch must fail at configuration time, not on the
       # first invoice.
@@ -37,7 +29,13 @@ module PlanRateCards
         return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
       end
 
-      ActiveRecord::Base.transaction do
+      plan.with_lock do
+        # One card per pricing slice: a plan may hold several cards of the same
+        # item only when they cover different filter slices (default + EU, ...).
+        if slice_already_priced?(rate_card)
+          return result.single_validation_failure!(field: :rate_card, error_code: slice_error_code(rate_card))
+        end
+
         plan_rate_card = plan.applied_rate_cards.create!(
           organization:,
           rate_card:,
