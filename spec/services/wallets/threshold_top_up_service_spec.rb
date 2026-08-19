@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Wallets::ThresholdTopUpService do
   subject(:top_up_service) { described_class.new(wallet:) }
 
+  let(:paid_top_up_min_amount_cents) { 205_50 }
+  let(:paid_top_up_max_amount_cents) { nil }
   let(:wallet) do
     create(
       :wallet,
@@ -14,7 +16,8 @@ RSpec.describe Wallets::ThresholdTopUpService do
       credits_balance: 10.0,
       credits_ongoing_balance: 5.5,
       credits_ongoing_usage_balance: 4.0,
-      paid_top_up_min_amount_cents: 205_50
+      paid_top_up_min_amount_cents:,
+      paid_top_up_max_amount_cents:
     )
   end
 
@@ -69,7 +72,30 @@ RSpec.describe Wallets::ThresholdTopUpService do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(invoice_requires_successful_payment: true, ignore_paid_top_up_limits: false),
+            params: hash_including(invoice_requires_successful_payment: true),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when the rule keeps the wallet top-up limits" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          ignore_paid_top_up_limits: false
+        )
+      end
+
+      it "enqueues the top-up with the limit check enabled" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(ignore_paid_top_up_limits: false),
             unique_transaction: true
           )
       end
@@ -313,11 +339,28 @@ RSpec.describe Wallets::ThresholdTopUpService do
               invoice_requires_successful_payment: false,
               metadata: [],
               name: "Recurring Transaction Rule",
-              ignore_paid_top_up_limits: false,
+              ignore_paid_top_up_limits: true,
               purchase_order_number: nil
             },
             unique_transaction: true
           )
+      end
+
+      context "when the refill exceeds the wallet max top-up limit" do
+        let(:paid_top_up_min_amount_cents) { nil }
+        let(:paid_top_up_max_amount_cents) { 100_00 }
+
+        it "enqueues the full refill with the limit check disabled" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            .with(
+              organization_id: wallet.organization.id,
+              params: hash_including(
+                paid_credits: "194.5",
+                ignore_paid_top_up_limits: true
+              ),
+              unique_transaction: true
+            )
+        end
       end
 
       context "when grants_target_top_up is true" do

@@ -503,6 +503,7 @@ RSpec.describe Wallets::CreateService do
           }
         ]
       end
+      let(:fixed_rule) { {interval: "monthly", method: "fixed", trigger: "interval"} }
       let(:params) do
         {
           name: "New Wallet",
@@ -525,6 +526,53 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.name).to eq("New Wallet")
         expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
+      end
+
+      context "when a fixed rule pays more than the wallet max top-up limit" do
+        let(:rules) { [fixed_rule.merge(paid_credits: "100.0")] }
+
+        it "rejects the wallet creation" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
+        end
+
+        context "when the rule ignores top-up limits" do
+          let(:rules) { [super().first.merge(ignore_paid_top_up_limits: true)] }
+
+          it "creates the wallet and the rule" do
+            expect { service_result }.to change(Wallet, :count).by(1)
+
+            expect(service_result).to be_success
+            expect(service_result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          end
+        end
+      end
+
+      context "when a fixed rule only grants credits (no paid amount)" do
+        let(:rules) { [fixed_rule.merge(paid_credits: "0", granted_credits: "50.0")] }
+
+        it "creates the wallet, since there is no paid amount to limit-check" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+
+          expect(service_result).to be_success
+          expect(service_result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+        end
+      end
+
+      context "when the customer currency has a different subunit than the request default" do
+        let(:params) { super().except(:currency) }
+        let(:customer_currency) { "JPY" }
+        let(:rules) { [fixed_rule.merge(paid_credits: "200.0")] }
+
+        it "checks the limit in the customer currency, not the EUR default" do
+          # max 5000 cents is 50 credits in EUR but 5000 in JPY (subunit 1); 200 is within
+          expect { service_result }.to change(Wallet, :count).by(1)
+
+          expect(service_result).to be_success
+          expect(service_result.wallet.currency).to eq("JPY")
+        end
       end
 
       context "when wallet and recurring transaction rule have purchase order numbers" do
