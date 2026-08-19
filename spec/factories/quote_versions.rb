@@ -15,6 +15,10 @@ FactoryBot.define do
     trait :with_one_off_billing_items do
       transient do
         add_on { create(:add_on, organization: quote.organization) }
+        # The service period is optional on a one_off item, and it is what the commercial term is
+        # derived from. Specs that want a term pass both.
+        add_on_from_datetime { nil }
+        add_on_to_datetime { nil }
       end
 
       currency { "EUR" }
@@ -29,7 +33,9 @@ FactoryBot.define do
                 "code" => add_on.code,
                 "units" => 1,
                 "unitAmountCents" => 10_000,
-                "totalAmountCents" => 10_000
+                "totalAmountCents" => 10_000,
+                "fromDatetime" => add_on_from_datetime,
+                "toDatetime" => add_on_to_datetime
               }
             }
           ]

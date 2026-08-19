@@ -258,6 +258,79 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
           "commercial_terms_term_duration" => nil
         )
       end
+
+      context "when the add-on carries a service period" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :with_one_off_billing_items,
+            quote:,
+            organization:,
+            currency: "EUR",
+            add_on_from_datetime: "2026-04-01T00:00:00Z",
+            add_on_to_datetime: "2027-04-01T00:00:00Z"
+          )
+        end
+
+        it "derives the commercial term from it" do
+          expect(variables).to include(
+            "commercial_terms_start_date" => "2026-04-01",
+            "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
+          )
+        end
+      end
+
+      context "when the quote carries several add-ons" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {
+              "addOns" => [
+                {"id" => SecureRandom.uuid, "type" => "add_on", "payload" => {"fromDatetime" => "2026-03-01T00:00:00Z", "toDatetime" => "2027-06-01T00:00:00Z"}},
+                {"id" => SecureRandom.uuid, "type" => "add_on", "payload" => {"fromDatetime" => "2026-01-01T00:00:00Z", "toDatetime" => "2027-01-01T00:00:00Z"}}
+              ]
+            }
+          )
+        end
+
+        it "spans the earliest start and the latest end" do
+          expect(variables).to include(
+            "commercial_terms_start_date" => "2026-01-01",
+            "commercial_terms_term_duration" => {"unit" => "months", "count" => 17}
+          )
+        end
+      end
+
+      context "when an add-on overrides its service period" do
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {
+              "addOns" => [
+                {
+                  "id" => SecureRandom.uuid,
+                  "type" => "add_on",
+                  "payload" => {"fromDatetime" => "2026-01-01T00:00:00Z", "toDatetime" => "2027-01-01T00:00:00Z"},
+                  "overrides" => {"fromDatetime" => "2026-02-01T00:00:00Z", "toDatetime" => "2026-08-01T00:00:00Z"}
+                }
+              ]
+            }
+          )
+        end
+
+        it "reads the overridden period, the one the fee is billed for" do
+          expect(variables).to include(
+            "commercial_terms_start_date" => "2026-02-01",
+            "commercial_terms_term_duration" => {"unit" => "months", "count" => 6}
+          )
+        end
+      end
     end
   end
 end
