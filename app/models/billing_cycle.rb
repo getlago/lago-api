@@ -42,6 +42,14 @@ class BillingCycle < ApplicationRecord
       rate_card_rate.applied_pricing_unit_conversion_rate
     end
   end
+
+  def min_amount_cents
+    if rate_override
+      rate_override.min_amount_cents
+    else
+      rate_card_rate.min_amount_cents
+    end
+  end
 end
 
 # == Schema Information

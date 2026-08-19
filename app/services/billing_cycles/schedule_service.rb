@@ -2,10 +2,15 @@
 
 module BillingCycles
   # Producer lane, scoped to ONE customer. It selects subscription rate cards whose
-  # next_billing_at is due within the scheduling range, generates the normal periods
-  # that overlap that range, writes pending BillingCycle rows, and advances each
-  # item's clock. Termination final cycles are not scheduled here; they are created
-  # by SubscriptionRateCards::TerminateService.
+  # next_billing_at is due within the scheduling range, loads the dependencies needed
+  # to bill each period, writes pending BillingCycle rows, and advances each item's
+  # clock. Termination final cycles are not scheduled here; they are created by
+  # SubscriptionRateCards::TerminateService.
+  #
+  # A BillingCycle is the durable processing contract: it carries the resolved rate,
+  # optional override, pricing unit, rate properties snapshot, period boundaries, and
+  # billing date. Downstream processing should use those cycle dependencies instead of
+  # resolving product-catalog pricing again.
   #
   # The whole customer runs in one transaction, so the consumer sees the customer's
   # whole set or nothing (completeness), and the clock never advances without a
@@ -17,7 +22,7 @@ module BillingCycles
   # scale lives in the fan-out (one job per customer), not in bulk-writing one customer.
   #
   # Rate effective dates are used only to split service periods. Pricing is still
-  # computed later from the rate properties snapshot stored on each billing cycle.
+  # computed later from the dependencies and snapshots stored on each billing cycle.
   class ScheduleService < BaseService
     OVERLAP_CONSTRAINT = "billing_cycles_no_overlapping_periods"
     UNIQUE_PERIOD_INDEX = "index_billing_cycles_on_product_and_period"

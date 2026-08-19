@@ -3,86 +3,118 @@
 module BillingCycles
   module Fees
     class AmountsService < BaseService
-      Result = BaseResult[
+      Result = BaseResult[:amount, :true_up_amount]
+      Amount = Data.define(
         :amount_cents,
         :precise_amount_cents,
         :unit_amount_cents,
         :precise_unit_amount,
         :pricing_unit_usage
-      ]
+      )
 
-      def initialize(billing_cycle:, charge_model_result:, currency:, units:)
+      def initialize(billing_cycle:, charge_model_result:, currency:, units:, proration_ratio: 1)
         @billing_cycle = billing_cycle
         @charge_model_result = charge_model_result
         @currency = currency
         @units = units
+        @proration_ratio = proration_ratio
         super
       end
 
       def call
-        result.amount_cents = amounts.amount_cents
-        result.precise_amount_cents = amounts.precise_amount_cents
-        result.unit_amount_cents = amounts.unit_amount_cents
-        result.precise_unit_amount = amounts.precise_unit_amount
-        result.pricing_unit_usage = amounts.pricing_unit_usage
+        result.amount = amount
+        result.true_up_amount = true_up_amount
         result
       end
 
       private
 
-      attr_reader :billing_cycle, :charge_model_result, :currency, :units
+      attr_reader :billing_cycle, :charge_model_result, :currency, :units, :proration_ratio
+
+      def amount
+        @amount ||= amounts.amount_for(charge_model_result:, units:)
+      end
+
+      def true_up_amount
+        return if minimum_amount_cents.to_i.zero?
+        return if amount.amount_cents >= minimum_amount_cents
+
+        amounts.amount_for(charge_model_result: true_up_amount_result, units: 1)
+      end
+
+      def true_up_amount_result
+        BaseResult[:amount, :unit_amount].new.tap do |result|
+          result.amount = true_up_amount_units
+          result.unit_amount = true_up_amount_units
+        end
+      end
+
+      def true_up_amount_units
+        if billing_cycle.pricing_unit
+          return true_up_currency_amount / billing_cycle.pricing_unit_conversion_rate
+        end
+
+        true_up_currency_amount
+      end
+
+      def true_up_currency_amount
+        (minimum_amount_cents - amount.amount_cents).to_d / currency.subunit_to_unit
+      end
+
+      def minimum_amount_cents
+        (billing_cycle.min_amount_cents * proration_ratio).round
+      end
 
       def amounts
         @amounts ||= Amounts.build(
           billing_cycle:,
-          charge_model_result:,
-          currency:,
-          units:
+          currency:
         )
       end
 
       class Amounts
-        def self.build(billing_cycle:, charge_model_result:, currency:, units:)
+        def self.build(billing_cycle:, currency:)
           if billing_cycle.pricing_unit
-            return WithPricingUnit.new(billing_cycle:, charge_model_result:, currency:, units:)
+            return WithPricingUnit.new(billing_cycle:, currency:)
           end
 
-          new(charge_model_result:, currency:, units:)
+          new(currency:)
         end
 
-        def initialize(charge_model_result:, currency:, units:)
-          @charge_model_result = charge_model_result
+        def initialize(currency:)
           @currency = currency
-          @units = units
         end
 
-        def amount_cents
-          @amount_cents ||= (charge_model_result.amount.round(currency.exponent) * subunit).round
+        def amount_for(charge_model_result:, units:)
+          amount_cents = amount_cents_for(charge_model_result)
+          Amount.new(
+            amount_cents:,
+            precise_amount_cents: BigDecimal(amount_cents),
+            unit_amount_cents: unit_amount_cents_for(amount_cents, units),
+            precise_unit_amount: precise_unit_amount_for(amount_cents, units),
+            pricing_unit_usage: nil
+          )
         end
 
-        def precise_amount_cents
-          BigDecimal(amount_cents)
+        private
+
+        attr_reader :currency
+
+        def amount_cents_for(charge_model_result)
+          (charge_model_result.amount.round(currency.exponent) * subunit).round
         end
 
-        def unit_amount_cents
+        def unit_amount_cents_for(amount_cents, units)
           return 0 if units.zero?
 
           (amount_cents / units).round
         end
 
-        def precise_unit_amount
+        def precise_unit_amount_for(amount_cents, units)
           return BigDecimal(0) if units.zero?
 
           BigDecimal(amount_cents) / units / subunit
         end
-
-        def pricing_unit_usage
-          nil
-        end
-
-        private
-
-        attr_reader :charge_model_result, :currency, :units
 
         def subunit
           currency.subunit_to_unit
@@ -90,36 +122,21 @@ module BillingCycles
       end
 
       class WithPricingUnit < Amounts
-        def initialize(billing_cycle:, charge_model_result:, currency:, units:)
+        def initialize(billing_cycle:, currency:)
           @billing_cycle = billing_cycle
-          super(charge_model_result:, currency:, units:)
+          super(currency:)
         end
 
-        def amount_cents
-          fiat_amounts[:amount_cents]
-        end
+        def amount_for(charge_model_result:, units:)
+          pricing_unit_usage = pricing_unit_usage_for(charge_model_result)
+          fiat_amounts = pricing_unit_usage.to_fiat_currency_cents(currency)
 
-        def precise_amount_cents
-          fiat_amounts[:precise_amount_cents]
-        end
-
-        def unit_amount_cents
-          return 0 if units.zero?
-
-          fiat_amounts[:unit_amount_cents]
-        end
-
-        def precise_unit_amount
-          return BigDecimal(0) if units.zero?
-
-          fiat_amounts[:precise_unit_amount]
-        end
-
-        def pricing_unit_usage
-          @pricing_unit_usage ||= PricingUnitUsage.build_from_fiat_amounts(
-            amount: charge_model_result.amount,
-            unit_amount: charge_model_result.unit_amount,
-            applied_pricing_unit:
+          Amount.new(
+            amount_cents: fiat_amounts[:amount_cents],
+            precise_amount_cents: fiat_amounts[:precise_amount_cents],
+            unit_amount_cents: unit_amount_cents_for(fiat_amounts, units),
+            precise_unit_amount: precise_unit_amount_for(fiat_amounts, units),
+            pricing_unit_usage:
           )
         end
 
@@ -135,8 +152,24 @@ module BillingCycles
           )
         end
 
-        def fiat_amounts
-          @fiat_amounts ||= pricing_unit_usage.to_fiat_currency_cents(currency)
+        def pricing_unit_usage_for(charge_model_result)
+          PricingUnitUsage.build_from_fiat_amounts(
+            amount: charge_model_result.amount,
+            unit_amount: charge_model_result.unit_amount,
+            applied_pricing_unit:
+          )
+        end
+
+        def unit_amount_cents_for(fiat_amounts, units)
+          return 0 if units.zero?
+
+          fiat_amounts[:unit_amount_cents]
+        end
+
+        def precise_unit_amount_for(fiat_amounts, units)
+          return BigDecimal(0) if units.zero?
+
+          fiat_amounts[:precise_unit_amount]
         end
       end
 

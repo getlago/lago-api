@@ -67,4 +67,24 @@ RSpec.describe BillingCycle do
       end
     end
   end
+
+  describe "#min_amount_cents" do
+    subject(:min_amount_cents) { billing_cycle.min_amount_cents }
+
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, min_amount_cents: 1_000) }
+    let(:billing_cycle) { described_class.new(rate_card_rate:) }
+
+    it "returns the rate minimum amount" do
+      expect(min_amount_cents).to eq(1_000)
+    end
+
+    context "with a rate override" do
+      let(:rate_override) { build_stubbed(:rate_override, min_amount_cents: 2_000) }
+      let(:billing_cycle) { described_class.new(rate_card_rate:, rate_override:) }
+
+      it "returns the override minimum amount" do
+        expect(min_amount_cents).to eq(2_000)
+      end
+    end
+  end
 end

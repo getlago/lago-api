@@ -28,7 +28,8 @@ RSpec.describe BillingCycles::Fees::ComputeService do
         organization:,
         rate_card:,
         rate_model:,
-        rate_properties:
+        rate_properties:,
+        min_amount_cents:
       )
     end
     let(:billing_cycle) do
@@ -45,6 +46,7 @@ RSpec.describe BillingCycles::Fees::ComputeService do
       )
     end
     let(:units) { 15 }
+    let(:min_amount_cents) { 0 }
 
     context "with a standard rate model" do
       let(:rate_model) { "standard" }
@@ -55,6 +57,26 @@ RSpec.describe BillingCycles::Fees::ComputeService do
         expect(result.fee.amount_cents).to eq(45_000)
         expect(result.fee.unit_amount_cents).to eq(3_000)
         expect(result.fee.precise_unit_amount).to eq(30)
+        expect(result.true_up_fee).to be_nil
+      end
+
+      context "with a minimum amount above the fee amount" do
+        let(:min_amount_cents) { 100_000 }
+
+        it "returns a linked true-up fee" do
+          expect(result).to be_success
+          expect(result.true_up_fee).to be_new_record.and have_attributes(
+            fee_type: "product",
+            invoiceable: result.fee.invoiceable,
+            amount_cents: 55_000,
+            precise_amount_cents: 55_000,
+            units: 1,
+            unit_amount_cents: 55_000,
+            precise_unit_amount: 550,
+            true_up_parent_fee: result.fee,
+            pricing_unit_usage: nil
+          )
+        end
       end
 
       context "with a fixed product and pricing unit" do
@@ -76,7 +98,8 @@ RSpec.describe BillingCycles::Fees::ComputeService do
             rate_card:,
             rate_model:,
             rate_properties:,
-            applied_pricing_unit_conversion_rate: 0.5
+            applied_pricing_unit_conversion_rate: 0.5,
+            min_amount_cents:
           )
         end
         let(:units) { 5 }
@@ -112,6 +135,31 @@ RSpec.describe BillingCycles::Fees::ComputeService do
             precise_unit_amount: 10,
             conversion_rate: 0.5
           )
+        end
+
+        context "with a minimum amount above the converted fee amount" do
+          let(:min_amount_cents) { 10_000 }
+
+          it "returns a linked true-up fee with pricing unit usage" do
+            expect(result).to be_success
+            expect(result.true_up_fee).to be_new_record.and have_attributes(
+              amount_cents: 7_500,
+              precise_amount_cents: 7_500,
+              units: 1,
+              unit_amount_cents: 7_500,
+              precise_unit_amount: 75,
+              true_up_parent_fee: result.fee
+            )
+
+            expect(result.true_up_fee.pricing_unit_usage).to be_new_record.and have_attributes(
+              pricing_unit:,
+              amount_cents: 15_000,
+              precise_amount_cents: 15_000,
+              unit_amount_cents: 15_000,
+              precise_unit_amount: 150,
+              conversion_rate: 0.5
+            )
+          end
         end
       end
     end

@@ -26,12 +26,14 @@ RSpec.describe BillingCycles::ProcessService do
         :rate_card_rate,
         organization:,
         rate_card:,
-        rate_properties: {"amount" => "30.00"}
+        rate_properties: {"amount" => "30.00"},
+        min_amount_cents:
       )
     end
     let(:rate_override) { create(:rate_override, organization:, rate_properties: {"amount" => "15.00"}) }
     let(:billing_cycle_rate_properties) { {"amount" => "15.00"} }
     let(:billing_cycle_pricing_unit) { nil }
+    let(:min_amount_cents) { 0 }
 
     before do
       create(
@@ -63,6 +65,25 @@ RSpec.describe BillingCycles::ProcessService do
       expect(fee.precise_unit_amount).to eq(15)
       expect(fee.rate_card_rate).to eq(rate_card_rate)
       expect(fee.rate_override).to eq(rate_override)
+    end
+
+    context "with a minimum amount above the fee amount" do
+      let(:rate_override) { nil }
+      let(:billing_cycle_rate_properties) { {"amount" => "10.00"} }
+      let(:min_amount_cents) { 10_000 }
+
+      it "persists the fee and its true-up fee" do
+        expect(result).to be_success
+
+        invoice = result.invoices.sole
+        fee, true_up_fee = invoice.fees.order(:created_at)
+        expect(invoice.total_amount_cents).to eq(10_000)
+        expect(fee.amount_cents).to eq(5_000)
+        expect(true_up_fee).to have_attributes(
+          amount_cents: 5_000,
+          true_up_parent_fee_id: fee.id
+        )
+      end
     end
 
     context "when a scheduled cycle has a pricing unit" do
