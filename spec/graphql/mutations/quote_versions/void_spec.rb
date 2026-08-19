@@ -91,4 +91,22 @@ RSpec.describe Mutations::QuoteVersions::Void do
       expect_graphql_error(result:, message: "Unprocessable Entity", details: {status: ["not_voidable"]})
     end
   end
+
+  context "when the quote lock cannot be acquired", :premium do
+    before do
+      allow(QuoteVersions::VoidService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+    end
+
+    it "returns an unprocessable entity error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_unprocessable_entity(result, details: {base: ["concurrency_conflict"]})
+    end
+  end
 end

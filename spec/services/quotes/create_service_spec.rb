@@ -177,6 +177,23 @@ RSpec.describe Quotes::CreateService do
       end
     end
 
+    context "when the version creation fails with a non-validation failure", :premium do
+      before do
+        allow(QuoteVersions::CreateService).to receive(:call!)
+          .and_raise(BaseService::ForbiddenFailure.new(BaseResult.new, code: "active_version_exists"))
+      end
+
+      it "surfaces the failure instead of letting it escape" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("active_version_exists")
+      end
+
+      it "rolls the quote back" do
+        expect { result }.not_to change(Quote, :count)
+      end
+    end
+
     context "when owners include invalid user ids", :premium do
       let(:create_params) do
         {order_type: :subscription_creation, owners: ["invalid_user_id"]}

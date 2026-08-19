@@ -147,6 +147,27 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when the order form creation fails with a non-validation failure", :premium do
+      before do
+        allow(OrderForms::CreateService).to receive(:call!)
+          .and_raise(BaseService::ForbiddenFailure.new(BaseResult.new, code: "feature_unavailable"))
+      end
+
+      it "surfaces the failure instead of letting it escape" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
+      end
+
+      it "rolls the approval back" do
+        result
+
+        quote_version.reload
+        expect(quote_version.draft?).to eq(true)
+        expect(quote_version.approved_at).to eq(nil)
+      end
+    end
+
     context "when the billing items are incomplete", :premium do
       let(:quote_version) do
         create(:quote_version, quote:, organization:)
