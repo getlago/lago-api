@@ -8,18 +8,20 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
 
-      field :amount_cents, GraphQL::Types::BigInt, null: false
+      # Nullable: product-catalog plans price through their rate cards, so they
+      # carry no plan-level amount, interval or billing timing.
+      field :amount_cents, GraphQL::Types::BigInt
       field :amount_currency, Types::CurrencyEnum, null: false
       field :bill_charges_monthly, Boolean
       field :bill_fixed_charges_monthly, Boolean
       field :code, String, null: false
       field :description, String
-      field :interval, Types::Plans::IntervalEnum, null: false
+      field :interval, Types::Plans::IntervalEnum
       field :invoice_display_name, String
       field :minimum_commitment, Types::Commitments::Object, null: true
       field :name, String, null: false
       field :parent, Types::Plans::Object, null: true
-      field :pay_in_advance, Boolean, null: false
+      field :pay_in_advance, Boolean
       field :trial_period, Float
 
       field :applicable_usage_thresholds, [Types::UsageThresholds::Object]
