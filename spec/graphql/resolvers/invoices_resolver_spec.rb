@@ -497,6 +497,36 @@ RSpec.describe Resolvers::InvoicesResolver do
     end
   end
 
+  context "with an amount range wider than the 32-bit integer limit" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, amountFrom: 0, amountTo: 30000000000) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let!(:big_invoice) { create(:invoice, total_amount_cents: 3_000_000_000, organization:) }
+
+    it "returns the invoices in range, including amounts above 2^31" do
+      collection = result["data"]["invoices"]["collection"]
+
+      expect(collection.pluck("id")).to match_array [invoice_first.id, invoice_second.id, big_invoice.id]
+    end
+  end
+
   context "when filtering by self billed" do
     let(:invoice_third) do
       create(
