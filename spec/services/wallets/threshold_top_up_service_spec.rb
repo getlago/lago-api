@@ -271,6 +271,41 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    context "when the wallet is several top-ups short" do
+      let(:wallet) do
+        create(
+          :wallet,
+          balance_cents: 5000,
+          ongoing_balance_cents: -42_980,
+          ongoing_usage_balance_cents: 47_980,
+          credits_balance: 50.0,
+          credits_ongoing_balance: -429.8,
+          credits_ongoing_usage_balance: 479.8,
+          rate_amount: 1.0
+        )
+      end
+
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "10.0",
+          paid_credits: "50.0",
+          granted_credits: "0.0"
+        )
+      end
+
+      it "closes the whole gap in a single top-up" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(paid_credits: "450.0", granted_credits: "0.0"),
+            unique_transaction: true
+          )
+      end
+    end
+
     context "when border has NOT been crossed" do
       let(:recurring_transaction_rule) do
         create(:recurring_transaction_rule, wallet:, trigger: "threshold", threshold_credits: "2.0")
@@ -294,6 +329,28 @@ RSpec.describe Wallets::ThresholdTopUpService do
         create(:wallet_transaction, wallet:, amount: 1.0, credit_amount: 1.0, status: "pending")
 
         expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+
+      context "when the wallet rate is not one" do
+        let(:wallet) do
+          create(
+            :wallet,
+            balance_cents: 1000,
+            ongoing_balance_cents: 550,
+            ongoing_usage_balance_cents: 450,
+            credits_balance: 10.0,
+            credits_ongoing_balance: 5.5,
+            credits_ongoing_usage_balance: 4.0,
+            rate_amount: 0.1,
+            paid_top_up_min_amount_cents: 205_50
+          )
+        end
+
+        it "counts the pending credits rather than the pending currency amount" do
+          create(:wallet_transaction, wallet:, amount: 0.1, credit_amount: 1.0, status: "pending")
+
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
       end
     end
 
