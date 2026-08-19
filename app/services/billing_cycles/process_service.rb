@@ -104,8 +104,7 @@ module BillingCycles
         invoice_result.raise_if_error!
         invoice = invoice_result.invoice
 
-        cycles.each do |cycle|
-          fee = BillingCycles::Fees::ComputeService.call!(billing_cycle: cycle).fee
+        cycles.flat_map { |cycle| computed_fees(cycle) }.each do |fee|
           fee.invoice = invoice
           fee.billing_entity = invoice.billing_entity
           fee.save!
@@ -118,6 +117,11 @@ module BillingCycles
       end
 
       invoice
+    end
+
+    def computed_fees(cycle)
+      fee_result = BillingCycles::Fees::ComputeService.call!(billing_cycle: cycle)
+      [fee_result.fee, fee_result.true_up_fee].compact
     end
 
     # The billing_cycle already carries the exact period per item, so the new engine owns
