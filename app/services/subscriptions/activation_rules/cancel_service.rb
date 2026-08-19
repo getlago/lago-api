@@ -46,7 +46,8 @@ module Subscriptions
         payment_rule = subscription.activation_rules.payment.sole
         Payment::EvaluateService.call!(rule: payment_rule, status: rule_status)
 
-        invoice.closed!
+        # Locked because Invoices::RetryService reopens a failed invoice under the same lock.
+        invoice.with_lock { invoice.closed! }
 
         ResolveSubscriptionStatusService.call!(subscription:)
         subscription.update!(cancellation_reason:)
