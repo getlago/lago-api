@@ -142,7 +142,8 @@ module V2
         BillingPeriods::DatesService::Options.new(
           timezone: subscription.customer.applicable_timezone,
           exclude_out_of_range: true,
-          realign_billing_anchor: true
+          realign_billing_anchor: true,
+          termination: false
         )
       end
     end

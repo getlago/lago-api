@@ -35,7 +35,8 @@ RSpec.describe BillingPeriods::Dates::AdvanceService do
       BillingPeriods::DatesService::Options.new(
         timezone: "UTC",
         exclude_out_of_range:,
-        realign_billing_anchor: false
+        realign_billing_anchor: false,
+        termination: false
       )
     end
     let(:rates) { [rate] }

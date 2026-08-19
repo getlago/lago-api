@@ -138,7 +138,8 @@ module BillingCycles
       BillingPeriods::DatesService::Options.new(
         timezone: subscription_rate_card.subscription.customer.applicable_timezone,
         exclude_out_of_range: true,
-        realign_billing_anchor: true
+        realign_billing_anchor: true,
+        termination: false
       )
     end
 

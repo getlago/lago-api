@@ -10,8 +10,7 @@ module BillingPeriods
         started_at:, rates:, range:,
         subscription_rate_card:,
         options: BillingPeriods::DatesService::Options.default,
-        rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: []),
-        ratio_end_at: nil
+        rate_phases: SubscriptionRateCards::ResolveRatePhasesService::RatePhases.new(phases: [])
       )
         @billing_anchor_date = billing_anchor_date
         @options = options
@@ -20,7 +19,6 @@ module BillingPeriods
         @rates = rates
         @rate_phases = rate_phases
         @range = range
-        @ratio_end_at = ratio_end_at
         super
       end
 
@@ -33,7 +31,7 @@ module BillingPeriods
 
       private
 
-      attr_reader :billing_anchor_date, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range, :ratio_end_at
+      attr_reader :billing_anchor_date, :options, :started_at, :subscription_rate_card, :rates, :rate_phases, :range
 
       delegate :timezone, :exclude_out_of_range, :realign_billing_anchor, to: :options
 
@@ -187,7 +185,7 @@ module BillingPeriods
       def proration_ratio_for(cycle, start_at, end_at)
         return 1 unless subscription_rate_card.proration?
 
-        boundaries_by_cycle.fetch(cycle).proration_ratio(start_at, ratio_end_at || end_at)
+        boundaries_by_cycle.fetch(cycle).proration_ratio(start_at, end_at)
       end
 
       # The consumed ratio represents how much of this period slice has elapsed within
