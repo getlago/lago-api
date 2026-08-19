@@ -79,15 +79,19 @@ module QuoteVersions
       end
     end
 
-    # The deal term is not a quote-level field: every plan carries its own dates in the billing
-    # items, so the commercial term is the span the quoted plans cover. one_off quotes carry no
-    # plans, hence no term at all.
+    # The deal term is not a quote-level field: every billing item carries its own dates, so the
+    # commercial term is the span the quoted items cover. Plans state it as startDate/endDate, and
+    # one_off add-ons as the service period their fee is billed for.
     #
     # An amendment restates a subscription that is already running and its plan need not carry a
     # start date, since the replacement inherits the target's anniversary date. That date is then
     # the term the customer signs.
     def term_start_date
-      plan_dates("startDate").min || amended_subscription_date
+      if one_off?
+        add_on_dates("fromDatetime").min
+      else
+        plan_dates("startDate").min || amended_subscription_date
+      end
     end
 
     def amended_subscription_date
@@ -97,7 +101,15 @@ module QuoteVersions
     end
 
     def term_end_date
-      plan_dates("endDate").max
+      if one_off?
+        add_on_dates("toDatetime").max
+      else
+        plan_dates("endDate").max
+      end
+    end
+
+    def one_off?
+      quote.order_type == "one_off"
     end
 
     # Same parsing as Orders::SubscriptionCreation::ExecuteService, the service these dates feed:
@@ -105,6 +117,14 @@ module QuoteVersions
     def plan_dates(key)
       Array(billing_items["plans"]).filter_map do
         Utils::Datetime.parse_iso8601(it.dig("payload", key))&.to_date
+      end
+    end
+
+    # Overrides win over the payload, the resolution Orders::OneOff::ExecuteService applies to the
+    # dates it bills, and the one OneOff::BusinessValidator checks section by section.
+    def add_on_dates(key)
+      Array(billing_items["addOns"]).filter_map do |item|
+        Utils::Datetime.parse_iso8601(item.dig("overrides", key) || item.dig("payload", key))&.to_date
       end
     end
 

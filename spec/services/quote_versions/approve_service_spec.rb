@@ -125,6 +125,28 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when the expires_at lands on the deal expiration", :premium do
+      subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
+
+      # The quoted plan ends on 2027-01-01 and the signing window has to close strictly before the
+      # deal expires, so the boundary day itself is refused.
+      let(:expires_at) { Time.utc(2027, 1, 1).end_of_day }
+
+      it "does not approve the quote version" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(expires_at: ["after_deal_expiration"])
+
+        quote_version.reload
+        expect(quote_version.approved?).to eq(false)
+        expect(quote_version.approved_at).to eq(nil)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+    end
+
     context "when the billing items are incomplete", :premium do
       let(:quote_version) do
         create(:quote_version, quote:, organization:)
