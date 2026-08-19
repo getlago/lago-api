@@ -90,7 +90,7 @@ module BillingCycles
 
     def charge_model_result
       @charge_model_result ||= ChargeModels::Factory.new_instance(
-        structure: ChargeModels::PricingStructure.from_billing_cycle(billing_cycle),
+        pricing_structure: ChargeModels::PricingStructure.from_billing_cycle(billing_cycle),
         aggregation_result:,
         period_ratio: proration_ratio,
         calculate_projected_usage: false

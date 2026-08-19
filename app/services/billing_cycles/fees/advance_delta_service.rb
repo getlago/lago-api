@@ -57,7 +57,7 @@ module BillingCycles
 
       def price_for(quantity)
         ChargeModels::Factory.new_instance(
-          structure: ChargeModels::PricingStructure.from_billing_cycle(billing_cycle),
+          pricing_structure: ChargeModels::PricingStructure.from_billing_cycle(billing_cycle),
           aggregation_result: aggregation_for(quantity),
           period_ratio: proration_ratio,
           calculate_projected_usage: false
