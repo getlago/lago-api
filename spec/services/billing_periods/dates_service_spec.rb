@@ -91,7 +91,7 @@ RSpec.describe BillingPeriods::DatesService do
       )
     end
 
-    before do
+    let(:rate_card_rate) do
       create(
         :rate_card_rate,
         organization:,
@@ -99,6 +99,8 @@ RSpec.describe BillingPeriods::DatesService do
         effective_from: Time.zone.parse("2026-08-01"),
         billing_interval_unit: "week"
       )
+    end
+    let(:second_rate_card_rate) do
       create(
         :rate_card_rate,
         organization:,
@@ -107,6 +109,11 @@ RSpec.describe BillingPeriods::DatesService do
         effective_from: Time.zone.parse("2026-08-06"),
         billing_interval_unit: "week"
       )
+    end
+
+    before do
+      rate_card_rate
+      second_rate_card_rate
     end
 
     it "keeps the same cycle window when a rate effective date splits a cycle" do
@@ -118,6 +125,7 @@ RSpec.describe BillingPeriods::DatesService do
         ]
       )
       expect(result.periods.map(&:cycle_index)).to eq([0, 0, 1])
+      expect(result.periods.map(&:rate)).to eq([rate_card_rate, second_rate_card_rate, second_rate_card_rate])
       expect(result.periods.map(&:rate_phase)).to eq([intro_phase, intro_phase, standard_phase])
     end
 
