@@ -90,10 +90,19 @@ module Subscriptions
       def discarded_periods
         return SubscriptionBillingPeriod.none if discarded_from.nil?
 
-        SubscriptionBillingPeriod
+        scope = SubscriptionBillingPeriod
           .where(scope_type: "Subscription", scope_id: subscription.id)
           .where(period_to: discarded_from..)
-          .where.not(period_from: desired_periods.map(&:period_from))
+
+        retained = desired_periods.map(&:period_from)
+
+        # Nothing is being written, so nothing from `discarded_from` onwards is retained. Spelled
+        # out rather than left to an empty `period_from NOT IN ()`, which happens to render as true.
+        if retained.empty?
+          scope
+        else
+          scope.where.not(period_from: retained)
+        end
       end
 
       # The termination is a boundary of its own: a subscription terminated at the very instant a
