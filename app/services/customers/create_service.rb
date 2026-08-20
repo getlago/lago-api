@@ -84,12 +84,6 @@ module Customers
       ActiveRecord::Base.transaction do
         customer.save!
 
-        # This is the create-or-update endpoint, so it can move the applicable timezone of a customer
-        # that already has subscriptions, and that decides where their charge periods fall.
-        if customer.saved_change_to_timezone?
-          Subscriptions::BillingPeriods::RefreshAllJob.perform_after_commit(customer)
-        end
-
         eu_tax_code_result = Customers::EuAutoTaxesService.call(customer:, new_record: true, tax_attributes_changed: true)
 
         if eu_tax_code_result.success?
