@@ -70,6 +70,29 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "with notify_on" do
+      it "accepts opting a coded threshold in to resolution" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}]})
+
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+
+      it "rejects opting in without a code" do
+        result = described_class.call(alert:, params: {thresholds: [{value: 10, notify_on: %w[triggered resolved]}]})
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:code"]).to include("value_is_mandatory")
+      end
+
+      it "rejects dropping triggered" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, notify_on: %w[resolved]}]})
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+    end
+
     context "with too many thresholds" do
       let(:params) do
         {
