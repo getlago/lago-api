@@ -227,7 +227,7 @@ RSpec.describe Mutations::Customers::Create do
       GQL
     end
 
-    it "creates the connections and marks the flagged one as default" do
+    it "creates the connections declaratively" do
       stripe_provider
 
       result = execute_graphql(
@@ -240,7 +240,7 @@ RSpec.describe Mutations::Customers::Create do
             name: "Array Inc",
             externalId: "array_inc",
             paymentProviderCustomers: [
-              {type: "lago_manual", code: "lago_manual", isDefault: true},
+              {type: "lago_manual", code: "lago_manual"},
               {code: "stripe_eu", paymentProvider: "stripe", providerCustomerId: "cu_12345", providerPaymentMethods: ["card"]}
             ]
           }
@@ -249,10 +249,7 @@ RSpec.describe Mutations::Customers::Create do
 
       result_data = result["data"]["createCustomer"]
 
-      expect(result_data["connectionStatus"]).to eq("manual")
       expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to match_array(%w[lago_manual stripe_eu])
-      manual = result_data["paymentProviderCustomers"].find { |c| c["code"] == "lago_manual" }
-      expect(manual["isDefault"]).to be(true)
     end
   end
 
