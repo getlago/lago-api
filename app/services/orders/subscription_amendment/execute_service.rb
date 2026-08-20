@@ -18,6 +18,12 @@ module Orders
         [amend_subscription]
       end
 
+      # The plan change carries the target's own binding over, so the wallets created alongside follow
+      # the entity that will bill them rather than the customer's default.
+      def quoted_billing_entity_id
+        target_subscription&.billing_entity_id
+      end
+
       # Subscriptions::CreateService is the entry point the API and the UI already use for a plan
       # change, so the amendment inherits Lago's own semantics in both directions: a raise rotates
       # the subscription now, keeping the external id and the billing anchor, while a reduction keeps

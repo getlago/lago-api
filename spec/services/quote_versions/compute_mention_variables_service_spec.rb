@@ -272,6 +272,31 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
         )
       end
 
+      # The plan change bills under the target's entity, so the signed document has to name it too.
+      context "when the target subscription is bound to another entity" do
+        let(:target_entity) do
+          create(:billing_entity, organization:, name: "Globex Inc", legal_name: "Globex Incorporated")
+        end
+        let(:subscription) do
+          create(
+            :subscription,
+            organization:,
+            customer:,
+            plan: create(:plan, organization:, amount_currency: "EUR"),
+            subscription_at: Date.new(2026, 2, 1),
+            billing_entity: target_entity
+          )
+        end
+
+        it "renders the target's entity rather than the customer's" do
+          expect(target_entity).not_to eq(customer.billing_entity)
+          expect(variables).to include(
+            "billing_entity_name" => "Globex Inc",
+            "billing_entity_legal_name" => "Globex Incorporated"
+          )
+        end
+      end
+
       context "when the plan carries its own start date" do
         let(:quote_version) do
           create(

@@ -56,15 +56,23 @@ class QuoteVersion < ApplicationRecord
 
   def version = sequential_id
 
-  # A blank billing entity means the deal follows the customer's own, resolved at billing time
-  # rather than frozen here, the same semantic Subscription and Wallet carry. The customer is reached
-  # through the quote, so both hops are guarded: a version with no quote yet reads as having none.
+  # A blank billing entity means the deal follows whichever entity will bill it, resolved at billing
+  # time rather than frozen here, the same semantic Subscription and Wallet carry.
+  #
+  # An amendment restates a subscription already bound to an entity, and the plan change carries that
+  # binding over, so the deal follows the target rather than the customer's own default: otherwise the
+  # signed document would name one issuer while the execution billed under another. Subscription
+  # resolves its own fallback to the customer, so the last hop only serves a quote without a target.
+  #
+  # Every hop is guarded: a version with no quote yet reads as having no entity.
   def billing_entity
-    super || quote&.customer&.billing_entity
+    super || quote&.subscription&.billing_entity || quote&.customer&.billing_entity
   end
 
   def applicable_billing_entity_id
-    billing_entity_id || quote&.customer&.billing_entity_id
+    billing_entity_id ||
+      quote&.subscription&.applicable_billing_entity_id ||
+      quote&.customer&.billing_entity_id
   end
 end
 

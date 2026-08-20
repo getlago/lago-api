@@ -116,6 +116,25 @@ RSpec.describe QuoteVersion do
 
       expect(quote_version.billing_entity).to eq(billing_entity)
     end
+
+    # The plan change carries the target's binding over, so the document has to name the same issuer.
+    context "when the quote amends a subscription bound to another entity" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:target_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, billing_entity: target_entity) }
+      let(:quote) do
+        create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment)
+      end
+
+      it "follows the target rather than the customer's own entity" do
+        quote_version = create(:quote_version, quote:, organization:)
+
+        expect(target_entity).not_to eq(customer.billing_entity)
+        expect(quote_version.billing_entity).to eq(target_entity)
+        expect(quote_version.applicable_billing_entity_id).to eq(target_entity.id)
+      end
+    end
   end
 
   describe "#applicable_billing_entity_id" do

@@ -371,6 +371,22 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
           )
         end
 
+        # The plan change keeps the target's entity, so the wallet has to land on the same one rather
+        # than on the customer's default.
+        context "when the target subscription is bound to another entity" do
+          let(:target_entity) { create(:billing_entity, organization:) }
+          let(:target_subscription) do
+            create(:subscription, customer:, organization:, plan: target_plan, billing_entity: target_entity)
+          end
+
+          it "creates the wallet under the target's entity" do
+            execute_service.call
+
+            expect(target_entity).not_to eq(customer.billing_entity)
+            expect(customer.wallets.sole.billing_entity_id).to eq(target_entity.id)
+          end
+        end
+
         it "applies them alongside the plan change" do
           execute_service.call
 
