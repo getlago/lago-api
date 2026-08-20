@@ -5,7 +5,9 @@ if [ "$RAILS_ENV" == "staging" ]
 then
   bundle exec rake db:prepare
 else
-  bundle exec rake db:create
+  if ! bundle exec rails runner "ActiveRecord::Base.connection.select_value('SELECT 1')" 2>/dev/null; then
+    bundle exec rake db:create
+  fi
   bundle exec rails db:migrate
   bundle exec rails roles:seed_predefined
 
