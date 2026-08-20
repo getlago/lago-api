@@ -107,7 +107,7 @@ module Subscriptions
 
       def desired_periods
         @desired_periods ||= begin
-          current = build_period(timestamp)
+          current = build_period(derivation_timestamp)
 
           if current.nil?
             []
@@ -122,6 +122,16 @@ module Subscriptions
             [current, following].compact
           end
         end
+      end
+
+      # A terminated subscription has no period past its termination, so the last one it can have is
+      # the one covering `terminated_at`. Deriving it at a later `timestamp` would take the start of
+      # the period containing that timestamp while DatesService clamps the end to `terminated_at`,
+      # collapsing the period and leaving the subscription with no final period at all.
+      def derivation_timestamp
+        return timestamp unless subscription.terminated? && subscription.terminated_at.present?
+
+        [timestamp, subscription.terminated_at].min
       end
 
       def build_period(at)

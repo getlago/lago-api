@@ -150,6 +150,41 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
     end
   end
 
+  # RefreshAllService walks the subscriptions terminated within the grace period too, so a timezone
+  # change refreshes a subscription whose final period ended before `timestamp`. Deriving that
+  # period at `timestamp` would take the start of the current period against an end clamped to
+  # `terminated_at`, collapse it, and discard the stored final period without writing anything back.
+  context "when the subscription was terminated in a previous period" do
+    let(:subscription) do
+      create(
+        :subscription,
+        organization:, customer:, plan:, billing_time:, subscription_at:,
+        started_at: subscription_at,
+        status: :terminated,
+        terminated_at: Time.utc(2024, 2, 20)
+      )
+    end
+
+    it "stores the period covering the termination" do
+      expect { result }.to change(SubscriptionBillingPeriod, :count).by(1)
+
+      expect_period(persisted_periods.first, boundaries_at(subscription.terminated_at))
+    end
+
+    it "keeps the period already stored for the termination" do
+      final = create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: Time.utc(2024, 2, 1),
+        period_to: Time.utc(2024, 2, 20)
+      )
+
+      expect { result }.not_to change(SubscriptionBillingPeriod, :count)
+
+      expect(SubscriptionBillingPeriod.where(id: final.id)).to be_present
+    end
+  end
+
   # A downgrade takes effect on the billing day, so the previous subscription is terminated at the
   # very instant the next period opens: DatesService clamps charges_to to terminated_at and the
   # boundaries collapse onto each other.
