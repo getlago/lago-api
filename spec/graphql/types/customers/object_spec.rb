@@ -259,7 +259,7 @@ RSpec.describe Types::Customers::Object do
         data = execute
 
         expect(data["connectionStatus"]).to eq("not_connected")
-        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["manual"])
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
         expect(data["paymentProviderCustomers"].first["isDefault"]).to be(false)
       end
     end
@@ -271,7 +271,7 @@ RSpec.describe Types::Customers::Object do
         data = execute
 
         expect(data["connectionStatus"]).to eq("connected")
-        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(%w[manual stripe_eu])
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(%w[lago_manual stripe_eu])
       end
     end
 
@@ -282,7 +282,7 @@ RSpec.describe Types::Customers::Object do
         data = execute
 
         expect(data["connectionStatus"]).to eq("manual")
-        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["manual"])
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
         expect(data["paymentProviderCustomers"].first["isDefault"]).to be(true)
       end
     end
