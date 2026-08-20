@@ -29,9 +29,9 @@ module Plans
       plan.description = params[:description] if params.key?(:description)
       plan.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
 
-      # NOTE: If plan is attached to subscriptions the editable attributes are:
+      # NOTE: If plan is attached to live subscriptions the editable attributes are:
       #       name, invoice_display_name, description, amount_cents
-      unless plan.attached_to_subscriptions?
+      unless plan.attached_to_live_subscriptions?
         plan.code = params[:code] if params.key?(:code)
         plan.interval = params[:interval].to_sym if params.key?(:interval)
         plan.pay_in_advance = params[:pay_in_advance] if params.key?(:pay_in_advance)
