@@ -79,6 +79,12 @@ module BillingEntities
         handle_base64_logo if params.key?(:logo)
 
         billing_entity.save!
+
+        # Customers without their own timezone inherit this one, and it decides where their
+        # subscriptions' charge periods fall.
+        if billing_entity.saved_change_to_timezone?
+          Subscriptions::BillingPeriods::RefreshAllJob.perform_after_commit(billing_entity)
+        end
       end
 
       register_security_log(billing_entity, original_attributes, old_tax_codes)

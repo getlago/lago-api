@@ -150,6 +150,15 @@ module Customers
         ).raise_if_error!
 
         customer.save!
+
+        # The applicable timezone decides where a subscription's charge periods fall, so every
+        # subscription of this customer has to re-derive them. A customer without a timezone of its
+        # own takes the one of its billing entity, so moving it between entities moves the
+        # boundaries just as editing the timezone does.
+        if customer.saved_change_to_timezone? || billing_entity_changed
+          Subscriptions::BillingPeriods::RefreshAllJob.perform_after_commit(customer)
+        end
+
         customer.error_details.tax_error.delete_all if @address_changed
         customer.reload
 

@@ -14,6 +14,10 @@ FactoryBot.define do
     email { Faker::Internet.email }
     email_settings { ["invoice.finalized", "credit_note.created"] }
 
+    # The subscription lifecycle maintains billing periods behind this flag, so the suite exercises
+    # the enabled path rather than the skip. Pass `feature_flags: []` to cover the disabled one.
+    feature_flags { ["subscription_billing_periods"] }
+
     api_keys { [association(:api_key, organization: instance, strategy: :build)] }
     billing_entities do
       [

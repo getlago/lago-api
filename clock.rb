@@ -43,6 +43,19 @@ module Clockwork
     end
   end
 
+  billing_periods_refresh_interval = ENV["LAGO_BILLING_PERIODS_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
+  every(billing_periods_refresh_interval.to_i.seconds, "schedule:refresh_subscription_billing_periods") do
+    Clock::RefreshSubscriptionBillingPeriodsJob
+      .set(sentry: {"slug" => "lago_refresh_subscription_billing_periods", "cron" => "#{billing_periods_refresh_interval} interval"})
+      .perform_later
+  end
+
+  every(1.day, "schedule:detect_missing_billing_periods", at: "02:30") do
+    Clock::DetectMissingBillingPeriodsJob
+      .set(sentry: {"slug" => "lago_detect_missing_billing_periods", "cron" => "30 2 * * *"})
+      .perform_later
+  end
+
   lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
   every(lifetime_usage_refresh_interval.to_i.seconds, "schedule:refresh_lifetime_usages") do
     unless ENV["LAGO_DISABLE_LIFETIME_USAGE_REFRESH"] == "true"

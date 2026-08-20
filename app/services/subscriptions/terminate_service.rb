@@ -2,6 +2,8 @@
 
 module Subscriptions
   class TerminateService < BaseService
+    include Subscriptions::Concerns::BillingPeriodsRefreshConcern
+
     Result = BaseResult[:subscription]
 
     def initialize(subscription:, async: true, upgrade: false, on_termination_credit_note: subscription&.on_termination_credit_note, on_termination_invoice: subscription&.on_termination_invoice)
@@ -30,6 +32,7 @@ module Subscriptions
           end
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
+          refresh_billing_periods(subscription)
           update_on_termination_actions!
 
           if subscription.should_sync_hubspot_subscription?

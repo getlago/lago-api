@@ -118,6 +118,28 @@ RSpec.describe Customers::UpdateService do
         expect(result.customer.billing_entity).to eq(billing_entity_2)
       end
 
+      # A customer without a timezone of its own takes the one of its billing entity, so the move
+      # can shift where the charge periods of its subscriptions fall.
+      it "refreshes the billing periods of the customer's subscriptions" do
+        expect { customers_service.call }
+          .to have_enqueued_job_after_commit(Subscriptions::BillingPeriods::RefreshAllJob).with(customer)
+      end
+
+      context "when the billing entity does not change" do
+        let(:update_args) do
+          {
+            id: customer.id,
+            name: "Updated customer name",
+            billing_entity_code: customer.billing_entity.code
+          }
+        end
+
+        it "does not refresh the billing periods" do
+          expect { customers_service.call }
+            .not_to have_enqueued_job(Subscriptions::BillingPeriods::RefreshAllJob)
+        end
+      end
+
       context "when billing entity is archived" do
         before { billing_entity_2.update!(archived_at: Time.current) }
 
