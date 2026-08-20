@@ -5291,8 +5291,8 @@ type DataExport {
 Export credit notes search query and filters input argument
 """
 input DataExportCreditNoteFiltersInput {
-  amountFrom: Int
-  amountTo: Int
+  amountFrom: BigInt
+  amountTo: BigInt
   billingEntityIds: [ID!]
   creditStatus: [CreditNoteCreditStatusEnum!]
   currency: CurrencyEnum
@@ -5321,8 +5321,8 @@ enum DataExportFormatTypeEnum {
 Export Invoices search query and filters input argument
 """
 input DataExportInvoiceFiltersInput {
-  amountFrom: Int
-  amountTo: Int
+  amountFrom: BigInt
+  amountTo: BigInt
   billingEntityIds: [ID!]
   currency: CurrencyEnum
   customerExternalId: String
@@ -11340,8 +11340,8 @@ type Query {
   Query credit notes
   """
   creditNotes(
-    amountFrom: Int
-    amountTo: Int
+    amountFrom: BigInt
+    amountTo: BigInt
     billingEntityIds: [ID!]
     creditStatus: [CreditNoteCreditStatusEnum!]
     currency: CurrencyEnum
@@ -11695,8 +11695,8 @@ type Query {
   Query invoices
   """
   invoices(
-    amountFrom: Int
-    amountTo: Int
+    amountFrom: BigInt
+    amountTo: BigInt
     billingEntityIds: [ID!]
     currency: CurrencyEnum
     customerExternalId: String

@@ -265,6 +265,15 @@ RSpec.describe Resolvers::CreditNotesResolver do
     end
   end
 
+  context "with an amount range wider than the 32-bit integer limit" do
+    let(:arguments) { "amountFrom: 0, amountTo: 30000000000" }
+    let!(:big_credit_note) { create(:credit_note, total_amount_cents: 3_000_000_000, customer:) }
+
+    it "returns the credit notes in range, including amounts above 2^31" do
+      expect(response_collection.pluck("id")).to contain_exactly big_credit_note.id
+    end
+  end
+
   context "with search_term" do
     let(:arguments) { "searchTerm: #{credit_note.number.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
