@@ -70,8 +70,15 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
         end
       end
 
-      context "when customer has net_payment_term" do
-        let(:customer) { create(:customer, organization:, net_payment_term: 3) }
+      context "when the draft invoice has a snapshotted payment term" do
+        let(:invoice_to_not_be_finalized) do
+          create(:invoice, status: :draft, customer:,
+            issuing_date: DateTime.parse("21 Jun 2022").to_date,
+            expected_finalization_date: DateTime.parse("21 Jun 2022").to_date,
+            organization:,
+            payment_term: {term_type: "net", days: 3},
+            net_payment_term: 3)
+        end
 
         it "updates issuing_date on draft invoices with payment term" do
           current_date = DateTime.parse("22 Jun 2022")
