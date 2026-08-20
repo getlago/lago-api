@@ -10371,7 +10371,6 @@ enum PaymentProviderConnectionStatusEnum {
 input PaymentProviderCustomerInput {
   code: String
   id: ID
-  isDefault: Boolean
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   providerCustomerId: ID

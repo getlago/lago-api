@@ -22,24 +22,22 @@ RSpec.describe PaymentProviderCustomers::CreateOrUpdateBatchService do
       end
     end
 
-    context "when creating the manual connection as default" do
-      let(:payment_provider_customers) { [{type: "lago_manual", code: "lago_manual", is_default: true}] }
+    context "when creating the manual connection" do
+      let(:payment_provider_customers) { [{type: "lago_manual", code: "lago_manual"}] }
 
-      it "creates the reserved manual connection and marks it default" do
+      it "creates the reserved manual connection" do
         result = service
 
         expect(result).to be_success
         manual = customer.payment_provider_customers.by_code("lago_manual").first
         expect(manual.payment_provider_id).to be_nil
         expect(manual).to be_manual
-        expect(manual).to be_is_default
-        expect(customer.payment_connection_status).to eq("manual")
       end
     end
 
     context "when a connection is omitted from the array" do
       let!(:existing) { create(:stripe_customer, customer:, is_default: true) }
-      let(:payment_provider_customers) { [{type: "lago_manual", code: "lago_manual", is_default: true}] }
+      let(:payment_provider_customers) { [{type: "lago_manual", code: "lago_manual"}] }
 
       it "discards the omitted connection" do
         service

@@ -3,8 +3,8 @@
 module PaymentProviderCustomers
   # Declaratively reconciles a customer's payment provider connections from the GraphQL array:
   # connections absent from the array (matched by id) are discarded, provider connections are
-  # created/updated, the reserved manual connection is created on demand, and the element flagged
-  # is_default becomes the customer default.
+  # created/updated, and the reserved manual connection is created on demand. The customer default
+  # is managed through the dedicated set-as-default mutation, not this array.
   class CreateOrUpdateBatchService < BaseService
     Result = BaseResult[:payment_provider_customers]
 
@@ -24,7 +24,6 @@ module PaymentProviderCustomers
       ActiveRecord::Base.transaction do
         discard_removed_connections
         params_list.each { |params| upsert_connection(params) }
-        apply_default
       end
 
       result.payment_provider_customers = customer.payment_provider_customers.reload
@@ -83,17 +82,6 @@ module PaymentProviderCustomers
         :provider_payment_methods,
         :sync_with_provider
       )
-    end
-
-    # The element explicitly flagged as default wins; later flags override earlier ones.
-    def apply_default
-      default_params = params_list.rfind { |params| params[:is_default] }
-      return unless default_params
-
-      connection = customer.payment_provider_customers.by_code(default_params[:code]).first
-      return unless connection
-
-      PaymentProviderCustomers::SetAsDefaultService.call!(payment_provider_customer: connection)
     end
   end
 end

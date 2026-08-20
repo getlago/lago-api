@@ -8,8 +8,7 @@ module Types
       argument :id, ID, required: false
 
       argument :code, String, required: false
-      argument :is_default, Boolean, required: false
-      # NOTE: "manual" flags the reserved null-provider connection; omit for provider connections.
+      # NOTE: "lago_manual" flags the reserved null-provider connection; omit for provider connections.
       argument :type, String, required: false
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
