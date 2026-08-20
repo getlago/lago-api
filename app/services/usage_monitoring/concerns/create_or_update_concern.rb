@@ -17,6 +17,28 @@ module UsageMonitoring
         result.not_found_failure!(resource: "billable_metric")
       end
 
+      def seed_alarms_already_past(alert, alertable)
+        return if alertable.nil?
+
+        in_alarm = alert.thresholds_in_alarm(alert.previous_value)
+        return if in_alarm.empty?
+
+        recorded = alert.recorded_alarm_codes
+        already_past = in_alarm.reject { recorded.include?(it.code) }
+        return if already_past.empty?
+
+        TriggeredAlert.create!(
+          alert:,
+          organization: alert.organization,
+          alertable:,
+          kind: :seeded,
+          current_value: alert.previous_value,
+          previous_value: alert.previous_value,
+          crossed_thresholds: alert.formatted_crossed_thresholds(already_past.map(&:value)),
+          triggered_at: Time.current
+        )
+      end
+
       def duplicate_threshold_values?(thresholds)
         threshold_keys = thresholds.map { |t| [t[:value], ActiveModel::Type::Boolean.new.cast(t[:recurring]) || false] }
         threshold_keys.size != threshold_keys.uniq.size

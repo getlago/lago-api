@@ -375,6 +375,30 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.alert.direction).to eq("decreasing")
       end
 
+      context "when a watched line is already past at creation" do
+        let(:wallet) { create(:wallet, organization:, balance_cents: 0) }
+        let(:thresholds) { [{code: "critical", value: 0, notify_on: %w[triggered resolved]}, {code: "warn", value: 100}] }
+
+        it "records a silent alarm so the first top-up can announce" do
+          expect(result).to be_success
+
+          seeded = result.alert.all_triggered_alerts.sole
+          expect(seeded).to be_seeded
+          expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when a watched line is not yet past at creation" do
+        let(:wallet) { create(:wallet, organization:, balance_cents: 5000) }
+        let(:thresholds) { [{code: "critical", value: 0, notify_on: %w[triggered resolved]}] }
+
+        it "records nothing" do
+          expect(result).to be_success
+          expect(result.alert.all_triggered_alerts).to be_empty
+        end
+      end
+
       it "inserts the alert before locking the wallet, so balance updates cannot race the baseline" do
         statements = capture_sql { result }
 
