@@ -132,6 +132,70 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
     end
   end
 
+  # The timezone snap in DatesService#charges_from_datetime only applies when the previous period
+  # has already been invoiced, so without that invoice a timezone change moves the start of the
+  # current period away from the boundary of the period stored before it.
+  describe "when a timezone change moves the start of the current period" do
+    let(:timestamp) { Time.utc(2024, 4, 1, 0, 10) }
+
+    let!(:march) do
+      create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: Time.utc(2024, 3, 1),
+        period_to: Time.utc(2024, 3, 31).end_of_day
+      )
+    end
+
+    # The periods around it: the one it closed after, and the one the refresh is rolling out of.
+    before do
+      create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: Time.utc(2024, 2, 1),
+        period_to: Time.utc(2024, 2, 29).end_of_day
+      )
+      create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: Time.utc(2024, 4, 1),
+        period_to: Time.utc(2024, 4, 30).end_of_day
+      )
+    end
+
+    def expect_no_hole_before(period_from)
+      preceding = SubscriptionBillingPeriod.where(period_from: ...period_from).order(:period_from).last
+
+      expect(preceding).to be_present
+      expect(preceding.period_to).to match_datetime(period_from - 1.second)
+    end
+
+    # Moving east pulls the start back into the period stored before it, which is closed and still
+    # needed to attribute the usage it covers.
+    context "when the start moves backwards" do
+      let(:timezone) { "Asia/Tokyo" }
+
+      it "keeps the preceding period and ends it on the new start" do
+        result
+
+        expect(SubscriptionBillingPeriod.where(id: march.id)).to be_present
+        expect_no_hole_before(result.periods.first.period_from)
+      end
+    end
+
+    # Moving west pushes it forward: the period covering now is rewritten, and the one before it is
+    # left short of the new start.
+    context "when the start moves forwards" do
+      let(:timezone) { "America/New_York" }
+
+      it "leaves no instant uncovered before the new start" do
+        result
+
+        expect_no_hole_before(result.periods.first.period_from)
+      end
+    end
+  end
+
   context "when the subscription is terminated" do
     let(:subscription) do
       create(
@@ -296,15 +360,33 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
       expect(persisted_periods.first.first).to match_datetime(Time.utc(2024, 2, 1))
     end
 
-    # A moved boundary is the same period shifted, so the row it replaces overlaps it and cannot
-    # stay. The overlap constraint is deferred to commit for exactly this.
-    it "replaces a period whose boundary moved, despite the overlap" do
+    # A moved boundary is the same period shifted, so the row it replaces overlaps it and cannot stay
+    # as it is. The overlap constraint is deferred to commit for exactly this. The row opened before
+    # the new start, so it is ended on it rather than dropped: the instants it covered are still
+    # covered, and only the ones that moved into the current period change hands.
+    it "ends a period whose boundary moved on the new start" do
       current_from, current_to = boundaries_at(timestamp)
       shifted = create(
         :subscription_billing_period,
         subscription:,
         period_from: current_from - 1.day,
         period_to: current_to - 1.day
+      )
+
+      expect { result }.not_to raise_error
+
+      expect(shifted.reload.period_to).to match_datetime(current_from - 1.second)
+      expect_period(persisted_periods.second, [current_from, current_to])
+    end
+
+    # Shifted the other way, the row opens on or after the new start, so the writer redraws it.
+    it "replaces a period shifted past the new start" do
+      current_from, current_to = boundaries_at(timestamp)
+      shifted = create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: current_from + 1.day,
+        period_to: current_to + 1.day
       )
 
       expect { result }.not_to raise_error

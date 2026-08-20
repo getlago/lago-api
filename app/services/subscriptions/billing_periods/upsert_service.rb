@@ -45,6 +45,7 @@ module Subscriptions
             # a moved boundary is a new row rather than an update to the old one, and the two
             # overlap until the old one is gone.
             discarded_periods.delete_all
+            reconcile_preceding_period
 
             if periods.present?
               # Validations are not the guard here: the upsert has to be a single statement so a
@@ -82,17 +83,16 @@ module Subscriptions
         false
       end
 
-      # Everything that closed before the current period is kept: a closed period is still needed to
-      # attribute a late event and to bill the usage it covers. From the current period onwards only
-      # the periods being written survive, which discards both a boundary that moved (the same
-      # period shifted, so its old row overlaps the new one) and a period that can no longer happen,
-      # such as the next one after a termination.
+      # A period that opens on or after the discard boundary is the writer's to redraw: the periods
+      # being written replace it, and one that is not being written can no longer happen, such as
+      # the next period after a termination.
+      #
+      # A period that opened before the boundary is never dropped: it is closed, and its usage still
+      # has to be attributable and billable. It is reconciled onto the new start instead.
       def discarded_periods
         return SubscriptionBillingPeriod.none if discarded_from.nil?
 
-        scope = SubscriptionBillingPeriod
-          .where(scope_type: "Subscription", scope_id: subscription.id)
-          .where(period_to: discarded_from..)
+        scope = stored_periods.where(period_from: discarded_from..)
 
         retained = desired_periods.map(&:period_from)
 
@@ -103,6 +103,36 @@ module Subscriptions
         else
           scope.where.not(period_from: retained)
         end
+      end
+
+      # The period that opened before the discard boundary has to end exactly on it. Its own end was
+      # derived from the timezone in force when it was written, so a change to that timezone leaves
+      # it either overlapping the new start — which the table refuses — or short of it, with the
+      # instants in between covered by no period at all.
+      #
+      # This is where the timezone snap in Subscriptions::DatesService#charges_from_datetime cannot
+      # help: it only applies while the previous period is invoiced and within a day of the new
+      # start, and neither holds for a period that has yet to be billed.
+      def reconcile_preceding_period
+        return if discarded_from.nil?
+
+        period = stored_periods.where(period_from: ...discarded_from).order(:period_from).last
+        return if period.nil?
+
+        period_to = discarded_from - 1.second
+        return if period.period_to < discarded_from && period.period_to >= period_to
+
+        # A period left with nothing to cover is dropped rather than written backwards; the table
+        # refuses a period that does not move forward, and there is no usage to key off it.
+        if period_to <= period.period_from
+          period.delete
+        else
+          period.update!(period_to:)
+        end
+      end
+
+      def stored_periods
+        SubscriptionBillingPeriod.where(scope_type: "Subscription", scope_id: subscription.id)
       end
 
       # The termination is a boundary of its own: a subscription terminated at the very instant a
