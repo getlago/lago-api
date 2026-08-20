@@ -11125,6 +11125,11 @@ type ProviderCustomer {
   code: String
   id: ID!
   isDefault: Boolean!
+
+  """
+  Query payment methods of a payment connection
+  """
+  paymentMethods(limit: Int, page: Int, withDeleted: Boolean): PaymentMethodCollection!
   providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
