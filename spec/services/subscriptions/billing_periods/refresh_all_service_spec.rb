@@ -31,6 +31,31 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
     end
   end
 
+  # The writer skips a subscription terminated longer ago than its grace period, so a job for one
+  # would load it and return.
+  context "with terminated subscriptions" do
+    let(:owner) { customer }
+
+    before do
+      create(
+        :subscription,
+        organization:, customer:, plan:,
+        status: :terminated,
+        terminated_at: Subscriptions::BillingPeriods::UpsertService::TERMINATED_GRACE_PERIOD.ago + 1.day
+      )
+      create(
+        :subscription,
+        organization:, customer:, plan:,
+        status: :terminated,
+        terminated_at: Subscriptions::BillingPeriods::UpsertService::TERMINATED_GRACE_PERIOD.ago - 1.day
+      )
+    end
+
+    it "keeps the ones terminated within the grace period" do
+      expect(result.enqueued_count).to eq(2)
+    end
+  end
+
   context "with pending and canceled subscriptions" do
     let(:owner) { customer }
 
