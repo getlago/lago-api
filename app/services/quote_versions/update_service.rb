@@ -57,6 +57,9 @@ module QuoteVersions
     # The billing items carry their own copy of the currency, which the rendered quote reads, so the
     # stored payload is realigned rather than resolved later from the deal.
     #
+    # This runs before the structural pass, on a payload that is whatever JSON the caller sent, so
+    # anything not shaped as expected is left exactly as it arrived for the validator to report.
+    #
     # Every update realigns, not only the ones changing the currency: the payload is rewritten
     # wholesale by whoever saves it, so a copy the deal no longer matches can arrive at any time and
     # would otherwise sit there until it blocked approval. Realigning is idempotent, so an already
@@ -74,7 +77,11 @@ module QuoteVersions
     end
 
     def realigned_plans(plans)
-      Array(plans).map do |item|
+      return plans unless plans.is_a?(Array)
+
+      plans.map do |item|
+        next item unless item.is_a?(Hash)
+
         plan = catalog_plans_by_id[item["id"]]
         next item if plan.nil?
 
@@ -83,7 +90,11 @@ module QuoteVersions
     end
 
     def realigned_coupons(coupons)
-      Array(coupons).map do |item|
+      return coupons unless coupons.is_a?(Array)
+
+      coupons.map do |item|
+        next item unless item.is_a?(Hash)
+
         coupon = catalog_coupons_by_id[item["id"]]
         next item if coupon.nil?
 
@@ -102,6 +113,8 @@ module QuoteVersions
     # what keeps the execution service from minting a duplicate override plan.
     def with_currency_override(item, catalog_currency:)
       overrides = item["overrides"] || {}
+      return item unless overrides.is_a?(Hash)
+
       realigned = if catalog_currency == quote_version.currency
         overrides.except("amountCurrency")
       else
@@ -117,7 +130,11 @@ module QuoteVersions
     # A credit that stated no currency keeps stating none: the execution service falls back to the
     # deal's own, so there is nothing stale to realign.
     def realigned_wallet_credits(wallet_credits)
-      Array(wallet_credits).map do |item|
+      return wallet_credits unless wallet_credits.is_a?(Array)
+
+      wallet_credits.map do |item|
+        next item unless item.is_a?(Hash)
+
         payload = item["payload"]
         next item unless payload.is_a?(Hash) && payload["currency"].present?
 
@@ -144,7 +161,10 @@ module QuoteVersions
     end
 
     def billing_item_ids(key)
-      Array(billing_items[key]).filter_map { it["id"] }
+      items = billing_items[key]
+      return [] unless items.is_a?(Array)
+
+      items.filter_map { it["id"] if it.is_a?(Hash) }
     end
 
     # The structural pass rejects a payload that is not an object, but it runs after this.

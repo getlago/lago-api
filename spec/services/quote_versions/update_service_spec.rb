@@ -359,6 +359,54 @@ RSpec.describe QuoteVersions::UpdateService do
       end
     end
 
+    # The realignment runs before the structural pass, so a malformed payload reaches it first. It
+    # must leave anything unexpected alone and let the validator report it, never raise.
+    context "when the submitted billing items are malformed", :premium do
+      let(:update_params) { {billing_items:} }
+
+      [
+        {"plans" => ["bad"]},
+        {"plans" => [1]},
+        {"plans" => {"id" => "not-an-array"}},
+        {"plans" => [{"overrides" => "nope"}]},
+        {"coupons" => [["pair"]]},
+        {"walletCredits" => ["bad"]}
+      ].each do |malformed|
+        context "with #{malformed.to_json}" do
+          let(:billing_items) { malformed }
+
+          it "returns a validation failure rather than raising" do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+          end
+        end
+      end
+
+      # Reported on the collection rather than on an item, which is only true if the payload reached
+      # the validator in the shape it was sent rather than coerced into pairs on the way.
+      context "with a collection that is not an array" do
+        let(:billing_items) { {"plans" => {"id" => "not-an-array"}} }
+
+        it "leaves the shape untouched for the validator" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq({"billing_items.plans": ["invalid_type"]})
+        end
+      end
+
+      # A malformed overrides is only reached once the item resolves to a catalog record.
+      context "with an overrides that is not an object on a known plan" do
+        let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+        let(:billing_items) do
+          {"plans" => [{"id" => plan.id, "localId" => "p1", "type" => "plan", "overrides" => "nope"}]}
+        end
+
+        it "returns a validation failure rather than raising" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
+    end
+
     context "when approved quote version", :premium do
       let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 
