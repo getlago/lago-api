@@ -74,28 +74,45 @@ module QuoteVersions
       quote_version.billing_items = realigned
     end
 
-    # Only a plan the catalog prices differently needs the override. Stamping every item would give
-    # them all an overrides object, and the execution service mints a duplicate override plan for any
-    # plan item carrying one.
     def realigned_plans(plans)
       Array(plans).map do |item|
         plan = catalog_plans_by_id[item["id"]]
-        next item if plan.nil? || plan.amount_currency == quote_version.currency
+        next item if plan.nil?
 
-        item.merge("overrides" => (item["overrides"] || {}).merge("amountCurrency" => quote_version.currency))
+        with_currency_override(item, catalog_currency: plan.amount_currency)
       end
     end
 
-    # Same as the plans, for the coupons the catalog prices differently. A percentage coupon carries no
-    # currency at all, so it is left alone.
     def realigned_coupons(coupons)
       Array(coupons).map do |item|
         coupon = catalog_coupons_by_id[item["id"]]
-        next item if coupon.nil? || !coupon.fixed_amount?
-        next item if coupon.amount_currency == quote_version.currency
+        next item if coupon.nil?
 
-        item.merge("overrides" => (item["overrides"] || {}).merge("amountCurrency" => quote_version.currency))
+        # A percentage coupon is never priced in a currency, so it reads as already matching and any
+        # override it carries is stale.
+        catalog_currency = coupon.fixed_amount? ? coupon.amount_currency : quote_version.currency
+
+        with_currency_override(item, catalog_currency:)
       end
+    end
+
+    # The override states the deal currency only while the catalog record is priced in another one.
+    # Dropping it once the two agree matters as much as setting it: an override left behind states a
+    # currency the deal no longer uses, and fails validation exactly as a missing one did. The key
+    # goes away with it so the item stops carrying an overrides object it no longer needs, which is
+    # what keeps the execution service from minting a duplicate override plan.
+    def with_currency_override(item, catalog_currency:)
+      overrides = item["overrides"] || {}
+      realigned = if catalog_currency == quote_version.currency
+        overrides.except("amountCurrency")
+      else
+        overrides.merge("amountCurrency" => quote_version.currency)
+      end
+
+      return item if realigned == overrides
+      return item.except("overrides") if realigned.empty?
+
+      item.merge("overrides" => realigned)
     end
 
     # A credit that stated no currency keeps stating none: the execution service falls back to the

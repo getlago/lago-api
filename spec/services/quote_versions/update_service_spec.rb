@@ -171,6 +171,75 @@ RSpec.describe QuoteVersions::UpdateService do
         end
       end
 
+      # The mirror of the bug this realignment exists for: an override left behind states a currency
+      # the deal no longer uses, and blocks approval exactly as a missing one did.
+      context "when the item carries an override the new currency makes stale" do
+        let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {"plans" => [plan_item.merge("overrides" => {"amountCurrency" => "EUR"})]}
+          )
+        end
+
+        it "drops the override along with the empty overrides object" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_items["plans"].sole).not_to have_key("overrides")
+        end
+
+        context "when the item carries other overrides too" do
+          let(:quote_version) do
+            create(
+              :quote_version,
+              quote:,
+              organization:,
+              currency: "EUR",
+              billing_items: {
+                "plans" => [plan_item.merge("overrides" => {"amountCents" => 50_000, "amountCurrency" => "EUR"})]
+              }
+            )
+          end
+
+          it "drops only the currency override" do
+            expect(result).to be_success
+
+            overrides = result.quote_version.billing_items["plans"].sole["overrides"]
+            expect(overrides).to eq({"amountCents" => 50_000})
+          end
+        end
+
+        context "when a coupon carries the stale override" do
+          let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_currency: "USD") }
+          let(:quote_version) do
+            create(
+              :quote_version,
+              quote:,
+              organization:,
+              currency: "EUR",
+              billing_items: {
+                "coupons" => [
+                  {
+                    "id" => coupon.id,
+                    "localId" => "c1",
+                    "type" => "coupon",
+                    "payload" => {"code" => coupon.code},
+                    "overrides" => {"amountCurrency" => "EUR"}
+                  }
+                ]
+              }
+            )
+          end
+
+          it "drops it too" do
+            expect(result).to be_success
+            expect(result.quote_version.billing_items["coupons"].sole).not_to have_key("overrides")
+          end
+        end
+      end
+
       context "when a wallet credit states its own currency" do
         let(:quote_version) do
           create(

@@ -30,6 +30,25 @@ RSpec.describe Api::V1::QuotesController do
       expect(json[:quotes].first[:current_version].keys).not_to include(:share_token, :content, :billing_items)
     end
 
+    # Every embedded version resolves a billing entity, falling back to the customer's own, so the
+    # count has to stay flat as rows are added rather than growing with them.
+    it "resolves the billing entity of every embedded version without a query per row" do
+      create_list(:quote, 4, organization:, customer:).each do |other|
+        create(:quote_version, quote: other, organization:)
+      end
+
+      queries = []
+      counter = ->(_name, _start, _finish, _id, payload) do
+        queries << payload[:sql] if payload[:sql]&.include?("billing_entities")
+      end
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { subject }
+
+      expect(json[:quotes].count).to eq(5)
+      expect(json[:quotes].first[:current_version][:billing_entity_code]).to eq(customer.billing_entity.code)
+      expect(queries.count).to be <= 2
+    end
+
     it "does not embed owners on the index" do
       subject
 

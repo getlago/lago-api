@@ -16,7 +16,9 @@ module Api
         )
 
         if result.success?
-          quotes = result.quotes.includes(:current_version)
+          # QuoteVersionSerializer resolves the billing entity of every embedded version, falling
+          # back to the customer's own, so both sides are preloaded rather than read per row.
+          quotes = result.quotes.includes(:current_version, {customer: :billing_entity}, {current_version: :billing_entity})
           render_quotes(quotes, meta: pagination_metadata(result.quotes))
         else
           render_error_response(result)
