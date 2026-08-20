@@ -5,7 +5,7 @@ module BillableMetrics
     queue_as :default
 
     def perform(_metric)
-      return true
+      true
     end
   end
 end
