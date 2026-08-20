@@ -39,5 +39,9 @@ module IntegrationCustomers
     def external_customer_id
       @external_customer_id ||= params[:external_customer_id]
     end
+
+    def code
+      @code ||= params[:code]
+    end
   end
 end
