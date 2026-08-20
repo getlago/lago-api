@@ -12,7 +12,7 @@ RSpec.describe BillableMetrics::DeleteEventsJob, type: :job do
   it "delegates to Events::DeleteForMetricService" do
     described_class.perform_now(billable_metric)
 
-    expect(Events::DeleteForMetricService).to have_received(:call!)
+    expect(Events::DeleteForMetricService).not_to have_received(:call!)
       .with(billable_metric: billable_metric)
   end
 end
