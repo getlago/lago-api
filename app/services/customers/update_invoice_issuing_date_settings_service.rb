@@ -97,7 +97,7 @@ module Customers
     end
 
     def grace_period_payment_due_date(invoice)
-      invoice.issuing_date + customer.applicable_net_payment_term.days
+      invoice.snapshotted_payment_term.due_date_for(invoice.issuing_date)
     end
   end
 end
