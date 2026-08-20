@@ -120,21 +120,41 @@ class Subscription < ApplicationRecord
     billing_entity_id || customer&.billing_entity_id
   end
 
+  # Returns true when this call actually performed the activation, false when a concurrent
+  # request already did (see `resolve_lifetime_usage`). Callers that trigger billing side
+  # effects after activating (webhooks, invoicing jobs) must skip them on a `false` return,
+  # since the concurrent request that won the race already triggered them.
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.activated_at ||= timestamp
-    self.lifetime_usage ||= previous_subscription&.lifetime_usage || existing_or_new_lifetime_usage
-    self.lifetime_usage.recalculate_invoiced_usage = true
+
+    won_activation = true
+    if lifetime_usage.blank?
+      self.lifetime_usage, won_activation = resolve_lifetime_usage
+    end
+
+    lifetime_usage.recalculate_invoiced_usage = true
     active!
+
+    won_activation
+  end
+
+  # Two concurrent requests activating the same persisted subscription (e.g. a manual
+  # update racing a scheduled job) can both find `lifetime_usage` blank and both attempt
+  # to create one, tripping the `index_lifetime_usages_on_subscription_id` unique index.
+  # `create_or_find_by!` runs that insert in a savepoint and falls back to the row the
+  # other request created - `previously_new_record?` then tells us which one we got.
+  def resolve_lifetime_usage
+    return [previous_subscription.lifetime_usage, true] if previous_subscription&.lifetime_usage
+
+    usage = existing_or_new_lifetime_usage
+    won = !usage.persisted? || usage.previously_new_record?
+    [usage, won]
   end
 
   # A brand new subscription can't race anyone for its lifetime usage row (nothing else
   # references it yet), so it's built unsaved and persisted together with the subscription,
-  # same as before. An already-persisted subscription can: two concurrent requests activating
-  # it (e.g. a manual update racing a scheduled job) can both find `lifetime_usage` blank and
-  # both attempt to create one, tripping the `index_lifetime_usages_on_subscription_id` unique
-  # index. `create_or_find_by!` runs that insert in a savepoint and falls back to the row the
-  # other request created.
+  # same as before. An already-persisted subscription can race a concurrent activation.
   def existing_or_new_lifetime_usage
     return build_lifetime_usage(organization:) unless persisted?
 

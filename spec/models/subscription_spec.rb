@@ -1017,12 +1017,15 @@ RSpec.describe Subscription do
 
     it "changes the status to active and sets started_at and activated_at" do
       freeze_time do
-        expect { subscription.mark_as_active! }
+        result = nil
+
+        expect { result = subscription.mark_as_active! }
           .to change(subscription, :status).from("pending").to("active")
 
         expect(subscription.started_at).to eq(Time.current)
         expect(subscription.activated_at).to eq(Time.current)
         expect(subscription.lifetime_usage).to be_present
+        expect(result).to eq(true)
       end
     end
 
@@ -1076,6 +1079,10 @@ RSpec.describe Subscription do
           .to change(subscription, :status).from("pending").to("active")
 
         expect(subscription.lifetime_usage).to eq(concurrent_lifetime_usage)
+      end
+
+      it "returns false so callers skip repeating the winner's billing side effects" do
+        expect(subscription.mark_as_active!).to eq(false)
       end
     end
 
