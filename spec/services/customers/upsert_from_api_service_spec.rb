@@ -274,6 +274,13 @@ RSpec.describe Customers::UpsertFromApiService do
       expect(result.customer.billing_entity).to eq(billing_entity)
     end
 
+    # A customer without a timezone of its own takes the one of its billing entity, so the move can
+    # shift where the charge periods of its subscriptions fall.
+    it "refreshes the billing periods of the customer's subscriptions" do
+      expect { result }
+        .to have_enqueued_job_after_commit(Subscriptions::BillingPeriods::RefreshAllJob).with(customer)
+    end
+
     context "when the customer already has an invoice" do
       before do
         create(:invoice, customer: customer)
