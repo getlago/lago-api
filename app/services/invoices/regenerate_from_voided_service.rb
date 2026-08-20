@@ -268,7 +268,9 @@ module Invoices
         invoice_type: voided_invoice.invoice_type,
         currency: voided_invoice.currency,
         datetime: voided_invoice.created_at,
-        billing_entity: voided_invoice.billing_entity
+        billing_entity: voided_invoice.billing_entity,
+        payment_term: voided_invoice.snapshotted_payment_term,
+        payment_term_source: voided_invoice.payment_term_source
       ).invoice.tap do |invoice|
         invoice.update!(
           voided_invoice_id: voided_invoice.id,

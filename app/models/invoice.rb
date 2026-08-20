@@ -256,6 +256,16 @@ class Invoice < ApplicationRecord
     Invoice.where(id: id)
   end
 
+  # NOTE: Pre-feature invoices have no jsonb snapshot,
+  # so a net term is derived from their own integer alias
+  def snapshotted_payment_term
+    if payment_term.present?
+      PaymentTerm.from_h(payment_term)
+    else
+      PaymentTerm.from_net_payment_term(net_payment_term)
+    end
+  end
+
   def visible?
     !invisible?
   end

@@ -30,7 +30,8 @@ describe "Dunning Campaign v1", :premium do
       billing_entity:,
       payment_provider: :stripe,
       payment_provider_code: stripe_provider.code,
-      net_payment_term: 2
+      net_payment_term: 2,
+      payment_term: {term_type: "net", days: 2}
     )
   end
 
