@@ -160,6 +160,36 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with a customer payment term" do
+        let(:customer) { build(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 5}, net_payment_term: 5) }
+
+        it "stamps the resolved term and computes the due date from it" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 5)
+            expect(result.invoice.payment_term_source).to eq("customer")
+            expect(result.invoice.net_payment_term).to eq(5)
+            expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date + 5.days)
+          end
+        end
+      end
+
+      context "with a billing entity non-net payment term" do
+        let(:billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}, net_payment_term: nil) }
+
+        it "stamps the entity term with a null alias and an end-of-month due date" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+            expect(result.invoice.payment_term_source).to eq("billing_entity")
+            expect(result.invoice.net_payment_term).to be_nil
+            expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date.end_of_month)
+          end
+        end
+      end
+
       context "with calendar billing" do
         it "creates preview invoice for 2 days" do
           # Two days should be billed, Mar 30 and Mar 31
