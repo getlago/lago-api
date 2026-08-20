@@ -25,10 +25,11 @@ module QuoteVersions
 
       quote_version.assign_attributes(params.slice(:billing_items, :content, :currency, :billing_entity_id))
 
-      if quote_version.currency_changed?
-        return result if refuse_currency_change!
-        realign_billing_items_currency!
+      if quote_version.currency_changed? && amendment?
+        return result.single_validation_failure!(field: :currency, error_code: "not_supported_for_order_type")
       end
+
+      realign_billing_items_currency!
 
       validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)
       return result if validator && !validator.valid?
@@ -46,13 +47,6 @@ module QuoteVersions
       quote_version.draft?
     end
 
-    # Returns truthy once a failure is recorded, so the caller stops before rewriting anything.
-    def refuse_currency_change!
-      return unless amendment?
-
-      result.single_validation_failure!(field: :currency, error_code: "not_supported_for_order_type")
-    end
-
     # An amendment restates a subscription that is already invoicing in its plan's currency, and the
     # quote takes that currency at creation. Repricing it here would switch a running subscription
     # mid-life, leaving its invoice history in the currency it started in.
@@ -62,6 +56,11 @@ module QuoteVersions
 
     # The billing items carry their own copy of the currency, which the rendered quote reads, so the
     # stored payload is realigned rather than resolved later from the deal.
+    #
+    # Every update realigns, not only the ones changing the currency: the payload is rewritten
+    # wholesale by whoever saves it, so a copy the deal no longer matches can arrive at any time and
+    # would otherwise sit there until it blocked approval. Realigning is idempotent, so an already
+    # coherent payload is left untouched.
     def realign_billing_items_currency!
       items = billing_items
       return if items.empty?

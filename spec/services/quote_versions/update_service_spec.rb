@@ -321,6 +321,44 @@ RSpec.describe QuoteVersions::UpdateService do
       end
     end
 
+    # The realignment is what keeps the stored copies coherent, and the payload is rewritten wholesale
+    # by whoever saves it, so a copy the deal no longer matches can arrive on an update that leaves
+    # the currency alone.
+    context "when a saved payload carries a currency the deal no longer matches", :premium do
+      let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+      let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_currency: "EUR") }
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "USD") }
+      let(:update_params) do
+        {
+          billing_items: {
+            "plans" => [
+              {
+                "id" => plan.id,
+                "localId" => "p1",
+                "type" => "plan",
+                "payload" => {"code" => plan.code, "startDate" => Date.current.iso8601}
+              }
+            ],
+            "coupons" => [
+              {"id" => coupon.id, "localId" => "c1", "type" => "coupon", "payload" => {"code" => coupon.code}}
+            ],
+            "walletCredits" => [
+              {"localId" => "w1", "type" => "wallet_credit", "payload" => {"currency" => "EUR", "paidCredits" => "100"}}
+            ]
+          }
+        }
+      end
+
+      it "repairs every copy rather than rejecting the save" do
+        expect(result).to be_success
+
+        items = result.quote_version.billing_items
+        expect(items.dig("plans", 0, "overrides", "amountCurrency")).to eq("USD")
+        expect(items.dig("coupons", 0, "overrides", "amountCurrency")).to eq("USD")
+        expect(items.dig("walletCredits", 0, "payload", "currency")).to eq("USD")
+      end
+    end
+
     context "when approved quote version", :premium do
       let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 
