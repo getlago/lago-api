@@ -82,6 +82,11 @@ class Invoice < ApplicationRecord
   has_many :plans, through: :subscriptions
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
+  has_many :invoice_connections, dependent: :destroy
+  has_one :payment_connection, -> { where(category: :payment) }, class_name: "InvoiceConnection"
+  has_one :tax_connection, -> { where(category: :tax) }, class_name: "InvoiceConnection"
+  has_one :accounting_connection, -> { where(category: :accounting) }, class_name: "InvoiceConnection"
+  has_one :crm_connection, -> { where(category: :crm) }, class_name: "InvoiceConnection"
   has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
   has_many :invoice_settlements, foreign_key: :target_invoice_id
 

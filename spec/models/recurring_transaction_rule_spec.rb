@@ -8,6 +8,7 @@ RSpec.describe RecurringTransactionRule do
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }
     it { is_expected.to belong_to(:organization) }
+    it { is_expected.to have_many(:billing_object_connections).dependent(:destroy) }
     it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("RecurringTransactionRule::AppliedInvoiceCustomSection").dependent(:destroy) }
     it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
   end

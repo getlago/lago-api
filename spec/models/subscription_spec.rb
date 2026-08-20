@@ -71,6 +71,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:invoice_subscriptions)
       expect(subject).to have_many(:invoices).through(:invoice_subscriptions)
       expect(subject).to have_many(:integration_resources)
+      expect(subject).to have_many(:billing_object_connections).dependent(:destroy)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
       expect(subject).to have_many(:usage_thresholds)
