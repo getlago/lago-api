@@ -448,10 +448,7 @@ RSpec.describe Subscriptions::UpdateService do
           context "when a concurrent request already activated the subscription" do
             let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
 
-            # Simulates a concurrent activation (e.g. the scheduler) winning the race on the
-            # `lifetime_usage` row before this request's transaction runs: `mark_as_active!`
-            # then returns false, and the billing side effects it already triggered must not
-            # run a second time here.
+            # Loads through a separate instance so `subscription`'s own cache stays stale, like the real race.
             before do
               fixed_charge
               subscription.lifetime_usage

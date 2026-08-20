@@ -1064,11 +1064,7 @@ RSpec.describe Subscription do
     context "when a concurrent request already created the lifetime usage" do
       subject(:subscription) { create(:subscription, :pending) }
 
-      # Simulates the actual race: `subscription`'s association cache is memoized to nil
-      # (as it would be mid-request) before a *different* Ruby object inserts the row for
-      # the same row, via a separate `Subscription.find`. When `mark_as_active!` then tries
-      # to create its own, it hits the real `index_lifetime_usages_on_subscription_id`
-      # unique constraint instead of finding the row through its stale cache.
+      # Loads through a separate instance so `subscription`'s own cache stays stale, like the real race.
       let!(:concurrent_lifetime_usage) do
         subscription.lifetime_usage
         create(:lifetime_usage, subscription: described_class.find(subscription.id), organization: subscription.organization)
@@ -1089,10 +1085,6 @@ RSpec.describe Subscription do
     context "when the subscription is not persisted yet" do
       subject(:subscription) { build(:subscription, :pending) }
 
-      # A new subscription being created has nothing to race against yet, so it must not
-      # eagerly persist the lifetime usage before `active!` sets the subscription status -
-      # `create_or_find_by!` would autosave the new (still status-less) parent to get an FK,
-      # violating the `status` NOT NULL constraint.
       it "activates without prematurely saving the subscription" do
         expect { subscription.mark_as_active! }
           .to change(subscription, :status).from("pending").to("active")
