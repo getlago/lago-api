@@ -36,13 +36,24 @@ module Subscriptions
 
       attr_reader :organization
 
+      # Mirrors Subscriptions::BillingPeriods::UpsertService#skip?, which is what makes a non-zero
+      # count a bug: a subscription the writer refuses to write for is not missing anything, and
+      # reporting it turns the count into a number that never reaches zero.
+      #
+      # A plan without an interval has no period to derive — a product catalog plan is not required
+      # to have one — and a subscription that has yet to start has its first period stored ahead of
+      # now, so nothing covers now until it does.
       def subscriptions_without_period
-        organization.subscriptions.active.where.not(
-          SubscriptionBillingPeriod
-            .covering(Time.current)
-            .where("subscription_billing_periods.subscription_id = subscriptions.id")
-            .arel.exists
-        )
+        organization.subscriptions.active
+          .joins(:plan)
+          .where.not(plans: {interval: nil})
+          .where(started_at: ..Time.current)
+          .where.not(
+            SubscriptionBillingPeriod
+              .covering(Time.current)
+              .where("subscription_billing_periods.subscription_id = subscriptions.id")
+              .arel.exists
+          )
       end
 
       def report(count)

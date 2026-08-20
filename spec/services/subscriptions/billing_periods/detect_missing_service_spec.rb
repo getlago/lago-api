@@ -54,6 +54,40 @@ RSpec.describe Subscriptions::BillingPeriods::DetectMissingService do
     end
   end
 
+  # The writer skips a plan without an interval, so such a subscription is not missing anything and
+  # would otherwise be enqueued and reported every night, forever.
+  context "when the plan has no interval" do
+    let(:plan) { create(:plan, organization:, interval: nil, pricing_type: :product_catalog) }
+
+    before { subscription }
+
+    it "neither enqueues nor reports" do
+      allow(Rails.logger).to receive(:warn)
+
+      expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+      expect(result.missing_count).to eq(0)
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
+  # Its first period opens at the start, so nothing covers now until then.
+  context "when the subscription has yet to start" do
+    let(:subscription) do
+      create(
+        :subscription,
+        organization:, customer:, plan:,
+        status: :active,
+        started_at: 2.hours.from_now
+      )
+    end
+
+    before { subscription }
+
+    it "ignores it" do
+      expect(result.missing_count).to eq(0)
+    end
+  end
+
   context "when the subscription belongs to another organization" do
     before { create(:subscription, status: :active) }
 
