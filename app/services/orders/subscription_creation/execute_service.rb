@@ -228,11 +228,12 @@ module Orders
         end
       end
 
-      # amount_currency is left out on purpose so it falls back to the coupon's own currency,
-      # which approve validation pins to the deal currency.
+      # Only the override states a currency: the payload's own is the catalog snapshot, and
+      # AppliedCoupons::CreateService already falls back to the live coupon's when none is given.
       def coupon_params(item)
         {
           amount_cents: effective_value(item, "amountCents"),
+          amount_currency: item.dig("overrides", "amountCurrency"),
           percentage_rate: effective_value(item, "percentageRate"),
           frequency: effective_value(item, "frequency"),
           frequency_duration: effective_value(item, "frequencyDuration")

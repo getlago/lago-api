@@ -482,6 +482,24 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           expect(order.execution_record["applied_coupon_ids"]).to eq([applied_coupon.id])
         end
 
+        context "when the override applies the coupon in another currency" do
+          let(:billing_items) do
+            items = super()
+            items.merge(
+              "coupons" => [items["coupons"].sole.merge("overrides" => {"amountCents" => 15_000, "amountCurrency" => "USD"})]
+            )
+          end
+          let(:quote_version) do
+            create(:quote_version, :approved, quote:, organization:, currency: "USD", billing_items:)
+          end
+
+          it "grants it in that currency" do
+            execute_service.call
+
+            expect(customer.applied_coupons.sole.amount_currency).to eq("USD")
+          end
+        end
+
         context "when the coupon is discarded" do
           before { coupon.discard! }
 

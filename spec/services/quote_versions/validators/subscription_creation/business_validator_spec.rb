@@ -860,6 +860,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.coupons.0.id": ["currencies_does_not_match"]})
       end
+
+      # AppliedCoupons::CreateService applies the coupon in the overridden currency, so a catalog
+      # coupon priced elsewhere is quoted by naming the deal's currency here.
+      context "when an override applies it in the version currency" do
+        let(:coupon_item) { super().merge("overrides" => {"amountCurrency" => "EUR"}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when an override applies it in a third currency" do
+        let(:coupon_item) { super().merge("overrides" => {"amountCurrency" => "GBP"}) }
+
+        it "returns a currencies_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.0.id": ["currencies_does_not_match"]})
+        end
+      end
     end
 
     context "when a percentage coupon currency differs from the version currency" do

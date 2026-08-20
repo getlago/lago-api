@@ -340,7 +340,7 @@ module QuoteVersions
               next
             end
 
-            validate_coupon_currency(coupon, index)
+            validate_coupon_currency(coupon, coupon_item, index)
             validate_coupon_frequency(coupon, coupon_item, index)
             validate_coupon_preconditions(coupon, earlier_coupons, index)
             validate_coupon_snapshot(coupon, coupon_item, index) if scope == :approve
@@ -419,13 +419,20 @@ module QuoteVersions
           known_coupons_by_id.each_value.flat_map { |coupon| target_ids(coupon, attribute) }.uniq
         end
 
-        def validate_coupon_currency(coupon, index)
+        # The coupon is applied in whatever currency it carries, so it has to be the deal's own. A
+        # catalog coupon priced elsewhere is quoted by overriding the currency, which
+        # AppliedCoupons::CreateService applies to the coupon it grants.
+        def validate_coupon_currency(coupon, coupon_item, index)
           return unless coupon.fixed_amount?
           return if self.class.currency_list.exclude?(quote_version.currency)
 
-          if coupon.amount_currency != quote_version.currency
+          if effective_coupon_currency(coupon, coupon_item) != quote_version.currency
             add_error(field: coupon_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        def effective_coupon_currency(coupon, coupon_item)
+          coupon_item.dig("overrides", "amountCurrency").presence || coupon.amount_currency
         end
 
         # The snapshot type is required at approve while the amount checks below follow the live

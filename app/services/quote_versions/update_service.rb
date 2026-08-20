@@ -46,18 +46,11 @@ module QuoteVersions
       quote_version.draft?
     end
 
-    # The two cases a currency change cannot be carried into the billing items. Returns truthy once a
-    # failure is recorded, so the caller stops before rewriting anything.
+    # Returns truthy once a failure is recorded, so the caller stops before rewriting anything.
     def refuse_currency_change!
-      if amendment?
-        return result.single_validation_failure!(field: :currency, error_code: "not_supported_for_order_type")
-      end
+      return unless amendment?
 
-      if mismatching_fixed_amount_coupon?
-        return result.single_validation_failure!(field: :currency, error_code: "currencies_does_not_match")
-      end
-
-      nil
+      result.single_validation_failure!(field: :currency, error_code: "not_supported_for_order_type")
     end
 
     # An amendment restates a subscription that is already invoicing in its plan's currency, and the
@@ -65,22 +58,6 @@ module QuoteVersions
     # mid-life, leaving its invoice history in the currency it started in.
     def amendment?
       quote_version.quote.order_type == "subscription_amendment"
-    end
-
-    # A coupon is applied in its own currency: Orders::SubscriptionCreation::ExecuteService states
-    # none on purpose and the approve validation pins the catalog coupon to the deal instead. So a
-    # fixed-amount coupon priced elsewhere cannot follow the deal, and the change is refused rather
-    # than leaving a quote that no longer approves.
-    def mismatching_fixed_amount_coupon?
-      ids = billing_item_ids("coupons")
-      return false if ids.empty?
-
-      quote_version
-        .organization
-        .coupons
-        .with_discarded
-        .where(id: ids)
-        .any? { it.fixed_amount? && it.amount_currency != quote_version.currency }
     end
 
     # The billing items carry their own copy of the currency, which the rendered quote reads, so the
@@ -91,6 +68,7 @@ module QuoteVersions
 
       realigned = items.dup
       realigned["plans"] = realigned_plans(items["plans"]) if items.key?("plans")
+      realigned["coupons"] = realigned_coupons(items["coupons"]) if items.key?("coupons")
       realigned["walletCredits"] = realigned_wallet_credits(items["walletCredits"]) if items.key?("walletCredits")
 
       quote_version.billing_items = realigned
@@ -103,6 +81,18 @@ module QuoteVersions
       Array(plans).map do |item|
         plan = catalog_plans_by_id[item["id"]]
         next item if plan.nil? || plan.amount_currency == quote_version.currency
+
+        item.merge("overrides" => (item["overrides"] || {}).merge("amountCurrency" => quote_version.currency))
+      end
+    end
+
+    # Same as the plans, for the coupons the catalog prices differently. A percentage coupon carries no
+    # currency at all, so it is left alone.
+    def realigned_coupons(coupons)
+      Array(coupons).map do |item|
+        coupon = catalog_coupons_by_id[item["id"]]
+        next item if coupon.nil? || !coupon.fixed_amount?
+        next item if coupon.amount_currency == quote_version.currency
 
         item.merge("overrides" => (item["overrides"] || {}).merge("amountCurrency" => quote_version.currency))
       end
@@ -125,6 +115,15 @@ module QuoteVersions
         .plans
         .with_discarded
         .where(id: billing_item_ids("plans"))
+        .index_by(&:id)
+    end
+
+    def catalog_coupons_by_id
+      @catalog_coupons_by_id ||= quote_version
+        .organization
+        .coupons
+        .with_discarded
+        .where(id: billing_item_ids("coupons"))
         .index_by(&:id)
     end
 

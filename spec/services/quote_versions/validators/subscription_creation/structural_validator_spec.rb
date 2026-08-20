@@ -424,6 +424,23 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when the coupon overrides carries an amountCurrency" do
+      let(:coupon_overrides) { super().merge("amountCurrency" => "EUR") }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the coupon overrides amountCurrency is not a known currency" do
+      let(:coupon_overrides) { super().merge("amountCurrency" => "DOUBLOON") }
+
+      it "returns an invalid_currency error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({"billing_items.coupons.0.overrides.amountCurrency": ["invalid_currency"]})
+      end
+    end
+
     context "when the plan overrides carries an amountCurrency" do
       let(:plan_overrides) { super().merge("amountCurrency" => "EUR") }
 

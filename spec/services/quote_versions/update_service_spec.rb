@@ -210,11 +210,30 @@ RSpec.describe QuoteVersions::UpdateService do
           )
         end
 
-        # The coupon is applied in its own currency, so it cannot follow the deal.
-        it "refuses the change on the currency field" do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to eq({currency: ["currencies_does_not_match"]})
+        it "applies the coupon in the new currency" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_items.dig("coupons", 0, "overrides", "amountCurrency")).to eq("USD")
+        end
+      end
+
+      context "when a percentage coupon is quoted" do
+        let(:coupon) { create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 10, amount_currency: nil) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {
+              "coupons" => [{"id" => coupon.id, "localId" => "c1", "type" => "coupon", "payload" => {"code" => coupon.code}}]
+            }
+          )
+        end
+
+        # A percentage coupon carries no currency, so there is nothing to realign.
+        it "leaves it without an overrides object" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_items.dig("coupons", 0, "overrides")).to eq(nil)
         end
       end
 
