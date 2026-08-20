@@ -230,7 +230,7 @@ RSpec.describe Mutations::Customers::Update do
           id: customer.id,
           externalId: customer.external_id,
           paymentProviderCustomers: [
-            {type: "manual", code: "manual", isDefault: true}
+            {type: "lago_manual", code: "lago_manual", isDefault: true}
           ]
         }
       )
@@ -238,7 +238,7 @@ RSpec.describe Mutations::Customers::Update do
       result_data = result["data"]["updateCustomer"]
 
       expect(result_data["connectionStatus"]).to eq("manual")
-      expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["manual"])
+      expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
       expect(existing_connection.reload).to be_discarded
     end
   end
