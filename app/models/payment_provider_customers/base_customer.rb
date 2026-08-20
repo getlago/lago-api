@@ -11,7 +11,7 @@ module PaymentProviderCustomers
 
     self.table_name = "payment_provider_customers"
 
-    MANUAL_CODE = "manual"
+    MANUAL_CODE = "lago_manual"
 
     CONNECTION_STATUSES = {
       not_connected: "not_connected",
@@ -52,14 +52,14 @@ module PaymentProviderCustomers
       get_from_settings("payment_method_id") || get_from_settings("provider_mandate_id")
     end
 
-    # A manual payment row is the reserved null-provider connection (no payment provider) coded "manual".
+    # A manual payment row is the reserved null-provider connection (no payment provider) coded "lago_manual".
     def manual?
       payment_provider_id.nil? && code == MANUAL_CODE
     end
 
     private
 
-    # The "manual" code is reserved for the null-provider manual connection; a provider-backed
+    # The "lago_manual" code is reserved for the null-provider manual connection; a provider-backed
     # connection cannot use it.
     def code_is_not_reserved
       return unless code == MANUAL_CODE

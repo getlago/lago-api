@@ -1467,7 +1467,7 @@ RSpec.describe Customer do
           customer:,
           organization: customer.organization,
           type: "PaymentProviderCustomers::BaseCustomer",
-          code: "manual",
+          code: "lago_manual",
           is_default: true
         )
       end

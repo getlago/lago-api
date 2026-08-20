@@ -17,7 +17,7 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
         customer = create(:customer)
         provider = create(:stripe_provider, organization: customer.organization)
         connection = create(:stripe_customer, customer:, organization: customer.organization, payment_provider: provider)
-        connection.code = "manual"
+        connection.code = "lago_manual"
 
         expect(connection).not_to be_valid
         expect(connection.errors[:code]).to include("value_is_reserved")
@@ -29,7 +29,7 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
           customer:,
           organization: customer.organization,
           type: "PaymentProviderCustomers::BaseCustomer",
-          code: "manual"
+          code: "lago_manual"
         )
 
         expect(manual).to be_valid
@@ -51,11 +51,11 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
 
   describe "#manual?" do
     it "is true for a null-provider row coded manual" do
-      expect(described_class.new(payment_provider_id: nil, code: "manual").manual?).to be(true)
+      expect(described_class.new(payment_provider_id: nil, code: "lago_manual").manual?).to be(true)
     end
 
     it "is false for a provider-backed connection coded manual" do
-      expect(described_class.new(payment_provider_id: SecureRandom.uuid, code: "manual").manual?).to be(false)
+      expect(described_class.new(payment_provider_id: SecureRandom.uuid, code: "lago_manual").manual?).to be(false)
     end
 
     it "is false for a null-provider row with a different code" do
