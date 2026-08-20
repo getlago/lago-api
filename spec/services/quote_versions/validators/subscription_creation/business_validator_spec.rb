@@ -150,6 +150,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    # Subscriptions::CreateService defaults the subscription date to the moment execution runs, so a
+    # deal that names none simply starts then.
     context "when the plan carries no start date" do
       let(:plan_payload) { super().except("startDate") }
 
@@ -160,11 +162,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires a start date on the plan" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq(
-            {"billing_items.plans.0.payload.startDate": ["value_is_mandatory"]}
-          )
+        it "is valid" do
+          expect(validator).to be_valid
         end
       end
     end
@@ -704,11 +703,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       let(:billing_items) { {"plans" => [plan_item, undated_plan_item]} }
       let(:scope) { :approve }
 
-      it "reports only the plan carrying none" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq(
-          {"billing_items.plans.1.payload.startDate": ["value_is_mandatory"]}
-        )
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 

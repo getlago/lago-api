@@ -272,21 +272,12 @@ module QuoteVersions
           )
         end
 
-        # The subscription date is the plan's own, so an approved plan carrying none could not
-        # produce a subscription at all.
-        def validate_plan_start_date_presence(plan_item, index)
-          return unless scope == :approve
-          return unless plan_item.dig("payload", "startDate").nil?
-
-          add_error(field: plan_field(index, "payload.startDate"), error_code: "value_is_mandatory")
-        end
-
         # Subscriptions::ValidateService requires the pair, compared as dates, to be strictly
         # increasing. An open-ended deal is legitimate, the subscription simply carries no ending
         # date, so only a plan stating both sides has a range to check.
+        # A plan stating no start date is left alone: Subscriptions::CreateService defaults the
+        # subscription date to the moment it runs, so the deal simply starts on execution.
         def validate_plan_dates(plan_item, index)
-          validate_plan_start_date_presence(plan_item, index)
-
           start_date = plan_item.dig("payload", "startDate")
           end_date = plan_item.dig("payload", "endDate")
 

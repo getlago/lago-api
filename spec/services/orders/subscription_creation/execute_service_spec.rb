@@ -138,6 +138,18 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
+      # Approval no longer requires a start date, so this reaches execution: CreateService defaults the
+      # subscription date to the moment it runs.
+      context "when the plan states no start date" do
+        let(:plan_payload) { super().except("startDate") }
+
+        it "subscribes from now" do
+          execute_service.call
+
+          expect(customer.subscriptions.sole.subscription_at).to be_within(5.seconds).of(Time.current)
+        end
+      end
+
       context "without overrides" do
         let(:plan_overrides) { nil }
 
