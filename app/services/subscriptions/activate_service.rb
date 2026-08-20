@@ -102,8 +102,11 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
+      # Previous first, as the upgrade path does through TerminateService: both branches hold the
+      # two period locks until the same commit, so opposite orders would deadlock a rotation of the
+      # same pair.
       Subscriptions::BillingPeriods::UpsertService.call!(subscription: previous_subscription)
+      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
 
       billable_subscriptions = [previous_subscription]
 

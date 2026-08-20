@@ -820,6 +820,20 @@ RSpec.describe Subscriptions::ActivateService do
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", previous_subscription)
     end
 
+    # Both rotation branches hold the two period locks until the same commit, so they have to take
+    # them in the same order or a rotation of the same pair deadlocks.
+    it "refreshes the billing periods of the previous subscription first" do
+      refreshed = []
+      allow(Subscriptions::BillingPeriods::UpsertService).to receive(:call!) do |subscription:|
+        refreshed << subscription
+        Subscriptions::BillingPeriods::UpsertService::Result.new
+      end
+
+      result
+
+      expect(refreshed).to eq([previous_subscription, subscription])
+    end
+
     it "produces a subscription.terminated activity log for the previous subscription" do
       result
 
