@@ -181,6 +181,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
       end
 
+      context "with a snapshotted payment term" do
+        it "computes the due date from the snapshot, ignoring a later customer term change" do
+          invoice.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
+          invoice.customer.update!(payment_term: {term_type: "net", days: 3}, net_payment_term: 3)
+
+          freeze_time do
+            expect { pull_taxes_service.call }
+              .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
+          end
+        end
+      end
+
       context "with a recurring invoice" do
         let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment:) }
 

@@ -154,7 +154,7 @@ module Invoices
       end
 
       def payment_due_date
-        @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
+        @payment_due_date ||= invoice.snapshotted_payment_term.due_date_for(issuing_date)
       end
 
       def customer

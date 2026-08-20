@@ -106,6 +106,22 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
     end
   end
 
+  context "when the invoice has a snapshotted payment term" do
+    let(:invoice) do
+      create(:invoice, :draft, customer:, issuing_date:, expected_finalization_date:, payment_due_date:, applied_grace_period: 12,
+        payment_term: {term_type: "net", days: 5}, net_payment_term: 5)
+    end
+
+    let(:payment_due_date) { issuing_date + 5.days }
+    let(:new_grace_period) { 15 }
+
+    it "recomputes the due date from the snapshot and the new issuing date" do
+      subject.call
+
+      expect(invoice.payment_due_date).to eq(invoice.issuing_date + 5.days)
+    end
+  end
+
   context "with issuing date preferences" do
     let(:recurring) { true }
 

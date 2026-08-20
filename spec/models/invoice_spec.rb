@@ -2710,4 +2710,29 @@ RSpec.describe Invoice do
       end
     end
   end
+
+  describe "#snapshotted_payment_term" do
+    it "builds a term from the jsonb snapshot when present" do
+      invoice = build(:invoice, payment_term: {"term_type" => "end_of_month"}, net_payment_term: nil)
+
+      term = invoice.snapshotted_payment_term
+
+      expect(term.term_type).to eq("end_of_month")
+    end
+
+    it "derives a net term from the integer alias for pre-feature invoices" do
+      invoice = build(:invoice, payment_term: nil, net_payment_term: 30)
+
+      term = invoice.snapshotted_payment_term
+
+      expect(term.term_type).to eq("net")
+      expect(term.days).to eq(30)
+    end
+
+    it "derives a net-0 term from a pre-feature invoice with the default alias" do
+      invoice = build(:invoice, payment_term: nil, net_payment_term: 0)
+
+      expect(invoice.snapshotted_payment_term.to_h).to eq("term_type" => "net", "days" => 0)
+    end
+  end
 end
