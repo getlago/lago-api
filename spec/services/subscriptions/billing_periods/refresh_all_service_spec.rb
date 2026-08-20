@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
-  subject(:result) { described_class.call(owner:) }
+  subject(:result) { described_class.call(owner:, cursor:) }
+
+  let(:cursor) { nil }
 
   let(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
@@ -49,6 +51,55 @@ RSpec.describe Subscriptions::BillingPeriods::RefreshAllService do
     it "enqueues nothing" do
       expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
       expect(result.enqueued_count).to eq(0)
+    end
+  end
+
+  describe "paging" do
+    let(:owner) { billing_entity }
+    let(:ids) { Subscription.order(:id).pluck(:id) }
+
+    before { create(:subscription, organization:, customer:, plan:, status: :active) }
+
+    context "when a page is full" do
+      before { stub_const("#{described_class}::BATCH_SIZE", 1) }
+
+      it "enqueues that page and hands back the cursor to resume from" do
+        expect(result.enqueued_count).to eq(1)
+        expect(result.next_cursor).to eq(ids.first)
+
+        expect(Subscriptions::BillingPeriods::UpsertJob).to have_been_enqueued.with(ids.first)
+        expect(Subscriptions::BillingPeriods::UpsertJob).not_to have_been_enqueued.with(ids.last)
+      end
+
+      context "with a cursor" do
+        let(:cursor) { ids.first }
+
+        it "resumes after it" do
+          expect(result.enqueued_count).to eq(1)
+
+          expect(Subscriptions::BillingPeriods::UpsertJob).to have_been_enqueued.with(ids.last)
+          expect(Subscriptions::BillingPeriods::UpsertJob).not_to have_been_enqueued.with(ids.first)
+        end
+      end
+    end
+
+    # A page that is not full is the last one, so paging past it would cost a query returning
+    # nothing.
+    context "when the page is not full" do
+      it "hands back no cursor" do
+        expect(result.enqueued_count).to eq(2)
+        expect(result.next_cursor).to be_nil
+      end
+    end
+
+    context "when the cursor is past the last subscription" do
+      let(:cursor) { ids.last }
+
+      it "enqueues nothing" do
+        expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+        expect(result.enqueued_count).to eq(0)
+        expect(result.next_cursor).to be_nil
+      end
     end
   end
 
