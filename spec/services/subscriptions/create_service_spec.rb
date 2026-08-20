@@ -402,6 +402,63 @@ RSpec.describe Subscriptions::CreateService do
         expect(result).not_to be_success
         expect(result.error.code).to eq("feature_unavailable")
       end
+
+      context "when plan_overrides is a units-only fixed_charges payload" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            plan_overrides: {
+              fixed_charges: [{id: fixed_charge.id, units: 25}]
+            }
+          }
+        end
+
+        before { fixed_charge }
+
+        it "writes the per-subscription units override without requiring premium" do
+          result = create_service.call
+
+          expect(result).to be_success
+          subscription = result.subscription
+          expect(subscription.plan).to eq(plan)
+          override = Subscription::FixedChargeUnitsOverride.find_by(subscription:, fixed_charge:)
+          expect(override.units).to eq(25)
+        end
+      end
+
+      context "when plan_overrides carries a fixed_charges change beyond units" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, units: 5) }
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            plan_overrides: {
+              fixed_charges: [{id: fixed_charge.id, units: 25, invoice_display_name: "Renamed"}]
+            }
+          }
+        end
+
+        before { fixed_charge }
+
+        it "still requires premium" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.code).to eq("feature_unavailable")
+        end
+      end
     end
 
     context "when License is premium and plan_overrides is passed", :premium do
