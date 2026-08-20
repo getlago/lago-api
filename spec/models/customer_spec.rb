@@ -1426,6 +1426,58 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#payment_connection" do
+    let(:customer) { create(:customer) }
+    let!(:default_connection) { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
+    let!(:other_connection) { create(:gocardless_customer, customer:, code: "gc") }
+
+    it "returns the default connection when no code is given" do
+      expect(customer.payment_connection).to eq(default_connection)
+    end
+
+    it "returns the connection matching the given code" do
+      expect(customer.payment_connection("gc")).to eq(other_connection)
+    end
+
+    it "returns nil for an unknown code" do
+      expect(customer.payment_connection("unknown")).to be_nil
+    end
+  end
+
+  describe "#payment_connection_status" do
+    let(:customer) { create(:customer) }
+
+    context "when no connection is the default" do
+      it "returns not_connected" do
+        expect(customer.payment_connection_status).to eq("not_connected")
+      end
+    end
+
+    context "when the default is a provider connection" do
+      before { create(:stripe_customer, customer:, is_default: true) }
+
+      it "returns connected" do
+        expect(customer.payment_connection_status).to eq("connected")
+      end
+    end
+
+    context "when the default is the manual row" do
+      before do
+        PaymentProviderCustomers::BaseCustomer.create!(
+          customer:,
+          organization: customer.organization,
+          type: "PaymentProviderCustomers::BaseCustomer",
+          code: "lago_manual",
+          is_default: true
+        )
+      end
+
+      it "returns manual" do
+        expect(customer.payment_connection_status).to eq("manual")
+      end
+    end
+  end
+
   describe "#address_changed?" do
     context "when a billing address field changes" do
       it "returns true" do
