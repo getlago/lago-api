@@ -2,6 +2,8 @@
 
 module Subscriptions
   class UpdateService < BaseService
+    include Subscriptions::Concerns::BillingPeriodsRefreshConcern
+
     include Subscriptions::Concerns::BillingEntityResolutionConcern
     include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
     include Subscriptions::Concerns::FixedChargeUnitsOverridePromotionConcern
@@ -162,7 +164,7 @@ module Subscriptions
       end
 
       subscription.mark_as_active!(subscription.subscription_at)
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
+      refresh_billing_periods(subscription)
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [subscription],

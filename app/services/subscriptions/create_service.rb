@@ -3,6 +3,7 @@
 module Subscriptions
   class CreateService < BaseService
     include Subscriptions::Concerns::BillingEntityResolutionConcern
+    include Subscriptions::Concerns::BillingPeriodsRefreshConcern
     include Subscriptions::Concerns::FixedChargeUnitsOverrideDetectionConcern
 
     Result = BaseResult[:subscription, :payment_method]
@@ -181,7 +182,7 @@ module Subscriptions
 
     def handle_past_subscription(new_subscription)
       new_subscription.mark_as_active!(started_at_for(new_subscription))
-      BillingPeriods::UpsertService.call!(subscription: new_subscription)
+      refresh_billing_periods(new_subscription)
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [new_subscription],

@@ -2,6 +2,8 @@
 
 module Subscriptions
   class ActivateService < BaseService
+    include Subscriptions::Concerns::BillingPeriodsRefreshConcern
+
     Result = BaseResult[:subscription]
 
     def initialize(subscription:, timestamp: Time.current)
@@ -69,8 +71,8 @@ module Subscriptions
 
       subscription.mark_as_active!(timestamp)
 
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription: previous_subscription)
+      refresh_billing_periods(subscription)
+      refresh_billing_periods(previous_subscription)
 
       billable_subscriptions = [previous_subscription]
 
@@ -105,8 +107,8 @@ module Subscriptions
       # Previous first, as the upgrade path does through TerminateService: both branches hold the
       # two period locks until the same commit, so opposite orders would deadlock a rotation of the
       # same pair.
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription: previous_subscription)
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
+      refresh_billing_periods(previous_subscription)
+      refresh_billing_periods(subscription)
 
       billable_subscriptions = [previous_subscription]
 
@@ -135,7 +137,7 @@ module Subscriptions
       from_incomplete = subscription.incomplete?
 
       subscription.mark_as_active!(timestamp)
-      Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
+      refresh_billing_periods(subscription)
 
       emit_fixed_charge_events unless from_incomplete
 

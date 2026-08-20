@@ -22,6 +22,25 @@ RSpec.describe Subscriptions::TerminateService do
       expect(result.subscription.terminated_at).to be_present
     end
 
+    # The billing periods are derived data, and their writer holds its lock until this transaction
+    # commits, so a refresh racing with one must not cost the termination.
+    context "when the billing periods cannot be refreshed" do
+      before do
+        allow(Subscriptions::BillingPeriods::UpsertService).to receive(:call!)
+          .and_raise(BaseLockService::FailedToAcquireLock, "subscription-billing-periods")
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "still terminates the subscription and hands the refresh to the job" do
+        expect { subject }
+          .to have_enqueued_job_after_commit(Subscriptions::BillingPeriods::UpsertJob).with(subscription.id)
+
+        expect(result).to be_success
+        expect(result.subscription).to be_terminated
+        expect(Sentry).to have_received(:capture_exception)
+      end
+    end
+
     context "when the subscription should sync with Hubspot" do
       let(:customer) { create(:customer, :with_hubspot_integration) }
       let(:subscription) { create(:subscription, customer:) }
