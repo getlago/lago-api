@@ -151,7 +151,9 @@ RSpec.describe Subscriptions::Dates::QuarterlyService do
           let(:billing_at) { Time.zone.parse("27 Feb 2022") }
           let(:subscription_at) { Time.zone.parse("28 Feb 2021") }
 
-          before { subscription.mark_as_terminated!("25 Feb 2022") }
+          # The enclosing context already terminated the subscription, and mark_as_terminated! sets
+          # terminated_at with ||=, so it has to be assigned to move it earlier than billing_at.
+          before { subscription.update!(terminated_at: Time.zone.parse("25 Feb 2022")) }
 
           it "returns the previous quarter last day" do
             expect(result).to eq("2021-11-28 00:00:00 UTC")
