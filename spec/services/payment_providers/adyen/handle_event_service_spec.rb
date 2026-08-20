@@ -60,6 +60,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
           :update_payment_status, hash_including(amount_cents: 71)
         )
       end
+
+      it "passes the organization of the event so the payable lookup is scoped" do
+        event_service.call
+
+        expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+          :update_payment_status, hash_including(organization_id: organization.id)
+        )
+      end
     end
 
     context "when succeeded authorisation event for processed one-time payment belonging to a Payment Request" do
@@ -155,6 +163,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(Invoices::Payments::AdyenService).to have_received(:call).with(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "PSPREF123",
           status: "Cancelled",
           metadata: {lago_payable_type: "Invoice"}

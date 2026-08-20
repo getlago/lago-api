@@ -52,6 +52,7 @@ RSpec.describe Invoices::Payments::AdyenService do
     it "updates the payment and invoice payment_status" do
       result = described_class.call(
         :update_payment_status,
+        organization_id: organization.id,
         provider_payment_id: "ch_123456",
         status: "Authorised"
       )
@@ -70,6 +71,7 @@ RSpec.describe Invoices::Payments::AdyenService do
       expect do
         described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "Authorised"
         )
@@ -80,6 +82,7 @@ RSpec.describe Invoices::Payments::AdyenService do
       it "updates the payment and invoice status" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "Refused"
         )
@@ -100,6 +103,7 @@ RSpec.describe Invoices::Payments::AdyenService do
       it "does not update the status of invoice and payment" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
         )
@@ -113,6 +117,7 @@ RSpec.describe Invoices::Payments::AdyenService do
       it "does not update the payment_status of invoice" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "foo-bar"
         )
@@ -135,6 +140,7 @@ RSpec.describe Invoices::Payments::AdyenService do
       it "creates a payment and updates invoice payment status" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "succeeded",
           metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"}
@@ -146,6 +152,36 @@ RSpec.describe Invoices::Payments::AdyenService do
         expect(result.invoice.reload).to have_attributes(
           payment_status: "succeeded",
           ready_for_payment_processing: false
+        )
+      end
+    end
+
+    context "when the one time payment references an invoice of another organization" do
+      let(:payment) { nil }
+      let(:other_organization) { create(:organization) }
+
+      before do
+        adyen_payment_provider
+        adyen_customer
+      end
+
+      it "does not create a payment and returns a not found failure" do
+        result = described_class.call(
+          :update_payment_status,
+          organization_id: other_organization.id,
+          provider_payment_id: "ch_123456",
+          status: "succeeded",
+          metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"}
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("invoice")
+        expect(Payment.count).to eq(0)
+        expect(invoice.reload).to have_attributes(
+          payment_status: "pending",
+          payment_attempts: 0,
+          ready_for_payment_processing: true
         )
       end
     end
