@@ -15,6 +15,7 @@ class PlanRateCard < ApplicationRecord
   has_many :rate_phases, -> { order(:position) }
 
   validates :rate_card_id, uniqueness: {scope: :plan_id, conditions: -> { where(deleted_at: nil) }}
+  validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
 
   default_scope -> { kept }
 end

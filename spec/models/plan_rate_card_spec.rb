@@ -43,5 +43,16 @@ RSpec.describe PlanRateCard do
         expect(sibling).to be_valid
       end
     end
+
+    describe "units" do
+      it "rejects a negative value and accepts zero or nil" do
+        entry = build(:plan_rate_card, units: -1)
+        expect(entry).not_to be_valid
+        expect(entry.errors.where(:units, :greater_than_or_equal_to)).to be_present
+
+        expect(build(:plan_rate_card, units: 0)).to be_valid
+        expect(build(:plan_rate_card, units: nil)).to be_valid
+      end
+    end
   end
 end
