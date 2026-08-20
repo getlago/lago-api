@@ -15,11 +15,6 @@ module Subscriptions
       # processor keeps terminated subscriptions cached for.
       TERMINATED_GRACE_PERIOD = 1.month
 
-      # The write is short, so a writer that has to wait for another is waiting on a couple of
-      # statements. Bounded anyway: this runs inside a subscription lifecycle transaction, which
-      # must not be left waiting on a lock that is never released.
-      LOCK_TIMEOUT = 10.seconds
-
       def initialize(subscription:, timestamp: Time.current)
         @subscription = subscription
         @timestamp = timestamp
@@ -35,13 +30,16 @@ module Subscriptions
 
         SubscriptionBillingPeriod.transaction do
           # Every writer takes this, jobs and lifecycle services alike, and holds it until the
-          # transaction commits rather than until the end of the block.
+          # transaction commits rather than until the end of the block — the outermost transaction,
+          # which on a lifecycle path is the whole subscription creation, termination or upgrade.
           #
           # The write is convergent, but the overlap constraint is deferred, so a writer that
-          # commits between our delete and our own commit turns the enclosing transaction into a
-          # constraint violation at COMMIT — and that transaction is a subscription being created,
-          # terminated or upgraded, which must not fail over its billing periods.
-          SubscriptionBillingPeriod.with_advisory_lock!(lock_key, transaction: true, timeout_seconds: LOCK_TIMEOUT) do
+          # commits between our delete and our own commit turns that transaction into a constraint
+          # violation at COMMIT.
+          #
+          # Waiting on it costs an open transaction on a pooled connection, so the wait is the
+          # short BaseLockService budget and a job that loses the race retries instead.
+          Subscriptions::BillingPeriods::LockService.call!(subscription:) do
             # Deleted before the upsert: a customer timezone change snaps period_from to the
             # previous invoice's charges_to (Subscriptions::DatesService#charges_from_datetime), so
             # a moved boundary is a new row rather than an update to the old one, and the two
@@ -70,10 +68,6 @@ module Subscriptions
       private
 
       attr_reader :subscription, :timestamp
-
-      def lock_key
-        "subscription_billing_periods_#{subscription.id}"
-      end
 
       def skip?
         return true if subscription.organization.feature_flag_disabled?(:subscription_billing_periods)

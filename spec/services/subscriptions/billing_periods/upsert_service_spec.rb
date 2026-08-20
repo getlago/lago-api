@@ -289,17 +289,18 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
       result
 
       expect(SubscriptionBillingPeriod).to have_received(:with_advisory_lock!).with(
-        "subscription_billing_periods_#{subscription.id}",
+        "subscription-billing-periods-#{subscription.id}",
         transaction: true,
-        timeout_seconds: described_class::LOCK_TIMEOUT
+        timeout_seconds: BaseLockService::ACQUIRE_LOCK_TIMEOUT,
+        disable_query_cache: true
       )
     end
 
     it "raises rather than writing when the lock cannot be acquired" do
       allow(SubscriptionBillingPeriod).to receive(:with_advisory_lock!)
-        .and_raise(WithAdvisoryLock::FailedToAcquireLock, "subscription_billing_periods")
+        .and_raise(WithAdvisoryLock::FailedToAcquireLock, "subscription-billing-periods")
 
-      expect { result }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+      expect { result }.to raise_error(BaseLockService::FailedToAcquireLock)
         .and not_change(SubscriptionBillingPeriod, :count)
     end
   end
