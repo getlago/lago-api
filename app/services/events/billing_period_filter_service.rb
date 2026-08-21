@@ -4,9 +4,17 @@ module Events
   class BillingPeriodFilterService < BaseService
     Result = BaseResult[:charges]
 
-    def initialize(subscription:, boundaries:)
+    # codes restricts the event lookup to those billable metric codes. Callers that only bill a
+    # subset of the plan (usage filtered by charge or metric) pass it so the event store does not
+    # resolve combinations they will discard. Recurring charges are still seeded for the whole plan.
+    #
+    # with_last_seen_at can be disabled by callers that never read the timestamps, which lets the
+    # event store skip the MAX() aggregate and stop reading the ingestion column entirely.
+    def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
       @subscription = subscription
       @boundaries = boundaries
+      @codes = codes
+      @with_last_seen_at = with_last_seen_at
       super
     end
 
@@ -15,6 +23,8 @@ module Events
     # result.charges is a nested hash: { charge_id => { filter_id => last_seen_at } } (nil filter
     # is the default bucket). last_seen_at is the most recent event ingestion timestamp for that
     # charge/filter (created_at on PG, enriched_at on CH), used to lazily invalidate the cache.
+    # It is nil when with_last_seen_at is disabled, which leaves the cache relying on its expiration
+    # instead of the lazy invalidation, so only callers that ignore it may disable it.
     # Recurring charges with no in-period event are seeded with the period start (see #period_start).
     def call
       result.charges = charges_and_filters
@@ -23,7 +33,7 @@ module Events
 
     private
 
-    attr_reader :subscription, :boundaries
+    attr_reader :subscription, :boundaries, :codes, :with_last_seen_at
 
     delegate :plan, :organization, to: :subscription
 
@@ -44,8 +54,18 @@ module Events
       )
     end
 
+    # Every billable metric code of the plan, restricted to the requested codes when given.
+    # Intersecting instead of using codes directly keeps an unknown code from widening the lookup.
     def plan_codes
-      @plan_codes ||= plan.billable_metrics.distinct.pluck(:code)
+      @plan_codes ||= if codes.nil?
+        all_plan_codes
+      else
+        all_plan_codes & codes
+      end
+    end
+
+    def all_plan_codes
+      @all_plan_codes ||= plan.billable_metrics.distinct.pluck(:code)
     end
 
     def charges_and_filters
@@ -60,7 +80,8 @@ module Events
     def charges_and_filters_from_events
       combinations = event_store.distinct_codes_and_property_combinations(
         codes: non_recurring_plan_codes,
-        filter_keys: billable_metric_filter_keys
+        filter_keys: billable_metric_filter_keys,
+        with_last_seen_at:
       )
 
       # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
@@ -69,7 +90,8 @@ module Events
         combinations += event_store.distinct_codes_and_property_combinations(
           codes: recurring_plan_codes,
           filter_keys: billable_metric_filter_keys,
-          include_all_history: true
+          include_all_history: true,
+          with_last_seen_at:
         )
       end
 
@@ -135,10 +157,10 @@ module Events
         .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
     end
 
-    # Union of every filter key defined across the plan billable metrics
+    # Union of every filter key defined across the billable metrics the event lookup covers
     def billable_metric_filter_keys
       @billable_metric_filter_keys ||= BillableMetricFilter
-        .where(billable_metric_id: plan.billable_metrics.select(:id))
+        .where(billable_metric_id: plan.billable_metrics.where(code: plan_codes).select(:id))
         .distinct
         .pluck(:key)
     end
@@ -147,12 +169,16 @@ module Events
     # the period, including the recurring ones.
     # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     def charges_and_filters_from_pre_enriched_events
-      values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes)
+      values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes, with_last_seen_at:)
 
       # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
       # for prior periods
       if recurring_plan_codes.any?
-        values += event_store.distinct_charges_and_filters(codes: recurring_plan_codes, include_all_history: true)
+        values += event_store.distinct_charges_and_filters(
+          codes: recurring_plan_codes,
+          include_all_history: true,
+          with_last_seen_at:
+        )
       end
 
       charge_filter_ids = values.map { |v| v[1] }.reject(&:blank?)
@@ -224,7 +250,7 @@ module Events
     end
 
     def recurring_plan_codes
-      @recurring_plan_codes ||= plan.billable_metrics.where(recurring: true).distinct.pluck(:code)
+      @recurring_plan_codes ||= plan.billable_metrics.where(recurring: true).where(code: plan_codes).distinct.pluck(:code)
     end
 
     def non_recurring_plan_codes

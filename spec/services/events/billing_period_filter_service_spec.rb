@@ -678,7 +678,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         filter_service.call
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
-          .with(codes: [billable_metric.code], filter_keys: [])
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
       end
     end
 
@@ -1317,7 +1317,123 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         filter_service.call
 
-        expect(event_store).to have_received(:distinct_charges_and_filters).with(codes: [billable_metric.code])
+        expect(event_store).to have_received(:distinct_charges_and_filters)
+          .with(codes: [billable_metric.code], with_last_seen_at: true)
+      end
+    end
+
+    context "when last_seen_at is not requested" do
+      subject(:filter_service) do
+        described_class.new(subscription:, boundaries:, with_last_seen_at: false)
+      end
+
+      let(:default_service) { described_class.new(subscription:, boundaries:) }
+
+      before do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          timestamp: boundaries.charges_from_datetime + 5.days,
+          code: billable_metric.code
+        )
+      end
+
+      it "returns the same charges and filters as when it is requested" do
+        result = filter_service.call
+
+        expect(result).to be_success
+        expect(result.charges.transform_values(&:keys)).to eq(default_service.call.charges.transform_values(&:keys))
+      end
+
+      it "returns no timestamp" do
+        result = filter_service.call
+
+        expect(result.charges[charge.id]).to eq({nil => nil})
+      end
+
+      it "does not request the aggregate from the event store" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_service.call
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: false)
+      end
+
+      context "when the organization pre-filters events" do
+        let(:organization) { create(:organization, pre_filter_events: true) }
+
+        it "does not request the aggregate from the event store" do
+          event_store = instance_double(Events::Stores::PostgresStore, distinct_charges_and_filters: [])
+          allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+          filter_service.call
+
+          expect(event_store).to have_received(:distinct_charges_and_filters)
+            .with(codes: [billable_metric.code], with_last_seen_at: false)
+        end
+      end
+    end
+
+    context "when codes restrict the lookup" do
+      subject(:filter_service) do
+        described_class.new(subscription:, boundaries:, codes: [billable_metric.code])
+      end
+
+      let(:billable_metric_2) { create(:billable_metric, organization:) }
+      let(:charge_2) { create(:standard_charge, plan:, billable_metric: billable_metric_2) }
+
+      before do
+        charge_2
+
+        [billable_metric, billable_metric_2].each do |metric|
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            timestamp: boundaries.charges_from_datetime + 5.days,
+            code: metric.code
+          )
+        end
+      end
+
+      it "returns only the charges of the requested codes" do
+        result = filter_service.call
+
+        expect(result).to be_success
+        expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil]})
+      end
+
+      it "queries the event store for the requested codes only" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_service.call
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
+      end
+
+      it "ignores a code that is not part of the plan" do
+        service = described_class.new(subscription:, boundaries:, codes: [billable_metric.code, "unknown_code"])
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        service.call
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
+      end
+
+      it "still seeds recurring charges left out of the codes" do
+        recurring_metric = create(:sum_billable_metric, :recurring, organization:)
+        recurring_charge = create(:standard_charge, plan:, billable_metric: recurring_metric)
+
+        result = filter_service.call
+
+        expect(result.charges[recurring_charge.id]).to eq({nil => boundaries.charges_from_datetime})
       end
     end
   end
