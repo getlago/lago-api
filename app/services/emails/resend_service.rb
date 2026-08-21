@@ -16,7 +16,6 @@ module Emails
       return result.not_found_failure!(resource: resource_type) unless resource
       return result.not_allowed_failure!(code: "#{resource_type}_not_finalized") unless valid_status?
       return result.forbidden_failure!(code: "premium_license_required") unless License.premium?
-      return result.not_allowed_failure!(code: "email_settings_disabled") unless email_settings_enabled?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
 
       send_email
@@ -66,18 +65,6 @@ module Emails
       return resource.payment.payable.customer if resource.is_a?(PaymentReceipt)
 
       resource.customer
-    end
-
-    def email_settings_enabled?
-      billing_entity.email_settings.include?(email_settings_key)
-    end
-
-    def email_settings_key
-      {
-        "Invoice" => "invoice.finalized",
-        "CreditNote" => "credit_note.created",
-        "PaymentReceipt" => "payment_receipt.created"
-      }[resource.class.name]
     end
 
     def resource_type
