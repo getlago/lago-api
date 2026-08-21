@@ -92,6 +92,28 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
         end
       end
 
+      context "when the draft invoice has a non-net snapshotted term" do
+        let(:invoice_to_not_be_finalized) do
+          create(:invoice, status: :draft, customer:,
+            issuing_date: DateTime.parse("21 Jun 2022").to_date,
+            expected_finalization_date: DateTime.parse("21 Jun 2022").to_date,
+            organization:,
+            payment_term: {term_type: "end_of_month"},
+            net_payment_term: nil)
+        end
+
+        it "recomputes the due date from the snapshotted term" do
+          current_date = DateTime.parse("22 Jun 2022")
+
+          travel_to(current_date) do
+            expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+              .to(DateTime.parse("23 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.payment_due_date }
+              .to(DateTime.parse("30 Jun 2022"))
+          end
+        end
+      end
+
       context "when grace period is the same" do
         let(:invoice_grace_period) { customer.invoice_grace_period }
         let(:subscription_invoice_issuing_date_anchor) {}
