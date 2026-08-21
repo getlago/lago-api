@@ -70,6 +70,35 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
       end
     end
 
+    context "when the quote version names a billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR", billing_entity:) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the billing entity belongs to another organization" do
+      let(:billing_entity) { create(:billing_entity) }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "EUR", billing_entity:) }
+
+      it "returns a billing_entity_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+      end
+    end
+
+    context "when the billing entity is archived" do
+      let(:billing_entity) { create(:billing_entity, organization:, archived_at: Time.current) }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "EUR", billing_entity:) }
+
+      it "returns a billing_entity_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+      end
+    end
+
     context "when the add-on does not exist" do
       let(:add_on_item) { super().merge("id" => "11111111-2222-3333-4444-555555555555") }
 

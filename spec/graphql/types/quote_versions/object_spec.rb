@@ -10,6 +10,7 @@ RSpec.describe Types::QuoteVersions::Object do
     expect(subject).to have_field(:organization).of_type("Organization!")
     expect(subject).to have_field(:quote).of_type("Quote!")
     expect(subject).to have_field(:approved_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:billing_items).of_type("JSON")
     expect(subject).to have_field(:content).of_type("String")
     expect(subject).to have_field(:mention_variables).of_type("JSON!")
@@ -21,8 +22,6 @@ RSpec.describe Types::QuoteVersions::Object do
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum")
-    expect(subject).to have_field(:start_date).of_type("ISO8601Date")
-    expect(subject).to have_field(:end_date).of_type("ISO8601Date")
   end
 
   describe "#mention_variables" do

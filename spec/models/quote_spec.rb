@@ -26,8 +26,8 @@ RSpec.describe Quote do
       expect(subject).to belong_to(:subscription).optional
       expect(subject).to have_many(:quote_owners).dependent(:destroy)
       expect(subject).to have_many(:owners).through(:quote_owners)
-      expect(subject).to have_many(:versions).class_name("QuoteVersion").order(sequential_id: :desc)
-      expect(subject).to have_one(:current_version).class_name("QuoteVersion").order(sequential_id: :desc)
+      expect(subject).to have_many(:versions).class_name("QuoteVersion").order(sequential_id: :desc).inverse_of(:quote)
+      expect(subject).to have_one(:current_version).class_name("QuoteVersion").order(sequential_id: :desc).inverse_of(:quote)
       expect(subject).to have_many(:order_forms).through(:versions)
       expect(subject).to have_many_attached(:images)
     end

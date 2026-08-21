@@ -6,6 +6,7 @@ module QuoteVersions
       class BusinessValidator < ::BaseValidator
         include Currencies
         include CurrencyValidation
+        include BillingEntityValidation
 
         def initialize(result, quote_version:, billing_items:, scope:)
           @quote_version = quote_version
@@ -15,9 +16,10 @@ module QuoteVersions
           super
         end
 
+        # NOTE: payment terms are not validated yet, the quote-level field lands with LAGO-1529
         def valid?
           validate_currency
-          validate_dates
+          validate_billing_entity
           validate_plans
           validate_coupons
           validate_wallet_credits
@@ -34,26 +36,9 @@ module QuoteVersions
 
         attr_reader :quote_version, :billing_items, :scope
 
-        # NOTE: payment terms are not validated yet, the quote-level field lands with LAGO-1529
-        def validate_dates
-          start_date = quote_version.start_date
-          end_date = quote_version.end_date
-
-          # An open-ended deal is legitimate, the subscription simply carries no ending date, but
-          # Subscriptions::ValidateService requires the ending date to be strictly after the
-          # subscription date, and these are the dates a plan without its own falls back to, so a
-          # zero-length range cannot produce a subscription.
-          if start_date.present? && end_date.present? && end_date <= start_date
-            add_error(field: :start_date, error_code: "invalid_date_range")
-          end
-
-          validate_future_end_date(end_date, :end_date)
-        end
-
-        # Subscriptions::ValidateService also requires the ending date to be after today, and the
-        # quote pair is what a plan without its own dates falls back to. NOTE: futureness is only
-        # guaranteed at approval time. An order scheduled far enough ahead can still reach execution
-        # with a past ending date, which that service rejects then.
+        # Subscriptions::ValidateService requires the ending date to be after today. NOTE:
+        # futureness is only guaranteed at approval time. An order scheduled far enough ahead can
+        # still reach execution with a past ending date, which that service rejects then.
         def validate_future_end_date(value, field)
           return unless scope == :approve
 
@@ -73,7 +58,7 @@ module QuoteVersions
               next
             end
 
-            validate_plan_currency(plan, index)
+            validate_plan_currency(plan, plan_item, index)
             validate_minimum_commitment(plan, plan_item, index)
             validate_plan_dates(plan_item, index)
             validate_plan_payment_method(plan_item, index)
@@ -82,14 +67,19 @@ module QuoteVersions
           end
         end
 
-        # NOTE: overrides carry no plan-level currency, so the plan's own currency is the one
-        # billed: a EUR deal on a USD plan would invoice the customer in USD.
-        def validate_plan_currency(plan, index)
+        # Whatever currency the plan is priced in ends up billed, so it has to be the deal's own.
+        # A catalog plan priced elsewhere is quoted by overriding the currency, which
+        # Plans::OverrideService applies to the plan it duplicates for the subscription.
+        def validate_plan_currency(plan, plan_item, index)
           return if self.class.currency_list.exclude?(quote_version.currency)
 
-          if plan.amount_currency != quote_version.currency
+          if effective_plan_currency(plan, plan_item) != quote_version.currency
             add_error(field: plan_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        def effective_plan_currency(plan, plan_item)
+          plan_item.dig("overrides", "amountCurrency").presence || plan.amount_currency
         end
 
         # Plans::OverrideService builds a fresh Commitment rather than duplicating the plan's own,
@@ -282,42 +272,27 @@ module QuoteVersions
           )
         end
 
-        def validate_plan_start_date_presence(plan_item, index)
-          return unless scope == :approve
-          return unless (plan_item.dig("payload", "startDate") || quote_version.start_date).nil?
-
-          add_error(field: plan_field(index, "payload.startDate"), error_code: "value_is_mandatory")
-        end
-
-        # The execution flow resolves each date on its own, falling back to the quote's, and
-        # Subscriptions::ValidateService then requires the pair, compared as dates, to be strictly
-        # increasing. Both fallbacks are applied here so a plan overriding one side only is still
-        # checked against the quote's other side.
+        # Subscriptions::ValidateService requires the pair, compared as dates, to be strictly
+        # increasing. An open-ended deal is legitimate, the subscription simply carries no ending
+        # date, so only a plan stating both sides has a range to check.
+        # A plan stating no start date is left alone: Subscriptions::CreateService defaults the
+        # subscription date to the moment it runs, so the deal simply starts on execution.
         def validate_plan_dates(plan_item, index)
-          validate_plan_start_date_presence(plan_item, index)
-
           start_date = plan_item.dig("payload", "startDate")
           end_date = plan_item.dig("payload", "endDate")
 
           valid_start = validate_plan_date(start_date, plan_field(index, "payload.startDate"))
           valid_end = validate_plan_date(end_date, plan_field(index, "payload.endDate"))
           return unless valid_start && valid_end
-          # A plan carrying neither date bills the quote pair.
-          return if start_date.nil? && end_date.nil?
 
-          # The quote's own ending date is checked by validate_dates, so only a payload one is
-          # reported here.
           validate_future_end_date(end_date, plan_field(index, "payload.endDate"))
 
-          effective_start = effective_date(start_date, quote_version.start_date)
-          effective_end = effective_date(end_date, quote_version.end_date)
+          effective_start = effective_date(start_date)
+          effective_end = effective_date(end_date)
           return if effective_start.nil? || effective_end.nil?
           return if effective_end > effective_start
 
-          add_error(
-            field: plan_field(index, end_date.nil? ? "payload.startDate" : "payload.endDate"),
-            error_code: "invalid_date_range"
-          )
+          add_error(field: plan_field(index, "payload.endDate"), error_code: "invalid_date_range")
         end
 
         # Same ISO 8601 check as Subscriptions::ValidateService, the service these dates feed.
@@ -329,10 +304,10 @@ module QuoteVersions
           false
         end
 
-        # Same parsing as Subscriptions::ValidateService: the payload carries ISO 8601 strings while
-        # the quote carries date columns, and the service compares both as dates.
-        def effective_date(payload_value, quote_value)
-          Utils::Datetime.parse_iso8601(payload_value || quote_value)&.to_date
+        # Same parsing as Subscriptions::ValidateService: the payload carries ISO 8601 strings and
+        # the service compares them as dates.
+        def effective_date(value)
+          Utils::Datetime.parse_iso8601(value)&.to_date
         end
 
         # Subscriptions::CreateService resolves the payment method by id and organization only, so
@@ -356,7 +331,7 @@ module QuoteVersions
               next
             end
 
-            validate_coupon_currency(coupon, index)
+            validate_coupon_currency(coupon, coupon_item, index)
             validate_coupon_frequency(coupon, coupon_item, index)
             validate_coupon_preconditions(coupon, earlier_coupons, index)
             validate_coupon_snapshot(coupon, coupon_item, index) if scope == :approve
@@ -435,13 +410,20 @@ module QuoteVersions
           known_coupons_by_id.each_value.flat_map { |coupon| target_ids(coupon, attribute) }.uniq
         end
 
-        def validate_coupon_currency(coupon, index)
+        # The coupon is applied in whatever currency it carries, so it has to be the deal's own. A
+        # catalog coupon priced elsewhere is quoted by overriding the currency, which
+        # AppliedCoupons::CreateService applies to the coupon it grants.
+        def validate_coupon_currency(coupon, coupon_item, index)
           return unless coupon.fixed_amount?
           return if self.class.currency_list.exclude?(quote_version.currency)
 
-          if coupon.amount_currency != quote_version.currency
+          if effective_coupon_currency(coupon, coupon_item) != quote_version.currency
             add_error(field: coupon_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        def effective_coupon_currency(coupon, coupon_item)
+          coupon_item.dig("overrides", "amountCurrency").presence || coupon.amount_currency
         end
 
         # The snapshot type is required at approve while the amount checks below follow the live

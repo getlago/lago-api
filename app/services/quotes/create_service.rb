@@ -46,7 +46,7 @@ module Quotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue BaseService::ValidationFailure => e
+    rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end
 
@@ -70,12 +70,7 @@ module Quotes
     def initialize_version!(quote:)
       QuoteVersions::CreateService.call!(
         quote: quote,
-        params: params.slice(
-          :billing_items,
-          :content,
-          :start_date,
-          :end_date
-        ).merge(currency: deal_currency)
+        params: params.slice(:billing_items, :content, :billing_entity_id).merge(currency: deal_currency)
       ).quote_version
     end
 
@@ -84,7 +79,14 @@ module Quotes
     def deal_currency
       return subscription.plan_amount_currency if subscription
 
-      customer.currency.presence || customer.billing_entity.default_currency
+      customer.currency.presence || issuing_billing_entity.default_currency
+    end
+
+    # The entity the deal is issued by, which is the one whose default currency the quote should
+    # fall back to. An unknown id is left to the version validator to report, so the fallback simply
+    # keeps the customer's own entity here.
+    def issuing_billing_entity
+      organization.billing_entities.find_by(id: params[:billing_entity_id]) || customer.billing_entity
     end
 
     def add_owners!(quote:)

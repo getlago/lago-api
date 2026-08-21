@@ -5,8 +5,8 @@ module QuoteVersions
     module SubscriptionAmendment
       # An amendment payload is a subscription_creation one with extra constraints, so currency,
       # plan overrides, coupons and wallet credits are all inherited. Only what is specific to
-      # restating one plan on a live subscription is added here, and the inherited date validation
-      # is narrowed down to the ending date, the one an amendment carries over.
+      # restating one plan on a live subscription is added here, and the inherited plan date
+      # validation is narrowed down to the ending date, the one an amendment carries over.
       class BusinessValidator < SubscriptionCreation::BusinessValidator
         def valid?
           validate_single_plan
@@ -26,13 +26,18 @@ module QuoteVersions
           add_error(field: :"billing_items.plans", error_code: "single_plan_expected")
         end
 
+        # The target subscription is already bound to an entity, and the plan change carries that
+        # binding over. Re-pinning it here would move a running subscription to another entity's
+        # invoice-numbering series mid-life, so an amendment cannot name one at all.
+        def validate_billing_entity
+          return if quote_version.billing_entity_id.blank?
+
+          add_error(field: :billing_entity_id, error_code: "not_supported_for_order_type")
+        end
+
         # An amendment restates the term of a subscription that is already running: its start is the
         # target's own anniversary date, which the plan change carries over, so a quoted start date
         # is a commercial term only and is not validated here.
-        def validate_dates
-          validate_future_end_date(quote_version.end_date, :end_date)
-        end
-
         # An absent ending date leaves the target's own in place, see the plan change services. The
         # start date being out of the picture, there is no range left to compare: the ending date
         # only has to be after the target's anniversary date, which its futureness already implies

@@ -10,14 +10,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :subscription_creation) }
   let(:quote_version) do
-    create(
-      :quote_version,
-      quote:,
-      organization:,
-      currency: "EUR",
-      start_date: Date.current,
-      end_date: 1.year.from_now.to_date
-    )
+    create(:quote_version, quote:, organization:, currency: "EUR")
   end
   let(:plan) { create(:plan, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
@@ -37,6 +30,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
   let(:plan_payload) do
     {
       "code" => plan.code,
+      "startDate" => Date.current.iso8601,
       "charges" => [charge_snapshot],
       "fixedCharges" => [fixed_charge_snapshot]
     }
@@ -128,14 +122,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the currency is missing" do
       let(:quote_version) do
-        create(
-          :quote_version,
-          quote:,
-          organization:,
-          currency: nil,
-          start_date: Date.current,
-          end_date: 1.year.from_now.to_date
-        )
+        create(:quote_version, quote:, organization:, currency: nil)
       end
 
       it "is valid at update scope" do
@@ -154,14 +141,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the currency is not ISO 4217" do
       let(:quote_version) do
-        build(
-          :quote_version,
-          quote:,
-          organization:,
-          currency: "DOUBLOON",
-          start_date: Date.current,
-          end_date: 1.year.from_now.to_date
-        )
+        build(:quote_version, quote:, organization:, currency: "DOUBLOON")
       end
 
       it "returns an invalid_currency error" do
@@ -170,31 +150,12 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the quote carries no dates" do
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+    # Subscriptions::CreateService defaults the subscription date to the moment execution runs, so a
+    # deal that names none simply starts then.
+    context "when the plan carries no start date" do
+      let(:plan_payload) { super().except("startDate") }
 
       it "is valid at update scope" do
-        expect(validator).to be_valid
-      end
-
-      context "when the scope is approve" do
-        let(:scope) { :approve }
-
-        it "requires a start date on the plan" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq(
-            {"billing_items.plans.0.payload.startDate": ["value_is_mandatory"]}
-          )
-        end
-      end
-    end
-
-    context "when the end date is missing" do
-      let(:quote_version) do
-        create(:quote_version, quote:, organization:, currency: "EUR", start_date: Date.parse("2026-01-01"))
-      end
-
-      it "is valid" do
         expect(validator).to be_valid
       end
 
@@ -203,68 +164,6 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
         it "is valid" do
           expect(validator).to be_valid
-        end
-      end
-    end
-
-    context "when the end date is before the start date" do
-      let(:quote_version) do
-        create(
-          :quote_version,
-          quote:,
-          organization:,
-          currency: "EUR",
-          start_date: 1.year.from_now.to_date,
-          end_date: 1.month.from_now.to_date
-        )
-      end
-
-      it "returns an invalid_date_range error at update scope" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({start_date: ["invalid_date_range"]})
-      end
-    end
-
-    context "when the end date equals the start date" do
-      let(:quote_version) do
-        create(
-          :quote_version,
-          quote:,
-          organization:,
-          currency: "EUR",
-          start_date: 1.month.from_now.to_date,
-          end_date: 1.month.from_now.to_date
-        )
-      end
-
-      it "returns an invalid_date_range error at update scope" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({start_date: ["invalid_date_range"]})
-      end
-    end
-
-    context "when the end date is today" do
-      let(:quote_version) do
-        create(
-          :quote_version,
-          quote:,
-          organization:,
-          currency: "EUR",
-          start_date: 1.month.ago.to_date,
-          end_date: Date.current
-        )
-      end
-
-      it "is valid at update scope" do
-        expect(validator).to be_valid
-      end
-
-      context "when the scope is approve" do
-        let(:scope) { :approve }
-
-        it "returns an invalid_date error" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq({end_date: ["invalid_date"]})
         end
       end
     end
@@ -303,6 +202,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns a currencies_does_not_match error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
+      end
+
+      # Plans::OverrideService reprices the duplicated plan, so a catalog plan priced elsewhere is
+      # quoted by naming the deal's currency here.
+      context "when an override reprices the plan in the version currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "EUR") }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when an override reprices the plan in a third currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "GBP") }
+
+        it "returns a currencies_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
+        end
       end
     end
 
@@ -748,36 +666,10 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the plan payload only overrides the start date, past the quote end date" do
-      let(:plan_payload) { super().merge("startDate" => 2.years.from_now.iso8601) }
-
-      it "returns an invalid_date_range error" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.payload.startDate": ["invalid_date_range"]})
-      end
-    end
-
-    context "when the plan payload only overrides the end date, before the quote start date" do
-      let(:plan_payload) { super().merge("endDate" => 1.day.ago.iso8601) }
-
-      it "returns an invalid_date_range error on the end date" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq({"billing_items.plans.0.payload.endDate": ["invalid_date_range"]})
-      end
-    end
-
     context "when the plan payload endDate is today" do
-      let(:quote_version) do
-        create(
-          :quote_version,
-          quote:,
-          organization:,
-          currency: "EUR",
-          start_date: 1.month.ago.to_date,
-          end_date: 1.year.from_now.to_date
-        )
+      let(:plan_payload) do
+        super().merge("startDate" => 1.month.ago.to_date.iso8601, "endDate" => Time.current.iso8601)
       end
-      let(:plan_payload) { super().merge("endDate" => Time.current.iso8601) }
 
       it "is valid at update scope" do
         expect(validator).to be_valid
@@ -793,33 +685,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the plan payload only overrides the start date, inside the quote range" do
-      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
-
-      it "is valid" do
-        expect(validator).to be_valid
-      end
-    end
-
-    context "when the quote carries no dates and the plan overrides one" do
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
-      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
-
-      it "is valid" do
-        expect(validator).to be_valid
-      end
-
-      context "when the scope is approve" do
-        let(:scope) { :approve }
-
-        it "is valid" do
-          expect(validator).to be_valid
-        end
-      end
-    end
-
-    context "when the quote carries no dates and the plan start date is blank" do
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
+    context "when the plan start date is blank" do
       let(:plan_payload) { super().merge("startDate" => "") }
       let(:scope) { :approve }
 
@@ -829,9 +695,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
-    context "when the quote carries no dates and only one plan carries its own" do
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
-      let(:plan_payload) { super().merge("startDate" => 6.months.from_now.iso8601) }
+    context "when only one plan carries a start date" do
       let(:other_plan) { create(:plan, organization:) }
       let(:undated_plan_item) do
         {"id" => other_plan.id, "type" => "plan", "payload" => {"code" => other_plan.code}}
@@ -839,11 +703,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       let(:billing_items) { {"plans" => [plan_item, undated_plan_item]} }
       let(:scope) { :approve }
 
-      it "reports only the plan carrying none" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq(
-          {"billing_items.plans.1.payload.startDate": ["value_is_mandatory"]}
-        )
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 
@@ -994,6 +855,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns a currencies_does_not_match error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.coupons.0.id": ["currencies_does_not_match"]})
+      end
+
+      # AppliedCoupons::CreateService applies the coupon in the overridden currency, so a catalog
+      # coupon priced elsewhere is quoted by naming the deal's currency here.
+      context "when an override applies it in the version currency" do
+        let(:coupon_item) { super().merge("overrides" => {"amountCurrency" => "EUR"}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when an override applies it in a third currency" do
+        let(:coupon_item) { super().merge("overrides" => {"amountCurrency" => "GBP"}) }
+
+        it "returns a currencies_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.0.id": ["currencies_does_not_match"]})
+        end
       end
     end
 

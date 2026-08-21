@@ -367,7 +367,6 @@ RSpec.describe OrderForms::MarkAsSignedService do
             :approved,
             quote:,
             organization:,
-            end_date: 1.year.from_now.to_date,
             billing_items: {
               "walletCredits" => [{"payload" => {"expirationAt" => 1.month.from_now.iso8601}}]
             }
@@ -387,7 +386,14 @@ RSpec.describe OrderForms::MarkAsSignedService do
       context "when execute_at falls inside the deal" do
         let(:order_form) { create(:order_form, customer:, organization:, quote_version:) }
         let(:quote_version) do
-          create(:quote_version, :approved, quote:, organization:, end_date: 1.year.from_now.to_date)
+          create(
+            :quote_version,
+            :approved,
+            :with_subscription_creation_billing_items,
+            quote:,
+            organization:,
+            plan_end_date: 1.year.from_now.to_date.iso8601
+          )
         end
         let(:execution_mode) { "execute_in_lago" }
         let(:execute_at) { 1.month.from_now.iso8601 }
@@ -398,6 +404,20 @@ RSpec.describe OrderForms::MarkAsSignedService do
           expect(result).to be_success
           expect(result.order.execute_at).to be_within(1.second).of(Time.zone.parse(execute_at))
         end
+      end
+    end
+
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
       end
     end
   end

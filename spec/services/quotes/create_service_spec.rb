@@ -22,13 +22,9 @@ RSpec.describe Quotes::CreateService do
       billing_items: {},
       content: "Test content",
       order_type: :subscription_creation,
-      owners: [owner.id],
-      start_date:,
-      end_date:
+      owners: [owner.id]
     }
   end
-  let(:start_date) { Date.new(2025, 2, 11) }
-  let(:end_date) { Date.new(2025, 3, 12) }
 
   describe ".call" do
     let(:result) { create_service.call }
@@ -50,8 +46,6 @@ RSpec.describe Quotes::CreateService do
           expect(result.quote.current_version.content).to eq("Test content")
           expect(result.quote.current_version.billing_items).to eq({})
           expect(result.quote.current_version.currency).to eq("EUR")
-          expect(result.quote.current_version.start_date).to eq(start_date)
-          expect(result.quote.current_version.end_date).to eq(end_date)
         end
       end
 
@@ -79,6 +73,40 @@ RSpec.describe Quotes::CreateService do
         expect(result).to be_success
         expect(customer.billing_entity.default_currency).to eq("USD")
         expect(result.quote.current_version.currency).to eq("USD")
+      end
+
+      context "when the quote names another billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:, default_currency: "EUR") }
+        let(:create_params) { super().merge(billing_entity_id: billing_entity.id) }
+
+        it "falls back to that entity's default currency" do
+          expect(result).to be_success
+          expect(result.quote.current_version.currency).to eq("EUR")
+        end
+      end
+    end
+
+    context "when the quote names a billing entity", :premium do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:create_params) { super().merge(billing_entity_id: billing_entity.id) }
+
+      it "pins it on the version" do
+        expect(result).to be_success
+        expect(result.quote.current_version.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when the quote names an unknown billing entity", :premium do
+      let(:create_params) { super().merge(billing_entity_id: "00000000-0000-0000-0000-000000000000") }
+
+      it "returns a validation failure from the version validator" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+      end
+
+      it "does not create the quote" do
+        expect { result }.not_to change(Quote, :count)
       end
     end
 
@@ -180,6 +208,23 @@ RSpec.describe Quotes::CreateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.message).to eq("subscription_not_found")
+      end
+    end
+
+    context "when the version creation fails with a non-validation failure", :premium do
+      before do
+        allow(QuoteVersions::CreateService).to receive(:call!)
+          .and_raise(BaseService::ForbiddenFailure.new(BaseResult.new, code: "active_version_exists"))
+      end
+
+      it "surfaces the failure instead of letting it escape" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("active_version_exists")
+      end
+
+      it "rolls the quote back" do
+        expect { result }.not_to change(Quote, :count)
       end
     end
 

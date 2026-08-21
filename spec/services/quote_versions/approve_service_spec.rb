@@ -13,8 +13,8 @@ RSpec.describe QuoteVersions::ApproveService do
       :with_subscription_creation_billing_items,
       quote:,
       organization:,
-      start_date: Date.new(2026, 1, 1),
-      end_date: Date.new(2027, 1, 1)
+      plan_start_date: "2026-01-01",
+      plan_end_date: "2027-01-01"
     )
   end
 
@@ -125,9 +125,64 @@ RSpec.describe QuoteVersions::ApproveService do
       end
     end
 
+    context "when the expires_at lands on the deal expiration", :premium do
+      subject(:approve_service) { described_class.new(quote_version:, expires_at:) }
+
+      # The quoted plan ends on 2027-01-01 and the signing window has to close strictly before the
+      # deal expires, so the boundary day itself is refused.
+      let(:expires_at) { Time.utc(2027, 1, 1).end_of_day }
+
+      it "does not approve the quote version" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(expires_at: ["after_deal_expiration"])
+
+        quote_version.reload
+        expect(quote_version.approved?).to eq(false)
+        expect(quote_version.approved_at).to eq(nil)
+      end
+
+      it "does not create an order form" do
+        expect { result }.not_to change(OrderForm, :count)
+      end
+    end
+
+    context "when the order form creation fails with a non-validation failure", :premium do
+      before do
+        allow(OrderForms::CreateService).to receive(:call!)
+          .and_raise(BaseService::ForbiddenFailure.new(BaseResult.new, code: "feature_unavailable"))
+      end
+
+      it "surfaces the failure instead of letting it escape" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
+      end
+
+      it "rolls the approval back" do
+        result
+
+        quote_version.reload
+        expect(quote_version.draft?).to eq(true)
+        expect(quote_version.approved_at).to eq(nil)
+      end
+    end
+
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
+      end
+    end
+
     context "when the billing items are incomplete", :premium do
       let(:quote_version) do
-        create(:quote_version, quote:, organization:, start_date: Date.new(2026, 1, 1), end_date: Date.new(2027, 1, 1))
+        create(:quote_version, quote:, organization:)
       end
 
       it "does not approve the quote version" do
@@ -150,9 +205,7 @@ RSpec.describe QuoteVersions::ApproveService do
           :quote_version,
           :with_one_off_billing_items,
           quote:,
-          organization:,
-          start_date: Date.new(2026, 1, 1),
-          end_date: Date.new(2027, 1, 1)
+          organization:
         )
       end
 

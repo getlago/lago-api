@@ -63,6 +63,8 @@ module OrderForms
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
       result.single_validation_failure!(field: :order_form_id, error_code: "value_already_exist")
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private
