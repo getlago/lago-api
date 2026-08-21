@@ -90,6 +90,24 @@ RSpec.describe Invoices::VoidService do
           end.to have_enqueued_job(Invoices::ProviderTaxes::VoidJob).with(invoice:)
         end
 
+        it "does not enqueue an accounting void invoice job" do
+          expect do
+            void_service.call
+          end.not_to have_enqueued_job(Integrations::Aggregator::Invoices::VoidJob)
+        end
+
+        context "when the invoice syncs with an accounting integration" do
+          let(:integration) { create(:netsuite_integration, organization: invoice.organization, sync_invoices: true) }
+
+          before { create(:netsuite_customer, integration:, customer: invoice.customer) }
+
+          it "enqueues an accounting void invoice job" do
+            expect do
+              void_service.call
+            end.to have_enqueued_job(Integrations::Aggregator::Invoices::VoidJob).with(invoice:)
+          end
+        end
+
         it "marks the invoice's payment overdue as false" do
           expect { void_service.call }.to change(invoice, :payment_overdue).from(true).to(false)
         end
