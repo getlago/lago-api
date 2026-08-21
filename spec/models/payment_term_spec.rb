@@ -77,6 +77,35 @@ RSpec.describe PaymentTerm do
     end
   end
 
+  describe "#label" do
+    it "renders a localized sentence for each term type" do
+      expect(described_class.from_h(term_type: "due_on_receipt").label).to eq("Due on receipt")
+      expect(described_class.from_h(term_type: "net", days: 30).label).to eq("Payment due within 30 days")
+      expect(described_class.from_h(term_type: "end_of_month").label).to eq("Due at end of month")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 30).label).to eq("Due 30 days after end of month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 30).label).to eq("Due 30 days, end of month")
+    end
+
+    it "renders a net-0 term as a zero-day net sentence, not due on receipt" do
+      expect(described_class.from_h(term_type: "net", days: 0).label).to eq("Payment due within 0 days")
+    end
+
+    it "renders the month_offset variants for day_of_month" do
+      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 0).label)
+        .to eq("Due on the 15 of this month")
+      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15).label)
+        .to eq("Due on the 15 of the following month")
+      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 2).label)
+        .to eq("Due on the 15, 2 months after invoice")
+    end
+
+    it "renders in the current locale" do
+      I18n.with_locale(:fr) do
+        expect(described_class.from_h(term_type: "end_of_month").label).to eq("Payable fin de mois")
+      end
+    end
+  end
+
   describe "#due_date_for" do
     context "when due_on_receipt" do
       it "returns the issuing date" do

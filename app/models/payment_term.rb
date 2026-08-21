@@ -57,6 +57,15 @@ class PaymentTerm
     end
   end
 
+  # Localized sentence for the term in the current I18n locale.
+  def label
+    if term_type == "day_of_month"
+      I18n.t("invoice.payment_terms.day_of_month.#{month_offset_variant}", day: day_of_month, months: month_offset)
+    else
+      I18n.t("invoice.payment_terms.#{term_type}", days:)
+    end
+  end
+
   def due_date_for(issuing_date)
     issuing_date = issuing_date.to_date
 
@@ -75,6 +84,14 @@ class PaymentTerm
 
   def carries?(field)
     FIELDS_BY_TERM_TYPE.fetch(term_type, []).include?(field)
+  end
+
+  def month_offset_variant
+    case month_offset
+    when 0 then "same_month"
+    when 1 then "following_month"
+    else "months_after"
+    end
   end
 
   # Only day_of_month terms carry a month_offset.
