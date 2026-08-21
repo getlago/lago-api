@@ -19,14 +19,15 @@ RSpec.describe Subscriptions::BillingPeriods::UpsertService do
     expect { service_result }.to change(SubscriptionBillingPeriod, :count).by(2)
 
     current, upcoming = subscription.reload
-      .then { SubscriptionBillingPeriod.where(subscription_id: subscription.id).order(:charges_from).to_a }
+      .then { SubscriptionBillingPeriod.where(subscription_id: subscription.id).order(:period_from).to_a }
 
-    expect(current.charges_from).to be <= timestamp
-    expect(current.charges_to).to be >= timestamp
+    expect(current.period_from).to be <= timestamp
+    expect(current.period_to).to be >= timestamp
     expect(current.organization_id).to eq(subscription.organization_id)
+    expect(current.customer_id).to eq(subscription.customer_id)
 
-    expect(upcoming.charges_from).to be > current.charges_to
-    expect(upcoming.charges_from).to be <= current.charges_to + 1.day
+    expect(upcoming.period_from).to be > current.period_to
+    expect(upcoming.period_from).to be <= current.period_to + 1.day
   end
 
   it "is idempotent" do

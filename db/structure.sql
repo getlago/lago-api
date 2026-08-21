@@ -345,6 +345,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1c
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
 ALTER TABLE IF EXISTS ONLY public.product_filters DROP CONSTRAINT IF EXISTS fk_rails_050342349f;
+ALTER TABLE IF EXISTS ONLY public.subscription_billing_periods DROP CONSTRAINT IF EXISTS fk_rails_04e998b1d7;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_04388258ff;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
@@ -463,6 +464,7 @@ DROP INDEX IF EXISTS public.index_subscription_rate_cards_on_next_billing_at;
 DROP INDEX IF EXISTS public.index_subscription_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_subscription_fixed_charge_units_overrides_on_deleted_at;
 DROP INDEX IF EXISTS public.index_subscription_billing_periods_on_organization_id;
+DROP INDEX IF EXISTS public.index_subscription_billing_periods_on_customer_id;
 DROP INDEX IF EXISTS public.index_subscription_activation_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_sub_fc_units_overrides_on_sub_id_and_fc_id;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
@@ -791,6 +793,7 @@ DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trg
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
+DROP INDEX IF EXISTS public.index_customers_on_external_id_only;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
@@ -942,7 +945,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_type_8feb7b9623;
-DROP INDEX IF EXISTS public.idx_on_subscription_id_charges_from_61b8f07abf;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_period_from_63bcfaba9e;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_b41afd08e0;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
@@ -1881,11 +1884,22 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_amount',
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
+    'billable_metric_lifetime_usage_units',
     'wallet_balance_amount',
     'wallet_credits_balance',
     'wallet_ongoing_balance_amount',
-    'wallet_credits_ongoing_balance',
-    'billable_metric_lifetime_usage_units'
+    'wallet_credits_ongoing_balance'
+);
+
+
+--
+-- Name: usage_monitoring_triggered_alert_kinds; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
+    'triggered',
+    'resolved',
+    'seeded'
 );
 
 
@@ -5655,8 +5669,11 @@ CREATE TABLE public.subscription_billing_periods (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     subscription_id uuid NOT NULL,
-    charges_from timestamp(6) without time zone NOT NULL,
-    charges_to timestamp(6) without time zone NOT NULL,
+    customer_id uuid NOT NULL,
+    scope_type character varying,
+    scope_id uuid,
+    period_from timestamp(6) without time zone NOT NULL,
+    period_to timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -7517,10 +7534,10 @@ CREATE INDEX idx_on_subscription_id_bd763c5aa3 ON public.subscription_fixed_char
 
 
 --
--- Name: idx_on_subscription_id_charges_from_61b8f07abf; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_on_subscription_id_period_from_63bcfaba9e; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_on_subscription_id_charges_from_61b8f07abf ON public.subscription_billing_periods USING btree (subscription_id, charges_from);
+CREATE UNIQUE INDEX idx_on_subscription_id_period_from_63bcfaba9e ON public.subscription_billing_periods USING btree (subscription_id, period_from);
 
 
 --
@@ -8511,7 +8528,7 @@ CREATE INDEX index_customer_metadata_on_organization_id ON public.customer_metad
 -- Name: index_customers_by_cursor; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_customers_by_cursor ON public.customers USING btree (organization_id, created_at DESC, id) WHERE (deleted_at IS NULL);
+CREATE INDEX index_customers_by_cursor ON public.customers USING btree (organization_id, created_at DESC, id);
 
 
 --
@@ -8582,6 +8599,13 @@ CREATE INDEX index_customers_on_external_id ON public.customers USING btree (org
 --
 
 CREATE UNIQUE INDEX index_customers_on_external_id_and_organization_id ON public.customers USING btree (external_id, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_customers_on_external_id_only; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_external_id_only ON public.customers USING btree (external_id);
 
 
 --
@@ -10881,6 +10905,13 @@ CREATE INDEX index_subscription_activation_rules_on_organization_id ON public.su
 
 
 --
+-- Name: index_subscription_billing_periods_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscription_billing_periods_on_customer_id ON public.subscription_billing_periods USING btree (customer_id);
+
+
+--
 -- Name: index_subscription_billing_periods_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11618,6 +11649,14 @@ ALTER TABLE ONLY public.invoice_settlements
 
 ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
     ADD CONSTRAINT fk_rails_0480ef4ad3 FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id);
+
+
+--
+-- Name: subscription_billing_periods fk_rails_04e998b1d7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_billing_periods
+    ADD CONSTRAINT fk_rails_04e998b1d7 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
 
 
 --
@@ -14473,6 +14512,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260305161302'),
 ('20260305100007'),
 ('20260304074158'),
+('20260302163856'),
 ('20260227184913'),
 ('20260224134805'),
 ('20260220131101'),
