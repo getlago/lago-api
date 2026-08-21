@@ -672,6 +672,34 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#payment_connection_status" do
+    subject { customer.payment_connection_status }
+
+    let(:customer) { create(:customer, organization:) }
+
+    context "when the customer has no payment connection" do
+      it { is_expected.to eq("not_connected") }
+    end
+
+    context "when no payment connection is default" do
+      before { create(:stripe_customer, customer:, is_default: false) }
+
+      it { is_expected.to eq("not_connected") }
+    end
+
+    context "when a provider connection is default" do
+      before { create(:stripe_customer, customer:, is_default: true) }
+
+      it { is_expected.to eq("connected") }
+    end
+
+    context "when the manual connection is default" do
+      before { create(:manual_payment_provider_customer, customer:, is_default: true) }
+
+      it { is_expected.to eq("manual") }
+    end
+  end
+
   describe "#applicable_timezone" do
     subject(:customer) do
       described_class.new(billing_entity:, timezone: "Europe/Paris")
@@ -1441,40 +1469,6 @@ RSpec.describe Customer do
 
     it "returns nil for an unknown code" do
       expect(customer.payment_connection("unknown")).to be_nil
-    end
-  end
-
-  describe "#payment_connection_status" do
-    let(:customer) { create(:customer) }
-
-    context "when no connection is the default" do
-      it "returns not_connected" do
-        expect(customer.payment_connection_status).to eq("not_connected")
-      end
-    end
-
-    context "when the default is a provider connection" do
-      before { create(:stripe_customer, customer:, is_default: true) }
-
-      it "returns connected" do
-        expect(customer.payment_connection_status).to eq("connected")
-      end
-    end
-
-    context "when the default is the manual row" do
-      before do
-        PaymentProviderCustomers::BaseCustomer.create!(
-          customer:,
-          organization: customer.organization,
-          type: "PaymentProviderCustomers::BaseCustomer",
-          code: "lago_manual",
-          is_default: true
-        )
-      end
-
-      it "returns manual" do
-        expect(customer.payment_connection_status).to eq("manual")
-      end
     end
   end
 
