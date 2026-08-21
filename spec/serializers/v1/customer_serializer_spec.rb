@@ -55,6 +55,7 @@ RSpec.describe ::V1::CustomerSerializer do
       "timezone" => customer.timezone,
       "applicable_timezone" => customer.applicable_timezone,
       "net_payment_term" => customer.net_payment_term,
+      "payment_term" => customer.payment_term,
       "finalize_zero_amount_invoice" => customer.finalize_zero_amount_invoice,
       "tax_identification_number" => customer.tax_identification_number,
       "taxes" => customer.taxes.map { hash_including("lago_id" => it.id) },
