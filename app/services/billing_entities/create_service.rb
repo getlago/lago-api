@@ -26,6 +26,12 @@ module BillingEntities
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]
         billing_entity.einvoicing = params[:einvoicing] if params[:einvoicing]
 
+        PaymentTerms::AssignService.call(record: billing_entity, params:)
+        # Mirror the net_payment_term column default so a new entity never carries a NULL payment_term.
+        if billing_entity.payment_term.nil?
+          billing_entity.payment_term = PaymentTerm.from_net_payment_term(billing_entity.net_payment_term)&.to_h
+        end
+
         handle_eu_tax_management if params[:eu_tax_management]
         handle_base64_logo
 

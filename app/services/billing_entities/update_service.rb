@@ -69,6 +69,8 @@ module BillingEntities
           )
         end
 
+        PaymentTerms::AssignService.call(record: billing_entity, params:)
+
         if params.key?(:tax_codes)
           BillingEntities::Taxes::ManageTaxesService.call!(billing_entity:, tax_codes: params[:tax_codes])
         end
