@@ -38,7 +38,8 @@ module QuoteVersions
 
     delegate :quote, to: :quote_version
     delegate :customer, :organization, to: :quote
-    delegate :billing_entity, to: :customer
+    # The version names the entity issuing the deal, falling back to the customer's own.
+    delegate :billing_entity, to: :quote_version
 
     # Structured, locale-independent address parts. Formatting happens at read time in
     # QuoteVersions::MentionVariablesLocalizer.

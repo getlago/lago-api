@@ -91,6 +91,51 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       expect(variables["quote_date"]).to match(/\A\d{4}-\d{2}-\d{2}\z/)
     end
 
+    context "when the version names its own billing entity" do
+      let(:issuing_entity) do
+        create(
+          :billing_entity,
+          organization:,
+          name: "Globex Inc",
+          legal_name: "Globex Incorporated",
+          tax_identification_number: "US987654321",
+          email: "billing@globex.us.example",
+          address_line1: "1 Market Street",
+          zipcode: "94105",
+          city: "San Francisco",
+          state: "CA",
+          country: "US"
+        )
+      end
+      let(:quote_version) do
+        create(
+          :quote_version,
+          :with_subscription_creation_billing_items,
+          quote:,
+          organization:,
+          currency: "EUR",
+          billing_entity: issuing_entity,
+          plan_start_date: start_date&.iso8601,
+          plan_end_date: end_date&.iso8601
+        )
+      end
+
+      it "renders that entity rather than the customer's" do
+        expect(variables).to include(
+          "billing_entity_name" => "Globex Inc",
+          "billing_entity_legal_name" => "Globex Incorporated",
+          "billing_entity_tax_id" => "US987654321",
+          "billing_entity_email" => "billing@globex.us.example"
+        )
+      end
+
+      # The invoice derives its own term from Customer#applicable_net_payment_term, i.e. the
+      # customer's entity, so the quote has to promise the same thing.
+      it "keeps the payment term on the customer's own chain" do
+        expect(variables["commercial_terms_payment_terms"]).to eq(30)
+      end
+    end
+
     context "when the customer overrides the net payment term" do
       let(:customer_net_payment_term) { 45 }
 
@@ -225,6 +270,31 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
           "commercial_terms_start_date" => "2026-02-01",
           "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
         )
+      end
+
+      # The plan change bills under the target's entity, so the signed document has to name it too.
+      context "when the target subscription is bound to another entity" do
+        let(:target_entity) do
+          create(:billing_entity, organization:, name: "Globex Inc", legal_name: "Globex Incorporated")
+        end
+        let(:subscription) do
+          create(
+            :subscription,
+            organization:,
+            customer:,
+            plan: create(:plan, organization:, amount_currency: "EUR"),
+            subscription_at: Date.new(2026, 2, 1),
+            billing_entity: target_entity
+          )
+        end
+
+        it "renders the target's entity rather than the customer's" do
+          expect(target_entity).not_to eq(customer.billing_entity)
+          expect(variables).to include(
+            "billing_entity_name" => "Globex Inc",
+            "billing_entity_legal_name" => "Globex Incorporated"
+          )
+        end
       end
 
       context "when the plan carries its own start date" do

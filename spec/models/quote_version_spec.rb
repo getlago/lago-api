@@ -30,6 +30,7 @@ RSpec.describe QuoteVersion do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:quote)
+      expect(subject).to belong_to(:billing_entity).optional
       expect(subject).to have_one(:order_form)
     end
   end
@@ -96,6 +97,75 @@ RSpec.describe QuoteVersion do
       quote_version = create(:quote_version, quote:, organization: quote.organization)
 
       expect(quote_version.customer).to eq(quote.customer)
+    end
+  end
+
+  describe "#billing_entity" do
+    let(:quote) { create(:quote) }
+
+    it "falls back to the customer's billing entity" do
+      quote_version = create(:quote_version, quote:, organization: quote.organization)
+
+      expect(quote_version.billing_entity_id).to eq(nil)
+      expect(quote_version.billing_entity).to eq(quote.customer.billing_entity)
+    end
+
+    it "returns its own billing entity when the deal names one" do
+      billing_entity = create(:billing_entity, organization: quote.organization)
+      quote_version = create(:quote_version, quote:, organization: quote.organization, billing_entity:)
+
+      expect(quote_version.billing_entity).to eq(billing_entity)
+    end
+
+    # The plan change carries the target's binding over, so the document has to name the same issuer.
+    context "when the quote amends a subscription bound to another entity" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:target_entity) { create(:billing_entity, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, billing_entity: target_entity) }
+      let(:quote) do
+        create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment)
+      end
+
+      it "follows the target rather than the customer's own entity" do
+        quote_version = create(:quote_version, quote:, organization:)
+
+        expect(target_entity).not_to eq(customer.billing_entity)
+        expect(quote_version.billing_entity).to eq(target_entity)
+        expect(quote_version.applicable_billing_entity_id).to eq(target_entity.id)
+      end
+
+      # The column is optional and only amendments require it, so another order type can carry a
+      # subscription its execution then ignores. The document has to ignore it too.
+      %i[subscription_creation one_off].each do |order_type|
+        context "when a #{order_type} quote carries one anyway" do
+          let(:quote) { create(:quote, organization:, customer:, subscription:, order_type:) }
+
+          it "ignores it and follows the customer's own entity" do
+            quote_version = create(:quote_version, quote:, organization:)
+
+            expect(quote_version.billing_entity).to eq(customer.billing_entity)
+            expect(quote_version.applicable_billing_entity_id).to eq(customer.billing_entity_id)
+          end
+        end
+      end
+    end
+  end
+
+  describe "#applicable_billing_entity_id" do
+    let(:quote) { create(:quote) }
+
+    it "returns the customer's billing entity id when the deal names none" do
+      quote_version = create(:quote_version, quote:, organization: quote.organization)
+
+      expect(quote_version.applicable_billing_entity_id).to eq(quote.customer.billing_entity_id)
+    end
+
+    it "returns its own billing entity id when the deal names one" do
+      billing_entity = create(:billing_entity, organization: quote.organization)
+      quote_version = create(:quote_version, quote:, organization: quote.organization, billing_entity:)
+
+      expect(quote_version.applicable_billing_entity_id).to eq(billing_entity.id)
     end
   end
 end

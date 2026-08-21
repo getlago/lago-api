@@ -10,6 +10,7 @@ module V1
         version: model.version,
         status: model.status,
         currency: model.currency,
+        billing_entity_code: model.billing_entity&.code,
         void_reason: model.void_reason,
         approved_at: model.approved_at&.iso8601,
         voided_at: model.voided_at&.iso8601,

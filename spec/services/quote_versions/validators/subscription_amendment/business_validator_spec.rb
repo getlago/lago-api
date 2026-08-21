@@ -113,6 +113,20 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
       end
     end
 
+    # The target is already bound to an entity and the plan change carries that binding over, so a
+    # quoted entity could only move a running subscription to another numbering series.
+    context "when the quote version names a billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:quote_version) do
+        create(:quote_version, quote:, organization:, currency: "EUR", billing_items:, billing_entity:)
+      end
+
+      it "refuses the amendment" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({billing_entity_id: ["not_supported_for_order_type"]})
+      end
+    end
+
     context "when the quote carries no target subscription" do
       let(:quote) { build(:quote, organization:, customer:, order_type: :subscription_amendment) }
       let(:quote_version) do

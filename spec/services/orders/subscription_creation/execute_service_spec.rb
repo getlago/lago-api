@@ -109,6 +109,21 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(overridden_plan.charges.sole.properties["amount"]).to eq("30")
       end
 
+      context "when the override reprices the plan in another currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "USD") }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, currency: "USD", billing_items:)
+        end
+
+        it "bills the override plan in that currency" do
+          execute_service.call
+
+          overridden_plan = customer.subscriptions.sole.plan
+          expect(overridden_plan.parent_id).to eq(plan.id)
+          expect(overridden_plan.amount_currency).to eq("USD")
+        end
+      end
+
       # The transports that trigger an execution set different sources, and the billing services
       # resolve their input by code under api and by id otherwise. The snapshot must replay the
       # same either way.
@@ -120,6 +135,18 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
 
           expect(customer.subscriptions.sole.external_id).to eq("sub_ext_42")
           expect(order.reload.executed?).to eq(true)
+        end
+      end
+
+      # Approval no longer requires a start date, so this reaches execution: CreateService defaults the
+      # subscription date to the moment it runs.
+      context "when the plan states no start date" do
+        let(:plan_payload) { super().except("startDate") }
+
+        it "subscribes from now" do
+          execute_service.call
+
+          expect(customer.subscriptions.sole.subscription_at).to be_within(5.seconds).of(Time.current)
         end
       end
 
@@ -467,6 +494,24 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           expect(order.execution_record["applied_coupon_ids"]).to eq([applied_coupon.id])
         end
 
+        context "when the override applies the coupon in another currency" do
+          let(:billing_items) do
+            items = super()
+            items.merge(
+              "coupons" => [items["coupons"].sole.merge("overrides" => {"amountCents" => 15_000, "amountCurrency" => "USD"})]
+            )
+          end
+          let(:quote_version) do
+            create(:quote_version, :approved, quote:, organization:, currency: "USD", billing_items:)
+          end
+
+          it "grants it in that currency" do
+            execute_service.call
+
+            expect(customer.applied_coupons.sole.amount_currency).to eq("USD")
+          end
+        end
+
         context "when the coupon is discarded" do
           before { coupon.discard! }
 
@@ -481,6 +526,56 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
             expect(order.execution_record["errors"]).to eq(["coupon_not_found"])
           end
         end
+      end
+
+      context "when the deal names a billing entity" do
+        let(:issuing_entity) { create(:billing_entity, organization:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items:,
+            billing_entity: issuing_entity
+          )
+        end
+
+        it "pins the subscription to it" do
+          execute_service.call
+
+          expect(customer.subscriptions.sole.billing_entity_id).to eq(issuing_entity.id)
+        end
+
+        context "with a wallet credit" do
+          let(:billing_items) do
+            super().merge(
+              "walletCredits" => [
+                {
+                  "localId" => "d9169d94-b322-4d70-a2b1-9e6a58e3f74a",
+                  "type" => "wallet_credit",
+                  "payload" => {"currency" => "EUR", "rateAmount" => "1", "paidCredits" => "100", "grantedCredits" => "10"}
+                }
+              ]
+            )
+          end
+
+          it "pins the wallet to it too" do
+            execute_service.call
+
+            expect(customer.wallets.sole.billing_entity_id).to eq(issuing_entity.id)
+          end
+        end
+      end
+
+      # NULL means "follow the customer at billing time", so nothing is frozen onto the records.
+      it "leaves the subscription inheriting the customer's entity when the deal names none" do
+        execute_service.call
+
+        expect(quote_version.billing_entity_id).to eq(nil)
+        expect(customer.subscriptions.sole.billing_entity_id).to eq(nil)
+        expect(customer.subscriptions.sole.billing_entity).to eq(billing_entity)
       end
 
       context "with a wallet credit" do

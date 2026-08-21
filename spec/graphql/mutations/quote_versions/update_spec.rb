@@ -65,6 +65,67 @@ RSpec.describe Mutations::QuoteVersions::Update do
     end
   end
 
+  # The response payload is what the pages rendering a quote read, so the shape of billing_items after
+  # a currency change is asserted here rather than only at the service.
+  context "when the currency change realigns the billing items", :premium do
+    let(:organization) { membership.organization }
+    let(:quote) { create(:quote, organization:) }
+    let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+    let(:overrides) { {"amountCurrency" => "USD"} }
+    let(:quote_version) do
+      create(
+        :quote_version,
+        quote:,
+        organization:,
+        currency: "USD",
+        billing_items: {
+          "plans" => [
+            {
+              "id" => plan.id,
+              "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+              "type" => "plan",
+              "payload" => {"code" => plan.code, "startDate" => Date.current.iso8601},
+              "overrides" => overrides
+            }
+          ]
+        }
+      )
+    end
+    let(:input) { {id: quote_version.id, currency: "EUR"} }
+
+    let(:returned_overrides) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      ).dig("data", "updateQuoteVersion", "billingItems", "plans", 0, "overrides")
+    end
+
+    it "returns an empty overrides object rather than dropping the key" do
+      expect(returned_overrides).to eq({})
+      expect(returned_overrides).not_to be_nil
+    end
+
+    context "when the item also carries a negotiated price" do
+      let(:overrides) { {"amountCurrency" => "USD", "amountCents" => 150_000, "name" => "Enterprise deal"} }
+
+      it "keeps the negotiated values and only drops the currency" do
+        expect(returned_overrides).to eq({"amountCents" => 150_000, "name" => "Enterprise deal"})
+      end
+    end
+
+    context "when the deal moves to a currency the plan is not priced in" do
+      let(:overrides) { {"amountCents" => 150_000} }
+      let(:input) { {id: quote_version.id, currency: "GBP"} }
+
+      it "restates the currency alongside the negotiated price" do
+        expect(returned_overrides).to eq({"amountCents" => 150_000, "amountCurrency" => "GBP"})
+      end
+    end
+  end
+
   context "when quote version is not found", :premium do
     let(:input) do
       {

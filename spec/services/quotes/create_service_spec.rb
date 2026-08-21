@@ -74,6 +74,40 @@ RSpec.describe Quotes::CreateService do
         expect(customer.billing_entity.default_currency).to eq("USD")
         expect(result.quote.current_version.currency).to eq("USD")
       end
+
+      context "when the quote names another billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:, default_currency: "EUR") }
+        let(:create_params) { super().merge(billing_entity_id: billing_entity.id) }
+
+        it "falls back to that entity's default currency" do
+          expect(result).to be_success
+          expect(result.quote.current_version.currency).to eq("EUR")
+        end
+      end
+    end
+
+    context "when the quote names a billing entity", :premium do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:create_params) { super().merge(billing_entity_id: billing_entity.id) }
+
+      it "pins it on the version" do
+        expect(result).to be_success
+        expect(result.quote.current_version.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when the quote names an unknown billing entity", :premium do
+      let(:create_params) { super().merge(billing_entity_id: "00000000-0000-0000-0000-000000000000") }
+
+      it "returns a validation failure from the version validator" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+      end
+
+      it "does not create the quote" do
+        expect { result }.not_to change(Quote, :count)
+      end
     end
 
     context "when the quote is one_off", :premium do

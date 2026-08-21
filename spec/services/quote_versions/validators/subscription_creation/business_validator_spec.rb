@@ -150,6 +150,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    # Subscriptions::CreateService defaults the subscription date to the moment execution runs, so a
+    # deal that names none simply starts then.
     context "when the plan carries no start date" do
       let(:plan_payload) { super().except("startDate") }
 
@@ -160,11 +162,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       context "when the scope is approve" do
         let(:scope) { :approve }
 
-        it "requires a start date on the plan" do
-          expect(validator).not_to be_valid
-          expect(result.error.messages).to eq(
-            {"billing_items.plans.0.payload.startDate": ["value_is_mandatory"]}
-          )
+        it "is valid" do
+          expect(validator).to be_valid
         end
       end
     end
@@ -203,6 +202,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns a currencies_does_not_match error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
+      end
+
+      # Plans::OverrideService reprices the duplicated plan, so a catalog plan priced elsewhere is
+      # quoted by naming the deal's currency here.
+      context "when an override reprices the plan in the version currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "EUR") }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when an override reprices the plan in a third currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "GBP") }
+
+        it "returns a currencies_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.plans.0.id": ["currencies_does_not_match"]})
+        end
       end
     end
 
@@ -685,11 +703,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       let(:billing_items) { {"plans" => [plan_item, undated_plan_item]} }
       let(:scope) { :approve }
 
-      it "reports only the plan carrying none" do
-        expect(validator).not_to be_valid
-        expect(result.error.messages).to eq(
-          {"billing_items.plans.1.payload.startDate": ["value_is_mandatory"]}
-        )
+      it "is valid" do
+        expect(validator).to be_valid
       end
     end
 
@@ -840,6 +855,25 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       it "returns a currencies_does_not_match error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({"billing_items.coupons.0.id": ["currencies_does_not_match"]})
+      end
+
+      # AppliedCoupons::CreateService applies the coupon in the overridden currency, so a catalog
+      # coupon priced elsewhere is quoted by naming the deal's currency here.
+      context "when an override applies it in the version currency" do
+        let(:coupon_item) { super().merge("overrides" => {"amountCurrency" => "EUR"}) }
+
+        it "is valid" do
+          expect(validator).to be_valid
+        end
+      end
+
+      context "when an override applies it in a third currency" do
+        let(:coupon_item) { super().merge("overrides" => {"amountCurrency" => "GBP"}) }
+
+        it "returns a currencies_does_not_match error" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages).to eq({"billing_items.coupons.0.id": ["currencies_does_not_match"]})
+        end
       end
     end
 

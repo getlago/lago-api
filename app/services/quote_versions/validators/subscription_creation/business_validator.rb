@@ -6,6 +6,7 @@ module QuoteVersions
       class BusinessValidator < ::BaseValidator
         include Currencies
         include CurrencyValidation
+        include BillingEntityValidation
 
         def initialize(result, quote_version:, billing_items:, scope:)
           @quote_version = quote_version
@@ -18,6 +19,7 @@ module QuoteVersions
         # NOTE: payment terms are not validated yet, the quote-level field lands with LAGO-1529
         def valid?
           validate_currency
+          validate_billing_entity
           validate_plans
           validate_coupons
           validate_wallet_credits
@@ -56,7 +58,7 @@ module QuoteVersions
               next
             end
 
-            validate_plan_currency(plan, index)
+            validate_plan_currency(plan, plan_item, index)
             validate_minimum_commitment(plan, plan_item, index)
             validate_plan_dates(plan_item, index)
             validate_plan_payment_method(plan_item, index)
@@ -65,14 +67,19 @@ module QuoteVersions
           end
         end
 
-        # NOTE: overrides carry no plan-level currency, so the plan's own currency is the one
-        # billed: a EUR deal on a USD plan would invoice the customer in USD.
-        def validate_plan_currency(plan, index)
+        # Whatever currency the plan is priced in ends up billed, so it has to be the deal's own.
+        # A catalog plan priced elsewhere is quoted by overriding the currency, which
+        # Plans::OverrideService applies to the plan it duplicates for the subscription.
+        def validate_plan_currency(plan, plan_item, index)
           return if self.class.currency_list.exclude?(quote_version.currency)
 
-          if plan.amount_currency != quote_version.currency
+          if effective_plan_currency(plan, plan_item) != quote_version.currency
             add_error(field: plan_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        def effective_plan_currency(plan, plan_item)
+          plan_item.dig("overrides", "amountCurrency").presence || plan.amount_currency
         end
 
         # Plans::OverrideService builds a fresh Commitment rather than duplicating the plan's own,
@@ -265,21 +272,12 @@ module QuoteVersions
           )
         end
 
-        # The subscription date is the plan's own, so an approved plan carrying none could not
-        # produce a subscription at all.
-        def validate_plan_start_date_presence(plan_item, index)
-          return unless scope == :approve
-          return unless plan_item.dig("payload", "startDate").nil?
-
-          add_error(field: plan_field(index, "payload.startDate"), error_code: "value_is_mandatory")
-        end
-
         # Subscriptions::ValidateService requires the pair, compared as dates, to be strictly
         # increasing. An open-ended deal is legitimate, the subscription simply carries no ending
         # date, so only a plan stating both sides has a range to check.
+        # A plan stating no start date is left alone: Subscriptions::CreateService defaults the
+        # subscription date to the moment it runs, so the deal simply starts on execution.
         def validate_plan_dates(plan_item, index)
-          validate_plan_start_date_presence(plan_item, index)
-
           start_date = plan_item.dig("payload", "startDate")
           end_date = plan_item.dig("payload", "endDate")
 
@@ -333,7 +331,7 @@ module QuoteVersions
               next
             end
 
-            validate_coupon_currency(coupon, index)
+            validate_coupon_currency(coupon, coupon_item, index)
             validate_coupon_frequency(coupon, coupon_item, index)
             validate_coupon_preconditions(coupon, earlier_coupons, index)
             validate_coupon_snapshot(coupon, coupon_item, index) if scope == :approve
@@ -412,13 +410,20 @@ module QuoteVersions
           known_coupons_by_id.each_value.flat_map { |coupon| target_ids(coupon, attribute) }.uniq
         end
 
-        def validate_coupon_currency(coupon, index)
+        # The coupon is applied in whatever currency it carries, so it has to be the deal's own. A
+        # catalog coupon priced elsewhere is quoted by overriding the currency, which
+        # AppliedCoupons::CreateService applies to the coupon it grants.
+        def validate_coupon_currency(coupon, coupon_item, index)
           return unless coupon.fixed_amount?
           return if self.class.currency_list.exclude?(quote_version.currency)
 
-          if coupon.amount_currency != quote_version.currency
+          if effective_coupon_currency(coupon, coupon_item) != quote_version.currency
             add_error(field: coupon_field(index, "id"), error_code: "currencies_does_not_match")
           end
+        end
+
+        def effective_coupon_currency(coupon, coupon_item)
+          coupon_item.dig("overrides", "amountCurrency").presence || coupon.amount_currency
         end
 
         # The snapshot type is required at approve while the amount checks below follow the live

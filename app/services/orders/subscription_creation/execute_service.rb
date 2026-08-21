@@ -63,9 +63,16 @@ module Orders
           subscription_at: subscription_datetime(payload["startDate"]),
           ending_at: subscription_datetime(payload["endDate"]),
           payment_method: payment_method_params(payload),
+          billing_entity_id: quoted_billing_entity_id,
           plan_overrides: plan_overrides(item, plan).presence,
           usage_thresholds: usage_thresholds(item).presence
         }.compact
+      end
+
+      # The raw column, not the applicable one: a deal that named no entity leaves the subscription
+      # and the wallets inheriting the customer's at billing time, which is what NULL means here.
+      def quoted_billing_entity_id
+        order.quote_version.billing_entity_id
       end
 
       # The payload may carry a bare date. A date reaches a datetime attribute as midnight UTC,
@@ -101,6 +108,7 @@ module Orders
 
         {
           amount_cents: overrides["amountCents"],
+          amount_currency: overrides["amountCurrency"],
           invoice_display_name: overrides["invoiceDisplayName"],
           name: overrides["name"],
           description: overrides["description"],
@@ -220,11 +228,12 @@ module Orders
         end
       end
 
-      # amount_currency is left out on purpose so it falls back to the coupon's own currency,
-      # which approve validation pins to the deal currency.
+      # Only the override states a currency: the payload's own is the catalog snapshot, and
+      # AppliedCoupons::CreateService already falls back to the live coupon's when none is given.
       def coupon_params(item)
         {
           amount_cents: effective_value(item, "amountCents"),
+          amount_currency: item.dig("overrides", "amountCurrency"),
           percentage_rate: effective_value(item, "percentageRate"),
           frequency: effective_value(item, "frequency"),
           frequency_duration: effective_value(item, "frequencyDuration")
@@ -244,6 +253,7 @@ module Orders
           organization_id: order.organization_id,
           customer: order.customer,
           currency: payload["currency"] || order.currency,
+          billing_entity_id: quoted_billing_entity_id,
           name: payload["name"],
           rate_amount: payload["rateAmount"],
           paid_credits: payload["paidCredits"],
