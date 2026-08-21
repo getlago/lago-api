@@ -139,5 +139,87 @@ RSpec.describe ChargeFilters::CascadeDispatcher do
         )
       end
     end
+
+    # A metric change dropped the `tier` key, leaving two filters describing the same thing.
+    # Keyed by predicate one of them vanishes from the diff; keyed by code both survive.
+    context "when two filters share a predicate" do
+      let(:gold) { {values: us_values, properties: {"amount" => "10"}, invoice_display_name: "Gold", code: "us_gold_1a2b3c4d"} }
+      let(:silver) { {values: us_values, properties: {"amount" => "20"}, invoice_display_name: "Silver", code: "us_silver_5e6f7a8b"} }
+
+      context "when one of them is repriced" do
+        let(:before) { [gold, silver] }
+        let(:after) { [gold, silver.merge(properties: {"amount" => "25"})] }
+
+        it "enqueues a job for the repriced one only" do
+          expect {
+            described_class.call(charge:, before:, after:)
+          }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
+            charge.id, "update", us_values, {"amount" => "20"}, {"amount" => "25"}, "Silver", "us_silver_5e6f7a8b"
+          ).exactly(:once)
+        end
+
+        it "leaves the other one alone" do
+          expect {
+            described_class.call(charge:, before:, after:)
+          }.to have_enqueued_job(ChargeFilters::CascadeJob).exactly(:once)
+        end
+      end
+
+      context "when one of them is removed" do
+        let(:before) { [gold, silver] }
+        let(:after) { [gold] }
+
+        it "enqueues a destroy for the one that went" do
+          expect {
+            described_class.call(charge:, before:, after:)
+          }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
+            charge.id, "destroy", us_values, {"amount" => "20"}, nil, "Silver", "us_silver_5e6f7a8b"
+          ).exactly(:once)
+        end
+
+        it "does not touch the one that stayed" do
+          expect {
+            described_class.call(charge:, before:, after:)
+          }.not_to have_enqueued_job(ChargeFilters::CascadeJob).with(
+            charge.id, anything, anything, anything, anything, anything, "us_gold_1a2b3c4d"
+          )
+        end
+      end
+    end
+
+    # Codes are per charge, so a filter that is replaced rather than edited comes back with a
+    # new one, and the pair of jobs is what moves the override off the old predicate
+    context "when a coded filter is replaced by another" do
+      let(:before) { [{values: us_values, properties: {"amount" => "10"}, invoice_display_name: "US", code: "us_1a2b3c4d"}] }
+      let(:after) { [{values: eu_values, properties: {"amount" => "10"}, invoice_display_name: "EU", code: "eu_9c8d7e6f"}] }
+
+      it "enqueues a destroy for the old code and a create for the new one" do
+        expect {
+          described_class.call(charge:, before:, after:)
+        }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
+          charge.id, "destroy", us_values, {"amount" => "10"}, nil, "US", "us_1a2b3c4d"
+        ).and have_enqueued_job(ChargeFilters::CascadeJob).with(
+          charge.id, "create", eu_values, nil, {"amount" => "10"}, "EU", "eu_9c8d7e6f"
+        )
+      end
+    end
+
+    context "when coded and codeless filters are mixed" do
+      let(:coded) { {values: us_values, properties: {"amount" => "10"}, invoice_display_name: "US", code: "us_1a2b3c4d"} }
+      let(:codeless) { {values: eu_values, properties: {"amount" => "20"}, invoice_display_name: "EU"} }
+
+      let(:before) { [coded, codeless] }
+      let(:after) { [coded.merge(properties: {"amount" => "15"}), codeless.merge(properties: {"amount" => "25"})] }
+
+      it "diffs each half on its own terms" do
+        expect {
+          described_class.call(charge:, before:, after:)
+        }.to have_enqueued_job(ChargeFilters::CascadeJob).with(
+          charge.id, "update", us_values, {"amount" => "10"}, {"amount" => "15"}, "US", "us_1a2b3c4d"
+        ).and have_enqueued_job(ChargeFilters::CascadeJob).with(
+          charge.id, "update", eu_values, {"amount" => "20"}, {"amount" => "25"}, "EU", nil
+        )
+      end
+    end
   end
 end

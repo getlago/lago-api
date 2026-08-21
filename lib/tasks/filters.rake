@@ -24,6 +24,39 @@ namespace :filters do
     end
   end
 
+  # The filters that make the cascade fail: a plan's own filter with no code, on a charge that has
+  # overrides to cascade to. Editing one enqueues an update the service cannot address, since the
+  # code is what identifies the copy on the override, so the job dies on MissingParentCode.
+  #
+  # Filters on the overrides themselves are not listed. Those cost nothing — the cascade simply
+  # does not reach them — whereas these stop a plan edit from propagating at all.
+  desc "Report the plan filters with no code to cascade with"
+  task report_parent_codes: :environment do
+    scope = ChargeFilter.unscope(:order)
+      .where(code: nil, deleted_at: nil)
+      .joins(charge: :plan)
+      .where(charges: {parent_id: nil, deleted_at: nil}, plans: {deleted_at: nil})
+      .where("EXISTS (SELECT 1 FROM charges children WHERE children.parent_id = charge_filters.charge_id AND children.deleted_at IS NULL)")
+
+    puts "##################################"
+    puts "Plan filters with no code, on charges that have overrides: #{scope.count}"
+    puts ""
+
+    by_organization = scope.group(:organization_id).count
+    if by_organization.any?
+      puts "By organization:"
+      Organization.where(id: by_organization.keys).order(:name).find_each do |organization|
+        puts "- #{organization.name}: #{by_organization[organization.id]} filters"
+      end
+
+      puts ""
+      puts "The charges to look at first:"
+      scope.group(:charge_id).order(Arel.sql("count(*) DESC")).limit(25).count.each do |charge_id, filters|
+        puts "- charge #{charge_id}: #{filters} filters"
+      end
+    end
+  end
+
   # Charge filters the backfill deliberately left alone. Two situations produce them, and neither
   # is a failure:
   #
@@ -38,7 +71,10 @@ namespace :filters do
   # Cleaning up the first kind and running upgrade:perform_required_jobs again converges.
   desc "Report the charge filters left without a code"
   task report_codes: :environment do
-    scope = ChargeFilter.where(code: nil, deleted_at: nil)
+    # `unscope(:order)`, because the model orders by `updated_at` by default and `order` adds to
+    # that rather than replacing it. Grouping by `charge_id` then leaves `updated_at` outside the
+    # GROUP BY, which Postgres rejects.
+    scope = ChargeFilter.unscope(:order).where(code: nil, deleted_at: nil)
 
     puts "##################################"
     puts "Charge filters without a code: #{scope.count}"
