@@ -30,7 +30,9 @@ RSpec.describe Invoices::CreateGeneratingService do
       expect(result.invoice.timezone).to eq(customer.applicable_timezone)
       expect(result.invoice.issuing_date).to eq(datetime.to_date)
       expect(result.invoice.payment_due_date).to eq(datetime.to_date)
-      expect(result.invoice.net_payment_term).to eq(customer.applicable_net_payment_term)
+      expect(result.invoice.net_payment_term).to eq(0)
+      expect(result.invoice.payment_term).to eq("term_type" => "due_on_receipt")
+      expect(result.invoice.payment_term_source).to eq("default")
     end
 
     context "with customer timezone" do
@@ -74,14 +76,70 @@ RSpec.describe Invoices::CreateGeneratingService do
       end
     end
 
-    context "with applicable net payment term" do
-      let(:customer) { create(:customer, net_payment_term: 3) }
+    context "when the customer has a payment term" do
+      let(:customer) { create(:customer, net_payment_term: 3, payment_term: {term_type: "net", days: 3}) }
 
-      it "assigns the payment due date based on the net payment term" do
+      it "snapshots the customer term and computes the due date from it" do
         result = create_service.call
 
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 3)
+        expect(result.invoice.payment_term_source).to eq("customer")
         expect(result.invoice.net_payment_term).to eq(3)
-        expect(result.invoice.payment_due_date.to_s).to eq((datetime + 3.days).to_date.to_s)
+        expect(result.invoice.payment_due_date).to eq(datetime.to_date + 3.days)
+      end
+    end
+
+    context "when only the billing entity has a payment term" do
+      before do
+        customer.billing_entity.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+      end
+
+      it "snapshots the entity term with a null alias for a non-net type" do
+        result = create_service.call
+
+        expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(result.invoice.payment_term_source).to eq("billing_entity")
+        expect(result.invoice.net_payment_term).to be_nil
+        expect(result.invoice.payment_due_date).to eq(datetime.to_date.end_of_month)
+      end
+    end
+
+    context "when a resolved payment term is passed in" do
+      subject(:create_service) do
+        described_class.new(
+          customer:, invoice_type:, currency:, datetime:,
+          payment_term: PaymentTerm.from_h(term_type: "net", days: 45),
+          payment_term_source: "subscription"
+        )
+      end
+
+      before { allow(PaymentTerms::ResolveService).to receive(:call!) }
+
+      it "snapshots it without resolving from the customer" do
+        result = create_service.call
+
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 45)
+        expect(result.invoice.payment_term_source).to eq("subscription")
+        expect(result.invoice.net_payment_term).to eq(45)
+        expect(result.invoice.payment_due_date).to eq(datetime.to_date + 45.days)
+        expect(PaymentTerms::ResolveService).not_to have_received(:call!)
+      end
+
+      context "when the passed source is nil" do
+        subject(:create_service) do
+          described_class.new(
+            customer:, invoice_type:, currency:, datetime:,
+            payment_term: PaymentTerm.from_h(term_type: "net", days: 45),
+            payment_term_source: nil
+          )
+        end
+
+        it "keeps the nil source instead of resolving one" do
+          result = create_service.call
+
+          expect(result.invoice.payment_term_source).to be_nil
+          expect(PaymentTerms::ResolveService).not_to have_received(:call!)
+        end
       end
     end
 

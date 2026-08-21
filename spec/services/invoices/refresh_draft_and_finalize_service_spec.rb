@@ -104,6 +104,34 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
+    context "with a snapshotted payment term" do
+      before do
+        invoice.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
+      end
+
+      it "computes the due date from the snapshot, ignoring a later customer term change" do
+        invoice.customer.update!(payment_term: {term_type: "net", days: 3}, net_payment_term: 3)
+
+        freeze_time do
+          expect { finalize_service.call }
+            .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
+        end
+      end
+    end
+
+    context "with a pre-feature draft (no jsonb snapshot)" do
+      before do
+        invoice.update!(payment_term: nil, net_payment_term: 10)
+      end
+
+      it "derives the due date from the invoice's integer alias" do
+        freeze_time do
+          expect { finalize_service.call }
+            .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
+        end
+      end
+    end
+
     context "with a recurring invoice" do
       let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment:) }
 
