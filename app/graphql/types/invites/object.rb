@@ -11,6 +11,7 @@ module Types
       field :id, ID, null: false
 
       field :email, String, null: false
+      field :existing_user, Boolean, null: false, method: :existing_user?
       field :roles, [String], null: false
       field :status, Types::Invites::StatusTypeEnum, null: false
       field :token, String, null: false

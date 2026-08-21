@@ -118,12 +118,12 @@ RSpec.describe UsersService do
       context "without active memberships" do
         before { create(:membership, user:, status: :revoked) }
 
-        it "updates the password" do
+        it "keeps the existing password" do
           result = described_class.call(:register_from_invite, invite, password)
 
           expect(result.user).to eq user
-          expect(result.user.authenticate(password).id).to eq(user.id)
-          expect(result.user.authenticate("old_password")).to be false
+          expect(result.user.authenticate(password)).to eq false
+          expect(result.user.authenticate("old_password").id).to eq(user.id)
           expect(result.token).to be_present
         end
       end
