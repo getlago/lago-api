@@ -54,7 +54,12 @@ Rails.application.routes.draw do
           end
         end
       end
+      get "subscriptions/cycles", to: "subscriptions#cycles"
       resources :subscriptions, only: %i[index show], param: :external_id
+      delete "subscriptions/:external_id", to: "subscriptions#terminate"
+      get "subscriptions/:external_id/cycles", to: "subscriptions#cycles"
+      post "subscriptions/:external_id/bill", to: "subscriptions#bill"
+      post "subscriptions/bill", to: "subscriptions#bill"
     end
 
     namespace :v2, module: :v1 do

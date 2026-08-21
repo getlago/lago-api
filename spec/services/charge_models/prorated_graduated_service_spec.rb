@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::ProratedGraduatedService do
   subject(:apply_graduated_service) do
     described_class.apply(
-      charge:,
+      structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end

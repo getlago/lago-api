@@ -60,7 +60,7 @@ module ChargeModels
     end
 
     def number_of_units
-      @number_of_units ||= (charge.prorated? && result.full_units_number) ? result.full_units_number : units
+      @number_of_units ||= (structure.prorated && result.full_units_number) ? result.full_units_number : units
     end
   end
 end
