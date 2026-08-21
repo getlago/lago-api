@@ -781,6 +781,37 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when the billable metric limitations are not sent" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+
+      before do
+        CurrentContext.source = "api"
+
+        create(:wallet_target, wallet:, billable_metric:)
+      end
+
+      context "when applies_to is omitted" do
+        let(:params) { {id: wallet.id, name: "new name"} }
+
+        it "keeps the existing wallet targets" do
+          expect { subject }.not_to change(WalletTarget, :count)
+          expect(result).to be_success
+          expect(wallet.reload.billable_metrics).to eq([billable_metric])
+        end
+      end
+
+      context "when applies_to is sent without the billable metric codes" do
+        let(:params) { {id: wallet.id, applies_to: {fee_types: %w[charge]}} }
+
+        it "keeps the existing wallet targets" do
+          expect { subject }.not_to change(WalletTarget, :count)
+          expect(result).to be_success
+          expect(wallet.reload.allowed_fee_types).to eq(%w[charge])
+          expect(wallet.reload.billable_metrics).to eq([billable_metric])
+        end
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, organization:, customer:) }
       let(:payment_method_params) do
