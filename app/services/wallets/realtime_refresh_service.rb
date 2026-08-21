@@ -18,14 +18,14 @@ module Wallets
   class RealtimeRefreshService < BaseService
     Result = BaseResult[:wallets]
 
-    # The Kafka trigger and the Postgres projection upsert are two sinks of
+    # The Kafka trigger and the ClickHouse bucket upsert are two sinks of
     # the same RisingWave epoch with no cross-sink ordering guarantee: a fast
-    # consumer can refresh BEFORE the projection row landed and compute the
+    # consumer can refresh BEFORE the bucket row landed and compute the
     # previous epoch's usage. expected_ingested_at maps subscription_id =>
     # the trigger's last_ingested_at watermark; the refresh waits (bounded)
-    # until projections catch up to it.
-    PROJECTION_WAIT_TIMEOUT = 5.seconds
-    PROJECTION_WAIT_INTERVAL = 0.1
+    # until the buckets catch up to it.
+    BUCKET_WAIT_TIMEOUT = 5.seconds
+    BUCKET_WAIT_INTERVAL = 0.1
 
     def initialize(organization_id:, customer_id:, wallet_codes: [], expected_ingested_at: {})
       @organization_id = organization_id
@@ -44,7 +44,7 @@ module Wallets
       return result unless customer.wallets.active.exists?
       return result if customer.error_details.tax_error.exists?
 
-      wait_for_projections
+      wait_for_buckets
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?
         Rails.logger.warn(
@@ -64,24 +64,25 @@ module Wallets
 
     attr_reader :organization_id, :customer_id, :wallet_codes, :expected_ingested_at
 
-    def wait_for_projections
+    def wait_for_buckets
       pending = expected_ingested_at.dup
       return if pending.empty?
 
-      deadline = Time.current + PROJECTION_WAIT_TIMEOUT
+      deadline = Time.current + BUCKET_WAIT_TIMEOUT
 
       loop do
         pending.delete_if do |subscription_id, watermark_ms|
           # Millisecond-granularity comparison on integers: float Time
           # conversion is off by up to a microsecond and can never match.
-          # uncached: Karafka consumes inside the Rails executor, which turns
-          # on the AR query cache — without it, a poll that runs before the
-          # projection lands is replayed from cache every iteration and the
-          # wait can only time out.
-          UsageRealtimeProjection.uncached do
-            UsageRealtimeProjection
+          # No FINAL needed: any row version at the watermark proves the
+          # epoch's upsert landed. uncached: Karafka consumes inside the
+          # Rails executor, which turns on the AR query cache — without it,
+          # a poll that runs before the bucket lands is replayed from cache
+          # every iteration and the wait can only time out.
+          Clickhouse::UsageBucket.uncached do
+            Clickhouse::UsageBucket
               .where(subscription_id:)
-              .where("(EXTRACT(EPOCH FROM last_ingested_at) * 1000)::bigint >= ?", watermark_ms.to_i)
+              .where("toUnixTimestamp64Milli(last_ingested_at) >= ?", watermark_ms.to_i)
               .exists?
           end
         end
@@ -89,13 +90,13 @@ module Wallets
 
         if Time.current > deadline
           Rails.logger.warn(
-            "[wallets] projections did not catch up before refresh " \
+            "[wallets] usage buckets did not catch up before refresh " \
             "customer_id=#{customer_id} pending=#{pending.keys.inspect}"
           )
           break
         end
 
-        sleep PROJECTION_WAIT_INTERVAL
+        sleep BUCKET_WAIT_INTERVAL
       end
     end
   end

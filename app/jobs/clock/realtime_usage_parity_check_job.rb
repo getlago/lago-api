@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Clock
-  class UsageProjectionsParityCheckJob < ClockJob
+  class RealtimeUsageParityCheckJob < ClockJob
     unique :until_executed, on_conflict: :log
 
     def perform
-      UsageProjections::ParityCheckService.call
+      RealtimeUsage::ParityCheckService.call
     end
   end
 end
