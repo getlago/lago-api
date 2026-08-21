@@ -93,12 +93,11 @@ RSpec.describe Emails::ResendService do
           billing_entity.save!
         end
 
-        it "returns a not allowed failure" do
-          result = service.call
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("email_settings_disabled")
+        it "sends the email successfully" do
+          expect do
+            result = service.call
+            expect(result).to be_success
+          end.to have_enqueued_mail(InvoiceMailer, :created)
         end
       end
 
