@@ -18,6 +18,9 @@ module Auth
         check_code
         check_okta_integration(result.email)
         check_invite(result.email)
+
+        raise ValidationError, "existing_user_must_authenticate" if existing_user_outside_organization?
+
         query_okta_access_token
         check_userinfo(result.email)
 
@@ -38,6 +41,13 @@ module Auth
       private
 
       attr_reader :invite_token, :code, :state
+
+      def existing_user_outside_organization?
+        user = User.find_by(email: result.email)
+        return false if user.nil?
+
+        !user.memberships.active.exists?(organization_id: result.invite.organization_id)
+      end
     end
   end
 end

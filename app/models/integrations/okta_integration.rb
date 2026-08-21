@@ -4,6 +4,7 @@ module Integrations
   class OktaIntegration < BaseIntegration
     validates :client_secret, :client_id, :domain, :organization_name, presence: true
     validate :domain_uniqueness
+    validate :host_format
 
     settings_accessors :client_id, :domain, :organization_name, :host
     secrets_accessors :client_secret
@@ -24,6 +25,14 @@ module Integrations
         .exists?
 
       errors.add(:domain, "domain_not_unique") if okta_integration
+    end
+
+    def host_format
+      configured_host = get_from_settings("host")
+      return if configured_host.blank?
+
+      url_segment = /\A[a-zA-Z0-9.-]+\z/
+      errors.add(:host, "host_invalid") unless configured_host.match?(url_segment)
     end
   end
 end
