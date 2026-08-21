@@ -66,13 +66,25 @@ class QuoteVersion < ApplicationRecord
   #
   # Every hop is guarded: a version with no quote yet reads as having no entity.
   def billing_entity
-    super || quote&.subscription&.billing_entity || quote&.customer&.billing_entity
+    super || amended_subscription&.billing_entity || quote&.customer&.billing_entity
   end
 
   def applicable_billing_entity_id
     billing_entity_id ||
-      quote&.subscription&.applicable_billing_entity_id ||
+      amended_subscription&.applicable_billing_entity_id ||
       quote&.customer&.billing_entity_id
+  end
+
+  private
+
+  # Only an amendment restates a running subscription. Any other order type may still carry one,
+  # since the column is optional and only amendments require it, and its execution ignores that
+  # subscription entirely: the document has to ignore it too rather than name an issuer nothing bills
+  # under.
+  def amended_subscription
+    return unless quote&.order_type == "subscription_amendment"
+
+    quote.subscription
   end
 end
 

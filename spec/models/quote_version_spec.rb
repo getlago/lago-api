@@ -134,6 +134,21 @@ RSpec.describe QuoteVersion do
         expect(quote_version.billing_entity).to eq(target_entity)
         expect(quote_version.applicable_billing_entity_id).to eq(target_entity.id)
       end
+
+      # The column is optional and only amendments require it, so another order type can carry a
+      # subscription its execution then ignores. The document has to ignore it too.
+      %i[subscription_creation one_off].each do |order_type|
+        context "when a #{order_type} quote carries one anyway" do
+          let(:quote) { create(:quote, organization:, customer:, subscription:, order_type:) }
+
+          it "ignores it and follows the customer's own entity" do
+            quote_version = create(:quote_version, quote:, organization:)
+
+            expect(quote_version.billing_entity).to eq(customer.billing_entity)
+            expect(quote_version.applicable_billing_entity_id).to eq(customer.billing_entity_id)
+          end
+        end
+      end
     end
   end
 
