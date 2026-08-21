@@ -3,6 +3,7 @@
 module QuoteVersions
   class UpdateService < BaseService
     include OrderForms::Premium
+    include Currencies
 
     attr_reader :quote_version, :params
 
@@ -58,13 +59,20 @@ module QuoteVersions
     # stored payload is realigned rather than resolved later from the deal.
     #
     # This runs before the structural pass, on a payload that is whatever JSON the caller sent, so
-    # anything not shaped as expected is left exactly as it arrived for the validator to report.
+    # anything the validator would reject is left exactly as it arrived for it to report -- shapes and
+    # values alike. Correcting a stale currency is the job here; silently accepting a malformed one
+    # would mean the caller gets a saved quote instead of the error the schema exists to raise.
     #
     # Every update realigns, not only the ones changing the currency: the payload is rewritten
     # wholesale by whoever saves it, so a copy the deal no longer matches can arrive at any time and
     # would otherwise sit there until it blocked approval. Realigning is idempotent, so an already
     # coherent payload is left untouched.
     def realign_billing_items_currency!
+      # Nothing coherent to realign against: a blank currency is still editable at this scope, and an
+      # invalid one is about to fail validation, so stamping either across the payload would only
+      # spread a value the deal does not have.
+      return if self.class.currency_list.exclude?(quote_version.currency)
+
       items = billing_items
       return if items.empty?
 
@@ -118,8 +126,17 @@ module QuoteVersions
     # Only the currency key is ever touched, so a negotiated amount, a charge override or anything
     # else the deal states survives a currency change untouched. The figure is not converted.
     def with_currency_override(item, catalog_currency:)
-      overrides = item["overrides"] || {}
-      return item unless overrides.is_a?(Hash)
+      submitted = item["overrides"]
+      # Null is a shape the schema accepts, so it realigns like an absent key. Anything else that is
+      # not an object does not, and coercing it into one here would quietly answer the question the
+      # structural pass is about to ask.
+      return item unless submitted.nil? || submitted.is_a?(Hash)
+
+      overrides = submitted || {}
+      stated = overrides["amountCurrency"]
+      # Same for the value it states: a currency that is not one is kept as submitted, rather than
+      # replaced by a valid payload the caller never sent.
+      return item unless stated.nil? || self.class.currency_list.include?(stated)
 
       realigned = if catalog_currency == quote_version.currency
         overrides.except("amountCurrency")
@@ -134,8 +151,6 @@ module QuoteVersions
       item.merge("overrides" => realigned)
     end
 
-    # A credit that stated no currency keeps stating none: the execution service falls back to the
-    # deal's own, so there is nothing stale to realign.
     def realigned_wallet_credits(wallet_credits)
       return wallet_credits unless wallet_credits.is_a?(Array)
 
@@ -143,7 +158,12 @@ module QuoteVersions
         next item unless item.is_a?(Hash)
 
         payload = item["payload"]
-        next item unless payload.is_a?(Hash) && payload["currency"].present?
+        next item unless payload.is_a?(Hash)
+
+        # Only a credit stating a real currency has anything stale to realign. One stating none keeps
+        # stating none, because execution falls back to the deal's own, and one stating something that
+        # is not a currency keeps that too, for the validator to report.
+        next item unless self.class.currency_list.include?(payload["currency"])
 
         item.merge("payload" => payload.merge("currency" => quote_version.currency))
       end

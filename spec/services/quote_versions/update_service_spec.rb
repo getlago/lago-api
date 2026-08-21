@@ -163,8 +163,8 @@ RSpec.describe QuoteVersions::UpdateService do
       context "when the catalog plan is already priced in the new currency" do
         let(:plan) { create(:plan, organization:, amount_currency: "USD") }
 
-        # An overrides object would make the execution service mint a duplicate override plan for a
-        # plan that needs none.
+        # An item that never carried the key, on a deal its catalog already matches, is left exactly
+        # as it arrived rather than gaining an empty object.
         it "leaves the item without an overrides object" do
           expect(result).to be_success
           expect(result.quote_version.billing_items.dig("plans", 0, "overrides")).to eq(nil)
@@ -315,6 +315,96 @@ RSpec.describe QuoteVersions::UpdateService do
         end
       end
 
+      # The realignment runs before the structural pass, so it must not overwrite a value the
+      # validator would have rejected: correcting a stale currency is its job, silently accepting a
+      # malformed one is not.
+      context "when the submitted value is one the validator would reject" do
+        let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+        let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_currency: "EUR") }
+
+        context "with an unknown currency on a plan override" do
+          let(:quote_version) do
+            create(
+              :quote_version,
+              quote:,
+              organization:,
+              currency: "EUR",
+              billing_items: {"plans" => [plan_item.merge("overrides" => {"amountCurrency" => "DOUBLOON"})]}
+            )
+          end
+
+          it "leaves it for the validator" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({"billing_items.plans.0.overrides.amountCurrency": ["invalid_currency"]})
+          end
+        end
+
+        context "with an unknown currency on a coupon override" do
+          let(:quote_version) do
+            create(
+              :quote_version,
+              quote:,
+              organization:,
+              currency: "EUR",
+              billing_items: {
+                "coupons" => [
+                  {
+                    "id" => coupon.id,
+                    "localId" => "c1",
+                    "type" => "coupon",
+                    "payload" => {"code" => coupon.code},
+                    "overrides" => {"amountCurrency" => "DOUBLOON"}
+                  }
+                ]
+              }
+            )
+          end
+
+          it "leaves it for the validator" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({"billing_items.coupons.0.overrides.amountCurrency": ["invalid_currency"]})
+          end
+        end
+
+        context "with an unknown currency on a wallet credit" do
+          let(:quote_version) do
+            create(
+              :quote_version,
+              quote:,
+              organization:,
+              currency: "EUR",
+              billing_items: {
+                "walletCredits" => [
+                  {"localId" => "w1", "type" => "wallet_credit", "payload" => {"currency" => "DOUBLOON", "paidCredits" => "100"}}
+                ]
+              }
+            )
+          end
+
+          it "leaves it for the validator" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({"billing_items.walletCredits.0.payload.currency": ["invalid_currency"]})
+          end
+        end
+
+        context "with an overrides that is neither an object nor null" do
+          let(:quote_version) do
+            create(
+              :quote_version,
+              quote:,
+              organization:,
+              currency: "EUR",
+              billing_items: {"plans" => [plan_item.merge("overrides" => false)]}
+            )
+          end
+
+          it "leaves it for the validator" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({"billing_items.plans.0.overrides": ["invalid_type"]})
+          end
+        end
+      end
+
       context "when a wallet credit states its own currency" do
         let(:quote_version) do
           create(
@@ -378,6 +468,17 @@ RSpec.describe QuoteVersions::UpdateService do
         it "leaves it without an overrides object" do
           expect(result).to be_success
           expect(result.quote_version.billing_items.dig("coupons", 0, "overrides")).to eq(nil)
+        end
+      end
+
+      # A draft may legitimately have no currency yet, and realigning against one would stamp an
+      # explicit null across every item the catalog does not match.
+      context "when the deal currency is cleared" do
+        let(:update_params) { {currency: nil} }
+
+        it "leaves the billing items as submitted" do
+          expect(result).to be_success
+          expect(result.quote_version.billing_items).to eq({"plans" => [plan_item]})
         end
       end
 
