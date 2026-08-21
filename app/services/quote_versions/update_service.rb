@@ -108,9 +108,15 @@ module QuoteVersions
 
     # The override states the deal currency only while the catalog record is priced in another one.
     # Dropping it once the two agree matters as much as setting it: an override left behind states a
-    # currency the deal no longer uses, and fails validation exactly as a missing one did. The key
-    # goes away with it so the item stops carrying an overrides object it no longer needs, which is
-    # what keeps the execution service from minting a duplicate override plan.
+    # currency the deal no longer uses, and fails validation exactly as a missing one did.
+    #
+    # Emptying the overrides leaves an empty object rather than removing the key. Everything reading
+    # the payload treats a missing key, an empty object and nil alike, so the shape is chosen for the
+    # readers that render the quote: they reach for `overrides.name` and a key that disappeared takes
+    # the whole page down with it.
+    #
+    # Only the currency key is ever touched, so a negotiated amount, a charge override or anything
+    # else the deal states survives a currency change untouched. The figure is not converted.
     def with_currency_override(item, catalog_currency:)
       overrides = item["overrides"] || {}
       return item unless overrides.is_a?(Hash)
@@ -121,8 +127,9 @@ module QuoteVersions
         overrides.merge("amountCurrency" => quote_version.currency)
       end
 
+      # An item that never carried the key, on a deal the catalog already matches, is left exactly as
+      # it arrived rather than gaining an empty object.
       return item if realigned == overrides
-      return item.except("overrides") if realigned.empty?
 
       item.merge("overrides" => realigned)
     end

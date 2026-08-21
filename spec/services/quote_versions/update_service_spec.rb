@@ -185,9 +185,11 @@ RSpec.describe QuoteVersions::UpdateService do
           )
         end
 
-        it "drops the override along with the empty overrides object" do
+        # An empty object, not a dropped key: the pages rendering the quote reach for
+        # `overrides.name`, and a key that disappeared takes them down.
+        it "drops the override and leaves the overrides empty" do
           expect(result).to be_success
-          expect(result.quote_version.billing_items["plans"].sole).not_to have_key("overrides")
+          expect(result.quote_version.billing_items.dig("plans", 0, "overrides")).to eq({})
         end
 
         context "when the item carries other overrides too" do
@@ -233,10 +235,83 @@ RSpec.describe QuoteVersions::UpdateService do
             )
           end
 
-          it "drops it too" do
+          it "drops it too and leaves the overrides empty" do
             expect(result).to be_success
-            expect(result.quote_version.billing_items["coupons"].sole).not_to have_key("overrides")
+            expect(result.quote_version.billing_items.dig("coupons", 0, "overrides")).to eq({})
           end
+        end
+      end
+
+      # The figure itself is never converted, so a plan negotiated at 150000 USD becomes 150000 EUR.
+      # What must not happen is losing it, which would silently revert the deal to list price.
+      context "when the item carries a negotiated price and charge overrides" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "50"}) }
+        let(:negotiated) do
+          {
+            "amountCents" => 150_000,
+            "name" => "Enterprise deal",
+            "charges" => [
+              {"billableMetricCode" => billable_metric.code, "chargeModel" => charge.charge_model, "properties" => {"amount" => "30"}}
+            ]
+          }
+        end
+        # The override resolves its charge through the payload snapshot, so the item has to carry one.
+        let(:snapshotted) do
+          plan_item.merge(
+            "payload" => plan_item["payload"].merge(
+              "charges" => [
+                {"id" => charge.id, "billableMetric" => {"code" => billable_metric.code}, "chargeModel" => charge.charge_model}
+              ]
+            )
+          )
+        end
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {"plans" => [snapshotted.merge("overrides" => negotiated)]}
+          )
+        end
+
+        it "keeps every negotiated value and only restates the currency" do
+          expect(result).to be_success
+
+          overrides = result.quote_version.billing_items.dig("plans", 0, "overrides")
+          expect(overrides).to eq(negotiated.merge("amountCurrency" => "USD"))
+        end
+      end
+
+      context "when a coupon carries a negotiated amount" do
+        let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_currency: "EUR") }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items: {
+              "coupons" => [
+                {
+                  "id" => coupon.id,
+                  "localId" => "c1",
+                  "type" => "coupon",
+                  "payload" => {"code" => coupon.code},
+                  "overrides" => {"amountCents" => 15_000, "frequency" => "once"}
+                }
+              ]
+            }
+          )
+        end
+
+        it "keeps it and only restates the currency" do
+          expect(result).to be_success
+
+          expect(result.quote_version.billing_items.dig("coupons", 0, "overrides")).to eq(
+            {"amountCents" => 15_000, "frequency" => "once", "amountCurrency" => "USD"}
+          )
         end
       end
 
