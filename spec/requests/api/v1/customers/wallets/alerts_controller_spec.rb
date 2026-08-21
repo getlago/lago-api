@@ -348,7 +348,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
               thresholds: [{value: 2000}]
             },
             {
-              code: "duplicated",
+              code: "other",
               alert_type: "wallet_balance_amount",
               thresholds: [{value: 3000}]
             }
@@ -365,6 +365,26 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json[:error_details]).to match(
           "1": match(params: params[:alerts][1], errors: include("invalid_type")),
           "2": match(params: params[:alerts][2], errors: include("alert_already_exists"))
+        )
+      end
+    end
+
+    context "when two alerts of different types share a code" do
+      let(:params) do
+        {
+          alerts: [
+            {code: "duplicated", alert_type: "wallet_balance_amount", thresholds: [{value: 1000}]},
+            {code: "duplicated", alert_type: "wallet_credits_balance", thresholds: [{value: 2000}]}
+          ]
+        }
+      end
+
+      it "returns an error naming the code" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to match(
+          "1": match(params: params[:alerts][1], errors: include("value_already_exist"))
         )
       end
     end
