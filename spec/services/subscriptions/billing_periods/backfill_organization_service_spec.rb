@@ -17,8 +17,33 @@ RSpec.describe Subscriptions::BillingPeriods::BackfillOrganizationService do
     expect(result.failed_count).to eq(0)
   end
 
-  it "skips subscriptions that are not active" do
+  it "skips subscriptions the writer would refuse" do
     create(:subscription, :pending, organization:, customer:, plan:)
+
+    expect(result.processed_count).to eq(1)
+  end
+
+  # Backdated events keep arriving for these during the grace period, so an organization enabled
+  # today would otherwise leave them with no covering period at all.
+  it "materializes the final period of a recently terminated subscription" do
+    create(
+      :subscription, :terminated,
+      organization:, customer:, plan:,
+      started_at: 2.months.ago,
+      terminated_at: 3.days.ago
+    )
+
+    expect { result }.to change(SubscriptionBillingPeriod, :count).by(3)
+    expect(result.processed_count).to eq(2)
+  end
+
+  it "skips a subscription terminated before the grace period" do
+    create(
+      :subscription, :terminated,
+      organization:, customer:, plan:,
+      started_at: 6.months.ago,
+      terminated_at: 2.months.ago
+    )
 
     expect(result.processed_count).to eq(1)
   end

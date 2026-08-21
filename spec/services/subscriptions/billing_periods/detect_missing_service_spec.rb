@@ -88,6 +88,113 @@ RSpec.describe Subscriptions::BillingPeriods::DetectMissingService do
     end
   end
 
+  # A terminated subscription has its final period clamped to the termination, so nothing covers
+  # now and the active probe cannot see it. It gets one of its own.
+  context "when a recently terminated subscription has its final period" do
+    let(:subscription) do
+      create(
+        :subscription, :terminated,
+        organization:, customer:, plan:,
+        started_at: 2.months.ago,
+        terminated_at: 3.days.ago
+      )
+    end
+
+    before do
+      create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: 1.month.ago,
+        period_to: subscription.terminated_at
+      )
+    end
+
+    it "neither enqueues nor reports" do
+      allow(Rails.logger).to receive(:warn)
+
+      expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+      expect(result.missing_count).to eq(0)
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
+  context "when a recently terminated subscription has no final period" do
+    let(:subscription) do
+      create(
+        :subscription, :terminated,
+        organization:, customer:, plan:,
+        started_at: 2.months.ago,
+        terminated_at: 3.days.ago
+      )
+    end
+
+    before { subscription }
+
+    it "enqueues a refresh for it" do
+      expect { result }.to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+        .with(subscription.id)
+    end
+
+    it "counts and reports it apart from the active ones" do
+      allow(Rails.logger).to receive(:warn)
+
+      expect(result.missing_count).to eq(1)
+      expect(Rails.logger).to have_received(:warn)
+        .with(/1 terminated subscriptions without their final period/)
+    end
+  end
+
+  # The writer stores no period for one terminated exactly when a period opens: it would start and
+  # end on the same instant. The preceding period ends on the second before, which is why that is
+  # the instant probed.
+  context "when a terminated subscription collapsed its final period" do
+    let(:terminated_at) { Time.current.beginning_of_month }
+
+    let(:subscription) do
+      create(
+        :subscription, :terminated,
+        organization:, customer:, plan:,
+        started_at: 2.months.ago,
+        terminated_at:
+      )
+    end
+
+    before do
+      create(
+        :subscription_billing_period,
+        subscription:,
+        period_from: terminated_at - 1.month,
+        period_to: terminated_at - 1.second
+      )
+    end
+
+    it "neither enqueues nor reports" do
+      allow(Rails.logger).to receive(:warn)
+
+      expect { result }.not_to have_enqueued_job(Subscriptions::BillingPeriods::UpsertJob)
+      expect(result.missing_count).to eq(0)
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
+  # The writer refuses it, so reporting it would keep the count away from zero forever.
+  context "when a subscription was terminated before the grace period" do
+    let(:subscription) do
+      create(
+        :subscription, :terminated,
+        organization:, customer:, plan:,
+        started_at: 6.months.ago,
+        terminated_at: 2.months.ago
+      )
+    end
+
+    before { subscription }
+
+    it "ignores it" do
+      expect(result.missing_count).to eq(0)
+    end
+  end
+
   context "when the subscription belongs to another organization" do
     before { create(:subscription, status: :active) }
 

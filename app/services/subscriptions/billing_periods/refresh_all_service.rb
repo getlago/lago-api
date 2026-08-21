@@ -63,12 +63,7 @@ module Subscriptions
 
         scope = scope.where("subscriptions.id > ?", cursor) if cursor
 
-        # Bounded the way the writer is: it skips a subscription terminated longer ago than the
-        # grace period, so enqueueing one buys a job that loads it and returns. An entity that has
-        # been billing for years owns far more of those than it owns live subscriptions.
-        scope.where(status: :active).or(
-          scope.where(status: :terminated, terminated_at: UpsertService::TERMINATED_GRACE_PERIOD.ago..)
-        )
+        UpsertService.maintainable(scope)
       end
     end
   end

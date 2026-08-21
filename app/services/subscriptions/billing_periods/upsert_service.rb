@@ -15,6 +15,19 @@ module Subscriptions
       # processor keeps terminated subscriptions cached for.
       TERMINATED_GRACE_PERIOD = 1.month
 
+      # The subscriptions this service will actually write for, so that a caller fanning out over a
+      # scope does not buy a job per subscription that `skip?` refuses. An organization that has been
+      # billing for years owns far more subscriptions terminated long ago than it owns live ones.
+      def self.maintainable(scope, at: Time.current)
+        scope.where(status: :active).or(recently_terminated(scope, at:))
+      end
+
+      # The terminated half of `maintainable`, on its own for a caller that only wants those: their
+      # final period can still move, and they can still receive backdated events.
+      def self.recently_terminated(scope, at: Time.current)
+        scope.where(status: :terminated, terminated_at: (at - TERMINATED_GRACE_PERIOD)..)
+      end
+
       def initialize(subscription:, timestamp: Time.current)
         @subscription = subscription
         @timestamp = timestamp
@@ -153,6 +166,12 @@ module Subscriptions
           elsif subscription.terminated?
             # DatesService clamps charges_to to terminated_at, so probing past it repeats the
             # current period instead of yielding the next one.
+            #
+            # The clamp shortens the final period rather than leaving it at its natural end, which
+            # moves the boundary of a row that is already stored. That is safe for a consumer
+            # aggregating usage by period: Events::PostProcessService only attaches an event to a
+            # terminated subscription while `terminated_at >= event.timestamp`, so the window the
+            # clamp removes can never hold usage. The same reason is why the next period goes.
             [current]
           else
             following = build_period(current.period_to + 1.second)

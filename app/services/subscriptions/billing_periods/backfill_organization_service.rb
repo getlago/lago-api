@@ -22,7 +22,12 @@ module Subscriptions
         processed = 0
         failed = 0
 
-        organization.subscriptions.active.includes(:plan, :customer).find_each(batch_size:) do |subscription|
+        # Recently terminated subscriptions are in: they still receive backdated events during the
+        # grace period, so an organization enabled today would otherwise leave those events with no
+        # covering period at all.
+        scope = UpsertService.maintainable(organization.subscriptions)
+
+        scope.includes(:plan, :customer).find_each(batch_size:) do |subscription|
           Subscriptions::BillingPeriods::UpsertService.call!(subscription:)
           processed += 1
         rescue => e
