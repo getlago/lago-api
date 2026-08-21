@@ -148,24 +148,26 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_charges_and_filters(codes: nil, include_all_history: false)
+      def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
         # Implementation relies directly on the events_enriched_expanded table,
         # so we delegate the implementation to the ClickhouseEnrichedStore
         Events::Stores::ClickhouseEnrichedStore.new(
           subscription:,
           boundaries:
-        ).distinct_charges_and_filters(codes:, include_all_history:)
+        ).distinct_charges_and_filters(codes:, include_all_history:, with_last_seen_at:)
       end
 
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
       # of the period. Only properties present in the filter_keys are considered, so the result
       # holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
-      # last_seen_at is the enriched_at of the most recent event in the combination.
+      # last_seen_at is the enriched_at of the most recent event in the combination. With
+      # with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
+      # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
         return [] if codes.empty?
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -182,7 +184,7 @@ module Events
             selects << ActiveRecord::Base.sanitize_sql_array(["properties[?] AS prop_#{index}", key.to_s])
             group_columns << "prop_#{index}"
           end
-          selects << "MAX(enriched_at) AS last_seen_at"
+          selects << "MAX(enriched_at) AS last_seen_at" if with_last_seen_at
 
           scope.select(selects.join(", ")).group(group_columns.join(", ")).map do |row|
             combination = {}
@@ -191,7 +193,7 @@ module Events
               combination[key] = value if value.present?
             end
 
-            [row.code, combination, row.read_attribute("last_seen_at")]
+            [row.code, combination, (row.read_attribute("last_seen_at") if with_last_seen_at)]
           end
         end
       end

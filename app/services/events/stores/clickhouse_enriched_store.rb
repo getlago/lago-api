@@ -152,7 +152,9 @@ module Events
 
       # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
       # enriched_at of the most recent event for that charge/filter in the period.
-      def distinct_charges_and_filters(codes: nil, include_all_history: false)
+      # With with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
+      # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
+      def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
         lower_bound = include_all_history ? nil : from_datetime
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
@@ -161,8 +163,14 @@ module Events
             .where(timestamp: lower_bound..to_datetime)
 
           scope = scope.where(code: codes) unless codes.nil?
-          scope.group("charge_id", "charge_filter_id")
-            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("MAX(enriched_at)"))
+          scope = scope.group("charge_id", "charge_filter_id")
+
+          if with_last_seen_at
+            scope.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("MAX(enriched_at)"))
+          else
+            scope.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+              .map { |charge_id, filter_id| [charge_id, filter_id, nil] }
+          end
         end
       end
 
