@@ -197,6 +197,20 @@ RSpec.describe DataExports::Csv::ResolveFeeBillingPeriodService do
         expect(result.from_datetime).to eq(Time.zone.parse("2026-06-22 00:00:00 UTC"))
         expect(result.to_datetime).to eq(Time.zone.parse("2026-07-21 23:59:59 UTC"))
       end
+
+      context "when the stored boundaries include an offset" do
+        let(:properties) do
+          {
+            "from_datetime" => "2026-08-04T22:00:00-04:00",
+            "to_datetime" => "2026-08-04T23:00:00-04:00"
+          }
+        end
+
+        it "preserves the calendar dates expressed by the stored boundaries" do
+          expect(result.from_datetime.to_date).to eq(Date.new(2026, 8, 4))
+          expect(result.to_datetime.to_date).to eq(Date.new(2026, 8, 4))
+        end
+      end
     end
   end
 end
