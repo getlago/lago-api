@@ -182,20 +182,27 @@ RSpec.describe BillingEntities::UpdateService do
 
         before do
           billing_entity.update!(net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
-          allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
         end
 
-        it "updates the corresponding draft invoices" do
-          current_date = DateTime.parse("22 Jun 2022")
+        it "persists the new term on both columns" do
+          result = update_service.call
 
-          travel_to(current_date) do
-            result = update_service.call
-            expect(result).to be_success
+          expect(result).to be_success
+          expect(result.billing_entity.net_payment_term).to eq(2)
+          expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
+        end
 
-            expect(result.billing_entity.net_payment_term).to eq(2)
-            expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
-            expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity:, net_payment_term: 2)
-          end
+        it "does not rewrite open draft invoices (snapshot-freeze)" do
+          draft = create(:invoice, :draft, customer:, billing_entity:, payment_term: {term_type: "net", days: 30}, net_payment_term: 30, issuing_date: Time.current.to_date, payment_due_date: Time.current.to_date + 30.days)
+
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(draft.reload).to have_attributes(
+            payment_term: {"term_type" => "net", "days" => 30},
+            net_payment_term: 30,
+            payment_due_date: Time.current.to_date + 30.days
+          )
         end
       end
     end

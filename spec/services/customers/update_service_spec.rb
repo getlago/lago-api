@@ -539,15 +539,17 @@ RSpec.describe Customers::UpdateService do
         end
       end
 
-      it "updates the net payment term of all draft invoices" do
-        create(:invoice, :draft, customer:, net_payment_term: 30)
-        create(:invoice, customer:, net_payment_term: 30)
-        create(:invoice, :draft, customer:, net_payment_term: 30)
+      it "does not rewrite open draft invoices (snapshot-freeze)" do
+        draft = create(:invoice, :draft, customer:, payment_term: {term_type: "net", days: 30}, net_payment_term: 30, issuing_date: Time.current.to_date, payment_due_date: Time.current.to_date + 30.days)
 
         result = customers_service.call
 
         expect(result).to be_success
-        expect(result.customer.invoices.draft.pluck(:net_payment_term)).to eq([8, 8])
+        expect(draft.reload).to have_attributes(
+          payment_term: {"term_type" => "net", "days" => 30},
+          net_payment_term: 30,
+          payment_due_date: Time.current.to_date + 30.days
+        )
       end
     end
 
