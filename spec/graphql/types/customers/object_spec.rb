@@ -255,23 +255,22 @@ RSpec.describe Types::Customers::Object do
     end
 
     context "when the customer has no payment connection" do
-      it "returns a placeholder manual element and not_connected status" do
+      it "returns an empty list and not_connected status" do
         data = execute
 
         expect(data["connectionStatus"]).to eq("not_connected")
-        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
-        expect(data["paymentProviderCustomers"].first["isDefault"]).to be(false)
+        expect(data["paymentProviderCustomers"]).to be_empty
       end
     end
 
     context "when the customer has a default provider connection" do
       before { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
 
-      it "prepends the manual placeholder to the real connections" do
+      it "returns the real connection" do
         data = execute
 
         expect(data["connectionStatus"]).to eq("connected")
-        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(%w[lago_manual stripe_eu])
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["stripe_eu"])
       end
     end
 

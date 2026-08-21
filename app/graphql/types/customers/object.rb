@@ -158,26 +158,6 @@ module Types
         object.active_subscriptions.count
       end
 
-      # The payment list always surfaces a "manual" option so the UI can select it. When the
-      # customer has no persisted manual connection, a non-persisted placeholder is prepended.
-      def payment_provider_customers
-        connections = object.payment_provider_customers.to_a
-        return connections if connections.any?(&:manual?)
-
-        [manual_connection_placeholder, *connections]
-      end
-
-      def manual_connection_placeholder
-        {
-          id: "#{object.id}-manual",
-          code: ::PaymentProviderCustomers::BaseCustomer::MANUAL_CODE,
-          is_default: false,
-          provider_customer_id: nil,
-          provider_payment_methods: nil,
-          sync_with_provider: nil
-        }
-      end
-
       def provider_customer # rubocop:disable GraphQL/ResolverMethodLength
         case object&.payment_provider&.to_sym
         when :stripe
