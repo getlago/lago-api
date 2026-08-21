@@ -67,7 +67,16 @@ de:
     paid_tax_invoice: Bezahlte Steuerrechnung
     pay_with_bank_transfer: Zahlung per Banküberweisung
     payment_term: Zahlungsfrist
-    payment_term_days: "%{net_payment_term} Tage"
+    payment_terms:
+      day_of_month:
+        following_month: Fällig am %{day}. des Folgemonats
+        months_after: Fällig am %{day}., %{months} Monate nach Rechnung
+        same_month: Fällig am %{day}. dieses Monats
+      days_end_of_month: Zahlbar %{days} Tage zum Monatsende
+      due_on_receipt: Zahlbar bei Erhalt
+      end_of_month: Zahlbar zum Monatsende
+      net: Zahlbar innerhalb von %{days} Tagen
+      net_end_of_month: Zahlbar %{days} Tage nach Monatsende
     percentage:
       adjustment_per_transaction: Anpassung für Min/Max pro Transaktion
       fee_per_transaction: Feste Gebühr pro Transaktion

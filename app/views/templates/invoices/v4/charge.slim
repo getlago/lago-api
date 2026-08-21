@@ -437,7 +437,7 @@ html
               td.body-2 = I18n.l(issuing_date, format: :default)
             tr
               td.body-1 = I18n.t('invoice.payment_term')
-              td.body-2 = I18n.t('invoice.payment_term_days', net_payment_term:)
+              td.body-2 = snapshotted_payment_term.label
         .invoice-information-column
           table.invoice-information-table
             - if customer.metadata.displayable.any?

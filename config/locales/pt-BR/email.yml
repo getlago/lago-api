@@ -64,10 +64,6 @@ pt-BR:
         already_paid: Se você já fez o pagamento, por favor desconsidere este email.
         hello: Olá %{customer_name},
         pay_amount: Pagar saldo
-        payment_terms:
-          one: Nossos termos de pagamento contratualmente acordados são de %{count} dia.
-          other: Nossos termos de pagamento contratualmente acordados são de %{count} dias.
-          zero: Nossos termos de pagamento contratualmente acordados exigem pagamento na geração da fatura.
         remaining_amount: Valor restante a pagar
         reminder_overdue_balance: Este é um lembrete da equipe financeira de %{billing_entity_name} de que algumas faturas estão em atraso.
         subject: Seu saldo em atraso de %{billing_entity_name}

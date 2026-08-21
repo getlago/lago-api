@@ -67,7 +67,16 @@ it:
     paid_tax_invoice: Fattura fiscale pagata
     pay_with_bank_transfer: Paga con bonifico bancario
     payment_term: Termine di pagamento
-    payment_term_days: "%{net_payment_term} giorni"
+    payment_terms:
+      day_of_month:
+        following_month: Pagamento il %{day} del mese successivo
+        months_after: Pagamento il %{day}, %{months} mesi dopo la fattura
+        same_month: Pagamento il %{day} di questo mese
+      days_end_of_month: Pagamento a %{days} giorni fine mese
+      due_on_receipt: Pagamento alla ricezione
+      end_of_month: Pagamento a fine mese
+      net: Pagamento entro %{days} giorni
+      net_end_of_month: Pagamento %{days} giorni dopo fine mese
     percentage:
       adjustment_per_transaction: Adeguamento per min/max per transazione
       fee_per_transaction: Tassa fissa per transazione
