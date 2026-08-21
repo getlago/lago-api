@@ -23,6 +23,72 @@ RSpec.describe Api::V1::CustomersController do
 
     include_examples "requires API permission", "customer", "write"
 
+    context "with a structured payment_term" do
+      before { create_params[:payment_term] = {term_type: "day_of_month", day_of_month: 15, month_offset: 2} }
+
+      it "writes the term and returns it with a null alias" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "day_of_month", day_of_month: 15, month_offset: 2)
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a payment_term carrying an unexpected field" do
+      before { create_params[:payment_term] = {term_type: "end_of_month", days: 3} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["unexpected_fields"])
+      end
+    end
+
+    context "with a non-hash payment_term" do
+      before { create_params[:payment_term] = "net 30" }
+
+      it "returns a validation error instead of silently dropping the value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a null payment_term" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, payment_term: nil) }
+
+      it "clears the term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a null payment_term alongside a net_payment_term (alias matrix row 9)" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: 20, payment_term: nil) }
+
+      it "lets payment_term win and clears the term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
     context "when firstname and lastname contain null bytes" do
       let(:create_params) do
         {
