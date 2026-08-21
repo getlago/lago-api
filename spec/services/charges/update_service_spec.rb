@@ -214,6 +214,25 @@ RSpec.describe Charges::UpdateService do
             expect { subject }.not_to change { charge.reload.code }
           end
         end
+
+        context "when plan is attached to a pending subscription" do
+          before { create(:subscription, :pending, plan:) }
+
+          it "does not update charge code" do
+            expect { subject }.not_to change { charge.reload.code }
+          end
+        end
+
+        context "when plan is attached only to terminated and canceled subscriptions" do
+          before do
+            create(:subscription, :terminated, plan:)
+            create(:subscription, :canceled, plan:)
+          end
+
+          it "updates charge code" do
+            expect { subject }.to change { charge.reload.code }.to("updated_code")
+          end
+        end
       end
 
       context "when cascade is true" do

@@ -773,11 +773,14 @@ RSpec.describe Api::V1::PlansController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:plan][:fixed_charges].count).to eq(2)
-        expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 1 updated")
-        expect(json[:plan][:fixed_charges].first[:taxes].first[:code]).to eq(tax.code)
-        expect(json[:plan][:fixed_charges].last[:invoice_display_name]).to eq("Fixed charge 2")
-        expect(json[:plan][:fixed_charges].last[:taxes]).to be_empty
+        # NOTE: `has_many :fixed_charges` is unordered, so sort before asserting on positions.
+        json_fixed_charges = json[:plan][:fixed_charges].sort_by { |fc| fc[:invoice_display_name] }
+
+        expect(json_fixed_charges.count).to eq(2)
+        expect(json_fixed_charges.first[:invoice_display_name]).to eq("Fixed charge 1 updated")
+        expect(json_fixed_charges.first[:taxes].first[:code]).to eq(tax.code)
+        expect(json_fixed_charges.last[:invoice_display_name]).to eq("Fixed charge 2")
+        expect(json_fixed_charges.last[:taxes]).to be_empty
       end
     end
 
