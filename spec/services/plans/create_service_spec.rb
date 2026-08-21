@@ -959,4 +959,24 @@ RSpec.describe Plans::CreateService do
       end
     end
   end
+
+  context "when the organization uses the product catalog" do
+    let(:create_args) do
+      {
+        organization_id: organization.id,
+        name: "Catalog plan",
+        code: "catalog_plan",
+        amount_currency: "USD"
+      }
+    end
+
+    before { organization.enable_feature_flag!(:product_catalog) }
+
+    it "creates a product_catalog plan without plan-level billing fields" do
+      result = plans_service.call
+
+      expect(result).to be_success
+      expect(result.plan).to have_attributes(pricing_type: "product_catalog", interval: nil, amount_cents: nil)
+    end
+  end
 end

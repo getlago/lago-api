@@ -80,6 +80,26 @@ RSpec.describe Api::V1::PlansController do
       end
     end
 
+    context "when the organization uses the product catalog" do
+      let(:create_params) do
+        {
+          name: "Data Growth",
+          code: "data_growth",
+          amount_currency: "USD"
+        }
+      end
+
+      before { organization.enable_feature_flag!(:product_catalog) }
+
+      it "creates a product_catalog plan without the legacy billing fields" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:lago_id]).to be_present
+        expect(json[:plan][:code]).to eq("data_growth")
+      end
+    end
+
     context "when interval is present" do
       let(:interval) { "weekly" }
 
