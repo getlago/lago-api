@@ -121,7 +121,7 @@ module Api
       private
 
       def create_params
-        params.expect(customer: [
+        permitted = params.expect(customer: [
           :account_type,
           :external_id,
           :name,
@@ -191,6 +191,20 @@ module Api
           tax_codes: [],
           invoice_custom_section_codes: []
         ])
+
+        with_raw_payment_term(permitted, params[:customer])
+      end
+
+      # payment_term is a discriminated union validated in PaymentTerms::ValidateService.
+      # Strong params would silently drop null and non-hash values before validation,
+      # breaking clear-by-null and hiding invalid_format errors.
+      def with_raw_payment_term(permitted, raw)
+        if raw.respond_to?(:key?) && raw.key?(:payment_term)
+          permitted[:payment_term] = raw[:payment_term]
+          permitted[:payment_term].permit! if permitted[:payment_term].is_a?(ActionController::Parameters)
+        end
+
+        permitted
       end
 
       def render_customer(customer)
