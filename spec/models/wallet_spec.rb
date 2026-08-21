@@ -8,6 +8,10 @@ RSpec.describe Wallet do
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
 
+  it_behaves_like "a connection-resolvable billing object" do
+    let(:resolvable) { create(:wallet) }
+  end
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
