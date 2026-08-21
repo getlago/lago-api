@@ -10376,7 +10376,6 @@ input PaymentProviderCustomerInput {
   providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
-  type: String
 }
 
 """

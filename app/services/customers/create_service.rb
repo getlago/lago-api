@@ -114,8 +114,7 @@ module Customers
       if args.key?(:payment_provider_customers)
         PaymentProviderCustomers::CreateOrUpdateBatchService.call(
           payment_provider_customers: args[:payment_provider_customers],
-          customer:,
-          new_customer: true
+          customer:
         ).raise_if_error!
       end
 

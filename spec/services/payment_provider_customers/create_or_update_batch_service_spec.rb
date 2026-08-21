@@ -4,12 +4,11 @@ require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::CreateOrUpdateBatchService do
   subject(:service) do
-    described_class.call(customer:, payment_provider_customers:, new_customer:)
+    described_class.call(customer:, payment_provider_customers:)
   end
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:new_customer) { false }
 
   describe "#call" do
     context "when the array is nil" do
@@ -22,8 +21,23 @@ RSpec.describe PaymentProviderCustomers::CreateOrUpdateBatchService do
       end
     end
 
+    context "when the array carries more than one connection" do
+      let(:payment_provider_customers) { [{code: "lago_manual"}, {code: "stripe_eu", payment_provider: "stripe"}] }
+
+      it "fails as only one connection is allowed for now" do
+        result = service
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:payment_provider_customers]).to include("only_one_connection_allowed")
+      end
+
+      it "does not create any connection" do
+        expect { service }.not_to change(PaymentProviderCustomers::BaseCustomer, :count)
+      end
+    end
+
     context "when creating the manual connection" do
-      let(:payment_provider_customers) { [{type: "lago_manual", code: "lago_manual"}] }
+      let(:payment_provider_customers) { [{code: "lago_manual"}] }
 
       it "creates the reserved manual connection" do
         result = service
@@ -37,7 +51,7 @@ RSpec.describe PaymentProviderCustomers::CreateOrUpdateBatchService do
 
     context "when a connection is omitted from the array" do
       let!(:existing) { create(:stripe_customer, customer:, is_default: true) }
-      let(:payment_provider_customers) { [{type: "lago_manual", code: "lago_manual"}] }
+      let(:payment_provider_customers) { [{code: "lago_manual"}] }
 
       it "discards the omitted connection" do
         service

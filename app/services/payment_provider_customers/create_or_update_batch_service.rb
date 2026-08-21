@@ -10,16 +10,24 @@ module PaymentProviderCustomers
 
     MANUAL_CODE = PaymentProviderCustomers::BaseCustomer::MANUAL_CODE
 
-    def initialize(customer:, payment_provider_customers:, new_customer:)
+    def initialize(customer:, payment_provider_customers:)
       @customer = customer
       @params_list = payment_provider_customers&.map { |c| c.to_h.deep_symbolize_keys }
-      @new_customer = new_customer
 
       super
     end
 
     def call
       return result if params_list.nil? || customer.nil?
+
+      # TEMPORARY: the array carries a single connection until multi-connection support ships;
+      # reject more than one so the feature is consumed incrementally.
+      if params_list.size > 1
+        return result.single_validation_failure!(
+          field: :payment_provider_customers,
+          error_code: "only_one_connection_allowed"
+        )
+      end
 
       ActiveRecord::Base.transaction do
         discard_removed_connections
@@ -36,7 +44,7 @@ module PaymentProviderCustomers
 
     private
 
-    attr_reader :customer, :params_list, :new_customer
+    attr_reader :customer, :params_list
 
     def discard_removed_connections
       kept_ids = params_list.filter_map { |params| params[:id] }
@@ -60,7 +68,7 @@ module PaymentProviderCustomers
     end
 
     def manual?(params)
-      params[:type] == MANUAL_CODE
+      params[:code] == MANUAL_CODE
     end
 
     def upsert_manual

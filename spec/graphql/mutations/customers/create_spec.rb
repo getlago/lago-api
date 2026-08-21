@@ -227,7 +227,7 @@ RSpec.describe Mutations::Customers::Create do
       GQL
     end
 
-    it "creates the connections declaratively" do
+    it "creates the connection declaratively" do
       stripe_provider
 
       result = execute_graphql(
@@ -240,16 +240,16 @@ RSpec.describe Mutations::Customers::Create do
             name: "Array Inc",
             externalId: "array_inc",
             paymentProviderCustomers: [
-              {type: "lago_manual", code: "lago_manual"},
               {code: "stripe_eu", paymentProvider: "stripe", providerCustomerId: "cu_12345", providerPaymentMethods: ["card"]}
             ]
           }
         }
       )
 
-      result_data = result["data"]["createCustomer"]
+      expect(result["data"]["createCustomer"]).to be_present
 
-      expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to match_array(%w[lago_manual stripe_eu])
+      created = organization.customers.find_by(external_id: "array_inc")
+      expect(created.payment_provider_customers.pluck(:code)).to eq(["stripe_eu"])
     end
   end
 
