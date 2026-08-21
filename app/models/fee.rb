@@ -355,7 +355,7 @@ class Fee < ApplicationRecord
     else
       "from_datetime"
     end
-    serialized_date_boundary(property)
+    properties[property]&.to_datetime&.iso8601
   end
 
   def to_date
@@ -366,17 +366,7 @@ class Fee < ApplicationRecord
     else
       "to_datetime"
     end
-    serialized_date_boundary(property)
-  end
-
-  def serialized_date_boundary(property)
-    value = properties[property]
-
-    if add_on?
-      value&.to_date&.to_datetime&.iso8601
-    else
-      value&.to_datetime&.iso8601
-    end
+    properties[property]&.to_datetime&.iso8601
   end
 end
 

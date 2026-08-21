@@ -362,13 +362,13 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           context "when the stored boundaries include an offset" do
             let(:add_on_boundaries) do
               {
-                "from_datetime" => "2026-08-04T22:00:00-04:00",
-                "to_datetime" => "2026-08-04T23:00:00-04:00"
+                "from_datetime" => "2026-08-05T23:59:59.999-07:00",
+                "to_datetime" => "2026-08-05T23:59:59.999-07:00"
               }
             end
 
             it "exports the calendar dates expressed by the stored boundaries" do
-              expect(exported_period).to eq(%w[2026-08-04 2026-08-04])
+              expect(exported_period).to eq(%w[2026-08-05 2026-08-05])
             end
           end
         end
