@@ -67,7 +67,16 @@ pt-BR:
     paid_tax_invoice: Nota fiscal paga
     pay_with_bank_transfer: Pagar com transferência bancária
     payment_term: Prazo de pagamento
-    payment_term_days: "%{net_payment_term} dias"
+    payment_terms:
+      day_of_month:
+        following_month: Vencimento no dia %{day} do mês seguinte
+        months_after: Vencimento no dia %{day}, %{months} meses após a fatura
+        same_month: Vencimento no dia %{day} deste mês
+      days_end_of_month: Pagamento em %{days} dias, fim do mês
+      due_on_receipt: Vencimento no recebimento
+      end_of_month: Vencimento no fim do mês
+      net: Pagamento em até %{days} dias
+      net_end_of_month: Vencimento %{days} dias após o fim do mês
     percentage:
       adjustment_per_transaction: Ajuste para mín/máx por transação
       fee_per_transaction: Taxa fixa por transação

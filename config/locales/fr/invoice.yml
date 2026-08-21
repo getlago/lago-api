@@ -67,7 +67,16 @@ fr:
     paid_tax_invoice: Facture fiscale payée
     pay_with_bank_transfer: Payer par virement bancaire
     payment_term: Délai de paiement
-    payment_term_days: "%{net_payment_term} jours"
+    payment_terms:
+      day_of_month:
+        following_month: Payable le %{day} du mois suivant
+        months_after: Payable le %{day}, %{months} mois après la facture
+        same_month: Payable le %{day} de ce mois
+      days_end_of_month: Paiement à %{days} jours fin de mois
+      due_on_receipt: Payable à réception
+      end_of_month: Payable fin de mois
+      net: Paiement sous %{days} jours
+      net_end_of_month: Payable %{days} jours après fin de mois
     percentage:
       adjustment_per_transaction: Ajustement pour min/max par transaction
       fee_per_transaction: Frais fixes par transaction
