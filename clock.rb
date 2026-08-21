@@ -43,17 +43,10 @@ module Clockwork
     end
   end
 
-  billing_periods_refresh_interval = ENV["LAGO_BILLING_PERIODS_REFRESH_INTERVAL_SECONDS"].presence || 15.minutes
-  every(billing_periods_refresh_interval.to_i.seconds, "schedule:refresh_subscription_billing_periods") do
-    Clock::RefreshSubscriptionBillingPeriodsJob
-      .set(sentry: {"slug" => "lago_refresh_subscription_billing_periods", "cron" => "#{billing_periods_refresh_interval} interval"})
-      .perform_later
-  end
-
   if ENV["LAGO_RISINGWAVE_USAGE_PARITY_CHECK_ENABLED"] == "true"
-    every(1.hour, "schedule:usage_projections_parity_check") do
-      Clock::UsageProjectionsParityCheckJob
-        .set(sentry: {"slug" => "lago_usage_projections_parity_check", "cron" => "0 * * * *"})
+    every(1.hour, "schedule:realtime_usage_parity_check") do
+      Clock::RealtimeUsageParityCheckJob
+        .set(sentry: {"slug" => "lago_realtime_usage_parity_check", "cron" => "0 * * * *"})
         .perform_later
     end
   end

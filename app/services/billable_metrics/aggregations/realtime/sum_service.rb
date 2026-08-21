@@ -3,27 +3,27 @@
 module BillableMetrics
   module Aggregations
     module Realtime
-      # Serves sum aggregation for current usage from the RisingWave-fed
-      # usage_realtime_projections table instead of querying the events
-      # store. Falls back to the parent (events-store) implementation when no
-      # projection rows are available.
+      # Serves sum aggregation for current usage by summing the
+      # RisingWave-fed 15-minute usage buckets (ClickHouse) instead of
+      # querying the events store. Falls back to the parent (events-store)
+      # implementation when no buckets cover the window.
       #
       # NOTE: sum's running_total with free units still hits the events store
       # (parent behavior); eligible charges are in arrears and non-recurring
-      # (see UsageProjections.eligible_charge?), so period-scoped units are
-      # the correct aggregation.
+      # (see RealtimeUsage.eligible_charge?), so window-scoped units are the
+      # correct aggregation.
       class SumService < BillableMetrics::Aggregations::SumService
-        include ProjectionLookup
+        include BucketLookup
 
         def compute_aggregation(options: {})
           return super if should_bypass_aggregation? || presentation_by.present?
 
-          row = projection_row
-          return super if row.nil?
+          totals = bucket_totals
+          return super if totals.nil?
 
-          result.aggregation = row.units
+          result.aggregation = totals.units
           result.pay_in_advance_aggregation = BigDecimal(0)
-          result.count = row.events_count
+          result.count = totals.events_count
           result.options = {running_total: running_total(options)}
           result
         end
@@ -31,14 +31,14 @@ module BillableMetrics
         def compute_grouped_by_aggregation(options: {})
           return super if should_bypass_aggregation? || presentation_by.present?
 
-          rows = grouped_projection_rows
+          rows = grouped_bucket_totals
           return super if rows.empty?
 
-          result.aggregations = rows.map do |row, groups|
+          result.aggregations = rows.map do |totals, groups|
             group_result = BillableMetrics::Aggregations::BaseService::Result.new
             group_result.grouped_by = groups
-            group_result.aggregation = row.units
-            group_result.count = row.events_count
+            group_result.aggregation = totals.units
+            group_result.count = totals.events_count
             group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
             group_result
           end

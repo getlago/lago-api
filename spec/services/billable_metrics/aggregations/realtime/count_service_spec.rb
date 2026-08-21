@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
+RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse: {clean_before: true}, transaction: false do
   subject(:aggregation_result) { count_service.aggregate }
 
   let(:count_service) do
@@ -27,41 +27,46 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
   let(:customer) { create(:customer, organization: billable_metric.organization) }
   let(:subscription) { create(:subscription, customer:, plan:) }
 
-  let(:period_from) { Time.current.beginning_of_month }
-  let(:period_to) { Time.current.end_of_month }
-  let(:charges_from) { period_from }
-  let(:charges_to) { period_to }
+  let(:charges_from) { Time.current.beginning_of_month }
+  let(:charges_to) { Time.current.end_of_month }
+  let(:bucket_time) { Time.current.beginning_of_month }
 
-  context "with a matching projection row" do
+  def insert_bucket(bucket:, events_count:, units:, grouped_by: "{}")
+    Clickhouse::UsageBucket.insert_all([
+      {
+        bucket:,
+        organization_id: billable_metric.organization_id,
+        subscription_id: subscription.id,
+        customer_id: customer.id,
+        plan_id: plan.id,
+        code: billable_metric.code,
+        charge_id: charge.id,
+        charge_filter_id: "",
+        grouped_by:,
+        aggregation_type: "count",
+        events_count:,
+        units:,
+        last_event_at: bucket,
+        last_ingested_at: bucket
+      }
+    ])
+  end
+
+  context "with buckets in the charges window" do
     before do
-      UsageRealtimeProjection.insert_all([
-        {
-          organization_id: billable_metric.organization_id,
-          subscription_id: subscription.id,
-          billing_period_id: SecureRandom.uuid,
-          charge_id: charge.id,
-          charge_filter_id: "",
-          grouped_by: "{}",
-          plan_id: plan.id,
-          code: billable_metric.code,
-          aggregation_type: "count",
-          period_charges_from: period_from,
-          period_charges_to: period_to,
-          events_count: 42,
-          units: 42
-        }
-      ])
+      insert_bucket(bucket: bucket_time + 1.hour, events_count: 40, units: 40)
+      insert_bucket(bucket: bucket_time + 2.hours, events_count: 2, units: 2)
     end
 
-    it "serves the aggregation from the projection" do
+    it "serves the aggregation by summing the buckets" do
       expect(aggregation_result.aggregation).to eq(42)
       expect(aggregation_result.count).to eq(42)
       expect(aggregation_result.current_usage_units).to eq(42)
     end
 
-    context "when the projection period disagrees with the boundaries" do
-      let(:charges_from) { period_from - 1.month }
-      let(:charges_to) { period_from - 1.second }
+    context "when the buckets sit outside the charges window" do
+      let(:charges_from) { Time.current.beginning_of_month - 1.month }
+      let(:charges_to) { Time.current.beginning_of_month - 1.second }
 
       it "falls back to the events store" do
         expect(aggregation_result.aggregation).to eq(0)
@@ -69,7 +74,7 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
     end
   end
 
-  context "without a projection row" do
+  context "without buckets" do
     it "falls back to the events store" do
       expect(aggregation_result.aggregation).to eq(0)
     end
@@ -91,30 +96,14 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
       )
     end
 
-    context "with grouped projection rows" do
+    context "with grouped buckets" do
       before do
-        UsageRealtimeProjection.insert_all(
-          [
-            {grouped_by: {region: "eu"}.to_json, events_count: 7, units: 7},
-            {grouped_by: {region: "us"}.to_json, events_count: 3, units: 3}
-          ].map do |row|
-            row.merge(
-              organization_id: billable_metric.organization_id,
-              subscription_id: subscription.id,
-              billing_period_id: SecureRandom.uuid,
-              charge_id: charge.id,
-              charge_filter_id: "",
-              plan_id: plan.id,
-              code: billable_metric.code,
-              aggregation_type: "count",
-              period_charges_from: period_from,
-              period_charges_to: period_to
-            )
-          end
-        )
+        insert_bucket(bucket: bucket_time + 1.hour, events_count: 4, units: 4, grouped_by: {region: "eu"}.to_json)
+        insert_bucket(bucket: bucket_time + 2.hours, events_count: 3, units: 3, grouped_by: {region: "eu"}.to_json)
+        insert_bucket(bucket: bucket_time + 1.hour, events_count: 3, units: 3, grouped_by: {region: "us"}.to_json)
       end
 
-      it "serves one aggregation per group from the projections" do
+      it "serves one aggregation per group by summing that group's buckets" do
         groups = aggregation_result.aggregations.sort_by { |a| a.grouped_by["region"] }
 
         expect(groups.map(&:grouped_by)).to eq([{"region" => "eu"}, {"region" => "us"}])
@@ -123,7 +112,7 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService do
       end
     end
 
-    context "without grouped projection rows" do
+    context "without grouped buckets" do
       it "falls back to the events store" do
         expect(aggregation_result.aggregations.first.aggregation).to eq(0)
       end
