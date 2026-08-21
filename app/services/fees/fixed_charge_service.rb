@@ -57,9 +57,14 @@ module Fees
       # For pay_in_advance fixed charges, check if already billed in a previous invoice
       # for the same billing period (prevents double-billing when trial ends)
       return false unless fixed_charge.pay_in_advance?
+      return false if context == :refresh && (!adjusted_fee || adjusted_fee.adjusted_display_name?)
 
-      fixed_charge
-        .fees
+      billed_fees_for_period.exists?
+    end
+
+    def billed_fees_for_period(fixed_charges: fixed_charge)
+      Fee
+        .where(fixed_charge: fixed_charges)
         .where(subscription:)
         .where("fees.units > 0 OR fees.amount_cents > 0")
         .joins(:invoice).where.not(invoices: {status: %i[voided deleted]})
@@ -71,7 +76,6 @@ module Fees
           "date_trunc('second', (properties->>'fixed_charges_to_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
           boundaries[:fixed_charges_to_datetime]&.iso8601(3)
         )
-        .exists?
     end
 
     def init_fee
@@ -120,6 +124,13 @@ module Fees
         end
       end
 
+      if context == :refresh && fixed_charge.pay_in_advance?
+        # Refresh rebuilds the full event history, so remove amounts invoiced separately for this period.
+        billed_amount_cents, billed_precise_amount_cents = billed_amounts_for_period
+        amount_cents = [amount_cents - billed_amount_cents, 0].max
+        precise_amount_cents = [precise_amount_cents - billed_precise_amount_cents, 0.to_d].max
+      end
+
       new_fee = Fee.new(
         invoice:,
         organization_id: organization.id,
@@ -155,6 +166,16 @@ module Fees
       end
 
       result.fee = new_fee
+    end
+
+    def billed_amounts_for_period
+      fixed_charge_family = [fixed_charge, fixed_charge.parent].compact
+      amounts = billed_fees_for_period(fixed_charges: fixed_charge_family).pick(
+        Arel.sql("COALESCE(SUM(fees.amount_cents), 0)"),
+        Arel.sql("COALESCE(SUM(fees.precise_amount_cents), 0)")
+      )
+
+      [amounts.first.to_i, amounts.second.to_d]
     end
 
     def init_adjusted_fee
