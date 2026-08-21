@@ -53,15 +53,17 @@ module BillingCycles
     end
 
     # The dimensions that must NOT be mixed on one invoice. Subscriptions differing on
-    # any of them split into separate invoices; consolidate_invoice=false forces its own.
+    # any of them split into separate invoices; consolidate_invoice=false forces each card
+    # cycle onto its own invoice.
     def invoice_key(cycle)
       subscription = cycle.subscription
       [
         billing_date(cycle),
-        subscription.consolidate_invoice ? :shared : subscription.id,
-        subscription.plan.amount_currency,
+        subscription.consolidate_invoice ? :shared : cycle.id,
+        cycle.currency,
         subscription.billing_entity_id || customer.billing_entity_id,
-        payment_method_key(subscription)
+        payment_method_key(subscription),
+        subscription.purchase_order_number
       ]
     end
 
@@ -96,8 +98,9 @@ module BillingCycles
           billing_entity:,
           invoice_type: :subscription,
           invoicing_reason: :subscription_periodic,
-          currency: subscriptions.first.plan.amount_currency,
-          datetime: billing_at
+          currency: cycles.first.currency,
+          datetime: billing_at,
+          purchase_order_number: subscriptions.first.purchase_order_number
         ) do |generating_invoice|
           create_invoice_subscriptions(generating_invoice, cycles)
         end
@@ -141,8 +144,6 @@ module BillingCycles
           subscription:,
           from_datetime: period_from,
           to_datetime: period_to,
-          charges_from_datetime: period_from,
-          charges_to_datetime: period_to,
           recurring: true,
           invoicing_reason: :subscription_periodic
         )
@@ -163,6 +164,7 @@ module BillingCycles
 
       Invoice.where(id: invoice_ids).find_each do |invoice|
         Invoices::TransitionToFinalStatusService.call(invoice:)
+        invoice.save! if invoice.changed?
       end
     end
   end
