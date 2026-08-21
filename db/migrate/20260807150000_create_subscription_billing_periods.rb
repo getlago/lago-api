@@ -5,12 +5,15 @@ class CreateSubscriptionBillingPeriods < ActiveRecord::Migration[8.0]
     create_table :subscription_billing_periods, id: :uuid do |t|
       t.references :organization, type: :uuid, null: false, foreign_key: true, index: true
       t.references :subscription, type: :uuid, null: false, foreign_key: true, index: false
-      t.datetime :charges_from, null: false
-      t.datetime :charges_to, null: false
+      t.references :customer, type: :uuid, null: false, foreign_key: true, index: true
+      t.string :scope_type
+      t.uuid :scope_id
+      t.datetime :period_from, null: false
+      t.datetime :period_to, null: false
 
       t.timestamps
 
-      t.index %i[subscription_id charges_from], unique: true
+      t.index %i[subscription_id period_from], unique: true
     end
   end
 end

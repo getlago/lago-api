@@ -24,12 +24,12 @@ module Subscriptions
         end
 
         periods = [current_period]
-        next_period = build_period(current_period[:charges_to] + 1.second)
-        periods << next_period if next_period && next_period[:charges_from] != current_period[:charges_from]
+        next_period = build_period(current_period[:period_to] + 1.second)
+        periods << next_period if next_period && next_period[:period_from] != current_period[:period_from]
 
         SubscriptionBillingPeriod.upsert_all(
           periods,
-          unique_by: %i[subscription_id charges_from]
+          unique_by: %i[subscription_id period_from]
         )
 
         result.billing_periods = periods
@@ -43,16 +43,17 @@ module Subscriptions
       def build_period(at)
         dates_service = Subscriptions::DatesService.new_instance(subscription, at, current_usage: true)
 
-        charges_from = dates_service.charges_from_datetime
-        charges_to = dates_service.charges_to_datetime
-        return nil if charges_from.nil? || charges_to.nil?
+        period_from = dates_service.charges_from_datetime
+        period_to = dates_service.charges_to_datetime
+        return nil if period_from.nil? || period_to.nil?
 
         now = Time.current
         {
           organization_id: subscription.organization_id,
           subscription_id: subscription.id,
-          charges_from:,
-          charges_to:,
+          customer_id: subscription.customer_id,
+          period_from:,
+          period_to:,
           created_at: now,
           updated_at: now
         }
