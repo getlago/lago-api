@@ -64,6 +64,15 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     end
   end
 
+  # Localized sentence for the term in the current I18n locale.
+  def label
+    if term_type == "day_of_month"
+      I18n.t("invoice.payment_terms.day_of_month.#{month_offset_variant}", day: day_of_month, months: month_offset)
+    else
+      I18n.t("invoice.payment_terms.#{term_type}", days:)
+    end
+  end
+
   def due_date_for(issuing_date)
     issuing_date = issuing_date.to_date
 
@@ -79,6 +88,14 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
   end
 
   private
+
+  def month_offset_variant
+    case month_offset
+    when 0 then "same_month"
+    when 1 then "following_month"
+    else "months_after"
+    end
+  end
 
   # month_offset → clamp → roll forward (only reachable with offset 0) → re-clamp
   def day_of_month_due_date(issuing_date)

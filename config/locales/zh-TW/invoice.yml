@@ -67,7 +67,16 @@ zh-TW:
     paid_tax_invoice: 已付款稅務發票
     pay_with_bank_transfer: 使用銀行轉帳付款
     payment_term: 付款條件
-    payment_term_days: "%{net_payment_term} 天"
+    payment_terms:
+      day_of_month:
+        following_month: 次月 %{day} 日付款
+        months_after: 發票日後 %{months} 個月之 %{day} 日付款
+        same_month: 本月 %{day} 日付款
+      days_end_of_month: "%{days} 天後之月底付款"
+      due_on_receipt: 見票即付
+      end_of_month: 月底前付款
+      net: 請於 %{days} 天內付款
+      net_end_of_month: 月底後 %{days} 天內付款
     percentage:
       adjustment_per_transaction: 每筆交易的最低／最高調整
       fee_per_transaction: 每筆交易的固定費用
