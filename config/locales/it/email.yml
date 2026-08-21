@@ -31,10 +31,6 @@ it:
         already_paid: Se hai già effettuato il pagamento, ti preghiamo di ignorare questa email.
         hello: Ciao %{customer_name},
         pay_amount: Paga il saldo
-        payment_terms:
-          one: I nostri termini di pagamento contrattualmente concordati sono %{count} giorno.
-          other: I nostri termini di pagamento contrattualmente concordati sono %{count} giorni.
-          zero: I nostri termini di pagamento contrattualmente concordati richiedono il pagamento al momento della generazione della fattura.
         remaining_amount: Importo residuo da pagare
         reminder_overdue_balance: Questo è un promemoria del team finanziario di %{billing_entity_name} che alcune fatture sono in ritardo.
         subject: Il tuo saldo in ritardo da %{billing_entity_name}
