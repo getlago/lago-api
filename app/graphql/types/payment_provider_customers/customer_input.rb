@@ -7,9 +7,9 @@ module Types
 
       argument :id, ID, required: false
 
+      # NOTE: code "lago_manual" flags the reserved null-provider connection; provider connections
+      # carry their own code and payment provider.
       argument :code, String, required: false
-      # NOTE: "lago_manual" flags the reserved null-provider connection; omit for provider connections.
-      argument :type, String, required: false
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
       argument :payment_provider_code, String, required: false

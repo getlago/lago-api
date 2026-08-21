@@ -230,7 +230,7 @@ RSpec.describe Mutations::Customers::Update do
           id: customer.id,
           externalId: customer.external_id,
           paymentProviderCustomers: [
-            {type: "lago_manual", code: "lago_manual"}
+            {code: "lago_manual"}
           ]
         }
       )
