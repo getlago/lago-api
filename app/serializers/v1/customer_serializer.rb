@@ -33,6 +33,7 @@ module V1
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
         net_payment_term: model.net_payment_term,
+        payment_term: model.payment_term,
         external_salesforce_id: model.external_salesforce_id,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         billing_configuration:,
