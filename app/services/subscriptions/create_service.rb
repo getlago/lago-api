@@ -27,6 +27,7 @@ module Subscriptions
         plan:,
         subscription_at:,
         ending_at: params[:ending_at],
+        billing_anchor_date: params[:billing_anchor_date],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
         subscription_type:
@@ -138,6 +139,7 @@ module Subscriptions
         external_id:,
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
+        billing_anchor_date: params[:billing_anchor_date],
         purchase_order_number: params[:purchase_order_number],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
@@ -167,7 +169,15 @@ module Subscriptions
         handle_future_subscription(new_subscription)
       end
 
+      materialize_product_catalog_rate_cards(new_subscription)
+
       new_subscription
+    end
+
+    def materialize_product_catalog_rate_cards(new_subscription)
+      return unless new_subscription.plan.product_catalog?
+
+      Subscriptions::ProductCatalog::MaterializeService.call!(subscription: new_subscription)
     end
 
     def handle_today_subscription(new_subscription)
