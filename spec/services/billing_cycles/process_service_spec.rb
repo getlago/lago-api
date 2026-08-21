@@ -7,9 +7,18 @@ RSpec.describe BillingCycles::ProcessService do
     subject(:result) { described_class.call(customer:) }
 
     let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:, currency: "USD") }
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        currency: "USD",
+        finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice
+      )
+    end
+    let(:customer_finalize_zero_amount_invoice) { "inherit" }
     let(:plan) { create(:plan, organization:, amount_currency: "USD") }
-    let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+    let(:subscription) { create(:subscription, organization:, customer:, plan:, consolidate_invoice:) }
+    let(:consolidate_invoice) { true }
     let(:rate_card) { create(:rate_card, organization:, currency: "USD") }
     let(:subscription_rate_card) do
       create(
@@ -39,7 +48,7 @@ RSpec.describe BillingCycles::ProcessService do
     let(:billing_cycle_proration_ratio) { 1 }
     let(:min_amount_cents) { 0 }
 
-    before do
+    let!(:billing_cycle) do
       create(
         :billing_cycle,
         organization:,
@@ -55,6 +64,135 @@ RSpec.describe BillingCycles::ProcessService do
         period_from: Time.zone.parse("2026-08-01"),
         period_to: Time.zone.parse("2026-08-31 23:59:59")
       )
+    end
+
+    describe "#invoice_key" do
+      subject(:invoice_key) { service.send(:invoice_key, billing_cycle) }
+
+      let(:service) { described_class.new(customer:) }
+
+      it "returns the invoice grouping key" do
+        expect(invoice_key).to eq(
+          [
+            Date.parse("2026-08-31"),
+            :shared,
+            "USD",
+            customer.billing_entity_id,
+            [nil, "provider"],
+            nil
+          ]
+        )
+      end
+
+      context "when the customer timezone changes the billing date" do
+        before do
+          customer.update!(timezone: "America/New_York")
+          billing_cycle.update!(billing_at: Time.zone.parse("2026-09-01 02:00:00"))
+        end
+
+        it "uses the customer-local billing date" do
+          expect(invoice_key.first).to eq(Date.parse("2026-08-31"))
+        end
+      end
+
+      context "when the subscription opts out of invoice consolidation" do
+        let(:consolidate_invoice) { false }
+
+        it "uses the cycle id as the consolidation key" do
+          expect(invoice_key[1]).to eq(billing_cycle.id)
+        end
+      end
+
+      context "when the cycle currency differs from the plan currency" do
+        let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
+        let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+
+        it "uses the cycle currency" do
+          expect(invoice_key[2]).to eq("EUR")
+        end
+      end
+
+      context "when the subscription has a billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:subscription) do
+          create(:subscription, organization:, customer:, plan:, consolidate_invoice:, billing_entity:)
+        end
+
+        it "uses the subscription billing entity" do
+          expect(invoice_key[3]).to eq(billing_entity.id)
+        end
+      end
+
+      context "when the subscription has a purchase order number" do
+        let(:subscription) do
+          create(
+            :subscription,
+            organization:,
+            customer:,
+            plan:,
+            consolidate_invoice:,
+            purchase_order_number: "PO-123"
+          )
+        end
+
+        it "uses the purchase order number" do
+          expect(invoice_key[5]).to eq("PO-123")
+        end
+      end
+
+      context "when the customer has a default payment method" do
+        let!(:payment_method) { create(:payment_method, organization:, customer:, is_default: true) }
+
+        it "uses the resolved default payment method" do
+          expect(invoice_key[4]).to eq([payment_method.id, "provider"])
+        end
+      end
+
+      context "when the subscription has an explicit payment method" do
+        let(:payment_method) { create(:payment_method, organization:, customer:, is_default: false) }
+        let(:subscription) do
+          create(
+            :subscription,
+            organization:,
+            customer:,
+            plan:,
+            consolidate_invoice:,
+            payment_method:,
+            payment_method_type: "provider"
+          )
+        end
+
+        before { create(:payment_method, organization:, customer:, is_default: true) }
+
+        it "uses the explicit payment method" do
+          expect(invoice_key[4]).to eq([payment_method.id, "provider"])
+        end
+      end
+
+      context "when the subscription payment method is manual" do
+        let(:subscription) do
+          create(
+            :subscription,
+            organization:,
+            customer:,
+            plan:,
+            consolidate_invoice:,
+            payment_method_type: "manual"
+          )
+        end
+
+        before { create(:payment_method, organization:, customer:, is_default: true) }
+
+        it "uses the manual payment method key" do
+          expect(invoice_key[4]).to eq([nil, "manual"])
+        end
+      end
+
+      context "when there is no explicit or default payment method" do
+        it "uses the subscription payment method type without an id" do
+          expect(invoice_key[4]).to eq([nil, "provider"])
+        end
+      end
     end
 
     it "prices the fee from the billing cycle rate override" do
@@ -272,6 +410,94 @@ RSpec.describe BillingCycles::ProcessService do
           amount_cents: 5_000,
           conversion_rate: 0.5
         )
+      end
+    end
+
+    context "with multiple cycles due on the same billing date" do
+      let(:second_rate_card) { create(:rate_card, organization:, currency: "USD") }
+      let(:second_subscription_rate_card) do
+        create(
+          :subscription_rate_card,
+          organization:,
+          customer:,
+          subscription:,
+          rate_card: second_rate_card,
+          units: 3
+        )
+      end
+      let(:second_rate_card_rate) do
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card: second_rate_card,
+          rate_properties: {"amount" => "20.00"}
+        )
+      end
+
+      before do
+        create(
+          :billing_cycle,
+          organization:,
+          subscription:,
+          customer:,
+          subscription_rate_card: second_subscription_rate_card,
+          rate_card_rate: second_rate_card_rate,
+          rate_properties: {"amount" => "20.00"},
+          billing_at: Time.zone.parse("2026-08-31 10:00:00"),
+          period_from: Time.zone.parse("2026-08-01"),
+          period_to: Time.zone.parse("2026-08-31 23:59:59")
+        )
+      end
+
+      it "consolidates same-date cycles into one invoice" do
+        expect(result).to be_success
+
+        invoice = result.invoices.sole.reload
+        expect(invoice.fees.count).to eq(2)
+        expect(BillingCycle.where(customer:).distinct.pluck(:invoice_id)).to eq([invoice.id])
+      end
+
+      context "when the subscription opts out of invoice consolidation" do
+        let(:consolidate_invoice) { false }
+
+        it "creates one invoice per cycle" do
+          expect(result).to be_success
+
+          invoices = result.invoices.map(&:reload)
+          expect(invoices.count).to eq(2)
+          expect(invoices.map { |invoice| invoice.fees.count }).to eq([1, 1])
+          expect(BillingCycle.where(customer:).pluck(:invoice_id)).to match_array(invoices.map(&:id))
+        end
+      end
+    end
+
+    context "with a zero amount cycle" do
+      let(:rate_override) { nil }
+      let(:rate_properties) { {"amount" => "0.00"} }
+      let(:billing_cycle_rate_properties) { rate_properties }
+
+      context "when zero amount invoices should be skipped" do
+        let(:customer_finalize_zero_amount_invoice) { "skip" }
+
+        it "closes the invoice" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("closed")
+          expect(invoice.number).to include("DRAFT")
+        end
+      end
+
+      context "when zero amount invoices should be finalized" do
+        let(:customer_finalize_zero_amount_invoice) { "finalize" }
+
+        it "finalizes the invoice" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+          expect(invoice.number).not_to include("DRAFT")
+        end
       end
     end
   end
