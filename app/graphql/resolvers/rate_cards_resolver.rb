@@ -2,6 +2,7 @@
 
 module Resolvers
   class RateCardsResolver < Resolvers::BaseResolver
+    include RequiresProductCatalog
     include AuthenticableApiUser
     include RequiredOrganization
 

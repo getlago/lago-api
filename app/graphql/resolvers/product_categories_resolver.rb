@@ -2,6 +2,7 @@
 
 module Resolvers
   class ProductCategoriesResolver < Resolvers::BaseResolver
+    include RequiresProductCatalog
     include AuthenticableApiUser
     include RequiredOrganization
 

@@ -3,6 +3,8 @@
 module Api
   module V2
     class ProductsController < Api::BaseController
+      include Api::RequiresProductCatalog
+
       ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
 
       def create

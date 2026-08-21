@@ -3,6 +3,8 @@
 module Api
   module V1
     class PlansController < Api::BaseController
+      include Api::ForbidsLegacyBilling
+
       def create
         result = ::Plans::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys

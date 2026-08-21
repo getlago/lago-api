@@ -979,4 +979,19 @@ RSpec.describe Plans::CreateService do
       expect(result.plan).to have_attributes(pricing_type: "product_catalog", interval: nil, amount_cents: nil)
     end
   end
+
+  describe "pricing type derivation" do
+    it "creates legacy plans for organizations without the catalog flag" do
+      result = described_class.call(create_args)
+
+      expect(result.plan.pricing_type).to eq("legacy")
+    end
+
+    it "creates catalog plans for catalog organizations, ignoring any submitted pricing_type" do
+      organization.update!(feature_flags: organization.feature_flags | ["product_catalog"])
+      result = described_class.call(create_args.merge(pricing_type: "legacy"))
+
+      expect(result.plan.pricing_type).to eq("product_catalog")
+    end
+  end
 end

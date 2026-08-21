@@ -3,6 +3,7 @@
 module Mutations
   module Plans
     class Create < BaseMutation
+      include ForbidsLegacyBilling
       include AuthenticableApiUser
       include RequiredOrganization
 

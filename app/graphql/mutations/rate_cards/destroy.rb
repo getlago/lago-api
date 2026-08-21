@@ -3,6 +3,7 @@
 module Mutations
   module RateCards
     class Destroy < BaseMutation
+      include RequiresProductCatalog
       include AuthenticableApiUser
       include RequiredOrganization
 
