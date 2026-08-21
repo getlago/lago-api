@@ -22,6 +22,11 @@ module Plans
     def call
       return result.not_found_failure!(resource: "plan") unless plan
 
+      if params.key?(:amount_currency) && params[:amount_currency] != plan.amount_currency &&
+          plan.applied_rate_cards.exists?
+        return result.single_validation_failure!(field: :amount_currency, error_code: "not_editable_with_applied_rate_cards")
+      end
+
       old_amount_cents = plan.amount_cents
 
       plan.name = params[:name] if params.key?(:name)
