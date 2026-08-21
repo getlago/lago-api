@@ -339,7 +339,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         shared_examples "exports the stored add-on period" do
           before { add_on_fee }
 
-          it "exports the stored calendar dates in UTC" do
+          it "exports the stored calendar dates" do
             expect(exported_period).to eq(%w[2026-08-04 2026-08-04])
           end
 
@@ -356,6 +356,19 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
             it "does not move the end date forward one day" do
               expect(exported_period).to eq(%w[2026-08-04 2026-08-04])
+            end
+          end
+
+          context "when the stored boundaries include an offset" do
+            let(:add_on_boundaries) do
+              {
+                "from_datetime" => "2026-08-05T23:59:59.999-07:00",
+                "to_datetime" => "2026-08-05T23:59:59.999-07:00"
+              }
+            end
+
+            it "exports the calendar dates expressed by the stored boundaries" do
+              expect(exported_period).to eq(%w[2026-08-05 2026-08-05])
             end
           end
         end

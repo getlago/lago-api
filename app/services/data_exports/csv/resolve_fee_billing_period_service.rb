@@ -86,7 +86,11 @@ module DataExports
 
       def parse_datetime(value)
         if value.is_a?(String)
-          Time.zone.parse(value)
+          if fee.fee_type.to_sym == :add_on
+            value.to_datetime
+          else
+            Time.zone.parse(value)
+          end
         else
           value
         end

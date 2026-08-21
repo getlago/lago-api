@@ -78,6 +78,10 @@ RSpec.describe Resolvers::InvoiceResolver do
             itemCode
             itemName
             creditableAmountCents
+            properties {
+              fromDatetime
+              toDatetime
+            }
             presentationBreakdowns { presentationBy units }
             charge {
               id
@@ -356,12 +360,15 @@ RSpec.describe Resolvers::InvoiceResolver do
   context "with an add on invoice" do
     let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
     let(:add_on) { create(:add_on, organization:) }
-    let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
     let(:fee) do
       create(
-        :add_on_fee,
+        :one_off_fee,
         invoice:,
-        applied_add_on:,
+        add_on:,
+        properties: {
+          "from_datetime" => "2026-08-05T23:59:59.999-07:00",
+          "to_datetime" => "2026-08-05T23:59:59.999-07:00"
+        },
         presentation_breakdowns: [build(:presentation_breakdown, organization:)]
       )
     end
@@ -389,6 +396,10 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(add_on_fee).to include(
         "itemCode" => add_on.code,
         "itemName" => add_on.name
+      )
+      expect(add_on_fee["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T00:00:00+00:00",
+        "toDatetime" => "2026-08-05T00:00:00+00:00"
       )
       expect(add_on_fee["presentationBreakdowns"]).to eq([])
     end

@@ -14,7 +14,9 @@ module Resolvers
     type Types::Invoices::Object, null: true
 
     def resolve(id:)
-      current_organization.invoices.visible.find(id)
+      invoice = current_organization.invoices.visible.find(id)
+      context[:invoice_detail] = true
+      invoice
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "invoice")
     end
