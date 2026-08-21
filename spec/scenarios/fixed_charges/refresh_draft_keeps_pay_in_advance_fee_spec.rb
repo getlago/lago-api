@@ -88,6 +88,7 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
       increase_amount_cents = increase_invoice.total_amount_cents
 
       expect(increase_invoice.fees.fixed_charge.sole.units).to eq(2)
+      expect(increase_amount_cents).to eq(35_598)
       expect(draft.fees.fixed_charge.sole).to have_attributes(units: 10, amount_cents: fee_amount_cents)
 
       travel_to subscription_date + 9.days do
