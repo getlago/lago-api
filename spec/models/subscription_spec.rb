@@ -10,6 +10,10 @@ RSpec.describe Subscription do
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
 
+  it_behaves_like "a connection-resolvable billing object" do
+    let(:resolvable) { create(:subscription) }
+  end
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:status).with_values(
