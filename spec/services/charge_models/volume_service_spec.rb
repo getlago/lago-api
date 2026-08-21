@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::VolumeService do
   subject(:apply_volume_service) do
     described_class.apply(
-      charge:,
+      structure: pricing_structure,
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
@@ -17,6 +16,7 @@ RSpec.describe ChargeModels::VolumeService do
   end
 
   let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
+  let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge) }
 
   let(:charge) do
     create(
@@ -207,6 +207,7 @@ RSpec.describe ChargeModels::VolumeService do
         }
       )
     end
+    let(:pricing_structure) { ChargeModels::PricingStructure.from_fixed_charge(charge) }
 
     it "applies the charge model to the value" do
       # 50 + 210 * 0.5 = 155

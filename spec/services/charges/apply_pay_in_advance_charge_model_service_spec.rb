@@ -66,13 +66,11 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           result.pay_in_advance_event = pay_in_advance_event
         end
 
-        allow(charge_model_class).to receive(:apply)
-          .with(charge:, aggregation_result:, properties:)
-          .and_return(charge_model_class::Result.new.tap { |r| r.amount = 10 })
-
-        allow(charge_model_class).to receive(:apply)
-          .with(charge:, aggregation_result: previous_agg_result, properties: properties.merge(exclude_event: true))
-          .and_return(charge_model_class::Result.new.tap { |r| r.amount = 8 })
+        allow(charge_model_class).to receive(:apply) do |structure:, **|
+          charge_model_class::Result.new.tap do |r|
+            r.amount = structure.properties[:exclude_event] ? 8 : 10
+          end
+        end
 
         result = charge_service.call
 
@@ -81,6 +79,23 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
         expect(result.amount).to eq(200) # In cents
         expect(result.precise_amount).to eq(200.0) # In cents
         expect(result.unit_amount).to eq(2)
+
+        expect(charge_model_class).to have_received(:apply).with(
+          structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+          aggregation_result:
+        )
+        expect(charge_model_class).to have_received(:apply).with(
+          structure: ChargeModels::PricingStructure.from_charge(charge).with(
+            properties: properties.merge(exclude_event: true)
+          ),
+          aggregation_result: have_attributes(
+            aggregation: previous_agg_result.aggregation,
+            count: previous_agg_result.count,
+            options: previous_agg_result.options,
+            aggregator: previous_agg_result.aggregator,
+            pay_in_advance_event: previous_agg_result.pay_in_advance_event
+          )
+        )
       end
 
       context "when the event is not persisted" do
@@ -95,13 +110,11 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
             result.pay_in_advance_event = pay_in_advance_event
           end
 
-          allow(charge_model_class).to receive(:apply)
-            .with(charge:, aggregation_result:, properties:)
-            .and_return(charge_model_class::Result.new.tap { |r| r.amount = 8 })
-
-          allow(charge_model_class).to receive(:apply)
-            .with(charge:, aggregation_result: non_persisted_agg_result, properties: properties.merge(include_event_value: true))
-            .and_return(charge_model_class::Result.new.tap { |r| r.amount = 10 })
+          allow(charge_model_class).to receive(:apply) do |structure:, **|
+            charge_model_class::Result.new.tap do |r|
+              r.amount = structure.properties[:include_event_value] ? 10 : 8
+            end
+          end
 
           result = charge_service.call
 
@@ -111,6 +124,23 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           expect(result.precise_amount).to eq(2_00.0) # In cents
           expect(result.unit_amount).to eq(2)
           expect(result.amount_details).to be_nil
+
+          expect(charge_model_class).to have_received(:apply).with(
+            structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+            aggregation_result:
+          )
+          expect(charge_model_class).to have_received(:apply).with(
+            structure: ChargeModels::PricingStructure.from_charge(charge).with(
+              properties: properties.merge(include_event_value: true)
+            ),
+            aggregation_result: have_attributes(
+              aggregation: non_persisted_agg_result.aggregation,
+              count: non_persisted_agg_result.count,
+              options: non_persisted_agg_result.options,
+              aggregator: non_persisted_agg_result.aggregator,
+              pay_in_advance_event: non_persisted_agg_result.pay_in_advance_event
+            )
+          )
         end
       end
     end

@@ -30,7 +30,7 @@ module ChargeModels
     private
 
     def currency
-      charge.plan.amount.currency
+      structure.currency
     end
   end
 end

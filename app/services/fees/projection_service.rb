@@ -53,9 +53,8 @@ module Fees
       return result.fail_with_error!(aggregation_result.error) unless aggregation_result.success?
 
       charge_model_result = ChargeModels::Factory.new_instance(
-        chargeable: charge,
+        structure: ChargeModels::PricingStructure.from_charge(charge).with(properties: properties_for_charge_model),
         aggregation_result:,
-        properties: properties_for_charge_model,
         period_ratio:,
         calculate_projected_usage: true
       ).apply
