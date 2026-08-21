@@ -270,10 +270,29 @@ module Invoices
       @customer_provider_taxation ||= invoice.customer.tax_customer
     end
 
+    # Only the charges being computed are billed, so restricting the event lookup to their codes
+    # avoids resolving combinations for the rest of the plan. The ingestion timestamps are requested
+    # only when the charge cache can actually read them.
     def event_filters(subscription, boundaries)
       Events::BillingPeriodFilterService.call!(
-        subscription:, boundaries:
+        subscription:,
+        boundaries:,
+        codes: filtered_metric_codes,
+        with_last_seen_at: charge_cache_enabled?
       )
+    end
+
+    # nil when every charge of the plan is computed, so the whole plan is looked up as before.
+    def filtered_metric_codes
+      return nil unless usage_filters.has_charge_filter?
+
+      charges.except(:includes).joins(:billable_metric).distinct.pluck("billable_metrics.code")
+    end
+
+    # charge_usage drops the cache middleware entirely when usage is filtered by group, so the
+    # ingestion timestamps driving its lazy invalidation are only read when both conditions hold.
+    def charge_cache_enabled?
+      cache_applicable? && usage_filters.filter_by_group.blank?
     end
 
     def querying_full_usage_allowed

@@ -163,9 +163,12 @@ module Invoices
       invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
     end
 
+    # Fees are computed without a charge cache middleware here, so the ingestion timestamps driving
+    # its lazy invalidation are never read. Only the charge/filter keys matter, and skipping the
+    # aggregate keeps the event store from reading the ingestion column.
     def event_filters(subscription, boundaries)
       Events::BillingPeriodFilterService.call!(
-        subscription:, boundaries:
+        subscription:, boundaries:, with_last_seen_at: false
       )
     end
   end
