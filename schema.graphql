@@ -1178,6 +1178,7 @@ enum BillingTimeEnum {
 }
 
 enum CancellationReasonEnum {
+  manual
   payment_failed
   timeout
 }

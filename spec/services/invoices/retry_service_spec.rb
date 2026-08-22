@@ -86,6 +86,22 @@ RSpec.describe Invoices::RetryService do
       end
     end
 
+    context "when the invoice was closed after it was loaded" do
+      before do
+        # Cancelling a gated subscription closes the invoice without touching this instance,
+        # which still believes it is failed.
+        Invoice.where(id: invoice.id).update_all(status: :closed) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it "does not reopen it" do
+        result = retry_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("invalid_status")
+        expect(invoice.reload).to be_closed
+      end
+    end
+
     it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
       expect do
         retry_service.call

@@ -33,6 +33,39 @@ RSpec.describe Mutations::Subscriptions::Terminate do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
 
+  context "when subscription is incomplete" do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+    let(:subscription) { create(:subscription, :incomplete, organization:, customer:, plan:) }
+    let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
+    let(:mutation) do
+      <<~GQL
+        mutation($input: TerminateSubscriptionInput!) {
+          terminateSubscription(input: $input) {
+            id,
+            status,
+            canceledAt,
+            cancellationReason
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+      create(:invoice_subscription, invoice:, subscription:)
+    end
+
+    it "cancels the subscription" do
+      result_data = result["data"]["terminateSubscription"]
+
+      expect(result_data["id"]).to eq(subscription.id)
+      expect(result_data["status"]).to eq("canceled")
+      expect(result_data["canceledAt"]).to be_present
+      expect(result_data["cancellationReason"]).to eq("manual")
+    end
+  end
+
   context "when plan is pay in advance" do
     let(:subscription) { create(:subscription, organization:, plan: create(:plan, :pay_in_advance)) }
 
