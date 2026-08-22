@@ -161,7 +161,8 @@ module Subscriptions
         )
       end
 
-      subscription.mark_as_active!(subscription.subscription_at)
+      # Skip billing side effects if a concurrent request already activated the subscription.
+      return unless subscription.mark_as_active!(subscription.subscription_at)
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [subscription],

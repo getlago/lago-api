@@ -486,6 +486,32 @@ RSpec.describe Subscriptions::UpdateService do
                 .to contain_exactly([fixed_charge.id, be_within(1.second).of(subscription.started_at)])
             end
           end
+
+          context "when a concurrent request already activated the subscription" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+
+            # Loads through a separate instance so `subscription`'s own cache stays stale, like the real race.
+            before do
+              fixed_charge
+              subscription.lifetime_usage
+              create(:lifetime_usage, subscription: Subscription.find(subscription.id), organization: subscription.organization)
+            end
+
+            it "does not enqueue a job to bill the subscription" do
+              expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+            end
+
+            it "does not create duplicate fixed charge events" do
+              expect { update_service.call }.not_to change(FixedChargeEvent, :count)
+            end
+
+            it "still activates the subscription" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(result.subscription.status).to eq("active")
+            end
+          end
         end
 
         context "when subscription_at is set to future date" do

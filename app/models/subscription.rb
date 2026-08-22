@@ -121,12 +121,34 @@ class Subscription < ApplicationRecord
     billing_entity_id || customer&.billing_entity_id
   end
 
+  # Returns false when a concurrent request already activated this subscription.
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.activated_at ||= timestamp
-    self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
-    self.lifetime_usage.recalculate_invoiced_usage = true
+
+    won_activation = true
+    if lifetime_usage.blank?
+      self.lifetime_usage, won_activation = resolve_lifetime_usage
+    end
+
+    lifetime_usage.recalculate_invoiced_usage = true
     active!
+
+    won_activation
+  end
+
+  def resolve_lifetime_usage
+    return [previous_subscription.lifetime_usage, true] if previous_subscription&.lifetime_usage
+
+    usage = existing_or_new_lifetime_usage
+    [usage, !usage.persisted? || usage.previously_new_record?]
+  end
+
+  # `create_or_find_by!` recovers from the unique-index race between concurrent activations.
+  def existing_or_new_lifetime_usage
+    return build_lifetime_usage(organization:) unless persisted?
+
+    LifetimeUsage.create_with(organization:).create_or_find_by!(subscription: self)
   end
 
   def mark_as_terminated!(timestamp = Time.current)

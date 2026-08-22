@@ -1037,12 +1037,15 @@ RSpec.describe Subscription do
 
     it "changes the status to active and sets started_at and activated_at" do
       freeze_time do
-        expect { subscription.mark_as_active! }
+        result = nil
+
+        expect { result = subscription.mark_as_active! }
           .to change(subscription, :status).from("pending").to("active")
 
         expect(subscription.started_at).to eq(Time.current)
         expect(subscription.activated_at).to eq(Time.current)
         expect(subscription.lifetime_usage).to be_present
+        expect(result).to eq(true)
       end
     end
 
@@ -1075,6 +1078,39 @@ RSpec.describe Subscription do
           .to change(subscription, :status).from("pending").to("active")
 
         expect(lifetime_usage.reload.subscription).to eq(subscription)
+      end
+    end
+
+    context "when a concurrent request already created the lifetime usage" do
+      subject(:subscription) { create(:subscription, :pending) }
+
+      # Loads through a separate instance so `subscription`'s own cache stays stale, like the real race.
+      let!(:concurrent_lifetime_usage) do
+        subscription.lifetime_usage
+        create(:lifetime_usage, subscription: described_class.find(subscription.id), organization: subscription.organization)
+      end
+
+      it "reuses the existing record instead of raising" do
+        expect { subscription.mark_as_active! }
+          .to change(subscription, :status).from("pending").to("active")
+
+        expect(subscription.lifetime_usage).to eq(concurrent_lifetime_usage)
+      end
+
+      it "returns false so callers skip repeating the winner's billing side effects" do
+        expect(subscription.mark_as_active!).to eq(false)
+      end
+    end
+
+    context "when the subscription is not persisted yet" do
+      subject(:subscription) { build(:subscription, :pending) }
+
+      it "activates without prematurely saving the subscription" do
+        expect { subscription.mark_as_active! }
+          .to change(subscription, :status).from("pending").to("active")
+
+        expect(subscription).to be_persisted
+        expect(subscription.lifetime_usage).to be_persisted
       end
     end
   end
