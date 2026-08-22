@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Coupons breakdown Spec", :premium do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
 
   before do
     organization
@@ -323,6 +323,948 @@ describe "Coupons breakdown Spec", :premium do
       expect(invoice.sub_total_excluding_taxes_amount_cents).to eq(16_500)
       expect(invoice.taxes_amount_cents).to eq(1_889)
       expect(invoice.total_amount_cents).to eq(18_389)
+    end
+  end
+
+  context "when progressive billing and multiple subscriptions with multiple invoices" do
+    def setup_test_billable_metric
+      create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
+      organization.billable_metrics.find_by(code: "bm1")
+    end
+
+    def setup_pia_plan(bm)
+      create_plan({
+        name: "Pay in Advance Plan", code: "pay_in_advance_plan", interval: "monthly",
+        amount_cents: 0, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: true, properties: {amount: "1"}}]
+      })
+      organization.plans.find_by(code: "pay_in_advance_plan")
+    end
+
+    def setup_pb_plan(bm, thresholds: [20_00, 50_00])
+      create_plan({
+        name: "Progressive Billing Plan", code: "progressive_plan", interval: "monthly",
+        amount_cents: 20_00, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: thresholds.each_with_index.map { |c, i| {amount_cents: c, threshold_display_name: "Threshold #{i + 1}"} }
+      })
+      organization.plans.find_by(code: "progressive_plan")
+    end
+
+    def setup_pb_test_customer_and_subs(coupon_attrs, pia_plan, pb_plan, time0)
+      create_coupon(coupon_attrs)
+      create_or_update_customer({external_id: "customer-12345"})
+      apply_coupon({external_customer_id: "customer-12345", coupon_code: coupon_attrs[:code]})
+
+      travel_to(time0) do
+        create_subscription({external_customer_id: "customer-12345", external_id: "sub_pay_in_advance", plan_code: pia_plan.code}) if pia_plan
+        create_subscription({external_customer_id: "customer-12345", external_id: "sub_progressive", plan_code: pb_plan.code}) if pb_plan
+      end
+      organization.customers.find_by(external_id: "customer-12345")
+    end
+
+    context "when coupon is single use" do
+      it "applies the coupon, calculating the remaining amount", transaction: false do
+        bm = setup_test_billable_metric
+        pay_in_advance_plan = setup_pia_plan(bm)
+        progressive_plan = setup_pb_plan(bm)
+        time0 = DateTime.new(2025, 1, 1)
+        customer = setup_pb_test_customer_and_subs(
+          {name: "Single Use Coupon", code: "single_use_coupon", coupon_type: "fixed_amount",
+           frequency: "once", amount_cents: 100_00, amount_currency: "EUR",
+           expiration: "no_expiration", reusable: false},
+          pay_in_advance_plan, progressive_plan, time0
+        )
+
+        # time0 + 5 days: send an event (5 units)
+        travel_to(time0 + 5.days) do
+          pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          ingest_event(pay_in_advance_subscription, bm, 5)
+          ingest_event(progressive_subscription, bm, 10)
+
+          # Check that invoice is generated for pay_in_advance
+          expect(pay_in_advance_subscription.invoices.count).to eq(1)
+
+          fee = pay_in_advance_subscription.fees.first
+          expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+          expect(fee.pay_in_advance).to eq(true)
+
+          # Check that coupon was applied to the pay in advance invoice (coupons are applied to pay-in-advance)
+          invoice = pay_in_advance_subscription.invoices.first
+          expect(invoice).to be_present
+          expect(invoice.coupons_amount_cents).to eq(5_00) # Coupons are applied on pay in advance invoices
+          expect(invoice.fees_amount_cents).to eq(5_00)
+          expect(invoice.total_amount_cents).to eq(0)
+          expect(progressive_subscription.invoices.count).to eq(0)
+          perform_all_enqueued_jobs
+        end
+
+        # time0 + 10 days: send event (5 units) and perform lifetime calculation
+        travel_to(time0 + 10.days) do
+          pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          ingest_event(pay_in_advance_subscription, bm, 5)
+          ingest_event(progressive_subscription, bm, 10)
+
+          # Check that progressive billing invoice is generated
+          # At time0 + 5 days: 10 units = $10 (does NOT exceed $20 threshold)
+          # At time0 + 10 days: 10 more units = $20 total (exceeds $20 threshold)
+          progressive_invoices = progressive_subscription.invoices
+          expect(progressive_invoices.count).to eq(1) # 1 progressive billing invoice
+
+          # Invoice should be for $20 (total usage at threshold)
+          progressive_invoice = progressive_invoices.first
+          expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+          expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # 20 units - 20$ coupon = 0
+          expect(progressive_invoice.total_amount_cents).to eq(0) # 20 units - 20$ coupon = 0
+
+          # Pay in advance should have another invoice
+          pay_in_advance_invoices = pay_in_advance_subscription.invoices
+          expect(pay_in_advance_invoices.count).to eq(2) # Original + new one
+        end
+
+        # time0 + 15 days: send an event (5 units)
+        travel_to(time0 + 15.days) do
+          pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          ingest_event(pay_in_advance_subscription, bm, 5)
+          ingest_event(progressive_subscription, bm, 10)
+
+          # Check that invoice is generated for pay_in_advance
+          expect(pay_in_advance_subscription.fees.count).to eq(3) # 2 previous + 1 new
+          expect(progressive_subscription.fees.count).to eq(1) # 1 progressive billing fee
+
+          latest_fee = pay_in_advance_subscription.fees.order(:created_at).last
+          expect(latest_fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+          expect(latest_fee.pay_in_advance).to eq(true) # Pay in advance
+          expect(pay_in_advance_subscription.invoices.order(:created_at).last.total_amount_cents).to eq(0) # Invoice is covered with coupon
+        end
+
+        # Travel to time0 + 1 month, run subscription billing
+        # coupon usage: 20$ subscription + 30$ usage (20$ were billed progressively) + 3 * 5$ pay in advance invoice = 65$
+        expect(customer.applied_coupons.last.remaining_amount).to eq(65_00)
+        travel_to(time0 + 1.month) do
+          perform_billing
+
+          # Check that invoices are generated
+          customer = organization.customers.find_by(external_id: "customer-12345")
+          expect(customer.invoices.count).to eq(5) # 3 pay in advance + 1 progressive_billing + 1 subscription
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+          expect(subscription_invoice.fees_amount_cents).to eq(50_00) # 30 units * $1 = $30 + subscription fee 20$
+          expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+          expect(subscription_invoice.coupons_amount_cents).to eq(30_00)
+          expect(subscription_invoice.total_amount_cents).to eq(0)
+        end
+        # coupon remaining: 35$
+        expect(customer.applied_coupons.last.remaining_amount).to eq(35_00)
+
+        # Repeat for next month
+        time1 = time0 + 1.month
+        travel_to(time1 + 5.days) do
+          pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          ingest_event(pay_in_advance_subscription, bm, 5)
+          ingest_event(progressive_subscription, bm, 10)
+
+          # Check that invoice is generated for pay_in_advance
+          expect(pay_in_advance_subscription.invoices.count).to eq(5) # 4 previous (3 pay in advance + 1 subscription) + 1 new (5 units)
+
+          fee = pay_in_advance_subscription.fees.order(:created_at).last
+          expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+          expect(fee.pay_in_advance).to eq(true)
+
+          # Check that no coupon is applied since it's single use
+          invoice = pay_in_advance_subscription.invoices.order(:created_at).last
+          expect(invoice).to be_present
+          expect(invoice.fees_amount_cents).to eq(5_00)
+          expect(invoice.coupons_amount_cents).to eq(5_00) # 5$ coupon applied
+          expect(invoice.total_amount_cents).to eq(0)
+          expect(progressive_subscription.invoices.count).to eq(2) # 2 previous + 0 new (no threshold exceeded)
+          perform_all_enqueued_jobs
+        end
+
+        travel_to(time1 + 10.days) do
+          pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          ingest_event(pay_in_advance_subscription, bm, 5)
+          ingest_event(progressive_subscription, bm, 10)
+
+          # Check that progressive billing invoice is generated
+          # At time1 + 5 days: 10 units = $10 (does NOT exceed $20 threshold)
+          # At time1 + 10 days: 10 more units = $20 total (exceeds $20 threshold of current usage)
+          progressive_invoices = progressive_subscription.invoices
+          expect(progressive_invoices.count).to eq(3) # 2 previous + 1 new
+
+          # Invoice should be for $20 (total usage at threshold)
+          progressive_invoice = progressive_invoices.order(:created_at).last
+          expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+          expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # 20 units - 20$ coupon = 0
+          expect(progressive_invoice.total_amount_cents).to eq(0) # 20 units - 20$ coupon = 0
+
+          # Pay in advance should have another invoice
+          pay_in_advance_invoices = pay_in_advance_subscription.invoices
+          expect(pay_in_advance_invoices.count).to eq(6) # 5 previous (4 pay in advance + 1 subscription) + 1 new (5 units)
+        end
+
+        # coupon remaining: 5$
+        expect(customer.applied_coupons.last.remaining_amount).to eq(5_00)
+        travel_to(time1 + 1.month) do
+          perform_billing
+
+          # Check that invoices are generated
+          customer = organization.customers.find_by(external_id: "customer-12345")
+          # Pay in advance: 3 prev month + 2 this month
+          # Progressive billing: 1 prev month + 1 this month
+          # Subscription: 1 prev month + 1 this month (combines both subscriptions through invoice_subscriptions)
+          expect(customer.invoices.count).to eq(9) # 5 previous + 3 pay in advance + 1 progressive_billing + 1 subscription
+          progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+          subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+          expect(subscription_invoice.fees_amount_cents).to eq(40_00) # 20 units * $1 = $20 + subscription fee 20$
+          expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+          expect(subscription_invoice.coupons_amount_cents).to eq(5_00) # 5$ coupon applied
+          expect(subscription_invoice.total_amount_cents).to eq(15_00) # 40$ - 20$ credit - 5$ coupon = 15$
+          expect(customer.applied_coupons.last.remaining_amount).to eq(0) # Coupon is now fully used
+          expect(customer.applied_coupons.last.terminated?).to eq(true) # Coupon is terminated
+        end
+      end
+    end
+
+    context "when coupon is recurring (same set up as for single use)" do
+      context "when recurring once" do
+        it "applies the coupon only during one billing period, calculating the remaining amount", transaction: false do
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          progressive_plan = setup_pb_plan(bm)
+          time0 = DateTime.new(2025, 1, 1)
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Single Use Coupon", code: "single_use_coupon", coupon_type: "fixed_amount",
+             frequency: "recurring", frequency_duration: 1, amount_cents: 100_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, progressive_plan, time0
+          )
+
+          # time0 + 5 days: send an event (5 units)
+          travel_to(time0 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(1)
+
+            fee = pay_in_advance_subscription.fees.first
+            expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that coupon was applied to the pay in advance invoice (coupons are applied to pay-in-advance)
+            invoice = pay_in_advance_subscription.invoices.first
+            expect(invoice).to be_present
+            expect(invoice.coupons_amount_cents).to eq(5_00) # Coupons are applied on pay in advance invoices
+            expect(invoice.fees_amount_cents).to eq(5_00)
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(progressive_subscription.invoices.count).to eq(0)
+            perform_all_enqueued_jobs
+          end
+          expect(customer.applied_coupons.last.active?).to eq(true)
+
+          # time0 + 10 days: send event (5 units) and perform lifetime calculation
+          travel_to(time0 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that progressive billing invoice is generated
+            # At time0 + 5 days: 10 units = $10 (does NOT exceed $20 threshold)
+            # At time0 + 10 days: 10 more units = $20 total (exceeds $20 threshold)
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(1) # 1 progressive billing invoice
+
+            # Invoice should be for $20 (total usage at threshold)
+            progressive_invoice = progressive_invoices.first
+            expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # 20 units - 20$ coupon = 0
+            expect(progressive_invoice.total_amount_cents).to eq(0) # 20 units - 20$ coupon = 0
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices.order(:created_at)
+            expect(pay_in_advance_invoices.count).to eq(2) # Original + new one
+            expect(pay_in_advance_invoices.last.coupons_amount_cents).to eq(5_00)
+            expect(pay_in_advance_invoices.last.total_amount_cents).to eq(0)
+          end
+          expect(customer.applied_coupons.last.active?).to eq(true)
+
+          # time0 + 15 days: send an event (5 units)
+          travel_to(time0 + 15.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.fees.count).to eq(3) # 2 previous + 1 new
+            expect(progressive_subscription.fees.count).to eq(1) # 1 progressive billing fee
+
+            latest_fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(latest_fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(latest_fee.pay_in_advance).to eq(true) # Pay in advance
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices.order(:created_at)
+            expect(pay_in_advance_invoices.last.coupons_amount_cents).to eq(5_00) # 5$ coupon applied
+            expect(pay_in_advance_invoices.last.total_amount_cents).to eq(0)
+          end
+
+          # Travel to time0 + 1 month, run subscription billing
+          # coupon usage: 20$ progressive usage + 30$ subscription invoice + 3 * 5$ pay in advance invoice = 65$
+          expect(customer.applied_coupons.last.active?).to eq(true)
+          travel_to(time0 + 1.month) do
+            perform_billing
+
+            # Check that invoices are generated
+            customer = organization.customers.find_by(external_id: "customer-12345")
+            expect(customer.invoices.count).to eq(5) # 3 pay in advance + 1 progressive_billing + 1 subscription
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+            expect(subscription_invoice.fees_amount_cents).to eq(50_00) # 30 units * $1 = $30 + subscription fee 20$
+            expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+            expect(subscription_invoice.coupons_amount_cents).to eq(30_00)
+            expect(subscription_invoice.total_amount_cents).to eq(0)
+          end
+          # coupon remaining: 35$
+          # coupon is terminated after billing cycle since it's recurring once
+          expect(customer.applied_coupons.last.terminated?).to eq(true)
+
+          # Repeat for next month
+          time1 = time0 + 1.month
+          travel_to(time1 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(5) # 4 previous (3 pay in advance + 1 subscription) + 1 new (5 units)
+
+            fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that no coupon is applied since it's single use
+            invoice = pay_in_advance_subscription.invoices.order(:created_at).last
+            expect(invoice).to be_present
+            expect(invoice.fees_amount_cents).to eq(5_00)
+            expect(invoice.coupons_amount_cents).to eq(0)
+            expect(invoice.total_amount_cents).to eq(5_00)
+            expect(progressive_subscription.invoices.count).to eq(2) # 2 previous + 0 new (no threshold exceeded)
+            perform_all_enqueued_jobs
+          end
+
+          travel_to(time1 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that progressive billing invoice is generated
+            # At time1 + 5 days: 10 units = $10 (does NOT exceed $20 threshold)
+            # At time1 + 10 days: 10 more units = $20 total (exceeds $20 threshold)
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(3) # 2 previous + 1 new
+
+            # Invoice should be for $20 (total usage at threshold)
+            progressive_invoice = progressive_invoices.order(:created_at).last
+            expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(0)
+            expect(progressive_invoice.total_amount_cents).to eq(20_00) # 20 units - 20$ coupon = 0
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices
+            expect(pay_in_advance_invoices.count).to eq(6) # 5 previous (4 pay in advance + 1 subscription) + 1 new (5 units)
+          end
+
+          travel_to(time1 + 1.month) do
+            perform_billing
+
+            # Check that invoices are generated
+            customer = organization.customers.find_by(external_id: "customer-12345")
+            # Pay in advance: 3 prev month + 2 this month
+            # Progressive billing: 1 prev month + 1 this month
+            # Subscription: 1 prev month + 1 this month (combines both subscriptions through invoice_subscriptions)
+            expect(customer.invoices.count).to eq(9) # 5 previous + 3 pay in advance + 1 progressive_billing + 1 subscription
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+            expect(subscription_invoice.fees_amount_cents).to eq(40_00) # 20 units * $1 = $20 + subscription fee 20$
+            expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+            expect(subscription_invoice.coupons_amount_cents).to eq(0)
+            expect(subscription_invoice.total_amount_cents).to eq(20_00) # 20$ - 20$ credit = 20$
+          end
+        end
+
+        it "does not terminate if nothing was billed" do
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          time0 = DateTime.new(2025, 1, 1)
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Recurring Coupon", code: "recurring_coupon", coupon_type: "fixed_amount",
+             frequency: "recurring", frequency_duration: 1, amount_cents: 100_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, nil, time0
+          )
+
+          travel_to(time0 + 1.month) do
+            perform_billing
+
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+
+            # Check that invoice is generated for pay in advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(1)
+            expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(1)
+            expect(customer.applied_coupons.first.status).to eq("active")
+          end
+        end
+      end
+
+      context "when recurring multiple times" do
+        it "applies the coupon multiple times, calculating the remaining amount", transaction: false do
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          progressive_plan = setup_pb_plan(bm)
+          time0 = DateTime.new(2025, 1, 1)
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Recurring Coupon", code: "recurring_coupon", coupon_type: "fixed_amount",
+             frequency: "recurring", frequency_duration: 3, amount_cents: 100_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, progressive_plan, time0
+          )
+
+          # time0 + 5 days: send events (5 units for pay in advance, 10 units for progressive billing)
+          travel_to(time0 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(1)
+
+            fee = pay_in_advance_subscription.fees.first
+            expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that coupon was applied to the pay in advance invoice
+            invoice = pay_in_advance_subscription.invoices.first
+            expect(invoice).to be_present
+            expect(invoice.coupons_amount_cents).to eq(5_00) # Coupons are applied on pay in advance invoices
+            expect(invoice.fees_amount_cents).to eq(5_00)
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(progressive_subscription.invoices.count).to eq(0)
+            perform_all_enqueued_jobs
+          end
+          expect(customer.applied_coupons.last.frequency_duration_remaining).to eq(3)
+
+          # time0 + 10 days: send events (5 units for pay in advance, 10 units for progressive billing)
+          travel_to(time0 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that progressive billing invoice is generated
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(1) # 1 progressive billing invoice
+
+            # Invoice should be for $20 (total usage at threshold)
+            progressive_invoice = progressive_invoices.first
+            expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # 20 units - 20$ coupon = 0
+            expect(progressive_invoice.total_amount_cents).to eq(0) # 20 units - 20$ coupon = 0
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices
+            expect(pay_in_advance_invoices.count).to eq(2) # Original + new one
+          end
+          expect(customer.applied_coupons.last.frequency_duration_remaining).to eq(3)
+
+          # time0 + 15 days: send an event (5 units)
+          travel_to(time0 + 15.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.fees.count).to eq(3) # 2 previous + 1 new
+            expect(progressive_subscription.fees.count).to eq(1) # 1 progressive billing fee
+
+            latest_fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(latest_fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(latest_fee.pay_in_advance).to eq(true) # Pay in advance
+          end
+
+          # Travel to time0 + 1 month, run subscription billing
+          travel_to(time0 + 1.month) do
+            perform_billing
+
+            # Check that invoices are generated
+            customer = organization.customers.find_by(external_id: "customer-12345")
+            expect(customer.invoices.count).to eq(5) # 3 pay in advance + 1 progressive_billing + 1 subscription
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+            expect(subscription_invoice.fees_amount_cents).to eq(50_00) # 30 units * $1 = $30 + subscription fee 20$
+            expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+            expect(subscription_invoice.coupons_amount_cents).to eq(30_00)
+            expect(subscription_invoice.total_amount_cents).to eq(0)
+          end
+          expect(customer.applied_coupons.last.frequency_duration_remaining).to eq(2)
+
+          # Second month
+          time1 = time0 + 1.month
+          travel_to(time1 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(5) # 4 previous (3 pay in advance + 1 subscription) + 1 new (5 units)
+
+            fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that coupon is still applied since it's recurring for 3 months
+            invoice = pay_in_advance_subscription.invoices.order(:created_at).last
+            expect(invoice).to be_present
+            expect(invoice.fees_amount_cents).to eq(5_00)
+            expect(invoice.coupons_amount_cents).to eq(5_00) # 5$ coupon applied
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(progressive_subscription.invoices.count).to eq(2) # 2 previous + 0 new (no threshold exceeded)
+            perform_all_enqueued_jobs
+          end
+
+          travel_to(time1 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that progressive billing invoice is generated
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(3) # 2 previous + 1 new
+
+            # Invoice should be for $20 (total usage at threshold)
+            progressive_invoice = progressive_invoices.order(:created_at).last
+            expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # 20$ coupon applied
+            expect(progressive_invoice.total_amount_cents).to eq(0) # 20 units - 20$ coupon = 0
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices
+            expect(pay_in_advance_invoices.count).to eq(6) # 5 previous (4 pay in advance + 1 subscription) + 1 new (5 units)
+          end
+
+          # coupon still active for 1 more billing period
+          travel_to(time1 + 1.month) do
+            perform_billing
+
+            # Check that invoices are generated
+            customer = organization.customers.find_by(external_id: "customer-12345")
+            expect(customer.invoices.count).to eq(9) # 5 previous + 3 pay in advance + 1 progressive_billing + 1 subscription
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+            expect(subscription_invoice.fees_amount_cents).to eq(40_00) # 20 units * $1 = $20 + subscription fee 20$
+            expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+            expect(subscription_invoice.coupons_amount_cents).to eq(20_00) # 20$ coupon applied
+            expect(subscription_invoice.total_amount_cents).to eq(0) # 40$ - 20$ credit - 20$ coupon = 0
+          end
+          expect(customer.applied_coupons.last.frequency_duration_remaining).to eq(1)
+
+          # Third month, last coupon cycle
+          time2 = time0 + 2.months
+          travel_to(time2 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(8) # 7 previous + 1 new (5 units)
+
+            fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that coupon is still applied since it's recurring for 3 months
+            invoice = pay_in_advance_subscription.invoices.order(:created_at).last
+            expect(invoice).to be_present
+            expect(invoice.fees_amount_cents).to eq(5_00)
+            expect(invoice.coupons_amount_cents).to eq(5_00) # 5$ coupon applied
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(progressive_subscription.invoices.count).to eq(4) # 3 previous + 0 new (no threshold exceeded)
+            perform_all_enqueued_jobs
+          end
+
+          travel_to(time2 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that progressive billing invoice is not generated
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(4) # 4 previous
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices
+            expect(pay_in_advance_invoices.count).to eq(9) # 8 previous + 1 new (5 units)
+            expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(1)
+            expect(customer.applied_coupons.first.status).to eq("active")
+
+            terminate_subscription(progressive_subscription)
+            perform_all_enqueued_jobs
+            expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(0)
+            expect(customer.applied_coupons.first.status).to eq("terminated")
+          end
+
+          # check that coupon is no longer applied
+          travel_to(time2 + 15.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+
+            # Check that pay in advance invoice is generated
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices.order(:created_at)
+            expect(pay_in_advance_invoices.count).to eq(10) # 9 previous + 1 new (5 units)
+            expect(pay_in_advance_invoices.last.fees_amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(pay_in_advance_invoices.last.coupons_amount_cents).to eq(0) # 0$ coupon applied
+            expect(pay_in_advance_invoices.last.total_amount_cents).to eq(5_00) # 5$ - 0$ coupon = 5$
+          end
+        end
+      end
+
+      context "when recurring forever" do
+        it "applies the coupon multiple times, calculating the remaining amount (coupon total is 50$)", transaction: false do
+          bm = setup_test_billable_metric
+          pay_in_advance_plan = setup_pia_plan(bm)
+          progressive_plan = setup_pb_plan(bm, thresholds: [20_00, 50_00, 80_00])
+          time0 = DateTime.new(2025, 1, 1)
+          customer = setup_pb_test_customer_and_subs(
+            {name: "Forever Recurring Coupon", code: "forever_recurring_coupon", coupon_type: "fixed_amount",
+             frequency: "forever", frequency_duration: nil, amount_cents: 50_00, amount_currency: "EUR",
+             expiration: "no_expiration", reusable: false},
+            pay_in_advance_plan, progressive_plan, time0
+          )
+
+          # time0 + 5 days: send events (5 units for pay in advance, 10 units for progressive billing)
+          travel_to(time0 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(1)
+
+            fee = pay_in_advance_subscription.fees.first
+            expect(fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that coupon was applied to the pay in advance invoice
+            invoice = pay_in_advance_subscription.invoices.first
+            expect(invoice).to be_present
+            expect(invoice.coupons_amount_cents).to eq(5_00) # Coupons are applied on pay in advance invoices
+            expect(invoice.fees_amount_cents).to eq(5_00)
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(progressive_subscription.invoices.count).to eq(0)
+            perform_all_enqueued_jobs
+          end
+
+          # time0 + 10 days: send events (5 units for pay in advance, 10 units for progressive billing)
+          travel_to(time0 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that progressive billing invoice is generated
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(1) # 1 progressive billing invoice
+
+            # Invoice should be for $20 (total usage at threshold)
+            progressive_invoice = progressive_invoices.first
+            expect(progressive_invoice.fees_amount_cents).to eq(20_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # 20 units - 20$ coupon = 0
+            expect(progressive_invoice.total_amount_cents).to eq(0) # 20 units - 20$ coupon = 0
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices
+            expect(pay_in_advance_invoices.count).to eq(2) # Original + new one
+          end
+
+          # time0 + 15 days: send an event (5 units)
+          travel_to(time0 + 15.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 5)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.fees.count).to eq(3) # 2 previous + 1 new
+            expect(progressive_subscription.fees.count).to eq(1) # 1 progressive billing fee
+
+            latest_fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(latest_fee.amount_cents).to eq(5_00) # 5 units * $1 = $5
+            expect(latest_fee.pay_in_advance).to eq(true) # Pay in advance
+          end
+
+          # Travel to time0 + 1 month, run subscription billing
+          # when applied forever, coupons are applied by subscription
+          travel_to(time0 + 1.month) do
+            perform_billing
+
+            # Check that invoices are generated
+            customer = organization.customers.find_by(external_id: "customer-12345")
+            expect(customer.invoices.count).to eq(5) # 3 pay in advance + 1 progressive_billing + 1 subscription
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+            expect(subscription_invoice.fees_amount_cents).to eq(50_00) # 30 units * $1 = $30 + subscription fee 20$
+            expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(20_00)
+            # ISSUE-1007 sum semantics: coupon usage in this period across all invoices is
+            # 3 * $5 (pay_in_advance) + $20 (PB) = $35. Period budget = $50. Final invoice
+            # gets only the $15 remaining, not another $30.
+            expect(subscription_invoice.coupons_amount_cents).to eq(15_00)
+            expect(subscription_invoice.total_amount_cents).to eq(15_00) # $50 - $20 PB credit - $15 coupon
+            expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(nil) # Forever
+            expect(customer.applied_coupons.first.status).to eq("active")
+          end
+
+          # Second month - coupon is fully available again
+          time1 = time0 + 1.month
+          travel_to(time1 + 5.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 30)
+            ingest_event(progressive_subscription, bm, 10)
+
+            # Check that invoice is generated for pay_in_advance
+            expect(pay_in_advance_subscription.invoices.count).to eq(5) # 4 previous (3 pay in advance + 1 subscription) + 1 new (5 units)
+
+            fee = pay_in_advance_subscription.fees.order(:created_at).last
+            expect(fee.amount_cents).to eq(30_00) # 30 units * $1 = $30
+            expect(fee.pay_in_advance).to eq(true)
+
+            # Check that coupon is still applied since it's recurring forever
+            invoice = pay_in_advance_subscription.invoices.order(:created_at).last
+            expect(invoice).to be_present
+            expect(invoice.fees_amount_cents).to eq(30_00)
+            expect(invoice.coupons_amount_cents).to eq(30_00) # 30$ coupon applied
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(progressive_subscription.invoices.count).to eq(2) # 2 previous + 0 new (no threshold exceeded)
+            perform_all_enqueued_jobs
+          end
+
+          travel_to(time1 + 10.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 30)
+            ingest_event(progressive_subscription, bm, 20)
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices.order(:created_at)
+            expect(pay_in_advance_invoices.count).to eq(6) # 5 previous (4 pay in advance + 1 subscription) + 1 new (30 units)
+            expect(pay_in_advance_invoices.last.fees_amount_cents).to eq(30_00) # 30 units * $1 = $30
+            expect(pay_in_advance_invoices.last.coupons_amount_cents).to eq(20_00) # 20$ coupon remaining
+            expect(pay_in_advance_invoices.last.total_amount_cents).to eq(10_00) # 30$ - 20$ coupon = 10$
+
+            # Check that progressive billing invoice is generated
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(3) # 2 previous + 1 new
+
+            # Invoice should be for $30 (total usage at threshold); this is 50$ threshold (total usage now is 60$)
+            progressive_invoice = progressive_invoices.order(:created_at).last
+            expect(progressive_invoice.fees_amount_cents).to eq(30_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(30_00) # 30$ coupon applied
+            expect(progressive_invoice.total_amount_cents).to eq(0) # 30 units - 30$ coupon = 0
+          end
+
+          # coupon usage so far: 30$ + 30$; 30$
+          travel_to(time1 + 15.days) do
+            pay_in_advance_subscription = Subscription.find_by(external_id: "sub_pay_in_advance")
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            ingest_event(pay_in_advance_subscription, bm, 20)
+            ingest_event(progressive_subscription, bm, 50)
+
+            # Check that progressive billing invoice is generated again
+            progressive_invoices = progressive_subscription.invoices
+            expect(progressive_invoices.count).to eq(4) # 3 previous + 1 new
+
+            # Invoice should be for $80 (total usage is 110, 20 is invoiced in previous billing period - is not used in calculation,
+            # 30 is progressively billed in this period, so it is calculated
+            # when applied forever, coupons are applied by subscription
+            progressive_invoice = progressive_invoices.order(:created_at).last
+            expect(progressive_invoice.fees_amount_cents).to eq(80_00)
+            expect(progressive_invoice.coupons_amount_cents).to eq(20_00) # only 20$ of coupon is remaining
+            expect(progressive_invoice.progressive_billing_credit_amount_cents).to eq(30_00)
+            expect(progressive_invoice.total_amount_cents).to eq(30_00) # 50 units - 20$ coupon = 30$
+
+            # Pay in advance should have another invoice
+            pay_in_advance_invoices = pay_in_advance_subscription.invoices
+            expect(pay_in_advance_invoices.count).to eq(7) # 6 previous (5 pay in advance + 1 subscription) + 1 new (30 units)
+          end
+
+          # coupon still active forever
+          travel_to(time1 + 1.month) do
+            perform_billing
+
+            # Check that invoices are generated
+            customer = organization.customers.find_by(external_id: "customer-12345")
+            expect(customer.invoices.count).to eq(11) # 5 previous + 3 pay in advance + 2 progressive_billing + 1 subscription
+            progressive_subscription = Subscription.find_by(external_id: "sub_progressive")
+            subscription_invoice = progressive_subscription.invoices.order(:created_at).last
+            expect(subscription_invoice.fees_amount_cents).to eq(100_00) # 80 units * $1 = $80 + subscription fee 20$
+            expect(subscription_invoice.progressive_billing_credit_amount_cents).to eq(80_00)
+            expect(subscription_invoice.coupons_amount_cents).to eq(0) # current coupon is fully used
+            expect(subscription_invoice.total_amount_cents).to eq(20_00) # 100$ - 80$ credit = 20$
+            expect(customer.applied_coupons.first.frequency_duration_remaining).to eq(nil) # Forever
+            expect(customer.applied_coupons.first.status).to eq("active")
+          end
+        end
+      end
+    end
+  end
+
+  # ISSUE-1007: documents how a $20 fixed-amount coupon interacts with progressive billing
+  # for a single-subscription, single-billing-period across the matrix of PB amounts.
+  # scenarios are (run against coupon 20$ applied once and coupon applied forever):
+  #   - Sc1: PB $5, final fees $35 (everything in charges or split, doesn't matter — math works the same)
+  #   - Sc2: PB $30, final fees $35
+  #   - Sc3: PB1 $5 + PB2 $30, final fees $50
+  #   - Sc4: PB $40, final fees $0 (no sub, no charges)
+  #   - Sc5: PB $40, final fees $20 (no sub, $20 charges)
+  #
+  # Customer's "paid" = sum of invoice totals; "refund" = sum of credit notes issued.
+  # Net cash-out = paid - refund.
+  context "with PB invoice and $20 coupon matrix", transaction: false do
+    let(:start_time) { DateTime.new(2025, 1, 1) }
+    let(:bm) do
+      create_metric({name: "U", code: "u", aggregation_type: "sum_agg", field_name: "n"})
+      organization.billable_metrics.find_by(code: "u")
+    end
+
+    def setup_pb_plan(thresholds_cents)
+      create_plan({
+        name: "P", code: "pb", interval: "monthly",
+        amount_cents: 0, amount_currency: "EUR", pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: thresholds_cents.map { |c| {amount_cents: c} }
+      })
+      organization.plans.find_by(code: "pb")
+    end
+
+    def apply_fixed_coupon(frequency)
+      create_coupon({
+        name: "C", code: "c", coupon_type: "fixed_amount",
+        frequency: frequency, amount_cents: 20_00, amount_currency: "EUR",
+        frequency_duration: ((frequency == "recurring") ? 1 : nil),
+        expiration: "no_expiration", reusable: false
+      })
+      create_or_update_customer({external_id: "cust"})
+      apply_coupon({external_customer_id: "cust", coupon_code: "c"})
+    end
+
+    def create_sub(plan)
+      travel_to(start_time) { create_subscription({external_customer_id: "cust", external_id: "s", plan_code: plan.code}) }
+      Subscription.find_by(external_id: "s")
+    end
+
+    def end_of_month_billing
+      travel_to(start_time + 1.month) { perform_billing }
+    end
+
+    def customer_totals
+      customer = organization.customers.find_by(external_id: "cust")
+      {
+        paid: customer.invoices.sum(:total_amount_cents),
+        refund: CreditNote.where(invoice_id: customer.invoices.pluck(:id)).sum(:credit_amount_cents)
+      }
+    end
+
+    shared_examples "matrix case" do |coupon:, paid:, refund:|
+      it "with #{coupon} coupon: customer pays $#{paid / 100.0}, refund $#{refund / 100.0}" do
+        plan = setup_pb_plan(thresholds)
+        apply_fixed_coupon(coupon)
+        sub = create_sub(plan)
+        trigger_usage(sub)
+        end_of_month_billing
+
+        expect(customer_totals).to eq(paid: paid, refund: refund)
+      end
+    end
+
+    context "with Sc1: 1 PB at $5, period total $35" do
+      let(:thresholds) { [5_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 5) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 30) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
+    end
+
+    context "with Sc2: 1 PB at $30, period total $35" do
+      let(:thresholds) { [30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 30) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 5) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
+    end
+
+    context "with Sc3: 2 PBs at $5 and $30, period total $50" do
+      let(:thresholds) { [5_00, 30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 5) }
+        travel_to(start_time + 10.days) { ingest_event(sub, bm, 25) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 20) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 30_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 30_00, refund: 0
+    end
+
+    context "with Sc4: PB at $40, usage clawed back to $0" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, -40) }
+        perform_usage_update
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 20_00, refund: 20_00
+      include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 20_00
+    end
+
+    context "with Sc5: PB at $40, usage clawed back to $20" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+        travel_to(start_time + 10.days) { ingest_event(sub, bm, -20) }
+      end
+
+      # Known limitation: $10 of coupon stays stranded on the PB for usage that was
+      # clawed back. Refund is the proportional cash portion only ($10), not the full
+      # $20 needed for the customer to come out at $0 owed.
+      include_examples "matrix case", coupon: "once", paid: 20_00, refund: 10_00
+      include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 10_00
     end
   end
 end
