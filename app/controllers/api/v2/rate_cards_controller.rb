@@ -74,11 +74,10 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.rate_cards.includes(:product, :product_filter, :rates, :taxes),
+              result.rate_cards.includes(:product, :product_filter, :rates),
               ::V1::RateCardSerializer,
               collection_name: "rate_cards",
-              meta: pagination_metadata(result.rate_cards),
-              includes: %i[taxes]
+              meta: pagination_metadata(result.rate_cards)
             )
           )
         else

@@ -309,14 +309,10 @@ RSpec.describe Api::V2::RateCardsController do
     include_examples "requires API permission", "rate_card", "read"
 
     it "returns the rate cards" do
-      tax = create(:tax, organization:)
-      create(:rate_card_applied_tax, rate_card:, tax:, organization:)
-
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_cards].map { it[:lago_id] }).to match_array([rate_card.id, other.id])
-      expect(json[:rate_cards].find { it[:lago_id] == rate_card.id }[:taxes].pluck(:code)).to eq([tax.code])
     end
 
     context "with a product_id filter" do
