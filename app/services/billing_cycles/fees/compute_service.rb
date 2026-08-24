@@ -51,7 +51,7 @@ module BillingCycles
           amount_currency: currency,
           unit_amount_cents: amount.unit_amount_cents,
           precise_unit_amount: amount.precise_unit_amount,
-          units:,
+          units: fee_units,
           taxes_amount_cents: 0,
           precise_amount_cents: amount.precise_amount_cents,
           amount_details: charge_model_result.amount_details,
@@ -80,7 +80,42 @@ module BillingCycles
       end
 
       def amount
+        return incremental_amount if incremental?
+
         fee_amounts.amount
+      end
+
+      # A pay-in-advance increase: the period was already invoiced, so this cycle owes only
+      # the difference between the new position and what the watermark already covers.
+      # Arrears never reaches this — its whole period is billed once, at the end.
+      def incremental?
+        return false unless subscription_rate_card.rate_card.advance?
+
+        watermark.positive?
+      end
+
+      def watermark
+        @watermark ||= BillingCycles::ResolveWatermarkService.call!(billing_cycle:).units
+      end
+
+      def incremental_amount
+        @incremental_amount ||= begin
+          delta = BillingCycles::Fees::AdvanceDeltaService.call!(
+            billing_cycle:,
+            units:,
+            already_billed_units: watermark
+          )
+
+          amount_cents = (delta.amount * Money::Currency.new(currency).subunit_to_unit).round
+
+          BillingCycles::Fees::AmountsService::Amount.new(
+            amount_cents:,
+            precise_amount_cents: BigDecimal(amount_cents),
+            unit_amount_cents: delta.billable_units.zero? ? 0 : (amount_cents / delta.billable_units).round,
+            precise_unit_amount: delta.billable_units.zero? ? BigDecimal(0) : BigDecimal(amount_cents) / delta.billable_units / Money::Currency.new(currency).subunit_to_unit,
+            pricing_unit_usage: nil
+          )
+        end
       end
 
       def true_up_amount
@@ -119,6 +154,14 @@ module BillingCycles
       # the two are the same number.
       def units
         resolved_units.closing_units
+      end
+
+      # An incremental charge bills only what sits above the watermark, so that is what the
+      # line reports too.
+      def fee_units
+        return units unless incremental?
+
+        [units - watermark, BigDecimal(0)].max
       end
 
       def charge_model_result
