@@ -3,15 +3,12 @@
 require "rails_helper"
 
 RSpec.describe IntegrationMappings::CreateService do
-  let(:service) { described_class.new(membership.user) }
-
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
+  let(:organization) { create(:organization) }
   let(:add_on) { create(:add_on, organization:) }
 
   describe "#call" do
-    subject(:service_call) { service.call(**create_args) }
+    subject(:service_call) { described_class.call(organization:, params: create_args) }
 
     let(:create_args) do
       {
@@ -72,6 +69,49 @@ RSpec.describe IntegrationMappings::CreateService do
             expect(service_call.error.message).to eq("billing_entity_not_found")
           end
         end
+      end
+
+      context "with a Product" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:product) { create(:product, organization:) }
+        let(:create_args) do
+          {
+            mappable_type: "Product",
+            mappable_id: product.id,
+            integration_id: integration.id,
+            external_id: "external_123"
+          }
+        end
+
+        it "creates the integration mapping" do
+          expect { service_call }.to change(IntegrationMappings::AnrokMapping, :count).by(1)
+
+          expect(service_call.integration_mapping).to have_attributes(
+            organization:,
+            integration:,
+            mappable: product
+          )
+        end
+
+        context "when the Product belongs to another organization" do
+          let(:product) { create(:product) }
+
+          it "returns a not found error" do
+            expect(service_call).not_to be_success
+            expect(service_call.error).to be_a(BaseService::NotFoundFailure)
+            expect(service_call.error.message).to eq("product_not_found")
+          end
+        end
+      end
+    end
+
+    context "when the integration belongs to another organization" do
+      let(:integration) { create(:netsuite_integration) }
+
+      it "returns a not found error" do
+        expect(service_call).not_to be_success
+        expect(service_call.error).to be_a(BaseService::NotFoundFailure)
+        expect(service_call.error.message).to eq("integration_not_found")
       end
     end
 

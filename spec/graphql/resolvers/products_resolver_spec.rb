@@ -44,6 +44,36 @@ RSpec.describe Resolvers::ProductsResolver do
     expect(response["metadata"]["totalCount"]).to eq(2)
   end
 
+  context "with integration mappings" do
+    let(:integration) { create(:anrok_integration, organization:) }
+    let!(:usage_mapping) { create(:anrok_mapping, integration:, organization:, mappable: usage_item) }
+    let!(:fixed_mapping) { create(:anrok_mapping, integration:, organization:, mappable: fixed_item) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          products(limit: 5) {
+            collection { id integrationMappings { id } }
+          }
+        }
+      GQL
+    end
+
+    it "loads mappings for all Products in one query" do
+      query_count = 0
+      counter = lambda do |_name, _start, _finish, _id, payload|
+        query_count += 1 if payload[:sql]&.include?('FROM "integration_mappings"')
+      end
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { execution }
+
+      products = execution.dig("data", "products", "collection").index_by { it["id"] }
+      expect(products[usage_item.id]["integrationMappings"].pluck("id")).to eq([usage_mapping.id])
+      expect(products[fixed_item.id]["integrationMappings"].pluck("id")).to eq([fixed_mapping.id])
+      expect(query_count).to eq(1)
+    end
+  end
+
   context "with an item type filter" do
     let(:variables) { {productType: "fixed"} }
 

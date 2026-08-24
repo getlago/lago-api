@@ -4,6 +4,7 @@ class Product < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   include CatalogAttachable
+  include IntegrationMappable
 
   self.discard_column = :deleted_at
 
