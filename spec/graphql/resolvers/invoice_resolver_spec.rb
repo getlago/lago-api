@@ -404,6 +404,43 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(add_on_fee["presentationBreakdowns"]).to eq([])
     end
 
+    it "preserves calendar dates only below the single-invoice field" do
+      mixed_root_query = <<~GQL
+        query($id: ID!) {
+          invoice(id: $id) {
+            fees { itemType properties { fromDatetime toDatetime } }
+          }
+          invoices(limit: 5) {
+            collection {
+              id
+              fees { itemType properties { fromDatetime toDatetime } }
+            }
+          }
+        }
+      GQL
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mixed_root_query,
+        variables: {id: invoice.id}
+      )
+
+      invoice_fee = result.dig("data", "invoice", "fees").find { |item| item["itemType"] == "add_on" }
+      list_invoice = result.dig("data", "invoices", "collection").find { |item| item["id"] == invoice.id }
+      list_fee = list_invoice["fees"].find { |item| item["itemType"] == "add_on" }
+
+      expect(invoice_fee["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T00:00:00+00:00",
+        "toDatetime" => "2026-08-05T00:00:00+00:00"
+      )
+      expect(list_fee["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T23:59:59-07:00",
+        "toDatetime" => "2026-08-05T23:59:59-07:00"
+      )
+    end
+
     context "with a deleted add_on" do
       let(:add_on) { create(:add_on, :deleted, organization:) }
 
