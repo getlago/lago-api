@@ -960,6 +960,21 @@ RSpec.describe Plans::CreateService do
     end
   end
 
+  context "when the organization uses the product catalog and sends legacy pricing" do
+    let(:create_args) do
+      {organization_id: organization.id, name: "Catalog plan", code: "catalog_plan", amount_currency: "USD", interval: "monthly"}
+    end
+
+    before { organization.enable_feature_flag!(:product_catalog) }
+
+    it "rejects the legacy field" do
+      result = plans_service.call
+
+      expect(result).to be_failure
+      expect(result.error.messages[:interval]).to eq(["legacy_billing_disabled"])
+    end
+  end
+
   context "when the organization uses the product catalog" do
     let(:create_args) do
       {
@@ -977,6 +992,23 @@ RSpec.describe Plans::CreateService do
 
       expect(result).to be_success
       expect(result.plan).to have_attributes(pricing_type: "product_catalog", interval: nil, amount_cents: nil)
+    end
+  end
+
+  describe "pricing type derivation" do
+    it "creates legacy plans for organizations without the catalog flag" do
+      result = described_class.call(create_args)
+
+      expect(result.plan.pricing_type).to eq("legacy")
+    end
+
+    it "creates catalog plans for catalog organizations, ignoring any submitted pricing_type" do
+      organization.update!(feature_flags: organization.feature_flags | ["product_catalog"])
+      result = described_class.call(
+        {organization_id: organization.id, name: "Catalog", code: "catalog", amount_currency: "USD", pricing_type: "legacy"}
+      )
+
+      expect(result.plan.pricing_type).to eq("product_catalog")
     end
   end
 end

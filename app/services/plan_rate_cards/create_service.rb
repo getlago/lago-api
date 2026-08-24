@@ -19,6 +19,11 @@ module PlanRateCards
         return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
       end
 
+      # On a legacy plan the config would be silently ignored by the v1 engine.
+      unless plan.product_catalog?
+        return result.single_validation_failure!(field: :plan, error_code: "legacy_plan")
+      end
+
       rate_card = organization.rate_cards.find_by(code: params[:rate_card_code])
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 

@@ -54,6 +54,10 @@ module Subscriptions
 
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
+      if params.key?(:plan_overrides) && (subscription.plan.product_catalog? || subscription.plan.organization.product_catalog_enabled?)
+        return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
+      end
+
       ActiveRecord::Base.transaction do
         subscription.name = params[:name] if params.key?(:name)
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)

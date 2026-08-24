@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Api::V2::PlanRateCardsController do
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, :product_catalog, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   describe "POST /api/v2/plans/:plan_code/applied_rate_cards" do

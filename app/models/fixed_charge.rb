@@ -41,6 +41,7 @@ class FixedCharge < ApplicationRecord
   validates :properties, presence: true
 
   validate :validate_code_unique
+  validate :validate_plan_pricing_type
   validate :validate_pay_in_advance
   validate :validate_prorated
   validate :validate_properties
@@ -110,6 +111,13 @@ class FixedCharge < ApplicationRecord
 
     fixed_charge = plan.fixed_charges.parents.where(code:).first
     errors.add(:code, :taken) if fixed_charge && fixed_charge != self
+  end
+
+  # Model-level so no caller can bypass it: a catalog plan never carries chargeables.
+  def validate_plan_pricing_type
+    return unless plan&.product_catalog?
+
+    errors.add(:plan, :legacy_billing_disabled)
   end
 end
 

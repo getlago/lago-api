@@ -15,6 +15,11 @@ module Plans
     def call
       return result.forbidden_failure! unless License.premium?
 
+      # Per-subscription pricing on the catalog is a SubscriptionRateCard.
+      if plan.product_catalog? || plan.organization.product_catalog_enabled?
+        return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
+      end
+
       ActiveRecord::Base.transaction do
         new_plan = plan.dup.tap do |p|
           p.organization = plan.organization
