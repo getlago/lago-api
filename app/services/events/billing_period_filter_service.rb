@@ -6,7 +6,11 @@ module Events
 
     # codes restricts the event lookup to those billable metric codes. Callers that only bill a
     # subset of the plan (usage filtered by charge or metric) pass it so the event store does not
-    # resolve combinations they will discard. Recurring charges are still seeded for the whole plan.
+    # resolve combinations they will discard. It bounds the lookup, not the result: recurring
+    # charges are seeded from the plan or from previous usage, neither of which codes narrows, so
+    # charges outside of it may still be returned. The first billing period of the pre-enriched
+    # path is the exception, as nothing is seeded there and a recurring charge is only returned
+    # when its code is part of codes. Callers must read the charges they asked for, no more.
     #
     # with_last_seen_at can be disabled only by callers that compute usage without the charge cache,
     # which lets the event store skip the MAX() aggregate and stop reading the ingestion column
@@ -171,7 +175,9 @@ module Events
     end
 
     # Return the charges and filters matching the events pre-enriched in ClickHouse or Postgres for
-    # the period, including the recurring ones.
+    # the period, including the recurring ones carrying usage over from the previous periods. In the
+    # first billing period there is none to carry over, so recurring charges are only returned when
+    # the event lookup covers their code (see #recurring_charges_and_filters).
     # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     def charges_and_filters_from_pre_enriched_events
       values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes, with_last_seen_at:)
