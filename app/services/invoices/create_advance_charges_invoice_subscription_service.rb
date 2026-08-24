@@ -46,12 +46,16 @@ module Invoices
     #       with a later `started_at` than the running one that replaced it, after a backdated
     #       re-subscription. Its charges period ended on its termination date, so it would stamp the group
     #       with a period preceding the one being billed.
-    #       We only fall back to it for an actual termination flow, where every subscription is terminated
-    #       and `timestamp` is the termination date.
+    #       We only fall back to the most recently terminated subscription for an actual termination flow,
+    #       where every subscription is terminated and `timestamp` is the termination date.
     def latest_subscription
       running_subscriptions = all_subscriptions.reject { |subscription| subscription.terminated_at?(timestamp) }
 
-      (running_subscriptions.presence || all_subscriptions).max_by(&:started_at)
+      if running_subscriptions.present?
+        running_subscriptions.max_by(&:started_at)
+      else
+        all_subscriptions.max_by(&:terminated_at)
+      end
     end
 
     def calculate_boundaries(subscription)

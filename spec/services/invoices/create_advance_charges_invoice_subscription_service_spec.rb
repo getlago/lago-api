@@ -93,9 +93,9 @@ RSpec.describe Invoices::CreateAdvanceChargesInvoiceSubscriptionService do
           customer:,
           external_id: terminated_subscription.external_id,
           status: :terminated,
-          subscription_at: DateTime.new(2024, 3, 1),
-          started_at: DateTime.new(2024, 3, 1),
-          terminated_at: DateTime.new(2024, 3, 15, 10)
+          subscription_at: DateTime.new(2024, 3, 20),
+          started_at: DateTime.new(2024, 3, 20),
+          terminated_at: DateTime.new(2024, 3, 25, 10)
         )
       end
 
