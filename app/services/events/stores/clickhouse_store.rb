@@ -184,7 +184,7 @@ module Events
             selects << ActiveRecord::Base.sanitize_sql_array(["properties[?] AS prop_#{index}", key.to_s])
             group_columns << "prop_#{index}"
           end
-          selects << "MAX(enriched_at) AS last_seen_at" if with_last_seen_at
+          selects << (with_last_seen_at ? "MAX(enriched_at) AS last_seen_at" : "NULL AS last_seen_at")
 
           scope.select(selects.join(", ")).group(group_columns.join(", ")).map do |row|
             combination = {}
@@ -193,7 +193,7 @@ module Events
               combination[key] = value if value.present?
             end
 
-            [row.code, combination, (row.read_attribute("last_seen_at") if with_last_seen_at)]
+            [row.code, combination, row.read_attribute("last_seen_at")]
           end
         end
       end

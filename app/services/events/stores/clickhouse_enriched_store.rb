@@ -165,12 +165,11 @@ module Events
           scope = scope.where(code: codes) unless codes.nil?
           scope = scope.group("charge_id", "charge_filter_id")
 
-          if with_last_seen_at
-            scope.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("MAX(enriched_at)"))
-          else
-            scope.pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
-              .map { |charge_id, filter_id| [charge_id, filter_id, nil] }
-          end
+          scope.pluck(
+            "charge_id",
+            Arel.sql("nullIf(charge_filter_id, '')"),
+            Arel.sql(with_last_seen_at ? "MAX(enriched_at)" : "NULL")
+          )
         end
       end
 

@@ -35,11 +35,7 @@ module Events
         scope = scope.where(code: codes) unless codes.nil?
         scope = scope.group(:charge_id, :charge_filter_id)
 
-        if with_last_seen_at
-          scope.pluck(:charge_id, :charge_filter_id, Arel.sql("MAX(enriched_at)"))
-        else
-          scope.pluck(:charge_id, :charge_filter_id).map { |charge_id, filter_id| [charge_id, filter_id, nil] }
-        end
+        scope.pluck(:charge_id, :charge_filter_id, Arel.sql(with_last_seen_at ? "MAX(enriched_at)" : "NULL"))
       end
 
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
@@ -64,12 +60,12 @@ module Events
             WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
           ), '{}'::jsonb) AS combination
         SQL
-        selects << "MAX(events.created_at) AS last_seen_at" if with_last_seen_at
+        selects << (with_last_seen_at ? "MAX(events.created_at) AS last_seen_at" : "NULL AS last_seen_at")
 
         scope
           .select(Arel.sql(selects.join(", ")))
           .group("code, combination")
-          .map { |row| [row.code, parse_combination(row), with_last_seen_at ? row.last_seen_at : nil] }
+          .map { |row| [row.code, parse_combination(row), row.last_seen_at] }
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
