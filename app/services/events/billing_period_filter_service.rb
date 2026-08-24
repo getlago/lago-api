@@ -63,18 +63,14 @@ module Events
       )
     end
 
-    # Every billable metric code of the plan, restricted to the requested codes when given.
-    # Intersecting instead of using codes directly keeps an unknown code from widening the lookup.
+    # The billable metric codes the event lookup covers: the requested ones, or every code of the
+    # plan when the caller did not restrict them. codes is expected to be derived from the plan, as
+    # every caller does today. An unrelated code is harmless, since codes only ever narrows the
+    # subscription events down to a `code IN (...)` restriction it cannot match, but intersecting
+    # with the plan to drop it is not: the charge would then be missing from the result and billed
+    # as zero units (see Fees::ChargeService#skip_unused_filter?) rather than reported as unknown.
     def plan_codes
-      @plan_codes ||= if codes.nil?
-        all_plan_codes
-      else
-        all_plan_codes & codes
-      end
-    end
-
-    def all_plan_codes
-      @all_plan_codes ||= plan.billable_metrics.distinct.pluck(:code)
+      @plan_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
     end
 
     def charges_and_filters

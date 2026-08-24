@@ -1416,7 +1416,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
       end
 
-      it "ignores a code that is not part of the plan" do
+      # A code outside of the plan matches no event of the subscription, so it is forwarded as is
+      # rather than intersected away: dropping it would remove the charge from the result and bill
+      # it as zero units instead of surfacing the unknown code.
+      it "forwards a code that is not part of the plan" do
         service = described_class.new(subscription:, boundaries:, codes: [billable_metric.code, "unknown_code"])
         event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
@@ -1424,7 +1427,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         service.call
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
-          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
+          .with(codes: [billable_metric.code, "unknown_code"], filter_keys: [], with_last_seen_at: true)
       end
 
       it "still seeds recurring charges left out of the codes" do
