@@ -732,17 +732,19 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
           end
 
-          it "does not use the Rails cache" do
-            key = [
-              "charge-usage",
-              Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
-              charge.id,
-              subscription.id,
-              charge.updated_at.iso8601
-            ].join("/")
-
+          it "serves the full usage entry on the next call" do
             travel_to(current_date) do
-              expect { usage_service.call }.not_to change { Rails.cache.exist?(key) }
+              expect(usage_service.call.usage.fees.first.units).to eq(2)
+
+              create(:event, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+
+              expect(described_class.new(
+                customer:,
+                subscription:,
+                apply_taxes: false,
+                with_cache: true,
+                usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+              ).call.usage.fees.first.units).to eq(2)
             end
           end
         end
@@ -895,10 +897,13 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
 
-        it "skips both the cache and the ingestion timestamps" do
-          expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
+        it "caches the charge under the full usage key and requests the ingestion timestamps" do
+          expect { usage_service.call }
+            .to change { Rails.cache.exist?("#{charge_cache_key}/full-usage") }.from(false).to(true)
+
+          expect(Rails.cache.exist?(charge_cache_key)).to be(false)
           expect(Events::BillingPeriodFilterService).to have_received(:call!)
-            .with(hash_including(with_last_seen_at: false))
+            .with(hash_including(with_last_seen_at: true))
         end
       end
     end

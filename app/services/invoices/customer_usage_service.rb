@@ -132,6 +132,7 @@ module Invoices
         charge:,
         to_datetime: boundaries.charges_to_datetime,
         cache: charge_cache_enabled?,
+        full_usage: full_usage_cache?,
         last_seen_at: applied_filters
       )
 
@@ -177,15 +178,13 @@ module Invoices
       @date_service ||= Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true)
     end
 
-    # NOTE: The charge cache key does not include from_datetime, so when full_usage
-    #       shifts the boundaries back to subscription.started_at, the cache would
-    #       return stale current-period data. Disable cache in that case.
-    #       When started_at matches the current period boundary, the aggregation
-    #       window is identical and the cache is safe to use.
-    def cache_applicable?
-      return with_cache unless usage_filters.full_usage
-
-      with_cache && subscription.started_at == date_service.charges_from_datetime
+    # NOTE: The charge cache key does not include from_datetime, so a full_usage window reaching
+    #       back to subscription.started_at gets its own cache entry instead of reading the
+    #       current-period one. When started_at matches the current period boundary the aggregation
+    #       window is identical, so the request shares the current usage entry rather than warming a
+    #       duplicate.
+    def full_usage_cache?
+      usage_filters.full_usage && subscription.started_at != date_service.charges_from_datetime
     end
 
     def compute_amounts
@@ -291,7 +290,7 @@ module Invoices
     # timestamp written into a live cache stays valid forever (see Events::BillingPeriodFilterService).
     # Usage filtered by group is never cached, as its fees are a subset of the charge fees.
     def charge_cache_enabled?
-      cache_applicable? && usage_filters.filter_by_group.blank?
+      with_cache && usage_filters.filter_by_group.blank?
     end
 
     def querying_full_usage_allowed
