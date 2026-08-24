@@ -17,7 +17,12 @@ module SubscriptionRateCards
   # nothing and the day belongs to whichever version closed it. That keeps a window's weights
   # summing to exactly 1, and stops a same-day change from charging the same day twice.
   class ResolveUnitsService < BaseService
-    Result = BaseResult[:units]
+    # units         -> what the amount is computed from
+    # closing_units -> the quantity in force when the window closes, which is what the
+    #                  invoice line reports. They differ only when prorating: a quantity is
+    #                  fractional in time, but a seat is not, so the line shows whole seats
+    #                  and the fraction is absorbed into the unit price.
+    Result = BaseResult[:units, :closing_units]
 
     def initialize(subscription_rate_card:, from:, to:, timezone: nil)
       @subscription_rate_card = subscription_rate_card
@@ -29,6 +34,7 @@ module SubscriptionRateCards
 
     def call
       result.units = subscription_rate_card.proration? ? weighted_units : trailing_units
+      result.closing_units = trailing_units
       result
     end
 

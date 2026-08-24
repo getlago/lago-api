@@ -97,15 +97,28 @@ module BillingCycles
       end
 
       # Resolved over the cycle's own window rather than read off the card, because a units
-      # change mid-period leaves several versions covering that window. Composes with
-      # proration_ratio: this answers "which quantity", the ratio answers "how much of the
-      # period the window covers".
-      def units
-        @units ||= SubscriptionRateCards::ResolveUnitsService.call!(
+      # change mid-period leaves several versions covering that window.
+      def resolved_units
+        @resolved_units ||= SubscriptionRateCards::ResolveUnitsService.call!(
           subscription_rate_card:,
           from: billing_cycle.period_from,
           to: billing_cycle.period_to
-        ).units
+        )
+      end
+
+      # What the amount is computed from: the day-weighted quantity. Composes with
+      # proration_ratio — this answers "which quantity", the ratio answers "how much of the
+      # period the window covers".
+      def billable_units
+        resolved_units.units
+      end
+
+      # What the invoice line reports, and what selects the tier. A quantity is fractional in
+      # time but a seat is not, so the line shows whole seats and the time-weighting is
+      # absorbed into the unit price, which is derived as amount / units. Without proration
+      # the two are the same number.
+      def units
+        resolved_units.closing_units
       end
 
       def charge_model_result
@@ -117,8 +130,11 @@ module BillingCycles
         ).apply
       end
 
+      # The amount comes from the weighted quantity; the tier comes from the closing one.
+      # That split is what the volume model expects (its range is selected by
+      # full_units_number) and it matches the legacy engine.
       def aggregation_result
-        prorated_units = units * billing_cycle.proration_ratio
+        prorated_units = billable_units * billing_cycle.proration_ratio
 
         BillableMetrics::Aggregations::BaseService::Result.new.tap do |aggregation_result|
           aggregation_result.aggregation = prorated_units
