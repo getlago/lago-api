@@ -9,7 +9,7 @@ RSpec.describe Resolvers::ProductResolver do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {productId: product.id}
+      variables:
     )
   end
 
@@ -17,6 +17,7 @@ RSpec.describe Resolvers::ProductResolver do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:product) { create(:product, organization:) }
+  let(:variables) { {productId: product.id} }
 
   let(:query) do
     <<~GQL
@@ -45,6 +46,41 @@ RSpec.describe Resolvers::ProductResolver do
 
     it "returns a not found error" do
       expect_graphql_error(result: execution, message: "Resource not found")
+    end
+  end
+
+  context "with integration mappings" do
+    let(:netsuite_integration) { create(:netsuite_integration, organization:) }
+    let(:xero_integration) { create(:xero_integration, organization:) }
+    let!(:netsuite_mapping) { create(:netsuite_mapping, integration: netsuite_integration, organization:, mappable: product) }
+    let!(:xero_mapping) { create(:xero_mapping, integration: xero_integration, organization:, mappable: product) }
+    let(:integration_id) { nil }
+    let(:variables) { {productId: product.id, integrationId: integration_id} }
+
+    let(:query) do
+      <<~GQL
+        query($productId: ID!, $integrationId: ID) {
+          product(id: $productId) {
+            integrationMappings(integrationId: $integrationId) { id }
+          }
+        }
+      GQL
+    end
+
+    it "returns all Product integration mappings" do
+      mappings = execution.dig("data", "product", "integrationMappings")
+
+      expect(mappings.pluck("id")).to match_array([netsuite_mapping.id, xero_mapping.id])
+    end
+
+    context "with an integration ID" do
+      let(:integration_id) { netsuite_integration.id }
+
+      it "returns only the mapping for that integration" do
+        mappings = execution.dig("data", "product", "integrationMappings")
+
+        expect(mappings.pluck("id")).to eq([netsuite_mapping.id])
+      end
     end
   end
 end
