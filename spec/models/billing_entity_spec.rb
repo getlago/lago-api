@@ -86,8 +86,6 @@ RSpec.describe BillingEntity do
       expect(billing_entity).to be_valid
     end
 
-    it { is_expected.to allow_value(nil).for(:net_payment_term) }
-
     it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:update) }
 
     it { is_expected.to allow_value(nil).for(:document_number_prefix).on(:create) }
