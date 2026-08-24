@@ -88,6 +88,8 @@ module Emails
     def validation_errors
       errors = {}
       errors[:billing_entity] = ["must have email configured"] if billing_entity.email.blank?
+      errors[:from] = ["must have a sender email address configured"] if billing_entity.from_email_address.blank?
+      errors[:invoice] = ["must have a non-zero fees amount"] if zero_amount_invoice?
       errors[:to] = ["must have at least one recipient"] if recipients_to.empty?
 
       invalid_to = recipients_to.reject { |email| valid_email?(email) }
@@ -104,6 +106,14 @@ module Emails
 
     def valid_email?(email)
       email.match?(Regex::EMAIL)
+    end
+
+    # Zero-amount invoices are intentionally never emailed (#1559), so InvoiceMailer
+    # returns before building the message. Mirror its condition here, otherwise the
+    # resend reports success while nothing is ever delivered. Note this is about the
+    # fees amount, not the presence of fees: an invoice can carry fees that sum to zero.
+    def zero_amount_invoice?
+      resource.is_a?(Invoice) && resource.fees_amount_cents.zero?
     end
   end
 end
