@@ -1,30 +1,22 @@
 # frozen_string_literal: true
 
 module Invoices
-  class FinalizeService < BaseService
+  class RefreshSearchTermsService < BaseService
     Result = BaseResult[:invoice]
 
     def initialize(invoice:)
       @invoice = invoice
+
       super
     end
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
 
-      if invoice.finalized?
-        result.invoice = invoice
-        return result
-      end
-
-      invoice.finalized!
-
-      Invoices::RefreshSearchTermsService.call!(invoice:)
+      Invoice.where(id: invoice.id).update_all("search_terms = #{Invoice::SearchTerms::SQL}") # rubocop:disable Rails/SkipsModelValidations
 
       result.invoice = invoice
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
     end
 
     private

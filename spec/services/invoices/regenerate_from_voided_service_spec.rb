@@ -76,6 +76,13 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         it "inherits the value from the voided invoice" do
           expect(regenerate_result.invoice.purchase_order_number).to eq("PO-ORIGINAL")
         end
+
+        it "writes the inherited value to the search terms" do
+          invoice = regenerate_result.invoice.reload
+
+          expect(invoice.search_terms).to include("PO-ORIGINAL")
+          expect(invoice.search_terms).to include(invoice.number)
+        end
       end
 
       context "when a purchase_order_number is provided" do
@@ -86,6 +93,14 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
 
           expect(result.invoice.purchase_order_number).to eq("PO-EDITED")
         end
+
+        it "writes the provided value to the search terms" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "  PO-EDITED  "
+          )
+
+          expect(result.invoice.reload.search_terms).to include("PO-EDITED")
+        end
       end
 
       context "when a blank purchase_order_number is provided" do
@@ -95,6 +110,36 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           )
 
           expect(result.invoice.purchase_order_number).to be_nil
+        end
+
+        it "keeps the voided invoice value out of the search terms" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "   "
+          )
+
+          expect(result.invoice.reload.search_terms).not_to include("PO-ORIGINAL")
+        end
+      end
+
+      context "when the regenerated invoice is closed instead of finalized" do
+        let(:fees_params) do
+          [
+            {
+              id: original_fee.id,
+              subscription_id: subscription.id,
+              units: 10,
+              unit_amount_cents: 0
+            }
+          ]
+        end
+
+        before { customer.update!(finalize_zero_amount_invoice: :skip) }
+
+        it "writes the purchase order number to the search terms" do
+          invoice = regenerate_result.invoice.reload
+
+          expect(invoice).to be_closed
+          expect(invoice.search_terms).to include("PO-ORIGINAL")
         end
       end
     end
