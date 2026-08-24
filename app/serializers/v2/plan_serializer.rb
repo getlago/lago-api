@@ -10,7 +10,7 @@ module V2
         code: model.code,
         description: model.description,
         currency: model.amount_currency,
-        applied_rate_cards_count: model.applied_rate_cards.count,
+        applied_rate_cards_count: model.applied_rate_cards.size,
         created_at: model.created_at.iso8601
       }
     end

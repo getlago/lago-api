@@ -5,6 +5,30 @@ module Api
     class PlansController < Api::BaseController
       include Api::RequiresProductCatalog
 
+      def index
+        result = PlansQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: {pricing_type: "product_catalog"}
+        )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.plans.includes(:applied_rate_cards),
+              ::V2::PlanSerializer,
+              collection_name: "plans",
+              meta: pagination_metadata(result.plans)
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def create
         result = ::Plans::CreateService.call(input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys)
 

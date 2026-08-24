@@ -6,11 +6,11 @@ RSpec.describe "API v2 fallback to v1" do
   let(:organization) { create(:organization) }
 
   it "serves a v1-backed resource under /api/v2" do
-    plan = create(:plan, organization:)
+    billable_metric = create(:billable_metric, organization:)
 
-    get_with_token(organization, "/api/v2/plans")
+    get_with_token(organization, "/api/v2/billable_metrics")
 
     expect(response).to have_http_status(:success)
-    expect(json[:plans].map { it[:lago_id] }).to include(plan.id)
+    expect(json[:billable_metrics].map { it[:lago_id] }).to include(billable_metric.id)
   end
 end
