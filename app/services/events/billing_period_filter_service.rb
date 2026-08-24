@@ -4,17 +4,6 @@ module Events
   class BillingPeriodFilterService < BaseService
     Result = BaseResult[:charges]
 
-    # codes restricts the event lookup to those billable metric codes. Callers that only bill a
-    # subset of the plan (usage filtered by charge or metric) pass it so the event store does not
-    # resolve combinations they will discard. It bounds the lookup, not the result: recurring
-    # charges are seeded from the plan or from previous usage, neither of which codes narrows, so
-    # charges outside of it may still be returned. The first billing period of the pre-enriched
-    # path is the exception, as nothing is seeded there and a recurring charge is only returned
-    # when its code is part of codes. Callers must read the charges they asked for, no more.
-    #
-    # with_last_seen_at can be disabled only by callers that compute usage without the charge cache,
-    # which lets the event store skip the MAX() aggregate and stop reading the ingestion column
-    # entirely. See #call for why a cached caller must never disable it.
     def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
       @subscription = subscription
       @boundaries = boundaries
@@ -28,12 +17,7 @@ module Events
     # result.charges is a nested hash: { charge_id => { filter_id => last_seen_at } } (nil filter
     # is the default bucket). last_seen_at is the most recent event ingestion timestamp for that
     # charge/filter (created_at on PG, enriched_at on CH), used to lazily invalidate the cache.
-    # It is nil when with_last_seen_at is disabled, so the flag may only be turned off when the
-    # charge cache is off entirely: a nil watermark does not fall back to the expiration, it makes
-    # the entry unconditionally valid (CacheService#settled? and #valid_cache? both return early)
-    # and stamps cached_at from a wall clock reading instead of an event timestamp. Later readers
-    # that do compute a watermark then accept that entry, because any real event timestamp is older
-    # than the wall clock, and stale usage is served for the rest of the billing period.
+    # It is nil when with_last_seen_at is disabled, which keeps a cached entry valid forever.
     # Recurring charges with no in-period event are seeded with the period start (see #period_start).
     def call
       result.charges = charges_and_filters
@@ -63,12 +47,8 @@ module Events
       )
     end
 
-    # The billable metric codes the event lookup covers: the requested ones, or every code of the
-    # plan when the caller did not restrict them. codes is expected to be derived from the plan, as
-    # every caller does today. An unrelated code is harmless, since codes only ever narrows the
-    # subscription events down to a `code IN (...)` restriction it cannot match, but intersecting
-    # with the plan to drop it is not: the charge would then be missing from the result and billed
-    # as zero units (see Fees::ChargeService#skip_unused_filter?) rather than reported as unknown.
+    # A code outside of the plan matches no event, so codes is used as is: dropping it would leave
+    # its charge out of the result, billed as zero units instead of surfaced.
     def plan_codes
       @plan_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
     end
@@ -162,7 +142,7 @@ module Events
         .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
     end
 
-    # Union of every filter key defined across the billable metrics the event lookup covers
+    # Union of every filter key defined across the billable metrics the lookup covers
     def billable_metric_filter_keys
       @billable_metric_filter_keys ||= BillableMetricFilter
         .where(billable_metric_id: plan.billable_metrics.where(code: plan_codes).select(:id))
@@ -171,9 +151,8 @@ module Events
     end
 
     # Return the charges and filters matching the events pre-enriched in ClickHouse or Postgres for
-    # the period, including the recurring ones carrying usage over from the previous periods. In the
-    # first billing period there is none to carry over, so recurring charges are only returned when
-    # the event lookup covers their code (see #recurring_charges_and_filters).
+    # the period, including the recurring ones, except in the first period where they are only
+    # returned when the event lookup covers their code.
     # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     def charges_and_filters_from_pre_enriched_events
       values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes, with_last_seen_at:)

@@ -421,9 +421,6 @@ module Invoices
       context == :finalize || Invoice::GENERATED_INVOICE_STATUSES.include?(invoice.status)
     end
 
-    # Fees are computed without a charge cache middleware here, so the ingestion timestamps driving
-    # its lazy invalidation are never read. Only the charge/filter keys matter, and skipping the
-    # aggregate keeps the event store from reading the ingestion column.
     def event_filters(subscription, boundaries)
       Events::BillingPeriodFilterService.call!(
         subscription:, boundaries:, with_last_seen_at: false
