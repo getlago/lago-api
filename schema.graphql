@@ -6272,6 +6272,7 @@ type Event {
   payload: JSON!
   receivedAt: ISO8601DateTime
   timestamp: ISO8601DateTime
+  timestampMs: BigInt
   transactionId: String
 }
 
@@ -11595,9 +11596,24 @@ type Query {
   """
   event(
     """
+    Billable metric code of the event
+    """
+    code: String
+
+    """
+    External subscription ID of the event
+    """
+    externalSubscriptionId: ID
+
+    """
+    Event timestamp in milliseconds since epoch
+    """
+    timestampMs: BigInt
+
+    """
     Transaction ID of the event
     """
-    transactionId: ID!
+    transactionId: ID
   ): Event
 
   """

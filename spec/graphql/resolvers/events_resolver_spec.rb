@@ -190,5 +190,144 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
         expect(events_response["collection"].count).to be_zero
       end
     end
+
+    context "when the same event was ingested several times" do
+      let(:event_timestamp) { 2.days.ago.change(usec: 0) }
+
+      let(:event) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: "tx_duplicated",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event_timestamp,
+          properties: {},
+          ingested_at: event_timestamp
+        )
+      end
+
+      let(:later_duplicate) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: "tx_duplicated",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event_timestamp,
+          properties: {},
+          ingested_at: event_timestamp + 1.second
+        )
+      end
+
+      before { later_duplicate }
+
+      it "returns the event once, keeping the most recently ingested row" do
+        expect(Clickhouse::EventsRaw.where(organization_id: organization.id).count).to eq(2)
+
+        result = execute_graphql(
+          current_user: user,
+          current_organization: organization,
+          query:
+        )
+
+        events_response = result["data"]["events"]
+
+        expect(events_response["collection"].count).to eq(1)
+        expect(events_response["metadata"]["totalCount"]).to eq(1)
+        expect(events_response["collection"].first["transactionId"]).to eq("tx_duplicated")
+        expect(events_response["collection"].first["id"]).to eq(later_duplicate.id)
+      end
+    end
+
+    context "when the same transaction id is reused across two billable metrics" do
+      let(:event_timestamp) { 2.days.ago.change(usec: 0) }
+      let(:other_billable_metric) { create(:billable_metric, organization:, code: "other_bm") }
+
+      let(:event) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: "tx_shared_code",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event_timestamp,
+          properties: {},
+          ingested_at: event_timestamp
+        )
+      end
+
+      let(:event_on_other_metric) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: "tx_shared_code",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: other_billable_metric.code,
+          timestamp: event_timestamp,
+          properties: {},
+          ingested_at: event_timestamp
+        )
+      end
+
+      before { event_on_other_metric }
+
+      it "keeps both — the aggregation stores bill them separately, one per code" do
+        result = execute_graphql(
+          current_user: user,
+          current_organization: organization,
+          query:
+        )
+
+        events_response = result["data"]["events"]
+
+        expect(events_response["collection"].count).to eq(2)
+        expect(events_response["metadata"]["totalCount"]).to eq(2)
+        expect(events_response["collection"].map { it["code"] })
+          .to match_array([billable_metric.code, other_billable_metric.code])
+      end
+    end
+
+    context "when the same transaction id is used on two subscriptions" do
+      let(:event_timestamp) { 2.days.ago.change(usec: 0) }
+      let(:other_subscription) { create(:subscription, customer:, plan:, external_id: "other_sub") }
+
+      let(:event) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: "tx_shared",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event_timestamp,
+          properties: {},
+          ingested_at: event_timestamp
+        )
+      end
+
+      let(:event_on_other_subscription) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: "tx_shared",
+          organization_id: organization.id,
+          external_subscription_id: other_subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event_timestamp,
+          properties: {},
+          ingested_at: event_timestamp
+        )
+      end
+
+      before { event_on_other_subscription }
+
+      it "keeps both, they are distinct events" do
+        result = execute_graphql(
+          current_user: user,
+          current_organization: organization,
+          query:
+        )
+
+        events_response = result["data"]["events"]
+
+        expect(events_response["collection"].count).to eq(2)
+        expect(events_response["metadata"]["totalCount"]).to eq(2)
+        expect(events_response["collection"].map { it["externalSubscriptionId"] })
+          .to match_array([subscription.external_id, other_subscription.external_id])
+      end
+    end
   end
 end
