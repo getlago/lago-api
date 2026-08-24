@@ -27,6 +27,15 @@ RSpec.describe Product do
       expect(product).to belong_to(:charge).optional
       expect(product).to have_many(:filters).class_name("ProductFilter")
       expect(product).to have_many(:rate_cards)
+      expect(product).to have_many(:integration_mappings)
+        .class_name("IntegrationMappings::BaseMapping")
+        .dependent(:destroy)
+      expect(product).to have_many(:netsuite_mappings)
+        .class_name("IntegrationMappings::NetsuiteMapping")
+        .dependent(:destroy)
+      expect(product).to have_many(:xero_mappings)
+        .class_name("IntegrationMappings::XeroMapping")
+        .dependent(:destroy)
     end
   end
 

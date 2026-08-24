@@ -64,6 +64,42 @@ RSpec.describe Mutations::IntegrationMappings::Create do
     )
   end
 
+  context "with a Product" do
+    let(:integration) { create(:anrok_integration, organization:) }
+    let(:mappable) { create(:product, organization:) }
+    let(:input) { super().merge(mappableType: "Product") }
+
+    it "creates a Product integration mapping" do
+      result = create_integration_mapping(input:)
+
+      expect(result).to include(
+        "integrationId" => integration.id,
+        "mappableId" => mappable.id,
+        "mappableType" => "Product"
+      )
+    end
+
+    context "when the Product belongs to another organization" do
+      let(:mappable) { create(:product) }
+
+      it "returns an error" do
+        result = create_integration_mapping(input:, raw: true)
+
+        expect_graphql_error(result:, message: "Resource not found")
+      end
+    end
+  end
+
+  context "when the integration belongs to another organization" do
+    let(:integration) { create(:netsuite_integration) }
+
+    it "returns an error" do
+      result = create_integration_mapping(input:, raw: true)
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
+
   context "with billing entity" do
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:billing_entity_id) { billing_entity.id }
