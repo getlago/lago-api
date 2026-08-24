@@ -103,7 +103,10 @@ module BillingPeriods
       @options = options
       @billing_anchor_date = subscription_rate_card.billing_anchor_date
       @billing_timing = subscription_rate_card.rate_card.billing_timing.to_sym
-      @started_at = subscription_rate_card.started_at.in_time_zone(options.timezone).beginning_of_day.utc
+      # Anchored on the card, not on the current version: a units change opens a new row, and
+      # using that row's own start would clip every period to the moment the quantity last
+      # changed.
+      @started_at = subscription_rate_card.card_started_at.in_time_zone(options.timezone).beginning_of_day.utc
       @rates = rates
       @rate_phases = rate_phases
       @range = range
