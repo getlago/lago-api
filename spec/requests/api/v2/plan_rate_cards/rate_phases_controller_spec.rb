@@ -122,6 +122,29 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       end
     end
 
+    context "when the override is an explicit null" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: nil}}
+        )
+      end
+
+      let(:override) { create(:rate_override, organization:) }
+
+      before { rate_phase.update!(rate_override_id: override.id) }
+
+      it "clears the override" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override]).to be_nil
+        expect(rate_phase.reload.rate_override).to be_nil
+        expect(override.reload).to be_discarded
+      end
+    end
+
     context "when the override names a structural card field" do
       subject do
         put_with_token(

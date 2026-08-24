@@ -29,13 +29,28 @@ module RatePhases
         return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
       end
 
-      rate_phase.name = params[:name] if params.key?(:name)
-      rate_phase.code = params[:code] if params.key?(:code)
-      if params.key?(:billing_interval_cycle_count)
-        rate_phase.billing_interval_cycle_count = params[:billing_interval_cycle_count]
+      ActiveRecord::Base.transaction do
+        rate_phase.name = params[:name] if params.key?(:name)
+        rate_phase.code = params[:code] if params.key?(:code)
+        if params.key?(:billing_interval_cycle_count)
+          rate_phase.billing_interval_cycle_count = params[:billing_interval_cycle_count]
+        end
+
+        superseded_override_id = nil
+        if params.key?(:rate_override)
+          superseded_override_id = rate_phase.rate_override_id
+          rate_phase.rate_override = build_override
+        end
+
+        rate_phase.save!
+
+        # Discarded by id after the save: discarding the loaded association
+        # target would write the old foreign key back through its has_one
+        # inverse and silently undo the replacement.
+        if superseded_override_id && superseded_override_id != rate_phase.rate_override_id
+          RateOverride.find_by(id: superseded_override_id)&.discard!
+        end
       end
-      rate_phase.rate_override = build_override if params.key?(:rate_override)
-      rate_phase.save!
 
       result.rate_phase = rate_phase
       result

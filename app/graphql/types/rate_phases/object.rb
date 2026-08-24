@@ -6,6 +6,8 @@ module Types
       graphql_name "RatePhase"
       description "A phase in the ordered rate schedule of a plan product"
 
+      dataload_association :rate_override
+
       field :billing_interval_cycle_count, Integer, null: true
       field :code, String, null: false
       field :id, ID, null: false

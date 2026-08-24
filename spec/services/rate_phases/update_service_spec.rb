@@ -46,6 +46,44 @@ RSpec.describe RatePhases::UpdateService do
     end
   end
 
+  describe "rate override lifecycle" do
+    let(:params) { {rate_override: {rate_model: "standard", rate_properties: {"amount" => "2"}}} }
+
+    let!(:previous_override) { create(:rate_override, organization:) }
+
+    before { rate_phase.update!(rate_override_id: previous_override.id) }
+
+    it "replaces the override and discards the superseded one" do
+      expect(result).to be_success
+      expect(rate_phase.reload.rate_override.rate_properties).to eq({"amount" => "2"})
+      expect(previous_override.reload).to be_discarded
+    end
+
+    context "when the override is null" do
+      let(:params) { {rate_override: nil} }
+
+      it "clears the override and discards it" do
+        expect(result).to be_success
+        expect(rate_phase.reload.rate_override).to be_nil
+        expect(previous_override.reload).to be_discarded
+      end
+    end
+
+    context "when the phase save fails" do
+      before { create(:rate_phase, plan_rate_card:, organization:, position: 2, code: "taken") }
+
+      let(:params) { {code: "taken", rate_override: {rate_model: "standard", rate_properties: {"amount" => "2"}}} }
+
+      it "rolls everything back without leaking an override" do
+        expect { result }.not_to change(RateOverride, :count)
+
+        expect(result).not_to be_success
+        expect(previous_override.reload).not_to be_discarded
+        expect(rate_phase.reload.rate_override).to eq(previous_override)
+      end
+    end
+  end
+
   context "when making the last phase indefinite" do
     let(:params) { {billing_interval_cycle_count: nil} }
 
