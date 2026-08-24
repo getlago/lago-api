@@ -19,8 +19,14 @@ module RatePhases
         return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
       end
 
+      # REST can send "" where nil is meant; normalize before the terminal
+      # check or the blank slips past it and persists as an indefinite phase.
+      if params.key?(:billing_interval_cycle_count)
+        params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
+      end
+
       if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
-        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "non_terminal_indefinite")
+        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
       end
 
       rate_phase.name = params[:name] if params.key?(:name)

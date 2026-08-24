@@ -3,6 +3,7 @@
 module Mutations
   module RatePhases
     class Update < BaseMutation
+      include RequiresProductCatalog
       include AuthenticableApiUser
       include RequiredOrganization
 

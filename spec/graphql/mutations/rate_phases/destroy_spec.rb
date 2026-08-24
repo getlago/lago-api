@@ -41,4 +41,12 @@ RSpec.describe Mutations::RatePhases::Destroy do
     expect(terminal.reload).to be_discarded
     expect(launch.reload.billing_interval_cycle_count).to be_nil
   end
+
+  context "when the organization is not on the product catalog" do
+    before { organization.update!(feature_flags: organization.feature_flags - ["product_catalog"]) }
+
+    it "returns a feature unavailable error" do
+      expect(execution["errors"].first.dig("extensions", "code")).to eq("feature_unavailable")
+    end
+  end
 end

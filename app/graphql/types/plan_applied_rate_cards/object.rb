@@ -25,7 +25,7 @@ module Types
       end
 
       def rate_phases
-        object.rate_phases.order(:position)
+        dataloader.with(Sources::ActiveRecordAssociation, :rate_phases).load(object).sort_by(&:position)
       end
     end
   end

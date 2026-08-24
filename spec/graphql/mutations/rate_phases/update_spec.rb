@@ -49,4 +49,12 @@ RSpec.describe Mutations::RatePhases::Update do
       expect_graphql_error(result: execution, message: "Resource not found")
     end
   end
+
+  context "when the organization is not on the product catalog" do
+    before { organization.update!(feature_flags: organization.feature_flags - ["product_catalog"]) }
+
+    it "returns a feature unavailable error" do
+      expect(execution["errors"].first.dig("extensions", "code")).to eq("feature_unavailable")
+    end
+  end
 end

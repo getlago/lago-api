@@ -59,13 +59,13 @@ module RatePhases
 
       positions = ordered_params.map { |phase| phase[:position].to_i }
       unless positions == (1..phases_params.size).to_a
-        return result.single_validation_failure!(field: :rate_phases, error_code: "non_contiguous_position")
+        return result.single_validation_failure!(field: :rate_phases, error_code: "positions_must_be_contiguous")
       end
 
       # An indefinite tail (null billing_interval_cycle_count) is only allowed on the last phase.
       ordered_params[0...-1].each do |phase|
         if phase[:billing_interval_cycle_count].blank?
-          return result.single_validation_failure!(field: :rate_phases, error_code: "non_terminal_indefinite")
+          return result.single_validation_failure!(field: :rate_phases, error_code: "indefinite_phase_must_be_last")
         end
       end
 

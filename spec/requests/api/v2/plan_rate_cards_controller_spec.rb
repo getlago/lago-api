@@ -78,12 +78,12 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
   context "with a nested rate_phases sequence" do
     subject do
-      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {plan_rate_card: {
+      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
         rate_card_code: rate_card.code,
         units: "1",
         rate_phases: [
-          {position: 1, name: "Launch", billing_interval_cycle_count: 3},
-          {position: 2, name: "Standard", billing_interval_cycle_count: nil}
+          {code: "launch", position: 1, name: "Launch", billing_interval_cycle_count: 3},
+          {code: "standard", position: 2, name: "Standard", billing_interval_cycle_count: nil}
         ]
       }})
     end

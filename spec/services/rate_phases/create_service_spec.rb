@@ -61,7 +61,7 @@ RSpec.describe RatePhases::CreateService do
 
       it "rejects a second indefinite phase" do
         expect(result).not_to be_success
-        expect(result.error.messages[:billing_interval_cycle_count]).to eq(["non_terminal_indefinite"])
+        expect(result.error.messages[:billing_interval_cycle_count]).to eq(["indefinite_phase_must_be_last"])
       end
     end
   end
@@ -71,7 +71,7 @@ RSpec.describe RatePhases::CreateService do
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:position]).to eq(["non_contiguous_position"])
+      expect(result.error.messages[:position]).to eq(["positions_must_be_contiguous"])
     end
   end
 
@@ -82,7 +82,16 @@ RSpec.describe RatePhases::CreateService do
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:billing_interval_cycle_count]).to eq(["non_terminal_indefinite"])
+      expect(result.error.messages[:billing_interval_cycle_count]).to eq(["indefinite_phase_must_be_last"])
+    end
+
+    context "when the cycle count is an empty string" do
+      let(:params) { {code: "sneaky", position: 1, billing_interval_cycle_count: ""} }
+
+      it "treats it as indefinite and rejects it too" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:billing_interval_cycle_count]).to eq(["indefinite_phase_must_be_last"])
+      end
     end
   end
 

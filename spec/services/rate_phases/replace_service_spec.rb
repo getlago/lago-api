@@ -69,7 +69,7 @@ RSpec.describe RatePhases::ReplaceService do
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:rate_phases]).to include("non_contiguous_position")
+      expect(result.error.messages[:rate_phases]).to include("positions_must_be_contiguous")
     end
   end
 
@@ -83,7 +83,7 @@ RSpec.describe RatePhases::ReplaceService do
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:rate_phases]).to include("non_terminal_indefinite")
+      expect(result.error.messages[:rate_phases]).to include("indefinite_phase_must_be_last")
     end
   end
 

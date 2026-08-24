@@ -33,7 +33,16 @@ RSpec.describe RatePhases::UpdateService do
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:billing_interval_cycle_count]).to eq(["non_terminal_indefinite"])
+      expect(result.error.messages[:billing_interval_cycle_count]).to eq(["indefinite_phase_must_be_last"])
+    end
+
+    context "when the cycle count is an empty string" do
+      let(:params) { {billing_interval_cycle_count: ""} }
+
+      it "treats it as indefinite and rejects it too" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:billing_interval_cycle_count]).to eq(["indefinite_phase_must_be_last"])
+      end
     end
   end
 
