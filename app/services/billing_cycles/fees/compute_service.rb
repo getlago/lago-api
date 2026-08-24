@@ -96,8 +96,16 @@ module BillingCycles
         )
       end
 
+      # Resolved over the cycle's own window rather than read off the card, because a units
+      # change mid-period leaves several versions covering that window. Composes with
+      # proration_ratio: this answers "which quantity", the ratio answers "how much of the
+      # period the window covers".
       def units
-        subscription_rate_card.units || 0
+        @units ||= SubscriptionRateCards::ResolveUnitsService.call!(
+          subscription_rate_card:,
+          from: billing_cycle.period_from,
+          to: billing_cycle.period_to
+        ).units
       end
 
       def charge_model_result
