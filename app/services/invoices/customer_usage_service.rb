@@ -131,15 +131,12 @@ module Invoices
         subscription:,
         charge:,
         to_datetime: boundaries.charges_to_datetime,
-        cache: cache_applicable?,
+        cache: charge_cache_enabled?,
         last_seen_at: applied_filters
       )
 
       applied_boundaries = boundaries
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-      if usage_filters.filter_by_group.present?
-        cache_middleware = nil
-      end
 
       Fees::ChargeService
         .call!(
@@ -289,8 +286,10 @@ module Invoices
       charges.except(:includes).joins(:billable_metric).distinct.pluck("billable_metrics.code")
     end
 
-    # charge_usage drops the cache middleware entirely when usage is filtered by group, so the
-    # ingestion timestamps driving its lazy invalidation are only read when both conditions hold.
+    # Single gate for the charge cache: it drives both the middleware passed to Fees::ChargeService
+    # and whether the ingestion timestamps are requested. The two must never diverge, because a nil
+    # timestamp written into a live cache stays valid forever (see Events::BillingPeriodFilterService).
+    # Usage filtered by group is never cached, as its fees are a subset of the charge fees.
     def charge_cache_enabled?
       cache_applicable? && usage_filters.filter_by_group.blank?
     end

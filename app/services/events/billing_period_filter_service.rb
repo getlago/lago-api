@@ -8,8 +8,9 @@ module Events
     # subset of the plan (usage filtered by charge or metric) pass it so the event store does not
     # resolve combinations they will discard. Recurring charges are still seeded for the whole plan.
     #
-    # with_last_seen_at can be disabled by callers that never read the timestamps, which lets the
-    # event store skip the MAX() aggregate and stop reading the ingestion column entirely.
+    # with_last_seen_at can be disabled only by callers that compute usage without the charge cache,
+    # which lets the event store skip the MAX() aggregate and stop reading the ingestion column
+    # entirely. See #call for why a cached caller must never disable it.
     def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
       @subscription = subscription
       @boundaries = boundaries
@@ -23,8 +24,12 @@ module Events
     # result.charges is a nested hash: { charge_id => { filter_id => last_seen_at } } (nil filter
     # is the default bucket). last_seen_at is the most recent event ingestion timestamp for that
     # charge/filter (created_at on PG, enriched_at on CH), used to lazily invalidate the cache.
-    # It is nil when with_last_seen_at is disabled, which leaves the cache relying on its expiration
-    # instead of the lazy invalidation, so only callers that ignore it may disable it.
+    # It is nil when with_last_seen_at is disabled, so the flag may only be turned off when the
+    # charge cache is off entirely: a nil watermark does not fall back to the expiration, it makes
+    # the entry unconditionally valid (CacheService#settled? and #valid_cache? both return early)
+    # and stamps cached_at from a wall clock reading instead of an event timestamp. Later readers
+    # that do compute a watermark then accept that entry, because any real event timestamp is older
+    # than the wall clock, and stale usage is served for the rest of the billing period.
     # Recurring charges with no in-period event are seeded with the period start (see #period_start).
     def call
       result.charges = charges_and_filters
