@@ -39,7 +39,7 @@ module Charges
       filtered_properties = ChargeModels::FilterPropertiesService.call(chargeable: charge, properties:).properties
 
       charge_model = ChargeModels::Factory.new_instance(
-        structure: ChargeModels::PricingStructure.from_charge(charge).with(properties: filtered_properties),
+        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties: filtered_properties),
         aggregation_result:
       )
 

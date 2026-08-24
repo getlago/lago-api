@@ -9,7 +9,7 @@ RSpec.describe ChargeModels::BaseService do
     context "when structure is not pricing structure" do
       it "raises an error" do
         expect do
-          described_class.apply(structure: build(:fee), aggregation_result:)
+          described_class.apply(pricing_structure: build(:fee), aggregation_result:)
         end.to raise_error(NotImplementedError, "Pricing structure: Fee is not implemented")
       end
     end

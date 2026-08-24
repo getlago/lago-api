@@ -173,7 +173,7 @@ module Fees
       aggregation_result = aggregator.call
 
       ChargeModels::Factory.new_instance(
-        structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge),
+        pricing_structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge),
         aggregation_result:,
         period_ratio: calculate_period_ratio,
         calculate_projected_usage: false

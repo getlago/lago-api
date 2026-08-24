@@ -162,7 +162,7 @@ RSpec.describe Fees::ProjectionService do
         service.call
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          structure: have_attributes(
+          pricing_structure: have_attributes(
             charge_model: charge.charge_model,
             properties: charge.properties,
             prorated: charge.prorated?,
@@ -240,7 +240,7 @@ RSpec.describe Fees::ProjectionService do
         )
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          structure: have_attributes(
+          pricing_structure: have_attributes(
             charge_model: charge.charge_model,
             properties: charge_filter.properties,
             prorated: charge.prorated?,

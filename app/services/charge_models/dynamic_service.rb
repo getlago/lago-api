@@ -30,7 +30,7 @@ module ChargeModels
     private
 
     def currency
-      structure.currency
+      pricing_structure.currency
     end
   end
 end

@@ -6,7 +6,7 @@ RSpec.describe ChargeModels::GroupedService do
   subject(:apply_grouped_service) do
     described_class.apply(
       charge_model:,
-      structure: ChargeModels::PricingStructure.from_charge(charge),
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
       period_ratio: 1.0
     )

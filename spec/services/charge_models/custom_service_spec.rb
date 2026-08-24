@@ -5,7 +5,7 @@ require "rails_helper"
 Rspec.describe ChargeModels::CustomService do
   subject(:apply_custom_service) do
     described_class.apply(
-      structure: ChargeModels::PricingStructure.from_charge(charge),
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
       period_ratio: 1.0
     )

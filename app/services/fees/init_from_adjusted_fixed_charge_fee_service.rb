@@ -81,7 +81,7 @@ module Fees
 
       @amount_result = ChargeModels::Factory
         .new_instance(
-          structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge).with(properties:),
+          pricing_structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge).with(properties:),
           aggregation_result:
         )
         .apply

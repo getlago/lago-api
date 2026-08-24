@@ -66,9 +66,9 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           result.pay_in_advance_event = pay_in_advance_event
         end
 
-        allow(charge_model_class).to receive(:apply) do |structure:, **|
+        allow(charge_model_class).to receive(:apply) do |pricing_structure:, **|
           charge_model_class::Result.new.tap do |r|
-            r.amount = structure.properties[:exclude_event] ? 8 : 10
+            r.amount = pricing_structure.properties[:exclude_event] ? 8 : 10
           end
         end
 
@@ -81,11 +81,11 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
         expect(result.unit_amount).to eq(2)
 
         expect(charge_model_class).to have_received(:apply).with(
-          structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+          pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
           aggregation_result:
         )
         expect(charge_model_class).to have_received(:apply).with(
-          structure: ChargeModels::PricingStructure.from_charge(charge).with(
+          pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(
             properties: properties.merge(exclude_event: true)
           ),
           aggregation_result: have_attributes(
@@ -110,9 +110,9 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
             result.pay_in_advance_event = pay_in_advance_event
           end
 
-          allow(charge_model_class).to receive(:apply) do |structure:, **|
+          allow(charge_model_class).to receive(:apply) do |pricing_structure:, **|
             charge_model_class::Result.new.tap do |r|
-              r.amount = structure.properties[:include_event_value] ? 10 : 8
+              r.amount = pricing_structure.properties[:include_event_value] ? 10 : 8
             end
           end
 
@@ -126,11 +126,11 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           expect(result.amount_details).to be_nil
 
           expect(charge_model_class).to have_received(:apply).with(
-            structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+            pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
             aggregation_result:
           )
           expect(charge_model_class).to have_received(:apply).with(
-            structure: ChargeModels::PricingStructure.from_charge(charge).with(
+            pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(
               properties: properties.merge(include_event_value: true)
             ),
             aggregation_result: have_attributes(
