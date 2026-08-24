@@ -12949,16 +12949,19 @@ ALTER TABLE ONLY public.subscriptions_invoice_custom_sections
 
 
 --
--- Name: quote_versions fk_rails_7082696669; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.quote_versions
-    ADD CONSTRAINT fk_rails_7082696669 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 -- Name: billing_cycles fk_rails_6fa9dce35c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.billing_cycles
     ADD CONSTRAINT fk_rails_6fa9dce35c FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: quote_versions fk_rails_7082696669; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.quote_versions
+    ADD CONSTRAINT fk_rails_7082696669 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -14448,12 +14451,12 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20260819111435'),
-('20260819111434'),
-('20260819000710'),
 ('20260819160309'),
 ('20260819144543'),
 ('20260819144542'),
+('20260819111435'),
+('20260819111434'),
+('20260819000710'),
 ('20260817175013'),
 ('20260817175012'),
 ('20260817120927'),
