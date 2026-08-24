@@ -1605,6 +1605,66 @@ describe "Payment Gated Subscription Activation Scenarios" do
     end
   end
 
+  describe "merchant cancels the gated subscription" do
+    before do
+      # Best-effort PSP cancel calls Stripe; mock the SDK to return a canceled intent.
+      allow(::Stripe::PaymentIntent).to receive(:cancel).and_return(
+        ::Stripe::PaymentIntent.construct_from(
+          id: payment_intent_id,
+          object: "payment_intent",
+          status: "canceled",
+          amount: 1000,
+          currency: "eur"
+        )
+      )
+    end
+
+    it "cancels the gated subscription with cancellation_reason: manual" do
+      # Stage 1: Create gated subscription
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
+
+      invoice = subscription.invoices.sole
+      expect(invoice).to be_open
+
+      expect(invoice.payments.sole.provider_payment_id).to eq(payment_intent_id)
+
+      # Stage 2: Merchant terminates the subscription while it is still gated
+      terminate_subscription(subscription, params: {status: "incomplete"})
+
+      expect(json[:subscription][:status]).to eq("canceled")
+      expect(json[:subscription][:cancellation_reason]).to eq("manual")
+
+      subscription.reload
+      expect(subscription).to be_canceled
+      expect(subscription.cancellation_reason).to eq("manual")
+      expect(subscription.activated_at).to be_nil
+      expect(subscription.activation_rules.sole).to be_declined
+
+      expect(invoice.reload).to be_closed
+      expect(::Stripe::PaymentIntent).to have_received(:cancel)
+    end
+
+    it "leaves an already activated subscription alone" do
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      simulate_stripe_webhook(status: "succeeded")
+
+      expect(subscription.reload).to be_active
+
+      terminate_subscription(subscription, params: {status: "incomplete"}, raise_on_error: false)
+
+      expect(response).to have_http_status(:not_found)
+      expect(subscription.reload).to be_active
+    end
+  end
+
   describe "gated subscription with pending VIES check" do
     let(:vat_number) { "IT12345678901" }
     let(:organization) do
