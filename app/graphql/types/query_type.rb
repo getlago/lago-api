@@ -117,6 +117,7 @@ module Types
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
+    field :subscription_hourly_usage, resolver: Resolvers::Subscriptions::HourlyUsageResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver

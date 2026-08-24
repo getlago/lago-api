@@ -7038,6 +7038,36 @@ type GroupedChargeUsage {
 }
 
 """
+Usage of a single charge filter within one hour
+"""
+type HourlyUsageBreakdown {
+  chargeFilterId: ID
+  eventsCount: Int!
+  units: Float!
+}
+
+"""
+A charge filter with usage in the window, and its window totals
+"""
+type HourlyUsageFilter {
+  chargeFilterId: ID
+  eventsCount: Int!
+  invoiceDisplayName: String
+  units: Float!
+  values: ChargeFilterValues!
+}
+
+"""
+One hour of the window, broken down by charge filter
+"""
+type HourlyUsagePoint {
+  breakdown: [HourlyUsageBreakdown!]!
+  eventsCount: Int!
+  time: ISO8601DateTime!
+  units: Float!
+}
+
+"""
 Api Logs http method enums
 """
 enum HttpMethodEnum {
@@ -12275,6 +12305,11 @@ type Query {
   subscriptionEntitlements(subscriptionId: ID!): SubscriptionEntitlementCollection!
 
   """
+  Query the hourly usage of a subscription charge, broken down by charge filter
+  """
+  subscriptionHourlyUsage(chargeId: ID!, fromDatetime: ISO8601DateTime, subscriptionId: ID!, toDatetime: ISO8601DateTime): SubscriptionHourlyUsage!
+
+  """
   Query subscriptions of an organization
   """
   subscriptions(billingEntityIds: [ID!], currency: String, externalCustomerId: String, externalId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
@@ -13402,6 +13437,19 @@ type SubscriptionEntitlementPrivilegeObject {
   name: String
   value: String
   valueType: PrivilegeValueTypeEnum!
+}
+
+"""
+Realtime usage of a charge, per hour and per charge filter
+"""
+type SubscriptionHourlyUsage {
+  aggregationType: AggregationTypeEnum!
+  filters: [HourlyUsageFilter!]!
+  fromDatetime: ISO8601DateTime!
+  hours: [HourlyUsagePoint!]!
+  lastIngestedAt: ISO8601DateTime
+  timezone: TimezoneEnum!
+  toDatetime: ISO8601DateTime!
 }
 
 type SubscriptionLifetimeUsage {
