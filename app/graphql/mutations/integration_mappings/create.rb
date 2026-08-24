@@ -16,9 +16,7 @@ module Mutations
       type Types::IntegrationMappings::Object
 
       def resolve(**args)
-        result = ::IntegrationMappings::CreateService
-          .new(context[:current_user])
-          .call(**args.merge(organization_id: current_organization.id))
+        result = ::IntegrationMappings::CreateService.call(organization: current_organization, params: args)
 
         result.success? ? result.integration_mapping : result_error(result)
       end

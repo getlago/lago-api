@@ -4,8 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationMappings::Update do
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration_mapping) { create(:netsuite_mapping, integration:) }
+  let(:integration_mapping) { create(:netsuite_mapping, integration:, mappable: product, organization:) }
   let(:integration) { create(:netsuite_integration, organization:) }
+  let(:product) { create(:product, organization:) }
   let(:mappable) { integration_mapping.mappable }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
@@ -44,7 +45,7 @@ RSpec.describe Mutations::IntegrationMappings::Update do
           id: integration_mapping.id,
           integrationId: integration.id,
           mappableId: mappable.id,
-          mappableType: "AddOn",
+          mappableType: "Product",
           externalAccountCode: external_account_code,
           externalId: external_id,
           externalName: external_name
@@ -56,9 +57,32 @@ RSpec.describe Mutations::IntegrationMappings::Update do
 
     expect(result_data["integrationId"]).to eq(integration.id)
     expect(result_data["mappableId"]).to eq(mappable.id)
-    expect(result_data["mappableType"]).to eq("AddOn")
+    expect(result_data["mappableType"]).to eq("Product")
     expect(result_data["externalAccountCode"]).to eq(external_account_code)
     expect(result_data["externalId"]).to eq(external_id)
     expect(result_data["externalName"]).to eq(external_name)
+  end
+
+  context "when the integration mapping belongs to another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:integration) { create(:netsuite_integration, organization: other_organization) }
+    let(:product) { create(:product, organization: other_organization) }
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: integration_mapping.id,
+            externalId: external_id
+          }
+        }
+      )
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
   end
 end
