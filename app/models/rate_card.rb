@@ -27,6 +27,8 @@ class RateCard < ApplicationRecord
   has_many :rates, class_name: "RateCardRate"
   has_many :plan_applied_rate_cards, class_name: "PlanRateCard"
   has_many :contract_applied_rate_cards, class_name: "ContractRateCard"
+  has_many :applied_taxes, class_name: "RateCard::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
   # prefix: a bare `none` value would define a RateCard.none scope, which

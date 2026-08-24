@@ -3687,6 +3687,7 @@ input CreateRateCardInput {
   proration: Boolean
   rates: [RateCardRateInput!]
   regroupPaidFees: RateCardRegroupPaidFeesEnum
+  taxCodes: [String!]
   walletTargetable: Boolean
 }
 
@@ -12615,6 +12616,7 @@ type RateCard {
   proration: Boolean!
   ratesCount: Int!
   regroupPaidFees: RateCardRegroupPaidFeesEnum!
+  taxes: [Tax!]!
   updatedAt: ISO8601DateTime!
   walletTargetable: Boolean
 }
@@ -15338,6 +15340,7 @@ input UpdateRateCardInput {
   name: String
   proration: Boolean
   regroupPaidFees: RateCardRegroupPaidFeesEnum
+  taxCodes: [String!]
   walletTargetable: Boolean
 }
 

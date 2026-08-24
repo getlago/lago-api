@@ -412,6 +412,17 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
       end
     end
 
+    context "when the object is a rate card" do
+      let(:object) { create(:rate_card, organization:) }
+      let(:tax) { create(:tax, organization:) }
+
+      before { create(:rate_card_applied_tax, rate_card: object, tax:, organization:) }
+
+      it "serializes the taxes" do
+        expect(method_call[:taxes].pluck(:code)).to eq([tax.code])
+      end
+    end
+
     context "when the object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
       let(:plan) { create(:plan, organization:) }
@@ -477,6 +488,14 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
       it "includes the billing items but not the content" do
         expect(method_call).to eq(%i[billing_items])
+      end
+    end
+
+    context "when object is a rate card" do
+      let(:object) { create(:rate_card, organization:) }
+
+      it "includes rates and taxes" do
+        expect(method_call).to eq(%i[rates taxes])
       end
     end
 

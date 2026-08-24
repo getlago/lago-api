@@ -117,8 +117,35 @@ RSpec.describe RateCards::CreateService do
 
       it "returns a validation failure with prefixed keys and creates nothing" do
         expect { result }.not_to change(RateCard, :count)
+        expect(result).to be_a(described_class::Result)
         expect(result).not_to be_success
         expect(result.error.messages[:"rates.rate_properties"]).to be_present
+      end
+    end
+  end
+
+  context "with taxes" do
+    let(:tax1) { create(:tax, organization:) }
+    let(:tax2) { create(:tax, organization:) }
+
+    before { params[:tax_codes] = [tax1.code, tax2.code] }
+
+    it "applies the taxes to the rate card" do
+      expect(result).to be_success
+      expect(result.rate_card.taxes).to match_array([tax1, tax2])
+    end
+
+    context "when a tax belongs to another organization" do
+      let(:other_tax) { create(:tax) }
+
+      before { params[:tax_codes] = [other_tax.code] }
+
+      it "returns a tax not found failure and rolls back the rate card" do
+        expect { result }.not_to change(RateCard, :count)
+
+        expect(result).to be_a(described_class::Result)
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("tax")
       end
     end
   end

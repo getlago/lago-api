@@ -32,6 +32,8 @@ class Tax < ApplicationRecord
   has_many :commitments, through: :commitments_taxes
   has_many :fixed_charges_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
   has_many :fixed_charges, through: :fixed_charges_taxes
+  has_many :rate_cards_taxes, class_name: "RateCard::AppliedTax", dependent: :destroy
+  has_many :rate_cards, through: :rate_cards_taxes
 
   belongs_to :organization
 

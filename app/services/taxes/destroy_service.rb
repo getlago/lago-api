@@ -35,6 +35,7 @@ module Taxes
         tax.charges_taxes.delete_all
         tax.commitments_taxes.delete_all
         tax.fixed_charges_taxes.delete_all
+        tax.rate_cards_taxes.delete_all
 
         tax.deleted_at = Time.current
         tax.save!

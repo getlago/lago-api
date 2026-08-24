@@ -29,6 +29,10 @@ RSpec.describe RateCard do
       expect(rate_card).to belong_to(:product)
       expect(rate_card).to belong_to(:product_filter).optional
       expect(rate_card).to have_many(:rates).class_name("RateCardRate")
+      expect(rate_card).to have_many(:plan_applied_rate_cards).class_name("PlanRateCard")
+      expect(rate_card).to have_many(:subscription_applied_rate_cards).class_name("SubscriptionRateCard")
+      expect(rate_card).to have_many(:applied_taxes).class_name("RateCard::AppliedTax").dependent(:destroy)
+      expect(rate_card).to have_many(:taxes).through(:applied_taxes)
     end
   end
 
