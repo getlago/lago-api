@@ -19,7 +19,11 @@ module LifetimeUsages
         return result
       end
 
-      if lifetime_usage.recalculate_invoiced_usage
+      # The open-period pay-in-advance amount is subtracted from the current usage, so the invoiced
+      # side must be refreshed in the same run: otherwise the subtraction removes fees that the
+      # cached invoiced column does not contain yet, and both counters stop describing one snapshot.
+      pay_in_advance_amount_cents = pay_in_advance_invoiced_amount_cents
+      if lifetime_usage.recalculate_invoiced_usage || pay_in_advance_amount_cents.positive?
         lifetime_usage.invoiced_usage_amount_cents = calculate_invoiced_usage_amount_cents
         lifetime_usage.recalculate_invoiced_usage = false
         lifetime_usage.invoiced_usage_amount_refreshed_at = Time.current
@@ -44,15 +48,37 @@ module LifetimeUsages
         .where(canceled_at: nil)
         .select(:id)
 
-      invoices = organization.invoices.subscription
+      invoice_ids = organization.invoices.subscription
         .where(status: %i[finalized draft])
         .joins(:invoice_subscriptions)
         .where(invoice_subscriptions: {subscription_id: subscription_ids})
-      invoices.sum { |invoice| invoice.fees.charge.sum(:amount_cents) }
+        .select(:id)
+
+      organization.fees.charge.where(invoice_id: invoice_ids).sum(:amount_cents)
     end
 
     def calculate_current_usage_amount_cents
-      current_usage.amount_cents
+      [current_usage.amount_cents - pay_in_advance_invoiced_amount_cents, 0].max
+    end
+
+    # Usage of an invoiceable pay-in-advance charge is invoiced immediately, inside the still-open
+    # period, so it lands in the invoiced counter while the current usage still reports it. The fee
+    # carries the open-period boundaries in its properties, the invoice_subscription does not.
+    def pay_in_advance_invoiced_amount_cents
+      @pay_in_advance_invoiced_amount_cents ||= begin
+        timestamp = Time.current
+        period_started_at = Subscriptions::DatesService
+          .new_instance(subscription, timestamp, current_usage: true)
+          .charges_from_datetime
+
+        organization.fees.charge
+          .where(subscription_id: subscription.id, pay_in_advance: true)
+          .where(created_at: period_started_at..)
+          .joins(:invoice)
+          .merge(Invoice.subscription.where(status: %i[finalized draft]))
+          .where("(fees.properties->>'charges_to_datetime')::timestamptz > ?", timestamp)
+          .sum(:amount_cents)
+      end
     end
 
     def current_usage
