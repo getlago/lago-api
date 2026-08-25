@@ -183,9 +183,14 @@ module Invoices
     #       current-period one. When started_at matches the current period boundary the aggregation
     #       window is identical, so the request shares the current usage entry rather than warming a
     #       duplicate.
+    #
+    #       The integration is checked again here even though full usage is already refused without
+    #       it: Subscriptions::ChargeCacheService only deletes the full usage entry for those
+    #       organizations, and an entry nobody invalidates would serve stale usage until the end of
+    #       the billing period.
     def full_usage_cache?
       usage_filters.full_usage &&
-        Subscriptions::ChargeCacheService.full_usage_cache_enabled?(organization) &&
+        organization.granular_lifetime_usage_enabled? &&
         subscription.started_at != date_service.charges_from_datetime
     end
 

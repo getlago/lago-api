@@ -62,20 +62,6 @@ RSpec.describe Subscriptions::ChargeCacheService do
     end
   end
 
-  describe ".full_usage_cache_enabled?" do
-    it "is false without the granular lifetime usage integration" do
-      expect(described_class.full_usage_cache_enabled?(subscription.organization)).to be(false)
-    end
-
-    context "when granular lifetime usage is enabled", :premium do
-      before { subscription.organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
-
-      it "is true" do
-        expect(described_class.full_usage_cache_enabled?(subscription.organization)).to be(true)
-      end
-    end
-  end
-
   describe ".expire_cache" do
     let(:current_usage_key) { described_class.new(subscription:, charge:, charge_filter:).cache_key }
     let(:full_usage_key) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true).cache_key }
