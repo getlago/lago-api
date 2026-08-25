@@ -10,7 +10,7 @@ RSpec.describe Integrations::Aggregator::BasePayload do
   let(:integration) { create(:anrok_integration, organization:) }
   let(:product) { create(:product, organization:) }
 
-  describe "Product mapping fallback" do
+  describe "Product mapping lookup" do
     let!(:fallback_mapping) do
       create(
         :anrok_collection_mapping,
@@ -24,6 +24,18 @@ RSpec.describe Integrations::Aggregator::BasePayload do
       mapping = payload.send(:lookup_mapping, "Product", product.id)
 
       expect(mapping).to eq(fallback_mapping)
+    end
+
+    context "when the Product has a mapping" do
+      let!(:product_mapping) do
+        create(:anrok_mapping, integration:, organization:, mappable: product)
+      end
+
+      it "returns the Product mapping" do
+        mapping = payload.send(:lookup_mapping, "Product", product.id)
+
+        expect(mapping).to eq(product_mapping)
+      end
     end
   end
 end
