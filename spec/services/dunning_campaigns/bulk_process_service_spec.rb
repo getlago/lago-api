@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe DunningCampaigns::BulkProcessService do
-  subject(:result) { described_class.call }
+  subject(:result) do
+    perform_enqueued_jobs(only: DunningCampaigns::ProcessCustomerJob) do
+      described_class.call
+    end
+  end
 
   let(:currency) { "EUR" }
 
@@ -32,6 +36,14 @@ RSpec.describe DunningCampaigns::BulkProcessService do
         payment_overdue: true,
         total_amount_cents: 1_00
       )
+    end
+
+    it "enqueues a ProcessCustomerJob for an eligible customer" do
+      invoice_1
+
+      expect { described_class.call }
+        .to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
+        .with(customer)
     end
 
     context "when billing_entity has an applied dunning campaign" do
