@@ -15,18 +15,20 @@ module RatePhases
     def call
       return result.not_found_failure!(resource: "rate_phase") unless rate_phase
 
-      if plan_locked?
-        return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
-      end
+      # Sequence reads and renumbering run under a parent lock: two concurrent
+      # deletions computing from the same positions would leave gaps.
+      parent.with_lock do
+        if plan_locked?
+          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+        end
 
-      siblings = parent.rate_phases.order(:position).to_a
-      if siblings.size == 1
-        return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
-      end
+        siblings = parent.rate_phases.order(:position).to_a
+        if siblings.size == 1
+          return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
+        end
 
-      was_terminal_indefinite = siblings.last == rate_phase && rate_phase.billing_interval_cycle_count.nil?
+        was_terminal_indefinite = siblings.last == rate_phase && rate_phase.billing_interval_cycle_count.nil?
 
-      ActiveRecord::Base.transaction do
         rate_phase.discard!
         rate_phase.rate_override&.discard!
 

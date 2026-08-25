@@ -17,7 +17,7 @@ module Api
 
           result = ::RatePhases::CreateService.call(
             plan_rate_card:,
-            params: phase_params.to_h.deep_symbolize_keys
+            params: create_params.to_h.deep_symbolize_keys
           )
 
           if result.success?
@@ -33,7 +33,7 @@ module Api
 
           result = ::RatePhases::UpdateService.call(
             rate_phase:,
-            params: phase_params.to_h.deep_symbolize_keys
+            params: update_params.to_h.deep_symbolize_keys
           )
 
           if result.success?
@@ -69,8 +69,14 @@ module Api
           plan_rate_card&.rate_phases&.find_by(code: params[:code])
         end
 
-        def phase_params
+        def create_params
           params.require(:rate_phase).permit(:code, :position, :name, :billing_interval_cycle_count)
+        end
+
+        # Positions are not editable on update (ordering goes through insert
+        # and delete), so update does not permit one.
+        def update_params
+          params.require(:rate_phase).permit(:code, :name, :billing_interval_cycle_count)
         end
 
         def render_rate_phase(rate_phase)

@@ -16,31 +16,35 @@ module RatePhases
     def call
       return result.not_found_failure!(resource: "rate_phaseable") unless parent
 
-      if plan_locked?
-        return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
-      end
-
       # REST can send "" where nil is meant; normalize before the sequence
       # checks or the blank slips past them and persists as an indefinite phase.
       if params.key?(:billing_interval_cycle_count)
         params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
       end
 
-      existing = parent.rate_phases.order(:position).to_a
-      position = (params[:position].presence || default_position(existing)).to_i
+      # The sequence is read, validated and renumbered under a parent lock:
+      # concurrent inserts computing from the same positions would otherwise
+      # leave gaps or die on the unique index. The guards run inside too, so a
+      # subscription attaching concurrently cannot slip past plan_locked?.
+      parent.with_lock do
+        if plan_locked?
+          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+        end
 
-      unless position.between?(1, existing.size + 1)
-        return result.single_validation_failure!(field: :position, error_code: "positions_must_be_contiguous")
-      end
+        existing = parent.rate_phases.order(:position).to_a
+        position = (params[:position].presence || default_position(existing)).to_i
 
-      # Validate the prospective sequence before touching anything: an
-      # indefinite phase (null cycle count) is only allowed last.
-      counts = existing.map(&:billing_interval_cycle_count).insert(position - 1, params[:billing_interval_cycle_count])
-      if counts[0...-1].any?(&:nil?)
-        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
-      end
+        unless position.between?(1, existing.size + 1)
+          return result.single_validation_failure!(field: :position, error_code: "positions_must_be_contiguous")
+        end
 
-      ActiveRecord::Base.transaction do
+        # Validate the prospective sequence before touching anything: an
+        # indefinite phase (null cycle count) is only allowed last.
+        counts = existing.map(&:billing_interval_cycle_count).insert(position - 1, params[:billing_interval_cycle_count])
+        if counts[0...-1].any?(&:nil?)
+          return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
+        end
+
         # Highest positions first so the unique (parent, position) index never
         # sees a duplicate mid-shift.
         existing.select { |phase| phase.position >= position }.reverse_each do |phase|

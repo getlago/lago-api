@@ -22,6 +22,14 @@ RSpec.describe RatePhases::CreateService do
     expect(rate_phase.code).to eq("trial")
   end
 
+  it "locks the parent entry while renumbering" do
+    allow(plan_rate_card).to receive(:with_lock).and_call_original
+
+    result
+
+    expect(plan_rate_card).to have_received(:with_lock)
+  end
+
   context "when the code is missing" do
     before { params.delete(:code) }
 

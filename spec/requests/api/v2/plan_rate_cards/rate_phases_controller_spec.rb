@@ -85,6 +85,23 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(json[:rate_phase][:name]).to eq("Renamed")
     end
 
+    context "when a position is provided" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {name: "Renamed", position: 4}}
+        )
+      end
+
+      it "does not permit it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(rate_phase.reload.position).to eq(1)
+      end
+    end
+
     context "when the phase does not exist" do
       subject do
         put_with_token(

@@ -29,6 +29,15 @@ RSpec.describe RatePhases::DestroyService do
       expect(result).to be_success
       expect(override.reload).to be_discarded
     end
+
+    it "locks the parent entry while renumbering" do
+      parent = ramp.plan_rate_card
+      allow(ramp).to receive(:plan_rate_card).and_return(parent)
+      allow(parent).to receive(:with_lock).and_call_original
+
+      expect(result).to be_success
+      expect(parent).to have_received(:with_lock)
+    end
   end
 
   context "when deleting the indefinite terminal phase" do

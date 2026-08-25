@@ -12,12 +12,17 @@ module RatePhases
 
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless plan_rate_card
-      return result.single_validation_failure!(field: :rate_phases, error_code: "plan_locked") if plan_locked?
 
       sequence_failure = validate_sequence
       return sequence_failure if sequence_failure
 
-      ActiveRecord::Base.transaction do
+      # The lock covers the plan_locked? read too, so a subscription attaching
+      # concurrently cannot slip past the guard mid-replace.
+      plan_rate_card.with_lock do
+        if plan_locked?
+          return result.single_validation_failure!(field: :rate_phases, error_code: "plan_locked")
+        end
+
         discard_existing_phases
 
         result.rate_phases = ordered_params.map do |phase|

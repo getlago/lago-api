@@ -31,6 +31,14 @@ RSpec.describe RatePhases::ReplaceService do
     expect(result.rate_phases.map(&:billing_interval_cycle_count)).to eq([3, nil])
   end
 
+  it "locks the entry while replacing the sequence" do
+    allow(plan_rate_card).to receive(:with_lock).and_call_original
+
+    result
+
+    expect(plan_rate_card).to have_received(:with_lock)
+  end
+
   it "accepts positions provided out of order" do
     result = described_class.call(
       plan_rate_card:,
