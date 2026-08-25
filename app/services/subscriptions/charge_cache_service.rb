@@ -35,12 +35,20 @@ module Subscriptions
       expire_cache(subscription:, charge:)
     end
 
+    # Single rule for the existence of a full usage entry, read by both the writer
+    # (Invoices::CustomerUsageService) and the invalidation path below. The two must never diverge:
+    # an entry written without a matching deletion keeps serving stale usage until the end of the
+    # billing period. Invoices::CustomerUsageService already refuses full usage without this
+    # integration, so this only guards against that gate moving.
+    def self.full_usage_cache_enabled?(organization)
+      organization.granular_lifetime_usage_enabled?
+    end
+
     # NOTE: A charge can hold both a current usage and a full usage entry, and an event invalidates
-    #       both. Only organizations allowed to query full usage can have the second one, so the
-    #       extra deletion is skipped for everyone else.
+    #       both. The extra deletion is skipped for organizations that cannot hold the second one.
     def self.expire_cache(subscription:, charge:, charge_filter: nil)
       new(subscription:, charge:, charge_filter:).expire_cache
-      return unless subscription.organization.granular_lifetime_usage_enabled?
+      return unless full_usage_cache_enabled?(subscription.organization)
 
       new(subscription:, charge:, charge_filter:, full_usage: true).expire_cache
     end

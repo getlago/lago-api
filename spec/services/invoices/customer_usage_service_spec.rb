@@ -906,6 +906,28 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             .with(hash_including(with_last_seen_at: true))
         end
       end
+
+      # Subscriptions::ChargeCacheService skips deleting the full usage entry for organizations
+      # without the integration, so no such entry may ever be written for them.
+      context "when the full usage is queried without the granular lifetime usage integration", :premium do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+          )
+        end
+
+        it "refuses the request and caches nothing" do
+          result = usage_service.call
+
+          expect(result.error.code).to eq("full_usage_not_allowed")
+          expect(Rails.cache.exist?("#{charge_cache_key}/full-usage")).to be(false)
+          expect(Rails.cache.exist?(charge_cache_key)).to be(false)
+        end
+      end
     end
   end
 end

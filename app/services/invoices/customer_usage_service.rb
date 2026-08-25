@@ -184,7 +184,9 @@ module Invoices
     #       window is identical, so the request shares the current usage entry rather than warming a
     #       duplicate.
     def full_usage_cache?
-      usage_filters.full_usage && subscription.started_at != date_service.charges_from_datetime
+      usage_filters.full_usage &&
+        Subscriptions::ChargeCacheService.full_usage_cache_enabled?(organization) &&
+        subscription.started_at != date_service.charges_from_datetime
     end
 
     def compute_amounts
