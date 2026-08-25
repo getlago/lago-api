@@ -22,7 +22,8 @@ module LifetimeUsages
       # The open-period pay-in-advance amount is subtracted from the current usage, so the invoiced
       # side must be refreshed in the same run: otherwise the subtraction removes fees that the
       # cached invoiced column does not contain yet, and both counters stop describing one snapshot.
-      if lifetime_usage.recalculate_invoiced_usage || pay_in_advance_invoiced_amount_cents.positive?
+      pay_in_advance_amount_cents = pay_in_advance_invoiced_amount_cents
+      if lifetime_usage.recalculate_invoiced_usage || pay_in_advance_amount_cents.positive?
         lifetime_usage.invoiced_usage_amount_cents = calculate_invoiced_usage_amount_cents
         lifetime_usage.recalculate_invoiced_usage = false
         lifetime_usage.invoiced_usage_amount_refreshed_at = Time.current

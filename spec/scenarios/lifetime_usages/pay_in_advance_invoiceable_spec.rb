@@ -93,4 +93,19 @@ describe "Lifetime usage with pay in advance invoiceable charges", :premium, :ti
       expect(Invoice.progressive_billing.count).to be_zero
     end
   end
+
+  context "with a usage threshold below the pay in advance amount" do
+    let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 500) }
+
+    before { usage_threshold }
+
+    it "does not issue a progressive billing invoice for usage that was already invoiced" do
+      subscription = subscribe
+
+      ingest_event(subscription, billable_metric, 1)
+
+      expect(subscription.lifetime_usage.reload.total_amount_cents).to eq(1000)
+      expect(Invoice.progressive_billing.count).to be_zero
+    end
+  end
 end

@@ -143,6 +143,35 @@ RSpec.describe LifetimeUsages::CalculateService do
         expect(lifetime_usage.recalculate_invoiced_usage).to be false
       end
     end
+
+    context "with an invoice covering two subscriptions from the same family" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          subscription_at:,
+          previous_subscription:,
+          external_id: previous_subscription.external_id
+        )
+      end
+
+      let(:previous_subscription) { create(:subscription, :terminated, customer:, subscription_at:) }
+      let(:invoice) do
+        create(:invoice, :finalized, :with_subscriptions, organization:, subscriptions: [previous_subscription, subscription])
+      end
+      let(:fees) { create(:charge_fee, invoice:, charge:, customer:, organization:, subscription:, amount_cents: 500) }
+
+      before do
+        invoice
+        fees
+      end
+
+      it "counts the invoice fees once" do
+        result = service.call
+
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(500)
+      end
+    end
   end
 
   describe "#recalculate_current_usage" do
