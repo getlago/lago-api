@@ -145,6 +145,43 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       end
     end
 
+    context "when the override is an empty object" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: {}}}
+        )
+      end
+
+      let(:override) { create(:rate_override, organization:) }
+
+      before { rate_phase.update!(rate_override_id: override.id) }
+
+      it "fails validation instead of clearing the override" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(rate_phase.reload.rate_override).to eq(override)
+      end
+    end
+
+    context "when the rate_phase wrapper is missing" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {}
+        )
+      end
+
+      it "returns a bad request error" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+      end
+    end
+
     context "when the override names a structural card field" do
       subject do
         put_with_token(

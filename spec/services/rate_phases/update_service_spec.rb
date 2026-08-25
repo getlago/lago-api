@@ -69,6 +69,17 @@ RSpec.describe RatePhases::UpdateService do
       end
     end
 
+    context "when the override is an empty object" do
+      let(:params) { {rate_override: {}} }
+
+      it "fails validation instead of clearing the override" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to have_key(:rate_model)
+        expect(rate_phase.reload.rate_override).to eq(previous_override)
+        expect(previous_override.reload).not_to be_discarded
+      end
+    end
+
     context "when the phase save fails" do
       before { create(:rate_phase, plan_rate_card:, organization:, position: 2, code: "taken") }
 
