@@ -38,10 +38,7 @@ module Types
       end
 
       def integration_mappings(integration_id: nil)
-        mappings = dataloader.with(Sources::ActiveRecordAssociation, :integration_mappings).load(object)
-        return mappings unless integration_id
-
-        mappings.select { |mapping| mapping.integration_id == integration_id }
+        dataloader.with(Sources::IntegrationMappingsByMappable, integration_id).load(object)
       end
     end
   end
