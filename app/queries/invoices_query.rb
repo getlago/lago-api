@@ -198,11 +198,27 @@ class InvoicesQuery < BaseQuery
   def base_scope
     scope = organization.invoices
     return scope if search_term.blank?
+    return search_terms_scope(scope) if search_terms_enabled?
 
     scope = scope.with(matching_customers: matching_customers) if search_customers?
     scope
       .with(matching_invoices: matching_invoices)
       .where("invoices.id IN (SELECT id FROM matching_invoices)")
+  end
+
+  # The customer portal passes a Customer as `organization`, and only Organization
+  # carries feature flags.
+  def search_terms_enabled?
+    organization.is_a?(Organization) && organization.feature_flag_enabled?(:invoice_search_terms)
+  end
+
+  def search_terms_scope(scope)
+    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
+    column = search_customers? ? "invoices.search_terms" : "invoices.number"
+
+    return scope.where("#{column} ILIKE ?", escaped_term) unless search_term.match?(BaseQuery::UUID_REGEX)
+
+    scope.where("#{column} ILIKE :term OR invoices.id = :id", term: escaped_term, id: search_term)
   end
 
   def search_customers?
