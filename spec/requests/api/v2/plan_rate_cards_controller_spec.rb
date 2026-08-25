@@ -110,6 +110,21 @@ RSpec.describe Api::V2::PlanRateCardsController do
         expect(json.dig(:error_details, :rate_phases)).to eq(["value_is_mandatory"])
       end
     end
+
+    context "when the list is explicitly empty" do
+      subject do
+        post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
+          rate_card_code: rate_card.code, rate_phases: []
+        }})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phases)).to eq(["value_is_mandatory"])
+      end
+    end
   end
 
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards/:code" do
