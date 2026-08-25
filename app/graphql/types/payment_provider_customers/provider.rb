@@ -25,7 +25,7 @@ module Types
       end
 
       def payment_provider_code
-        object.payment_provider&.code
+        dataloader.with(Sources::ActiveRecordAssociation, :payment_provider).load(object)&.code
       end
     end
   end

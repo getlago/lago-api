@@ -24,11 +24,10 @@ RSpec.describe Types::PaymentProviderCustomers::Provider do
       let(:payment_provider) { create(:stripe_provider, code: "stripe_eu") }
       let(:connection) { create(:stripe_customer, payment_provider:) }
 
-      it "derives the provider from the row and the code from its association" do
+      it "derives the provider from the row type" do
         type = described_class.authorized_new(connection, context)
 
         expect(type.payment_provider).to eq("stripe")
-        expect(type.payment_provider_code).to eq("stripe_eu")
       end
     end
 
@@ -40,12 +39,61 @@ RSpec.describe Types::PaymentProviderCustomers::Provider do
         )
       end
 
-      it "resolves both fields to nil" do
+      it "resolves the provider to nil" do
         type = described_class.authorized_new(connection, context)
 
         expect(type.payment_provider).to be_nil
-        expect(type.payment_provider_code).to be_nil
       end
+    end
+  end
+
+  describe "payment provider code over several rows" do
+    let(:membership) { create(:membership) }
+    let(:organization) { membership.organization }
+
+    let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
+    let(:adyen_provider) { create(:adyen_provider, organization:, code: "adyen_us") }
+
+    let(:customer_one) do
+      create(:customer, organization:, payment_provider: "stripe", payment_provider_code: "stripe_eu")
+    end
+    let(:customer_two) do
+      create(:customer, organization:, payment_provider: "adyen", payment_provider_code: "adyen_us")
+    end
+
+    let(:query) do
+      <<~GQL
+        query($idOne: ID!, $idTwo: ID!) {
+          one: customer(id: $idOne) {
+            providerCustomer { paymentProvider paymentProviderCode }
+          }
+          two: customer(id: $idTwo) {
+            providerCustomer { paymentProvider paymentProviderCode }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:stripe_customer, customer: customer_one, payment_provider: stripe_provider)
+      create(:adyen_customer, customer: customer_two, payment_provider: adyen_provider)
+    end
+
+    it "resolves each row's own provider within a single execution" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "customers:view",
+        query:,
+        variables: {idOne: customer_one.id, idTwo: customer_two.id}
+      )
+
+      expect(result["data"]["one"]["providerCustomer"]).to eq(
+        "paymentProvider" => "stripe", "paymentProviderCode" => "stripe_eu"
+      )
+      expect(result["data"]["two"]["providerCustomer"]).to eq(
+        "paymentProvider" => "adyen", "paymentProviderCode" => "adyen_us"
+      )
     end
   end
 end
