@@ -74,14 +74,14 @@ module Api
         end
 
         def render_rate_phase(rate_phase)
-          render(json: ::V1::RatePhaseSerializer.new(rate_phase, root_name: "rate_phase"))
+          render(json: ::V2::RatePhaseSerializer.new(rate_phase, root_name: "rate_phase"))
         end
 
         def render_rate_phases(rate_phases)
           render(
             json: ::CollectionSerializer.new(
               rate_phases,
-              ::V1::RatePhaseSerializer,
+              ::V2::RatePhaseSerializer,
               collection_name: "rate_phases"
             )
           )
