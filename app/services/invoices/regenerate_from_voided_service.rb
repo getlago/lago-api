@@ -211,7 +211,7 @@ module Invoices
         adjusted_fee_params[:unit_precise_amount] = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
         adjusted_fee_params[:fee_id] = dup_fee.id if dup_fee
 
-        AdjustedFees::CreateService.call(
+        AdjustedFees::CreateService.call!(
           invoice: regenerated_invoice,
           params: adjusted_fee_params,
           regenerating_voided: true
