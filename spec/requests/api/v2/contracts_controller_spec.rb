@@ -2,14 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V2::SubscriptionsController do
+RSpec.describe Api::V2::ContractsController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
   let(:subscription) { create(:subscription, customer:, plan:, organization:) }
 
-  describe "GET /api/v2/subscriptions" do
-    subject { get_with_token(organization, "/api/v2/subscriptions") }
+  describe "GET /api/v2/contracts" do
+    subject { get_with_token(organization, "/api/v2/contracts") }
 
     before do
       create(:subscription_rate_card, organization:, subscription:)
@@ -17,14 +17,14 @@ RSpec.describe Api::V2::SubscriptionsController do
       create(:subscription_rate_card, organization:, subscription:, started_at: 10.days.ago, ended_at: 1.day.ago)
     end
 
-    include_examples "requires API permission", "subscription", "read"
+    include_examples "requires API permission", "contract", "read"
 
     it "returns subscriptions in the v2 shape" do
       subject
 
       expect(response).to have_http_status(:success)
 
-      result = json[:subscriptions].sole
+      result = json[:contracts].sole
       expect(result[:lago_id]).to eq(subscription.id)
       expect(result[:plan_code]).to eq(plan.code)
       expect(result[:applied_rate_cards_count]).to eq(1)
@@ -38,30 +38,30 @@ RSpec.describe Api::V2::SubscriptionsController do
       it "lists only active subscriptions by default" do
         subject
 
-        expect(json[:subscriptions].map { |s| s[:lago_id] }).to eq([subscription.id])
+        expect(json[:contracts].map { |s| s[:lago_id] }).to eq([subscription.id])
       end
 
       it "lists pending subscriptions when the status filter asks for them" do
-        get_with_token(organization, "/api/v2/subscriptions?status[]=pending")
+        get_with_token(organization, "/api/v2/contracts?status[]=pending")
 
-        expect(json[:subscriptions].map { |s| s[:lago_id] }).to eq([pending_subscription.id])
+        expect(json[:contracts].map { |s| s[:lago_id] }).to eq([pending_subscription.id])
       end
     end
   end
 
-  describe "GET /api/v2/subscriptions/:external_id" do
-    subject { get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}") }
+  describe "GET /api/v2/contracts/:external_id" do
+    subject { get_with_token(organization, "/api/v2/contracts/#{subscription.external_id}") }
 
     let!(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:) }
 
-    include_examples "requires API permission", "subscription", "read"
+    include_examples "requires API permission", "contract", "read"
 
     it "returns the subscription with its rate card entries" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:subscription][:lago_id]).to eq(subscription.id)
-      expect(json[:subscription][:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
+      expect(json[:contract][:lago_id]).to eq(subscription.id)
+      expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
     end
 
     context "with an ended version of an entry" do
@@ -72,8 +72,8 @@ RSpec.describe Api::V2::SubscriptionsController do
       it "excludes it from the count and the list" do
         subject
 
-        expect(json[:subscription][:applied_rate_cards_count]).to eq(1)
-        expect(json[:subscription][:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
+        expect(json[:contract][:applied_rate_cards_count]).to eq(1)
+        expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
       end
     end
 
@@ -84,17 +84,17 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:subscription][:external_id]).to eq("sub.2026-01")
+        expect(json[:contract][:external_id]).to eq("sub.2026-01")
       end
     end
 
     context "when it does not exist" do
-      subject { get_with_token(organization, "/api/v2/subscriptions/unknown") }
+      subject { get_with_token(organization, "/api/v2/contracts/unknown") }
 
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("subscription")
+        expect(response).to be_not_found_error("contract")
       end
     end
   end

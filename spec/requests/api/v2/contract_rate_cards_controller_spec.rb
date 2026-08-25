@@ -2,30 +2,30 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V2::SubscriptionRateCardsController do
+RSpec.describe Api::V2::ContractRateCardsController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, :pending, customer:, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
-  describe "POST /api/v2/subscriptions/:external_id/applied_rate_cards" do
-    subject { post_with_token(organization, "/api/v2/subscriptions/#{external_id}/applied_rate_cards", {applied_rate_card: create_params}) }
+  describe "POST /api/v2/contracts/:external_id/applied_rate_cards" do
+    subject { post_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards", {applied_rate_card: create_params}) }
 
     let(:external_id) { subscription.external_id }
     let(:create_params) do
       {rate_card_code: rate_card.code, units: "10"}
     end
 
-    include_examples "requires API permission", "subscription_rate_card", "write"
+    include_examples "requires API permission", "contract_rate_card", "write"
 
     it "attaches the rate card to the subscription with a default rate phase" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to be_present
-      expect(json[:applied_rate_card][:external_subscription_id]).to eq(subscription.external_id)
+      expect(json[:applied_rate_card][:external_contract_id]).to eq(subscription.external_id)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
-      expect(json[:applied_rate_card][:external_subscription_id]).to eq(subscription.external_id)
+      expect(json[:applied_rate_card][:external_contract_id]).to eq(subscription.external_id)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
       expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
     end
@@ -57,7 +57,7 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("subscription")
+        expect(response).to be_not_found_error("contract")
       end
     end
 
@@ -89,32 +89,32 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
     end
 
     it "stays addressable during the authoring window" do
-      get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{rate_card.code}")
+      get_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/#{rate_card.code}")
       expect(response).to have_http_status(:success)
 
       put_with_token(
         organization,
-        "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{rate_card.code}",
+        "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/#{rate_card.code}",
         {applied_rate_card: {units: "3"}}
       )
       expect(response).to have_http_status(:success)
       expect(subscription_rate_card.reload.units).to eq(3)
 
-      delete_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{rate_card.code}")
+      delete_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/#{rate_card.code}")
       expect(response).to have_http_status(:success)
       expect(subscription_rate_card.reload).to be_discarded
     end
   end
 
-  describe "GET /api/v2/subscriptions/:external_id/applied_rate_cards" do
-    subject { get_with_token(organization, "/api/v2/subscriptions/#{external_id}/applied_rate_cards") }
+  describe "GET /api/v2/contracts/:external_id/applied_rate_cards" do
+    subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards") }
 
     let(:external_id) { subscription.external_id }
     let!(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:) }
 
     before { create(:subscription_rate_card, organization:) }
 
-    include_examples "requires API permission", "subscription_rate_card", "read"
+    include_examples "requires API permission", "contract_rate_card", "read"
 
     it "returns the subscription's entries only" do
       subject
@@ -142,17 +142,17 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("subscription")
+        expect(response).to be_not_found_error("contract")
       end
     end
   end
 
-  describe "GET /api/v2/subscriptions/:external_id/applied_rate_cards/:code" do
-    subject { get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}") }
+  describe "GET /api/v2/contracts/:external_id/applied_rate_cards/:code" do
+    subject { get_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}") }
 
     let(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:) }
 
-    include_examples "requires API permission", "subscription_rate_card", "read"
+    include_examples "requires API permission", "contract_rate_card", "read"
 
     it "returns the subscription product" do
       subject
@@ -162,7 +162,7 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
     end
 
     context "when it does not exist" do
-      subject { get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/unknown") }
+      subject { get_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/unknown") }
 
       it "returns a not found error" do
         subject
@@ -172,12 +172,12 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
     end
   end
 
-  describe "PUT /api/v2/subscriptions/:external_id/applied_rate_cards/:code" do
-    subject { put_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}", {applied_rate_card: {units: "12"}}) }
+  describe "PUT /api/v2/contracts/:external_id/applied_rate_cards/:code" do
+    subject { put_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}", {applied_rate_card: {units: "12"}}) }
 
     let(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:, units: 5) }
 
-    include_examples "requires API permission", "subscription_rate_card", "write"
+    include_examples "requires API permission", "contract_rate_card", "write"
 
     it "updates the entry" do
       subject
@@ -197,7 +197,7 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
     end
 
     context "when it does not exist" do
-      subject { put_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/unknown", {applied_rate_card: {units: "12"}}) }
+      subject { put_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/unknown", {applied_rate_card: {units: "12"}}) }
 
       it "returns a not found error" do
         subject
@@ -207,12 +207,12 @@ RSpec.describe Api::V2::SubscriptionRateCardsController do
     end
   end
 
-  describe "DELETE /api/v2/subscriptions/:external_id/applied_rate_cards/:code" do
-    subject { delete_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}") }
+  describe "DELETE /api/v2/contracts/:external_id/applied_rate_cards/:code" do
+    subject { delete_with_token(organization, "/api/v2/contracts/#{subscription.external_id}/applied_rate_cards/#{subscription_rate_card.rate_card.code}") }
 
     let(:subscription_rate_card) { create(:subscription_rate_card, organization:, subscription:) }
 
-    include_examples "requires API permission", "subscription_rate_card", "write"
+    include_examples "requires API permission", "contract_rate_card", "write"
 
     it "soft deletes the entry" do
       subject

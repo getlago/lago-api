@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-module V1
-  class SubscriptionRateCardSerializer < ModelSerializer
+module V2
+  class ContractAppliedRateCardSerializer < ModelSerializer
     def serialize
       {
         lago_id: model.id,
-        external_subscription_id: model.subscription.external_id,
+        external_contract_id: model.subscription.external_id,
         rate_card_code: model.rate_card.code,
         units: model.units,
         started_at: model.started_at.iso8601,

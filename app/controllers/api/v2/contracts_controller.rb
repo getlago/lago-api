@@ -2,7 +2,7 @@
 
 module Api
   module V2
-    class SubscriptionsController < Api::BaseController
+    class ContractsController < Api::BaseController
       include Api::RequiresProductCatalog
 
       def index
@@ -30,8 +30,8 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               subscriptions,
-              ::V2::SubscriptionSerializer,
-              collection_name: "subscriptions",
+              ::V2::ContractSerializer,
+              collection_name: "contracts",
               meta: pagination_metadata(subscriptions),
               applied_rate_cards_counts:
             )
@@ -48,12 +48,12 @@ module Api
             external_id: params[:external_id],
             status: params[:status] || :active
           )
-        return not_found_error(resource: "subscription") unless subscription
+        return not_found_error(resource: "contract") unless subscription
 
         render(
-          json: ::V2::SubscriptionSerializer.new(
+          json: ::V2::ContractSerializer.new(
             subscription,
-            root_name: "subscription",
+            root_name: "contract",
             includes: %i[applied_rate_cards]
           )
         )
@@ -62,7 +62,7 @@ module Api
       private
 
       def resource_name
-        "subscription"
+        "contract"
       end
     end
   end
