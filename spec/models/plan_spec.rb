@@ -525,6 +525,55 @@ RSpec.describe Plan do
     end
   end
 
+  describe ".preload_counts" do
+    subject(:preload_counts) { described_class.preload_counts(organization, plans) }
+
+    let(:organization) { build_stubbed(:organization) }
+    let(:plan1) { build_stubbed(:plan, organization:) }
+    let(:plan2) { build_stubbed(:plan, organization:) }
+    let(:plans) { [plan1, plan2] }
+    let(:counts) do
+      {
+        plan2.id => {
+          active_subscriptions_count: 1,
+          charges_count: 2,
+          customers_count: 3,
+          draft_invoices_count: 4,
+          fixed_charges_count: 5,
+          subscriptions_count: 6
+        }
+      }
+    end
+
+    before do
+      allow(Plan::CountsQuery).to receive(:call).and_return(counts)
+    end
+
+    it "preloads all count values and defaults missing values to zero" do
+      expect(preload_counts).to eq(plans)
+      expect([
+        plan1.active_subscriptions_count,
+        plan1.charges_count,
+        plan1.customers_count,
+        plan1.draft_invoices_count,
+        plan1.fixed_charges_count,
+        plan1.subscriptions_count
+      ]).to eq([0, 0, 0, 0, 0, 0])
+      expect([
+        plan2.active_subscriptions_count,
+        plan2.charges_count,
+        plan2.customers_count,
+        plan2.draft_invoices_count,
+        plan2.fixed_charges_count,
+        plan2.subscriptions_count
+      ]).to eq([1, 2, 3, 4, 5, 6])
+      expect(Plan::CountsQuery).to have_received(:call).with(
+        organization:,
+        filters: {plan_ids: [plan1.id, plan2.id]}
+      )
+    end
+  end
+
   describe "#pay_in_arrears?" do
     context "when pay_in_advance is true" do
       let(:plan) { build(:plan, :pay_in_advance) }

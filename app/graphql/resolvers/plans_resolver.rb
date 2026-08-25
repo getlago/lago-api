@@ -31,7 +31,7 @@ module Resolvers
         }
       )
 
-      result.plans
+      Plan.preload_counts(current_organization, result.plans)
     end
   end
 end
