@@ -15,6 +15,7 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :received_at, GraphQL::Types::ISO8601DateTime, null: true, method: :created_at
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
+      field :timestamp_ms, GraphQL::Types::BigInt, null: true
 
       field :api_client, String, null: true
       field :ip_address, String, null: true
@@ -37,6 +38,15 @@ module Types
             properties: object.properties || {}
           }
         }
+      end
+
+      # NOTE: `timestamp` is exposed as ISO8601, which graphql-ruby serializes at whole-second
+      # precision, while the Clickhouse column is a DateTime64(3). Callers that need to address
+      # one specific event have to send its timestamp back, so they need it lossless.
+      def timestamp_ms
+        return if object.timestamp.nil?
+
+        (object.timestamp.to_r * 1000).round
       end
 
       def match_billable_metric
