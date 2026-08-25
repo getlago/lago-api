@@ -9,10 +9,19 @@ RSpec.describe Customers::RefreshInvoicesSearchTermsJob do
   let(:customer) { create(:customer, organization:) }
   let(:customer_id) { customer.id }
 
-  let(:refresh_service) { instance_double(Customers::RefreshInvoicesSearchTermsService) }
-
   before do
     allow(Customers::RefreshInvoicesSearchTermsService).to receive(:call!).and_return(BaseResult.new)
+  end
+
+  it_behaves_like "a unique job" do
+    let(:job_args) { [customer.id] }
+  end
+
+  describe "unique" do
+    it "has unique :until_executing constraint" do
+      expect(described_class.lock_strategy_class).to eq(ActiveJob::Uniqueness::Strategies::UntilExecuting)
+      expect(described_class.lock_options).to eq(on_conflict: :log)
+    end
   end
 
   it "refreshes the invoices of the customer" do
