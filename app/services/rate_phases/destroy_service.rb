@@ -28,6 +28,7 @@ module RatePhases
 
       ActiveRecord::Base.transaction do
         rate_phase.discard!
+        rate_phase.rate_override&.discard!
 
         siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
           phase.update!(position: phase.position - 1)

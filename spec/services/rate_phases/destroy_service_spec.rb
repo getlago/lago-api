@@ -21,6 +21,14 @@ RSpec.describe RatePhases::DestroyService do
       expect(launch.reload.position).to eq(1)
       expect(terminal.reload.position).to eq(2)
     end
+
+    it "discards the phase's override with it" do
+      override = create(:rate_override, organization:)
+      ramp.update!(rate_override_id: override.id)
+
+      expect(result).to be_success
+      expect(override.reload).to be_discarded
+    end
   end
 
   context "when deleting the indefinite terminal phase" do

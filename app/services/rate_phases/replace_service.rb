@@ -18,7 +18,7 @@ module RatePhases
       return sequence_failure if sequence_failure
 
       ActiveRecord::Base.transaction do
-        plan_rate_card.rate_phases.discard_all!
+        discard_existing_phases
 
         result.rate_phases = ordered_params.map do |phase|
           plan_rate_card.rate_phases.create!(
@@ -42,6 +42,12 @@ module RatePhases
 
     def organization
       plan_rate_card.organization
+    end
+
+    def discard_existing_phases
+      existing_phases = plan_rate_card.rate_phases.to_a
+      RateOverride.where(id: existing_phases.filter_map(&:rate_override_id)).discard_all!
+      plan_rate_card.rate_phases.discard_all!
     end
 
     def plan_locked?

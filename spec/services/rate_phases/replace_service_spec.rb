@@ -17,11 +17,14 @@ RSpec.describe RatePhases::ReplaceService do
     ]
   end
 
-  it "replaces the phase sequence" do
-    create(:rate_phase, organization:, plan_rate_card:, position: 1)
+  it "replaces the phase sequence and discards the superseded overrides" do
+    previous_override = create(:rate_override, organization:)
+    create(:rate_phase, organization:, plan_rate_card:, position: 1, rate_override_id: previous_override.id)
 
     expect { result }.to change { plan_rate_card.rate_phases.reload.order(:position).pluck(:name) }
       .to(%w[trial standard])
+
+    expect(previous_override.reload).to be_discarded
 
     expect(result).to be_success
     expect(result.rate_phases.map(&:position)).to eq([1, 2])
