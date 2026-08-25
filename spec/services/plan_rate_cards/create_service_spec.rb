@@ -119,6 +119,16 @@ RSpec.describe PlanRateCards::CreateService do
     end
   end
 
+  context "with an explicit empty rate_phases list" do
+    let(:params) { {rate_card_code: rate_card.code, rate_phases: []} }
+
+    it "rejects it instead of silently creating the default phase" do
+      expect { result }.not_to change(PlanRateCard, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_phases]).to eq(["value_is_mandatory"])
+    end
+  end
+
   context "when the plan is missing" do
     let(:plan) { nil }
 

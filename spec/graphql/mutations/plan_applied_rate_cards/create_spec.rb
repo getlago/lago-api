@@ -65,5 +65,13 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
 
       expect(result_data["ratePhasesCount"]).to eq(2)
     end
+
+    context "when the list is explicitly empty" do
+      let(:input) { {planId: plan.id, rateCardCode: rate_card.code, ratePhases: []} }
+
+      it "returns an error" do
+        expect_graphql_error(result: execution, message: :unprocessable_entity)
+      end
+    end
   end
 end

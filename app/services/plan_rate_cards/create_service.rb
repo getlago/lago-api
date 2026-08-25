@@ -48,10 +48,11 @@ module PlanRateCards
         )
 
         # Phases can be authored atomically with the entry: a provided sequence
-        # goes through the same validations as the single-phase ops and a
-        # failure rolls the whole create back. Omitted, the entry starts on a
-        # single default terminal phase.
-        if params[:rate_phases].present?
+        # goes through the same validations as the single-phase ops (an explicit
+        # empty list is rejected there) and a failure rolls the whole create
+        # back. Omitted or null, the entry starts on a single default terminal
+        # phase.
+        if params.key?(:rate_phases) && !params[:rate_phases].nil?
           RatePhases::ReplaceService.call!(plan_rate_card:, phases_params: params[:rate_phases])
         else
           RatePhases::CreateService.call!(plan_rate_card:, params: {code: "default", position: 1})
