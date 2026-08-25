@@ -40,15 +40,18 @@ module BillingCycles
 
     attr_reader :billing_cycle
 
+    # Only what came BEFORE this cycle. Pricing is not a one-shot: a cycle is priced when it
+    # is processed, and re-priced on a retry or a preview, by which time later increases may
+    # already exist. Counting those would make an earlier increase look like it sits under a
+    # watermark that had not been reached yet, and bill it as zero.
+    #
+    # Increases are ordered by the moment they took effect, which is exactly period_from.
     def billed_cycles
-      scope = BillingCycle
+      BillingCycle
         .where(subscription_rate_card_id: card_version_ids)
         .where(period_to: billing_cycle.period_to)
+        .where(period_from: ...billing_cycle.period_from)
         .where.not(status: :failed)
-
-      return scope unless billing_cycle.persisted?
-
-      scope.where.not(id: billing_cycle.id)
     end
 
     def card_version_ids

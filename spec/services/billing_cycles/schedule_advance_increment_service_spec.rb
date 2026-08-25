@@ -15,9 +15,20 @@ RSpec.describe BillingCycles::ScheduleAdvanceIncrementService do
   let(:traits) { [:advance] }
   let(:period_to) { Time.utc(2025, 5, 31).end_of_day }
 
+  let(:card) { version(3, 2) }
+  let(:at) { Time.utc(2025, 5, 2) }
+
   let(:rate_card_rate) do
     create(:rate_card_rate, organization:, rate_card:, rate_model: "standard", rate_properties: {"amount" => "31"})
   end
+
+  # What has already been invoiced when the change arrives. Contexts override it to describe
+  # a different history.
+  def bill_opening
+    cycle_for(version(1, 1, 2), 1, 1)
+  end
+
+  before { bill_opening }
 
   def version(units, from_day, to_day = nil)
     create(
@@ -43,11 +54,6 @@ RSpec.describe BillingCycles::ScheduleAdvanceIncrementService do
       billing_at: Time.utc(2025, 5, from_day)
     )
   end
-
-  # May 01 billed at quantity 1; the card is now on quantity 3 as of May 02.
-  let!(:opening) { cycle_for(version(1, 1, 2), 1, 1) }
-  let(:card) { version(3, 2) }
-  let(:at) { Time.utc(2025, 5, 2) }
 
   it "schedules the remaining window with the share of the period still ahead" do
     expect(result.billing_cycle).to be_present
@@ -80,13 +86,13 @@ RSpec.describe BillingCycles::ScheduleAdvanceIncrementService do
   end
 
   context "when the quantity rises but stays under the watermark" do
-    let!(:opening) do
-      first = cycle_for(version(1, 1, 2), 1, 1)
-      cycle_for(version(5, 2, 3), 2, BigDecimal(30) / 31)
-      first
-    end
     let(:card) { version(2, 3) }
     let(:at) { Time.utc(2025, 5, 3) }
+
+    def bill_opening
+      cycle_for(version(1, 1, 2), 1, 1)
+      cycle_for(version(5, 2, 3), 2, BigDecimal(30) / 31)
+    end
 
     it "schedules nothing — that coverage is already paid for" do
       expect(result.billing_cycle).to be_nil
@@ -94,8 +100,9 @@ RSpec.describe BillingCycles::ScheduleAdvanceIncrementService do
   end
 
   context "when nothing has been billed for the period yet" do
-    let!(:opening) { nil }
-    let(:card) { version(3, 2) }
+    def bill_opening
+      nil
+    end
 
     it "leaves it to the ordinary producer" do
       expect(result.billing_cycle).to be_nil
@@ -114,9 +121,12 @@ RSpec.describe BillingCycles::ScheduleAdvanceIncrementService do
   # the segment it lands in, and its ratio stays denominated in the full period.
   context "when a rate change split the period" do
     let(:segment_end) { Time.utc(2025, 5, 14).end_of_day }
-    let!(:opening) { cycle_for(version(1, 1, 3), 1, BigDecimal(14) / 31, ends: segment_end) }
     let(:card) { version(3, 3) }
     let(:at) { Time.utc(2025, 5, 3) }
+
+    def bill_opening
+      cycle_for(version(1, 1, 3), 1, BigDecimal(14) / 31, ends: segment_end)
+    end
 
     it "schedules the rest of that segment only" do
       expect(result.billing_cycle.period_to).to be_within(1.second).of(segment_end)

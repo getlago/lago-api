@@ -152,7 +152,14 @@ module BillingCycles
       # time but a seat is not, so the line shows whole seats and the time-weighting is
       # absorbed into the unit price, which is derived as amount / units. Without proration
       # the two are the same number.
+      #
+      # An incremental charge reads the quantity off its OWN version instead. Resolving over
+      # the window would pick up changes made after it — the window runs to the period end,
+      # so a later increase sits inside it — and bill this charge for a quantity that was not
+      # yet in force when it was raised.
       def units
+        return BigDecimal((subscription_rate_card.units || 0).to_s) if incremental?
+
         resolved_units.closing_units
       end
 
