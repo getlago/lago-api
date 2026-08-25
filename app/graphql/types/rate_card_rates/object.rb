@@ -14,7 +14,7 @@ module Types
       field :status, Types::RateCardRates::StatusEnum, null: false
 
       field :rate_model, Types::RateCardRates::RateModelEnum, null: false
-      field :rate_properties, GraphQL::Types::JSON, null: false
+      field :rate_properties, Types::Charges::Properties, null: false
 
       field :applied_pricing_unit_conversion_rate, GraphQL::Types::Float, null: true
       field :billing_interval_count, Integer, null: false

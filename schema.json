@@ -16640,8 +16640,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
+                  "kind": "INPUT_OBJECT",
+                  "name": "PropertiesInput",
                   "ofType": null
                 }
               },
@@ -67737,8 +67737,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
+                  "kind": "OBJECT",
+                  "name": "Properties",
                   "ofType": null
                 }
               },
@@ -67982,8 +67982,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
+                  "kind": "INPUT_OBJECT",
+                  "name": "PropertiesInput",
                   "ofType": null
                 }
               },
@@ -80655,8 +80655,8 @@
               "name": "rateProperties",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "JSON",
+                "kind": "INPUT_OBJECT",
+                "name": "PropertiesInput",
                 "ofType": null
               },
               "defaultValue": null,

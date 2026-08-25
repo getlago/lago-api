@@ -13,7 +13,7 @@ module Types
       argument :effective_from, GraphQL::Types::ISO8601DateTime, required: true
       argument :min_amount_cents, GraphQL::Types::BigInt, required: false
       argument :rate_model, Types::RateCardRates::RateModelEnum, required: true
-      argument :rate_properties, GraphQL::Types::JSON, required: true
+      argument :rate_properties, Types::Charges::PropertiesInput, required: true
     end
   end
 end

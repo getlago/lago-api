@@ -3620,7 +3620,7 @@ input CreateRateCardRateInput {
   minAmountCents: BigInt
   rateCardId: ID!
   rateModel: RateCardRateModelEnum!
-  rateProperties: JSON!
+  rateProperties: PropertiesInput!
 }
 
 input CreateRecurringTransactionRuleInput {
@@ -12421,7 +12421,7 @@ type RateCardRate {
   id: ID!
   minAmountCents: BigInt!
   rateModel: RateCardRateModelEnum!
-  rateProperties: JSON!
+  rateProperties: Properties!
   status: RateCardRateStatusEnum!
   updatedAt: ISO8601DateTime!
 }
@@ -12459,7 +12459,7 @@ input RateCardRateInput {
   effectiveFrom: ISO8601DateTime!
   minAmountCents: BigInt
   rateModel: RateCardRateModelEnum!
-  rateProperties: JSON!
+  rateProperties: PropertiesInput!
 }
 
 enum RateCardRateModelEnum {
@@ -15086,7 +15086,7 @@ input UpdateRateCardRateInput {
   id: ID!
   minAmountCents: BigInt
   rateModel: RateCardRateModelEnum
-  rateProperties: JSON
+  rateProperties: PropertiesInput
 }
 
 input UpdateRecurringTransactionRuleInput {
