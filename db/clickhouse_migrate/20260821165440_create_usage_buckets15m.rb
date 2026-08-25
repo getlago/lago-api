@@ -11,6 +11,12 @@ class CreateUsageBuckets15m < ActiveRecord::Migration[8.0]
   # RisingWave writes is_deleted (its upsert protocol requires the column);
   # ver is stamped at insert so ReplacingMergeTree keeps the newest version
   # per key. Query with FINAL for exact reads.
+  #
+  # Partitioned by month of the bucket so merges never range over the whole
+  # history and retention is a DROP PARTITION rather than a TTL mutation. A
+  # billing period spans one or two partitions, so reads stay pruned; late
+  # events land in an older month's partition, which is exactly where they
+  # belong.
   def up
     safety_assured do
       execute <<~SQL
@@ -33,6 +39,7 @@ class CreateUsageBuckets15m < ActiveRecord::Migration[8.0]
             is_deleted UInt8 DEFAULT 0,
             ver DateTime64(3) MATERIALIZED now64(3)
         ) ENGINE = ReplacingMergeTree(ver, is_deleted)
+        PARTITION BY toYYYYMM(bucket)
         ORDER BY (organization_id, subscription_id, charge_id, charge_filter_id, grouped_by, bucket)
       SQL
     end

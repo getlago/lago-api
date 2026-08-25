@@ -79,9 +79,15 @@ module Wallets
           # Rails executor, which turns on the AR query cache — without it,
           # a poll that runs before the bucket lands is replayed from cache
           # every iteration and the wait can only time out.
+          #
+          # organization_id is not redundant with subscription_id: it is the
+          # first column of the table's ORDER BY, and without it this poll
+          # cannot use the primary key at all. Measured on a 172M-row table:
+          # 3.65M rows scanned without it, 8.2k with — and this runs every
+          # BUCKET_WAIT_INTERVAL for as long as the wait lasts.
           Clickhouse::UsageBucket.uncached do
             Clickhouse::UsageBucket
-              .where(subscription_id:)
+              .where(organization_id:, subscription_id:)
               .where("toUnixTimestamp64Milli(last_ingested_at) >= ?", watermark_ms.to_i)
               .exists?
           end

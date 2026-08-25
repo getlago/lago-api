@@ -27,6 +27,10 @@ module RealtimeUsage
       mismatches = []
       checked = 0
 
+      # The one bucket query with no organization to scope by — it samples
+      # across every org on purpose. It cannot use the ORDER BY prefix, so
+      # it leans on the monthly partitioning instead: the window prunes it
+      # to one or two partitions rather than the whole history.
       subscription_ids = Clickhouse::UsageBucket.final
         .where("bucket >= ?", RECENT_ACTIVITY_WINDOW.ago)
         .distinct.limit(limit).pluck(:subscription_id)
@@ -35,8 +39,10 @@ module RealtimeUsage
         charges_from, charges_to = current_period_window(subscription)
         next if charges_from.nil? || charges_to.nil?
 
+        # organization_id leads the table's ORDER BY — without it this
+        # scans instead of seeking (10M rows vs 74k on a 172M-row table).
         totals = Clickhouse::UsageBucket.final
-          .where(subscription_id: subscription.id)
+          .where(organization_id: subscription.organization_id, subscription_id: subscription.id)
           .where("bucket >= ? AND bucket <= ?", charges_from.change(min: charges_from.min - charges_from.min % 15), charges_to)
           .group(:charge_id)
           .pluck(Arel.sql("charge_id, sum(events_count), sum(units)"))

@@ -2,6 +2,8 @@
 -- RisingWave pipeline through a ClickHouse upsert sink. The API serves
 -- current usage and wallet refresh by summing buckets over the Rails-computed
 -- billing-period window. Query with FINAL for exact reads.
+-- Partitioned by month of the bucket: merges stay inside one month and
+-- retention is a DROP PARTITION instead of a TTL mutation.
 CREATE TABLE IF NOT EXISTS usage_buckets_15m
 (
     bucket DateTime64(3),
@@ -23,4 +25,5 @@ CREATE TABLE IF NOT EXISTS usage_buckets_15m
     ver DateTime64(3) MATERIALIZED now64(3)
 )
 ENGINE = ReplacingMergeTree(ver, is_deleted)
+PARTITION BY toYYYYMM(bucket)
 ORDER BY (organization_id, subscription_id, charge_id, charge_filter_id, grouped_by, bucket);
