@@ -8,7 +8,8 @@ CREATE TABLE default.events_raw
     `code` String,
     `properties` Map(String, String),
     `ingested_at` DateTime(3),
-    `precise_total_amount_cents` Nullable(Decimal(40, 15))
+    `precise_total_amount_cents` Nullable(Decimal(40, 15)),
+    INDEX idx_events_raw_transaction_id transaction_id TYPE bloom_filter(0.01) GRANULARITY 1
 )
 ENGINE = SharedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}')
 ORDER BY (organization_id, external_subscription_id, code, transaction_id, timestamp)
