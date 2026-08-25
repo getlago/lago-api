@@ -695,8 +695,11 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
           end
 
-          it "uses the Rails cache" do
-            key = [
+          # The two windows are identical here, but that equality is incidental and the key cannot
+          # express it: subscription.started_at is editable, so a shared entry would silently start
+          # answering for a window it was not computed over. Full usage keeps its own entry.
+          it "uses the full usage cache entry, not the current usage one" do
+            current_usage_key = [
               "charge-usage",
               Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
               charge.id,
@@ -705,7 +708,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             ].join("/")
 
             travel_to(current_date) do
-              expect { usage_service.call }.to change { Rails.cache.exist?(key) }.from(false).to(true)
+              expect { usage_service.call }
+                .to change { Rails.cache.exist?("#{current_usage_key}/full-usage") }.from(false).to(true)
+
+              expect(Rails.cache.exist?(current_usage_key)).to be(false)
             end
           end
         end
@@ -907,8 +913,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      # Subscriptions::ChargeCacheService skips deleting the full usage entry for organizations
-      # without the integration, so no such entry may ever be written for them.
+      # An organization that cannot query full usage never populates either entry.
       context "when the full usage is queried without the granular lifetime usage integration", :premium do
         subject(:usage_service) do
           described_class.new(
@@ -926,6 +931,31 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           expect(result.error.code).to eq("full_usage_not_allowed")
           expect(Rails.cache.exist?("#{charge_cache_key}/full-usage")).to be(false)
           expect(Rails.cache.exist?(charge_cache_key)).to be(false)
+        end
+      end
+
+      # skip_grouping and filter_by_presentation change the fees a charge produces but are absent
+      # from the cache key, so an entry holding one shape must never be written where another shape
+      # would read it.
+      context "when the full usage is queried with filters the cache key cannot describe", :premium do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true, skip_grouping: true)
+          )
+        end
+
+        before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
+
+        it "skips both the cache and the ingestion timestamps" do
+          expect { usage_service.call }.not_to change { Rails.cache.exist?("#{charge_cache_key}/full-usage") }.from(false)
+
+          expect(Rails.cache.exist?(charge_cache_key)).to be(false)
+          expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            .with(hash_including(with_last_seen_at: false))
         end
       end
     end

@@ -132,7 +132,7 @@ module Invoices
         charge:,
         to_datetime: boundaries.charges_to_datetime,
         cache: charge_cache_enabled?,
-        full_usage: full_usage_cache?,
+        full_usage: usage_filters.full_usage,
         last_seen_at: applied_filters
       )
 
@@ -176,22 +176,6 @@ module Invoices
 
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true)
-    end
-
-    # NOTE: The charge cache key does not include from_datetime, so a full_usage window reaching
-    #       back to subscription.started_at gets its own cache entry instead of reading the
-    #       current-period one. When started_at matches the current period boundary the aggregation
-    #       window is identical, so the request shares the current usage entry rather than warming a
-    #       duplicate.
-    #
-    #       The integration is checked again here even though full usage is already refused without
-    #       it: Subscriptions::ChargeCacheService only deletes the full usage entry for those
-    #       organizations, and an entry nobody invalidates would serve stale usage until the end of
-    #       the billing period.
-    def full_usage_cache?
-      usage_filters.full_usage &&
-        organization.granular_lifetime_usage_enabled? &&
-        subscription.started_at != date_service.charges_from_datetime
     end
 
     def compute_amounts
@@ -297,7 +281,20 @@ module Invoices
     # timestamp written into a live cache stays valid forever (see Events::BillingPeriodFilterService).
     # Usage filtered by group is never cached, as its fees are a subset of the charge fees.
     def charge_cache_enabled?
-      with_cache && usage_filters.filter_by_group.blank?
+      with_cache &&
+        usage_filters.filter_by_group.blank? &&
+        (!usage_filters.full_usage || full_usage_cache_enabled?)
+    end
+
+    # Full usage always reads and writes its own entry, never the current usage one (see
+    # Subscriptions::ChargeCacheService::FULL_USAGE_KEY_SEGMENT), and only for the shapes that entry
+    # can describe: skip_grouping and filter_by_presentation change the fees a charge produces
+    # without appearing in the key, so caching them would let one shape be served for another. The
+    # integration is required as well, restating locally what querying_full_usage_allowed refuses.
+    def full_usage_cache_enabled?
+      organization.granular_lifetime_usage_enabled? &&
+        !usage_filters.skip_grouping &&
+        usage_filters.filter_by_presentation.nil?
     end
 
     def querying_full_usage_allowed

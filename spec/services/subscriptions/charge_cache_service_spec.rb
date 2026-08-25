@@ -66,33 +66,17 @@ RSpec.describe Subscriptions::ChargeCacheService do
     let(:current_usage_key) { described_class.new(subscription:, charge:, charge_filter:).cache_key }
     let(:full_usage_key) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true).cache_key }
 
-    it "deletes the current usage entry" do
+    # The organization here holds no granular lifetime usage integration, so it cannot write a full
+    # usage entry today. Its deletion must happen anyway: an entry written while the integration was
+    # granted would otherwise survive every event ingested after it was revoked, and be served again
+    # the moment it is granted back, until the end of the billing period.
+    it "deletes both the current usage and the full usage entries" do
       allow(Rails.cache).to receive(:delete)
 
       described_class.expire_cache(subscription:, charge:, charge_filter:)
 
       expect(Rails.cache).to have_received(:delete).with(current_usage_key)
-    end
-
-    it "leaves the full usage entry alone when the organization cannot query full usage" do
-      allow(Rails.cache).to receive(:delete)
-
-      described_class.expire_cache(subscription:, charge:, charge_filter:)
-
-      expect(Rails.cache).not_to have_received(:delete).with(full_usage_key)
-    end
-
-    context "when granular lifetime usage is enabled", :premium do
-      before { subscription.organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
-
-      it "deletes both the current usage and the full usage entries" do
-        allow(Rails.cache).to receive(:delete)
-
-        described_class.expire_cache(subscription:, charge:, charge_filter:)
-
-        expect(Rails.cache).to have_received(:delete).with(current_usage_key)
-        expect(Rails.cache).to have_received(:delete).with(full_usage_key)
-      end
+      expect(Rails.cache).to have_received(:delete).with(full_usage_key)
     end
   end
 
@@ -129,8 +113,9 @@ RSpec.describe Subscriptions::ChargeCacheService do
         described_class.expire_for_subscriptions(ids)
       end
 
-      # 4 expected SELECTs: subscriptions, plans, charges, filters. Add a small
-      # safety margin for incidental loads (e.g. activity log context).
+      # 5 expected SELECTs: subscriptions, organizations, plans, charges, filters. The organization
+      # is preloaded because every cache key reads its feature flags. Add a small safety margin for
+      # incidental loads (e.g. activity log context).
       expect(query_count).to be <= 6
     end
   end

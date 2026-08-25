@@ -9,7 +9,9 @@ module Subscriptions
     LAZY_CACHE_KEY_VERSION = "2"
 
     # Full usage aggregates from subscription.started_at instead of the current period start, so its
-    # result cannot share an entry with the current usage one.
+    # result gets its own entry. The two windows coincide for a subscription that started with the
+    # current period, but that equality is incidental — started_at is editable — and the key cannot
+    # express it, so the two namespaces stay separate regardless.
     FULL_USAGE_KEY_SEGMENT = "full-usage"
 
     def self.expire_for_subscriptions(subscription_ids)
@@ -36,12 +38,12 @@ module Subscriptions
     end
 
     # NOTE: A charge can hold both a current usage and a full usage entry, and an event invalidates
-    #       both. Only organizations granted granular lifetime usage can hold the second one, so the
-    #       extra deletion is skipped for everyone else.
+    #       both. Neither deletion may be conditional on the organization still being granted
+    #       granular lifetime usage: an entry written while it was granted survives every event
+    #       ingested after it was revoked, and would serve that stale usage the moment it is granted
+    #       again, until the end of the billing period.
     def self.expire_cache(subscription:, charge:, charge_filter: nil)
       new(subscription:, charge:, charge_filter:).expire_cache
-      return unless subscription.organization.granular_lifetime_usage_enabled?
-
       new(subscription:, charge:, charge_filter:, full_usage: true).expire_cache
     end
 
