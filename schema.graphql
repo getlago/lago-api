@@ -1178,6 +1178,7 @@ enum BillingTimeEnum {
 }
 
 enum CancellationReasonEnum {
+  manual
   payment_failed
   timeout
 }
@@ -2954,6 +2955,21 @@ input CreateBillingEntityInput {
   taxIdentificationNumber: String
   timezone: TimezoneEnum
   zipcode: String
+}
+
+"""
+Create catalog plan input arguments
+"""
+input CreateCatalogPlanInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  currency: CurrencyEnum!
+  description: String
+  invoiceDisplayName: String
+  name: String!
 }
 
 """
@@ -6280,6 +6296,7 @@ type Event {
   payload: JSON!
   receivedAt: ISO8601DateTime
   timestamp: ISO8601DateTime
+  timestampMs: BigInt
   transactionId: String
 }
 
@@ -8017,6 +8034,16 @@ type Mutation {
   ): BillingEntity
 
   """
+  Creates a new catalog plan
+  """
+  createCatalogPlan(
+    """
+    Parameters for CreateCatalogPlan
+    """
+    input: CreateCatalogPlanInput!
+  ): Plan
+
+  """
   Creates a new Charge for a Plan
   """
   createCharge(
@@ -9465,6 +9492,16 @@ type Mutation {
     """
     input: UpdateCashfreePaymentProviderInput!
   ): CashfreeProvider
+
+  """
+  Updates an existing catalog plan
+  """
+  updateCatalogPlan(
+    """
+    Parameters for UpdateCatalogPlan
+    """
+    input: UpdateCatalogPlanInput!
+  ): Plan
 
   """
   Updates an existing Charge
@@ -11206,6 +11243,8 @@ type ProviderCustomer {
   Query payment methods of a payment connection
   """
   paymentMethods(limit: Int, page: Int, withDeleted: Boolean): PaymentMethodCollection!
+  paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
   providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
@@ -11619,9 +11658,24 @@ type Query {
   """
   event(
     """
+    Billable metric code of the event
+    """
+    code: String
+
+    """
+    External subscription ID of the event
+    """
+    externalSubscriptionId: ID
+
+    """
+    Event timestamp in milliseconds since epoch
+    """
+    timestampMs: BigInt
+
+    """
     Transaction ID of the event
     """
-    transactionId: ID!
+    transactionId: ID
   ): Event
 
   """
@@ -14356,6 +14410,22 @@ input UpdateCashfreePaymentProviderInput {
   requireTermsOfServiceConsent: Boolean
   successRedirectUrl: String
   supports3ds: Boolean
+}
+
+"""
+Update catalog plan input arguments
+"""
+input UpdateCatalogPlanInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  currency: CurrencyEnum
+  description: String
+  id: ID!
+  invoiceDisplayName: String
+  name: String
 }
 
 """

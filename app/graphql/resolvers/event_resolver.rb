@@ -7,15 +7,27 @@ module Resolvers
 
     description "Query a single event of an organization"
 
-    argument :transaction_id, ID, required: true, description: "Transaction ID of the event"
+    argument :code, String, required: false, description: "Billable metric code of the event"
+    argument :external_subscription_id, ID, required: false, description: "External subscription ID of the event"
+    argument :timestamp_ms, GraphQL::Types::BigInt, required: false, description: "Event timestamp in milliseconds since epoch"
+    argument :transaction_id, ID, required: false, description: "Transaction ID of the event"
 
     type Types::Events::Object, null: true
 
-    def resolve(transaction_id: nil)
-      event_scope = current_organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
-      event_scope.find_by!(organization_id: current_organization.id, transaction_id:)
-    rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: "event")
+    def resolve(transaction_id: nil, external_subscription_id: nil, timestamp_ms: nil, code: nil)
+      query_result = EventQuery.call(
+        organization: current_organization,
+        filters: {
+          transaction_id:,
+          external_subscription_id:,
+          code:,
+          timestamp: timestamp_ms && Time.zone.at(Rational(timestamp_ms, 1000))
+        }
+      )
+
+      return result_error(query_result) unless query_result.success?
+
+      query_result.event || not_found_error(resource: "event")
     end
   end
 end

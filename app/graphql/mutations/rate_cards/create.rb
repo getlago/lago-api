@@ -3,6 +3,7 @@
 module Mutations
   module RateCards
     class Create < BaseMutation
+      include RequiresProductCatalog
       include AuthenticableApiUser
       include RequiredOrganization
 

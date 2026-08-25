@@ -5,10 +5,21 @@ require "rails_helper"
 RSpec.describe Plans::OverrideService do
   subject(:override_service) { described_class.new(plan: parent_plan, params:, subscription:) }
 
+  let(:organization) { membership.organization }
+  let(:membership) { create(:membership) }
   let(:subscription) { nil }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  describe "product catalog gating", :premium do
+    it "rejects overriding any plan of a catalog organization" do
+      organization = create(:organization, feature_flags: ["product_catalog"])
+      legacy_plan = create(:plan, organization:)
+
+      result = described_class.call(plan: legacy_plan, params: {amount_cents: 100})
+
+      expect(result).to be_failure
+      expect(result.error.messages[:plan_overrides]).to eq(["legacy_billing_disabled"])
+    end
+  end
 
   describe "#call", :premium do
     let(:parent_plan) { create(:plan, organization:) }

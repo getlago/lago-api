@@ -107,6 +107,10 @@ RSpec.describe Customers::UpsertFromApiService do
     expect(Utils::ActivityLog).to have_produced("customer.created").after_commit.with(result.customer)
   end
 
+  it "does not refresh the invoices search terms" do
+    expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+  end
+
   context "when organization has multiple billing entities" do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
@@ -626,6 +630,19 @@ RSpec.describe Customers::UpsertFromApiService do
       result = described_class.call(organization:, params: create_args)
 
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(result.customer)
+    end
+
+    it "refreshes the invoices search terms when a searchable field changes" do
+      expect { result }
+        .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+    end
+
+    context "when no searchable field changes" do
+      let(:create_args) { {external_id:, city: "Paris"} }
+
+      it "does not refresh the invoices search terms" do
+        expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+      end
     end
 
     context "with provider customer" do

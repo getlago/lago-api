@@ -2,6 +2,7 @@
 
 module Resolvers
   class PlanAppliedRateCardsResolver < Resolvers::BaseResolver
+    include RequiresProductCatalog
     include AuthenticableApiUser
     include RequiredOrganization
 

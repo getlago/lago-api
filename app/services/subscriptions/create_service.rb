@@ -32,6 +32,11 @@ module Subscriptions
         subscription_type:
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
+
+      if params.key?(:plan_overrides) && (plan.product_catalog? || plan.organization.product_catalog_enabled?)
+        return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
+      end
+
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
       # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`

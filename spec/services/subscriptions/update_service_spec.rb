@@ -9,9 +9,6 @@ RSpec.describe Subscriptions::UpdateService do
   let(:subscription) { create(:subscription) }
 
   describe "#call" do
-    let(:subscription_at) { "2022-07-07T00:00:00Z" }
-    let(:ending_at) { Time.current.beginning_of_day + 1.month }
-
     let(:params) do
       {
         name: "new name",
@@ -19,9 +16,26 @@ RSpec.describe Subscriptions::UpdateService do
         subscription_at:
       }
     end
+    let(:ending_at) { Time.current.beginning_of_day + 1.month }
+    let(:subscription_at) { "2022-07-07T00:00:00Z" }
 
     before do
       subscription
+    end
+
+    context "when the organization uses the product catalog", :premium do
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+      let(:params) { {plan_overrides: {amount_cents: 5000}} }
+
+      it "rejects plan overrides" do
+        result = update_service.call
+
+        expect(result).to be_failure
+        expect(result.error.messages[:plan_overrides]).to eq(["legacy_billing_disabled"])
+      end
     end
 
     context "when subscription is incomplete" do

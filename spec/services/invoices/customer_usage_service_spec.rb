@@ -791,5 +791,116 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(result.usage.fees.first.grouped_by).to eq({})
       end
     end
+
+    # The charge cache is lazily invalidated with the ingestion timestamps requested by
+    # Events::BillingPeriodFilterService, so a cached charge must always have asked for them:
+    # an entry stored without a timestamp stays valid for the rest of the billing period, for
+    # every later reader. Each example asserts both halves so they cannot drift apart.
+    describe "charge cache gate" do
+      let(:charge_cache_key) do
+        [
+          "charge-usage",
+          Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
+          charge.id,
+          subscription.id,
+          charge.updated_at.iso8601
+        ].join("/")
+      end
+
+      before { allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original }
+
+      context "when the usage is not filtered" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: true)
+        end
+
+        it "caches the charge and requests the ingestion timestamps" do
+          expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
+          expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            .with(hash_including(codes: nil, with_last_seen_at: true))
+        end
+      end
+
+      context "when the usage is filtered by charge" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id)
+          )
+        end
+
+        it "restricts the lookup to the filtered codes and keeps the timestamps" do
+          expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
+          expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            .with(hash_including(codes: [billable_metric.code], with_last_seen_at: true))
+        end
+      end
+
+      context "when the cache is disabled by the caller" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false)
+        end
+
+        it "skips both the cache and the ingestion timestamps" do
+          expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
+          expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            .with(hash_including(with_last_seen_at: false))
+        end
+      end
+
+      context "when the usage is filtered by group" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_group: {"cloud" => ["aws"]})
+          )
+        end
+
+        let(:billable_metric) { create(:billable_metric, aggregation_type: "sum_agg", field_name: "value") }
+
+        let(:charge) do
+          create(:standard_charge, plan:, billable_metric:, properties: {amount: "10", pricing_group_keys: %w[cloud]})
+        end
+
+        let(:events) { [] }
+
+        before do
+          create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+            timestamp:, properties: {cloud: "aws", value: 10})
+        end
+
+        it "skips both the cache and the ingestion timestamps" do
+          expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
+          expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            .with(hash_including(with_last_seen_at: false))
+        end
+      end
+
+      context "when the full usage is queried outside of the first billing period", :premium do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true,
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+          )
+        end
+
+        before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
+
+        it "skips both the cache and the ingestion timestamps" do
+          expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
+          expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            .with(hash_including(with_last_seen_at: false))
+        end
+      end
+    end
   end
 end

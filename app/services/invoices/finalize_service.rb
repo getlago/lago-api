@@ -19,6 +19,8 @@ module Invoices
 
       invoice.finalized!
 
+      Invoices::RefreshSearchTermsService.call!(invoice:)
+
       result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e

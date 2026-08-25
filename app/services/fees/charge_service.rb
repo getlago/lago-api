@@ -186,9 +186,8 @@ module Fees
       zero_aggregation = aggregator(charge_filter:).empty_results
 
       charge_model_result = ChargeModels::Factory.new_instance(
-        chargeable: charge,
+        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
         aggregation_result: zero_aggregation,
-        properties:,
         period_ratio: calculate_period_ratio,
         calculate_projected_usage:
       ).apply
@@ -404,9 +403,8 @@ module Fees
 
     def apply_charge_model(aggregation_result:, properties:)
       ChargeModels::Factory.new_instance(
-        chargeable: charge,
+        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
         aggregation_result:,
-        properties:,
         period_ratio: calculate_period_ratio,
         calculate_projected_usage:
       ).apply

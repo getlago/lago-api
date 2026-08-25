@@ -16,7 +16,7 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
   let(:required_permission) { "plans:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, :product_catalog, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   let(:mutation) do

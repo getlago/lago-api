@@ -20,6 +20,12 @@ RSpec.describe Invoices::FinalizeService do
         expect(result.invoice.finalized_at).to be_within(1.second).of(Time.current)
       end
 
+      it "refreshes the search terms with the generated number" do
+        result = service.call
+
+        expect(result.invoice.reload.search_terms).to include(result.invoice.number)
+      end
+
       context "when the subscription has a different purchase order number" do
         let(:invoice) do
           create(:invoice, :draft, customer:, organization:, purchase_order_number: "PO-ORIGINAL")

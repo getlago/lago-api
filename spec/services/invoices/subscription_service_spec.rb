@@ -1009,5 +1009,32 @@ RSpec.describe Invoices::SubscriptionService do
         end
       end
     end
+
+    context "when activation billing fails after fees were created" do
+      subject(:invoice_service) do
+        described_class.new(
+          subscriptions:,
+          timestamp: timestamp.to_i,
+          invoicing_reason:,
+          skip_charges: true
+        )
+      end
+
+      let(:invoicing_reason) { :subscription_starting }
+      let(:pay_in_advance) { true }
+
+      before do
+        allow(Invoices::ApplyInvoiceCustomSectionsService)
+          .to receive(:call).and_raise(StandardError.new("boom"))
+      end
+
+      it "rolls the fees back instead of committing them with the lock" do
+        result = nil
+
+        expect { result = invoice_service.call }.not_to change(Fee, :count)
+
+        expect(result).to be_failure
+      end
+    end
   end
 end
