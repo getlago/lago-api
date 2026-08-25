@@ -11,7 +11,7 @@ module Types
       argument :min_amount_cents, GraphQL::Types::BigInt, required: false
       argument :pricing_unit_conversion_rate, GraphQL::Types::Float, required: false
       argument :rate_model, Types::RateCardRates::RateModelEnum, required: true
-      argument :rate_properties, GraphQL::Types::JSON, required: true
+      argument :rate_properties, Types::Charges::PropertiesInput, required: true
     end
   end
 end

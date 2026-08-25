@@ -68724,8 +68724,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
+                  "kind": "OBJECT",
+                  "name": "Properties",
                   "ofType": null
                 }
               },
@@ -68831,8 +68831,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
+                  "kind": "INPUT_OBJECT",
+                  "name": "PropertiesInput",
                   "ofType": null
                 }
               },

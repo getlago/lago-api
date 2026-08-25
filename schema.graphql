@@ -12612,7 +12612,7 @@ type RateOverride {
   minAmountCents: BigInt!
   pricingUnitConversionRate: Float
   rateModel: RateCardRateModelEnum!
-  rateProperties: JSON!
+  rateProperties: Properties!
   updatedAt: ISO8601DateTime!
 }
 
@@ -12625,7 +12625,7 @@ input RateOverrideInput {
   minAmountCents: BigInt
   pricingUnitConversionRate: Float
   rateModel: RateCardRateModelEnum!
-  rateProperties: JSON!
+  rateProperties: PropertiesInput!
 }
 
 """
