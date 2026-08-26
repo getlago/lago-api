@@ -76,6 +76,41 @@ RSpec.describe Api::V2::PlanRateCardsController do
     end
   end
 
+  context "with a nested rate_phases sequence" do
+    subject do
+      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
+        rate_card_code: rate_card.code,
+        units: "1",
+        rate_phases: [
+          {code: "launch", position: 1, name: "Launch", billing_interval_cycle_count: 3},
+          {code: "standard", position: 2, name: "Standard", billing_interval_cycle_count: nil}
+        ]
+      }})
+    end
+
+    it "creates the entry with the provided phases in one call" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:applied_rate_card][:rate_phases_count]).to eq(2)
+    end
+
+    context "when the list is explicitly empty" do
+      subject do
+        post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
+          rate_card_code: rate_card.code, rate_phases: []
+        }})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phases)).to eq(["value_is_mandatory"])
+      end
+    end
+  end
+
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards/:code" do
     subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
 

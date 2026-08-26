@@ -1,0 +1,102 @@
+# frozen_string_literal: true
+
+module Api
+  module V2
+    module PlanRateCards
+      class RatePhasesController < Api::BaseController
+        include Api::RequiresProductCatalog
+
+        def index
+          return not_found_error(resource: "applied_rate_card") unless plan_rate_card
+
+          render_rate_phases(plan_rate_card.rate_phases.order(:position))
+        end
+
+        def create
+          return not_found_error(resource: "applied_rate_card") unless plan_rate_card
+
+          result = ::RatePhases::CreateService.call(
+            plan_rate_card:,
+            params: create_params.to_h.deep_symbolize_keys
+          )
+
+          if result.success?
+            render_rate_phase(result.rate_phase)
+          else
+            render_error_response(result)
+          end
+        end
+
+        def update
+          rate_phase = find_rate_phase
+          return not_found_error(resource: "rate_phase") unless rate_phase
+
+          result = ::RatePhases::UpdateService.call(
+            rate_phase:,
+            params: update_params.to_h.deep_symbolize_keys
+          )
+
+          if result.success?
+            render_rate_phase(result.rate_phase)
+          else
+            render_error_response(result)
+          end
+        end
+
+        def destroy
+          rate_phase = find_rate_phase
+          return not_found_error(resource: "rate_phase") unless rate_phase
+
+          result = ::RatePhases::DestroyService.call(rate_phase:)
+
+          if result.success?
+            render_rate_phase(result.rate_phase)
+          else
+            render_error_response(result)
+          end
+        end
+
+        private
+
+        def plan_rate_card
+          @plan_rate_card ||= begin
+            plan = current_organization.plans.parents.find_by(code: params[:plan_code])
+            plan&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
+          end
+        end
+
+        def find_rate_phase
+          plan_rate_card&.rate_phases&.find_by(code: params[:code])
+        end
+
+        def create_params
+          params.require(:rate_phase).permit(:code, :position, :name, :billing_interval_cycle_count)
+        end
+
+        # Positions are not editable on update (ordering goes through insert
+        # and delete), so update does not permit one.
+        def update_params
+          params.require(:rate_phase).permit(:code, :name, :billing_interval_cycle_count)
+        end
+
+        def render_rate_phase(rate_phase)
+          render(json: ::V2::RatePhaseSerializer.new(rate_phase, root_name: "rate_phase"))
+        end
+
+        def render_rate_phases(rate_phases)
+          render(
+            json: ::CollectionSerializer.new(
+              rate_phases,
+              ::V2::RatePhaseSerializer,
+              collection_name: "rate_phases"
+            )
+          )
+        end
+
+        def resource_name
+          "plan_rate_card"
+        end
+      end
+    end
+  end
+end
