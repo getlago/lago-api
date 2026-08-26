@@ -101,6 +101,10 @@ gem "datadog", require: false
 # Storage
 gem "aws-sdk-s3", require: false
 gem "google-cloud-storage", require: false
+# google-apis-core < 1.2.1 loads representable/json, which calls `gem "multi_json"`
+# without declaring the dependency. googleauth 1.17 and signet 0.22 both migrated to
+# stdlib json, so multi_json is no longer pulled in transitively and must be pinned.
+gem "multi_json", require: false
 
 # Templating
 gem "slim"
