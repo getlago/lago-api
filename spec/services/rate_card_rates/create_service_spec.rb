@@ -186,4 +186,21 @@ RSpec.describe RateCardRates::CreateService do
       expect(result.rate_card_rate).to be_persisted
     end
   end
+
+  context "when a graduated percentage rate has no ranges" do
+    let(:params) do
+      {
+        code: "gp",
+        effective_from: Time.current,
+        rate_model: "graduated_percentage",
+        rate_properties: {},
+        billing_interval_unit: "month"
+      }
+    end
+
+    it "returns a validation failure instead of raising" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_properties]).to be_present
+    end
+  end
 end
