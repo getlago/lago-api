@@ -15,21 +15,24 @@ module RatePhases
     def call
       return result.not_found_failure!(resource: "rate_phase") unless rate_phase
 
-      if plan_locked?
-        return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
-      end
-
       # REST can send "" where nil is meant; normalize before the terminal
       # check or the blank slips past it and persists as an indefinite phase.
       if params.key?(:billing_interval_cycle_count)
         params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
       end
 
-      if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
-        return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
-      end
+      # Guards and the terminal check run under the same parent lock as the
+      # other sequence mutations: making the tail indefinite could otherwise
+      # race a concurrent insert and persist a non-terminal indefinite phase.
+      parent.with_lock do
+        if plan_locked?
+          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+        end
 
-      ActiveRecord::Base.transaction do
+        if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
+          return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
+        end
+
         rate_phase.name = params[:name] if params.key?(:name)
         rate_phase.code = params[:code] if params.key?(:code)
         if params.key?(:billing_interval_cycle_count)

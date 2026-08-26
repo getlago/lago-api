@@ -17,6 +17,15 @@ RSpec.describe RatePhases::UpdateService do
     expect(rate_phase.billing_interval_cycle_count).to eq(6)
   end
 
+  it "locks the parent entry like the other sequence mutations" do
+    allow(rate_phase).to receive(:plan_rate_card).and_return(plan_rate_card)
+    allow(plan_rate_card).to receive(:with_lock).and_call_original
+
+    result
+
+    expect(plan_rate_card).to have_received(:with_lock)
+  end
+
   context "when renaming the code" do
     let(:params) { {code: "launch"} }
 
