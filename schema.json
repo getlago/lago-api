@@ -65401,6 +65401,35 @@
               "deprecationReason": null
             },
             {
+              "name": "rateCardRate",
+              "description": "Query a single rate of a rate card",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the rate",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "RateCardRate",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "rateCardRates",
               "description": "Query the rates of a rate card",
               "args": [
