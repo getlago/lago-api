@@ -26,6 +26,10 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
         end
 
+        if subscription_locked?
+          return result.single_validation_failure!(field: :rate_phase, error_code: "subscription_locked")
+        end
+
         if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
           return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
         end
@@ -77,6 +81,10 @@ module RatePhases
 
     def plan_locked?
       rate_phase.plan_rate_card.present? && rate_phase.plan_rate_card.plan.attached_to_subscriptions?
+    end
+
+    def subscription_locked?
+      rate_phase.subscription_rate_card.present? && !rate_phase.subscription_rate_card.subscription.pending?
     end
 
     def last_phase?

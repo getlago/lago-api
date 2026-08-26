@@ -31,6 +31,10 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
         end
 
+        if subscription_locked?
+          return result.single_validation_failure!(field: :rate_phase, error_code: "subscription_locked")
+        end
+
         existing = parent.rate_phases.order(:position).to_a
         position = (params[:position].presence || default_position(existing)).to_i
 
@@ -89,6 +93,10 @@ module RatePhases
 
     def plan_locked?
       plan_rate_card.present? && plan_rate_card.plan.attached_to_subscriptions?
+    end
+
+    def subscription_locked?
+      subscription_rate_card.present? && !subscription_rate_card.subscription.pending?
     end
 
     # Omitted position appends at the end — except a definite phase lands just
