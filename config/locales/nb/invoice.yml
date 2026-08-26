@@ -72,11 +72,17 @@ nb:
         following_month: Forfaller den %{day}. i påfølgende måned
         months_after: Forfaller den %{day}., %{months} måneder etter fakturaen
         same_month: Forfaller den %{day}. i denne måneden
-      days_end_of_month: Betaling %{days} dager, månedsslutt
+      days_end_of_month:
+        one: Betaling %{days} dag, månedsslutt
+        other: Betaling %{days} dager, månedsslutt
       due_on_receipt: Forfaller ved mottak
       end_of_month: Forfaller ved månedsslutt
-      net: Betaling innen %{days} dager
-      net_end_of_month: Forfaller %{days} dager etter månedsslutt
+      net:
+        one: Betaling innen %{days} dag
+        other: Betaling innen %{days} dager
+      net_end_of_month:
+        one: Forfaller %{days} dag etter månedsslutt
+        other: Forfaller %{days} dager etter månedsslutt
     percentage:
       adjustment_per_transaction: Justering for min/maks per transaksjon
       fee_per_transaction: Fast avgift per transaksjon

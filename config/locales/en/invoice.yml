@@ -73,11 +73,17 @@ en:
         following_month: Due on the %{day} of the following month
         months_after: Due on the %{day}, %{months} months after invoice
         same_month: Due on the %{day} of this month
-      days_end_of_month: Due %{days} days, end of month
+      days_end_of_month:
+        one: Due %{days} day, end of month
+        other: Due %{days} days, end of month
       due_on_receipt: Due on receipt
       end_of_month: Due at end of month
-      net: Payment due within %{days} days
-      net_end_of_month: Due %{days} days after end of month
+      net:
+        one: Payment due within %{days} day
+        other: Payment due within %{days} days
+      net_end_of_month:
+        one: Due %{days} day after end of month
+        other: Due %{days} days after end of month
     percentage:
       adjustment_per_transaction: Adjustment for min/max per transaction
       fee_per_transaction: Fixed fee per transaction

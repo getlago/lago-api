@@ -80,9 +80,12 @@ RSpec.describe PaymentTerm do
   describe "#label" do
     it "renders a localized sentence for each term type" do
       expect(described_class.from_h(term_type: "due_on_receipt").label).to eq("Due on receipt")
+      expect(described_class.from_h(term_type: "net", days: 1).label).to eq("Payment due within 1 day")
       expect(described_class.from_h(term_type: "net", days: 30).label).to eq("Payment due within 30 days")
       expect(described_class.from_h(term_type: "end_of_month").label).to eq("Due at end of month")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 1).label).to eq("Due 1 day after end of month")
       expect(described_class.from_h(term_type: "net_end_of_month", days: 30).label).to eq("Due 30 days after end of month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 1).label).to eq("Due 1 day, end of month")
       expect(described_class.from_h(term_type: "days_end_of_month", days: 30).label).to eq("Due 30 days, end of month")
     end
 
