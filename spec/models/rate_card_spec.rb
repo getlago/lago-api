@@ -171,7 +171,7 @@ RSpec.describe RateCard do
     end
 
     it "is true when a subscription references the card" do
-      create(:subscription_rate_card, organization: rate_card.organization, rate_card:)
+      create(:contract_rate_card, organization: rate_card.organization, rate_card:)
 
       expect(rate_card.attached_to_plan_or_subscription?).to be(true)
     end
@@ -198,8 +198,16 @@ RSpec.describe RateCard do
       expect(rate_card.attached_to_subscriptions?).to be(true)
     end
 
+    it "is true when on a plan that has contracts" do
+      plan = create(:plan, organization: rate_card.organization)
+      create(:plan_rate_card, organization: rate_card.organization, plan:, rate_card:)
+      create(:contract, plan:, organization: rate_card.organization)
+
+      expect(rate_card.attached_to_subscriptions?).to be(true)
+    end
+
     it "is true when attached directly to a subscription" do
-      create(:subscription_rate_card, organization: rate_card.organization, rate_card:)
+      create(:contract_rate_card, organization: rate_card.organization, rate_card:)
 
       expect(rate_card.attached_to_subscriptions?).to be(true)
     end

@@ -26,7 +26,7 @@ RSpec.describe PlanRateCards::CreateService do
     rate_phase = result.plan_rate_card.rate_phases.first
     expect(rate_phase.position).to eq(1)
     expect(rate_phase.billing_interval_cycle_count).to be_nil
-    expect(rate_phase.subscription_rate_card_id).to be_nil
+    expect(rate_phase.contract_rate_card_id).to be_nil
   end
 
   context "when the plan already prices the whole item" do

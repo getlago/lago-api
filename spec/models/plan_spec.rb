@@ -18,6 +18,7 @@ RSpec.describe Plan do
     expect(subject).to have_many(:fixed_charges).dependent(:destroy)
     expect(subject).to have_many(:add_ons).through(:fixed_charges)
     expect(subject).to have_many(:subscriptions)
+    expect(subject).to have_many(:contracts)
     expect(subject).to have_many(:customers).through(:subscriptions)
     expect(subject).to have_many(:children).class_name("Plan").dependent(:destroy)
     expect(subject).to have_many(:coupon_targets)

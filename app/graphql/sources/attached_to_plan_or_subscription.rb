@@ -25,7 +25,7 @@ module Sources
     end
 
     def fetch(ids)
-      attached = grouped_ids(PlanRateCard, ids) | grouped_ids(SubscriptionRateCard, ids)
+      attached = grouped_ids(PlanRateCard, ids) | grouped_ids(ContractRateCard, ids)
 
       ids.map { attached.include?(it) }
     end

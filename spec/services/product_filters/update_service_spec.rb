@@ -103,7 +103,7 @@ RSpec.describe ProductFilters::UpdateService do
   context "when a subscription bills through a card scoped to the filter" do
     before do
       rate_card = create(:rate_card, organization:, product:, product_filter:)
-      create(:subscription_rate_card, organization:, rate_card:)
+      create(:contract_rate_card, organization:, rate_card:)
     end
 
     let(:params) { {values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }

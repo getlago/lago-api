@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-class SubscriptionRateCard < ApplicationRecord
+class ContractRateCard < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
 
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  belongs_to :subscription
+  belongs_to :contract
   belongs_to :rate_card
 
   has_one :product, through: :rate_card
@@ -17,7 +17,7 @@ class SubscriptionRateCard < ApplicationRecord
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
   validates :started_at, presence: true
-  validates :rate_card_id, uniqueness: {scope: :subscription_id, conditions: -> { where(deleted_at: nil, ended_at: nil) }}
+  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_at: nil) }}
 
   validate :validate_started_before_ended
 
@@ -35,7 +35,7 @@ end
 
 # == Schema Information
 #
-# Table name: subscription_rate_cards
+# Table name: contract_rate_cards
 # Database name: primary
 #
 #  id                  :uuid             not null, primary key
@@ -47,22 +47,22 @@ end
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
+#  contract_id         :uuid             not null
 #  organization_id     :uuid             not null
 #  rate_card_id        :uuid             not null
-#  subscription_id     :uuid             not null
 #
 # Indexes
 #
-#  index_active_subscription_rate_cards_on_sub_and_card  (subscription_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
-#  index_subscription_rate_cards_on_deleted_at           (deleted_at)
-#  index_subscription_rate_cards_on_next_billing_at      (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
-#  index_subscription_rate_cards_on_organization_id      (organization_id)
-#  index_subscription_rate_cards_on_rate_card_id         (rate_card_id)
-#  index_subscription_rate_cards_on_subscription_id      (subscription_id)
+#  index_active_contract_rate_cards_on_contract_and_card  (contract_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
+#  index_contract_rate_cards_on_contract_id               (contract_id)
+#  index_contract_rate_cards_on_deleted_at                (deleted_at)
+#  index_contract_rate_cards_on_next_billing_at           (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
+#  index_contract_rate_cards_on_organization_id           (organization_id)
+#  index_contract_rate_cards_on_rate_card_id              (rate_card_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (contract_id => contracts.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (rate_card_id => rate_cards.id)
-#  fk_rails_...  (subscription_id => subscriptions.id)
 #

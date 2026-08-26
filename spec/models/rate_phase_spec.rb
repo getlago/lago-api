@@ -11,7 +11,7 @@ RSpec.describe RatePhase do
     it do
       expect(rate_phase).to belong_to(:organization)
       expect(rate_phase).to belong_to(:plan_rate_card).optional
-      expect(rate_phase).to belong_to(:subscription_rate_card).optional
+      expect(rate_phase).to belong_to(:contract_rate_card).optional
       expect(rate_phase).to belong_to(:rate_override).optional
     end
   end
@@ -61,12 +61,12 @@ RSpec.describe RatePhase do
         expect(build(:rate_phase)).to be_valid
       end
 
-      it "is valid with only a subscription_rate_card" do
-        expect(build(:rate_phase, :subscription_level)).to be_valid
+      it "is valid with only a contract_rate_card" do
+        expect(build(:rate_phase, :contract_level)).to be_valid
       end
 
       it "is invalid with neither parent" do
-        phase = build(:rate_phase, plan_rate_card: nil, subscription_rate_card: nil)
+        phase = build(:rate_phase, plan_rate_card: nil, contract_rate_card: nil)
         phase.valid?
         expect(phase.errors.added?(:base, :exactly_one_parent_required)).to be(true)
       end
@@ -75,7 +75,7 @@ RSpec.describe RatePhase do
         phase = build(
           :rate_phase,
           plan_rate_card: create(:plan_rate_card),
-          subscription_rate_card: create(:subscription_rate_card)
+          contract_rate_card: create(:contract_rate_card)
         )
         phase.valid?
         expect(phase.errors.added?(:base, :exactly_one_parent_required)).to be(true)

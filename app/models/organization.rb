@@ -55,6 +55,7 @@ class Organization < ApplicationRecord
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
+  has_many :contracts
   has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
   has_many :credit_notes

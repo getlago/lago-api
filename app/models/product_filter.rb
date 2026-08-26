@@ -16,7 +16,7 @@ class ProductFilter < ApplicationRecord
   delegate :attached_to_plan_or_subscription?, to: :product
 
   def attached_to_subscriptions?
-    SubscriptionRateCard.joins(:rate_card).where(rate_cards: {product_filter_id: id}).exists?
+    ContractRateCard.joins(:rate_card).where(rate_cards: {product_filter_id: id}).exists?
   end
 
   validates :name, presence: true

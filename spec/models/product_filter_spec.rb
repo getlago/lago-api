@@ -75,7 +75,7 @@ RSpec.describe ProductFilter do
     it "delegates to the product" do
       expect(filter.attached_to_plan_or_subscription?).to be(false)
 
-      create(:subscription_rate_card, organization: product.organization, product:)
+      create(:contract_rate_card, organization: product.organization, product:)
 
       expect(filter.attached_to_plan_or_subscription?).to be(true)
     end

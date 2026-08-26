@@ -2,18 +2,18 @@
 
 require "rails_helper"
 
-RSpec.describe SubscriptionRateCard do
-  subject(:subscription_rate_card) { build(:subscription_rate_card) }
+RSpec.describe ContractRateCard do
+  subject(:contract_rate_card) { build(:contract_rate_card) }
 
   it_behaves_like "paper_trail traceable"
 
   describe "associations" do
     it do
-      expect(subscription_rate_card).to belong_to(:organization)
-      expect(subscription_rate_card).to belong_to(:subscription)
-      expect(subscription_rate_card).to belong_to(:rate_card)
-      expect(subscription_rate_card).to have_many(:rate_phases).order(:position)
-      expect(subscription_rate_card).to have_one(:product).through(:rate_card)
+      expect(contract_rate_card).to belong_to(:organization)
+      expect(contract_rate_card).to belong_to(:contract)
+      expect(contract_rate_card).to belong_to(:rate_card)
+      expect(contract_rate_card).to have_many(:rate_phases).order(:position)
+      expect(contract_rate_card).to have_one(:product).through(:rate_card)
     end
   end
 
@@ -22,13 +22,13 @@ RSpec.describe SubscriptionRateCard do
     it { is_expected.to validate_presence_of(:next_billing_at) }
     it { is_expected.to validate_presence_of(:started_at) }
 
-    describe "active uniqueness per (subscription, rate_card)" do
-      it "rejects a second active row for the same subscription and rate card" do
-        existing = create(:subscription_rate_card)
+    describe "active uniqueness per (contract, rate_card)" do
+      it "rejects a second active row for the same contract and rate card" do
+        existing = create(:contract_rate_card)
         duplicate = build(
-          :subscription_rate_card,
+          :contract_rate_card,
           organization: existing.organization,
-          subscription: existing.subscription,
+          contract: existing.contract,
           rate_card: existing.rate_card
         )
         duplicate.valid?
@@ -36,11 +36,11 @@ RSpec.describe SubscriptionRateCard do
       end
 
       it "allows a new row once the previous one has ended" do
-        existing = create(:subscription_rate_card, started_at: 2.days.ago, ended_at: 1.day.ago)
+        existing = create(:contract_rate_card, started_at: 2.days.ago, ended_at: 1.day.ago)
         replacement = build(
-          :subscription_rate_card,
+          :contract_rate_card,
           organization: existing.organization,
-          subscription: existing.subscription,
+          contract: existing.contract,
           rate_card: existing.rate_card
         )
         replacement.valid?
@@ -50,12 +50,12 @@ RSpec.describe SubscriptionRateCard do
 
     describe "started_at before ended_at" do
       it "is valid when ended_at is after started_at" do
-        item = build(:subscription_rate_card, started_at: 2.days.ago, ended_at: 1.day.ago)
+        item = build(:contract_rate_card, started_at: 2.days.ago, ended_at: 1.day.ago)
         expect(item).to be_valid
       end
 
       it "is invalid when ended_at is before started_at" do
-        item = build(:subscription_rate_card, started_at: 1.day.ago, ended_at: 2.days.ago)
+        item = build(:contract_rate_card, started_at: 1.day.ago, ended_at: 2.days.ago)
         item.valid?
         expect(item.errors.added?(:ended_at, :must_be_after_started_at)).to be(true)
       end

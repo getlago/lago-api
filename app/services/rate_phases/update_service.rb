@@ -62,7 +62,7 @@ module RatePhases
     attr_reader :rate_phase, :params
 
     def parent
-      rate_phase.plan_rate_card || rate_phase.subscription_rate_card
+      rate_phase.plan_rate_card || rate_phase.contract_rate_card
     end
 
     # A provided rate_override replaces the phase's override; null clears it.
