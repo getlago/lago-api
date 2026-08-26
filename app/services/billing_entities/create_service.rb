@@ -19,7 +19,7 @@ module BillingEntities
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
-      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term], net_payment_term: params[:net_payment_term]).valid?
         return result
       end
 
