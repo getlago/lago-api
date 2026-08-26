@@ -137,6 +137,50 @@ RSpec.describe Subscriptions::InvoiceGroupingService do
       end
     end
 
+    context "when subscriptions resolve to different payment terms" do
+      let(:net_resolution) do
+        PaymentTerms::ResolveService::Result.new.tap do |resolution|
+          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
+        end
+      end
+
+      let(:end_of_month_resolution) do
+        PaymentTerms::ResolveService::Result.new.tap do |resolution|
+          resolution.payment_term = PaymentTerm.from_h({"term_type" => "end_of_month"})
+        end
+      end
+
+      before do
+        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, end_of_month_resolution)
+      end
+
+      it "returns one group per payment term" do
+        expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+      end
+    end
+
+    context "when subscriptions resolve to payment terms with the same grouping key" do
+      let(:net_zero_resolution) do
+        PaymentTerms::ResolveService::Result.new.tap do |resolution|
+          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 0})
+        end
+      end
+
+      let(:due_on_receipt_resolution) do
+        PaymentTerms::ResolveService::Result.new.tap do |resolution|
+          resolution.payment_term = PaymentTerm.from_h({"term_type" => "due_on_receipt"})
+        end
+      end
+
+      before do
+        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_zero_resolution, due_on_receipt_resolution)
+      end
+
+      it "returns a single group" do
+        expect(result.subscription_groups).to eq([[subscription1, subscription2]])
+      end
+    end
+
     context "when subscriptions differ on several criteria" do
       let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
       let(:billing_entity) { create(:billing_entity, organization:) }
