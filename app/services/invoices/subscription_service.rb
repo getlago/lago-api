@@ -47,6 +47,12 @@ module Invoices
         return result.validation_failure!(errors: {purchase_order_number: ["mixed_purchase_order_numbers"]})
       end
 
+      # NOTE: Guard for direct callers — BillSubscriptionJob resolves, splits mixed groups
+      #       and passes the term down, so this is unreachable from the job path.
+      if payment_term.nil? && mixed_payment_terms?
+        return result.validation_failure!(errors: {payment_term: ["mixed_payment_terms"]})
+      end
+
       create_generating_invoice unless invoice
       invoice.status = :open if subscription_gated?
       result.invoice = invoice
@@ -205,8 +211,8 @@ module Invoices
         datetime: Time.zone.at(timestamp),
         skip_charges:,
         purchase_order_number: subscriptions.first&.purchase_order_number,
-        payment_term:,
-        payment_term_source:
+        payment_term: payment_term || resolved_payment_terms.first&.payment_term,
+        payment_term_source: payment_term ? payment_term_source : resolved_payment_term_source
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
@@ -230,6 +236,26 @@ module Invoices
 
     def mixed_billing_entities?
       subscriptions.map(&:applicable_billing_entity_id).uniq.many?
+    end
+
+    def resolved_payment_terms
+      @resolved_payment_terms ||= subscriptions.map do |subscription|
+        PaymentTerms::ResolveService.call!(customer:, subscription:)
+      end
+    end
+
+    def resolved_payment_term_source
+      sources = resolved_payment_terms.map(&:source).uniq
+
+      if sources.many?
+        "mixed"
+      else
+        sources.first
+      end
+    end
+
+    def mixed_payment_terms?
+      resolved_payment_terms.map { |resolution| resolution.payment_term.to_h }.uniq.many?
     end
 
     def mixed_purchase_order_numbers?

@@ -98,23 +98,30 @@ module Invoices
     #       an external_id after an upgrade. Each PO must produce its own invoice.
     #       Same for subscriptions resolving to different payment terms.
     def create_group_invoices
+      resolutions = subscriptions.index_with do |subscription|
+        PaymentTerms::ResolveService.call!(customer: subscription.customer, subscription:)
+      end
+
       groups = subscriptions.group_by do |subscription|
-        [
-          subscription.purchase_order_number,
-          PaymentTerms::ResolveService.call!(customer: subscription.customer).payment_term.to_h
-        ]
+        [subscription.purchase_order_number, resolutions[subscription].payment_term.to_h]
       end
 
       groups.values.filter_map do |subscriptions_group|
-        create_group_invoice(subscriptions_group)
+        sources = resolutions.values_at(*subscriptions_group).map(&:source).uniq
+
+        create_group_invoice(
+          subscriptions_group,
+          payment_term: resolutions[subscriptions_group.first].payment_term,
+          payment_term_source: sources.many? ? "mixed" : sources.first
+        )
       end
     end
 
-    def create_group_invoice(subscriptions_group)
+    def create_group_invoice(subscriptions_group, payment_term:, payment_term_source:)
       invoice = nil
 
       ActiveRecord::Base.transaction do
-        invoice = create_generating_invoice(subscriptions_group)
+        invoice = create_generating_invoice(subscriptions_group, payment_term:, payment_term_source:)
         invoice.invoice_subscriptions.each do |is|
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
@@ -144,7 +151,7 @@ module Invoices
       invoice
     end
 
-    def create_generating_invoice(subscriptions_group)
+    def create_generating_invoice(subscriptions_group, payment_term:, payment_term_source:)
       # TODO: seems that skip_charges here might be deleted. Performed one test locally - worked without any additional charges.
       # Following the code - also did not find calling any service that would use this skip_charges
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -154,7 +161,9 @@ module Invoices
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true,
         billing_entity: initial_subscriptions.first&.billing_entity || customer.billing_entity,
-        purchase_order_number: subscriptions_group.first&.purchase_order_number
+        purchase_order_number: subscriptions_group.first&.purchase_order_number,
+        payment_term:,
+        payment_term_source:
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
           invoice:,
