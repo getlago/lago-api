@@ -3,6 +3,8 @@
 module Api
   module V1
     class CustomersController < Api::BaseController
+      include RawPaymentTermParams
+
       def create
         result = ::Customers::UpsertFromApiService.call(
           organization: current_organization,
@@ -193,18 +195,6 @@ module Api
         ])
 
         with_raw_payment_term(permitted, params[:customer])
-      end
-
-      # payment_term is a discriminated union validated in PaymentTerms::ValidateService.
-      # Strong params would silently drop null and non-hash values before validation,
-      # breaking clear-by-null and hiding invalid_format errors.
-      def with_raw_payment_term(permitted, raw)
-        if raw.respond_to?(:key?) && raw.key?(:payment_term)
-          permitted[:payment_term] = raw[:payment_term]
-          permitted[:payment_term].permit! if permitted[:payment_term].is_a?(ActionController::Parameters)
-        end
-
-        permitted
       end
 
       def render_customer(customer)

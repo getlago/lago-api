@@ -89,6 +89,39 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with a net_payment_term as a digit string" do
+      before { create_params.merge!(net_payment_term: "45") }
+
+      it "fails with invalid_format" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a decimal net_payment_term" do
+      before { create_params.merge!(net_payment_term: 30.5) }
+
+      it "fails with invalid_format" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a negative net_payment_term" do
+      before { create_params.merge!(net_payment_term: -1) }
+
+      it "fails with the legacy value_is_out_of_range code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["value_is_out_of_range"])
+      end
+    end
+
     context "when firstname and lastname contain null bytes" do
       let(:create_params) do
         {
