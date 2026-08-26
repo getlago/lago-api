@@ -399,7 +399,14 @@ RSpec.describe InvoicesQuery do
     end
   end
 
-  shared_examples "invoice search" do
+  context "when searching" do
+    # Refreshed here rather than in a before hook so that fixtures created by an inner
+    # let! are covered too: the factory does not go through the services.
+    let(:returned_ids) do
+      organization.invoices.find_each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
+      result.invoices.pluck(:id)
+    end
+
     context "when searching for a full invoice id (UUID)" do
       let(:search_term) { invoice_fourth.id }
 
@@ -548,50 +555,13 @@ RSpec.describe InvoicesQuery do
         )
       end
     end
-  end
-
-  context "with the CTE search path" do
-    it_behaves_like "invoice search"
 
     context "when the term only matches a customer legal name" do
       let(:search_term) { "Sanchez Holdings" }
 
       before { customer_first.update!(legal_name: "Sanchez Holdings") }
 
-      it "does not match, the CTE does not search legal_name" do
-        expect(returned_ids).to be_empty
-      end
-    end
-
-    context "when the term only matches a purchase order number" do
-      let(:search_term) { "PO-4242" }
-
-      before { invoice_first.update!(purchase_order_number: "PO-4242") }
-
-      it "does not match, the CTE does not search purchase_order_number" do
-        expect(returned_ids).to be_empty
-      end
-    end
-  end
-
-  context "with the search_terms path" do
-    before { organization.enable_feature_flag!(:invoice_search_terms) }
-
-    # Refreshed here rather than in a before hook so that fixtures created by an inner
-    # let! are covered too: the factory does not go through the services.
-    let(:returned_ids) do
-      organization.invoices.find_each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
-      result.invoices.pluck(:id)
-    end
-
-    it_behaves_like "invoice search"
-
-    context "when the term only matches a customer legal name" do
-      let(:search_term) { "Sanchez Holdings" }
-
-      before { customer_first.update!(legal_name: "Sanchez Holdings") }
-
-      it "matches, unlike the CTE path" do
+      it "returns the matching invoices" do
         expect(returned_ids).to contain_exactly(invoice_first.id, invoice_third.id, invoice_fifth.id, invoice_sixth.id)
       end
     end
@@ -601,7 +571,7 @@ RSpec.describe InvoicesQuery do
 
       before { invoice_first.update!(purchase_order_number: "PO-4242") }
 
-      it "matches, unlike the CTE path" do
+      it "returns the matching invoices" do
         expect(returned_ids).to eq([invoice_first.id])
       end
     end
@@ -1004,8 +974,8 @@ RSpec.describe InvoicesQuery do
     end
 
     before do
-      ms_invoice_first
-      ms_invoice_second
+      # The factory does not go through the services, so the denormalized column is empty.
+      [ms_invoice_first, ms_invoice_second].each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
       organization.enable_feature_flag!(:meilisearch)
       stub_const(
         "ENV",

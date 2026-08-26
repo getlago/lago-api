@@ -198,18 +198,8 @@ class InvoicesQuery < BaseQuery
   def base_scope
     scope = organization.invoices
     return scope if search_term.blank?
-    return search_terms_scope(scope) if search_terms_enabled?
 
-    scope = scope.with(matching_customers: matching_customers) if search_customers?
-    scope
-      .with(matching_invoices: matching_invoices)
-      .where("invoices.id IN (SELECT id FROM matching_invoices)")
-  end
-
-  # The customer portal passes a Customer as `organization`, and only Organization
-  # carries feature flags.
-  def search_terms_enabled?
-    organization.is_a?(Organization) && organization.feature_flag_enabled?(:invoice_search_terms)
+    search_terms_scope(scope)
   end
 
   def search_terms_scope(scope)
@@ -223,37 +213,6 @@ class InvoicesQuery < BaseQuery
 
   def search_customers?
     filters.customer_id.blank? && filters.customer_external_id.blank?
-  end
-
-  def matching_customers
-    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
-
-    organization.customers
-      .where(
-        "customers.name ILIKE :term OR customers.firstname ILIKE :term " \
-        "OR customers.lastname ILIKE :term OR customers.external_id ILIKE :term " \
-        "OR customers.email ILIKE :term",
-        term: escaped_term
-      )
-      .select(:id)
-  end
-
-  def matching_invoices
-    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
-    search_base = organization.invoices
-
-    branches = [
-      search_base.where("invoices.number ILIKE ?", escaped_term).select(:id)
-    ]
-
-    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
-
-    if search_customers?
-      branches << search_base.where("invoices.customer_id IN (SELECT id FROM matching_customers)").select(:id)
-    end
-
-    union_sql = branches.map(&:to_sql).join(" UNION ")
-    Invoice.unscoped.from("(#{union_sql}) AS invoices").select(:id)
   end
 
   def with_billing_entity_ids(scope)
