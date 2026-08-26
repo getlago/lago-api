@@ -84,6 +84,16 @@ RSpec.describe RateOverrides::CreateService do
       expect(result.error).to be_a(BaseService::ValidationFailure)
       expect(result.error.messages).to have_key(:rate_properties)
     end
+
+    context "with a graduated percentage model" do
+      let(:params) { {rate_model: "graduated_percentage", rate_properties: {}} }
+
+      it "returns a validation failure instead of raising" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to have_key(:rate_properties)
+      end
+    end
   end
 
   context "when the card carries a pricing unit" do
