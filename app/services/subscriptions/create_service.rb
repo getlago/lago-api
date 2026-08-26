@@ -35,6 +35,10 @@ module Subscriptions
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
+        return result
+      end
+
       if params.key?(:plan_overrides) && plan.organization.product_catalog_enabled?
         return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
       end
@@ -146,6 +150,7 @@ module Subscriptions
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
         purchase_order_number: params[:purchase_order_number],
+        payment_term: params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h,
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: consolidate_invoice,
         billing_entity: resolve_billing_entity(organization: customer.organization, params:)

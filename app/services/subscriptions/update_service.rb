@@ -46,6 +46,10 @@ module Subscriptions
         return result
       end
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
+        return result
+      end
+
       # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`
       if params[:usage_thresholds].present? && params.dig(:plan_overrides, :usage_thresholds).present?
         return result.validation_failure!(errors: {
@@ -67,6 +71,10 @@ module Subscriptions
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
         if params.key?(:consolidate_invoice)
           subscription.consolidate_invoice = ActiveModel::Type::Boolean.new.cast(params[:consolidate_invoice])
+        end
+
+        if params.key?(:payment_term)
+          subscription.payment_term = params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h
         end
 
         if pay_in_advance? && params.key?(:on_termination_credit_note)
