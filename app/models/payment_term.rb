@@ -68,7 +68,7 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     if term_type == "day_of_month"
       I18n.t("invoice.payment_terms.day_of_month.#{month_offset_variant}", day: day_of_month, months: month_offset)
     else
-      I18n.t("invoice.payment_terms.#{term_type}", days:)
+      I18n.t("invoice.payment_terms.#{term_type}", count: days, days:)
     end
   end
 
