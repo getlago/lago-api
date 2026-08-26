@@ -167,6 +167,7 @@ module Api
             :external_id,
             :billing_time,
             :subscription_at,
+            :billing_anchor_date,
             :ending_at,
             :progressive_billing_disabled,
             :consolidate_invoice,

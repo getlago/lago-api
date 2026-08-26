@@ -27,6 +27,7 @@ module Subscriptions
         plan:,
         subscription_at:,
         ending_at: params[:ending_at],
+        billing_anchor_date: params[:billing_anchor_date],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
         subscription_type:
@@ -112,7 +113,21 @@ module Subscriptions
       Subscriptions::ValidateService.new(result, **args).valid?
     end
 
+    def product_catalog_plan_change?
+      return false unless current_subscription
+      return false if plan.id == current_subscription.plan.id
+
+      plan.product_catalog? || current_subscription.plan.product_catalog?
+    end
+
     def handle_subscription
+      # Product-catalog plan changes go through the dedicated upgrade and
+      # downgrade flows once they exist; the legacy amount comparison cannot
+      # price catalog plans, so the change is rejected instead of crashing.
+      if product_catalog_plan_change?
+        result.single_validation_failure!(field: :plan, error_code: "plan_change_not_available").raise_if_error!
+      end
+
       return upgrade_subscription if upgrade?
       return downgrade_subscription if downgrade?
 
@@ -143,6 +158,7 @@ module Subscriptions
         external_id:,
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at],
+        billing_anchor_date: params[:billing_anchor_date],
         purchase_order_number: params[:purchase_order_number],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
         consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
@@ -172,7 +188,15 @@ module Subscriptions
         handle_future_subscription(new_subscription)
       end
 
+      materialize_product_catalog_rate_cards(new_subscription)
+
       new_subscription
+    end
+
+    def materialize_product_catalog_rate_cards(new_subscription)
+      return unless new_subscription.plan.product_catalog?
+
+      Subscriptions::ProductCatalog::MaterializeService.call!(subscription: new_subscription)
     end
 
     def handle_today_subscription(new_subscription)

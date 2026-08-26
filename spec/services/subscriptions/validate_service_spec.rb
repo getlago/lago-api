@@ -98,6 +98,43 @@ RSpec.describe Subscriptions::ValidateService do
       end
     end
 
+    context "with invalid billing_anchor_date" do
+      let(:args) do
+        {
+          customer:,
+          plan:,
+          subscription_at:,
+          ending_at:,
+          billing_anchor_date: "hello",
+          subscription:,
+          subscription_type:
+        }
+      end
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:billing_anchor_date]).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "with a valid billing_anchor_date" do
+      let(:args) do
+        {
+          customer:,
+          plan:,
+          subscription_at:,
+          ending_at:,
+          billing_anchor_date: "2026-01-01",
+          subscription:,
+          subscription_type:
+        }
+      end
+
+      it "returns true" do
+        expect(validate_service).to be_valid
+      end
+    end
+
     context "with invalid subscription_at" do
       context "when string is not a valid iso8601 datetime" do
         let(:subscription_at) { "2022-12-13 12:00:00Z" }

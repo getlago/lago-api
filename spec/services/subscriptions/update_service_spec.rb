@@ -1668,4 +1668,40 @@ RSpec.describe Subscriptions::UpdateService do
       end
     end
   end
+
+  context "when moving a pending product-catalog subscription's date" do
+    let(:organization) { membership.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, :product_catalog, organization:) }
+    let(:subscription) do
+      create(:subscription, :pending, organization:, customer:, plan:, subscription_at: 1.month.from_now, started_at: nil)
+    end
+
+    let!(:materialized_card) do
+      create(
+        :subscription_rate_card,
+        organization:,
+        subscription:,
+        started_at: subscription.subscription_at,
+        next_billing_at: subscription.subscription_at,
+        billing_anchor_date: subscription.subscription_at.to_date
+      )
+    end
+
+    let!(:custom_card) do
+      create(:subscription_rate_card, organization:, subscription:, started_at: 2.months.from_now)
+    end
+
+    it "resyncs the cards that followed the subscription date" do
+      new_date = 6.weeks.from_now.change(usec: 0)
+
+      result = described_class.call(subscription:, params: {subscription_at: new_date.iso8601})
+
+      expect(result).to be_success
+      expect(materialized_card.reload.started_at).to eq(new_date)
+      expect(materialized_card.next_billing_at).to eq(new_date)
+      expect(materialized_card.billing_anchor_date).to eq(new_date.to_date)
+      expect(custom_card.reload.started_at).to be_within(1.second).of(2.months.from_now)
+    end
+  end
 end

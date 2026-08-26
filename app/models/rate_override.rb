@@ -38,6 +38,21 @@ class RateOverride < ApplicationRecord
     rate_properties
   end
 
+  # The charge-model calculators (ChargeModels::*) read the pricing model from
+  # a `charge_model` attribute and check `prorated?`; expose both so an
+  # override can be priced through the same calculators as charges.
+  def charge_model
+    rate_model
+  end
+
+  # Proration is structural and never overridable: it is always inherited from
+  # the card the override's phase prices. An override not yet attached to a
+  # phase cannot be priced, so false is only the safe default there.
+  def prorated?
+    card_entry = rate_phase&.plan_rate_card || rate_phase&.subscription_rate_card
+    card_entry&.rate_card&.proration? || false
+  end
+
   private
 
   def validate_properties

@@ -60,4 +60,27 @@ RSpec.describe RateOverride do
       end
     end
   end
+
+  describe "#charge_model" do
+    it "exposes the rate model under the calculators' expected name" do
+      expect(build(:rate_override).charge_model).to eq("standard")
+    end
+  end
+
+  describe "#prorated?" do
+    it "inherits the structural proration of the card its phase prices" do
+      organization = create(:organization)
+      product = create(:product, :fixed, organization:)
+      rate_card = create(:rate_card, organization:, product:, proration: true)
+      plan_rate_card = create(:plan_rate_card, organization:, rate_card:)
+      override = create(:rate_override, organization:)
+      create(:rate_phase, organization:, plan_rate_card:, position: 1, rate_override: override)
+
+      expect(override.prorated?).to be(true)
+    end
+
+    it "defaults to false when not attached to a phase yet" do
+      expect(build(:rate_override).prorated?).to be(false)
+    end
+  end
 end
