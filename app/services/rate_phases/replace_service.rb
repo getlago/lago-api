@@ -59,8 +59,6 @@ module RatePhases
     end
 
     def build_override(phase)
-      # An empty object is not a clear: only omitted/null skips, so a malformed
-      # override fails validation instead of silently vanishing.
       return if phase[:rate_override].nil?
 
       RateOverrides::CreateService.call(

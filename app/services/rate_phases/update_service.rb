@@ -21,9 +21,6 @@ module RatePhases
         params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
       end
 
-      # Guards and the terminal check run under the same parent lock as the
-      # other sequence mutations: making the tail indefinite could otherwise
-      # race a concurrent insert and persist a non-terminal indefinite phase.
       parent.with_lock do
         if plan_locked?
           return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
@@ -47,9 +44,6 @@ module RatePhases
 
         rate_phase.save!
 
-        # Discarded by id after the save: discarding the loaded association
-        # target would write the old foreign key back through its has_one
-        # inverse and silently undo the replacement.
         if superseded_override_id && superseded_override_id != rate_phase.rate_override_id
           RateOverride.find_by(id: superseded_override_id)&.discard!
         end
@@ -73,8 +67,6 @@ module RatePhases
 
     # A provided rate_override replaces the phase's override; null clears it.
     def build_override
-      # An empty object is not a clear: only omitted/null skips, so a malformed
-      # override fails validation instead of silently vanishing.
       return if params[:rate_override].nil?
 
       RateOverrides::CreateService.call(

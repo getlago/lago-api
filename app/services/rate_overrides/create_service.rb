@@ -5,9 +5,7 @@ module RateOverrides
     Result = BaseResult[:rate_override]
 
     # Structural card fields are inherited, never overridden. A caller naming
-    # one has misunderstood the contract, not made a typo — reject it instead
-    # of silently building a phase they believe is advance-billed / EUR /
-    # prorated. Genuinely unknown keys keep the API-wide tolerant behaviour.
+    # one has misunderstood the contract, not made a typo — reject it.
     NOT_OVERRIDABLE_FIELDS = %i[
       billing_timing currency proration display_on_invoice
       regroup_paid_fees wallet_targetable applied_pricing_unit_code
