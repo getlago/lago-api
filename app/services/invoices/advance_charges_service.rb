@@ -103,23 +103,30 @@ module Invoices
     #       an external_id after an upgrade. Each PO must produce its own invoice.
     #       Same for subscriptions resolving to different payment terms.
     def create_group_invoices
+      resolutions = pending_billing_contexts_with_fees.index_with do |billing_context|
+        PaymentTerms::ResolveService.call!(customer: billing_context.customer, subscription: billing_context.subscription)
+      end
+
       groups = pending_billing_contexts_with_fees.group_by do |billing_context|
-        [
-          billing_context.purchase_order_number,
-          PaymentTerms::ResolveService.call!(customer: billing_context.customer).payment_term.to_h
-        ]
+        [billing_context.purchase_order_number, resolutions[billing_context].payment_term.to_h]
       end
 
       groups.values.filter_map do |billing_contexts_group|
-        create_group_invoice(billing_contexts_group)
+        sources = resolutions.values_at(*billing_contexts_group).map(&:source).uniq
+
+        create_group_invoice(
+          billing_contexts_group,
+          payment_term: resolutions[billing_contexts_group.first].payment_term,
+          payment_term_source: sources.many? ? "mixed" : sources.first
+        )
       end
     end
 
-    def create_group_invoice(billing_contexts_group)
+    def create_group_invoice(billing_contexts_group, payment_term:, payment_term_source:)
       invoice = nil
 
       ActiveRecord::Base.transaction do
-        invoice = create_generating_invoice(billing_contexts_group)
+        invoice = create_generating_invoice(billing_contexts_group, payment_term:, payment_term_source:)
         invoice.invoice_subscriptions.each do |is|
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
@@ -149,14 +156,16 @@ module Invoices
       invoice
     end
 
-    def create_generating_invoice(billing_contexts_group)
+    def create_generating_invoice(billing_contexts_group, payment_term:, payment_term_source:)
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
         billing_entity: billing_contexts.first&.applicable_billing_entity,
-        purchase_order_number: billing_contexts_group.first&.purchase_order_number
+        purchase_order_number: billing_contexts_group.first&.purchase_order_number,
+        payment_term:,
+        payment_term_source:
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceService.call!(
           invoice:,
