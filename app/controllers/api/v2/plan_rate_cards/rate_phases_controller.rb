@@ -9,7 +9,7 @@ module Api
         def index
           return not_found_error(resource: "applied_rate_card") unless plan_rate_card
 
-          render_rate_phases(plan_rate_card.rate_phases.order(:position))
+          render_rate_phases(plan_rate_card.rate_phases.includes(:rate_override).order(:position))
         end
 
         def create
@@ -70,13 +70,65 @@ module Api
         end
 
         def create_params
-          params.require(:rate_phase).permit(:code, :position, :name, :billing_interval_cycle_count)
+          params.require(:rate_phase).permit(
+            :code, :position, :name, :billing_interval_cycle_count,
+            rate_override: [
+              :rate_model,
+              :min_amount_cents,
+              :billing_interval_count,
+              :billing_interval_unit,
+              :pricing_unit_conversion_rate,
+              # Structural card fields pass through so the override service can
+              # reject them explicitly instead of strong params dropping them.
+              :billing_timing,
+              :currency,
+              :proration,
+              :display_on_invoice,
+              :regroup_paid_fees,
+              :wallet_targetable,
+              :applied_pricing_unit_code,
+              {rate_properties: {}}
+            ]
+          )
         end
 
         # Positions are not editable on update (ordering goes through insert
         # and delete), so update does not permit one.
         def update_params
-          params.require(:rate_phase).permit(:code, :name, :billing_interval_cycle_count)
+          # Required before any wrapper inspection so a missing rate_phase key
+          # stays a parameter-missing 400, not a NoMethodError.
+          permitted = permitted_update_params
+
+          # permit drops an explicit null; carry it through so an override can
+          # be cleared over REST like it can over GraphQL.
+          if params[:rate_phase].include?(:rate_override) && params[:rate_phase][:rate_override].nil?
+            permitted = permitted.merge(rate_override: nil)
+          end
+
+          permitted
+        end
+
+        def permitted_update_params
+          params.require(:rate_phase).permit(
+            :code, :name, :billing_interval_cycle_count,
+            rate_override: [
+              :rate_model,
+              :min_amount_cents,
+              :billing_interval_count,
+              :billing_interval_unit,
+              :pricing_unit_conversion_rate,
+              # Structural card fields pass through so the override service can
+              # reject them explicitly instead of strong params dropping them.
+              :billing_timing,
+              :currency,
+              :proration,
+              :display_on_invoice,
+              :regroup_paid_fees,
+              :wallet_targetable,
+              :applied_pricing_unit_code,
+              {rate_properties: {}}
+            ]
+          )
         end
 
         def render_rate_phase(rate_phase)

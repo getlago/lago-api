@@ -46,6 +46,33 @@ RSpec.describe Mutations::RatePhases::Create do
     expect(terminal.reload.position).to eq(2)
   end
 
+  context "with a rate override" do
+    let(:input) do
+      {
+        planAppliedRateCardId: plan_rate_card.id,
+        code: "overridden",
+        billingIntervalCycleCount: 3,
+        rateOverride: {rateModel: "standard", rateProperties: {amount: "0"}}
+      }
+    end
+
+    let(:mutation) do
+      <<~GQL
+        mutation($input: CreateRatePhaseInput!) {
+          createRatePhase(input: $input) {
+            id code rateOverride { id rateModel }
+          }
+        }
+      GQL
+    end
+
+    it "creates the override on the phase" do
+      response = execution["data"]["createRatePhase"]
+
+      expect(response["rateOverride"]["rateModel"]).to eq("standard")
+    end
+  end
+
   context "when inserting an indefinite phase before the end" do
     let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: "bad", position: 1, billingIntervalCycleCount: nil} }
 

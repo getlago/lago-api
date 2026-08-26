@@ -53,6 +53,26 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(terminal.reload.position).to eq(2)
     end
 
+    context "with a rate override" do
+      let(:phase_params) do
+        {
+          code: "trial",
+          name: "trial",
+          billing_interval_cycle_count: 3,
+          rate_override: {rate_model: "standard", rate_properties: {amount: "0"}, min_amount_cents: 0}
+        }
+      end
+
+      it "creates the override and returns it on the phase" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        override = json[:rate_phase][:rate_override]
+        expect(override[:lago_id]).to be_present
+        expect(override[:rate_model]).to eq("standard")
+      end
+    end
+
     context "when inserting an indefinite phase before the end" do
       let(:phase_params) { {position: 1, billing_interval_cycle_count: nil} }
 
@@ -99,6 +119,84 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
 
         expect(response).to have_http_status(:success)
         expect(rate_phase.reload.position).to eq(1)
+      end
+    end
+
+    context "when the override is an explicit null" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: nil}}
+        )
+      end
+
+      let(:override) { create(:rate_override, organization:) }
+
+      before { rate_phase.update!(rate_override_id: override.id) }
+
+      it "clears the override" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override]).to be_nil
+        expect(rate_phase.reload.rate_override).to be_nil
+        expect(override.reload).to be_discarded
+      end
+    end
+
+    context "when the override is an empty object" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: {}}}
+        )
+      end
+
+      let(:override) { create(:rate_override, organization:) }
+
+      before { rate_phase.update!(rate_override_id: override.id) }
+
+      it "fails validation instead of clearing the override" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(rate_phase.reload.rate_override).to eq(override)
+      end
+    end
+
+    context "when the rate_phase wrapper is missing" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {}
+        )
+      end
+
+      it "returns a bad request error" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+      end
+    end
+
+    context "when the override names a structural card field" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}, billing_timing: "advance"}}}
+        )
+      end
+
+      it "rejects it instead of silently dropping the field" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :billing_timing)).to eq(["not_overridable"])
+        expect(rate_phase.reload.rate_override).to be_nil
       end
     end
 

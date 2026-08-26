@@ -3638,6 +3638,7 @@ input CreateRatePhaseInput {
   name: String
   planAppliedRateCardId: ID!
   position: Int
+  rateOverride: RateOverrideInput
 }
 
 input CreateRecurringTransactionRuleInput {
@@ -10826,6 +10827,7 @@ input PhaseInput {
   code: String!
   name: String
   position: Int!
+  rateOverride: RateOverrideInput
 }
 
 type Plan {
@@ -12600,6 +12602,33 @@ enum RateCardRegroupPaidFeesEnum {
 }
 
 """
+Overridden pricing applied by a rate phase in place of the card's active rate
+"""
+type RateOverride {
+  billingIntervalCount: Int
+  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum
+  createdAt: ISO8601DateTime!
+  id: ID!
+  minAmountCents: BigInt!
+  pricingUnitConversionRate: Float
+  rateModel: RateCardRateModelEnum!
+  rateProperties: Properties!
+  updatedAt: ISO8601DateTime!
+}
+
+"""
+Overridden pricing for a rate phase
+"""
+input RateOverrideInput {
+  billingIntervalCount: Int
+  billingIntervalUnit: RateCardRateBillingIntervalUnitEnum
+  minAmountCents: BigInt
+  pricingUnitConversionRate: Float
+  rateModel: RateCardRateModelEnum!
+  rateProperties: PropertiesInput!
+}
+
+"""
 A phase in the ordered rate schedule of a plan product
 """
 type RatePhase {
@@ -12609,6 +12638,7 @@ type RatePhase {
   id: ID!
   name: String
   position: Int!
+  rateOverride: RateOverride
   updatedAt: ISO8601DateTime!
 }
 
@@ -15231,6 +15261,7 @@ input UpdateRatePhaseInput {
   name: String
   newCode: String
   planAppliedRateCardId: ID!
+  rateOverride: RateOverrideInput
 }
 
 input UpdateRecurringTransactionRuleInput {

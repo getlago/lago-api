@@ -17,6 +17,15 @@ RSpec.describe RatePhases::UpdateService do
     expect(rate_phase.billing_interval_cycle_count).to eq(6)
   end
 
+  it "locks the parent entry like the other sequence mutations" do
+    allow(rate_phase).to receive(:plan_rate_card).and_return(plan_rate_card)
+    allow(plan_rate_card).to receive(:with_lock).and_call_original
+
+    result
+
+    expect(plan_rate_card).to have_received(:with_lock)
+  end
+
   context "when renaming the code" do
     let(:params) { {code: "launch"} }
 
@@ -42,6 +51,55 @@ RSpec.describe RatePhases::UpdateService do
       it "treats it as indefinite and rejects it too" do
         expect(result).not_to be_success
         expect(result.error.messages[:billing_interval_cycle_count]).to eq(["indefinite_phase_must_be_last"])
+      end
+    end
+  end
+
+  describe "rate override lifecycle" do
+    let(:params) { {rate_override: {rate_model: "standard", rate_properties: {"amount" => "2"}}} }
+
+    let!(:previous_override) { create(:rate_override, organization:) }
+
+    before { rate_phase.update!(rate_override_id: previous_override.id) }
+
+    it "replaces the override and discards the superseded one" do
+      expect(result).to be_success
+      expect(rate_phase.reload.rate_override.rate_properties).to eq({"amount" => "2"})
+      expect(previous_override.reload).to be_discarded
+    end
+
+    context "when the override is null" do
+      let(:params) { {rate_override: nil} }
+
+      it "clears the override and discards it" do
+        expect(result).to be_success
+        expect(rate_phase.reload.rate_override).to be_nil
+        expect(previous_override.reload).to be_discarded
+      end
+    end
+
+    context "when the override is an empty object" do
+      let(:params) { {rate_override: {}} }
+
+      it "fails validation instead of clearing the override" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to have_key(:rate_model)
+        expect(rate_phase.reload.rate_override).to eq(previous_override)
+        expect(previous_override.reload).not_to be_discarded
+      end
+    end
+
+    context "when the phase save fails" do
+      before { create(:rate_phase, plan_rate_card:, organization:, position: 2, code: "taken") }
+
+      let(:params) { {code: "taken", rate_override: {rate_model: "standard", rate_properties: {"amount" => "2"}}} }
+
+      it "rolls everything back without leaking an override" do
+        expect { result }.not_to change(RateOverride, :count)
+
+        expect(result).not_to be_success
+        expect(previous_override.reload).not_to be_discarded
+        expect(rate_phase.reload.rate_override).to eq(previous_override)
       end
     end
   end

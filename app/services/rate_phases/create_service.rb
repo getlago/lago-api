@@ -58,13 +58,16 @@ module RatePhases
           code: params[:code].presence,
           position:,
           billing_interval_cycle_count: params[:billing_interval_cycle_count],
-          name: params[:name]
+          name: params[:name],
+          rate_override: build_override
         )
       end
 
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
@@ -73,6 +76,15 @@ module RatePhases
 
     def parent
       plan_rate_card || subscription_rate_card
+    end
+
+    def build_override
+      return if params[:rate_override].nil?
+
+      RateOverrides::CreateService.call(
+        rate_card: parent.rate_card,
+        params: params[:rate_override]
+      ).raise_if_error!.rate_override
     end
 
     def plan_locked?
