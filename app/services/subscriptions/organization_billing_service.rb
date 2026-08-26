@@ -567,7 +567,7 @@ module Subscriptions
     def group_by_resolved_payment_term(subscription_groups)
       subscription_groups.flat_map do |subscriptions|
         groups = subscriptions.group_by do |subscription|
-          PaymentTerms::ResolveService.call!(customer: subscription.customer).payment_term.grouping_key
+          PaymentTerms::ResolveService.call!(customer: subscription.customer, subscription:).payment_term.grouping_key
         end.values
 
         if groups.many?
