@@ -32,7 +32,7 @@ module Resolvers
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
     argument :subscription_id, ID, required: false
 
-    type Types::Invoices::Object.collection_type, null: false
+    type Types::Invoices::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata), null: false
 
     def resolve( # rubocop:disable Metrics/ParameterLists
       amount_from: nil,
@@ -89,6 +89,7 @@ module Resolvers
       return result_error(result) unless result.success?
 
       invoices = result.invoices
+      invoices = invoices.without_count.extend(BaseQuery::CappedTotalCount) if capped_count?(invoices)
 
       ActiveRecord::Associations::Preloader.new(
         records: invoices.to_a,
@@ -103,6 +104,15 @@ module Resolvers
       ).call
 
       Invoice.preload_offset_amounts(invoices)
+    end
+
+    private
+
+    # Meilisearch returns a paginated array, which has no `without_count`. An organization
+    # can have both feature flags enabled, so the flag alone is not enough to tell them apart.
+    def capped_count?(invoices)
+      invoices.respond_to?(:without_count) &&
+        current_organization.feature_flag_enabled?(:invoice_search_terms)
     end
   end
 end

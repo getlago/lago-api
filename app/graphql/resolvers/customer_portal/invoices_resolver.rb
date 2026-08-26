@@ -12,7 +12,7 @@ module Resolvers
       argument :search_term, String, required: false
       argument :status, [Types::Invoices::StatusTypeEnum], required: false
 
-      type Types::Invoices::Object.collection_type, null: false
+      type Types::Invoices::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata), null: false
 
       def resolve(status: nil, page: nil, limit: nil, search_term: nil)
         result = InvoicesQuery.call(
