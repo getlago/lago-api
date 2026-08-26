@@ -1080,6 +1080,81 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by resolved payment term" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      let(:first_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+      let(:second_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+
+      before do
+        subscription.destroy
+        first_subscription
+        second_subscription
+      end
+
+      it "groups subscriptions resolving to the same payment term into a single billing job" do
+        billing_service.call
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with(
+            contain_exactly(first_subscription, second_subscription),
+            current_date.to_i,
+            invoicing_reason: :subscription_periodic
+          )
+      end
+
+      context "when subscriptions resolve to different payment terms" do
+        let(:net_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
+            resolution.source = "customer"
+          end
+        end
+
+        let(:eom_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "end_of_month"})
+            resolution.source = "customer"
+          end
+        end
+
+        before do
+          allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
+        end
+
+        it "produces separate billing jobs per payment term" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([first_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([second_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+    end
+
     context "when a subscription opts out of invoice consolidation" do
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
