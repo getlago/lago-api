@@ -12158,6 +12158,16 @@ type Query {
   ): RateCard
 
   """
+  Query a single rate of a rate card
+  """
+  rateCardRate(
+    """
+    Uniq ID of the rate
+    """
+    id: ID!
+  ): RateCardRate
+
+  """
   Query the rates of a rate card
   """
   rateCardRates(limit: Int, page: Int, rateCardId: ID!): RateCardRateCollection!
