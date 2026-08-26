@@ -323,6 +323,39 @@ RSpec.describe Api::V1::BillingEntitiesController do
       end
     end
 
+    context "when updating net_payment_term with a digit string" do
+      let(:update_params) { {billing_entity: {net_payment_term: "45"}} }
+
+      it "fails with invalid_format" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "when updating net_payment_term with a decimal" do
+      let(:update_params) { {billing_entity: {net_payment_term: 30.5}} }
+
+      it "fails with invalid_format" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "when updating net_payment_term with a negative value" do
+      let(:update_params) { {billing_entity: {net_payment_term: -1}} }
+
+      it "fails with the legacy value_is_out_of_range code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["value_is_out_of_range"])
+      end
+    end
+
     context "when the payment_term shape is invalid" do
       let(:update_params) do
         {billing_entity: {payment_term: {term_type: "net"}}}

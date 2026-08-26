@@ -34,7 +34,7 @@ module Customers
         )
       end
 
-      unless PaymentTerms::ValidateService.new(result, payment_term: args[:payment_term]).valid?
+      unless PaymentTerms::ValidateService.new(result, payment_term: args[:payment_term], net_payment_term: args[:net_payment_term]).valid?
         return result
       end
 
