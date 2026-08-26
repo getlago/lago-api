@@ -96,8 +96,16 @@ module Invoices
     # NOTE: The re-expanded subscription set (matched by external_id) can span several
     #       purchase order numbers — e.g. a terminated and an active subscription sharing
     #       an external_id after an upgrade. Each PO must produce its own invoice.
+    #       Same for subscriptions resolving to different payment terms.
     def create_group_invoices
-      subscriptions.group_by(&:purchase_order_number).values.filter_map do |subscriptions_group|
+      groups = subscriptions.group_by do |subscription|
+        [
+          subscription.purchase_order_number,
+          PaymentTerms::ResolveService.call!(customer: subscription.customer).payment_term.to_h
+        ]
+      end
+
+      groups.values.filter_map do |subscriptions_group|
         create_group_invoice(subscriptions_group)
       end
     end
