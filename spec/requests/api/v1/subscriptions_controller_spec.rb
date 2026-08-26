@@ -63,6 +63,31 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
     include_examples "requires API permission", "subscription", "write"
 
+    context "with payment_term" do
+      let(:params) { super().merge(payment_term: {term_type: "net", days: 45}) }
+
+      it "stores and returns the payment_term" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription][:payment_term]).to eq({term_type: "net", days: 45})
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.payment_term).to eq({"term_type" => "net", "days" => 45})
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) { super().merge(payment_term: {term_type: "unknown"}) }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:payment_term]).to eq(["invalid_term_type"])
+        end
+      end
+    end
+
     it "returns a success" do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: "foo")
       create(:entitlement, organization:, plan:)
@@ -1738,6 +1763,32 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
         subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
         expect(subscription.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when updating payment_term" do
+      let(:update_params) { {payment_term: {term_type: "end_of_month"}} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates the payment_term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:payment_term]).to eq({term_type: "end_of_month"})
+        expect(subscription.reload.payment_term).to eq({"term_type" => "end_of_month"})
+      end
+
+      context "when payment_term is null" do
+        let(:subscription) { create(:subscription, customer:, plan:, payment_term: {term_type: "net", days: 30}) }
+        let(:update_params) { {payment_term: nil} }
+
+        it "clears the payment_term" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:payment_term]).to be_nil
+          expect(subscription.reload.payment_term).to be_nil
+        end
       end
     end
 
