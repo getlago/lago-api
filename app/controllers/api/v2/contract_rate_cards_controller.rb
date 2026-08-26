@@ -2,12 +2,17 @@
 
 module Api
   module V2
-    class SubscriptionRateCardsController < Api::BaseController
+    class ContractRateCardsController < Api::BaseController
       include Api::RequiresProductCatalog
 
       def create
+        # The service speaks the internal name; the contract 404 belongs to the
+        # API boundary, so the lookup happens here.
+        subscription = find_subscription
+        return not_found_error(resource: "contract") unless subscription
+
         result = ::SubscriptionRateCards::CreateService.call(
-          subscription: find_subscription,
+          subscription:,
           params: create_params.to_h.deep_symbolize_keys
         )
 
@@ -53,7 +58,7 @@ module Api
 
       def index
         subscription = find_subscription
-        return not_found_error(resource: "subscription") unless subscription
+        return not_found_error(resource: "contract") unless subscription
 
         # Scope by id, not external_id: several subscriptions can share an
         # external_id over time and the list must match the version the nested
@@ -71,7 +76,7 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.subscription_rate_cards,
-              ::V1::SubscriptionRateCardSerializer,
+              ::V2::ContractAppliedRateCardSerializer,
               collection_name: "applied_rate_cards",
               meta: pagination_metadata(result.subscription_rate_cards)
             )
@@ -101,7 +106,7 @@ module Api
       # A pending subscription can share its external_id with a past one;
       # prefer the pending one (the only editable state), then the latest.
       def find_subscription
-        subscriptions = current_organization.subscriptions.where(external_id: params[:subscription_external_id])
+        subscriptions = current_organization.subscriptions.where(external_id: params[:contract_external_id])
         subscriptions.pending.first || subscriptions.order(created_at: :desc).first
       end
 
@@ -139,11 +144,11 @@ module Api
       end
 
       def render_subscription_rate_card(subscription_rate_card)
-        render(json: ::V1::SubscriptionRateCardSerializer.new(subscription_rate_card, root_name: "applied_rate_card"))
+        render(json: ::V2::ContractAppliedRateCardSerializer.new(subscription_rate_card, root_name: "applied_rate_card"))
       end
 
       def resource_name
-        "subscription_rate_card"
+        "contract_rate_card"
       end
     end
   end

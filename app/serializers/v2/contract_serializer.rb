@@ -4,7 +4,7 @@ module V2
   # The v2 shape drops the plan-interval fields (amounts, billing periods,
   # trial): a product-catalog subscription prices through its rate card
   # entries, each carrying its own billing cycle.
-  class SubscriptionSerializer < ModelSerializer
+  class ContractSerializer < ModelSerializer
     def serialize
       payload = {
         lago_id: model.id,
@@ -46,7 +46,7 @@ module V2
     def applied_rate_cards
       ::CollectionSerializer.new(
         model.applied_rate_cards.current_and_scheduled.includes(:rate_phases, :rate_card, :subscription),
-        ::V1::SubscriptionRateCardSerializer,
+        ::V2::ContractAppliedRateCardSerializer,
         collection_name: "applied_rate_cards"
       ).serialize[:applied_rate_cards]
     end

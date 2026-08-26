@@ -2,7 +2,7 @@
 
 module Api
   module V2
-    module SubscriptionRateCards
+    module ContractRateCards
       class RatePhasesController < Api::BaseController
         include Api::RequiresProductCatalog
 
@@ -60,7 +60,7 @@ module Api
 
         def subscription_rate_card
           @subscription_rate_card ||= begin
-            subscriptions = current_organization.subscriptions.where(external_id: params[:subscription_external_id])
+            subscriptions = current_organization.subscriptions.where(external_id: params[:contract_external_id])
             subscription = subscriptions.pending.first || subscriptions.order(created_at: :desc).first
 
             if subscription
@@ -154,7 +154,7 @@ module Api
         end
 
         def resource_name
-          "subscription_rate_card"
+          "contract_rate_card"
         end
       end
     end
