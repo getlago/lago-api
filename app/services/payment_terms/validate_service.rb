@@ -6,20 +6,8 @@ module PaymentTerms
     MONTH_OFFSET_RANGE = (0..12)
 
     def valid?
-      if payment_term.nil?
-        return true
-      end
-
-      if !payment_term.is_a?(Hash)
-        add_error(field: :payment_term, error_code: "invalid_format")
-      elsif !PaymentTerm::FIELDS_BY_TERM_TYPE.key?(term_type)
-        add_error(field: :payment_term, error_code: "invalid_term_type")
-      else
-        valid_fields?
-        valid_days?
-        valid_day_of_month?
-        valid_month_offset?
-      end
+      valid_net_payment_term?
+      valid_payment_term?
 
       if errors?
         result.validation_failure!(errors:)
@@ -30,6 +18,36 @@ module PaymentTerms
     end
 
     private
+
+    def valid_net_payment_term?
+      value = args[:net_payment_term]
+      if value.nil?
+        true
+      elsif !value.is_a?(Integer)
+        add_error(field: :net_payment_term, error_code: "invalid_format")
+      elsif value.negative?
+        add_error(field: :net_payment_term, error_code: "value_is_out_of_range")
+      else
+        true
+      end
+    end
+
+    def valid_payment_term?
+      return true if payment_term.nil?
+
+      if !payment_term.is_a?(Hash)
+        return add_error(field: :payment_term, error_code: "invalid_format")
+      end
+
+      unless PaymentTerm::FIELDS_BY_TERM_TYPE.key?(term_type)
+        return add_error(field: :payment_term, error_code: "invalid_term_type")
+      end
+
+      valid_fields?
+      valid_days?
+      valid_day_of_month?
+      valid_month_offset?
+    end
 
     def payment_term
       args[:payment_term]
