@@ -71,11 +71,17 @@ es:
         following_month: Pago el día %{day} del mes siguiente
         months_after: Pago el día %{day}, %{months} meses después de la factura
         same_month: Pago el día %{day} de este mes
-      days_end_of_month: Pago a %{days} días fin de mes
+      days_end_of_month:
+        one: Pago a %{days} día fin de mes
+        other: Pago a %{days} días fin de mes
       due_on_receipt: Pago a la recepción
       end_of_month: Pago a fin de mes
-      net: Pago en un plazo de %{days} días
-      net_end_of_month: Pago %{days} días tras fin de mes
+      net:
+        one: Pago en un plazo de %{days} día
+        other: Pago en un plazo de %{days} días
+      net_end_of_month:
+        one: Pago %{days} día tras fin de mes
+        other: Pago %{days} días tras fin de mes
     percentage:
       adjustment_per_transaction: Ajuste para mín./máx. por transacción
       fee_per_transaction: Tasa fija por transacción

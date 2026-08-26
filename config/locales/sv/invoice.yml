@@ -71,11 +71,17 @@ sv:
         following_month: Förfaller den %{day}:e följande månad
         months_after: Förfaller den %{day}:e, %{months} månader efter fakturan
         same_month: Förfaller den %{day}:e denna månad
-      days_end_of_month: Betalning %{days} dagar, månadens slut
+      days_end_of_month:
+        one: Betalning %{days} dag, månadens slut
+        other: Betalning %{days} dagar, månadens slut
       due_on_receipt: Betalas vid mottagandet
       end_of_month: Betalas vid månadens slut
-      net: Betalning inom %{days} dagar
-      net_end_of_month: Betalas %{days} dagar efter månadens slut
+      net:
+        one: Betalning inom %{days} dag
+        other: Betalning inom %{days} dagar
+      net_end_of_month:
+        one: Betalas %{days} dag efter månadens slut
+        other: Betalas %{days} dagar efter månadens slut
     percentage:
       adjustment_per_transaction: Justering för min/max per transaktion
       fee_per_transaction: Fast avgift per transaktion

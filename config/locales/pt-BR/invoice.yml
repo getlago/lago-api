@@ -72,11 +72,17 @@ pt-BR:
         following_month: Vencimento no dia %{day} do mês seguinte
         months_after: Vencimento no dia %{day}, %{months} meses após a fatura
         same_month: Vencimento no dia %{day} deste mês
-      days_end_of_month: Pagamento em %{days} dias, fim do mês
+      days_end_of_month:
+        one: Pagamento em %{days} dia, fim do mês
+        other: Pagamento em %{days} dias, fim do mês
       due_on_receipt: Vencimento no recebimento
       end_of_month: Vencimento no fim do mês
-      net: Pagamento em até %{days} dias
-      net_end_of_month: Vencimento %{days} dias após o fim do mês
+      net:
+        one: Pagamento em até %{days} dia
+        other: Pagamento em até %{days} dias
+      net_end_of_month:
+        one: Vencimento %{days} dia após o fim do mês
+        other: Vencimento %{days} dias após o fim do mês
     percentage:
       adjustment_per_transaction: Ajuste para mín/máx por transação
       fee_per_transaction: Taxa fixa por transação
