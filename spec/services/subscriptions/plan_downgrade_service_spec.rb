@@ -168,6 +168,42 @@ RSpec.describe Subscriptions::PlanDowngradeService do
       end
     end
 
+    context "when the current subscription has a payment_term" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          subscription_at: Time.current,
+          external_id: SecureRandom.uuid,
+          payment_term: {term_type: "net", days: 60}
+        )
+      end
+
+      it "inherits the payment_term when params omit it" do
+        expect(result).to be_success
+        expect(result.subscription.next_subscription.payment_term).to eq({"term_type" => "net", "days" => 60})
+      end
+
+      context "when params provide a payment_term" do
+        let(:params) { {name: subscription_name, payment_term: {term_type: "end_of_month"}} }
+
+        it "sets it on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.payment_term).to eq({"term_type" => "end_of_month"})
+        end
+      end
+
+      context "when params provide an explicit nil payment_term" do
+        let(:params) { {name: subscription_name, payment_term: nil} }
+
+        it "clears it on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.next_subscription.payment_term).to be_nil
+        end
+      end
+    end
+
     context "with plan overrides", :premium do
       let(:params) do
         {
