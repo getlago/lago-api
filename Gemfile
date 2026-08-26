@@ -63,7 +63,7 @@ gem "graphql-pagination"
 
 # Payment processing
 gem "adyen-ruby-api-library"
-gem "gocardless_pro", "~> 2.34"
+gem "gocardless_pro", "~> 4.0"
 gem "stripe"
 
 # Analytics
