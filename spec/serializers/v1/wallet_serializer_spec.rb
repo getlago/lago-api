@@ -33,6 +33,7 @@ RSpec.describe ::V1::WalletSerializer do
       "created_at" => wallet.created_at.iso8601,
       "expiration_at" => wallet.expiration_at&.iso8601,
       "last_balance_sync_at" => wallet.last_balance_sync_at&.iso8601,
+      "last_ongoing_balance_sync_at" => wallet.last_ongoing_balance_sync_at&.iso8601,
       "last_consumed_credit_at" => wallet.last_consumed_credit_at&.iso8601,
       "terminated_at" => wallet.terminated_at,
       "credits_balance" => wallet.credits_balance.to_s,
