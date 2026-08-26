@@ -6,11 +6,13 @@ module Invoices
 
     ACTIVATION_BILLING_REASONS = %i[subscription_starting upgrading].freeze
 
-    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
+    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false, payment_term: nil, payment_term_source: nil)
       @subscriptions = subscriptions
       @timestamp = timestamp
       @invoicing_reason = invoicing_reason
       @recurring = invoicing_reason.to_sym == :subscription_periodic
+      @payment_term = payment_term
+      @payment_term_source = payment_term_source
 
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
@@ -139,7 +141,9 @@ module Invoices
       :customer,
       :currency,
       :invoice,
-      :skip_charges
+      :skip_charges,
+      :payment_term,
+      :payment_term_source
 
     # Cancelling a gated subscription takes the same lock, so holding it here orders the two:
     # cancellation either finds the gating invoice and closes it, or refuses until it exists.
@@ -200,7 +204,9 @@ module Invoices
         currency:,
         datetime: Time.zone.at(timestamp),
         skip_charges:,
-        purchase_order_number: subscriptions.first&.purchase_order_number
+        purchase_order_number: subscriptions.first&.purchase_order_number,
+        payment_term:,
+        payment_term_source:
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
