@@ -360,6 +360,7 @@ end
 #  on_termination_credit_note   :enum
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
+#  payment_term                 :jsonb
 #  progressive_billing_disabled :boolean          default(FALSE), not null
 #  purchase_order_number        :string
 #  skip_daily_usage             :boolean          default(FALSE), not null
