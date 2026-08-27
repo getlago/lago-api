@@ -28,7 +28,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
         expect(month).to eq(DateTime.current.beginning_of_month)
         expect(json[:invoice_collections].first[:payment_status]).to eq(nil)
         expect(json[:invoice_collections].first[:invoices_count]).to eq(0)
-        expect(json[:invoice_collections].first[:amount_cents]).to eq(0.0)
+        expect(json[:invoice_collections].first[:amount_cents]).to eq(0)
         expect(json[:invoice_collections].first[:currency]).to eq(nil)
         expect(Analytics::InvoiceCollectionsService).to have_received(:call).with(organization, billing_entity_id: nil, currency: nil, months: nil)
       end
