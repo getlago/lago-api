@@ -27,6 +27,18 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:plan).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
     end
+
+    it "resolves a discarded customer and plan" do
+      customer = create(:customer)
+      plan = create(:plan, organization: customer.organization)
+      contract = create(:contract, customer:, plan:, organization: customer.organization)
+
+      customer.discard!
+      plan.discard!
+
+      expect(contract.reload.customer).to eq(customer)
+      expect(contract.plan).to eq(plan)
+    end
   end
 
   describe "validations" do

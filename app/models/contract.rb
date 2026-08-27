@@ -20,8 +20,11 @@ class Contract < ApplicationRecord
   }.freeze
 
   belongs_to :organization
-  belongs_to :customer
-  belongs_to :plan, optional: true
+  # with_discarded: a terminated contract must still resolve its customer and
+  # plan after they are discarded — history, serializers and invoices read
+  # through these associations.
+  belongs_to :customer, -> { with_discarded }
+  belongs_to :plan, -> { with_discarded }, optional: true
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
 
