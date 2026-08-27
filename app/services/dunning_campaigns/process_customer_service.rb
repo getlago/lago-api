@@ -13,6 +13,8 @@ module DunningCampaigns
     end
 
     def call
+      return result unless customer.organization.auto_dunning_enabled?
+      return result if customer.exclude_from_dunning_campaign?
       return result unless dunning_campaign
       return result unless days_between_attempts_satisfied?
 
