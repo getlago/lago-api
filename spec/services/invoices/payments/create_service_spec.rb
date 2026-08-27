@@ -875,6 +875,17 @@ RSpec.describe Invoices::Payments::CreateService do
         end
       end
 
+      context "when the organization skips the checkout auto-payment delay" do
+        before { organization.enable_feature_flag!(:skip_checkout_auto_payment_delay) }
+
+        it "enqueues the payment immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+      end
+
       context "when it is not the first payment attempt (retry)" do
         before { invoice.update!(payment_attempts: 1) }
 
