@@ -24,18 +24,22 @@ namespace :filters do
     end
   end
 
-  # The filters that make the cascade fail: a plan's own filter with no code, on a charge that has
-  # overrides to cascade to. Editing one enqueues an update the service cannot address, since the
-  # code is what identifies the copy on the override, so the job dies on MissingParentCode.
+  # A plan's own filters with no code, on charges that have overrides. Editing one enqueues an
+  # update the cascade cannot address — the code is what identifies the copy on the override — so
+  # the job dies on MissingParentCode.
   #
-  # Filters on the overrides themselves are not listed. Those cost nothing — the cascade simply
-  # does not reach them — whereas these stop a plan edit from propagating at all.
+  # This lists more than can fail today: `ChargeFilters::CascadeService#child_ids` only reaches an
+  # override whose plan carries an active or pending subscription, and the EXISTS below does not
+  # check that. Deliberately so — an override without one starts mattering the day it gains one.
+  #
+  # Filters on the overrides themselves are not listed: nothing dispatches a job for them, so a
+  # missing code there costs nothing.
   desc "Report the plan filters with no code to cascade with"
   task report_parent_codes: :environment do
     scope = ChargeFilter.unscope(:order)
       .where(code: nil, deleted_at: nil)
       .joins(charge: :plan)
-      .where(charges: {parent_id: nil, deleted_at: nil}, plans: {deleted_at: nil})
+      .where(charges: {parent_id: nil, deleted_at: nil}, plans: {parent_id: nil, deleted_at: nil})
       .where("EXISTS (SELECT 1 FROM charges children WHERE children.parent_id = charge_filters.charge_id AND children.deleted_at IS NULL)")
 
     puts "##################################"
@@ -45,7 +49,7 @@ namespace :filters do
     by_organization = scope.group(:organization_id).count
     if by_organization.any?
       puts "By organization:"
-      Organization.where(id: by_organization.keys).order(:name).find_each do |organization|
+      Organization.where(id: by_organization.keys).order(:name).each do |organization|
         puts "- #{organization.name}: #{by_organization[organization.id]} filters"
       end
 

@@ -368,9 +368,9 @@ RSpec.describe ChargeFilters::CascadeService do
         end
       end
 
-      # The lookup ran before the other job committed, so the insert is the first thing to see
-      # the conflict. Left to fail on purpose: the retry finds the copy and passes, and a
-      # swallowed conflict would hide filters that still need cleaning up.
+      # The lookup ran before the other job committed, so the insert is the first thing to see the
+      # conflict. Left to fail on purpose: swallowing it would hide filters that still need
+      # cleaning up. needs manual retry
       context "when another job commits the copy mid-flight" do
         let(:racing) do
           described_class.new(
