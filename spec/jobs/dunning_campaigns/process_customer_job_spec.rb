@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe DunningCampaigns::ProcessCustomerJob do
-  let(:customer) { build(:customer) }
+  let(:customer) { create(:customer) }
 
   before do
     allow(DunningCampaigns::ProcessCustomerService).to receive(:call!)
