@@ -497,6 +497,7 @@ GEM
       money (~> 7.0)
       railties (>= 7.0)
     msgpack (1.8.2)
+    multi_json (1.21.1)
     multi_xml (0.9.1)
       bigdecimal (>= 3.1, < 5)
     multipart-post (2.4.1)
@@ -1132,6 +1133,7 @@ DEPENDENCIES
   logstash-event
   meilisearch-rails
   money-rails
+  multi_json
   multipart-post
   mutex_m
   newrelic_rpm
