@@ -203,6 +203,17 @@ RSpec.describe FeeDisplayHelper do
     end
   end
 
+  describe ".format_percentage_rate" do
+    it "rounds float artifacts to two decimal places" do
+      expect(helper.format_percentage_rate("0.8999999999999999")).to eq("0.90%")
+      expect(helper.format_percentage_rate("0.7000000000000001")).to eq("0.70%")
+    end
+
+    it "keeps rates with two decimal places unchanged" do
+      expect(helper.format_percentage_rate("5.55")).to eq("5.55%")
+    end
+  end
+
   describe ".format_amount" do
     subject { helper.format_amount(fee) }
 

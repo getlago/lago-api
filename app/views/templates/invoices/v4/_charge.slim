@@ -14,7 +14,7 @@ table.invoice-resume-table width="100%"
           td.body-1
             = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
           td.body-2 = fee.amount_details['paid_units']
-          td.body-2 = fee.amount_details['rate'] + '%'
+          td.body-2 = FeeDisplayHelper.format_percentage_rate(fee.amount_details['rate'])
           td.body-2 == TaxHelper.applied_taxes(fee)
           td.body-2 = FeeDisplayHelper.format_as_currency(fee, fee.amount_details['per_unit_total_amount'])
       - else
