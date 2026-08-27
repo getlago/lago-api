@@ -215,7 +215,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
         invoice_display_name: "Transaction Fee",
         amount_details: {
           "paid_units" => "100",
-          "rate" => "5.55",
+          "rate" => "0.8999999999999999",
           "per_unit_total_amount" => "55.50"
         },
         properties: {
@@ -253,7 +253,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
         invoice_display_name: "Payment Processing Fee",
         amount_details: {
           "paid_units" => "100",
-          "rate" => "5.55",
+          "rate" => "0.7000000000000001",
           "per_unit_total_amount" => "55.50",
           "fixed_fee_unit_amount" => "0.20",
           "fixed_fee_total_amount" => "20.00",
