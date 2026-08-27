@@ -136,7 +136,7 @@ module Invoices
             metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
             subscription:,
             options: Fees::ChargeService::Options.new(
-              context: charge_service_context,
+              context:,
               skip_adjusted_fees: !adjusted_fee_exists
             ),
             filtered_aggregations: filters[charge.id]&.keys || []
@@ -240,12 +240,6 @@ module Invoices
 
           result.non_invoiceable_fees.concat(fee_result.fees)
       end
-    end
-
-    def charge_service_context
-      return context if Fees::ChargeService::CONTEXTS.include?(context)
-
-      nil
     end
 
     def should_create_minimum_commitment_true_up_fee?(invoice_subscription)

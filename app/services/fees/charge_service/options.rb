@@ -3,6 +3,8 @@
 module Fees
   class ChargeService
     CONTEXTS = [nil, :current_usage, :invoice_preview, :recurring, :finalize].freeze
+    # NOTE: Accepted for callers that still use invoice-level contexts with charge fee calculation.
+    DEPRECATED_CONTEXTS = [:refresh, :draft].freeze
 
     Options = Data.define(
       :context,
@@ -53,9 +55,10 @@ module Fees
       private
 
       def validate_context!(context)
-        return if CONTEXTS.include?(context)
+        accepted_contexts = CONTEXTS + DEPRECATED_CONTEXTS
+        return if accepted_contexts.include?(context)
 
-        raise ArgumentError, "context must be one of: #{CONTEXTS.compact.join(", ")}"
+        raise ArgumentError, "context '#{context}' must be one of: #{accepted_contexts.compact.join(", ")}"
       end
 
       def validate_usage_filters!(usage_filters)

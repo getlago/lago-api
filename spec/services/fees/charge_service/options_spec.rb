@@ -19,8 +19,10 @@ RSpec.describe Fees::ChargeService::Options do
   describe "validations" do
     it "validates context" do
       expect { described_class.new(context: :current_usage) }.not_to raise_error
+      expect { described_class.new(context: :refresh) }.not_to raise_error
+      expect { described_class.new(context: :draft) }.not_to raise_error
       expect { described_class.new(context: :unknown) }
-        .to raise_error(ArgumentError, "context must be one of: current_usage, invoice_preview, recurring, finalize")
+        .to raise_error(ArgumentError, "context 'unknown' must be one of: current_usage, invoice_preview, recurring, finalize, refresh, draft")
     end
 
     it "validates usage filters" do
