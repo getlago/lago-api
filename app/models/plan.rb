@@ -181,27 +181,6 @@ class Plan < ApplicationRecord
     count + children.joins(:subscriptions).select("subscriptions.id").distinct.count
   end
 
-  def self.preload_counts(organization, plans)
-    counts = CountsQuery.call(
-      organization:,
-      filters: {
-        plan_ids: plans.map(&:id)
-      }
-    )
-
-    plans.each do |plan|
-      plan_counts = counts.fetch(plan.id, {})
-      plan.active_subscriptions_count = plan_counts.fetch(:active_subscriptions_count, 0)
-      plan.charges_count = plan_counts.fetch(:charges_count, 0)
-      plan.customers_count = plan_counts.fetch(:customers_count, 0)
-      plan.draft_invoices_count = plan_counts.fetch(:draft_invoices_count, 0)
-      plan.fixed_charges_count = plan_counts.fetch(:fixed_charges_count, 0)
-      plan.subscriptions_count = plan_counts.fetch(:subscriptions_count, 0)
-    end
-
-    plans
-  end
-
   private
 
   def validate_code_unique

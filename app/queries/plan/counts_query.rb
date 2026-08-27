@@ -6,9 +6,9 @@ class Plan
     Filters = BaseFilters[:plan_ids]
 
     def call
-      result = ActiveRecord::Base.connection.exec_query(counts_query)
+      query_result = ActiveRecord::Base.connection.exec_query(counts_query)
 
-      result.each_with_object({}) do |row, hash|
+      result.plans = query_result.each_with_object({}) do |row, hash|
         hash[row["plan_id"]] = {
           active_subscriptions_count: row["active_subscriptions_count"],
           charges_count: row["charges_count"],
@@ -18,6 +18,8 @@ class Plan
           subscriptions_count: row["subscriptions_count"]
         }
       end
+
+      result
     end
 
     private

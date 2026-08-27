@@ -22,6 +22,16 @@ RSpec.describe Resolvers::PlansResolver do
       }
     GQL
   end
+  let(:query_without_counts) do
+    <<~GQL
+      query {
+        plans(limit: 5) {
+          collection { id }
+          metadata { totalCount }
+        }
+      }
+    GQL
+  end
 
   let(:membership) { create(:membership) }
   let(:plan) { create(:plan, organization:) }
@@ -82,6 +92,27 @@ RSpec.describe Resolvers::PlansResolver do
     expect(result["errors"]).to be_nil
     expect(result.dig("data", "plans", "collection").count).to eq(3)
     expect(query_count).to eq(1)
+  end
+
+  it "does not load plan counts when count fields are not requested" do
+    query_count = 0
+    counter = lambda do |_name, _start, _finish, _id, payload|
+      query_count += 1 if payload[:sql]&.include?("active_subscription_counts AS")
+    end
+
+    result = nil
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: query_without_counts
+      )
+    end
+
+    expect(result["errors"]).to be_nil
+    expect(result.dig("data", "plans", "collection").count).to eq(1)
+    expect(query_count).to eq(0)
   end
 
   context "when filtering by with_deleted" do

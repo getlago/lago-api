@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Plan::CountsQuery do
-  subject(:result) { described_class.call(organization:, filters: {plan_ids:}) }
+  subject(:plans) { described_class.call(organization:, filters: {plan_ids:}).plans }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -48,7 +48,7 @@ RSpec.describe Plan::CountsQuery do
   end
 
   it "returns all counts for the requested organization plans" do
-    expect(result).to eq({
+    expect(plans).to eq({
       plan.id => {
         active_subscriptions_count: 4,
         charges_count: 2,
