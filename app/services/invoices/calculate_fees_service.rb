@@ -3,7 +3,6 @@
 module Invoices
   class CalculateFeesService < BaseService
     Result = BaseResult[:invoice, :non_invoiceable_fees]
-    CHARGE_SERVICE_CONTEXTS = [nil, :current_usage, :invoice_preview, :recurring, :finalize].freeze
 
     def initialize(invoice:, recurring: false, context: nil)
       @invoice = invoice
@@ -244,7 +243,7 @@ module Invoices
     end
 
     def charge_service_context
-      return context if CHARGE_SERVICE_CONTEXTS.include?(context)
+      return context if Fees::ChargeService::CONTEXTS.include?(context)
 
       nil
     end
