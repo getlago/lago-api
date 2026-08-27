@@ -3,6 +3,7 @@
 module Invoices
   class CalculateFeesService < BaseService
     Result = BaseResult[:invoice, :non_invoiceable_fees]
+    CHARGE_SERVICE_CONTEXTS = [nil, :current_usage, :invoice_preview, :recurring, :finalize].freeze
 
     def initialize(invoice:, recurring: false, context: nil)
       @invoice = invoice
@@ -118,8 +119,6 @@ module Invoices
       return unless charge_boundaries_valid?(boundaries)
 
       filters = event_filters(subscription, boundaries).charges
-      plan = subscription.plan
-      customer = subscription.customer
       adjusted_fee_exists = AdjustedFee.where(invoice:, subscription:).matching_charge_boundaries(boundaries).exists?
 
       subscription
@@ -135,13 +134,12 @@ module Invoices
 
           Fees::ChargeService.call!(
             invoice:,
-            charge:,
+            metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
             subscription:,
-            boundaries:,
-            context:,
-            plan:,
-            customer:,
-            skip_adjusted_fees: !adjusted_fee_exists,
+            options: Fees::ChargeService::Options.new(
+              context: charge_service_context,
+              skip_adjusted_fees: !adjusted_fee_exists
+            ),
             filtered_aggregations: filters[charge.id]&.keys || []
           )
         end
@@ -231,17 +229,24 @@ module Invoices
 
           fee_result = Fees::ChargeService.call!(
             invoice: nil,
-            charge:,
+            metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
             subscription:,
-            context: :recurring,
-            boundaries:,
             plan: subscription.plan,
             customer: subscription.customer,
-            apply_taxes: invoice.customer.tax_customer.blank?
+            options: Fees::ChargeService::Options.new(
+              context: :recurring,
+              apply_taxes: invoice.customer.tax_customer.blank?
+            )
           )
 
           result.non_invoiceable_fees.concat(fee_result.fees)
       end
+    end
+
+    def charge_service_context
+      return context if CHARGE_SERVICE_CONTEXTS.include?(context)
+
+      nil
     end
 
     def should_create_minimum_commitment_true_up_fee?(invoice_subscription)
