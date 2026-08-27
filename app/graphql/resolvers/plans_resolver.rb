@@ -33,7 +33,8 @@ module Resolvers
         search_term:,
         filters: {
           with_deleted:,
-          product_category_id:
+          product_category_id:,
+          preload_counts: counts_requested?(lookahead)
         },
         pagination: {
           page:,
@@ -41,9 +42,7 @@ module Resolvers
         }
       )
 
-      return result.plans unless counts_requested?(lookahead)
-
-      preload_counts(result.plans)
+      result.plans
     end
 
     private
@@ -51,27 +50,6 @@ module Resolvers
     def counts_requested?(lookahead)
       collection = lookahead.selection(:collection)
       COUNT_FIELDS.any? { |field| collection.selects?(field) }
-    end
-
-    def preload_counts(plans)
-      counts = Plan::CountsQuery.call(
-        organization: current_organization,
-        filters: {
-          plan_ids: plans.map(&:id)
-        }
-      ).plans
-
-      plans.each do |plan|
-        plan_counts = counts.fetch(plan.id, {})
-        plan.active_subscriptions_count = plan_counts.fetch(:active_subscriptions_count, 0)
-        plan.charges_count = plan_counts.fetch(:charges_count, 0)
-        plan.customers_count = plan_counts.fetch(:customers_count, 0)
-        plan.draft_invoices_count = plan_counts.fetch(:draft_invoices_count, 0)
-        plan.fixed_charges_count = plan_counts.fetch(:fixed_charges_count, 0)
-        plan.subscriptions_count = plan_counts.fetch(:subscriptions_count, 0)
-      end
-
-      plans
     end
   end
 end

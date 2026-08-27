@@ -105,4 +105,20 @@ RSpec.describe PlansQuery do
       expect(returned_ids).to eq([plan_first.id])
     end
   end
+
+  context "when preloading counts" do
+    let(:filters) { {preload_counts: true} }
+
+    before do
+      allow(Plan::CountsQuery).to receive(:call).and_call_original
+      create(:subscription, plan: plan_first, organization:)
+    end
+
+    it "attaches the counts to the returned plans" do
+      returned_plan = result.plans.find { |plan| plan.id == plan_first.id }
+
+      expect(returned_plan.subscriptions_count).to eq(1)
+      expect(Plan::CountsQuery).to have_received(:call)
+    end
+  end
 end
