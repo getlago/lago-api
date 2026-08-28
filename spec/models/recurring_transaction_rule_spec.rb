@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe RecurringTransactionRule do
   it_behaves_like "a model with a purchase order number"
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "a connection-resolvable billing object" do
     let(:resolvable) { create(:recurring_transaction_rule) }
   end

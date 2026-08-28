@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Entitlement::EntitlementValue do
   subject { create(:entitlement_value) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { expect(described_class).to be_soft_deletable }
 
   describe "associations" do

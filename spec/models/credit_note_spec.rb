@@ -8,6 +8,8 @@ RSpec.describe CreditNote do
       taxes_rate: 10.0, precise_taxes_amount_cents: 1000
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+
   let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 10000, amount_cents: 1000) }
 
   it_behaves_like "paper_trail traceable"
@@ -518,7 +520,8 @@ RSpec.describe CreditNote do
     subject(:method_call) { credit_note.should_sync_credit_note? }
 
     let(:credit_note) { create(:credit_note, customer:, organization:, status:) }
-    let(:organization) { create(:organization) }
+
+    let_it_be(:organization) { create_default(:organization) }
 
     context "when credit note is not finalized" do
       let(:status) { :draft }
@@ -534,7 +537,8 @@ RSpec.describe CreditNote do
       context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
-        let(:customer) { create(:customer, organization:) }
+
+        let_it_be(:customer) { create_default(:customer, organization:) }
 
         before { integration_customer }
 
@@ -570,7 +574,8 @@ RSpec.describe CreditNote do
       context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
-        let(:customer) { create(:customer, organization:) }
+
+        let_it_be(:customer) { create_default(:customer, organization:) }
 
         before { integration_customer }
 

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Webhook do
   subject(:webhook) { build(:webhook) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:webhook_endpoint) }
   it { is_expected.to belong_to(:object).optional }
   it { is_expected.to belong_to(:organization) }

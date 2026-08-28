@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeFilter do
   subject(:charge_filter) { build(:charge_filter) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "paper_trail traceable"
 
   describe "associations" do

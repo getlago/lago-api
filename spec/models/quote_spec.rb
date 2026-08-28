@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Quote do
   subject(:quote) { create(:quote) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:order_type)

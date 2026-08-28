@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactionConsumption do
+  let_it_be(:organization) { create_default(:organization) }
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)

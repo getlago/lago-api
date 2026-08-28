@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Organizations::AuthenticationMethods do
   describe "authentication_methods" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     before do
       organization

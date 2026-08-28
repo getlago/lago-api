@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Clickhouse::SecurityLog, clickhouse: true do
   subject(:security_log) { create(:clickhouse_security_log) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   describe "associations" do
     it do
       expect(security_log).to belong_to(:organization)
