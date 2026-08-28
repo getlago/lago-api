@@ -6,6 +6,8 @@ RSpec.describe ::V1::FixedChargeSerializer do
   subject(:result) { JSON.parse(serializer.to_json) }
 
   let(:serializer) { described_class.new(fixed_charge, root_name: "fixed_charge", includes: %i[taxes]) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
   let(:fixed_charge) { create(:fixed_charge, properties:) }
   let(:properties) { {"amount" => "1000"} }
 
