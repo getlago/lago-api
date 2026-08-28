@@ -66,9 +66,8 @@ RSpec.describe Subscriptions::ChargeCacheService do
     let(:current_usage_key) { described_class.new(subscription:, charge:, charge_filter:).cache_key }
     let(:full_usage_key) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true).cache_key }
 
-    # Both entries go unconditionally. Events::DeleteForMetricService and the ClickHouse
-    # de-duplication clear the cache after removing usage, which does not advance the ingestion
-    # watermark, so a full usage entry left behind here would be served for the rest of the period.
+    # Both go unconditionally: removing usage (a deleted metric, de-duplicated events) does not
+    # advance the ingestion watermark, so lazy validation would not clear what was left behind.
     it "deletes both the current usage and the full usage entries" do
       allow(Rails.cache).to receive(:delete)
 
@@ -112,9 +111,8 @@ RSpec.describe Subscriptions::ChargeCacheService do
         described_class.expire_for_subscriptions(ids)
       end
 
-      # 5 expected SELECTs: subscriptions, organizations, plans, charges, filters. The organization
-      # is preloaded because every cache key reads its feature flags. Add a small safety margin for
-      # incidental loads (e.g. activity log context).
+      # 5 expected SELECTs: subscriptions, organizations, plans, charges, filters. Add a small
+      # safety margin for incidental loads (e.g. activity log context).
       expect(query_count).to be <= 6
     end
   end

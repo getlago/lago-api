@@ -8,10 +8,8 @@ module Subscriptions
     # this version instead of invalidating every organization's cache at once.
     LAZY_CACHE_KEY_VERSION = "2"
 
-    # Full usage aggregates from subscription.started_at instead of the current period start, so its
-    # result gets its own entry. The two windows coincide for a subscription that started with the
-    # current period, but that equality is incidental — started_at is editable — and the key cannot
-    # express it, so the two namespaces stay separate regardless.
+    # Full usage aggregates from subscription.started_at, not the current period start. The two
+    # windows can coincide, but started_at is editable, so they never share an entry.
     FULL_USAGE_KEY_SEGMENT = "full-usage"
 
     def self.expire_for_subscriptions(subscription_ids)
@@ -37,11 +35,9 @@ module Subscriptions
       expire_cache(subscription:, charge:)
     end
 
-    # NOTE: A charge can hold both a current usage and a full usage entry, and both are cleared.
-    #       The per-event caller only ever finds the current usage one, since a full usage entry
-    #       requires the lazy validation that turns that caller off. The explicit ones do find it:
-    #       deleting a billable metric or de-duplicating events removes usage without advancing the
-    #       ingestion watermark, so lazy validation would keep serving whatever was left behind.
+    # NOTE: Both entries are cleared. Deleting a billable metric or de-duplicating events removes
+    #       usage without advancing the ingestion watermark, so lazy validation would keep serving a
+    #       full usage entry left behind here.
     def self.expire_cache(subscription:, charge:, charge_filter: nil)
       new(subscription:, charge:, charge_filter:).expire_cache
       new(subscription:, charge:, charge_filter:, full_usage: true).expire_cache

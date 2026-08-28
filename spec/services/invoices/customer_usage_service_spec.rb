@@ -708,9 +708,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
               code: billable_metric.code, timestamp:, created_at: current_date - 1.hour)
           end
 
-          # The two windows are identical here, but that equality is incidental and the key cannot
-          # express it: subscription.started_at is editable, so a shared entry would silently start
-          # answering for a window it was not computed over. Full usage keeps its own entry.
+          # The windows are identical here, but started_at is editable, so the entry is still not shared.
           it "uses the full usage cache entry, not the current usage one" do
             travel_to(current_date) do
               expect { usage_service.call }
@@ -901,9 +899,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      # Full usage is cached only where lazy validation can reject a stale entry. The eager deletion
-      # clears both keys, but it never runs for a ClickHouse organization, and the events-processor
-      # invalidating in its place builds the current usage key alone.
+      # Full usage is cached only where lazy validation can reject a stale entry.
       context "when the full usage is queried outside of the first billing period", :premium do
         subject(:usage_service) do
           described_class.new(
@@ -976,9 +972,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      # skip_grouping and filter_by_presentation change the fees a charge produces but are absent
-      # from the cache key, so an entry holding one shape must never be written where another shape
-      # would read it.
+      # skip_grouping and filter_by_presentation change the fees but are absent from the key, so
+      # neither may leave an entry another shape would read.
       context "when the full usage is queried with filters the cache key cannot describe", :premium do
         subject(:usage_service) do
           described_class.new(

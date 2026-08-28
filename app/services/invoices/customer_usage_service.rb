@@ -286,18 +286,9 @@ module Invoices
         (!usage_filters.full_usage || full_usage_cache_enabled?)
     end
 
-    # Full usage always reads and writes its own entry, never the current usage one (see
-    # Subscriptions::ChargeCacheService::FULL_USAGE_KEY_SEGMENT), and only when it can be kept exact.
-    #
-    # Lazy validation is required, because it is the only invalidation that certainly reaches the
-    # full usage entry: the eager deletion clears both keys, but it never runs for a ClickHouse
-    # organization (Events::CreateService skips Events::PostProcessJob), and the events-processor
-    # invalidating in its place builds the current usage key alone. A stale lifetime total would then
-    # feed alerting until the end of the billing period.
-    #
-    # skip_grouping and filter_by_presentation are refused as well: both change the fees a charge
-    # produces without appearing in the key, so caching them would serve one shape for another. And
-    # the integration restates locally what querying_full_usage_allowed already refuses.
+    # Lazy validation is the only invalidation reaching this entry: the eager deletion never runs for
+    # a ClickHouse organization, and the events-processor replacing it clears the current usage key
+    # alone. skip_grouping and filter_by_presentation reshape the fees without appearing in the key.
     def full_usage_cache_enabled?
       organization.granular_lifetime_usage_enabled? &&
         organization.feature_flag_enabled?(:lazy_charge_usage_cache) &&
