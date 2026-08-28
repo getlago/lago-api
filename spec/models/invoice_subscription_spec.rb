@@ -16,6 +16,8 @@ RSpec.describe InvoiceSubscription do
   end
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
 
   let(:invoice) { invoice_subscription.invoice }
   let(:subscription) { invoice_subscription.subscription }
@@ -30,8 +32,6 @@ RSpec.describe InvoiceSubscription do
   it { is_expected.to belong_to(:organization) }
 
   describe ".order_by_subscription_invoice_name" do
-    let_it_be(:organization) { create_default(:organization) }
-    let_it_be(:customer) { create_default(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
     let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }

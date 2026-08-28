@@ -6,6 +6,7 @@ RSpec.describe RateCardRate do
   subject(:rate_card_rate) { build(:rate_card_rate) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
 
   it_behaves_like "paper_trail traceable"
 

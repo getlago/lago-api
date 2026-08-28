@@ -6,6 +6,7 @@ RSpec.describe Webhook do
   subject(:webhook) { build(:webhook) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   it { is_expected.to belong_to(:webhook_endpoint) }
   it { is_expected.to belong_to(:object).optional }

@@ -6,6 +6,7 @@ RSpec.describe Metadata::InvoiceMetadata do
   subject(:metadata) { described_class.new(attributes) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   let(:invoice) { create(:invoice) }
   let(:key) { "hello" }

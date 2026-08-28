@@ -27,7 +27,7 @@ RSpec.describe IntegrationMappings::BaseMapping do
 
       let_it_be(:organization) { create_default(:organization) }
       let_it_be(:add_on) { create_default(:add_on, organization: organization) }
-      let_it_be(:other_add_on) { create_default(:add_on, organization: organization) }
+      let_it_be(:other_add_on) { create(:add_on, organization: organization) }
       let_it_be(:billable_metric) { create_default(:billable_metric, id: add_on.id, organization: organization) }
       let_it_be(:billing_entity) { create_default(:billing_entity, organization: organization) }
       let_it_be(:other_billing_entity) { create(:billing_entity, organization: organization) }

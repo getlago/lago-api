@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe Event do
   subject { build(:event) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer) }
   let_it_be(:plan) { create_default(:plan) }
 

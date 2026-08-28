@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe PaymentIntent do
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   it { is_expected.to define_enum_for(:status).with_values(described_class::STATUSES) }
 
