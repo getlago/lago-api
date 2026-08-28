@@ -540,8 +540,18 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
 
       context "when granular_lifetime_usage is enabled", :premium do
+        # Both keys are built through the service so their version follows the lazy validation flag.
+        let(:current_usage_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
+        end
+
+        let(:full_usage_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:, full_usage: true).cache_key
+        end
+
         before do
           organization.update!(premium_integrations: %w[granular_lifetime_usage])
+          organization.enable_feature_flag!(:lazy_charge_usage_cache)
         end
 
         context "when filter_by_charge_id is provided and no prorated charges" do
@@ -691,27 +701,22 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             create(:subscription, plan:, customer:, started_at: DateTime.parse("2025-06-01"))
           end
 
+          # created_at predates the aggregation: CacheService refuses to store a value whose
+          # watermark is younger than SETTLE_WINDOW.
           before do
-            create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+            create_list(:event, 2, organization:, subscription:, customer:,
+              code: billable_metric.code, timestamp:, created_at: current_date - 1.hour)
           end
 
           # The two windows are identical here, but that equality is incidental and the key cannot
           # express it: subscription.started_at is editable, so a shared entry would silently start
           # answering for a window it was not computed over. Full usage keeps its own entry.
           it "uses the full usage cache entry, not the current usage one" do
-            current_usage_key = [
-              "charge-usage",
-              Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
-              charge.id,
-              subscription.id,
-              charge.updated_at.iso8601
-            ].join("/")
-
             travel_to(current_date) do
               expect { usage_service.call }
-                .to change { Rails.cache.exist?("#{current_usage_key}/full-usage") }.from(false).to(true)
+                .to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
 
-              expect(Rails.cache.exist?(current_usage_key)).to be(false)
+              expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
             end
           end
         end
@@ -735,22 +740,28 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           end
 
           before do
-            create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+            create_list(:event, 2, organization:, subscription:, customer:,
+              code: billable_metric.code, timestamp:, created_at: current_date - 1.hour)
           end
 
-          it "serves the full usage entry on the next call" do
+          it "uses the full usage cache entry, not the current usage one" do
             travel_to(current_date) do
-              expect(usage_service.call.usage.fees.first.units).to eq(2)
+              expect { usage_service.call }
+                .to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
 
-              create(:event, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+              expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
+            end
+          end
 
-              expect(described_class.new(
-                customer:,
-                subscription:,
-                apply_taxes: false,
-                with_cache: true,
-                usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
-              ).call.usage.fees.first.units).to eq(2)
+          context "when the organization does not lazily validate the cache" do
+            before { organization.disable_feature_flag!(:lazy_charge_usage_cache) }
+
+            it "does not cache the charge at all" do
+              travel_to(current_date) do
+                expect { usage_service.call }.not_to change { Rails.cache.exist?(full_usage_cache_key) }.from(false)
+
+                expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
+              end
             end
           end
         end
@@ -890,6 +901,9 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      # Full usage is cached only where lazy validation can reject a stale entry. The eager deletion
+      # clears both keys, but it never runs for a ClickHouse organization, and the events-processor
+      # invalidating in its place builds the current usage key alone.
       context "when the full usage is queried outside of the first billing period", :premium do
         subject(:usage_service) do
           described_class.new(
@@ -901,15 +915,41 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           )
         end
 
+        let(:full_usage_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:, full_usage: true).cache_key
+        end
+
+        let(:current_usage_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
+        end
+
         before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
 
-        it "caches the charge under the full usage key and requests the ingestion timestamps" do
-          expect { usage_service.call }
-            .to change { Rails.cache.exist?("#{charge_cache_key}/full-usage") }.from(false).to(true)
+        it "skips both the cache and the ingestion timestamps" do
+          expect { usage_service.call }.not_to change { Rails.cache.exist?(full_usage_cache_key) }.from(false)
 
-          expect(Rails.cache.exist?(charge_cache_key)).to be(false)
           expect(Events::BillingPeriodFilterService).to have_received(:call!)
-            .with(hash_including(with_last_seen_at: true))
+            .with(hash_including(with_last_seen_at: false))
+        end
+
+        context "when the organization lazily validates the cache" do
+          # created_at predates the aggregation: CacheService refuses to store a value whose
+          # watermark is younger than SETTLE_WINDOW.
+          let(:events) do
+            create_list(:event, 2, organization:, subscription:, customer:,
+              code: billable_metric.code, timestamp:, created_at: 1.hour.ago)
+          end
+
+          before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+
+          it "caches the charge under the full usage key and requests the ingestion timestamps" do
+            expect { usage_service.call }
+              .to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
+
+            expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
+            expect(Events::BillingPeriodFilterService).to have_received(:call!)
+              .with(hash_including(with_last_seen_at: true))
+          end
         end
       end
 
@@ -924,6 +964,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
           )
         end
+
+        before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
 
         it "refuses the request and caches nothing" do
           result = usage_service.call
@@ -948,12 +990,24 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           )
         end
 
-        before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
+        let(:full_usage_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:, full_usage: true).cache_key
+        end
+
+        let(:current_usage_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
+        end
+
+        # Lazy validation is on, so the refusal can only come from the filter shape.
+        before do
+          organization.update!(premium_integrations: %w[granular_lifetime_usage])
+          organization.enable_feature_flag!(:lazy_charge_usage_cache)
+        end
 
         it "skips both the cache and the ingestion timestamps" do
-          expect { usage_service.call }.not_to change { Rails.cache.exist?("#{charge_cache_key}/full-usage") }.from(false)
+          expect { usage_service.call }.not_to change { Rails.cache.exist?(full_usage_cache_key) }.from(false)
 
-          expect(Rails.cache.exist?(charge_cache_key)).to be(false)
+          expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
           expect(Events::BillingPeriodFilterService).to have_received(:call!)
             .with(hash_including(with_last_seen_at: false))
         end
