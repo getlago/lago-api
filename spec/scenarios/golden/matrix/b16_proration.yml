@@ -1,0 +1,654 @@
+# B16 — Proration.
+#
+# `prorated: true` is only legal on a RECURRING metric (Charge#validate_prorated, charge.rb:178-189),
+# and then only on `standard` when the charge pays in advance, or on `standard` / `volume` /
+# `graduated` when it pays in arrears. weighted_sum_agg is always rejected (it already prorates) and
+# count_agg / max_agg / latest_agg cannot be recurring at all
+# (BillableMetric#validate_recurring, billable_metric.rb:108-113). That leaves the 8 cells below.
+#
+# Two independent halves decide a prorated fee, and every row here is written to separate them:
+#
+#   1. the AGGREGATION is prorated — only sum_agg and unique_count_agg have a prorated aggregator
+#      (BillableMetrics::AggregationFactory:26-40). Both weight each unit by the days from the event
+#      through the end of the period, inclusive, over the period length:
+#      postgres_store.rb:301-315 + :532-537 for sum, unique_count_query.rb:302-329 for unique_count.
+#   2. the CHARGE MODEL decides what to do with two numbers, the prorated units and the un-prorated
+#      `full_units_number`. There is no ProratedStandardService and no ProratedVolumeService:
+#      ChargeModels::Factory:36-61 returns the ordinary StandardService and VolumeService, and only
+#      `graduated` swaps in ProratedGraduatedService. Each of the three therefore mixes the two
+#      numbers differently, and that is what the charge_model axis is measuring here.
+#
+# Shared conventions, so the numbers are comparable across rows:
+#   * March 2024, monthly / calendar, plan pay in arrears with amount_cents 0, no taxes, no coupons
+#     — so the charge fee is the whole invoice
+#   * a 31-day period, and events placed so the day counts are exact:
+#       2024-03-11 → 31 - 11 + 1 = 21 days remain → weight 21/31
+#       2024-03-22 → 31 - 22 + 1 = 10 days remain → weight 10/31
+#   * sum_agg rows ingest 31 units on the 11th and 62 on the 22nd
+#       → prorated 31·21/31 + 62·10/31 = 21 + 20 = 41 units against 93 full units
+#   * unique_count_agg rows add seat_1 on the 11th and seat_2 + seat_3 on the 22nd
+#       → prorated 21/31 + 10/31 + 10/31 = 41/31 units against 3 full units
+#
+# So "41 prorated unit-months" is the shared quantity, and each row prices it differently. The point
+# of every row is that the prorated answer and the un-prorated answer DIFFER: with the per-unit
+# prices chosen below, ignoring proration entirely gives 9_300¢ where the standard rows expect
+# 4_100¢, 15_500¢ where the graduated rows expect 6_100¢, and 18_600¢ / 19_600¢ where the volume
+# rows expect 8_200¢ / 9_200¢.
+#
+# Every row is `calendar_sensitive`: a 31-day denominator and fixed day-of-month offsets ARE the
+# arithmetic, so the live runner — which shifts the whole timeline so the last step lands at "now" —
+# cannot reproduce them. Hence `runners: [rspec]` throughout.
+#
+# `volume` has no pay-in-advance cell because Charge#validate_pay_in_advance rejects every volume
+# charge, and `graduated` has none because validate_prorated allows only `standard` in advance.
+---
+- id: b16/standard/sum_agg/false
+  block: B16
+  axes: {charge_model: standard, aggregation: sum_agg, pay_in_advance: 'false'}
+  dimensions:
+    recurring: true
+    prorated: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_std_sum, aggregation_type: sum_agg, field_name: units, recurring: true}]
+    plan: {code: golden_b16_std_sum, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_std_sum
+        charge_model: standard
+        prorated: true
+        properties: {amount: "1"}
+    customer: {external_id: golden_b16_std_sum_cust, currency: EUR}
+    subscription: {external_id: golden_b16_std_sum_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_std_sum, properties: {units: 31}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_std_sum, properties: {units: 62}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 4100
+      taxes_amount_cents: 0
+      total_amount_cents: 4100
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - fee_type: charge
+          units: "93.0"
+          events_count: 2
+          amount_cents: 4100
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    ProratedAggregations::SumService#compute_event_aggregation (sum_service.rb:164-167) is the
+    persisted prorated sum plus the current one, and the current one is SQL:
+    `SUM(value * ((DATE(to_datetime) - DATE(events.timestamp) + 1) / charges_duration))`
+    (postgres_store.rb:301-315, ratio built by duration_ratio_sql:532-537). March is 31 days, so the
+    11th weighs (31 - 11 + 1)/31 = 21/31 and the 22nd weighs 10/31:
+    31 × 21/31 + 62 × 10/31 = 21 + 20 = 41 prorated units. Nothing is persisted from an earlier
+    period, so persisted_prorated_result contributes 0.
+    There is no ProratedStandardService — ChargeModels::Factory:38-39 returns the plain
+    StandardService, whose compute_amount is `units × amount` (standard_service.rb:7-9) where `units`
+    is the aggregation, i.e. the PRORATED 41 (base_service.rb:34). 41 × 1.00 = 41.00 → 4_100¢.
+    The fee's `units` field is the OTHER number: for a prorated charge Fees::ChargeService:302-307
+    reports `full_units_number`, the un-prorated aggregation (sum_service.rb:25) = 31 + 62 = 93. So
+    93 units are reported and 41 unit-months are billed, and that mismatch is what the row pins —
+    asserting the amount alone could not tell 41 prorated units from a discount on 93.
+    An implementation that ignored `prorated` would bill 93 × 1.00 = 9_300¢; one that prorated by
+    days ELAPSED instead of days remaining would use 11/31 and 22/31 → 31 × 11/31 + 62 × 22/31 =
+    11 + 44 = 55 → 5_500¢. Neither is 4_100¢.
+
+- id: b16/standard/sum_agg/true
+  block: B16
+  axes: {charge_model: standard, aggregation: sum_agg, pay_in_advance: 'true'}
+  dimensions:
+    recurring: true
+    prorated: true
+    invoiceable: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_adv_sum, aggregation_type: sum_agg, field_name: units, recurring: true}]
+    plan: {code: golden_b16_adv_sum, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_adv_sum
+        charge_model: standard
+        prorated: true
+        pay_in_advance: true
+        properties: {amount: "1"}
+    customer: {external_id: golden_b16_adv_sum_cust, currency: EUR}
+    subscription: {external_id: golden_b16_adv_sum_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_adv_sum, properties: {units: 31}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_adv_sum, properties: {units: 62}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 2100
+        total_amount_cents: 2100
+        fees_count: 1
+        fees:
+          - {fee_type: charge, units: "31.0", amount_cents: 2100}
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: charge, units: "62.0", amount_cents: 2000}
+      - select: {index: 2}
+        invoice_type: subscription
+        fees_amount_cents: 9300
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 0}
+          - {fee_type: charge, units: "93.0", amount_cents: 9300}
+  math: >-
+    An invoiceable pay-in-advance charge bills on each event (Events::PayInAdvanceService:30-32), and
+    a prorated one bills only the part of the period the units will be present for.
+    Per event the amount is a CUMULATIVE DELTA, `amount_from_aggregation - amount_excluding_event`
+    (apply_pay_in_advance_charge_model_service.rb:20-24), and the event's own contribution is
+    prorated by `date_diff_with_timezone(event.timestamp, to_datetime) / period_duration`
+    (prorated_aggregations/base_service.rb:16-24). date_diff ceils, so the 11th gives 21 days and the
+    22nd gives 10, of 31 — the same day counts the arrears SQL produces.
+    11 March: cumulative prorated = 31 × 21/31 = 21, less nothing → 21.00 → 2_100¢.
+    22 March: cumulative prorated = 21 + 62 × 10/31 = 41, less the 21 already billed → 20.00 →
+    2_000¢. The two March fees sum to 4_100¢, exactly what b16/standard/sum_agg/false bills for the
+    same period in arrears — the same 41 prorated unit-months, collected event by event instead of
+    once at the end.
+    Each fee reports its own event's raw value as `units` (31, then 62), because for a prorated
+    charge compute_units returns `full_units_number`
+    (apply_pay_in_advance_charge_model_service.rb:118-119), which
+    prorated_aggregations/base_service.rb:13 sets to the UN-prorated per-event aggregation.
+    The third invoice is the 1 April renewal. A pay-in-advance charge on a RECURRING metric is not
+    excluded from the billing invoice (calculate_fees_service.rb:131-132 excludes only
+    pay_in_advance + non-recurring), and on the billing date proration is deliberately skipped —
+    `bill_full_amount?` is true when there is no event (sum_service.rb:143-145) — so the 93 persisted
+    units are billed for a whole period: 93 × 1.00 = 9_300¢. Note the fee is LABELLED with the
+    upcoming period even though it aggregated the previous one's boundaries
+    (Fee#date_boundaries, fee.rb:318-327).
+    If proration were applied on the billing date too this would be 4_100¢; if the per-event fees
+    were not prorated they would be 3_100¢ and 6_200¢ instead of 2_100¢ and 2_000¢.
+
+- id: b16/standard/unique_count_agg/false
+  block: B16
+  axes: {charge_model: standard, aggregation: unique_count_agg, pay_in_advance: 'false'}
+  dimensions:
+    recurring: true
+    prorated: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_std_uc, aggregation_type: unique_count_agg, field_name: seat_id, recurring: true}]
+    plan: {code: golden_b16_std_uc, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_std_uc
+        charge_model: standard
+        prorated: true
+        properties: {amount: "31"}
+    customer: {external_id: golden_b16_std_uc_cust, currency: EUR}
+    subscription: {external_id: golden_b16_std_uc_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_std_uc, properties: {seat_id: seat_1}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_std_uc, properties: {seat_id: seat_2}}]
+    - at: "2024-03-22T11:00:00Z"
+      do: ingest_events
+      events: [{code: b16_std_uc, properties: {seat_id: seat_3}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 4100
+      taxes_amount_cents: 0
+      total_amount_cents: 4100
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - fee_type: charge
+          units: "3.0"
+          amount_cents: 4100
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    Prorated unique_count weights each distinct property by the days it was present, from its `add`
+    to the next event on the same property or to the end of the period — UniqueCountQuery's
+    period_ratio_sql (unique_count_query.rb:302-329) is
+    `(DATE(LEAD(timestamp, default to_datetime) + 1 day) - DATE(timestamp)) / charges_duration`.
+    No seat is ever removed, so each LEAD falls back to 31 March and every seat runs to the end of
+    the month: seat_1 from the 11th → (1 Apr - 11 Mar) = 21 days, seat_2 and seat_3 from the 22nd →
+    10 days each. Aggregation = (21 + 10 + 10)/31 = 41/31, ceiled to 5 decimals by
+    unique_count_service.rb:22 → 1.32259.
+    StandardService prices the aggregation (there is no prorated standard service —
+    charge_models/factory.rb:38-39): 1.32259 × 31.00 = 41.00029, rounded to the currency's two
+    decimals by Fees::ChargeService:296-300 → 41.00 → 4_100¢. The ceil is why the raw product is not
+    exactly 41; the currency rounding is what makes the expected integer safe.
+    The fee reports `units: 3` — the un-prorated count (unique_count_service.rb:23 sets
+    full_units_number, charge_service.rb:302-307 prefers it for a prorated charge). Three seats
+    reported, 41/31 of a seat-month billed.
+    Un-prorated this would be 3 × 31.00 = 9_300¢. Counting only seats present at period end would
+    also give 9_300¢. Prorating by days elapsed rather than days remaining would give
+    (11 + 22 + 22)/31 × 31.00 = 55.00 → 5_500¢.
+
+- id: b16/standard/unique_count_agg/true
+  block: B16
+  axes: {charge_model: standard, aggregation: unique_count_agg, pay_in_advance: 'true'}
+  dimensions:
+    recurring: true
+    prorated: true
+    invoiceable: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_adv_uc, aggregation_type: unique_count_agg, field_name: seat_id, recurring: true}]
+    plan: {code: golden_b16_adv_uc, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_adv_uc
+        charge_model: standard
+        prorated: true
+        pay_in_advance: true
+        properties: {amount: "31"}
+    customer: {external_id: golden_b16_adv_uc_cust, currency: EUR}
+    subscription: {external_id: golden_b16_adv_uc_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_adv_uc, properties: {seat_id: seat_1}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_adv_uc, properties: {seat_id: seat_2}}]
+    - at: "2024-03-22T11:00:00Z"
+      do: ingest_events
+      events: [{code: b16_adv_uc, properties: {seat_id: seat_3}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 4
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 2100
+        total_amount_cents: 2100
+        fees_count: 1
+        fees:
+          - {fee_type: charge, units: "1.0", amount_cents: 2100}
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 1000
+        total_amount_cents: 1000
+        fees_count: 1
+        fees:
+          - {fee_type: charge, units: "1.0", amount_cents: 1000}
+      - select: {index: 2}
+        invoice_type: subscription
+        fees_amount_cents: 1000
+        total_amount_cents: 1000
+        fees_count: 1
+        fees:
+          - {fee_type: charge, units: "1.0", amount_cents: 1000}
+      - select: {index: 3}
+        invoice_type: subscription
+        fees_amount_cents: 9300
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 0}
+          - {fee_type: charge, units: "3.0", amount_cents: 9300}
+  math: >-
+    The seats case: each seat is charged, when it appears, for the rest of the period only.
+    Per event the fee is the cumulative delta
+    (apply_pay_in_advance_charge_model_service.rb:20-24) over the prorated aggregation, and the
+    event's own share is `1 × date_diff(event.timestamp, to_datetime) / 31`, ceiled to 5 decimals
+    (prorated_aggregations/base_service.rb:16-24).
+    seat_1 on the 11th: cumulative = 21/31 → 0.67742; delta = 0.67742 × 31.00 = 21.00002 → rounded
+    to 21.00 → 2_100¢.
+    seat_2 on the 22nd: cumulative = (21 + 10)/31 = 1.0; already billed = (1.0 - 0.32259) × 31.00 =
+    20.99971; delta = 10.00029 → 1_000¢.
+    seat_3, same day: cumulative = 41/31 → 1.32259 → 41.00029; already billed = 1.0 × 31.00 = 31.00;
+    delta = 10.00029 → 1_000¢. A seat added on the 22nd of a 31-day month costs 10/31 of 31.00,
+    i.e. 10.00 — which is why the per-unit price here is 31.00 rather than a round number.
+    The three March fees sum to 4_100¢, the same total b16/standard/unique_count_agg/false reaches in
+    arrears for the same three seats.
+    Each fee reports `units: 1`: compute_units returns full_units_number for a prorated charge
+    (apply_pay_in_advance_charge_model_service.rb:118-119), which is the event's own un-prorated
+    contribution of one seat.
+    The fourth invoice is the 1 April renewal: pay-in-advance charges on a recurring metric are still
+    billed there (calculate_fees_service.rb:131-132) and proration is skipped on the billing date
+    when there is no event (unique_count_service.rb:20), so all 3 seats are billed for a whole
+    period: 3 × 31.00 = 9_300¢.
+    If the per-event fees ignored proration each would be 3_100¢; if they were per-event rather than
+    cumulative deltas, seat_2 and seat_3 would not both be 1_000¢.
+
+- id: b16/graduated/sum_agg/false
+  block: B16
+  axes: {charge_model: graduated, aggregation: sum_agg, pay_in_advance: 'false'}
+  dimensions:
+    recurring: true
+    prorated: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_grad_sum, aggregation_type: sum_agg, field_name: units, recurring: true}]
+    plan: {code: golden_b16_grad_sum, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_grad_sum
+        charge_model: graduated
+        prorated: true
+        properties:
+          graduated_ranges:
+            - {from_value: 0, to_value: 31, per_unit_amount: "1", flat_amount: "0"}
+            - {from_value: 32, to_value: null, per_unit_amount: "2", flat_amount: "0"}
+    customer: {external_id: golden_b16_grad_sum_cust, currency: EUR}
+    subscription: {external_id: golden_b16_grad_sum_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_grad_sum, properties: {units: 31}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_grad_sum, properties: {units: 62}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 6100
+      taxes_amount_cents: 0
+      total_amount_cents: 6100
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - fee_type: charge
+          units: "93.0"
+          events_count: 2
+          amount_cents: 6100
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    This is the one charge model with a dedicated prorated implementation
+    (ChargeModels::Factory:40-45 → ProratedGraduatedService), and it uses the two numbers for two
+    different jobs: the FULL per-event units decide which tier an event lands in, the PRORATED
+    per-event units are what that tier prices (prorated_graduated_service.rb:11-94, and the comment
+    at :30-33 says exactly this).
+    The two arrays come from ProratedAggregations::SumService#per_event_aggregation
+    (sum_service.rb:116-137): full = [31, 62] from the base aggregator, prorated =
+    `prorated_events_values` = [31 × 21/31, 62 × 10/31] = [21, 20]
+    (postgres_store.rb:96-100), both ordered by timestamp.
+    Walking the loop: event 1 fills tier 1 exactly (full_sum 31 = to_value 31), so the overflow at
+    :84 is 31 - 31 = 0 and its 21 prorated units are priced at tier 1: 21 × 1.00 = 21.00.
+    `range` then advances to tier 2 because full_sum equals tier 1's to_value and another event
+    follows (:135), and event 2's 20 prorated units are priced at tier 2 by the trailing line :91:
+    20 × 2.00 = 40.00. Both flat amounts are 0, so result_with_flat_amount (:112-123) adds nothing.
+    Total 61.00 → 6_100¢, reported against `units: 93` (charge_service.rb:302-307).
+    The tier boundary is set at 31 on purpose: it falls exactly on an event boundary, so no event is
+    split across tiers and the overflow arithmetic at :84-85 — which rescales a partially-overflowing
+    event's prorated units by prorated/full — contributes 0 rather than a repeating fraction.
+    Three wrong implementations give three different numbers, which is why this row asserts 6_100¢
+    and not just "less than the un-prorated amount": graduating the FULL 93 units gives
+    31 × 1.00 + 62 × 2.00 = 155.00 → 15_500¢; graduating the prorated TOTAL of 41 units gives
+    31 × 1.00 + 10 × 2.00 = 51.00 → 5_100¢; pricing all 41 prorated units at the top tier reached
+    gives 82.00 → 8_200¢. Only tier-by-full / price-by-prorated gives 61.00.
+
+- id: b16/graduated/unique_count_agg/false
+  block: B16
+  axes: {charge_model: graduated, aggregation: unique_count_agg, pay_in_advance: 'false'}
+  dimensions:
+    recurring: true
+    prorated: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_grad_uc, aggregation_type: unique_count_agg, field_name: seat_id, recurring: true}]
+    plan: {code: golden_b16_grad_uc, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_grad_uc
+        charge_model: graduated
+        prorated: true
+        properties:
+          graduated_ranges:
+            - {from_value: 0, to_value: 1, per_unit_amount: "31", flat_amount: "0"}
+            - {from_value: 2, to_value: null, per_unit_amount: "62", flat_amount: "0"}
+    customer: {external_id: golden_b16_grad_uc_cust, currency: EUR}
+    subscription: {external_id: golden_b16_grad_uc_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_grad_uc, properties: {seat_id: seat_1}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_grad_uc, properties: {seat_id: seat_2}}]
+    - at: "2024-03-22T11:00:00Z"
+      do: ingest_events
+      events: [{code: b16_grad_uc, properties: {seat_id: seat_3}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 6100
+      taxes_amount_cents: 0
+      total_amount_cents: 6100
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - fee_type: charge
+          units: "3.0"
+          amount_cents: 6100
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    Same machinery as b16/graduated/sum_agg/false, fed by the unique-count breakdown instead:
+    ProratedAggregations::UniqueCountService#per_event_aggregation
+    (unique_count_service.rb:104-124) returns full = [1, 1, 1] — one per relevant `add`, -1 for a
+    relevant `remove` — and prorated = the per-seat day fractions from
+    prorated_unique_count_breakdown, each ceiled to 5 decimals: seat_1 21/31 → 0.67742, seat_2 and
+    seat_3 10/31 → 0.32259, ordered by timestamp then property.
+    ProratedGraduatedService then tiers by the FULL count and prices by the PRORATED one
+    (prorated_graduated_service.rb:11-94). Tier 1 holds one seat, so seat_1's 0.67742 is priced at
+    31.00 → 21.00002; seat_2 and seat_3 fall in tier 2, and the trailing line :91 prices their
+    0.32259 + 0.32259 = 0.64518 at 62.00 → 40.00116. Total 61.00118, rounded to the currency's two
+    decimals (charge_service.rb:296-300) → 61.00 → 6_100¢, against `units: 3`.
+    The tier boundary at 1 seat is what makes the row informative: the first seat is priced at the
+    cheap tier even though it is the one present LONGEST, because the tier follows arrival order and
+    not duration.
+    Tiering the prorated total (41/31 ≈ 1.32259) instead would put 1 seat in tier 1 and 0.32259 in
+    tier 2 → 31.00 + 20.00 = 51.00 → 5_100¢. Ignoring proration → 1 × 31.00 + 2 × 62.00 = 155.00 →
+    15_500¢. Neither is 6_100¢.
+
+- id: b16/volume/sum_agg/false
+  block: B16
+  axes: {charge_model: volume, aggregation: sum_agg, pay_in_advance: 'false'}
+  dimensions:
+    recurring: true
+    prorated: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_vol_sum, aggregation_type: sum_agg, field_name: units, recurring: true}]
+    plan: {code: golden_b16_vol_sum, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_vol_sum
+        charge_model: volume
+        prorated: true
+        properties:
+          volume_ranges:
+            - {from_value: 0, to_value: 50, per_unit_amount: "1", flat_amount: "0"}
+            - {from_value: 51, to_value: null, per_unit_amount: "2", flat_amount: "0"}
+    customer: {external_id: golden_b16_vol_sum_cust, currency: EUR}
+    subscription: {external_id: golden_b16_vol_sum_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_vol_sum, properties: {units: 31}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_vol_sum, properties: {units: 62}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 8200
+      taxes_amount_cents: 0
+      total_amount_cents: 8200
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - fee_type: charge
+          units: "93.0"
+          events_count: 2
+          amount_cents: 8200
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    There is no ProratedVolumeService: ChargeModels::Factory:52-53 always returns VolumeService,
+    which handles proration in one line — `number_of_units` is `full_units_number` when the charge is
+    prorated (volume_service.rb:62-64) and is used to pick the tier and nothing else, while
+    `per_unit_total_amount` multiplies the PRORATED `units` by that tier's rate
+    (volume_service.rb:52-54).
+    So the tier is chosen by the 93 un-prorated units — 93 > 50, so tier 2 at 2.00 — and the 41
+    prorated units (31 × 21/31 + 62 × 10/31 = 21 + 20, postgres_store.rb:301-315) are all priced
+    there: 41 × 2.00 = 82.00, plus tier 2's flat amount of 0 → 8_200¢. `units` on the fee is again
+    the un-prorated 93 (charge_service.rb:302-307).
+    The 50-unit boundary is deliberately between the prorated total (41) and the full total (93), so
+    the two candidate readings disagree: choosing the tier from the PRORATED units would land in
+    tier 1 and give 41 × 1.00 = 41.00 → 4_100¢. Ignoring proration altogether gives 93 × 2.00 =
+    186.00 → 18_600¢. Volume, unlike graduated, prices every unit at the single tier reached, so
+    a graduated reading of the same ranges would give 50 × 1.00 + 43 × 2.00 = 136.00 on full units.
+    Only "tier from full units, quantity prorated" gives 8_200¢.
+
+- id: b16/volume/unique_count_agg/false
+  block: B16
+  axes: {charge_model: volume, aggregation: unique_count_agg, pay_in_advance: 'false'}
+  dimensions:
+    recurring: true
+    prorated: true
+    interval: monthly
+    billing_time: calendar
+    plan_pay_in_advance: false
+    period_days: 31
+    flat_amount: 10
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b16_vol_uc, aggregation_type: unique_count_agg, field_name: seat_id, recurring: true}]
+    plan: {code: golden_b16_vol_uc, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges:
+      - billable_metric_code: b16_vol_uc
+        charge_model: volume
+        prorated: true
+        properties:
+          volume_ranges:
+            - {from_value: 0, to_value: 2, per_unit_amount: "31", flat_amount: "0"}
+            - {from_value: 3, to_value: null, per_unit_amount: "62", flat_amount: "10"}
+    customer: {external_id: golden_b16_vol_uc_cust, currency: EUR}
+    subscription: {external_id: golden_b16_vol_uc_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_vol_uc, properties: {seat_id: seat_1}}]
+    - at: "2024-03-22T10:00:00Z"
+      do: ingest_events
+      events: [{code: b16_vol_uc, properties: {seat_id: seat_2}}]
+    - at: "2024-03-22T11:00:00Z"
+      do: ingest_events
+      events: [{code: b16_vol_uc, properties: {seat_id: seat_3}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 9200
+      taxes_amount_cents: 0
+      total_amount_cents: 9200
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - fee_type: charge
+          units: "3.0"
+          amount_cents: 9200
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    Same VolumeService reading as b16/volume/sum_agg/false — tier from `number_of_units` =
+    full_units_number, quantity from the prorated `units` (volume_service.rb:52-64) — plus the half
+    of compute_amount the other volume row leaves at zero: the tier's FLAT amount is added whole,
+    un-prorated (`compute_amount` = per_unit_total_amount + flat_unit_amount,
+    volume_service.rb:11-13 and :44-46).
+    3 un-prorated seats (unique_count_service.rb:23) select tier 2, from_value 3. The prorated
+    aggregation is (21 + 10 + 10)/31 = 41/31, ceiled to 1.32259
+    (unique_count_query.rb:302-329, unique_count_service.rb:22), priced at 62.00 →
+    82.00058, plus the flat 10.00 → 92.00058, rounded to two decimals
+    (charge_service.rb:296-300) → 92.00 → 9_200¢.
+    That the flat fee is NOT prorated is the specific thing this row records: a subscriber who
+    reached tier 2 for the last 10 days of the month still pays its full entry fee. Prorating the
+    flat amount as well would give 82.00 + 10.00 × 41/93 ≈ 86.41 → 8_641¢.
+    Choosing the tier from the prorated units instead would use `number_of_units.ceil` = 2 → tier 1
+    → 1.32259 × 31.00 = 41.00029 → 4_100¢. Ignoring proration gives 3 × 62.00 + 10.00 = 196.00 →
+    19_600¢. Neither is 9_200¢.

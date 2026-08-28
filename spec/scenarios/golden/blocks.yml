@@ -1,0 +1,443 @@
+# The blocks of the golden billing suite.
+#
+# A block is one thing that can go wrong. Each declares its own axes, and coverage is measured
+# per block against that block's own product — never against a global cross-product, which would be
+# ~5,000 cells and permanently ~2% covered, telling you nothing. Per-block products are small enough
+# that each can honestly reach 100%.
+#
+# An axis domain is either:
+#   domain: <name>   — derived from a model constant via GoldenLegality (grows by itself)
+#   values: [...]    — declared here, for axes Lago does not enumerate as an enum
+#
+# `constraint` names a GoldenLegality predicate that filters the raw product down to the legal cells.
+# `services` are the paths whose fix-commit density gives the block its RISK ranking.
+#
+# `requires` declares what the HARNESS needs before a cell can be written at all — either at block
+# level (applies to every cell) or under an axis, keyed by the value that needs it. Three kinds:
+#
+#   step:        a timeline verb the interpreter must dispatch
+#   expectation: a top-level `expect:` key the assertion phase must read
+#   schema:      a dotted path that must exist in schema.json, i.e. somewhere for a row to SAY it
+#
+# Requirements are checked against capabilities DERIVED from the interpreter, so a requirement is
+# satisfied the moment the capability exists and not a moment before. The ledger reports blocked
+# cells and their reasons rather than subtracting them silently — a cell nobody can write should be
+# visible work, not a permanent hole in a percentage.
+---
+- id: B1
+  title: Pricing grid
+  why: >-
+    volume and custom charge models, and max_agg / weighted_sum_agg / custom_agg, have zero invoice
+    coverage — they are exercised only through current_usage, which is a different code path.
+    observed_via is a first-class axis precisely because that is where the hole is.
+  constraint: charge_model_x_aggregation
+  axes:
+    charge_model: {domain: charge_models}
+    aggregation: {domain: aggregations}
+    observed_via: {values: [invoice, current-usage]}
+    # Event cardinality is a real axis, not a convention. Zero events still produce flat fees and
+    # minimums (the ING-13 regression is exactly "graduated with no events"); and one event cannot
+    # distinguish an aggregation from a passthrough, nor cumulative-delta pricing from per-event
+    # pricing. A grid that fixes the event set silently tests one third of each cell.
+    events: {values: [none, one, many]}
+  services:
+    - app/services/charge_models
+    - app/services/fees/charge_service.rb
+    - app/services/billable_metrics/aggregations
+
+- id: B2
+  title: Period boundaries
+  why: >-
+    dates_service and dates/yearly_service carry 13 fix commits between them, while quarterly,
+    semiannual and weekly are barely covered. Rows pin pricing and vary only dates.
+  axes:
+    interval: {domain: intervals}
+    billing_time: {domain: billing_times}
+    phase: {values: [first-partial-period, first-full-period, full-period, terminated-mid-period]}
+  services:
+    - app/services/subscriptions/dates_service.rb
+    - app/services/subscriptions/dates
+    - app/services/subscriptions/terminated_dates_service.rb
+
+- id: B3
+  title: Pay-in-advance & non-invoiceable
+  why: >-
+    the hottest measured cluster — create_pay_in_advance_charge_service 10 fixes,
+    fees/create_pay_in_advance_service 10, advance_charges_service 10.
+  constraint: pay_in_advance_charge
+  axes:
+    charge_model: {domain: charge_models}
+    aggregation: {domain: aggregations}
+    invoicing: {values: [invoiceable, non-invoiceable-regrouped, non-invoiceable-dropped]}
+    # Critical here rather than merely useful: a pay-in-advance amount is a cumulative delta, so a
+    # one-event row and a many-event row exercise genuinely different arithmetic.
+    events: {values: [one, many]}
+  services:
+    - app/services/invoices/create_pay_in_advance_charge_service.rb
+    - app/services/fees/create_pay_in_advance_service.rb
+    - app/services/invoices/advance_charges_service.rb
+
+- id: B4
+  title: Draft lifecycle
+  why: refresh_draft + refresh_draft_and_finalize 14 fixes, adjusted fee services 5, preview 9.
+  axes:
+    operation:
+      values: [refresh, finalize, void, adjust-fee-units, adjust-fee-amount, preview]
+    # The reducer stages are context here, not decoration: a draft, a preview and a regenerated
+    # invoice each re-run the credit pipeline, so every reducer is a way for the three to disagree
+    # with the invoice they predict.
+    context:
+      values: [grace-period, no-grace-period, with-coupon, with-credit-note, with-progressive-billing, with-prepaid-credit]
+  services:
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/invoices/refresh_draft_and_finalize_service.rb
+    - app/services/invoices/preview_service.rb
+    - app/services/fees/init_from_adjusted_charge_fee_service.rb
+
+- id: B5
+  title: Progressive billing
+  why: progressive_billing_service 7 fixes, credits/progressive_billing_service 5, progressive_billed_amount 7.
+  axes:
+    threshold: {values: [fixed, recurring, multiple]}
+    crossing: {values: [single, multiple-in-period, exact-hit]}
+    settlement: {values: [credited-on-final, excess-to-credit-note, terminated-mid-period]}
+  services:
+    - app/services/credits/progressive_billing_service.rb
+    - app/services/invoices/progressive_billing_service.rb
+    - app/services/subscriptions/progressive_billed_amount.rb
+
+- id: B6
+  title: Wallets & prepaid credits
+  why: 85 fixes — wallets 52, wallet_transactions 23, applied prepaid credits 10.
+  axes:
+    # `paid` and `paid-settled` are distinct states, not a formatting choice: a purchased top-up
+    # creates its wallet transaction PENDING, so the credits are unusable until the top-up invoice
+    # is paid. Both behaviours have rows, because the gap between them is where revenue hides.
+    source:
+      values: [paid, paid-settled, granted, interval-rule, threshold-rule, target-method]
+    # `target-wallet-code` is the one limitation that lives on the CHARGE rather than on the wallet:
+    # the tag only exists when the charge carries accepts_target_wallet, and nothing else in a row can
+    # produce it. Declared even though the schema key now exists — satisfaction is derived from
+    # schema.json itself, so this documents the dependency and re-blocks these 36 cells by itself if
+    # the key is ever dropped, rather than reporting them as gaps a writer could close today.
+    limitation:
+      values: [none, fee-types, billable-metrics, target-wallet-code]
+      requires:
+        target-wallet-code: {schema: setup.properties.charges.items.properties.accepts_target_wallet}
+    application:
+      values: [full-cover, partial-cover, multi-wallet-priority, rounding, negative-total, ongoing-balance]
+  services:
+    - app/services/wallets
+    - app/services/wallet_transactions
+    - app/services/credits/applied_prepaid_credits_service.rb
+    - app/services/credits/allocate_prepaid_credits_by_wallets_service.rb
+
+- id: B7
+  title: Usage surfaces
+  why: >-
+    customer_usage_service 12 fixes, daily_usages 18, lifetime_usages 9. Includes the invariant no
+    existing spec asserts — usage at period end must equal the invoice it produces.
+  axes:
+    surface:
+      values: [current-usage, daily-usage, lifetime-usage, usage-equals-invoice]
+    aggregation: {domain: aggregations}
+    timing: {values: [mid-period, period-boundary, after-billing, after-termination]}
+  services:
+    - app/services/invoices/customer_usage_service.rb
+    - app/services/daily_usages
+    - app/services/lifetime_usages
+
+- id: B8
+  title: Credit notes
+  why: 53 fixes — create_service 10, create_from_termination 6. Not on the original shortlist; the data surfaced it.
+  axes:
+    origin: {values: [manual-full, manual-partial, from-termination, from-progressive-billing-excess]}
+    credit_note_type: {domain: credit_note_types}
+    invoice_state: {values: [plain, with-coupon, with-tax, with-prepaid-credit]}
+  services:
+    - app/services/credit_notes
+    - app/services/credits/credit_note_service.rb
+
+- id: B9
+  title: Subscription lifecycle
+  why: subscriptions create_service 10 fixes, terminate_service 9, activate_service 6.
+  constraint: subscription_lifecycle
+  axes:
+    # Two of these transitions are performed by a clock job and by nothing else, so `setup` alone can
+    # schedule them but never reach them. Declared even though both verbs now exist: satisfaction is
+    # derived from the interpreter's own dispatch, so this documents the dependency and re-blocks these
+    # 12 cells by itself if either verb is ever dropped, rather than reporting them as gaps a writer
+    # could close today.
+    #
+    # `gated-activation` is the PENDING gate — a future-dated subscription that only
+    # Clock::ActivateSubscriptionsJob activates. The other reading, an activation_rules gate, is not
+    # what blocks these cells and is not what unblocks them: `setup.subscription.activation_rules` now
+    # exists and reaches the API, but the only rule type is `payment`, which is rejected 422
+    # customer/no_linked_payment_provider unless the customer carries a payment provider AND a default
+    # payment method — and /api/v1/payment_methods has no create (routes.rb:75), so no golden setup can
+    # give it either. That reading needs a payment-provider setup section plus PSP stubbing, and until
+    # then the schema key is guarded by canary/subscription-activation-rules rather than claimed here.
+    transition:
+      values: [create-mid-period, trial-end, upgrade, downgrade, terminate, ending-at, recreate-same-external-id, gated-activation]
+      requires:
+        ending-at: {step: perform_ended_subscriptions_termination}
+        gated-activation: {step: perform_subscriptions_activation}
+    plan_pay_in_advance: {values: ["true", "false"]}
+    # The four settable values are Subscription::ON_TERMINATION_CREDIT_NOTES; `none` is listed
+    # explicitly because an arrears plan may not carry the field at all, and that absence is a real
+    # cell rather than a gap. The constraint enforces it.
+    on_termination_credit_note: {values: [none, credit, skip, refund, offset]}
+  services:
+    - app/services/subscriptions/create_service.rb
+    - app/services/subscriptions/terminate_service.rb
+    - app/services/subscriptions/activate_service.rb
+    - app/services/subscriptions/plan_upgrade_service.rb
+    - app/services/subscriptions/plan_downgrade_service.rb
+
+- id: B10
+  title: Discounts & taxes ordering
+  why: >-
+    coupons are applied before VAT (calculate_fees_service.rb:54 vs :56) and the tax precedence
+    ladder in fees/apply_taxes_service.rb:64-78 has never been tested as a ladder.
+  axes:
+    coupon_type: {domain: coupon_types}
+    coupon_frequency: {domain: coupon_frequencies}
+    tax_level:
+      values: [billing-entity, customer, plan, charge, add-on, commitment, fixed-charge, explicit-codes]
+  services:
+    - app/services/credits/applied_coupon_service.rb
+    - app/services/credits/applied_coupons_service.rb
+    - app/services/fees/apply_taxes_service.rb
+    - app/services/invoices/apply_taxes_service.rb
+
+- id: B11
+  title: Plan & charge overrides / cascade
+  why: >-
+    the worst bug-rate-to-coverage ratio measured — 64 fixes across charges children services and
+    plans/update_service, against roughly four scenario specs.
+  axes:
+    operation: {values: [create-child, update-parent-cascade, update-parent-no-cascade, delete-charge, filter-create, filter-update, filter-delete]}
+    target: {values: [plan-override, subscription-override, charge-filter]}
+  services:
+    - app/services/charges/update_children_service.rb
+    - app/services/charges/create_children_service.rb
+    - app/services/charges/destroy_children_service.rb
+    - app/services/plans/update_service.rb
+    - app/services/plans/override_service.rb
+
+- id: B12
+  title: Commitments & spending minimums
+  why: >-
+    spec/scenarios/commitments/minimum/ is already a deliberate grid — and it is missing semiannual
+    entirely, 0 of 4 possible files. The ledger makes that gap visible instead of invisible.
+  axes:
+    commitment_mode: {values: [in-advance, in-arrears]}
+    billing_time: {domain: billing_times}
+    interval: {domain: intervals}
+  services:
+    - app/services/commitments
+    - app/services/fees/create_true_up_service.rb
+
+- id: B13
+  title: Fixed charges
+  why: newer feature, 6 fixes already, and its period boundaries are computed separately from charge boundaries.
+  constraint: fixed_charge
+  axes:
+    charge_model: {domain: fixed_charge_models}
+    pay_in_advance: {values: ["true", "false"]}
+    prorated: {values: ["true", "false"]}
+    # A fixed charge's units are mutable, and nothing in `setup` can move them — the axis needs a
+    # timeline verb per endpoint. Declared even though both verbs now exist: satisfaction is derived
+    # from the interpreter's own dispatch, so this documents the dependency and re-blocks these 27
+    # cells by itself if either verb is ever dropped, rather than reporting them as gaps a writer
+    # could close today.
+    units_change:
+      values: [none, increase-mid-period, decrease-mid-period, subscription-override]
+      requires:
+        increase-mid-period: {step: update_plan_fixed_charge}
+        decrease-mid-period: {step: update_plan_fixed_charge}
+        subscription-override: {step: update_subscription_fixed_charge}
+  services:
+    - app/services/fixed_charges
+    - app/services/fees/fixed_charge_service.rb
+    - app/services/fees/build_pay_in_advance_fixed_charge_service.rb
+
+- id: B14
+  title: Constraints & negative contract
+  why: >-
+    cheapest rows in the suite and they pin the API contract, so a loosened validation or a renamed
+    error code is noticed immediately. The value list is extended by `discover` when a new
+    validation rule ships.
+  axes:
+    rule:
+      values:
+        - prorated_requires_recurring_metric
+        - prorated_rejects_weighted_sum
+        - prorated_advance_standard_only
+        - pay_in_advance_rejects_volume
+        - pay_in_advance_rejects_aggregation
+        - dynamic_requires_sum_agg
+        - custom_requires_custom_agg
+        - percentage_rejects_latest_agg
+        - graduated_percentage_rejects_latest_agg
+        - graduated_percentage_requires_premium
+        - recurring_rejects_aggregation
+        - field_name_required
+        - field_name_ignored_for_count_agg
+        - invoiceable_requires_pay_in_advance
+        - regroup_paid_fees_requires_non_invoiceable
+        - min_amount_cents_rejects_pay_in_advance
+        # Discovered while authoring: without a licence these two params are silently dropped
+        # rather than rejected (Charges::CreateService:46-48), so the caller gets a charge that
+        # does not match what it asked for and no error.
+        - invoiceable_silently_ignored_without_premium
+        - regroup_paid_fees_silently_ignored_without_premium
+        - min_amount_cents_silently_ignored_without_premium
+        - custom_aggregator_not_settable_via_api
+        - invoice_grace_period_silently_ignored_without_premium
+        - graduated_ranges_must_be_contiguous
+        - volume_ranges_must_be_contiguous
+        - package_size_must_be_positive
+        - percentage_max_above_min
+        - interval_blank_is_value_is_invalid
+  services:
+    - app/models/charge.rb
+    - app/models/billable_metric.rb
+    - app/services/charges/validators
+
+- id: B15
+  title: Cross-block interactions
+  why: >-
+    where the real money bugs live, and the reason the suite is one skill with many blocks rather
+    than one skill per domain — a separate skill cannot express an interaction row.
+  # Derived from the pipeline rather than listed by hand. Invoices::CalculateFeesService applies
+  # features in a fixed order, so a pair interacts exactly when both are present and that order
+  # decides the amount. Pairs are unordered (feature_a < feature_b); producer-only pairs are excluded
+  # because two fee producers just add.
+  constraint: interacting_pair
+  axes:
+    feature_a: {domain: billing_features}
+    feature_b: {domain: billing_features}
+  services:
+    - app/services/invoices/calculate_fees_service.rb
+    - app/services/invoices/compute_amounts_from_fees.rb
+
+- id: B16
+  title: Proration
+  why: >-
+    prorated is only legal for a recurring, non-weighted_sum metric, and then only on standard when
+    paying in advance. Prorated aggregators exist solely for sum_agg and unique_count_agg
+    (aggregation_factory.rb:28-40), so the custom_agg cells are characterization rows.
+  constraint: prorated_charge
+  fixed:
+    recurring: "true"
+  axes:
+    charge_model: {domain: charge_models}
+    aggregation: {domain: aggregations}
+    pay_in_advance: {values: ["true", "false"]}
+  services:
+    - app/services/billable_metrics/prorated_aggregations
+    - app/services/charge_models/prorated_graduated_service.rb
+
+- id: B17
+  title: Feature stacks
+  why: >-
+    B15 proves each pair in isolation; a real invoice carries several reducers at once. From three up
+    the question stops being "which of the two runs first" and becomes whether a stage is still
+    handed the right base after everything before it has already moved it — which no pair row can
+    observe. Cells are the derived subsets of the reducer list, so the block grows by itself when the
+    pipeline gains a stage.
+  axes:
+    stack: {domain: reducer_stacks}
+    observed_via: {values: [invoice, preview, regenerated]}
+  services:
+    - app/services/invoices/calculate_fees_service.rb
+    - app/services/invoices/preview_service.rb
+    - app/services/invoices/refresh_draft_service.rb
+
+- id: B18
+  title: Mid-flight changes
+  why: >-
+    Every other block sets a configuration up and then bills it. Real customers change the
+    configuration while an invoice is in flight — a coupon replaced between two threshold invoices, a
+    tax rate edited before the period closes, a charge amount corrected on a draft. What matters is
+    which invoices re-read the change and which were already fixed: a draft re-reads, a finalized
+    invoice must not, and a preview should agree with whichever it is predicting.
+  constraint: observable_after_mutation
+  axes:
+    mutation: {values: [coupon, tax_rate, charge_amount, plan_amount, wallet_balance, grace_period]}
+    stage: {values: [before-first-invoice, between-progressive-invoices, on-draft, after-finalize]}
+    observed_via: {values: [draft, preview, regenerated, invoice]}
+  services:
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/invoices/refresh_draft_and_finalize_service.rb
+    - app/services/invoices/preview_service.rb
+    - app/services/invoices/calculate_fees_service.rb
+
+- id: B19
+  title: Multiplicity
+  why: >-
+    B17 asks what happens when different reducers meet on one invoice. This asks what happens when the
+    SAME one appears twice, which is a different question and an unasserted one: two instances either
+    simply add, or they compete for the same money — and if they compete, something decides which goes
+    first and therefore which survives to the next period. Every one of those orderings exists in the
+    code and none is covered. Applied coupons are sorted metric-limited, then plan-limited, then oldest
+    first, and skipped entirely once the sub_total reaches zero
+    (credits/applied_coupons_service.rb:50-53). Wallets go by ascending priority. Credit notes and
+    prepaid credits each draw on a balance that the one before it has already reduced.
+  constraint: duplicable
+  axes:
+    feature: {domain: duplicable_features}
+    # equal      — two instances configured alike; do both take effect at all
+    # unequal    — two instances that differ in a way the consumption order exposes
+    # capped     — together they exceed what is available, so allocation decides who gets what
+    arrangement: {values: [equal, unequal, capped]}
+    observed_via: {values: [invoice, preview, regenerated]}
+  services:
+    - app/services/credits/applied_coupons_service.rb
+    - app/services/credits/credit_note_service.rb
+    - app/services/credits/allocate_prepaid_credits_by_wallets_service.rb
+    - app/services/fees/apply_taxes_service.rb
+
+- id: B20
+  title: Identity churn
+  why: >-
+    The bugs that reach production are not "this feature is wrong" — they are "this feature could not
+    find its own state after something was reconfigured". Lago recovers carried state by joining on
+    record ids: progressive-billing credits match fees on charge_id, charge_filter_id and grouped_by;
+    an already-paid pay-in-advance fee is matched on charge_id and pay_in_advance_event_id; a limited
+    coupon on plan_id and billable_metric_id. A plan override, a subscription override or an upgrade
+    rewrites those ids, and the lookup then returns nothing rather than failing — so the credit is
+    lost, or the fee is deleted, and the invoice is quietly wrong.
+    Cells are the intersection of what a churn rewrites and what a state is found by, so every one of
+    them names a join actually at risk.
+  constraint: identity_at_risk
+  axes:
+    churn: {domain: churns}
+    carried_state: {domain: carried_states}
+    observed_via: {values: [invoice, draft, regenerated, preview]}
+  services:
+    - app/services/credits/progressive_billing_service.rb
+    - app/services/subscriptions/plan_upgrade_service.rb
+    - app/services/plans/override_service.rb
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/fees/charge_service.rb
+
+- id: B21
+  title: Surface parity
+  why: >-
+    Sixteen of twenty blocks had never asserted anything but a finalized invoice, and BIL-537 is what
+    that costs: B13 covers a fixed-charge units change thirty-six ways and cannot see the bug, because
+    not one of its rows holds an invoice open long enough to refresh it.
+    The fix is not a fourth axis on every block — that would triple more than a thousand cells, most of
+    them cases where draft and final provably agree. It is one cell per (block, surface), asserting for
+    a representative scenario from each block what that surface makes of it. Subject blocks are the ones
+    whose behaviour can actually differ: they involve a reducer gated on finalization
+    (calculate_fees_service.rb:364-379) or are recomputed on refresh.
+  axes:
+    subject_block: {domain: surface_subject_blocks}
+    surface: {domain: surfaces}
+  services:
+    - app/services/invoices/calculate_fees_service.rb
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/invoices/preview_service.rb

@@ -1,0 +1,1785 @@
+# B5 — Progressive billing
+#
+# Invoices::ProgressiveBillingService 7 fixes, Credits::ProgressiveBillingService 5,
+# Subscriptions::ProgressiveBilledAmount 7.
+#
+# A usage threshold bills the customer MID-period as soon as accrued usage crosses it, then the
+# period's real invoice credits back whatever was already collected. Two invoices describe one
+# period, and the credit-back is what stops the customer paying twice — so every row asserts both
+# sides.
+#
+# Every row needs three things beyond the usual: `premium: true`, the `progressive_billing` premium
+# integration on the organization, and `no_transaction: true` — the service runs inside an
+# idempotent_transaction, which refuses to start while a wrapping transaction is open.
+#
+# Shared conventions: monthly / calendar, plan amount_cents 0, standard charge at 1.00 per unit.
+---
+- id: b05/fixed/single/credited-on-final
+  block: B5
+  axes: {threshold: fixed, crossing: single, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 2000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fixed
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}]
+    charges: [{billable_metric_code: b05_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fixed_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fixed_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b05_sum, properties: {amount: 30}}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      select: {invoice_type: subscription}
+      invoice_type: subscription
+      fees_amount_cents: 3000
+      progressive_billing_credit_amount_cents: 3000
+      total_amount_cents: 0
+  math: >-
+    30 units × 1.00 = 3_000¢ of accrued usage crosses the 2_000¢ threshold, and the mid-period
+    progressive_billing invoice then bills ALL accrued usage — 3_000¢, not the 2_000¢ of the
+    threshold. The threshold is a TRIGGER, not a cap; billing only up to it would leave the
+    remaining 1_000¢ uncollected until period end.
+    At period end the subscription invoice re-computes the same 3_000¢ of fees and credits back
+    everything already collected, so progressive_billing_credit_amount_cents is 3_000¢ and nothing
+    further is owed. fees_amount_cents stays 3_000: the credit reduces what is due, not what was
+    charged — the same shape as a wallet in B6, and the reason double-billing here is invisible in
+    the fees total.
+
+- id: b05/fixed/exact-hit/credited-on-final
+  block: B5
+  axes: {threshold: fixed, crossing: exact-hit, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 3000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_exact_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_exact
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 3000}]
+    charges: [{billable_metric_code: b05_exact_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_exact_cust, currency: EUR}
+    subscription: {external_id: golden_b05_exact_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b05_exact_sum, properties: {amount: 30}}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      select: {invoice_type: subscription}
+      fees_amount_cents: 3000
+      progressive_billing_credit_amount_cents: 3000
+      total_amount_cents: 0
+  math: >-
+    Usage lands EXACTLY on the threshold: 30 units × 1.00 = 3_000¢ against a 3_000¢ threshold. The
+    boundary is inclusive — reaching the threshold triggers billing, it does not have to be exceeded
+    — so the same two invoices appear as in the previous row. An off-by-one that required strictly
+    greater-than would produce a single invoice here and nothing would look wrong until the customer
+    was billed a period late.
+
+- id: b05/recurring/single/credited-on-final
+  block: B5
+  axes: {threshold: recurring, crossing: single, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 2000, recurring: true}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rec_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_recurring
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000, recurring: true}]
+    charges: [{billable_metric_code: b05_rec_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_recurring_cust, currency: EUR}
+    subscription: {external_id: golden_b05_recurring_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b05_rec_sum, properties: {amount: 30}}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      select: {invoice_type: subscription}
+      fees_amount_cents: 3000
+      progressive_billing_credit_amount_cents: 3000
+      total_amount_cents: 0
+  math: >-
+    A RECURRING threshold re-arms after each crossing rather than firing once per period, so it bills
+    every further 2_000¢ of usage. Over a single crossing the outcome is identical to the fixed row —
+    3_000¢ billed early, 3_000¢ credited back, nothing owed — which is deliberate: this row pins that
+    the recurring flag does not change the settlement arithmetic, only how often the trigger arms.
+    A plan may hold at most one recurring threshold (UsageThreshold validates uniqueness on
+    [plan_id, recurring]), so this is the only shape it can take.
+
+- id: b05/fixed/single/terminated-mid-period
+  block: B5
+  axes: {threshold: fixed, crossing: single, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_term_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_term
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b05_term_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_term_cust, currency: EUR}
+    subscription: {external_id: golden_b05_term_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_term_sum, properties: {amount: 100}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 10000
+        total_amount_cents: 0
+  math: >-
+    A threshold invoice is money taken for a period that then ends early, so the credit has to survive
+    a boundary the customer never reached.
+    100 units on 5 April cross the 5_000¢ threshold and are billed immediately — 10_000¢. Terminating
+    on 16 April closes the period there and bills the consumed usage, which is the same 100 units, so
+    the final invoice is 10_000¢ of charges credited by the 10_000¢ already collected: nothing more is
+    owed.
+    The credit survives because ProgressiveBillingService looks the threshold invoice up by the
+    charges_from_datetime of the invoice being built (1 April), not by the period's end, and the
+    threshold invoice's own window still contains it. Had it matched on the period end instead, the
+    shortened period would find nothing and the customer would pay 20_000¢ for 10_000¢ of usage.
+    The plan bills in arrears and carries no subscription fee, so the only thing on either invoice is
+    the charge — which is what makes the double-charge visible rather than buried in a proration.
+
+- id: b05/fixed/multiple-in-period/credited-on-final
+  block: B5
+  axes: {threshold: fixed, crossing: multiple-in-period, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_fmf_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fmf
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}, {amount_cents: 5000}]
+    charges: [{billable_metric_code: b05_fmf_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fmf_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fmf_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fmf_sum, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-12T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fmf_sum, properties: {amount: 50}}]
+    - {at: "2024-03-12T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 8000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 8000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two non-recurring thresholds on one plan, crossed at two different moments: three invoices
+    describe one period and all three are asserted.
+    Which thresholds arm is decided by check_service.rb:39-41 —
+    `threshold.amount_cents > invoiced_usage && threshold.amount_cents <= total_usage` — where
+    `invoiced_usage` is the last threshold invoice's own fees (check_service.rb:28 feeding on
+    progressive_billed_amount.rb:58) and `total_usage` is everything accrued.
+    5 March, 30 units x 1.00 = 3_000 cents accrued: invoiced_usage 0, total_usage 3_000, so the
+    2_000 threshold arms and the 5_000 one does not. progressive_billing_service.rb:94-107 then
+    bills the FULL accrued usage over the whole period boundaries (:118-136), so the demand is
+    3_000 cents, not the 2_000 of the threshold.
+    12 March, +50 units = 8_000 cents accrued: invoiced_usage is now 3_000, total_usage 8_000, so
+    the 5_000 threshold arms while the 2_000 one is excluded by `> invoiced_usage` — it cannot fire
+    twice. The second threshold invoice re-bills the whole 8_000 and credits the first invoice's
+    3_000 back (credits/progressive_billing_service.rb:20-58), demanding 5_000 of new cash.
+    3_000 + 5_000 = 8_000 collected, exactly the usage.
+    1 April the period invoice re-computes the same 8_000 of fees and credits
+    `to_credit_amount`, which reads ONLY the last threshold invoice
+    (progressive_billed_amount.rb:55-63): 8_000 cents. That is right because threshold invoices are
+    cumulative and each already credited its predecessor.
+    Summing every threshold invoice instead would credit 11_000 and hand the customer 3_000 they
+    never paid; taking the FIRST invoice instead would credit 3_000 and charge the 5_000 a second
+    time. Both are visible here and neither can be seen in a single-crossing row.
+
+- id: b05/recurring/multiple-in-period/credited-on-final
+  block: B5
+  axes: {threshold: recurring, crossing: multiple-in-period, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 2000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rmf_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rmf
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000, recurring: true}]
+    charges: [{billable_metric_code: b05_rmf_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rmf_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rmf_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rmf_sum, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-12T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rmf_sum, properties: {amount: 30}}]
+    - {at: "2024-03-12T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The recurring threshold is the only one that can fire twice for the same amount, and this is the
+    row that makes it do so.
+    With no fixed threshold `largest_threshold_amount` is 0 (check_service.rb:32), so
+    `invoiced_usage < largest_threshold_amount` is false from the very first check and every
+    crossing goes through the recurring branch at check_service.rb:47-52:
+    `actual_current_usage + (invoiced_usage % R) >= R`.
+    5 March, 30 units = 3_000 cents: invoiced_usage 0, remainder 0, actual 3_000 >= 2_000, so it
+    fires and bills all accrued usage — 3_000 cents.
+    12 March, +30 units = 6_000 accrued: invoiced_usage = the first invoice's fees = 3_000
+    (progressive_billed_amount.rb:58), remainder = 3_000 % 2_000 = 1_000, actual = 6_000 - 3_000 =
+    3_000, and 3_000 + 1_000 = 4_000 >= 2_000, so it re-arms. The second invoice re-bills 6_000 and
+    credits the first's 3_000, demanding 3_000. Cash 3_000 + 3_000 = 6_000.
+    Note this second invoice only exists because progressive_billing_service.rb:32-34 widens the
+    idempotency key with `previous_progressive_billing_invoice_id` when the last armed threshold is
+    recurring — without it the key (invoiced_usage 0, threshold_amount 2_000, :21-26) is identical
+    to the first invoice's and the second demand is swallowed as a duplicate, leaving 3_000 of usage
+    uncollected until period end.
+    1 April: fees 6_000, credit = the LAST threshold invoice's `to_credit_amount` = 6_000, nothing
+    owed. Crediting the sum of both threshold invoices would give 9_000 and refund 3_000 that was
+    never paid.
+
+- id: b05/recurring/exact-hit/credited-on-final
+  block: B5
+  axes: {threshold: recurring, crossing: exact-hit, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 3000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_ref_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_ref
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 3000, recurring: true}]
+    charges: [{billable_metric_code: b05_ref_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_ref_cust, currency: EUR}
+    subscription: {external_id: golden_b05_ref_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_ref_sum, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 3000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The recurring boundary, hit exactly. 30 units x 1.00 = 3_000 cents against a 3_000 recurring
+    threshold. The recurring branch is check_service.rb:48-52 and the comparison is
+    `actual_current_usage + recurring_remainder >= recurring_threshold.amount_cents`: with
+    invoiced_usage 0 the remainder is 0 and 3_000 >= 3_000 is true, so the threshold fires.
+    The row sits on the boundary on purpose. One cent below — `amount: 29.99`, 2_999 cents — the
+    comparison fails and there is ONE invoice, 2_999 cents charged a month later. One cent above,
+    3_001 cents, it fires and bills 3_001. So a `>` in place of `>=` at check_service.rb:50 turns
+    `invoices: 3` worth of assertions here into a single invoice of 3_000, and the failure is the
+    invoice count rather than a rounding argument.
+    The settlement is the same shape as the fixed rows: 3_000 billed early,
+    `to_credit_amount` = 3_000 (progressive_billed_amount.rb:60-63, nothing having reduced the
+    threshold invoice), credited in full, nothing owed. That is deliberate — the recurring flag
+    changes how often the trigger arms, never the settlement arithmetic.
+
+- id: b05/multiple/single/credited-on-final
+  block: B5
+  axes: {threshold: multiple, crossing: single, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_msf_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_msf
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_msf_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_msf_cust, currency: EUR}
+    subscription: {external_id: golden_b05_msf_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_msf_sum, properties: {amount: 60}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 6000
+        total_amount_cents: 6000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Three thresholds on one plan — two fixed and the one recurring one a plan is allowed
+    (UsageThreshold:20-21) — and a single jump that passes TWO of them at once. The point of the
+    row is that two armed thresholds still produce exactly ONE invoice.
+    60 units x 1.00 = 6_000 cents on 5 March. invoiced_usage 0, total_usage 6_000, so
+    check_service.rb:39-41 arms both 2_000 and 5_000. The recurring one is guarded separately at
+    :42-46 by `total_usage - largest_threshold_amount >= recurring_threshold.amount_cents`:
+    6_000 - 5_000 = 1_000, which is under 4_000, so it stays disarmed — the recurring threshold only
+    starts counting once the whole fixed ladder is behind it.
+    Invoices::ProgressiveBillingService is handed the armed set as one list and creates ONE invoice
+    for it (progressive_billing_service.rb:15-19, with one AppliedUsageThreshold per threshold at
+    :138-147), billing the accrued 6_000 once.
+    An implementation that invoiced per armed threshold would produce three invoices here, and by
+    billing accrued usage each time would demand 6_000 twice — 12_000 for 6_000 of usage. That is
+    what `invoices: 2` pins, and it is unreachable from a plan with a single threshold.
+    1 April: fees 6_000, `to_credit_amount` 6_000, credited in full, nothing owed.
+
+- id: b05/multiple/multiple-in-period/credited-on-final
+  block: B5
+  axes: {threshold: multiple, crossing: multiple-in-period, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mmf_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mmf
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mmf_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mmf_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mmf_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mmf_sum, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-12T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mmf_sum, properties: {amount: 40}}]
+    - {at: "2024-03-12T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mmf_sum, properties: {amount: 50}}]
+    - {at: "2024-03-20T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 4
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 7000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 4000
+        total_amount_cents: 4000
+      - select: {invoice_type: progressive_billing, index: 2}
+        fees_amount_cents: 12000
+        progressive_billing_credit_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 12000
+        progressive_billing_credit_amount_cents: 12000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The hand-off from the fixed ladder to the recurring threshold, which no other cell in this block
+    reaches: check_service.rb:36 chooses between two entirely different branches on
+    `invoiced_usage < largest_threshold_amount`, and this row crosses that line mid-period.
+    Thresholds: fixed 2_000 and 5_000, recurring 4_000, so `largest_threshold_amount` is 5_000.
+    5 March, 30 units = 3_000: invoiced 0 < 5_000, fixed branch, armed = [2_000] (5_000 > 3_000).
+    Recurring guard 3_000 - 5_000 is negative, disarmed. Invoice 1 bills 3_000.
+    12 March, +40 units = 7_000 accrued: invoiced = 3_000, still < 5_000, fixed branch, armed =
+    [5_000] (`> 3_000` drops 2_000, `<= 7_000` admits 5_000). Recurring guard 7_000 - 5_000 = 2_000
+    < 4_000, still disarmed. Invoice 2 bills 7_000 and credits 3_000, demanding 4_000.
+    20 March, +50 units = 12_000 accrued: invoiced = 7_000, and 7_000 < 5_000 is now FALSE, so the
+    elsif at :47 takes over: remainder = 7_000 % 4_000 = 3_000, actual = 12_000 - 7_000 = 5_000,
+    5_000 + 3_000 = 8_000 >= 4_000, so the recurring threshold arms for the first time. Invoice 3
+    bills 12_000 and credits 7_000, demanding 5_000.
+    Cash 3_000 + 4_000 + 5_000 = 12_000, exactly the usage.
+    1 April: fees 12_000, `to_credit_amount` = the LAST threshold invoice's fees = 12_000
+    (progressive_billed_amount.rb:55-63), so nothing is owed.
+    If the two branches were merged — recurring armed while the ladder was unfinished — a fourth
+    threshold invoice would appear on 12 March; if the modulo at :48 used the recurring amount
+    against total usage instead of invoiced usage, 20 March would arm nothing and 5_000 would go
+    uncollected until April.
+
+- id: b05/multiple/exact-hit/credited-on-final
+  block: B5
+  axes: {threshold: multiple, crossing: exact-hit, settlement: credited-on-final}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mef_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mef
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mef_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mef_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mef_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mef_sum, properties: {amount: 20}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 2000
+        total_amount_cents: 2000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 2000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The LOWEST rung of a three-threshold ladder, hit exactly, with two higher thresholds present to
+    prove they do not interfere.
+    20 units x 1.00 = 2_000 cents against fixed 2_000 / fixed 5_000 / recurring 4_000. invoiced 0 <
+    largest 5_000, so the fixed branch runs and check_service.rb:40 asks
+    `2_000 > 0 && 2_000 <= 2_000` — true on the inclusive upper bound, so exactly one threshold
+    arms. The recurring guard at :43 sees 2_000 - 5_000, negative, and stays out.
+    One cent below (`amount: 19.99`, 1_999 cents) nothing arms and the whole period is a single
+    invoice of 1_999 a month later; one cent above, 2_001, the same single threshold arms and bills
+    2_001. So `<=` becoming `<` at :40 collapses this row from two invoices to one, and the failure
+    names the invoice count.
+    Settlement: fees 2_000, `to_credit_amount` 2_000, credited in full, nothing owed. The higher
+    fixed threshold and the recurring one contribute nothing — which is the assertion, since a
+    ladder that armed everything at or below the largest threshold would demand 2_000 and then
+    re-demand it.
+
+# `excess-to-credit-note` — the settlement where the threshold invoices have already collected MORE
+# than the period turns out to be worth. Read from credits/progressive_billing_service.rb:36-42:
+# when `to_credit_amount > total_charges_amount`, Lago raises an automatic credit note on the
+# threshold invoice for the difference and then credits only what the period's charges can absorb.
+# It is a real credit note, not a zero invoice and not a negative line, and it is left AVAILABLE on
+# the customer rather than spent on the period invoice — that invoice's total is already 0 by the
+# time Credits::CreditNoteService runs (calculate_fees_service.rb:53 before :61), so
+# credit_note_service.rb:41-47 finds nothing to apply.
+#
+# Falling usage is produced with `latest_agg`: the metric's value is the LAST event in the period
+# (aggregations/latest_service.rb:17-19), so a smaller later event genuinely reduces what the period
+# is worth. A monotonic aggregation cannot reach this cell at all.
+
+- id: b05/fixed/single/excess-to-credit-note
+  block: B5
+  axes: {threshold: fixed, crossing: single, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 5000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_fse_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fse
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b05_fse_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fse_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fse_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fse_latest, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fse_latest, properties: {amount: 20}}]
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      reason: other
+      credit_amount_cents: 8000
+      refund_amount_cents: 0
+      balance_amount_cents: 8000
+      total_amount_cents: 8000
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    Money already taken for a period that then shrinks. 5 March a single event of 100 units x 1.00 =
+    10_000 cents crosses the 5_000 threshold and is billed in full — one crossing, one threshold
+    invoice of 10_000.
+    15 March a second event of 20 units arrives. With `latest_agg` the period is now worth the LAST
+    event only (latest_service.rb:17-19), so accrued usage falls to 2_000. No further threshold can
+    arm: check_service.rb:25-27 computes `actual_current_usage = current - progressive_billed` =
+    2_000 - 10_000 = -8_000 and returns immediately on the negative.
+    1 April the period invoice's charges are 2_000 while
+    `to_credit_amount` is still the threshold invoice's 10_000 (progressive_billed_amount.rb:60-63:
+    fees, less its own coupons, less credits pointing AT it, less credit notes on it — all zero
+    here). credits/progressive_billing_service.rb:26-31 measures what the period can absorb —
+    `total_charges_amount` = 2_000, the charge fees sharing the threshold invoice's charge_id — and
+    :36-42 finds 10_000 > 2_000, so it issues a credit note on the THRESHOLD invoice for
+    10_000 - 2_000 = 8_000 and clamps the credit to 2_000.
+    The credit note is 8_000 exactly: create_from_progressive_billing_invoice.rb:41-58 takes items
+    off the threshold invoice's fees largest-first (one 10_000 fee, creditable 10_000, so a single
+    8_000 item) and :69-79 grosses it up by taxes less coupon adjustment — both zero — giving
+    credit_amount_cents 8_000, balance 8_000, total 8_000 (create_service.rb:68-73).
+    The period invoice therefore reads 2_000 of fees fully credited, total 0, and
+    credit_notes_amount_cents 0 — the 8_000 is NOT spent on it, because
+    credit_note_service.rb:41-47 starts from `invoice.total_amount_cents`, which the progressive
+    credit already took to 0.
+    Net cash: 10_000 collected, 8_000 returned as credit, 2_000 kept — the period's real value.
+    Had the clamp at :41 been omitted the period invoice would carry a 10_000 credit against 2_000
+    of fees and a negative total; had the credit-note branch been omitted the customer would simply
+    keep paying 10_000 for 2_000 of usage.
+
+- id: b05/fixed/multiple-in-period/excess-to-credit-note
+  block: B5
+  pins: ["F01"]
+  axes: {threshold: fixed, crossing: multiple-in-period, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_fme_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fme
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}, {amount_cents: 5000}]
+    charges: [{billable_metric_code: b05_fme_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fme_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fme_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fme_latest, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-12T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fme_latest, properties: {amount: 80}}]
+    - {at: "2024-03-12T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fme_latest, properties: {amount: 10}}]
+    - {at: "2024-03-20T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 8000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 1000
+        progressive_billing_credit_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 7000
+      balance_amount_cents: 7000
+      total_amount_cents: 7000
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    Two threshold invoices, then a collapse — the case that decides WHICH invoice the refund comes
+    off.
+    5 March, latest event 30 units = 3_000: the 2_000 threshold arms, invoice 1 bills 3_000.
+    12 March, latest event 80 units = 8_000: invoiced_usage is 3_000, so check_service.rb:39-41 arms
+    5_000 only; invoice 2 re-bills 8_000, credits invoice 1's 3_000 and demands 5_000. Cash so far
+    3_000 + 5_000 = 8_000.
+    20 March, latest event 10 units = 1_000. `actual_current_usage` = 1_000 - 8_000 is negative
+    (check_service.rb:25-27), so nothing further arms.
+    1 April the period's charges are 1_000. `to_credit_amount` reads only the LAST threshold invoice
+    (progressive_billed_amount.rb:55-63) = 8_000, which is the whole cash position precisely because
+    invoice 2 already absorbed invoice 1. 8_000 > 1_000, so the credit note is raised on invoice 2
+    for 7_000 and the credit clamps to 1_000.
+    Invoice 1 gets NO credit note, and that is the assertion: refunding both invoices, or refunding
+    the first, would return 10_000 or 3_000 against 8_000 of cash. 8_000 - 7_000 = 1_000 kept,
+    exactly what the period is worth.
+    The note has one item: create_from_progressive_billing_invoice.rb:46-58 walks invoice 2's fees
+    largest-first and its single 8_000 fee covers the 7_000 in one go.
+
+- id: b05/fixed/exact-hit/excess-to-credit-note
+  block: B5
+  axes: {threshold: fixed, crossing: exact-hit, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 3000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_fxe_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fxe
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 3000}]
+    charges: [{billable_metric_code: b05_fxe_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fxe_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fxe_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fxe_latest, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fxe_latest, properties: {amount: 5}}]
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 500
+        progressive_billing_credit_amount_cents: 500
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 2500
+      balance_amount_cents: 2500
+      total_amount_cents: 2500
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    An exact hit that later has to be given back — the two behaviours the block treats separately,
+    on one invoice pair.
+    5 March, 30 units x 1.00 = 3_000 cents against a 3_000 threshold. check_service.rb:40 is
+    `threshold.amount_cents <= total_usage`, inclusive, so exactly-on fires and the invoice bills
+    3_000. At 2_999 (`amount: 29.99`) nothing fires, there is one invoice, no credit note, and the
+    customer is billed 2_999 in April instead — so this row fails on the invoice count AND on the
+    absence of the credit note if that comparison ever loses its equality.
+    15 March the latest event drops to 5 units = 500, so the period is worth 500 and no further
+    threshold can arm (actual_current_usage 500 - 3_000 is negative, :25-27).
+    1 April: `to_credit_amount` 3_000 against `total_charges_amount` 500
+    (credits/progressive_billing_service.rb:26-34), so :36-42 refunds 3_000 - 500 = 2_500 as a
+    credit note on the threshold invoice and credits 500 to the period invoice, which settles at 0.
+    2_500 is grossed up by nothing (create_from_progressive_billing_invoice.rb:69-79, no tax, no
+    coupon), so credit_amount_cents, balance and total all read 2_500.
+    Cash: 3_000 in, 2_500 back, 500 kept.
+
+- id: b05/recurring/single/excess-to-credit-note
+  block: B5
+  axes: {threshold: recurring, crossing: single, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 5000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rse_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rse
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000, recurring: true}]
+    charges: [{billable_metric_code: b05_rse_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rse_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rse_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rse_latest, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rse_latest, properties: {amount: 20}}]
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 8000
+      balance_amount_cents: 8000
+      total_amount_cents: 8000
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    The same refund, reached through the recurring branch rather than the fixed one — the pair with
+    b05/fixed/single/excess-to-credit-note, which is what makes it worth a row: it pins that the
+    refund path does not depend on which branch armed the threshold.
+    With no fixed threshold `largest_threshold_amount` is 0, so check_service.rb:36 is false from
+    the start and the recurring test at :48-52 applies: remainder 0 % 5_000 = 0 and 10_000 >= 5_000,
+    so 100 units x 1.00 = 10_000 cents is billed on 5 March.
+    15 March the latest event falls to 20 units = 2_000 and nothing re-arms — a recurring threshold
+    re-arms on `actual_current_usage`, which is 2_000 - 10_000, negative, and :27 returns.
+    1 April: to_credit 10_000 versus charges of 2_000, so
+    credits/progressive_billing_service.rb:36-42 refunds 8_000 as a credit note on the threshold
+    invoice and credits 2_000. Period invoice total 0, credit note available at 8_000.
+    A recurring threshold that re-armed on TOTAL usage rather than on usage net of what was already
+    billed would fire again here on 15 March, producing a third invoice and a second refund.
+
+- id: b05/recurring/multiple-in-period/excess-to-credit-note
+  block: B5
+  pins: ["F01"]
+  axes: {threshold: recurring, crossing: multiple-in-period, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 2000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rme_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rme
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000, recurring: true}]
+    charges: [{billable_metric_code: b05_rme_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rme_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rme_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rme_latest, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-12T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rme_latest, properties: {amount: 60}}]
+    - {at: "2024-03-12T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rme_latest, properties: {amount: 10}}]
+    - {at: "2024-03-20T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 1000
+        progressive_billing_credit_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 5000
+      balance_amount_cents: 5000
+      total_amount_cents: 5000
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    A recurring threshold firing twice and then having to hand most of it back.
+    5 March, 30 units = 3_000: remainder 0 % 2_000 = 0, 3_000 >= 2_000, invoice 1 bills 3_000.
+    12 March, latest event 60 units = 6_000: invoiced_usage = 3_000, remainder 3_000 % 2_000 =
+    1_000, actual 6_000 - 3_000 = 3_000, and 3_000 + 1_000 >= 2_000, so it re-arms
+    (check_service.rb:48-52). Invoice 2 bills 6_000, credits 3_000, demands 3_000. Cash 6_000.
+    20 March the latest event falls to 10 units = 1_000 and nothing arms.
+    1 April: `to_credit_amount` is invoice 2's 6_000 — one figure, not the 9_000 the two invoices add
+    up to, because invoice 2 already carries invoice 1's credit inside it
+    (progressive_billed_amount.rb:55-63). Charges are 1_000, so 5_000 is refunded as a credit note on
+    invoice 2 and 1_000 is credited. Cash 6_000 - 5_000 = 1_000, the period's value.
+    A refund computed from the SUM of the threshold invoices would return 8_000 against 6_000 of
+    cash — a 2_000 gift; one computed from invoice 1 would return 2_000 and keep 4_000 of the
+    customer's money.
+
+- id: b05/recurring/exact-hit/excess-to-credit-note
+  block: B5
+  axes: {threshold: recurring, crossing: exact-hit, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 3000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rxe_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rxe
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 3000, recurring: true}]
+    charges: [{billable_metric_code: b05_rxe_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rxe_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rxe_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rxe_latest, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rxe_latest, properties: {amount: 8}}]
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 800
+        progressive_billing_credit_amount_cents: 800
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 2200
+      balance_amount_cents: 2200
+      total_amount_cents: 2200
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    The recurring boundary hit exactly, then refunded.
+    5 March, 30 units x 1.00 = 3_000 cents against a recurring 3_000 threshold: invoiced_usage 0 so
+    the remainder is 0, and check_service.rb:50 asks `3_000 + 0 >= 3_000` — true only because the
+    comparison is inclusive. At 2_999 (`amount: 29.99`) there is no threshold invoice and no credit
+    note, so this row fails on both counts if the equality is ever lost.
+    15 March the latest event falls to 8 units = 800; nothing re-arms (actual 800 - 3_000 negative).
+    1 April: charges 800 against `to_credit_amount` 3_000, so
+    credits/progressive_billing_service.rb:36-42 refunds 2_200 on the threshold invoice and credits
+    800. Period invoice total 0; credit note available at 2_200; net cash kept 800.
+
+- id: b05/multiple/single/excess-to-credit-note
+  block: B5
+  axes: {threshold: multiple, crossing: single, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mse_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mse
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mse_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mse_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mse_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mse_latest, properties: {amount: 60}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mse_latest, properties: {amount: 15}}]
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 6000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 1500
+        progressive_billing_credit_amount_cents: 1500
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 4500
+      balance_amount_cents: 4500
+      total_amount_cents: 4500
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    Two fixed thresholds armed at once on a plan that also holds a recurring one, then a collapse.
+    5 March, 60 units x 1.00 = 6_000 cents: invoiced 0 < largest fixed 5_000 so the fixed branch
+    arms both 2_000 and 5_000 (check_service.rb:39-41), while the recurring guard at :43 sees
+    6_000 - 5_000 = 1_000 < 4_000 and stays out. Two armed thresholds, ONE invoice, billing the
+    accrued 6_000 (progressive_billing_service.rb:15-19 takes the whole armed list).
+    15 March the latest event falls to 15 units = 1_500; nothing arms (1_500 - 6_000 negative).
+    1 April: charges 1_500, `to_credit_amount` 6_000, so 4_500 is refunded as a credit note on the
+    single threshold invoice and 1_500 is credited — period invoice 0, cash kept 1_500.
+    The refund is one note of 4_500, not one per armed threshold:
+    credits/progressive_billing_service.rb:36-42 is driven by the invoice, not by
+    AppliedUsageThreshold, so the two thresholds that produced this invoice share its single refund.
+    An implementation that refunded per threshold would return 9_000 against 6_000 collected.
+
+- id: b05/multiple/multiple-in-period/excess-to-credit-note
+  block: B5
+  pins: ["F01"]
+  axes: {threshold: multiple, crossing: multiple-in-period, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mme_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mme
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mme_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mme_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mme_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mme_latest, properties: {amount: 30}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-12T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mme_latest, properties: {amount: 70}}]
+    - {at: "2024-03-12T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-18T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mme_latest, properties: {amount: 120}}]
+    - {at: "2024-03-18T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-25T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mme_latest, properties: {amount: 20}}]
+    - {at: "2024-03-25T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 4
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 7000
+        progressive_billing_credit_amount_cents: 3000
+        total_amount_cents: 4000
+      - select: {invoice_type: progressive_billing, index: 2}
+        fees_amount_cents: 12000
+        progressive_billing_credit_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 10000
+      balance_amount_cents: 10000
+      total_amount_cents: 10000
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    The deepest chain this block reaches: the fixed ladder, then the recurring re-arm, then a
+    collapse — four invoices and a refund, all asserted.
+    Thresholds fixed 2_000 / 5_000 and recurring 4_000, so largest_threshold_amount is 5_000.
+    5 March, latest 30 units = 3_000: fixed branch (0 < 5_000), armed [2_000]; invoice 1 bills 3_000.
+    12 March, latest 70 units = 7_000: invoiced 3_000, still < 5_000, armed [5_000]; recurring guard
+    7_000 - 5_000 = 2_000 < 4_000. Invoice 2 bills 7_000, credits 3_000, demands 4_000.
+    18 March, latest 120 units = 12_000: invoiced 7_000, so `7_000 < 5_000` is false and
+    check_service.rb:47-52 takes over — remainder 7_000 % 4_000 = 3_000, actual 12_000 - 7_000 =
+    5_000, 5_000 + 3_000 >= 4_000, so the recurring threshold arms. Invoice 3 bills 12_000, credits
+    7_000, demands 5_000. Cash 3_000 + 4_000 + 5_000 = 12_000.
+    25 March, latest 20 units = 2_000: `actual_current_usage` 2_000 - 12_000 is negative, nothing
+    arms (:25-27).
+    1 April: charges 2_000 against `to_credit_amount` = invoice 3's 12_000 — the single latest
+    threshold invoice, which is also exactly the cash collected because each invoice credited its
+    predecessor (progressive_billed_amount.rb:55-63). 12_000 > 2_000, so
+    credits/progressive_billing_service.rb:36-42 refunds 10_000 on invoice 3 and clamps the credit to
+    2_000. Cash kept 2_000.
+    Two failure modes are pinned here that a shallower chain cannot see: refunding against the SUM of
+    the three threshold invoices would return 20_000 for 12_000 collected, and refunding against the
+    FIRST would return 1_000 and leave 9_000 of the customer's money with Lago.
+
+- id: b05/multiple/exact-hit/excess-to-credit-note
+  block: B5
+  axes: {threshold: multiple, crossing: exact-hit, settlement: excess-to-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", aggregation: latest_agg, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mxe_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mxe
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mxe_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mxe_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mxe_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mxe_latest, properties: {amount: 20}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mxe_latest, properties: {amount: 4}}]
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 2000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 400
+        progressive_billing_credit_amount_cents: 400
+        credit_notes_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {credit_status: available}
+      credit_status: available
+      credit_amount_cents: 1600
+      balance_amount_cents: 1600
+      total_amount_cents: 1600
+      taxes_amount_cents: 0
+      items_count: 1
+  math: >-
+    The lowest rung of a three-threshold ladder, hit exactly, and then refunded almost entirely.
+    5 March, 20 units x 1.00 = 2_000 cents. invoiced 0 < largest fixed 5_000, so the fixed branch
+    runs and check_service.rb:40 asks `2_000 > 0 && 2_000 <= 2_000` — the inclusive bound is what
+    arms it. 5_000 is above total usage and the recurring guard at :43 sees 2_000 - 5_000, negative,
+    so exactly one threshold arms and the invoice bills 2_000. At 1_999 nothing arms: no threshold
+    invoice, no credit note, one invoice of 1_999 in April.
+    15 March the latest event falls to 4 units = 400.
+    1 April: charges 400 against `to_credit_amount` 2_000, so 1_600 comes back as a credit note on
+    the threshold invoice and 400 is credited. Period invoice 0, cash kept 400.
+    The two idle thresholds are the point of the `multiple` shape here: neither the higher fixed rung
+    nor the recurring one may change the exact hit or the size of the refund.
+
+# `terminated-mid-period` — the credit has to survive a period boundary the customer never reached.
+# credits/progressive_billing_service.rb:20-21 looks the threshold invoices up by the
+# `charges_from_datetime` of the invoice being built (1 April here), and the threshold invoice's own
+# window still contains it (progressive_billed_amount.rb:34-41 wants
+# `charges_to_datetime > timestamp` and `charges_from_datetime <= timestamp`). Matching on the
+# period END instead would find nothing on a shortened period and charge the whole thing twice.
+# Plan amount is 0 and arrears, so no subscription fee and no proration is in the way: the only
+# thing on either invoice is the charge, which is what makes a double charge visible.
+
+- id: b05/fixed/multiple-in-period/terminated-mid-period
+  block: B5
+  axes: {threshold: fixed, crossing: multiple-in-period, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_fmt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fmt
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}, {amount_cents: 5000}]
+    charges: [{billable_metric_code: b05_fmt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fmt_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fmt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fmt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fmt_sum, properties: {amount: 50}}]
+    - {at: "2024-04-10T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 8000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 8000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    TWO threshold invoices and then a termination — the case where the "last threshold invoice"
+    lookup and the shortened-period lookup have to be right at the same time.
+    5 April, 30 units x 1.00 = 3_000 cents arms the 2_000 threshold (check_service.rb:39-41,
+    invoiced_usage 0) and is billed in full.
+    10 April, +50 units = 8_000 accrued: invoiced_usage is now 3_000 so the 2_000 rung is excluded by
+    `> invoiced_usage` and the 5_000 one arms. Invoice 2 re-bills 8_000 and credits invoice 1's
+    3_000, demanding 5_000. Cash 3_000 + 5_000 = 8_000.
+    Terminating on 16 April closes the period there and bills the consumed usage in arrears — the
+    same 100 units accrued before termination, so 8_000 of charge. The credit is
+    `to_credit_amount` of the LAST threshold invoice (progressive_billed_amount.rb:55-63) = 8_000, so
+    nothing more is owed and no credit note is issued (8_000 is not GREATER than the 8_000 of charges,
+    so credits/progressive_billing_service.rb:36 is false).
+    Two wrong answers are excluded: crediting invoice 1 only would leave 5_000 due for usage already
+    paid, and crediting the sum 11_000 would exceed the 8_000 of charges, trip the :36 branch and
+    refund 3_000 the customer never overpaid.
+
+- id: b05/fixed/exact-hit/terminated-mid-period
+  block: B5
+  axes: {threshold: fixed, crossing: exact-hit, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 3000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_fxt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_fxt
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 3000}]
+    charges: [{billable_metric_code: b05_fxt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_fxt_cust, currency: EUR}
+    subscription: {external_id: golden_b05_fxt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_fxt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 3000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    An exact hit whose period then ends early.
+    5 April, 30 units x 1.00 = 3_000 cents against a 3_000 threshold: check_service.rb:40 is
+    inclusive, so it fires and bills 3_000. At 2_999 nothing fires and the termination invoice on 16
+    April is the only invoice, carrying 2_999 due — so the row fails on the invoice count as well as
+    on the amounts.
+    Terminating on 16 April bills the usage consumed in the shortened period, which is the same 30
+    units = 3_000, and credits the 3_000 already taken: total 0.
+    The credit survives the shortened period because the lookup is by the invoice's
+    `charges_from_datetime` (1 April) against the threshold invoice's own window, which still runs to
+    30 April (credits/progressive_billing_service.rb:20-21,
+    progressive_billed_amount.rb:34-41). Keying it on the period END would find nothing here and bill
+    the customer 6_000 for 3_000 of usage.
+
+- id: b05/recurring/single/terminated-mid-period
+  block: B5
+  axes: {threshold: recurring, crossing: single, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 5000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rst_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rst
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000, recurring: true}]
+    charges: [{billable_metric_code: b05_rst_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rst_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rst_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rst_sum, properties: {amount: 100}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    A recurring threshold whose period is cut short before it can re-arm — the control for
+    b05/recurring/multiple-in-period/terminated-mid-period.
+    With no fixed threshold `largest_threshold_amount` is 0, so check_service.rb:36 is false and the
+    recurring test at :48-52 runs: remainder 0, actual 10_000 >= 5_000. 100 units x 1.00 = 10_000
+    cents is billed on 5 April.
+    Terminating on 16 April bills the consumed usage — the same 10_000 — and credits the 10_000
+    already collected, so nothing more is due. `to_credit_amount` is the threshold invoice's fees with
+    nothing subtracted (progressive_billed_amount.rb:60-63: no coupons, no credits pointing at it, no
+    credit notes on it).
+    Compare with the fixed row of the same shape: the recurring flag changes only how often the
+    trigger arms, and termination gives it no second chance to.
+
+- id: b05/recurring/multiple-in-period/terminated-mid-period
+  block: B5
+  axes: {threshold: recurring, crossing: multiple-in-period, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 2000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rmt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rmt
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000, recurring: true}]
+    charges: [{billable_metric_code: b05_rmt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rmt_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rmt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rmt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rmt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-10T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    A recurring threshold that fires twice and then has its period cut short.
+    5 April, 30 units = 3_000: remainder 0 % 2_000 = 0, actual 3_000 >= 2_000, invoice 1 bills 3_000.
+    10 April, +30 units = 6_000 accrued: invoiced_usage 3_000, remainder 3_000 % 2_000 = 1_000, actual
+    3_000, and 3_000 + 1_000 >= 2_000, so it re-arms (check_service.rb:48-52). Invoice 2 re-bills
+    6_000, credits 3_000, demands 3_000. This second invoice exists only because
+    progressive_billing_service.rb:32-34 adds `previous_progressive_billing_invoice_id` to the
+    idempotency key for a recurring threshold — the rest of the key (:21-26) is identical between the
+    two demands.
+    Terminating on 16 April bills the consumed 6_000 and credits `to_credit_amount` of the LAST
+    threshold invoice = 6_000, so nothing is owed. Cash 3_000 + 3_000 = 6_000 = the period's value.
+    Crediting the sum of both threshold invoices would give 9_000, exceed the 6_000 of charges, trip
+    the excess branch at credits/progressive_billing_service.rb:36 and refund 3_000 that was never
+    overpaid — which is why the credit-note count matters here even though this row expects none.
+
+- id: b05/recurring/exact-hit/terminated-mid-period
+  block: B5
+  axes: {threshold: recurring, crossing: exact-hit, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "recurring 3000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_rxt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_rxt
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 3000, recurring: true}]
+    charges: [{billable_metric_code: b05_rxt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_rxt_cust, currency: EUR}
+    subscription: {external_id: golden_b05_rxt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_rxt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 3000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The recurring boundary hit exactly, on a period that then ends early.
+    5 April, 30 units x 1.00 = 3_000 cents against a recurring 3_000 threshold: invoiced_usage 0 so
+    the remainder is 0 and check_service.rb:50 asks `3_000 + 0 >= 3_000`, true on the equality. The
+    invoice bills the accrued 3_000. At 2_999 nothing fires and the 16 April termination invoice is
+    the only one, carrying 2_999 due.
+    Terminating on 16 April bills the same 3_000 of consumed usage and credits the 3_000 already
+    taken, so total 0 — the credit found through the threshold invoice's own still-open window
+    (progressive_billed_amount.rb:34-41), not through the shortened period's end.
+
+- id: b05/multiple/single/terminated-mid-period
+  block: B5
+  axes: {threshold: multiple, crossing: single, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mst_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mst
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mst_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mst_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mst_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mst_sum, properties: {amount: 60}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 6000
+        total_amount_cents: 6000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two fixed rungs armed in one jump on a plan that also holds a recurring threshold, then a
+    termination.
+    5 April, 60 units x 1.00 = 6_000 cents: invoiced 0 < largest fixed 5_000, so the fixed branch
+    arms both 2_000 and 5_000 (check_service.rb:39-41); the recurring guard at :43 sees
+    6_000 - 5_000 = 1_000 < 4_000 and stays out. Both armed thresholds go into ONE invoice
+    (progressive_billing_service.rb:15-19), billing the accrued 6_000.
+    Terminating on 16 April bills the consumed 6_000 and credits the 6_000 collected: total 0.
+    An implementation invoicing per armed threshold would have produced two threshold invoices of
+    6_000 each, and the termination invoice would then credit only the later one — 6_000 credited
+    against 12_000 collected, so the customer would be 6_000 out of pocket with a zero-total invoice
+    to look at. `invoices: 2` is what stops that reading.
+
+- id: b05/multiple/multiple-in-period/terminated-mid-period
+  block: B5
+  axes: {threshold: multiple, crossing: multiple-in-period, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mmt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mmt
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mmt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mmt_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mmt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mmt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-04-09T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mmt_sum, properties: {amount: 40}}]
+    - {at: "2024-04-09T11:00:00Z", do: perform_usage_update}
+    - at: "2024-04-13T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mmt_sum, properties: {amount: 50}}]
+    - {at: "2024-04-13T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 4
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 7000
+        progressive_billing_credit_amount_cents: 3000
+        total_amount_cents: 4000
+      - select: {invoice_type: progressive_billing, index: 2}
+        fees_amount_cents: 12000
+        progressive_billing_credit_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 12000
+        progressive_billing_credit_amount_cents: 12000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Three threshold invoices spanning the fixed-to-recurring hand-off, and then a termination eleven
+    days before the period would have ended.
+    Thresholds fixed 2_000 / 5_000 and recurring 4_000, largest fixed 5_000.
+    5 April, 30 units = 3_000: fixed branch, armed [2_000], invoice 1 bills 3_000.
+    9 April, +40 units = 7_000: invoiced 3_000 < 5_000, armed [5_000] (2_000 excluded by
+    `> invoiced_usage`); recurring guard 7_000 - 5_000 = 2_000 < 4_000. Invoice 2 bills 7_000,
+    credits 3_000, demands 4_000.
+    13 April, +50 units = 12_000: invoiced 7_000, so `7_000 < 5_000` is false and the recurring branch
+    at check_service.rb:47-52 applies — remainder 7_000 % 4_000 = 3_000, actual 12_000 - 7_000 =
+    5_000, 5_000 + 3_000 >= 4_000. Invoice 3 bills 12_000, credits 7_000, demands 5_000.
+    Cash 3_000 + 4_000 + 5_000 = 12_000.
+    Terminating on 16 April bills the consumed 12_000 and credits `to_credit_amount` of the LAST
+    threshold invoice = 12_000 (progressive_billed_amount.rb:55-63), so nothing is owed and the
+    excess branch at credits/progressive_billing_service.rb:36 is not entered — hence no credit note.
+    Both wrong readings are excluded by the numbers on the page: summing the three invoices gives
+    20_000 against 12_000 of charges, which would clamp the credit and refund 8_000; taking the first
+    gives 3_000 and leaves 9_000 due for usage already paid.
+
+- id: b05/multiple/exact-hit/terminated-mid-period
+  block: B5
+  axes: {threshold: multiple, crossing: exact-hit, settlement: terminated-mid-period}
+  dimensions: {interval: monthly, billing_time: calendar, thresholds: "fixed 2000 + fixed 5000 + recurring 4000", taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b05_mxt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b05_mxt
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds:
+        - {amount_cents: 2000}
+        - {amount_cents: 5000}
+        - {amount_cents: 4000, recurring: true}
+    charges: [{billable_metric_code: b05_mxt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b05_mxt_cust, currency: EUR}
+    subscription: {external_id: golden_b05_mxt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b05_mxt_sum, properties: {amount: 20}}]
+    - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 2000
+        total_amount_cents: 2000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 2000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The lowest rung of a three-threshold ladder, hit exactly, on a period cut short.
+    5 April, 20 units x 1.00 = 2_000 cents. invoiced 0 < largest fixed 5_000, so the fixed branch runs
+    and check_service.rb:40 asks `2_000 > 0 && 2_000 <= 2_000` — the inclusive upper bound is what
+    arms it. 5_000 is above total usage and the recurring guard at :43 sees 2_000 - 5_000, negative.
+    One threshold arms, one invoice, 2_000 billed. At 1_999 nothing arms and the 16 April termination
+    invoice is the only invoice, carrying 1_999 due.
+    Terminating on 16 April bills the consumed 2_000 and credits the 2_000 collected: total 0. The two
+    idle thresholds must change neither the exact hit nor the credit — which is what makes this
+    distinct from b05/fixed/exact-hit/terminated-mid-period rather than a copy of it.

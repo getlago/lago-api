@@ -1,0 +1,106 @@
+# Reported combinations, and what became of them.
+#
+# This is the suite's memory of things a person noticed before a test did. The prospector reads it,
+# translates each lead into cells, and expands siblings — so a lead is not one row but a pattern.
+# Status closes only when a row covers the named cells; `rejected` needs a reason.
+#
+#   open      — not yet covered
+#   covered   — cells listed below all have rows
+#   rejected  — investigated and found not to be a gap; say why
+---
+- lead: >-
+    A plan has progressive billing and the subscription is billed by several threshold invoices. The
+    subscription is then updated, creating a plan override, and the final invoice cannot find the
+    fees to apply the progressively billed credits to because the charge ids changed.
+  reported: 2026-08-26
+  reported_by: anna
+  status: covered
+  cells:
+    - B20/plan-override/progressive_billing_credit/invoice
+    - B20/plan-override/progressive_billing_credit/draft
+  finding: >-
+    Reproduced. The charge_id join in ProgressiveBillingService matches nothing across the override
+    boundary, so the whole credit is diverted into a credit note. On a finalized invoice that note is
+    spent on the spot and the total is accidentally right; on a grace-period draft credit notes are
+    withheld and the customer is billed twice for the same usage.
+  siblings_expanded: true
+  siblings_note: >-
+    Expanded 2026-08-26. All three sibling patterns now have rows on all four surfaces, plus the two
+    surfaces the lead itself did not reach (plan-override/progressive_billing_credit/regenerated and
+    /preview) and a fourth reading of the same charge_id loss through the fixed-charge endpoint
+    (subscription-override/progressive_billing_credit/*).
+    What the expansion established, beyond the lead:
+    (1) plan-upgrade does NOT lose the credit - the churn closes the period before anything has to
+    join across it, which makes those four rows the CONTROL that turns the override finding from a
+    symptom into a trigger.
+    (2) filter-changed rewrites only charge_filter_id, so the CAP still finds the money and the
+    per-fee distribution does not; the credit reads in full while the invoice is taxed on gross fees,
+    and the customer is billed 2_000 cents of tax on an invoice whose taxable sub-total is zero.
+    New finding F70.
+    (3) plan-override drops the minimum commitment outright - Plans::OverrideService rebuilds it from
+    params rather than duping it (override_service.rb:64-72). New finding F69.
+    (4) preview keeps its own copy of the charge_id cap (preview_service.rb:346-352) and DROPS the
+    excess instead of diverting it, so it is the surface on which a lost credit is most visible: it
+    quotes the whole period again while the invoice settles at zero by spending a credit note.
+  siblings_note_2: >-
+    Expanded again 2026-08-26 (w2). The two churns that were unreachable until `delete_metric` and
+    `update_plan`'s `billable_metric_code` existed now carry the same join on all four surfaces:
+    charge-replaced isolates `charge_id` from everything a plan override moves and loses the credit
+    identically (so charge_id alone is the cause), while metric-deleted removes the fee the credit must
+    land on and mints a credit note LARGER than the invoice - spent down to a leftover balance when
+    finalized, withheld entirely on a draft. New finding F78.
+  siblings_done:
+    - B20/plan-upgrade/progressive_billing_credit/ x4 surfaces
+    - B20/charge-replaced/progressive_billing_credit/ x4 surfaces
+    - B20/metric-deleted/progressive_billing_credit/ x4 surfaces
+    - B20/filter-changed/progressive_billing_credit/ x4 surfaces
+    - B20/plan-override/commitment_progress/ x4 surfaces
+    - B20/plan-override/progressive_billing_credit/regenerated + /preview
+    - B20/subscription-override/progressive_billing_credit/ x4 surfaces
+
+- lead: >-
+    A subscription is created with pay-in-advance fixed charges and a subscription override setting
+    10 units. The invoice is drafted, then the subscription is updated to 12 units, so a
+    pay-in-advance invoice is issued for the 2 extra units. When the draft invoice is refreshed it
+    deletes the fee for the fixed charge because it finds the already-paid fee.
+  reported: 2026-08-26
+  reported_by: anna
+  ticket: BIL-537
+  status: covered
+  cells:
+    - B20/subscription-override/paid_advance_fee/regenerated
+  status_note: closed 2026-08-26
+  finding: >-
+    REPRODUCED, as a pair. Three details were all load-bearing and only the third came from the
+    reporter:
+    (1) the plan's fixed charge carries 0 units, so the 10 arrive as a creation-time override rather
+        than from the plan;
+    (2) the grace period holds the period open;
+    (3) THE PLAN MUST PAY IN ADVANCE. That is what makes the subscription-start invoice a
+        `subscription` invoice — the kind Invoices::SubscriptionService raises and therefore the only
+        kind that consults grace_period?. With an arrears plan the first invoice comes from a path that
+        finalizes on creation, and three attempts died there.
+    Result: without the refresh the draft carries a 0¢ subscription fee and a 100_000¢ fixed-charge fee
+    for its 10 units. With the refresh it carries nothing but the 0¢ subscription fee. April is
+    invoiced 20_000¢ on a period owing 120_000¢.
+    The control row is what makes it a defect rather than a setup artefact: identical rows, one
+    refreshed and one not, so the fee is not missing because the override removed it, nor because the
+    creation-time override never billed it, nor because the delta invoice claimed it.
+    The path facts are now written down in
+    .claude/skills/maintaining-golden-billing/reference/invoice-paths.md so the next row does not
+    rediscover them.
+  siblings_note_2: >-
+    Expanded 2026-08-26 (w2). The cell's fourth surface is now written
+    (B20/subscription-override/paid_advance_fee/preview), together with the plan-override twin that was
+    left blank for the same reason. Both open questions were settled from source rather than guessed:
+    a projection previews the NEXT period for any persisted subscription regardless of pay_in_advance
+    (preview_service.rb:141-151), and `already_billed?` is period-scoped so May quotes the full 12 units
+    at 120_000 rather than April's 20_000 delta. New finding F80.
+    The other half of `paid_advance_fee` - the CachedAggregation join for a pay-in-advance metric
+    CHARGE, which no fixed charge can reach - is now covered for charge-replaced, metric-deleted and
+    plan-upgrade on all four surfaces. New findings F76, F77, F79.
+  harness_ready: true
+  harness_note: >-
+    Two gaps closed on the way, both independent of this lead: creation-time fixed-charge unit
+    overrides are expressible (the runner resolves the UUID plan_overrides demands from the code), and
+    refresh/finalize/void take a `select` so a row can act on an invoice that is not the newest.

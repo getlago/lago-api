@@ -1,0 +1,1671 @@
+# B12 — minimum commitments and spending floors.
+#
+# A true-up is the one fee computed FROM the other fees, which makes it the only producer whose
+# amount depends on what else landed on the invoice — and it is computed before any reducer runs.
+#
+# Two different mechanisms are called "true-up" in this codebase and only one of them is this block.
+# The `commitment` fee here comes from Commitments::Minimum::CalculateTrueUpFeeService, a PLAN-level
+# floor. Fees::CreateTrueUpService is the unrelated per-CHARGE `min_amount_cents` floor, and it
+# returns early when the charge has no minimum (create_true_up_service.rb:22) — no charge in this
+# block sets one, so it is inert in every row.
+#
+# `commitment_mode` is not a field: Commitments::DatesService:8-12, FetchInvoicesService:8-12 and
+# CalculateTrueUpFeeService:9-13 all branch on `plan.pay_in_advance?`, so in-advance rows are
+# pay-in-advance plans and in-arrears rows are pay-in-arrears ones. In arrears the true-up
+# reconciles the period being invoiced; in advance it reconciles the PREVIOUS period, which is why
+# the in-advance rows need two invoices and assert both.
+#
+# Pricing is pinned across every row — plan 2_000¢, 30 units x 1.00, floor 10_000¢, no tax, no
+# coupon — so the only thing moving between cells is the dates. `premium: true` is mandatory, not
+# decorative: plans/create_service.rb:68 drops `minimum_commitment` without a licence and answers
+# HTTP 200, so a non-premium row would pass with no commitment on the plan at all.
+---
+- id: b12/in-arrears/calendar/monthly
+  block: B12
+  axes: {commitment_mode: in-arrears, billing_time: calendar, interval: monthly}
+  dimensions: {commitment_amount_cents: 10000, tax_rate: 20}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes: [{code: b12_vat, name: VAT, rate: 20}]
+    metrics: [{code: b12_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_commitment
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_cust, currency: EUR}
+    subscription: {external_id: golden_b12_sub, billing_time: calendar}
+    coupons:
+      - name: b12 coupon
+        code: b12_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 8000
+      taxes_amount_cents: 1600
+      total_amount_cents: 9600
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 320}
+        - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 480}
+        - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 800}
+  math: >-
+    A minimum commitment tops the period up to a floor, and the true-up is the only fee whose amount
+    is a function of the other fees on the same invoice.
+    2_000¢ subscription + 30 units × 1.00 = 5_000¢ of real usage against a 10_000¢ commitment, so
+    Commitments::Minimum::CalculateTrueUpFeeService adds `commitment - fees_total` = 5_000¢ as a
+    `commitment` fee and the invoice reaches exactly the floor: 10_000¢.
+    The order is what this row pins. The true-up is a PRODUCER — it is created alongside the
+    subscription and charge fees (calculate_fees_service.rb:46), before any reducer — and it reads
+    raw `amount_cents`, so it neither knows nor cares that a coupon is coming. The 2_000¢ coupon then
+    applies to the topped-up 10_000¢ and the customer pays 8_000¢ net against a floor they committed
+    to at 10_000¢.
+    That is the consequence worth knowing: a coupon discounts the commitment itself rather than being
+    absorbed by the headroom beneath it. Had the true-up run after the coupon it would have seen
+    3_000¢ of discounted fees, topped up by 7_000¢ instead of 5_000¢, and the customer would have
+    paid the full 10_000¢ with the coupon silently doing nothing.
+    Both totals are 10_000¢ of fees, so `fees_amount_cents` cannot tell the two apart — the split
+    across the three fees is what does, which is why each is asserted with its own tax:
+    the coupon spreads pro rata (400¢, 600¢, 1_000¢) and each fee is taxed on the remainder at 20%.
+
+
+- id: b12/in-arrears/calendar/weekly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: calendar, interval: weekly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_cal_wk, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_cal_wk
+      interval: weekly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_cal_wk, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_cal_wk_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_cal_wk_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-04T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_wk, properties: {amount: 10}}]
+    - at: "2024-03-07T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_wk, properties: {amount: 10}}]
+    - at: "2024-03-09T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_wk, properties: {amount: 10}}]
+    - {at: "2024-03-11T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-04T00:00:00Z", to_date: "2024-03-10T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-04T00:00:00Z", to_date: "2024-03-10T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-04T00:00:00Z", to_date: "2024-03-10T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    calendar weekly period billed on 2024-03-11 as 2024-03-04T00:00:00Z .. 2024-03-10T23:59:59Z
+    (subscriptions/dates/weekly_service.rb:22-26 (compute_to_date) and :54-58
+    (compute_previous_beginning_of_period)). fees_total = 2_000¢ subscription + 3_000¢ usage (30
+    units x 1.00) = 5_000¢, and the two halves get there by DIFFERENT routes, which is what makes
+    the boundary observable at all: the subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (7) by the
+    days of the whole period (7) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. A window shifted off this one loses the charge fee — the only
+    window-selected fee here — and the true-up climbs to 10_000 - 2_000 = 8_000¢; a window starting
+    after 2024-03-04 also empties the coefficient query at :33-46, which then has no
+    invoice_subscription to read. The other direction does not need a shift at all: reading this
+    plan with the monthly rule gives 2024-03-01 .. 2024-03-31, which still CONTAINS both fees, but
+    days_total becomes 31 against the 7 days billed, the floor is prorated to 10_000 x 7/31 =
+    2_258¢, that is already under the 5_000¢ on the invoice, and line 38 returns 0 — no commitment
+    fee at all and fees_count 2. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-arrears/calendar/quarterly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: calendar, interval: quarterly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_cal_qt, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_cal_qt
+      interval: quarterly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_cal_qt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_cal_qt_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_cal_qt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T00:00:00Z", do: create_subscription}
+    - at: "2024-01-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_qt, properties: {amount: 10}}]
+    - at: "2024-02-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_qt, properties: {amount: 10}}]
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_qt, properties: {amount: 10}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-01-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    calendar quarterly period billed on 2024-04-01 as 2024-01-01T00:00:00Z .. 2024-03-31T23:59:59Z
+    (subscriptions/dates/quarterly_service.rb:62-68 and :90-94). fees_total = 2_000¢ subscription +
+    3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves get there by DIFFERENT routes, which
+    is what makes the boundary observable at all: the subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (91) by the
+    days of the whole period (91) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the monthly rule gives 2024-03-01 ..
+    2024-03-31, which does not contain a charge fee running 2024-01-01 .. 2024-03-31: fees_total
+    falls to the 2_000¢ subscription fee (that one is invoice-selected, so it survives every
+    boundary error) and the true-up climbs to 8_000¢. The semiannual rule instead gives 2024-01-01
+    .. 2024-06-30 — 182 days against the 91 billed — prorating the floor to 10_000 x 91/182 =
+    5_000¢, which line 38 compares >= against the 5_000¢ already invoiced and answers 0: no
+    commitment fee, fees_count 2. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-arrears/calendar/semiannual
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: calendar, interval: semiannual}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_cal_sa, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_cal_sa
+      interval: semiannual
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_cal_sa, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_cal_sa_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_cal_sa_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T00:00:00Z", do: create_subscription}
+    - at: "2024-01-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_sa, properties: {amount: 10}}]
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_sa, properties: {amount: 10}}]
+    - at: "2024-06-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_sa, properties: {amount: 10}}]
+    - {at: "2024-07-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-01-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    calendar semiannual period billed on 2024-07-01 as 2024-01-01T00:00:00Z .. 2024-06-30T23:59:59Z
+    (subscriptions/dates/semiannual_service.rb:140-146 and :168-172). fees_total = 2_000¢
+    subscription + 3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves get there by
+    DIFFERENT routes, which is what makes the boundary observable at all: the subscription fee is
+    read off this invoice (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 —
+    FetchInvoicesService returns just this one invoice, since the plan does not split charges
+    monthly), while the charge fee has to satisfy charges_from_datetime >=
+    previous_beginning_of_period AND charges_to_datetime <= end_of_period (:22-38). The floor is not
+    prorated: CalculateProratedCoefficientService:45-57 divides the days from the
+    invoice_subscription's from_datetime to its to_datetime (182) by the days of the whole period
+    (182) — the same span, because the subscription was created exactly on the period's own start —
+    so the coefficient is 1 and CalculateAmountService:25-34 returns the full 10_000¢.
+    commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment - fees_total =
+    10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the floor at
+    10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the quarterly rule gives 2024-04-01 ..
+    2024-06-30, which does not contain a charge fee running 2024-01-01 .. 2024-06-30: fees_total
+    falls to the invoice-selected 2_000¢ subscription fee and the true-up climbs to 8_000¢. The
+    yearly rule instead gives 2024-01-01 .. 2024-12-31 — 366 days against the 182 billed — prorating
+    the floor to 4_973¢, under the 5_000¢ invoiced, so line 38 returns 0: no commitment fee,
+    fees_count 2. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-arrears/calendar/yearly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: calendar, interval: yearly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_cal_yr, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_cal_yr
+      interval: yearly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_cal_yr, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_cal_yr_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_cal_yr_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T00:00:00Z", do: create_subscription}
+    - at: "2024-02-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_yr, properties: {amount: 10}}]
+    - at: "2024-07-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_yr, properties: {amount: 10}}]
+    - at: "2024-11-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_cal_yr, properties: {amount: 10}}]
+    - {at: "2025-01-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-01-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    calendar yearly period billed on 2025-01-01 as 2024-01-01T00:00:00Z .. 2024-12-31T23:59:59Z
+    (subscriptions/dates/yearly_service.rb:73-87 and :137-141). fees_total = 2_000¢ subscription +
+    3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves get there by DIFFERENT routes, which
+    is what makes the boundary observable at all: the subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (366) by the
+    days of the whole period (366) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the semiannual rule gives 2024-07-01 ..
+    2024-12-31, which does not contain a charge fee running 2024-01-01 .. 2024-12-31 — fees_total
+    falls to 2_000¢ — and also starts after the invoice_subscription, emptying the coefficient query
+    at :33-46. And this is why the row is calendar_sensitive rather than merely date-bearing: 2024
+    is a leap year, so both sides of the ratio are 366 and the floor is the full 10_000¢, but the
+    two numbers arrive from different places (days from the invoice_subscription's own boundaries,
+    days_total from the dates service). A days_total taken as a flat 365 would give 366/365, a floor
+    of 10_027¢ and a true-up of 5_027¢. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-arrears/anniversary/weekly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: anniversary, interval: weekly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_ann_wk, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_ann_wk
+      interval: weekly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_ann_wk, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_ann_wk_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_ann_wk_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-06T00:00:00Z", do: create_subscription}
+    - at: "2024-03-07T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_wk, properties: {amount: 10}}]
+    - at: "2024-03-09T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_wk, properties: {amount: 10}}]
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_wk, properties: {amount: 10}}]
+    - {at: "2024-03-13T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-06T00:00:00Z", to_date: "2024-03-12T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-06T00:00:00Z", to_date: "2024-03-12T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-06T00:00:00Z", to_date: "2024-03-12T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    anniversary weekly period billed on 2024-03-13 as 2024-03-06T00:00:00Z .. 2024-03-12T23:59:59Z
+    (subscriptions/dates/weekly_service.rb:22-26 (compute_to_date) and :54-58
+    (compute_previous_beginning_of_period)). fees_total = 2_000¢ subscription + 3_000¢ usage (30
+    units x 1.00) = 5_000¢, and the two halves get there by DIFFERENT routes, which is what makes
+    the boundary observable at all: the subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (7) by the
+    days of the whole period (7) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the calendar rule (beginning_of_week ..
+    end_of_week) gives 2024-03-04 .. 2024-03-10: the same seven days, two days early. The charge fee
+    ends 2024-03-12T23:59:59Z and no longer satisfies charges_to_datetime <= end_of_period, while
+    the coefficient stays 1 (the invoice_subscription still opens inside the window, and 7/7 is
+    unchanged), so the true-up is exactly 10_000 - 2_000 = 8_000¢. Reading the period as monthly
+    instead keeps both fees but gives 31 days against 7, prorating the floor to 2_258¢ — under the
+    5_000¢ invoiced — so line 38 returns 0: no commitment fee, fees_count 2. 5_000¢ is reachable
+    only from the window this row names.
+
+- id: b12/in-arrears/anniversary/monthly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: anniversary, interval: monthly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_ann_mo, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_ann_mo
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_ann_mo, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_ann_mo_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_ann_mo_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-10T00:00:00Z", do: create_subscription}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_mo, properties: {amount: 10}}]
+    - at: "2024-03-25T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_mo, properties: {amount: 10}}]
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_mo, properties: {amount: 10}}]
+    - {at: "2024-04-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-10T00:00:00Z", to_date: "2024-04-09T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-10T00:00:00Z", to_date: "2024-04-09T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-10T00:00:00Z", to_date: "2024-04-09T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    anniversary monthly period billed on 2024-04-10 as 2024-03-10T00:00:00Z .. 2024-04-09T23:59:59Z
+    (subscriptions/dates/monthly_service.rb:62-81 and :103-107). fees_total = 2_000¢ subscription +
+    3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves get there by DIFFERENT routes, which
+    is what makes the boundary observable at all: the subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (31) by the
+    days of the whole period (31) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the calendar rule (beginning_of_month ..
+    end_of_month) gives 2024-03-01 .. 2024-03-31: the same 31 days, nine days early. The charge fee
+    ends 2024-04-09T23:59:59Z and drops out while the coefficient stays 1 (31/31), so the true-up is
+    exactly 8_000¢. Reading the period as quarterly instead gives 2024-03-10 .. 2024-06-09, 92 days
+    against 31, and prorates the floor to 10_000 x 31/92 = 3_370¢ — under the 5_000¢ invoiced — so
+    line 38 returns 0: fees_count 2. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-arrears/anniversary/quarterly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: anniversary, interval: quarterly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_ann_qt, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_ann_qt
+      interval: quarterly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_ann_qt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_ann_qt_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_ann_qt_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-10T00:00:00Z", do: create_subscription}
+    - at: "2024-02-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_qt, properties: {amount: 10}}]
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_qt, properties: {amount: 10}}]
+    - at: "2024-04-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_qt, properties: {amount: 10}}]
+    - {at: "2024-05-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-02-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    anniversary quarterly period billed on 2024-05-10 as 2024-02-10T00:00:00Z ..
+    2024-05-09T23:59:59Z (subscriptions/dates/quarterly_service.rb:62-68 and :90-94). fees_total =
+    2_000¢ subscription + 3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves get there by
+    DIFFERENT routes, which is what makes the boundary observable at all: the subscription fee is
+    read off this invoice (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 —
+    FetchInvoicesService returns just this one invoice, since the plan does not split charges
+    monthly), while the charge fee has to satisfy charges_from_datetime >=
+    previous_beginning_of_period AND charges_to_datetime <= end_of_period (:22-38). The floor is not
+    prorated: CalculateProratedCoefficientService:45-57 divides the days from the
+    invoice_subscription's from_datetime to its to_datetime (90) by the days of the whole period
+    (90) — the same span, because the subscription was created exactly on the period's own start —
+    so the coefficient is 1 and CalculateAmountService:25-34 returns the full 10_000¢.
+    commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment - fees_total =
+    10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the floor at
+    10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the calendar rule (beginning_of_quarter ..
+    end_of_quarter) gives 2024-01-01 .. 2024-03-31, which holds neither end of a charge fee running
+    2024-02-10 .. 2024-05-09: fees_total falls to 2_000¢ and, with days_total 91 against the 90 days
+    billed, the floor comes out at 9_890¢ and the true-up at 7_890¢. The semiannual rule instead
+    gives 2024-02-10 .. 2024-08-09, 182 days against 90, floor 4_945¢ — under 5_000¢ — so line 38
+    returns 0: fees_count 2. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-arrears/anniversary/semiannual
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: anniversary, interval: semiannual}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_ann_sa, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_ann_sa
+      interval: semiannual
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_ann_sa, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_ann_sa_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_ann_sa_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-10T00:00:00Z", do: create_subscription}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_sa, properties: {amount: 10}}]
+    - at: "2024-05-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_sa, properties: {amount: 10}}]
+    - at: "2024-07-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_sa, properties: {amount: 10}}]
+    - {at: "2024-08-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-02-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    anniversary semiannual period billed on 2024-08-10 as 2024-02-10T00:00:00Z ..
+    2024-08-09T23:59:59Z (subscriptions/dates/semiannual_service.rb:140-146 and :168-172).
+    fees_total = 2_000¢ subscription + 3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves
+    get there by DIFFERENT routes, which is what makes the boundary observable at all: the
+    subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (182) by the
+    days of the whole period (182) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the calendar rule (beginning_of_half_year
+    .. end_of_half_year) gives 2024-07-01 .. 2024-12-31, which holds no part of a charge fee running
+    2024-02-10 .. 2024-08-09 and also starts after the invoice_subscription, emptying the
+    coefficient query at :33-46. The yearly rule instead gives 2024-02-10 .. 2025-02-09, 365 days
+    against the 182 billed, prorating the floor to 10_000 x 182/365 = 4_986¢ — under the 5_000¢
+    invoiced — so line 38 returns 0: fees_count 2. 5_000¢ is reachable only from the window this row
+    names.
+
+- id: b12/in-arrears/anniversary/yearly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-arrears, billing_time: anniversary, interval: yearly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_arr_ann_yr, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_arr_ann_yr
+      interval: yearly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_arr_ann_yr, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_arr_ann_yr_cust, currency: EUR}
+    subscription: {external_id: golden_b12_arr_ann_yr_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-10T00:00:00Z", do: create_subscription}
+    - at: "2024-04-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_yr, properties: {amount: 10}}]
+    - at: "2024-09-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_yr, properties: {amount: 10}}]
+    - at: "2025-01-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_arr_ann_yr, properties: {amount: 10}}]
+    - {at: "2025-02-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-02-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+        - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-02-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+        - {fee_type: commitment, amount_cents: 5000, from_date: "2024-02-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+  math: >-
+    In arrears the commitment reconciles the period being invoiced, so one invoice tells the whole
+    story. Commitments::Minimum::InArrears::DatesService:9-11 asks Subscriptions::DatesService for
+    current_usage=false — the subscription is neither terminated nor downgraded — which resolves the
+    anniversary yearly period billed on 2025-02-10 as 2024-02-10T00:00:00Z .. 2025-02-09T23:59:59Z
+    (subscriptions/dates/yearly_service.rb:73-87 and :137-141). fees_total = 2_000¢ subscription +
+    3_000¢ usage (30 units x 1.00) = 5_000¢, and the two halves get there by DIFFERENT routes, which
+    is what makes the boundary observable at all: the subscription fee is read off this invoice
+    (commitments/minimum/in_arrears/calculate_true_up_fee_service.rb:9-20 — FetchInvoicesService
+    returns just this one invoice, since the plan does not split charges monthly), while the charge
+    fee has to satisfy charges_from_datetime >= previous_beginning_of_period AND charges_to_datetime
+    <= end_of_period (:22-38). The floor is not prorated: CalculateProratedCoefficientService:45-57
+    divides the days from the invoice_subscription's from_datetime to its to_datetime (365) by the
+    days of the whole period (365) — the same span, because the subscription was created exactly on
+    the period's own start — so the coefficient is 1 and CalculateAmountService:25-34 returns the
+    full 10_000¢. commitments/minimum/calculate_true_up_fee_service.rb:37-41 then adds commitment -
+    fees_total = 10_000 - 5_000 = 5_000¢ as a `commitment` fee, and the invoice lands exactly on the
+    floor at 10_000¢. The true-up is a PRODUCER, created beside the other fees
+    (invoices/calculate_fees_service.rb:41-46) from their raw amount_cents; this row deliberately
+    carries no coupon and no tax so that nothing downstream can move the figure and the only
+    arithmetic under test is the boundary. Every fee is asserted with its own from_date / to_date
+    because those dates ARE the boundary — the `commitment` fee copies its period straight off the
+    reconciled invoice_subscription (fees/commitments/minimum/build_fee_base_service.rb:30-50). What
+    a wrong implementation gives. Reading this plan with the calendar rule (beginning_of_year ..
+    end_of_year) gives 2024-01-01 .. 2024-12-31, which does not contain a charge fee ending
+    2025-02-09T23:59:59Z: fees_total falls to 2_000¢ and, with days_total 366 against the 365 days
+    billed, the floor lands at 9_973¢ and the true-up at 7_973¢. The 365 is itself worth pinning,
+    and is why the row is calendar_sensitive: a year from 2024-02-10 to 2025-02-10 is 366 days
+    because Feb 29 2024 falls inside it, and compute_to_date (yearly_service.rb:73-87) closes the
+    period the day BEFORE the next anniversary, so the period is 365. Both sides of the ratio are
+    365 and the floor is the full 10_000¢; a days_total of 366 would give 9_973¢ and a true-up of
+    4_973¢. 5_000¢ is reachable only from the window this row names.
+
+- id: b12/in-advance/calendar/weekly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: calendar, interval: weekly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_cal_wk, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_cal_wk
+      interval: weekly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_cal_wk, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_cal_wk_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_cal_wk_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-04T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_wk, properties: {amount: 10}}]
+    - at: "2024-03-07T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_wk, properties: {amount: 10}}]
+    - at: "2024-03-09T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_wk, properties: {amount: 10}}]
+    - {at: "2024-03-11T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-04T00:00:00Z", to_date: "2024-03-10T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-11T00:00:00Z", to_date: "2024-03-17T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-04T00:00:00Z", to_date: "2024-03-10T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-04T00:00:00Z", to_date: "2024-03-10T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-03-04, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-03-11) reconciles period 1 = 2024-03-04T00:00:00Z ..
+    2024-03-10T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a calendar weekly plan by
+    subscriptions/dates/weekly_service.rb:22-26 (compute_to_date) and :54-58
+    (compute_previous_beginning_of_period). fees_total = 2_000¢ + 3_000¢ = 5_000¢. The period-1
+    subscription fee is selected by properties->>'from_datetime' >= 2024-03-04T00:00:00Z AND
+    properties->>'to_datetime' <= 2024-03-10T23:59:59Z (:21-37), which is exactly why the period-2
+    subscription fee sitting on this same invoice (2024-03-11T00:00:00Z .. 2024-03-17T23:59:59Z) is
+    NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge fee for period 1 and is
+    selected by invoice id rather than by date (:39-48). The floor is not prorated:
+    calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 7 / 7 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-03-04T00:00:00Z .. 2024-03-10T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-03-17T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢; on this weekly plan the monthly rule (2024-03-01 .. 2024-03-31) is
+    literally such a window, since it spans both periods. One failure mode the amount cannot catch,
+    and the dates can: reconciling the CURRENT period instead of the previous one would still total
+    5_000¢, because the charge fee is chosen by invoice id and the two subscription fees cost the
+    same — `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the
+    only assertion that fails.
+
+- id: b12/in-advance/calendar/monthly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: calendar, interval: monthly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_cal_mo, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_cal_mo
+      interval: monthly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_cal_mo, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_cal_mo_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_cal_mo_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_mo, properties: {amount: 10}}]
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_mo, properties: {amount: 10}}]
+    - at: "2024-03-25T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_mo, properties: {amount: 10}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-03-01, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-04-01) reconciles period 1 = 2024-03-01T00:00:00Z ..
+    2024-03-31T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a calendar monthly plan by
+    subscriptions/dates/monthly_service.rb:62-81 and :103-107. fees_total = 2_000¢ + 3_000¢ =
+    5_000¢. The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-03-01T00:00:00Z AND properties->>'to_datetime' <= 2024-03-31T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2024-04-01T00:00:00Z ..
+    2024-04-30T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 31 / 31 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-03-01T00:00:00Z .. 2024-03-31T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-04-30T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails.
+
+- id: b12/in-advance/calendar/quarterly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: calendar, interval: quarterly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_cal_qt, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_cal_qt
+      interval: quarterly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_cal_qt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_cal_qt_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_cal_qt_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T00:00:00Z", do: create_subscription}
+    - at: "2024-01-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_qt, properties: {amount: 10}}]
+    - at: "2024-02-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_qt, properties: {amount: 10}}]
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_qt, properties: {amount: 10}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-01-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-01-01, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-04-01) reconciles period 1 = 2024-01-01T00:00:00Z ..
+    2024-03-31T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a calendar quarterly plan by
+    subscriptions/dates/quarterly_service.rb:62-68 and :90-94. fees_total = 2_000¢ + 3_000¢ =
+    5_000¢. The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-01-01T00:00:00Z AND properties->>'to_datetime' <= 2024-03-31T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2024-04-01T00:00:00Z ..
+    2024-06-30T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 91 / 91 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-01-01T00:00:00Z .. 2024-03-31T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-06-30T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails.
+
+- id: b12/in-advance/calendar/semiannual
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: calendar, interval: semiannual}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_cal_sa, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_cal_sa
+      interval: semiannual
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_cal_sa, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_cal_sa_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_cal_sa_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T00:00:00Z", do: create_subscription}
+    - at: "2024-01-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_sa, properties: {amount: 10}}]
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_sa, properties: {amount: 10}}]
+    - at: "2024-06-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_sa, properties: {amount: 10}}]
+    - {at: "2024-07-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-07-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-01-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-06-30T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-01-01, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-07-01) reconciles period 1 = 2024-01-01T00:00:00Z ..
+    2024-06-30T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a calendar semiannual plan by
+    subscriptions/dates/semiannual_service.rb:140-146 and :168-172. fees_total = 2_000¢ + 3_000¢ =
+    5_000¢. The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-01-01T00:00:00Z AND properties->>'to_datetime' <= 2024-06-30T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2024-07-01T00:00:00Z ..
+    2024-12-31T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 182 / 182 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-01-01T00:00:00Z .. 2024-06-30T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-12-31T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails.
+
+- id: b12/in-advance/calendar/yearly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: calendar, interval: yearly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_cal_yr, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_cal_yr
+      interval: yearly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_cal_yr, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_cal_yr_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_cal_yr_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T00:00:00Z", do: create_subscription}
+    - at: "2024-02-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_yr, properties: {amount: 10}}]
+    - at: "2024-07-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_yr, properties: {amount: 10}}]
+    - at: "2024-11-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_cal_yr, properties: {amount: 10}}]
+    - {at: "2025-01-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2025-01-01T00:00:00Z", to_date: "2025-12-31T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-01-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-01-01T00:00:00Z", to_date: "2024-12-31T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-01-01, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2025-01-01) reconciles period 1 = 2024-01-01T00:00:00Z ..
+    2024-12-31T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a calendar yearly plan by
+    subscriptions/dates/yearly_service.rb:73-87 and :137-141. fees_total = 2_000¢ + 3_000¢ = 5_000¢.
+    The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-01-01T00:00:00Z AND properties->>'to_datetime' <= 2024-12-31T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2025-01-01T00:00:00Z ..
+    2025-12-31T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 366 / 366 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-01-01T00:00:00Z .. 2024-12-31T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2025-12-31T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails. And this is why the row is calendar_sensitive rather than merely
+    date-bearing: 2024 is a leap year, so both sides of the coefficient are 366 and the floor is the
+    full 10_000¢, but days and days_total arrive from different places
+    (CalculateProratedCoefficientService:45-55) — a days_total taken as a flat 365 would give
+    366/365, a floor of 10_027¢ and a true-up of 5_027¢.
+
+- id: b12/in-advance/anniversary/weekly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: anniversary, interval: weekly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_ann_wk, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_ann_wk
+      interval: weekly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_ann_wk, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_ann_wk_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_ann_wk_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-06T00:00:00Z", do: create_subscription}
+    - at: "2024-03-07T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_wk, properties: {amount: 10}}]
+    - at: "2024-03-09T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_wk, properties: {amount: 10}}]
+    - at: "2024-03-11T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_wk, properties: {amount: 10}}]
+    - {at: "2024-03-13T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-06T00:00:00Z", to_date: "2024-03-12T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-13T00:00:00Z", to_date: "2024-03-19T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-06T00:00:00Z", to_date: "2024-03-12T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-06T00:00:00Z", to_date: "2024-03-12T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-03-06, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-03-13) reconciles period 1 = 2024-03-06T00:00:00Z ..
+    2024-03-12T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a anniversary weekly plan by
+    subscriptions/dates/weekly_service.rb:22-26 (compute_to_date) and :54-58
+    (compute_previous_beginning_of_period). fees_total = 2_000¢ + 3_000¢ = 5_000¢. The period-1
+    subscription fee is selected by properties->>'from_datetime' >= 2024-03-06T00:00:00Z AND
+    properties->>'to_datetime' <= 2024-03-12T23:59:59Z (:21-37), which is exactly why the period-2
+    subscription fee sitting on this same invoice (2024-03-13T00:00:00Z .. 2024-03-19T23:59:59Z) is
+    NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge fee for period 1 and is
+    selected by invoice id rather than by date (:39-48). The floor is not prorated:
+    calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 7 / 7 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-03-06T00:00:00Z .. 2024-03-12T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-03-19T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢; on this weekly plan the monthly rule (2024-03-01 .. 2024-03-31) is
+    literally such a window, since it spans both periods. One failure mode the amount cannot catch,
+    and the dates can: reconciling the CURRENT period instead of the previous one would still total
+    5_000¢, because the charge fee is chosen by invoice id and the two subscription fees cost the
+    same — `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the
+    only assertion that fails.
+
+- id: b12/in-advance/anniversary/monthly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: anniversary, interval: monthly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_ann_mo, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_ann_mo
+      interval: monthly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_ann_mo, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_ann_mo_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_ann_mo_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-10T00:00:00Z", do: create_subscription}
+    - at: "2024-03-15T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_mo, properties: {amount: 10}}]
+    - at: "2024-03-25T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_mo, properties: {amount: 10}}]
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_mo, properties: {amount: 10}}]
+    - {at: "2024-04-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-03-10T00:00:00Z", to_date: "2024-04-09T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-03-10T00:00:00Z", to_date: "2024-04-09T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-03-10T00:00:00Z", to_date: "2024-04-09T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-03-10, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-04-10) reconciles period 1 = 2024-03-10T00:00:00Z ..
+    2024-04-09T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a anniversary monthly plan by
+    subscriptions/dates/monthly_service.rb:62-81 and :103-107. fees_total = 2_000¢ + 3_000¢ =
+    5_000¢. The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-03-10T00:00:00Z AND properties->>'to_datetime' <= 2024-04-09T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2024-04-10T00:00:00Z ..
+    2024-05-09T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 31 / 31 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-03-10T00:00:00Z .. 2024-04-09T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-05-09T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails.
+
+- id: b12/in-advance/anniversary/quarterly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: anniversary, interval: quarterly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_ann_qt, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_ann_qt
+      interval: quarterly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_ann_qt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_ann_qt_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_ann_qt_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-10T00:00:00Z", do: create_subscription}
+    - at: "2024-02-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_qt, properties: {amount: 10}}]
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_qt, properties: {amount: 10}}]
+    - at: "2024-04-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_qt, properties: {amount: 10}}]
+    - {at: "2024-05-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-05-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-02-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-05-09T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-02-10, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-05-10) reconciles period 1 = 2024-02-10T00:00:00Z ..
+    2024-05-09T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a anniversary quarterly plan by
+    subscriptions/dates/quarterly_service.rb:62-68 and :90-94. fees_total = 2_000¢ + 3_000¢ =
+    5_000¢. The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-02-10T00:00:00Z AND properties->>'to_datetime' <= 2024-05-09T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2024-05-10T00:00:00Z ..
+    2024-08-09T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 90 / 90 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-02-10T00:00:00Z .. 2024-05-09T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2024-08-09T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails.
+
+- id: b12/in-advance/anniversary/semiannual
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: anniversary, interval: semiannual}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_ann_sa, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_ann_sa
+      interval: semiannual
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_ann_sa, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_ann_sa_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_ann_sa_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-10T00:00:00Z", do: create_subscription}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_sa, properties: {amount: 10}}]
+    - at: "2024-05-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_sa, properties: {amount: 10}}]
+    - at: "2024-07-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_sa, properties: {amount: 10}}]
+    - {at: "2024-08-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-08-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-02-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-02-10T00:00:00Z", to_date: "2024-08-09T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-02-10, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2024-08-10) reconciles period 1 = 2024-02-10T00:00:00Z ..
+    2024-08-09T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a anniversary semiannual plan by
+    subscriptions/dates/semiannual_service.rb:140-146 and :168-172. fees_total = 2_000¢ + 3_000¢ =
+    5_000¢. The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-02-10T00:00:00Z AND properties->>'to_datetime' <= 2024-08-09T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2024-08-10T00:00:00Z ..
+    2025-02-09T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 182 / 182 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-02-10T00:00:00Z .. 2024-08-09T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2025-02-09T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails.
+
+- id: b12/in-advance/anniversary/yearly
+  block: B12
+  pins: ["F10"]
+  axes: {commitment_mode: in-advance, billing_time: anniversary, interval: yearly}
+  dimensions: {commitment_amount_cents: 10000, plan_amount_cents: 2000, usage_units: 30, taxes: none, coupons: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: [{code: b12_adv_ann_yr, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b12_adv_ann_yr
+      interval: yearly
+      amount_cents: 2000
+      pay_in_advance: true
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b12_adv_ann_yr, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b12_adv_ann_yr_cust, currency: EUR}
+    subscription: {external_id: golden_b12_adv_ann_yr_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-10T00:00:00Z", do: create_subscription}
+    - at: "2024-04-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_yr, properties: {amount: 10}}]
+    - at: "2024-09-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_yr, properties: {amount: 10}}]
+    - at: "2025-01-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b12_adv_ann_yr, properties: {amount: 10}}]
+    - {at: "2025-02-10T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-02-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 10000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2025-02-10T00:00:00Z", to_date: "2026-02-09T23:59:59Z"}
+          - {fee_type: charge, amount_cents: 3000, units: "30", from_date: "2024-02-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+          - {fee_type: commitment, amount_cents: 5000, from_date: "2024-02-10T00:00:00Z", to_date: "2025-02-09T23:59:59Z"}
+  math: >-
+    In advance the commitment reconciles the PREVIOUS period, so it is the SECOND invoice that
+    carries the true-up and this row asserts both. Invoice 1 (2024-02-10, raised on subscription
+    creation by activate_service.rb:181-196) is the period-1 subscription fee alone: 2_000¢, and no
+    commitment fee at all — calculate_fees_service.rb:250 and
+    commitments/minimum/in_advance/calculate_true_up_fee_service.rb:9-19 both refuse a true-up while
+    invoice_subscription.previous_invoice_subscription is nil — and no charge fee either, because a
+    zero-units zero-amount fee is not persisted (fees/charge_service.rb:353-359). fees_count 1 is
+    what pins that. Invoice 2 (2025-02-10) reconciles period 1 = 2024-02-10T00:00:00Z ..
+    2025-02-09T23:59:59Z. That window is built from the PREVIOUS invoice_subscription with
+    current_usage=true (in_advance/calculate_true_up_fee_service.rb:122-127,
+    in_advance/dates_service.rb:7-9), resolved for a anniversary yearly plan by
+    subscriptions/dates/yearly_service.rb:73-87 and :137-141. fees_total = 2_000¢ + 3_000¢ = 5_000¢.
+    The period-1 subscription fee is selected by properties->>'from_datetime' >=
+    2024-02-10T00:00:00Z AND properties->>'to_datetime' <= 2025-02-09T23:59:59Z (:21-37), which is
+    exactly why the period-2 subscription fee sitting on this same invoice (2025-02-10T00:00:00Z ..
+    2026-02-09T23:59:59Z) is NOT counted; the 30 units x 1.00 of usage arrives as the arrears charge
+    fee for period 1 and is selected by invoice id rather than by date (:39-48). The floor is not
+    prorated: calculate_amount_service.rb:36-44 hands the PREVIOUS invoice_subscription to
+    CalculateProratedCoefficientService, whose 365 / 365 days come out even because the subscription
+    started on the period's own boundary, so the commitment is the full 10_000¢ and
+    calculate_true_up_fee_service.rb:37-41 gives 10_000 - 5_000 = 5_000¢. Note what the invoice
+    total does NOT say: invoice 2 sums to 10_000¢, but only 5_000¢ of that belongs to the reconciled
+    period — the other 2_000¢ is period 2 charged in advance. An arrears invoice for the same money
+    reads identically at invoice level, so the per-fee from_date / to_date are load-bearing: the
+    commitment fee's period is copied off the reconciled invoice_subscription
+    (fees/commitments/minimum/build_fee_base_service.rb:30-50) and names period 1, while the
+    subscription fee beside it names period 2. What a wrong implementation gives. Both date
+    comparisons are inclusive (>= and <=), so any window that does not fully span
+    2024-02-10T00:00:00Z .. 2025-02-09T23:59:59Z — one day short at either end is enough — no longer
+    contains the period-1 subscription fee, fees_total drops to the invoice-selected 3_000¢ charge
+    fee and the true-up becomes 10_000 - 3_000 = 7_000¢. A window whose end reaches
+    2026-02-09T23:59:59Z catches the period-2 subscription fee as well and gives 10_000 - (2_000 +
+    2_000 + 3_000) = 3_000¢. One failure mode the amount cannot catch, and the dates can:
+    reconciling the CURRENT period instead of the previous one would still total 5_000¢, because the
+    charge fee is chosen by invoice id and the two subscription fees cost the same —
+    `fees_amount_cents` is blind to it, and the commitment fee's from_date / to_date is the only
+    assertion that fails. The 365-day span is itself worth pinning, and is why the row is
+    calendar_sensitive: a year from 2024-02-10 to 2025-02-10 is 366 days because Feb 29 2024 falls
+    inside it, and compute_to_date (yearly_service.rb:73-87) closes the period the day BEFORE the
+    next anniversary, so period 1 is 365 days. A days_total of 366 would prorate the floor to 9_973¢
+    and the true-up to 4_973¢.

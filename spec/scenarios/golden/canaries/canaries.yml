@@ -1,0 +1,774 @@
+# Each row here MUST fail. See README.md in this directory.
+#
+# `expect_failure` names the mechanism under guard and a fragment the failure message must contain,
+# so a canary that fails for an unrelated reason (a typo, a 500, a missing plan) does not count as
+# the mechanism working.
+---
+- id: canary/invoice-amount
+  guards: invoice field comparison
+  expect_failure: "total_amount_cents expected 999999"
+  row:
+    id: b01/canary/invoice-amount
+    block: B1
+    axes: {charge_model: standard, aggregation: sum_agg, observed_via: invoice, events: one}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_amount, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_amount_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_amount, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_amount_cust, currency: EUR}
+      subscription: {external_id: canary_amount_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_amount, properties: {amount: 30}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoice: {total_amount_cents: 999999}
+    math: canary — the real total is 3_000¢
+
+- id: canary/fee-units
+  guards: fee-level field comparison after identity matching
+  expect_failure: "units expected"
+  row:
+    id: b01/canary/fee-units
+    block: B1
+    axes: {charge_model: standard, aggregation: sum_agg, observed_via: invoice, events: one}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_units, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_units_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_units, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_units_cust, currency: EUR}
+      subscription: {external_id: canary_units_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_units, properties: {amount: 30}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoice:
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 0}
+          - {fee_type: charge, units: "77.0", amount_cents: 3000}
+    math: canary — the real unit count is 30
+
+- id: canary/invoice-count
+  guards: invoice count assertion
+  expect_failure: "Expected 1 to eq 5"
+  row:
+    id: b01/canary/invoice-count
+    block: B1
+    axes: {charge_model: standard, aggregation: sum_agg, observed_via: invoice, events: none}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_count, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_count_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_count, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_count_cust, currency: EUR}
+      subscription: {external_id: canary_count_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 5
+    math: canary — exactly one invoice is produced
+
+- id: canary/unimplemented-error-stage
+  guards: rejection rows cannot assert nothing
+  expect_failure: "is not implemented by the interpreter"
+  row:
+    id: b14/canary/unimplemented-stage
+    block: B14
+    axes: {rule: prorated_requires_recurring_metric}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      customer: {external_id: canary_stage_cust, currency: EUR}
+    at: "2024-03-01T00:00:00Z"
+    expect:
+      error: {stage: wallet, status: 422, code: this_code_does_not_exist}
+    note: >-
+      canary — `wallet` is permitted by the schema but not implemented by the interpreter. Before the
+      guard existed this row passed green while asserting nothing whatsoever, which is the single
+      worst failure mode a test suite can have.
+
+- id: canary/resource-field
+  guards: resource assertion, including dotted nested paths
+  expect_failure: "aggregation_type expected"
+  row:
+    id: b14/canary/resource-field
+    block: B14
+    axes: {rule: field_name_ignored_for_count_agg}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_resource, aggregation_type: count_agg}]
+      customer: {external_id: canary_resource_cust, currency: EUR}
+    at: "2024-03-01T00:00:00Z"
+    expect:
+      resource:
+        kind: metric
+        code: canary_resource
+        fields: {aggregation_type: sum_agg}
+    note: canary — the metric really is count_agg
+
+- id: canary/second-invoice-expectation
+  guards: every invoice in a multi-invoice expectation is asserted, and named on failure
+  expect_failure: "invoice[index=1]: total_amount_cents expected 888888"
+  row:
+    id: b01/canary/second-invoice
+    block: B1
+    axes: {charge_model: standard, aggregation: sum_agg, observed_via: invoice, events: none}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      plan: {code: canary_second_plan, interval: monthly, amount_cents: 1000}
+      customer: {external_id: canary_second_cust, currency: EUR}
+      subscription: {external_id: canary_second_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 2
+      invoice:
+        - select: {index: 0}
+          total_amount_cents: 1000
+        - select: {index: 1}
+          total_amount_cents: 888888
+  math: >-
+    canary — both months bill 1_000¢. The FIRST expectation is correct and the second is not, so the
+    only way this row passes is if entries after the first are skipped.
+
+- id: canary/selected-credit-note
+  guards: a credit note reached by `select` is re-read from the API and compared
+  expect_failure: "credit_note: credit_amount_cents expected 777777"
+  row:
+    id: b08/canary/selected-credit-note
+    block: B8
+    axes: {origin: manual-full, credit_note_type: credit, invoice_state: plain}
+    provenance: canary
+    runners: [rspec]
+    premium: true
+    setup:
+      metrics: [{code: canary_sel_cn, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_sel_cn_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_sel_cn, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_sel_cn_cust, currency: EUR}
+      subscription: {external_id: canary_sel_cn_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_sel_cn, properties: {amount: 30}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      - at: "2024-04-02T10:00:00Z"
+        do: create_credit_note
+        credit_note:
+          reason: other
+          credit_amount_cents: 3000
+          refund_amount_cents: 0
+          items: [{fee_type: charge, amount_cents: 3000}]
+    expect:
+      credit_note:
+        select: {index: -1}
+        credit_amount_cents: 777777
+  math: canary — the selected credit note is really 3_000¢
+
+- id: canary/charge-filter-replacement
+  guards: a `filters` replacement array on update_plan_charge reaches the charge
+  expect_failure: "fees_amount_cents expected 8000"
+  row:
+    id: b11/canary/charge-filter-replacement
+    block: B11
+    axes: {operation: filter-create, target: charge-filter}
+    provenance: canary
+    runners: [rspec]
+    premium: true
+    setup:
+      metrics:
+        - code: canary_cf_repl
+          aggregation_type: sum_agg
+          field_name: amount
+          filters: [{key: region, values: ["eu", "us"]}]
+      plan: {code: canary_cf_repl_plan, interval: monthly, amount_cents: 1000}
+      charges:
+        - billable_metric_code: canary_cf_repl
+          charge_model: standard
+          properties: {amount: "1"}
+      customer: {external_id: canary_cf_repl_cust, currency: EUR}
+      subscription:
+        external_id: canary_cf_repl_sub
+        billing_time: calendar
+        plan_overrides: {amount_cents: 5000}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-02T10:00:00Z"
+        do: update_plan_charge
+        charge:
+          billable_metric_code: canary_cf_repl
+          charge_model: standard
+          properties: {amount: "1"}
+          cascade_updates: true
+          filters:
+            - invoice_display_name: EU region
+              properties: {amount: "3"}
+              values: {region: ["eu"]}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_cf_repl, properties: {amount: 30, region: "eu"}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoice:
+        fees_amount_cents: 8000
+        total_amount_cents: 8000
+  math: >-
+    canary — 8_000¢ is precisely the invoice this row produced BEFORE the `filters` passthrough
+    existed: the key was dropped silently, no filter ever reached the charge, and the 30 eu units were
+    priced by the charge's own 1.00 (3_000¢) on top of the 5_000¢ override. With the passthrough the
+    eu filter is created and cascaded to the child and the answer is 14_000¢. So this row passes if
+    and only if a row can no longer edit a charge filter after setup — which is the state that blocked
+    nine B11 cells, and which would otherwise return looking like a harmless simplification of
+    golden_update_plan_charge.
+
+- id: canary/invoice-fees-count
+  guards: invoice fees_count assertion
+  expect_failure: "fees_count expected 7"
+  row:
+    id: b01/canary/fees-count
+    block: B1
+    axes: {charge_model: standard, aggregation: sum_agg, observed_via: invoice, events: one}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_fees_count, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_fees_count_plan, interval: monthly, amount_cents: 1000}
+      charges: [{billable_metric_code: canary_fees_count, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_fees_count_cust, currency: EUR}
+      subscription: {external_id: canary_fees_count_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_fees_count, properties: {amount: 30}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 1
+      invoice:
+        fees_count: 7
+  math: >-
+    canary — the invoice really carries two fees. fees_count is checked separately from the field
+    comparison and separately from the `fees:` list (golden_runner.rb assert_golden_invoice_payload),
+    and it is the ONLY assertion available to a row whose charge emits two fees, because two fees of
+    one charge share every FEE_MATCH_KEYS identity field and a per-fee list cannot tell them apart.
+    Three B11 filter rows rest on it alone, so a fees_count that stopped comparing would let "the
+    filter vanished" pass as "the amount changed".
+
+- id: canary/charge-target-wallet
+  guards: an accepts_target_wallet flag on a setup charge reaches the charge
+  expect_failure: "prepaid_credit_amount_cents expected 5000"
+  row:
+    id: b06/canary/charge-target-wallet
+    block: B6
+    axes: {source: granted, limitation: target-wallet-code, application: partial-cover}
+    provenance: canary
+    runners: [rspec]
+    premium: true
+    setup:
+      organization: {premium_integrations: [events_targeting_wallets]}
+      metrics: [{code: canary_tw, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_tw_plan, interval: monthly, amount_cents: 0}
+      charges:
+        - billable_metric_code: canary_tw
+          charge_model: standard
+          properties: {amount: "1"}
+          accepts_target_wallet: true
+      customer: {external_id: canary_tw_cust, currency: EUR}
+      subscription: {external_id: canary_tw_sub, billing_time: calendar}
+      wallets:
+        - {name: alpha, code: canary_tw_alpha, rate_amount: "1", currency: EUR, granted_credits: "10"}
+        - {name: beta, code: canary_tw_beta, rate_amount: "1", currency: EUR, granted_credits: "100"}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events:
+          - {code: canary_tw, properties: {amount: 30, target_wallet_code: canary_tw_alpha}}
+          - {code: canary_tw, properties: {amount: 20, target_wallet_code: canary_tw_beta}}
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoice:
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 0
+        fees_count: 2
+  math: >-
+    canary — 5_000¢ / 0¢ / two fees is precisely the invoice this row produced BEFORE the
+    `accepts_target_wallet` passthrough existed: the key was dropped SILENTLY, the charge came back
+    with the flag false at HTTP 200, no "target_wallet_code" ever entered the charge's grouped_by keys
+    (fees/charge_service.rb:496), the 50 units stayed ONE 5_000¢ fee, and both wallets spent freely
+    into it because `applicable_fee?` saw no tag to route on
+    (allocate_prepaid_credits_by_wallets_service.rb:109-114). With the passthrough the fee splits by
+    tag, alpha may only pay its own 3_000¢ bucket and beta only its own 2_000¢ one, and the answer is
+    3_000¢ prepaid with 2_000¢ still owed. So this row passes if and only if a charge can no longer
+    carry the flag — the state that made all 36 cells of B6's `limitation: target-wallet-code` column
+    unreachable and left :109-114 unexercised by the whole suite — and which would otherwise return
+    looking like a harmless tidy-up of golden_charge_params' whitelist.
+
+- id: canary/usage-stage-rejection
+  guards: a usage-stage rejection is asserted even when the read succeeds
+  expect_failure: "expected HTTP 405 on usage, got 200"
+  row:
+    id: b07/canary/usage-stage-rejection
+    block: B7
+    axes: {surface: current-usage, aggregation: sum_agg, timing: after-termination}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_ustage, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_ustage_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_ustage, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_ustage_cust, currency: EUR}
+      subscription: {external_id: canary_ustage_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_ustage, properties: {amount: 30}}]
+      - {at: "2024-03-10T10:00:00Z", do: fetch_current_usage}
+    expect:
+      error: {stage: usage, status: 405, code: no_active_subscription}
+    note: >-
+      canary — the subscription is NEVER terminated, so this read returns 200 with 3_000¢ of usage.
+      The `usage` stage is the only error stage that fires from the TIMELINE rather than from setup,
+      and the tempting implementation — assert only when the fetch actually fails — would make this
+      row pass while asserting nothing, which is the same vacuum SUPPORTED_ERROR_STAGES exists to
+      prevent. So golden_snapshot_usage fetches with raise_on_error: false and compares
+      unconditionally, and this row can only pass if that comparison stopped happening.
+
+- id: canary/lifetime-usage-select-only
+  guards: a lifetime_usage expectation of only a select cannot assert nothing
+  expect_failure: "carries only a `select` and asserts nothing"
+  row:
+    id: b07/canary/lifetime-usage-select-only
+    block: B7
+    axes: {surface: lifetime-usage, aggregation: sum_agg, timing: after-termination}
+    provenance: canary
+    runners: [rspec]
+    premium: true
+    setup:
+      organization: {premium_integrations: [lifetime_usage]}
+      metrics: [{code: canary_ltsel, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_ltsel_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_ltsel, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_ltsel_cust, currency: EUR}
+      subscription: {external_id: canary_ltsel_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_ltsel, properties: {amount: 30}}]
+      - {at: "2024-03-10T10:00:00Z", do: terminate_subscription}
+    note: >-
+      canary — `select` is a SELECTOR, not an assertion, but the schema's minProperties counts keys
+      and cannot tell the two apart: `{select: {status: terminated}}` satisfies it while naming no
+      field of the payload at all. Such a row would perform the read, compare nothing and pass, which
+      is exactly how the six lifetime-usage after-termination cells could be claimed without being
+      covered. The interpreter refuses it, and this row passes only if that refusal is dropped.
+    expect:
+      lifetime_usage:
+        select: {status: terminated}
+
+- id: canary/setup-stage-error-code
+  guards: a setup-stage rejection's error code is compared
+  expect_failure: "expected error code \"this_is_not_the_code\" on metric"
+  row:
+    id: b14/canary/setup-stage-error-code
+    block: B14
+    axes: {rule: field_name_required}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_stage_code, aggregation_type: sum_agg}]
+      customer: {external_id: canary_stage_code_cust, currency: EUR}
+    at: "2024-03-01T00:00:00Z"
+    expect:
+      error: {stage: metric, status: 422, code: this_is_not_the_code}
+    note: >-
+      canary — the metric IS rejected, and with the right status: a sum_agg metric without a
+      field_name fails 422 value_is_mandatory. Only the CODE is wrong, so the row can pass only if
+      that comparison stopped happening. It is the counterpart of canary/usage-stage-rejection at a
+      SETUP stage, and it is the one that covers B14: every row of that block is three comparisons
+      inside assert_golden_error, and until the `throw :golden_row_done` was moved out of an `ensure`
+      all three were discarded whenever aggregate_failures was off — the row went green while Lago had
+      answered a different code entirely.
+
+- id: canary/subscription-termination-policy
+  guards: setup.subscription termination policy reaches the subscription
+  expect_failure: "Expected 0 to eq 1"
+  row:
+    id: b09/canary/termination-policy
+    block: B9
+    axes: {transition: terminate, plan_pay_in_advance: "false", on_termination_credit_note: none}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      plan: {code: canary_otp_plan, interval: monthly, amount_cents: 1000}
+      customer: {external_id: canary_otp_cust, currency: EUR}
+      subscription:
+        external_id: canary_otp_sub
+        billing_time: calendar
+        on_termination_invoice: skip
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - {at: "2024-03-16T10:00:00Z", do: terminate_subscription}
+    expect:
+      invoices: 1
+    math: >-
+      canary — ONE invoice is what this row produced before the termination policy was applied. The
+      key sat in schema.json and golden_create_subscription never forwarded it, so the subscription
+      carried the column default and TerminateService#bill_in_arrears_fees? (terminate_service.rb:185)
+      raised the partial-period invoice anyway. With `skip` actually applied there is NO invoice at
+      all, so the real count is 0 and this row must fail. It is also the only shape that can catch it:
+      neither creation nor a POST can set the field — it is absent from
+      SubscriptionsController#create_params and Subscriptions::CreateService never assigns it even when
+      handed it directly — so the value only lands if the interpreter follows the create with a PUT.
+
+- id: canary/ended-subscription-termination
+  guards: the ending-at verb really runs the clock job that terminates an ended subscription
+  expect_failure: "Expected 1 to eq 0"
+  row:
+    id: b09/canary/ended-subscription-termination
+    block: B9
+    axes: {transition: ending-at, plan_pay_in_advance: "false", on_termination_credit_note: none}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      plan: {code: canary_end_plan, interval: monthly, amount_cents: 3100, pay_in_advance: false}
+      customer: {external_id: canary_end_cust, currency: EUR}
+      subscription:
+        external_id: canary_end_sub
+        billing_time: calendar
+        ending_at: "2024-03-16T10:00:00Z"
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - {at: "2024-03-16T10:15:00Z", do: perform_ended_subscriptions_termination}
+    expect:
+      invoices: 0
+    math: >-
+      canary — ZERO invoices is precisely what this row produced before the verb existed, and what it
+      produces again the moment the verb stops running Clock::TerminateEndedSubscriptionsJob: an
+      arrears subscription that is never terminated has simply not reached a billing day by 16 March,
+      so nothing is raised. With the job running, TerminateService bills the 16 consumed days and the
+      count is 1. The verb cannot be canaried by asserting the AMOUNT, because the amount is identical
+      to a manual DELETE — only the existence of the transition distinguishes them, which is why this
+      counts invoices instead. It is the same shape as canary/subscription-termination-policy, and it
+      is the only guard on the six `ending-at` cells: `setup.subscription.ending_at` was settable for
+      months while nothing performed the transition it schedules, so a row could name the axis and
+      then measure an ordinary still-active subscription.
+
+- id: canary/pending-subscription-activation
+  guards: the activation verb really runs the clock job that activates a pending future-dated subscription
+  expect_failure: "Expected 2 to eq 0"
+  row:
+    id: b09/canary/pending-subscription-activation
+    block: B9
+    axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: none}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      plan: {code: canary_act_plan, interval: monthly, amount_cents: 3100, pay_in_advance: true}
+      customer: {external_id: canary_act_cust, currency: EUR}
+      subscription:
+        external_id: canary_act_sub
+        billing_time: calendar
+        subscription_at: "2024-03-16T00:00:00Z"
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - {at: "2024-03-16T01:00:00Z", do: perform_subscriptions_activation}
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 0
+    math: >-
+      canary — ZERO is what a future-dated subscription produces for the WHOLE timeline when nothing
+      activates it, and that includes the perform_billing on 1 April: the subscription is `pending` and
+      OrganizationBillingService scopes to `.active`, so it is never billed and never activated, and
+      perform_billing can therefore never stand in for this verb. With the verb the answer is 2 —
+      1_600¢ for the remainder of March at activation and 3_100¢ for April once the subscription is
+      really active. Counting invoices rather than comparing an amount is deliberate: a verb that ran
+      the job but left the status pending would still raise the first invoice, and only the second one
+      is evidence that the gate opened rather than leaked.
+
+- id: canary/subscription-activation-rules
+  guards: an activation_rules array on setup.subscription reaches the create payload
+  expect_failure: "no_linked_payment_provider"
+  row:
+    id: b09/canary/subscription-activation-rules
+    block: B9
+    axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: none}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      plan: {code: canary_ar_plan, interval: monthly, amount_cents: 3100, pay_in_advance: true}
+      customer: {external_id: canary_ar_cust, currency: EUR}
+      subscription:
+        external_id: canary_ar_sub
+        billing_time: calendar
+        activation_rules: [{type: payment, timeout_hours: 48}]
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 2
+    math: >-
+      canary — TWO invoices (3_100¢ March plus 3_100¢ April, both full advance periods) is exactly what
+      this row produced while `activation_rules` was dropped SILENTLY: the key was not in the create
+      payload, the API answered 200, the subscription activated normally and both months were billed.
+      Measured, not assumed — that is the number the pre-capability run printed. With the key forwarded
+      the request is REJECTED 422 customer/no_linked_payment_provider, because a `payment` rule
+      requires the customer to carry a payment provider and a default payment method
+      (activation_rules/payment/validate_service.rb:29-35, :60-70) and no golden setup can give it one:
+      /api/v1/payment_methods exposes index and destroy only (routes.rb:75). So the rejection IS the
+      evidence the key arrived, and this canary passes only if the passthrough is removed and the row
+      goes back to quietly measuring an ungated subscription.
+
+- id: canary/delete-metric-verb
+  guards: the delete_metric verb actually issues DELETE /billable_metrics/:code
+  expect_failure: "fees_amount_cents expected 15000"
+  row:
+    id: b20/canary/delete-metric-verb
+    block: B20
+    axes: {churn: metric-deleted, carried_state: coupon_application, observed_via: invoice}
+    provenance: canary
+    runners: [rspec]
+    calendar_sensitive: true
+    premium: true
+    setup:
+      metrics: [{code: canary_dm_sum, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_dm_plan, interval: monthly, amount_cents: 5000}
+      charges: [{billable_metric_code: canary_dm_sum, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_dm_cust, currency: EUR}
+      subscription: {external_id: canary_dm_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_dm_sum, properties: {amount: 100}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      - at: "2024-04-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_dm_sum, properties: {amount: 100}}]
+      - {at: "2024-04-10T10:00:00Z", do: delete_metric, code: canary_dm_sum}
+      - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 2
+      invoice:
+        select: {index: 1}
+        fees_amount_cents: 15000
+    math: >-
+      canary — 15_000¢ on the SECOND invoice is what this row produces with `delete_metric` no-opped:
+      the step runs, the API is never called, the metric and its charge survive, and May bills the
+      plan's 5_000¢ plus April's 100 units at 1.00. Verified by hollowing the helper and watching this
+      canary flip to PASSED, then restoring it.
+      The April usage is load-bearing and was the whole point of a first attempt that guarded nothing:
+      with events only in March, the post-deletion period has no usage to bill, so a live metric and a
+      deleted one BOTH produce 5_000¢ and the row cannot tell them apart. Events must fall in the
+      period AFTER the churn or the churn is invisible.
+      With the verb wired up, BillableMetrics::DestroyService discards the metric and
+      `metric.charges.update_all(deleted_at:)` (destroy_service.rb:29); Charge carries
+      `default_scope -> { kept }` (models/charge.rb:62), so May has no charge fee and bills 5_000¢.
+      This canary catches a SILENT loss — the step still dispatches and nothing raises. It cannot
+      catch a removed runner branch, which raises "unknown step" loudly on its own.
+- id: canary/interval-wallet-top-up-verb
+  guards: the perform_interval_wallet_top_ups verb actually runs Clock::CreateIntervalWalletTransactionsJob
+  expect_failure: "prepaid_credit_amount_cents expected 0"
+  row:
+    id: b06/canary/interval-wallet-top-up-verb
+    block: B6
+    axes: {source: interval-rule, limitation: none, application: full-cover}
+    provenance: canary
+    runners: [rspec]
+    calendar_sensitive: true
+    premium: true
+    setup:
+      metrics: [{code: canary_iw_sum, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_iw_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_iw_sum, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_iw_cust, currency: EUR}
+      subscription: {external_id: canary_iw_sub, billing_time: calendar}
+      wallets:
+        - name: canary interval refilled
+          code: canary_iw_w
+          rate_amount: "1"
+          currency: EUR
+          recurring_transaction_rules:
+            - {trigger: interval, interval: monthly, method: fixed, granted_credits: "60"}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events:
+          - {code: canary_iw_sum, properties: {amount: 10}}
+          - {code: canary_iw_sum, properties: {amount: 30}}
+          - {code: canary_iw_sum, properties: {amount: 20}}
+      - {at: "2024-04-01T00:30:00Z", do: perform_interval_wallet_top_ups}
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      invoices: 1
+      invoice:
+        fees_amount_cents: 6000
+        prepaid_credit_amount_cents: 0
+    math: >-
+      canary — a prepaid credit of 0¢ against 6_000¢ of fees is exactly what this row produced with
+      `perform_interval_wallet_top_ups` no-opped, measured rather than assumed: the wallet was created
+      empty, the interval rule never fired, and the invoice was paid in cash.
+      `trigger: interval` is reachable from nowhere else — Clock::CreateIntervalWalletTransactionsJob
+      is its only caller, `perform_wallet_refresh` reaches only `trigger: threshold`, and
+      POST /wallet_transactions cannot set `source` (wallet_transactions_controller.rb:125-135), so it
+      always writes `source: :manual`. With the verb wired up the rule grants 60 credits at
+      rate_amount 1 and covers the period in full: prepaid 6_000¢, total 0¢.
+      A hollowed helper is silent — the step dispatches, nothing raises, and the invoice simply bills
+      cash. That is what this canary catches; it cannot catch a removed runner branch, which raises
+      "unknown step" loudly on its own.
+
+# The `add_ons` list and the invoice it produces are asserted by b19/add_on/*/invoice, so collapsing
+# either turns those rows red. `units` is not: both of them leave it at the default, so dropping the
+# `spec.key?("units")` forward in golden_create_one_off_invoice would move no green row at all —
+# every fee would quietly bill one unit and the capability would be gone with nothing to say so.
+# ScenariosHelper#create_one_off_invoice defaults `units: 1`, which is exactly what makes the loss
+# silent rather than an error.
+- id: canary/one-off-units
+  guards: the one_off.units multiplier on create_one_off_invoice reaches the fee
+  expect_failure: "fees_amount_cents expected 5000"
+  row:
+    id: b19/canary/one-off-units
+    block: B19
+    axes: {feature: add_on, arrangement: equal, observed_via: invoice}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      add_ons: [{code: canary_one_off_units, amount_cents: 5000}]
+      customer: {external_id: canary_one_off_units_cust, currency: EUR}
+    timeline:
+      - at: "2024-03-01T00:00:00Z"
+        do: create_one_off_invoice
+        one_off: {add_ons: [canary_one_off_units], units: 3}
+    expect:
+      invoice:
+        invoice_type: one_off
+        fees_count: 1
+        fees_amount_cents: 5000
+    math: >-
+      canary — 5_000¢ x 3 units is 15_000¢ (one_off_service.rb:37,
+      `amount_cents: (unit_amount_cents * units).round`). 5_000¢ is what the invoice reads if the
+      units forward is dropped and the helper's default of 1 applies.
+
+# `charge_model` is the one usage field the ChargeUsageSerializer nests (under `charge`, alongside
+# `code` and `invoice_display_name`), and GoldenComparison.read digs the top level by default. With
+# no FIELD_PATHS entry it returned nil for every row, so a wrong charge model was indistinguishable
+# from a right one — 36 b01 current_usage rows asserted it and all 36 were red for that reason alone.
+# Drop the entry and this canary goes GREEN, because nil never equals "package" either.
+- id: canary/usage-charge-model
+  guards: the usage charge_model path reaches charge.charge_model rather than the payload root
+  expect_failure: "charge_model expected \"package\""
+  row:
+    id: b01/canary/usage-charge-model
+    block: B1
+    axes: {charge_model: standard, aggregation: sum_agg, observed_via: current_usage, events: one}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_ucm, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_ucm_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_ucm, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_ucm_cust, currency: EUR}
+      subscription: {external_id: canary_ucm_sub, billing_time: calendar}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_ucm, properties: {amount: 30}}]
+      - {at: "2024-03-10T10:00:00Z", do: fetch_current_usage}
+    expect:
+      usage:
+        amount_cents: 3000
+        charges_usage:
+          - {billable_metric_code: canary_ucm, charge_model: package, amount_cents: 3000}
+    math: >-
+      canary — the charge is `standard`, so the read must be "standard" and never "package". Before
+      the FIELD_PATHS entry the read was nil and this row would have failed on the nil rather than on
+      the value, which is the same failure a correct row produced.
+
+# `expect.wallet` used to be a single object, so a two-wallet row could assert one balance and had to
+# derive the other from `prepaid_credit - prepaid_granted`. A list is asserted element by element;
+# this canary puts the wrong number on the SECOND entry, so it can only pass if the iteration stops
+# after the first — which is exactly what a `Array.wrap(...).first` regression would do.
+- id: canary/wallet-list-second
+  guards: every entry of a wallet LIST is asserted, not just the first
+  expect_failure: "wallet[canary_wl_beta]: credits_balance expected"
+  row:
+    id: b06/canary/wallet-list-second
+    block: B6
+    axes: {source: granted, limitation: none, effect: multi-wallet-priority}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      metrics: [{code: canary_wl, aggregation_type: sum_agg, field_name: amount}]
+      plan: {code: canary_wl_plan, interval: monthly, amount_cents: 0}
+      charges: [{billable_metric_code: canary_wl, charge_model: standard, properties: {amount: "1"}}]
+      customer: {external_id: canary_wl_cust, currency: EUR}
+      subscription: {external_id: canary_wl_sub, billing_time: calendar}
+      wallets:
+        - {name: alpha, code: canary_wl_alpha, rate_amount: "1", currency: EUR, granted_credits: "10", priority: 1}
+        - {name: beta, code: canary_wl_beta, rate_amount: "1", currency: EUR, granted_credits: "10", priority: 2}
+    timeline:
+      - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+      - at: "2024-03-05T10:00:00Z"
+        do: ingest_events
+        events: [{code: canary_wl, properties: {amount: 30}}]
+      - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    expect:
+      wallet:
+        - {code: canary_wl_alpha, currency: EUR}
+        - {code: canary_wl_beta, credits_balance: "9.99"}
+    math: >-
+      canary — beta is a 10-credit wallet against 3_000¢ of fees, so its balance is whatever the
+      allocation left, never 9.99. The FIRST entry asserts only the wallet's currency and is true on
+      purpose: a runner that asserts element 0 and stops goes green, which is the regression under
+      guard.
+
+# Before `code`, golden_top_up_wallet did `Wallet.find_by!(customer:)` — no ORDER BY, so "the wallet"
+# was whichever row Postgres returned first. This canary tops up BETA and asserts the credits landed
+# on ALPHA. It fails only while the selector works; drop it and the unordered lookup will sooner or
+# later hand back alpha, at which point the canary goes green.
+- id: canary/top-up-wallet-code
+  guards: top_up_wallet's `code` targets the named wallet rather than an arbitrary one
+  expect_failure: "wallet[canary_tw_alpha]: credits_balance expected"
+  row:
+    id: b06/canary/top-up-wallet-code
+    block: B6
+    axes: {source: granted, limitation: none, effect: multi-wallet-priority}
+    provenance: canary
+    runners: [rspec]
+    setup:
+      customer: {external_id: canary_tw_cust, currency: EUR}
+      wallets:
+        - {name: alpha, code: canary_tw_alpha, rate_amount: "1", currency: EUR, granted_credits: "5", priority: 1}
+        - {name: beta, code: canary_tw_beta, rate_amount: "1", currency: EUR, granted_credits: "5", priority: 2}
+    timeline:
+      - at: "2024-03-01T00:00:00Z"
+        do: top_up_wallet
+        code: canary_tw_beta
+        params: {granted_credits: "7", paid_credits: "0"}
+    expect:
+      wallet: {code: canary_tw_alpha, credits_balance: "12.0"}
+    math: >-
+      canary — the top-up names beta, so beta holds 5 + 7 = 12 credits and ALPHA still holds 5.
+      Asserting 12 on alpha is untrue exactly while the selector works, and becomes true the moment
+      the lookup goes back to picking the first wallet.

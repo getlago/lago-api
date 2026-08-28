@@ -8,6 +8,10 @@ This projects runs in docker container, managed with docker-compose.
 You must run `rspec` in the api container, use `lago exec api bundle exec rspec <args>`.
 You must use the `rails` cli in the container too, for example: `lago exec api bin/rails db:migrate`.
 
+Exception, golden suite only: run its specs and `golden:*` rake tasks through
+`dev/golden/run.sh <command>` (e.g. `dev/golden/run.sh rspec spec/scenarios/golden`). It picks
+between a native run and re-entering docker, so it also works on CI where `lago` does not exist.
+
 
 # General style
 

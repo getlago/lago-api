@@ -1,0 +1,58 @@
+# Which API actions count towards the golden suite's action coverage.
+#
+# Cells cover data combinations; actions cover API operations. A suite can be at 100% cells and
+# still never have called `PUT /invoices/:id/refresh`, so both are measured.
+#
+# The action list itself is NOT written here — it is read from Rails' own route table, so a new
+# endpoint appears as an uncovered action without anyone remembering to add it. This file only says
+# which controllers are in scope, and every exclusion is reported in the ledger so the boundary
+# stays visible rather than silently shrinking the denominator.
+#
+# READ ENDPOINTS ARE DELIBERATELY OUT OF SCOPE. Only POST/PUT/PATCH/DELETE count. There are 99 GET
+# endpoints under api/v1 and none of them is in any denominator here, by decision rather than by
+# oversight: this suite exists to pin BILLING BEHAVIOUR — what Lago charges — and its expensive
+# machinery (exact money values, derived `math`, canaries) buys nothing for pagination, filtering or
+# serializer shape. Those are request-spec work. Rows still CALL read endpoints to observe results;
+# what is out of scope is asserting them as contracts in their own right.
+---
+# Controllers whose mutating routes are billing behaviour.
+include:
+  - api/v1/add_ons
+  - api/v1/applied_coupons
+  - api/v1/billable_metrics
+  - api/v1/coupons
+  - api/v1/credit_notes
+  - api/v1/customers
+  - api/v1/events
+  - api/v1/fees
+  - api/v1/invoices
+  - api/v1/plans
+  - api/v1/plans/charges
+  - api/v1/plans/charges/filters
+  - api/v1/plans/fixed_charges
+  - api/v1/subscriptions
+  - api/v1/subscriptions/charges
+  - api/v1/subscriptions/charges/filters
+  - api/v1/subscriptions/fixed_charges
+  - api/v1/subscriptions/lifetime_usages
+  - api/v1/taxes
+  - api/v1/wallet_transactions
+  - api/v1/wallets
+
+# In scope by controller, but not billing behaviour. Listed explicitly so the ledger can report
+# them as deliberately-out-of-scope rather than as missing coverage.
+exclude_actions:
+  - api/v1/invoices#download_pdf
+  - api/v1/invoices#download_xml
+  - api/v1/invoices#resend_email
+  - api/v1/invoices#payment_url
+  - api/v1/invoices#sync_salesforce_id
+  - api/v1/credit_notes#download_pdf
+  - api/v1/credit_notes#download_xml
+  - api/v1/credit_notes#resend_email
+  - api/v1/customers#metadata
+  # Payment-provider flows rather than billing arithmetic.
+  - api/v1/customers#checkout_url
+  - api/v1/wallet_transactions#payment_url
+  - api/v1/invoices#retry_payment
+  - api/v1/invoices#lose_dispute

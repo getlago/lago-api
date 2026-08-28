@@ -1,0 +1,2432 @@
+# B2 — Period boundaries: interval × billing_time × phase, plus the calendar edges
+#
+# Rows here pin pricing (a plan amount, no charges) and vary only dates, so a failure localises to
+# Subscriptions::Dates::*Service rather than to charge arithmetic.
+---
+- id: b02/monthly/anniversary/first-full-period/jan31-into-leap-february
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: anniversary
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    calendar_edge: anniversary-day-absent-in-target-month
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan:
+      code: golden_b02_monthly_anniversary
+      interval: monthly
+      amount_cents: 2900
+      pay_in_advance: false
+    customer:
+      external_id: golden_b02_anniversary_cust
+      currency: EUR
+      timezone: UTC
+    subscription:
+      external_id: golden_b02_anniversary_sub
+      billing_time: anniversary
+  timeline:
+    - {at: "2024-01-31T01:00:00Z", do: create_subscription}
+    - {at: "2024-02-29T02:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 2900
+      taxes_amount_cents: 0
+      total_amount_cents: 2900
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 2900
+          from_date: "2024-01-31T00:00:00Z"
+          to_date: "2024-02-28T23:59:59Z"
+  math: >-
+    Anniversary monthly starting Jan 31: February has no 31st, so Subscriptions::DatesService#build_date
+    clamps and the period runs Jan 31 00:00:00 → Feb 28 23:59:59, with the next period starting
+    Feb 29 (boundaries cross-checked against spec/scenarios/subscriptions/billing_boundaries_spec.rb:57-58,
+    which asserts exactly these two datetimes on invoice_subscription).
+    The subscription fee period starts at midnight even though the subscription was created at
+    01:00 — only charges_from_datetime carries the creation time. A whole period bills the full
+    plan amount, unprorated → 2_900¢.
+
+# ---------------------------------------------------------------------------------------------
+# The interval x billing_time x phase grid. Pricing is pinned across every row below — one plan
+# of 100_000¢, pay in arrears, NO charges, NO tax, NO coupon, customer currency EUR and the
+# default UTC timezone — so the only thing that moves between cells is the dates. Any failure
+# here is a boundary computation, never arithmetic: the single-day price is always
+# 100_000 / (days in the period) and the fee is always (days billed) x that.
+#
+# Two phases need a word of warning about what makes them reachable at all.
+#
+# `first-partial-period` on ANNIVERSARY billing cannot be produced by dates alone. An anniversary
+# subscription's periods are derived from its own `subscription_at`, so it starts exactly on a
+# period boundary by construction and its first period is always whole — dates_service.rb:73-75
+# clamps from_datetime up to started_at and finds nothing to clamp. The only date-driven way to
+# bill part of a first anniversary period is a TRIAL that ends inside it: Fees::SubscriptionService
+# #first_subscription_amount:162-170 moves from_datetime to `initial_started_at + trial_period.days`
+# and bills the remainder of the period from there. The five anniversary partial rows therefore
+# carry `trial_period`, still with the same plan amount and no charges, and they assert the fee's
+# from_date/to_date as the WHOLE period — the labelled window stays the full period while the
+# amount covers only the post-trial days, which is the pair of facts worth pinning.
+#
+# `full-period` means a period that is neither the first nor a terminated one, so those rows bill
+# twice and assert both invoices. On the second invoice
+# Fees::SubscriptionService#should_use_full_amount?:147 sees a subscription fee created before this
+# invoice and returns the plan amount with no division at all, which is exactly the assertion: a
+# second period that were still clamped to `started_at` would repeat the first period's prorated
+# figure.
+# ---------------------------------------------------------------------------------------------
+
+- id: b02/weekly/calendar/first-partial-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: calendar
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 5
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_cal_p1, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_cal_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_cal_p1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-06T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-11T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 71429
+      taxes_amount_cents: 0
+      total_amount_cents: 71429
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 71429
+          from_date: "2024-03-06T00:00:00Z"
+          to_date: "2024-03-10T23:59:59Z"
+  math: >-
+    A calendar weekly subscription is billed on Mondays and only on Mondays
+    (organization_billing_service.rb:148-155, ISODOW = 1), so a subscription created on Wednesday
+    2024-03-06 first bills on Monday 2024-03-11. base_date is billing_date - 1.week = 2024-03-04
+    (dates/weekly_service.rb:10-12) and compute_from_date is base_date.beginning_of_week =
+    2024-03-04 (:14-20); dates_service.rb:73-75 then clamps that up to the subscription's own
+    start, giving from_datetime 2024-03-06T00:00:00Z. It is MIDNIGHT and not the 10:00 creation
+    instant: only charges_from_datetime carries the creation time (dates_service.rb:112).
+    compute_to_date is computed from the UNCLAMPED from_date (:22-26), so the period still closes
+    on the calendar week's Sunday, 2024-03-10T23:59:59Z. Fees::SubscriptionService
+    #first_subscription_amount (fees/subscription_service.rb:158-179) bills
+    date_diff_with_timezone(2024-03-06T00:00, 2024-03-10T23:59:59) = 5 days at a single_day_price
+    of 100_000 / compute_duration, and compute_duration for weekly is the constant WEEK_DURATION =
+    7 (weekly_service.rb:70-72), so 5 x 14_285.714…¢ = 71_428.571…¢, rounded to 71_429¢ at
+    subscription_service.rb:19-20.
+    What a wrong boundary gives. Skipping the clamp at dates_service.rb:73-75 leaves from_datetime
+    on 2024-03-04 and bills 7 days = 100_000¢ — two days the customer did not have. Reading the
+    period with the ANNIVERSARY rule instead (previous_anniversary_day, weekly_service.rb:60-64)
+    gives 2024-03-06 .. 2024-03-12, also 7 days and 100_000¢, over a window that has not finished
+    yet. Dividing by the 5 days actually billed rather than by WEEK_DURATION gives 100_000¢ again.
+    Every plausible mistake here lands on the full plan amount, which is why the row asserts
+    71_429¢ together with both period ends.
+
+- id: b02/weekly/calendar/first-full-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: calendar
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 7
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_cal_f1, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_cal_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_cal_f1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-04T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-11T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-03-04T00:00:00Z"
+          to_date: "2024-03-10T23:59:59Z"
+  math: >-
+    The control for the row above: the same plan and the same billing Monday, with the
+    subscription created ON the boundary instead of two days into it. Monday 2024-03-04 is
+    beginning_of_week, so compute_from_date (weekly_service.rb:14-20) already returns 2024-03-04
+    and the clamp at dates_service.rb:73-75 only moves the time of day down to midnight. The
+    period is 2024-03-04T00:00:00Z .. 2024-03-10T23:59:59Z, date_diff_with_timezone returns 7 days
+    and single_day_price is 100_000/7, so the first period bills 7 x 14_285.714…¢ = 100_000¢
+    exactly — the whole plan amount, unprorated, reached through the SAME prorating expression as
+    the partial row (fees/subscription_service.rb:158-179); should_use_full_amount? is false here
+    on every one of its four branches (:141-156), because the plan is in arrears, no subscription
+    fee exists yet and the subscription did not start in the past.
+    What a wrong boundary gives. A period read one day short (2024-03-04 .. 2024-03-09) bills 6/7
+    = 85_714¢; one day long (.. 2024-03-11) bills 8/7 = 114_286¢. Both are visible only because
+    the row pins from_date and to_date next to the amount: 100_000¢ on its own is also what a
+    boundary computation that gave up and returned plan.amount_cents would produce.
+
+- id: b02/weekly/calendar/full-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: calendar
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 7
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_cal_fp, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_cal_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_cal_fp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-06T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-11T01:00:00Z", do: perform_billing}
+    - {at: "2024-03-18T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 71429
+        total_amount_cents: 71429
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 71429
+            from_date: "2024-03-06T00:00:00Z"
+            to_date: "2024-03-10T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-03-11T00:00:00Z"
+            to_date: "2024-03-17T23:59:59Z"
+  math: >-
+    Two Mondays, so two invoices, and the pair is the assertion. The first is the partial row's
+    5/7 = 71_429¢ over 2024-03-06 .. 2024-03-10. The second is billed on 2024-03-18, where
+    base_date is 2024-03-11 and compute_from_date = base_date.beginning_of_week = 2024-03-11
+    (weekly_service.rb:10-20); dates_service.rb:73 finds 2024-03-11T00:00 is NOT before started_at
+    (2024-03-06T10:00), so nothing is clamped and the period is
+    2024-03-11T00:00:00Z .. 2024-03-17T23:59:59Z. The amount no longer goes through the prorating
+    branch at all: should_use_full_amount? line 147 sees a subscription fee created before this
+    invoice and full_period_amount (fees/subscription_service.rb:247-273) returns plan.amount_cents
+    = 100_000¢ with no division.
+    What a wrong boundary gives. A second period still clamped to started_at would repeat
+    2024-03-06 as its from_datetime; the amount would stay 100_000¢ because full_period_amount does
+    not look at the dates, and the error would be invisible in the totals — which is precisely why
+    both from_date values are asserted. A base_date that walked back a day instead of a week
+    (2024-03-17.beginning_of_week is still 2024-03-11, but 2024-03-18 - 1.day = 2024-03-17 gives
+    2024-03-11 too) is indistinguishable here; the case that IS caught is an off-by-one week,
+    2024-03-04 .. 2024-03-10, which would collide with the first invoice's window and be refused as
+    a duplicate by CreateInvoiceSubscriptionService:69-77, leaving one invoice instead of two.
+
+- id: b02/weekly/calendar/terminated-mid-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: calendar
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 4
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_cal_tm, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_cal_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_cal_tm_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-04T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-07T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 57143
+      taxes_amount_cents: 0
+      total_amount_cents: 57143
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 57143
+          from_date: "2024-03-04T00:00:00Z"
+          to_date: "2024-03-07T10:00:00Z"
+  math: >-
+    Terminating does not wait for Monday: the termination itself invoices the part of the week that
+    was used. terminated_pay_in_arrears? (dates_service.rb:273-277) is true — terminated, in
+    arrears, not downgraded — so compute_from_date takes billing_date.beginning_of_week rather than
+    base_date's (weekly_service.rb:15-17), giving 2024-03-04T00:00:00Z. compute_to_date would close
+    the week on 2024-03-10, but dates_service.rb:87-89 clamps to_datetime down to terminated_at, so
+    the period ends at 2024-03-07T10:00:00Z — a to_datetime that is NOT an end-of-day, which is the
+    signature of a termination boundary. CreateInvoiceSubscriptionService:113-127 keeps these
+    boundaries rather than rebuilding the whole period, because the termination instant is before
+    the period's own charges_to_datetime (:125).
+    Proration on the way out is a different expression from proration on the way in:
+    Fees::SubscriptionService#terminated_amount (:188-214) is selected by
+    should_compute_terminated_amount? (:125-130) and counts
+    subscription.date_diff_with_timezone(2024-03-04T00:00, 2024-03-07T10:00) = 4 days — the
+    termination day is billed — against single_day_price computed with an explicit
+    optional_from_date of 2024-03-04 (:209-213). WEEK_DURATION is 7 either way, so
+    4 x 14_285.714…¢ = 57_142.857…¢ → 57_143¢.
+    What a wrong boundary gives. Treating termination the way an ADVANCE subscription is treated —
+    crediting FROM the termination day rather than billing THROUGH it — bills 2024-03-04 ..
+    2024-03-06, 3 days = 42_857¢. Leaving to_datetime at 2024-03-10T23:59:59Z bills the whole week,
+    100_000¢, for three days the customer will not have. And a from_datetime taken from base_date
+    (2024-02-26, the PREVIOUS week, because compute_from_date without the
+    terminated_pay_in_arrears? branch walks back one week) bills 11 days = 157_143¢.
+
+- id: b02/weekly/anniversary/first-partial-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: anniversary
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    trial_period: 3
+    period_days: 7
+    days_billed: 4
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_ann_p1, interval: weekly, amount_cents: 100000, pay_in_advance: false, trial_period: 3}
+    customer: {external_id: golden_b02_wk_ann_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_ann_p1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-06T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-13T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 57143
+      taxes_amount_cents: 0
+      total_amount_cents: 57143
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 57143
+          from_date: "2024-03-06T00:00:00Z"
+          to_date: "2024-03-12T23:59:59Z"
+  math: >-
+    An anniversary weekly subscription bills on the weekday it started (organization_billing_service
+    .rb:263-272, matching ISODOW), so a Wednesday subscription bills on Wednesday 2024-03-13. The
+    period is whole by construction: base_date is 2024-03-06, previous_anniversary_day returns the
+    date itself when the weekday already matches (weekly_service.rb:60-64), and compute_to_date adds
+    six days (:22-26), so from_datetime .. to_datetime is
+    2024-03-06T00:00:00Z .. 2024-03-12T23:59:59Z. That is why the trial is here: an anniversary
+    subscription starts ON its own boundary, so nothing for dates_service.rb:73-75 to clamp and no
+    date alone can make its first period partial.
+    A 3-day trial ends 2024-03-09. first_subscription_amount:162-170 sees trial_end_date inside the
+    period and moves its LOCAL from_datetime to initial_started_at + 3.days = 2024-03-09T00:00:00Z,
+    then bills date_diff_with_timezone(2024-03-09T00:00, 2024-03-12T23:59:59) = 4 days x 100_000/7 =
+    57_142.857…¢ → 57_143¢. The fee's from_date is NOT moved with it: the fee records
+    boundaries.from_datetime, which came from the invoice_subscription
+    (calculate_fees_service.rb:30-38), so the labelled window stays the whole period while the money
+    covers four sevenths of it. Both facts are asserted, because a fee period narrowed to the
+    post-trial days would leave the amount right and the invoice wrong.
+    What a wrong boundary gives. A trial counted as calendar days from midnight of the day AFTER
+    creation ends 2024-03-10 and bills 3 days = 42_857¢. A trial appended to the period rather than
+    subtracted from it (bill the full week, credit later) shows 100_000¢. And reading this weekly
+    plan with the CALENDAR rule puts the period on 2024-03-04 .. 2024-03-10, with the trial ending
+    inside it, and bills 2024-03-09 .. 2024-03-10 = 2 days = 28_571¢.
+
+- id: b02/weekly/anniversary/first-full-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: anniversary
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 7
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_ann_f1, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_ann_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_ann_f1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-06T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-13T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-03-06T00:00:00Z"
+          to_date: "2024-03-12T23:59:59Z"
+  math: >-
+    The trial row's control, and the row that pins where an anniversary week actually falls. Created
+    Wednesday 2024-03-06 at 10:00 and billed Wednesday 2024-03-13, base_date = billing_date -
+    1.week = 2024-03-06 and previous_anniversary_day returns it unchanged because its weekday
+    already matches subscription_at's (weekly_service.rb:60-64). compute_to_date adds six days
+    (:25), so the period is 2024-03-06T00:00:00Z .. 2024-03-12T23:59:59Z; the from_datetime is
+    midnight even though the subscription was created at 10:00, via the beginning_of_day clamp at
+    dates_service.rb:73-75. 7 days x 100_000/7 = 100_000¢.
+    What a wrong boundary gives. The calendar rule would put this week on 2024-03-04 .. 2024-03-10:
+    the same seven days and the same 100_000¢, two days early — undetectable in the amount and
+    caught only by from_date/to_date. Using next_occurring instead of prev_occurring in
+    previous_anniversary_day would open the period on 2024-03-13, after the clamp collapses it onto
+    started_at, and bill 2024-03-06 .. 2024-03-12 anyway; the case that moves money is a
+    compute_to_date of `from_date + 7.days` instead of 6, which bills 8 days = 114_286¢ and overlaps
+    the next period.
+
+- id: b02/weekly/anniversary/full-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: anniversary
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 7
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_ann_fp, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_ann_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_ann_fp_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-06T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-13T01:00:00Z", do: perform_billing}
+    - {at: "2024-03-20T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-03-06T00:00:00Z"
+            to_date: "2024-03-12T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-03-13T00:00:00Z"
+            to_date: "2024-03-19T23:59:59Z"
+  math: >-
+    Two anniversary Wednesdays. Both invoices are 100_000¢ — an anniversary period is always whole
+    — so the entire content of this row is that the two windows are adjacent and neither repeats:
+    2024-03-06 .. 2024-03-12, then 2024-03-13 .. 2024-03-19. On the second, base_date is
+    2024-03-13, previous_anniversary_day returns it (weekday matches, weekly_service.rb:60-64), the
+    clamp at dates_service.rb:73 does not fire because 2024-03-13T00:00 is after started_at, and
+    should_use_full_amount?:147 short-circuits to plan.amount_cents because a subscription fee
+    already exists (fees/subscription_service.rb:247-273).
+    What a wrong boundary gives. A second period re-clamped to started_at would report from_date
+    2024-03-06T00:00:00Z with the same 100_000¢, so the amount cannot detect it and only the dates
+    can. A previous_anniversary_day that walked back a full week from 2024-03-20 would give
+    2024-03-06 .. 2024-03-12, which InvoiceSubscription.matching? already holds, and
+    CreateInvoiceSubscriptionService:69-77 would refuse the invoice entirely — one invoice, not two.
+
+- id: b02/weekly/anniversary/terminated-mid-period
+  block: B2
+  axes:
+    interval: weekly
+    billing_time: anniversary
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 7
+    days_billed: 4
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_wk_ann_tm, interval: weekly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_wk_ann_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_wk_ann_tm_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-06T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-09T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 57143
+      taxes_amount_cents: 0
+      total_amount_cents: 57143
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 57143
+          from_date: "2024-03-06T00:00:00Z"
+          to_date: "2024-03-09T10:00:00Z"
+  math: >-
+    Terminated on Saturday 2024-03-09, three days into a week that started Wednesday 2024-03-06.
+    terminated_pay_in_arrears? (dates_service.rb:273-277) sends compute_from_date down the
+    billing_date branch, and previous_anniversary_day walks BACK to the subscription's own weekday:
+    2024-03-09 is a Saturday, so prev_occurring(:wednesday) = 2024-03-06
+    (weekly_service.rb:15-17 and :60-64). to_datetime would be 2024-03-12T23:59:59Z and is clamped
+    down to terminated_at by dates_service.rb:87-89, so the period is
+    2024-03-06T00:00:00Z .. 2024-03-09T10:00:00Z.
+    terminated_amount (fees/subscription_service.rb:188-214) bills 4 days — the period start and
+    the termination day are both charged — against WEEK_DURATION 7, so 4 x 100_000/7 =
+    57_142.857…¢ → 57_143¢. Identical to the anniversary trial row's 57_143¢ from the opposite end
+    of the same seven days, which is the point: proration in and proration out are computed by
+    different methods and must agree on the day count.
+    What a wrong boundary gives. Using next_occurring rather than prev_occurring resolves the
+    anniversary forward to 2024-03-13, dates_service.rb:91 then collapses to_datetime onto
+    started_at and the fee lands on a zero-length period. Not clamping to_datetime bills the full
+    week, 100_000¢. Excluding the termination day (the ADVANCE convention) bills 3 days = 42_857¢.
+
+- id: b02/monthly/calendar/first-partial-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: calendar
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 31
+    days_billed: 16
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_cal_p1, interval: monthly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_mo_cal_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_cal_p1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 51613
+      taxes_amount_cents: 0
+      total_amount_cents: 51613
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 51613
+          from_date: "2024-03-16T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    A calendar monthly subscription bills on the 1st (organization_billing_service.rb:157-164), so
+    one created on 2024-03-16 first bills on 2024-04-01. base_date = billing_date - 1.month =
+    2024-03-01 (monthly_service.rb:48-60) and compute_from_date = base_date.beginning_of_month =
+    2024-03-01 (:6-12); dates_service.rb:73-75 clamps it up to the subscription's start, giving
+    from_datetime 2024-03-16T00:00:00Z at MIDNIGHT rather than the 10:00 creation instant.
+    compute_to_date runs on the UNCLAMPED from_date (monthly_service.rb:62-63: calendar, so
+    end_of_month), so the period closes on 2024-03-31T23:59:59Z. compute_duration is measured from
+    the beginning of the period holding from_date, not from from_date itself
+    (monthly_service.rb:35-39), which is why the denominator is March's 31 days and not the 16
+    billed: first_subscription_amount bills 16 x 100_000/31 = 51_612.903…¢ → 51_613¢.
+    March is deliberate. What a wrong boundary gives, and each wrong answer is a different number:
+    dividing by the 16 days billed gives 100_000¢; dividing by APRIL's 30 days (the month being
+    billed IN rather than the month billed FOR) gives 16 x 3_333.33 = 53_333¢; taking the duration
+    from base_date - 1.month (February's 29) gives 55_172¢; and skipping the clamp at
+    dates_service.rb:73-75 bills all 31 days = 100_000¢. Only the pairing of a 31-day denominator
+    with a 16-day numerator lands on 51_613¢.
+
+- id: b02/monthly/calendar/first-full-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: calendar
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 31
+    days_billed: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_cal_f1, interval: monthly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_mo_cal_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_cal_f1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    The control for the row above: same plan, same billing day, subscription created ON the calendar
+    boundary. compute_from_date already returns 2024-03-01 (monthly_service.rb:6-12) and the clamp
+    at dates_service.rb:73-75 only pulls the time of day back to midnight, so the period is
+    2024-03-01T00:00:00Z .. 2024-03-31T23:59:59Z. This still goes through the prorating branch —
+    should_use_full_amount? is false on all four of its conditions (fees/subscription_service.rb
+    :141-156) because the plan is in arrears, no earlier subscription fee exists and the
+    subscription did not start in the past — so the 100_000¢ is 31 x 100_000/31 rather than a
+    short-circuit to plan.amount_cents.
+    What a wrong boundary gives. A period read as 2024-03-01 .. 2024-03-30 bills 30/31 = 96_774¢;
+    one read as 2024-02-29 .. 2024-03-31 bills 32/31 = 103_226¢. Both are only visible because the
+    row asserts the two dates beside the amount: 100_000¢ alone is also what any implementation that
+    gave up and returned plan.amount_cents would print.
+
+- id: b02/monthly/calendar/full-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: calendar
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 30
+    days_billed: 30
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_cal_fp, interval: monthly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_mo_cal_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_cal_fp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 51613
+        total_amount_cents: 51613
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 51613
+            from_date: "2024-03-16T00:00:00Z"
+            to_date: "2024-03-31T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    A partial March followed by a whole April, on one subscription, so the row pins the transition
+    rather than either end of it. March bills 16/31 = 51_613¢ as in the partial row. On 2024-05-01,
+    base_date = 2024-04-01, compute_from_date = base_date.beginning_of_month = 2024-04-01
+    (monthly_service.rb:6-12, :48-60), the clamp at dates_service.rb:73 does not fire because
+    2024-04-01T00:00 is after started_at (2024-03-16T10:00), and the period is
+    2024-04-01T00:00:00Z .. 2024-04-30T23:59:59Z. should_use_full_amount? line 147 finds the March
+    fee created before this invoice, so full_period_amount returns plan.amount_cents = 100_000¢
+    (fees/subscription_service.rb:247-273) with no division — the 30-day April is billed the same
+    100_000¢ as a 31-day March, which is the behaviour: a full period is a full period regardless of
+    its length.
+    What a wrong boundary gives. April prorated as if it were still a first period would bill
+    30 x 100_000/30 = 100_000¢ too, so the amount cannot separate the two; the from_date is what
+    does. A second period still clamped to started_at would report 2024-03-16T00:00:00Z as its
+    from_date over an April window. And a base_date that walked back only to 2024-04-30 rather than
+    a month would resolve the period to April as well, but a base_date left on 2024-03-01 would
+    reproduce the March window, which InvoiceSubscription.matching? already holds and
+    CreateInvoiceSubscriptionService:69-77 would refuse — one invoice, not two.
+
+- id: b02/monthly/calendar/terminated-mid-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: calendar
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 31
+    days_billed: 16
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_cal_tm, interval: monthly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_mo_cal_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_cal_tm_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 51613
+      taxes_amount_cents: 0
+      total_amount_cents: 51613
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 51613
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-03-16T10:00:00Z"
+  math: >-
+    The exact mirror of b02/monthly/calendar/first-partial-period: 16 days of the same 31-day March
+    for the same 51_613¢, counted from the other end. That symmetry is the assertion — proration on
+    the way in and proration on the way out are computed by different methods, and if either were
+    off by a day the two rows would disagree.
+    terminated_pay_in_arrears? (dates_service.rb:273-277) makes compute_from_date take
+    billing_date.beginning_of_month = 2024-03-01 (monthly_service.rb:7-9); to_datetime would be
+    2024-03-31T23:59:59Z and dates_service.rb:87-89 clamps it down to terminated_at, giving
+    2024-03-16T10:00:00Z — again a to_datetime that is not an end of day.
+    CreateInvoiceSubscriptionService:113-127 keeps these boundaries rather than rebuilding the
+    period, because the termination instant precedes the period's charges_to_datetime (:125).
+    terminated_amount (fees/subscription_service.rb:188-214) counts
+    date_diff_with_timezone(2024-03-01T00:00, 2024-03-16T10:00) = 16 days — the termination DAY is
+    billed — and divides by compute_duration measured over the whole of March, 31 days
+    (monthly_service.rb:35-39, reached through single_day_price's optional_from_date at
+    subscription_service.rb:209-213). 16 x 100_000/31 = 51_612.903…¢ → 51_613¢.
+    What a wrong boundary gives. The ADVANCE convention — treat the termination day as unused and
+    credit FROM it — bills 15 days = 48_387¢, which is the off-by-one this block exists to catch.
+    Leaving to_datetime at end of month bills 100_000¢. Dividing by the 16 days billed gives
+    100_000¢. Dividing by April's 30 days gives 53_333¢.
+
+- id: b02/monthly/anniversary/first-partial-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: anniversary
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    trial_period: 10
+    period_days: 31
+    days_billed: 21
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_ann_p1, interval: monthly, amount_cents: 100000, pay_in_advance: false, trial_period: 10}
+    customer: {external_id: golden_b02_mo_ann_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_ann_p1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-15T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-15T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 67742
+      taxes_amount_cents: 0
+      total_amount_cents: 67742
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 67742
+          from_date: "2024-03-15T00:00:00Z"
+          to_date: "2024-04-14T23:59:59Z"
+  math: >-
+    An anniversary monthly subscription bills on its own day of the month
+    (organization_billing_service.rb:274-285), so one created 2024-03-15 bills 2024-04-15. The
+    period is whole by construction: base_date = billing_date - 1.month = 2024-03-15
+    (monthly_service.rb:48-60), previous_anniversary_day returns 2024-03-15 (:109-130), and
+    compute_to_date takes the day BEFORE the next anniversary — month + 1, day
+    subscription_at.day - 1 = 2024-04-14 (:62-81). So from_datetime .. to_datetime is
+    2024-03-15T00:00:00Z .. 2024-04-14T23:59:59Z and compute_duration is
+    2024-04-15 - 2024-03-15 = 31 days (:35-39) — a period that crosses a month boundary and is
+    priced on its OWN length, not on either calendar month.
+    A 10-day trial ends 2024-03-25. first_subscription_amount:162-170 moves its local from_datetime
+    to initial_started_at + 10.days = 2024-03-25T00:00:00Z and bills
+    date_diff_with_timezone(2024-03-25T00:00, 2024-04-14T23:59:59) = 21 days x 100_000/31 =
+    67_741.935…¢ → 67_742¢. The fee still records the full period as its from_date/to_date, because
+    the fee is built from the invoice_subscription's boundaries
+    (calculate_fees_service.rb:30-38), not from the trial-shifted local variable.
+    What a wrong boundary gives. Dividing by MARCH's 31 days happens to coincide here, which is why
+    the row's discriminating denominators are the wrong ones: April's 30 days gives 70_000¢, and the
+    30 days from 2024-03-15 to 2024-04-13 (a compute_to_date that used subscription_at.day rather
+    than day - 1, closing the period on the next anniversary itself and overlapping it) gives
+    21 x 100_000/30 = 70_000¢ over a window one day too long. A trial appended rather than
+    subtracted bills 100_000¢; a trial counted from the following midnight bills 20 days = 64_516¢.
+
+- id: b02/monthly/anniversary/full-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: anniversary
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    calendar_edge: anniversary-day-absent-in-target-month
+    period_days: 31
+    days_billed: 31
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_ann_fp, interval: monthly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_mo_ann_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_ann_fp_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-01-31T10:00:00Z", do: create_subscription}
+    - {at: "2024-02-29T01:00:00Z", do: perform_billing}
+    - {at: "2024-03-31T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-01-31T00:00:00Z"
+            to_date: "2024-02-28T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-02-29T00:00:00Z"
+            to_date: "2024-03-30T23:59:59Z"
+  math: >-
+    Continues b02/monthly/anniversary/first-full-period/jan31-into-leap-february into its SECOND
+    period, which is where the clamping gets interesting: does a month too short for the 31st drag
+    the following periods with it?
+    Period 1 is 2024-01-31T00:00:00Z .. 2024-02-28T23:59:59Z (29 days, billed 29 x 100_000/29 =
+    100_000¢). Period 2 is billed on 2024-03-31 — reached because monthly_anniversary treats the
+    last day of a short month as standing in for every later day of the month
+    (organization_billing_service.rb:274-285). base_date is 2024-03-31 - 1.month = 2024-02-29, since
+    the last-day-of-month branch at monthly_service.rb:51-57 does not fire (2024-03-31's day is not
+    less than the anniversary day 31). previous_anniversary_day(2024-02-29) then returns 2024-02-29
+    itself: 2024-02-29 IS the last day of its month and its day (29) is below the anniversary day
+    (31), so the special case at :115-116 uses the date's own day rather than 31. compute_to_date
+    (:62-81) takes month + 1 and day 30, build_date gives 2024-03-30, and 2024-03-30 is not its
+    month's last day, so no further subtraction: period 2 is
+    2024-02-29T00:00:00Z .. 2024-03-30T23:59:59Z, 31 days, and the anniversary re-anchors to the
+    31st for the period that opens on 2024-03-31.
+    The amount is plan.amount_cents outright — should_use_full_amount? line 147 sees period 1's fee
+    (fees/subscription_service.rb:141-156, :247-273) — so both invoices read 100_000¢ and this row's
+    entire content is the two windows.
+    What a wrong boundary gives. If the February clamp dragged forward, previous_anniversary_day
+    would return 2024-01-31 and period 2 would be 2024-01-31 .. 2024-02-28 — the window period 1
+    already used, which CreateInvoiceSubscriptionService:69-77 refuses as duplicated_invoices, so
+    the run would show ONE invoice instead of two. A compute_to_date that returned 2024-03-31
+    instead of 2024-03-30 would overlap the next period by a day and leave 2024-03-31 billed twice.
+
+- id: b02/monthly/anniversary/terminated-mid-period
+  block: B2
+  axes:
+    interval: monthly
+    billing_time: anniversary
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    calendar_edge: anniversary-day-absent-in-target-month
+    period_days: 29
+    days_billed: 16
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_mo_ann_tm, interval: monthly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_mo_ann_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_mo_ann_tm_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-01-31T10:00:00Z", do: create_subscription}
+    - {at: "2024-02-15T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 55172
+      taxes_amount_cents: 0
+      total_amount_cents: 55172
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 55172
+          from_date: "2024-01-31T00:00:00Z"
+          to_date: "2024-02-15T10:00:00Z"
+  math: >-
+    The sharpest arithmetic in the monthly family, because the DENOMINATOR is neither 30 nor 31.
+    Terminating on 2024-02-15 sends compute_from_date down the terminated_pay_in_arrears? branch
+    (dates_service.rb:273-277, monthly_service.rb:7-9): previous_anniversary_day(2024-02-15) is not
+    a last-day-of-month case, so it uses the anniversary day 31, sees 15 < 31 and walks back to
+    build_date(2024, 1, 31) = 2024-01-31 (:109-130). to_datetime would be 2024-02-28T23:59:59Z —
+    compute_to_date builds 2024-02-30, build_date clamps it to 2024-02-29, and :78 subtracts a
+    further day because 2024-02-29 is the month's last day and the anniversary day 31 is above it —
+    and dates_service.rb:87-89 then clamps down to terminated_at, giving
+    2024-01-31T00:00:00Z .. 2024-02-15T10:00:00Z.
+    terminated_amount bills date_diff_with_timezone(2024-01-31T00:00, 2024-02-15T10:00) = 16 days
+    against compute_duration for the period that HOLDS 2024-01-31, which is
+    2024-01-31 .. 2024-02-28 = 29 days (monthly_service.rb:35-39). 16 x 100_000/29 =
+    55_172.413…¢ → 55_172¢.
+    What a wrong boundary gives, and this is the whole point of the row: the naive denominators are
+    all wrong and all plausible. 31 days (January's length) gives 51_613¢; 30 gives 53_333¢;
+    28 (forgetting the leap day) gives 57_143¢. Dropping the -1.day at monthly_service.rb:78 makes
+    the period 2024-01-31 .. 2024-02-29 and the duration 30, giving 53_333¢. Excluding the
+    termination day bills 15 days = 51_724¢. Only 16/29 reaches 55_172¢.
+
+- id: b02/quarterly/calendar/first-partial-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: calendar
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 91
+    days_billed: 46
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_cal_p1, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_cal_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_cal_p1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-02-15T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 50549
+      taxes_amount_cents: 0
+      total_amount_cents: 50549
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 50549
+          from_date: "2024-02-15T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    A calendar quarterly subscription bills on the 1st of January, April, July and October
+    (organization_billing_service.rb:166-181), so one created 2024-02-15 first bills 2024-04-01.
+    base_date = billing_date - 3.months = 2024-01-01 (quarterly_service.rb:48-60) and
+    compute_from_date = base_date.beginning_of_quarter = 2024-01-01 (:8-14); dates_service.rb:73-75
+    clamps up to the subscription's start for from_datetime 2024-02-15T00:00:00Z, at midnight rather
+    than the 10:00 creation instant. compute_to_date is taken from the unclamped from_date and, for a
+    calendar subscription, is end_of_quarter (:62-68) — 2024-03-31T23:59:59Z.
+    compute_duration (:37-41) measures the period holding from_date, Q1 2024 =
+    31 + 29 + 31 = 91 days, and first_subscription_amount bills
+    date_diff_with_timezone(2024-02-15T00:00, 2024-03-31T23:59:59) = 46 days: 46 x 100_000/91 =
+    50_549.450…¢ → 50_549¢. Q1 of a LEAP year is deliberate — 91 days, not 90.
+    What a wrong boundary gives. Using 90 days (Q1 of a common year, i.e. losing the leap day) gives
+    51_111¢; using Q2's 91 days coincides, but using the 92 days of Q3 gives 50_000¢; dividing by
+    the 46 days billed gives 100_000¢; taking a MONTHLY period instead (2024-02-15 .. 2024-02-29,
+    15 of 29 days) gives 51_724¢; and skipping the clamp bills the whole quarter, 100_000¢. Only
+    46/91 reaches 50_549¢.
+
+- id: b02/quarterly/calendar/first-full-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: calendar
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 91
+    days_billed: 91
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_cal_f1, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_cal_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_cal_f1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-01-01T00:00:00Z"
+          to_date: "2024-03-31T23:59:59Z"
+  math: >-
+    The control for the row above, and the row that pins where a calendar quarter starts and ends.
+    Created on 2024-01-01, compute_from_date already returns beginning_of_quarter
+    (quarterly_service.rb:8-14) and the clamp at dates_service.rb:73-75 only lowers the time of day,
+    so the period is 2024-01-01T00:00:00Z .. 2024-03-31T23:59:59Z. It is still the prorating branch
+    — should_use_full_amount? is false on all four conditions
+    (fees/subscription_service.rb:141-156) — so the 100_000¢ is 91 x 100_000/91.
+    What a wrong boundary gives. A quarter closing on 2024-03-30 bills 90/91 = 98_901¢; one opening
+    on 2023-12-31 bills 92/91 = 101_099¢. A period resolved with the MONTHLY rule
+    (2024-01-01 .. 2024-01-31) bills 31 x 100_000/31 = 100_000¢ — the same total over a third of the
+    time — which is why the two dates are asserted beside the amount rather than trusted to it.
+
+- id: b02/quarterly/calendar/full-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: calendar
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 91
+    days_billed: 91
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_cal_fp, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_cal_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_cal_fp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-02-15T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-07-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 50549
+        total_amount_cents: 50549
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 50549
+            from_date: "2024-02-15T00:00:00Z"
+            to_date: "2024-03-31T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-06-30T23:59:59Z"
+  math: >-
+    A partial Q1 followed by a whole Q2. Q1 bills 46/91 = 50_549¢ as in the partial row. On
+    2024-07-01, base_date = 2024-04-01, compute_from_date = base_date.beginning_of_quarter =
+    2024-04-01 (quarterly_service.rb:8-14, :48-60), the clamp at dates_service.rb:73 does not fire
+    because 2024-04-01T00:00 is after started_at, and the period is
+    2024-04-01T00:00:00Z .. 2024-06-30T23:59:59Z. should_use_full_amount? line 147 finds the Q1 fee
+    and full_period_amount returns plan.amount_cents = 100_000¢ (fees/subscription_service.rb
+    :247-273) without dividing — Q2's 91 days and Q1's 91 days both cost the plan amount, as would
+    Q3's 92.
+    What a wrong boundary gives. Q2 prorated as a first period is also 91/91 = 100_000¢, so the
+    amount alone cannot tell a full period from a re-clamped one; the from_date is the assertion. A
+    base_date that walked back one MONTH rather than three (2024-06-01.beginning_of_quarter is still
+    2024-04-01) is indistinguishable here, but a base_date left in Q1 would reproduce
+    2024-01-01 .. 2024-03-31, a window InvoiceSubscription.matching? already holds, and
+    CreateInvoiceSubscriptionService:69-77 would refuse the second invoice altogether.
+
+- id: b02/quarterly/calendar/terminated-mid-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: calendar
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 91
+    days_billed: 46
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_cal_tm, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_cal_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_cal_tm_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-02-15T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 50549
+      taxes_amount_cents: 0
+      total_amount_cents: 50549
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 50549
+          from_date: "2024-01-01T00:00:00Z"
+          to_date: "2024-02-15T10:00:00Z"
+  math: >-
+    The mirror of b02/quarterly/calendar/first-partial-period: the same 46 days of the same 91-day
+    Q1 for the same 50_549¢, counted from the other end of the quarter. If proration in and
+    proration out disagreed by a day the two rows would print different numbers.
+    terminated_pay_in_arrears? (dates_service.rb:273-277) makes compute_from_date take
+    billing_date.beginning_of_quarter = 2024-01-01 (quarterly_service.rb:9-11); to_datetime would be
+    2024-03-31T23:59:59Z and dates_service.rb:87-89 clamps it to terminated_at, so the period is
+    2024-01-01T00:00:00Z .. 2024-02-15T10:00:00Z. CreateInvoiceSubscriptionService:113-127 keeps
+    these boundaries because the termination instant precedes the period's own charges_to_datetime
+    (:125). terminated_amount (fees/subscription_service.rb:188-214) counts 46 days — the
+    termination day included — over compute_duration 91 (quarterly_service.rb:37-41), giving
+    46 x 100_000/91 = 50_549.450…¢ → 50_549¢.
+    What a wrong boundary gives. Excluding the termination day bills 45 days = 49_451¢. Not clamping
+    to_datetime bills the whole quarter, 100_000¢. A 90-day denominator (Q1 without the leap day)
+    gives 51_111¢, a 92-day one gives 50_000¢.
+
+- id: b02/quarterly/anniversary/first-partial-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: anniversary
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    trial_period: 20
+    period_days: 90
+    days_billed: 70
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_ann_p1, interval: quarterly, amount_cents: 100000, pay_in_advance: false, trial_period: 20}
+    customer: {external_id: golden_b02_qt_ann_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_ann_p1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-15T00:00:00Z", do: create_subscription}
+    - {at: "2024-05-15T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 77778
+      taxes_amount_cents: 0
+      total_amount_cents: 77778
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 77778
+          from_date: "2024-02-15T00:00:00Z"
+          to_date: "2024-05-14T23:59:59Z"
+  math: >-
+    An anniversary quarterly subscription bills on its own day, in its own month and every third
+    month after it (organization_billing_service.rb:295-331), so 2024-02-15 bills on 2024-05-15,
+    2024-08-15 and 2024-11-15. The period is whole by construction, which is why the trial is here:
+    base_date = billing_date - 3.months = 2024-02-15, previous_anniversary_day resolves it to
+    2024-02-15 (quarterly_service.rb:96-122 — February IS one of the four billing months and the
+    date's day is not below the anniversary day), and compute_to_date takes the day before the next
+    anniversary: from_date >> 3 = 2024-05-15, minus a day = 2024-05-14 (:62-80). So the period is
+    2024-02-15T00:00:00Z .. 2024-05-14T23:59:59Z and compute_duration is
+    2024-05-15 - 2024-02-15 = 90 days (:37-41).
+    A 20-day trial ends 2024-03-06. first_subscription_amount:162-170 moves its local from_datetime
+    to 2024-03-06T00:00:00Z and bills
+    date_diff_with_timezone(2024-03-06T00:00, 2024-05-14T23:59:59) = 70 days x 100_000/90 =
+    77_777.777…¢ → 77_778¢, while the fee still carries the whole period as its from_date/to_date
+    (calculate_fees_service.rb:30-38).
+    What a wrong boundary gives. 90 is the length of THIS quarter, not of a calendar quarter: using
+    Q1's 91 days gives 76_923¢, using 92 gives 76_087¢. A compute_to_date that closed the period on
+    the next anniversary itself (2024-05-15, without the -1.day at :67) makes the duration 91 and
+    the days 71, giving 78_022¢ over a window that overlaps the next period. A trial appended rather
+    than subtracted bills 100_000¢.
+
+- id: b02/quarterly/anniversary/first-full-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: anniversary
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 90
+    days_billed: 90
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_ann_f1, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_ann_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_ann_f1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-15T10:00:00Z", do: create_subscription}
+    - {at: "2024-05-15T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-02-15T00:00:00Z"
+          to_date: "2024-05-14T23:59:59Z"
+  math: >-
+    The trial row's control: the same three months with nothing subtracted from them. The period is
+    2024-02-15T00:00:00Z .. 2024-05-14T23:59:59Z — previous_anniversary_day(2024-02-15) returns the
+    date itself (quarterly_service.rb:96-122) and compute_to_date is the day before
+    2024-02-15 >> 3 = 2024-05-15 (:62-80) — and compute_duration is 90 days (:37-41), so
+    90 x 100_000/90 = 100_000¢ through the prorating branch, not through a short-circuit
+    (should_use_full_amount? is false on all four conditions, fees/subscription_service.rb:141-156).
+    What a wrong boundary gives. This anniversary quarter is 90 days while every 2024 calendar
+    quarter is 91 or 92, so a period closing on 2024-05-15 instead of 2024-05-14 bills 91/90 =
+    101_111¢, and one closing on 2024-05-13 bills 89/90 = 98_889¢. A CALENDAR reading puts the
+    period on 2024-04-01 .. 2024-06-30 and also bills 100_000¢, over a window that has not
+    finished — invisible in the total, caught by the dates.
+
+- id: b02/quarterly/anniversary/full-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: anniversary
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    calendar_edge: anniversary-day-absent-in-target-month
+    period_days: 92
+    days_billed: 92
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_ann_fp, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_ann_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_ann_fp_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-01-31T10:00:00Z", do: create_subscription}
+    - {at: "2024-04-30T01:00:00Z", do: perform_billing}
+    - {at: "2024-07-31T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-01-31T00:00:00Z"
+            to_date: "2024-04-29T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-04-30T00:00:00Z"
+            to_date: "2024-07-30T23:59:59Z"
+  math: >-
+    A 31st-of-the-month anniversary on a quarterly plan, followed across the month that has no 31st.
+    The question the row answers is whether the clamp is remembered — whether April dragging the
+    anniversary to the 30th keeps it there.
+    Period 1: billing on 2024-04-30 (organization_billing_service.rb:295-331 treats the last day of a
+    short month as standing in for the 31st). base_date takes the last-day branch at
+    quarterly_service.rb:51-57 — 2024-04-30 is its month's last day and its day 30 is below the
+    anniversary day 31 — and returns (2024-04-30 - 3.months).end_of_month.change(day: 31) =
+    2024-01-31. previous_anniversary_day(2024-01-31) = 2024-01-31 (:96-122), and compute_to_date is
+    next_anniversary - 1.day where next_anniversary clamps through anniversary_day_in:
+    2024-01-31 >> 3 = 2024-04-30, day min(31, 30) = 30, so 2024-04-30 - 1 = 2024-04-29 (:62-80,
+    dates_service.rb:307-309). Period 1 = 2024-01-31T00:00:00Z .. 2024-04-29T23:59:59Z, 90 days,
+    billed 90 x 100_000/90 = 100_000¢.
+    Period 2: billing on 2024-07-31. base_date is 2024-07-31 - 3.months = 2024-04-30 (the last-day
+    branch does not fire — 2024-07-31's day is not below 31). previous_anniversary_day(2024-04-30)
+    resolves to 2024-04-30 via anniversary_day_in(2024, 4) = min(31, 30) = 30, and
+    compute_to_date(2024-04-30) takes 2024-04-30 >> 3 = 2024-07-30, clamps the day to
+    min(31, 31) = 31 giving 2024-07-31, minus a day = 2024-07-30. Period 2 =
+    2024-04-30T00:00:00Z .. 2024-07-30T23:59:59Z — 92 days — and the anniversary RECOVERS to the
+    31st for the period opening 2024-07-31. The amount is plan.amount_cents outright
+    (should_use_full_amount? line 147, fees/subscription_service.rb:247-273): 100_000¢ for 92 days
+    just as for 90, so this row is entirely about the four dates.
+    What a wrong boundary gives. An anniversary resolved from the PREVIOUS period's clamped day
+    rather than from subscription_at would keep the 30th and close period 2 on 2024-07-29, shifting
+    every later period by a day — and if it instead walked back to 2024-01-31, period 2 would repeat
+    period 1's window and CreateInvoiceSubscriptionService:69-77 would refuse it, leaving one
+    invoice. Dropping the -1.day at quarterly_service.rb:67 would make the periods end on the
+    anniversaries themselves and bill 2024-04-30 and 2024-07-31 twice each.
+
+- id: b02/quarterly/anniversary/terminated-mid-period
+  block: B2
+  axes:
+    interval: quarterly
+    billing_time: anniversary
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    calendar_edge: anniversary-day-absent-in-target-month
+    period_days: 90
+    days_billed: 45
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_qt_ann_tm, interval: quarterly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_qt_ann_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_qt_ann_tm_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-01-31T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-15T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 50000
+      taxes_amount_cents: 0
+      total_amount_cents: 50000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 50000
+          from_date: "2024-01-31T00:00:00Z"
+          to_date: "2024-03-15T10:00:00Z"
+  math: >-
+    Terminated on 2024-03-15, in a month that is NOT one of this subscription's four billing months
+    (January, April, July, October), which is the branch this row exists for.
+    terminated_pay_in_arrears? (dates_service.rb:273-277) sends compute_from_date to
+    previous_anniversary_day(2024-03-15) (quarterly_service.rb:9-11). There,
+    should_find_previous_billing_date? returns true on its FIRST check — March is not in
+    billing_months — rather than falling through to the same-month comparison, so the month is
+    rfind { m < 3 } = 1 and build_date(2024, 1, anniversary_day_in(2024, 1) = 31) = 2024-01-31
+    (:96-139). to_datetime would be 2024-04-29T23:59:59Z and dates_service.rb:87-89 clamps it down
+    to terminated_at: 2024-01-31T00:00:00Z .. 2024-03-15T10:00:00Z.
+    terminated_amount (fees/subscription_service.rb:188-214) counts
+    date_diff_with_timezone(2024-01-31T00:00, 2024-03-15T10:00) = 45 days against compute_duration
+    for the period holding 2024-01-31, which is 2024-01-31 .. 2024-04-29 = 90 days
+    (quarterly_service.rb:37-41). 45 x 100_000/90 = exactly 50_000¢ — half the plan, half the
+    quarter, chosen so any off-by-one is a round-number miss.
+    What a wrong boundary gives. Falling through to the same-month branch resolves the anniversary
+    FORWARD to 2024-03-31 (the comment at quarterly_service.rb:131-134 is about exactly this),
+    dates_service.rb:91 then collapses to_datetime onto started_at and the fee lands on a
+    zero-length period. Excluding the termination day bills 44 days = 48_889¢; including one day too
+    many bills 46 = 51_111¢. A 91-day denominator gives 49_451¢ and a 92-day one 48_913¢. Only
+    45/90 is 50_000¢.
+
+- id: b02/semiannual/calendar/first-partial-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: calendar
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 182
+    days_billed: 137
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_cal_p1, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_cal_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_cal_p1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-02-15T10:00:00Z", do: create_subscription}
+    - {at: "2024-07-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 75275
+      taxes_amount_cents: 0
+      total_amount_cents: 75275
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 75275
+          from_date: "2024-02-15T00:00:00Z"
+          to_date: "2024-06-30T23:59:59Z"
+  math: >-
+    A calendar semiannual subscription bills on 1 January and 1 July
+    (organization_billing_service.rb:221-246), so one created 2024-02-15 first bills 2024-07-01.
+    base_date = billing_date - 6.months = 2024-01-01 (semiannual_service.rb:126-138) and
+    compute_from_date = base_date.beginning_of_half_year = 2024-01-01 (:56-62); dates_service.rb
+    :73-75 clamps up to the subscription's start for from_datetime 2024-02-15T00:00:00Z at midnight.
+    compute_to_date works on the unclamped from_date and, for a calendar subscription, is
+    end_of_half_year (:140-146) = 2024-06-30T23:59:59Z. compute_duration measures the whole half
+    (:108-112): 31 + 29 + 31 + 30 + 31 + 30 = 182 days, the LEAP first half.
+    first_subscription_amount bills date_diff_with_timezone(2024-02-15T00:00, 2024-06-30T23:59:59) =
+    137 days: 137 x 100_000/182 = 75_274.725…¢ → 75_275¢.
+    What a wrong boundary gives. A 181-day first half (the common-year length, i.e. losing the leap
+    day) gives 75_691¢; the SECOND half's 184 days give 74_457¢; a 180-day "six times thirty"
+    approximation gives 76_111¢; dividing by the 137 days billed gives 100_000¢; and skipping the
+    clamp bills the whole half, 100_000¢. Only 137/182 reaches 75_275¢.
+
+- id: b02/semiannual/calendar/first-full-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: calendar
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 182
+    days_billed: 182
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_cal_f1, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_cal_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_cal_f1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-07-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-01-01T00:00:00Z"
+          to_date: "2024-06-30T23:59:59Z"
+  math: >-
+    The control for the row above, pinning where a calendar half-year begins and ends. Created
+    2024-01-01, compute_from_date already returns beginning_of_half_year
+    (semiannual_service.rb:56-62) and the clamp at dates_service.rb:73-75 only lowers the time of
+    day, so the period is 2024-01-01T00:00:00Z .. 2024-06-30T23:59:59Z. Still the prorating branch
+    (should_use_full_amount? false on all four conditions, fees/subscription_service.rb:141-156), so
+    the 100_000¢ is 182 x 100_000/182.
+    What a wrong boundary gives. A half closing 2024-06-29 bills 181/182 = 99_451¢; one opening
+    2023-12-31 bills 183/182 = 100_549¢. A period resolved with the QUARTERLY rule
+    (2024-01-01 .. 2024-03-31) also bills 100_000¢, for half the time — which is why the dates are
+    asserted next to the amount.
+
+- id: b02/semiannual/calendar/full-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: calendar
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 184
+    days_billed: 184
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_cal_fp, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_cal_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_cal_fp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-02-15T10:00:00Z", do: create_subscription}
+    - {at: "2024-07-01T01:00:00Z", do: perform_billing}
+    - {at: "2025-01-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 75275
+        total_amount_cents: 75275
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 75275
+            from_date: "2024-02-15T00:00:00Z"
+            to_date: "2024-06-30T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-07-01T00:00:00Z"
+            to_date: "2024-12-31T23:59:59Z"
+  math: >-
+    A partial first half of 2024 followed by a whole second half. H1 bills 137/182 = 75_275¢ as in
+    the partial row. On 2025-01-01, base_date = 2024-07-01 and compute_from_date =
+    base_date.beginning_of_half_year = 2024-07-01 (semiannual_service.rb:56-62, :126-138); the clamp
+    at dates_service.rb:73 does not fire, and the period is
+    2024-07-01T00:00:00Z .. 2024-12-31T23:59:59Z. should_use_full_amount? line 147 finds the H1 fee
+    and full_period_amount returns plan.amount_cents = 100_000¢
+    (fees/subscription_service.rb:247-273) with no division — so a 184-day half costs the same as
+    the 182-day one before it, which is the behaviour.
+    What a wrong boundary gives. H2 prorated as a first period would be 184/184 = 100_000¢ too, so
+    only the from_date separates a full period from a re-clamped one. A second period still clamped
+    to started_at would report 2024-02-15T00:00:00Z over an H2 window; a base_date that stayed in H1
+    would reproduce 2024-01-01 .. 2024-06-30, which InvoiceSubscription.matching? already holds and
+    CreateInvoiceSubscriptionService:69-77 refuses — one invoice instead of two.
+
+- id: b02/semiannual/calendar/terminated-mid-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: calendar
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 182
+    days_billed: 46
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_cal_tm, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_cal_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_cal_tm_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-02-15T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 25275
+      taxes_amount_cents: 0
+      total_amount_cents: 25275
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 25275
+          from_date: "2024-01-01T00:00:00Z"
+          to_date: "2024-02-15T10:00:00Z"
+  math: >-
+    Terminated 46 days into a 182-day half. terminated_pay_in_arrears?
+    (dates_service.rb:273-277) makes compute_from_date take billing_date.beginning_of_half_year =
+    2024-01-01 (semiannual_service.rb:57-59); to_datetime would be 2024-06-30T23:59:59Z and
+    dates_service.rb:87-89 clamps it down to terminated_at, so the period is
+    2024-01-01T00:00:00Z .. 2024-02-15T10:00:00Z, and CreateInvoiceSubscriptionService:113-127 keeps
+    those boundaries because the termination instant precedes the period's charges_to_datetime
+    (:125). terminated_amount (fees/subscription_service.rb:188-214) counts
+    date_diff_with_timezone(2024-01-01T00:00, 2024-02-15T10:00) = 46 days — the termination day
+    included — against compute_duration 182 (semiannual_service.rb:108-112):
+    46 x 100_000/182 = 25_274.725…¢ → 25_275¢.
+    Note the pair with b02/quarterly/calendar/terminated-mid-period: the same 46 days of the same
+    calendar, priced against a half instead of a quarter, is 25_275¢ rather than 50_549¢. The
+    interval is doing the work, and if the semiannual service fell back on the quarterly denominator
+    this row would print 50_549¢.
+    What a wrong boundary gives. Excluding the termination day bills 45 = 24_725¢; not clamping
+    to_datetime bills the whole half, 100_000¢; a 181-day denominator gives 25_414¢ and the second
+    half's 184 gives 25_000¢.
+
+- id: b02/semiannual/anniversary/first-partial-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: anniversary
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    trial_period: 20
+    period_days: 182
+    days_billed: 162
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_ann_p1, interval: semiannual, amount_cents: 100000, pay_in_advance: false, trial_period: 20}
+    customer: {external_id: golden_b02_sa_ann_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_ann_p1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-15T00:00:00Z", do: create_subscription}
+    - {at: "2024-08-15T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 89011
+      taxes_amount_cents: 0
+      total_amount_cents: 89011
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 89011
+          from_date: "2024-02-15T00:00:00Z"
+          to_date: "2024-08-14T23:59:59Z"
+  math: >-
+    An anniversary semiannual subscription bills on its own day, in its own month and six months
+    later (organization_billing_service.rb:417-450), so 2024-02-15 bills 2024-08-15 and 2025-02-15.
+    The period is whole by construction — which is why the trial is here: base_date = billing_date -
+    6.months = 2024-02-15, previous_anniversary_day resolves it to 2024-02-15
+    (semiannual_service.rb:174-198 — February is one of the two billing months and the date's day is
+    not below the anniversary day), and compute_to_date is the day before
+    2024-02-15 >> 6 = 2024-08-15, i.e. 2024-08-14 (:140-158). Period
+    2024-02-15T00:00:00Z .. 2024-08-14T23:59:59Z, compute_duration
+    2024-08-15 - 2024-02-15 = 182 days (:108-112).
+    A 20-day trial ends 2024-03-06; first_subscription_amount:162-170 moves its local from_datetime
+    there and bills date_diff_with_timezone(2024-03-06T00:00, 2024-08-14T23:59:59) = 162 days x
+    100_000/182 = 89_010.989…¢ → 89_011¢, while the fee still records the whole period
+    (calculate_fees_service.rb:30-38).
+    What a wrong boundary gives. This anniversary half happens to be 182 days like calendar H1, so
+    the discriminating errors are elsewhere: a compute_to_date that closed on the anniversary itself
+    (2024-08-15, dropping the -1.day at :145) makes the duration 183 and the days 163, giving
+    89_071¢ over an overlapping window; a trial appended rather than subtracted bills 100_000¢; a
+    trial measured from the following midnight bills 161 days = 88_462¢. And reading this plan with
+    the CALENDAR rule puts the period on 2024-01-01 .. 2024-06-30 and bills 2024-03-06 .. 2024-06-30
+    = 117 days = 64_286¢.
+
+- id: b02/semiannual/anniversary/first-full-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: anniversary
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    period_days: 182
+    days_billed: 182
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_ann_f1, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_ann_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_ann_f1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-15T10:00:00Z", do: create_subscription}
+    - {at: "2024-08-15T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-02-15T00:00:00Z"
+          to_date: "2024-08-14T23:59:59Z"
+  math: >-
+    The trial row's control: the same six months with nothing subtracted. The period is
+    2024-02-15T00:00:00Z .. 2024-08-14T23:59:59Z — previous_anniversary_day(2024-02-15) returns the
+    date itself (semiannual_service.rb:174-198), compute_to_date is the day before
+    2024-02-15 >> 6 (:140-158) — and compute_duration is 182 days (:108-112), so
+    182 x 100_000/182 = 100_000¢ through the prorating branch rather than a short-circuit
+    (should_use_full_amount? false on all four conditions, fees/subscription_service.rb:141-156).
+    What a wrong boundary gives. A period closing 2024-08-15 bills 183/182 = 100_549¢ and one
+    closing 2024-08-13 bills 181/182 = 99_451¢. Reading the plan as calendar semiannual gives
+    2024-01-01 .. 2024-06-30 and the same 100_000¢ over a window that ended six weeks before the
+    invoice — undetectable in the total, which is what the two dates are for.
+
+- id: b02/semiannual/anniversary/full-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: anniversary
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    calendar_edge: anniversary-day-absent-in-target-month
+    period_days: 182
+    days_billed: 182
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_ann_fp, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_ann_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_ann_fp_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-31T10:00:00Z", do: create_subscription}
+    - {at: "2024-09-30T01:00:00Z", do: perform_billing}
+    - {at: "2025-03-31T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-03-31T00:00:00Z"
+            to_date: "2024-09-29T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-09-30T00:00:00Z"
+            to_date: "2025-03-30T23:59:59Z"
+  math: >-
+    A 31st-of-the-month anniversary on a semiannual plan, followed across September, which has no
+    31st, and back again.
+    Period 1: billed 2024-09-30 (organization_billing_service.rb:417-450 lets the last day of a short
+    month stand in for the 31st). base_date takes the last-day branch at semiannual_service.rb
+    :129-135 — 2024-09-30 is its month's last day and its day 30 is below the anniversary day 31 —
+    giving (2024-09-30 - 6.months).end_of_month.change(day: 31) = 2024-03-31.
+    previous_anniversary_day(2024-03-31) = 2024-03-31 (:174-198), and compute_to_date is
+    next_anniversary - 1.day, where next_anniversary clamps through anniversary_day_in:
+    2024-03-31 >> 6 = 2024-09-30, day min(31, 30) = 30, so 2024-09-30 - 1 = 2024-09-29 (:140-158,
+    dates_service.rb:307-309). Period 1 = 2024-03-31T00:00:00Z .. 2024-09-29T23:59:59Z, 183 days,
+    billed 183 x 100_000/183 = 100_000¢.
+    Period 2: billed 2025-03-31. base_date is 2025-03-31 - 6.months = 2024-09-30 (the last-day
+    branch does not fire). previous_anniversary_day(2024-09-30) resolves to 2024-09-30 via
+    anniversary_day_in(2024, 9) = min(31, 30) = 30, and compute_to_date takes
+    2024-09-30 >> 6 = 2025-03-30, clamps the day to min(31, 31) = 31 giving 2025-03-31, minus a day =
+    2025-03-30. Period 2 = 2024-09-30T00:00:00Z .. 2025-03-30T23:59:59Z, 182 days, and the
+    anniversary RECOVERS to the 31st for the period opening 2025-03-31. The amount is
+    plan.amount_cents outright (should_use_full_amount? line 147,
+    fees/subscription_service.rb:247-273), so 183 days and 182 days both cost 100_000¢ and this row
+    is entirely about the four dates.
+    What a wrong boundary gives. An anniversary resolved from the previous period's CLAMPED day
+    rather than from subscription_at would keep the 30th and close period 2 on 2025-03-29, shifting
+    every later period; one that walked back to 2024-03-31 would repeat period 1's window and
+    CreateInvoiceSubscriptionService:69-77 would refuse the invoice, leaving one instead of two.
+    Dropping the -1.day at semiannual_service.rb:145 would bill 2024-09-30 and 2025-03-31 twice each.
+
+- id: b02/semiannual/anniversary/terminated-mid-period
+  block: B2
+  axes:
+    interval: semiannual
+    billing_time: anniversary
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    calendar_edge: anniversary-day-absent-in-target-month
+    period_days: 183
+    days_billed: 77
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_sa_ann_tm, interval: semiannual, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_sa_ann_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_sa_ann_tm_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-31T10:00:00Z", do: create_subscription}
+    - {at: "2024-06-15T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 42077
+      taxes_amount_cents: 0
+      total_amount_cents: 42077
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 42077
+          from_date: "2024-03-31T00:00:00Z"
+          to_date: "2024-06-15T10:00:00Z"
+  math: >-
+    Terminated on 2024-06-15, in a month that is not one of this subscription's two billing months
+    (March and September). terminated_pay_in_arrears? (dates_service.rb:273-277) sends
+    compute_from_date to previous_anniversary_day(2024-06-15) (semiannual_service.rb:57-59), where
+    should_find_previous_billing_date? returns true on its first check — June is not in
+    billing_months — so the month is rfind { m < 6 } = 3 and
+    build_date(2024, 3, anniversary_day_in(2024, 3) = 31) = 2024-03-31 (:174-215). to_datetime would
+    be 2024-09-29T23:59:59Z and dates_service.rb:87-89 clamps it to terminated_at:
+    2024-03-31T00:00:00Z .. 2024-06-15T10:00:00Z.
+    terminated_amount (fees/subscription_service.rb:188-214) counts
+    date_diff_with_timezone(2024-03-31T00:00, 2024-06-15T10:00) = 77 days against compute_duration
+    for the period holding 2024-03-31, which is 2024-03-31 .. 2024-09-29 = 183 days
+    (semiannual_service.rb:108-112). 77 x 100_000/183 = 42_076.502…¢ → 42_077¢.
+    What a wrong boundary gives. Falling through to the same-month branch would resolve the
+    anniversary forward to 2024-06-30, dates_service.rb:91 would collapse to_datetime onto
+    started_at, and the fee would land on a zero-length period. Excluding the termination day bills
+    76 = 41_530¢. A 182-day denominator (the length of the NEXT half, and of a calendar H1) gives
+    42_308¢; 184 gives 41_848¢. Only 77/183 is 42_077¢.
+
+- id: b02/yearly/calendar/first-partial-period
+  block: B2
+  pins: ["F02"]
+  axes:
+    interval: yearly
+    billing_time: calendar
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    period_days: 366
+    days_billed: 291
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_cal_p1, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_cal_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_cal_p1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T10:00:00Z", do: create_subscription}
+    - {at: "2025-01-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 79508
+      taxes_amount_cents: 0
+      total_amount_cents: 79508
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 79508
+          from_date: "2024-03-16T00:00:00Z"
+          to_date: "2024-12-31T23:59:59Z"
+  math: >-
+    A calendar yearly subscription with bill_charges_monthly off is billed once, on 1 January
+    (organization_billing_service.rb:209-220), so one created 2024-03-16 first bills 2025-01-01.
+    base_date = billing_date - 1.year = 2024-01-01 (yearly_service.rb:47-59) and compute_from_date =
+    base_date.beginning_of_year = 2024-01-01 (:65-71); dates_service.rb:73-75 clamps up to the
+    subscription's start, giving 2024-03-16T00:00:00Z at midnight rather than the 10:00 creation
+    instant. compute_to_date runs on the unclamped from_date and, for a calendar subscription, is
+    end_of_year (:73-74) = 2024-12-31T23:59:59Z.
+    The denominator is where yearly differs from every other interval: compute_duration does NOT
+    measure the period, it returns Time.days_in_year(from_date.year) for a calendar subscription
+    (yearly_service.rb:155-157) — 366 for 2024. first_subscription_amount bills
+    date_diff_with_timezone(2024-03-16T00:00, 2024-12-31T23:59:59) = 291 days:
+    291 x 100_000/366 = 79_508.196…¢ → 79_508¢. 2024 is chosen deliberately: a leap year makes the
+    366 visible.
+    What a wrong boundary gives. A 365-day denominator (the leap day forgotten, or
+    days_in_year(2025) taken from the BILLING year rather than the period's) gives 79_726¢ — a 218¢
+    difference that a row asserting only round numbers would never see. Dividing by the 291 days
+    billed gives 100_000¢; skipping the clamp bills the whole year, 100_000¢; and a MONTHLY reading
+    of the period (2024-12-01 .. 2024-12-31) bills 100_000¢ for one month.
+
+- id: b02/yearly/calendar/first-full-period
+  block: B2
+  axes:
+    interval: yearly
+    billing_time: calendar
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    period_days: 366
+    days_billed: 366
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_cal_f1, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_cal_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_cal_f1_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T10:00:00Z", do: create_subscription}
+    - {at: "2025-01-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-01-01T00:00:00Z"
+          to_date: "2024-12-31T23:59:59Z"
+  math: >-
+    The control for the row above. Created 2024-01-01, compute_from_date already returns
+    beginning_of_year (yearly_service.rb:65-71) and the clamp at dates_service.rb:73-75 only lowers
+    the time of day, so the period is 2024-01-01T00:00:00Z .. 2024-12-31T23:59:59Z. Still the
+    prorating branch (should_use_full_amount? false on all four conditions,
+    fees/subscription_service.rb:141-156): 366 days over a days_in_year(2024) of 366
+    (yearly_service.rb:155-157) = 100_000¢, and the two 366s must be the same 366 for that to hold.
+    What a wrong boundary gives. A period closing 2024-12-30 bills 365/366 = 99_727¢; a denominator
+    of 365 against 366 billed days gives 100_274¢ — the leap-year mismatch, and the number this row
+    exists to exclude. A QUARTERLY reading (2024-10-01 .. 2024-12-31) also bills 100_000¢ for a
+    quarter of the time, which is why the dates are asserted.
+
+- id: b02/yearly/calendar/full-period
+  block: B2
+  axes:
+    interval: yearly
+    billing_time: calendar
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    period_days: 365
+    days_billed: 365
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_cal_fp, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_cal_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_cal_fp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T10:00:00Z", do: create_subscription}
+    - {at: "2025-01-01T01:00:00Z", do: perform_billing}
+    - {at: "2026-01-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 79508
+        total_amount_cents: 79508
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 79508
+            from_date: "2024-03-16T00:00:00Z"
+            to_date: "2024-12-31T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2025-01-01T00:00:00Z"
+            to_date: "2025-12-31T23:59:59Z"
+  math: >-
+    A partial leap year followed by a whole common year, which is the pairing worth having: 2024 is
+    366 days and 2025 is 365, and the plan costs 100_000¢ either way. 2024 bills 291/366 = 79_508¢
+    as in the partial row. On 2026-01-01, base_date = 2025-01-01 and compute_from_date =
+    base_date.beginning_of_year = 2025-01-01 (yearly_service.rb:47-71); the clamp at
+    dates_service.rb:73 does not fire because 2025-01-01T00:00 is after started_at, and the period is
+    2025-01-01T00:00:00Z .. 2025-12-31T23:59:59Z. should_use_full_amount? line 147 finds the 2024 fee
+    and full_period_amount returns plan.amount_cents = 100_000¢
+    (fees/subscription_service.rb:247-273) with no division, so the different year length never
+    enters the arithmetic.
+    What a wrong boundary gives. 2025 prorated as a first period is 365/365 = 100_000¢ too, so the
+    amount cannot distinguish it; the from_date is the assertion. A second period still clamped to
+    started_at would report 2024-03-16T00:00:00Z over a 2025 window. A base_date left in 2024 would
+    reproduce 2024-01-01 .. 2024-12-31, which InvoiceSubscription.matching? already holds, and
+    CreateInvoiceSubscriptionService:69-77 would refuse — one invoice instead of two.
+
+- id: b02/yearly/calendar/terminated-mid-period
+  block: B2
+  pins: ["F02"]
+  axes:
+    interval: yearly
+    billing_time: calendar
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    period_days: 366
+    days_billed: 76
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_cal_tm, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_cal_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_cal_tm_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-01-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-03-16T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 20765
+      taxes_amount_cents: 0
+      total_amount_cents: 20765
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 20765
+          from_date: "2024-01-01T00:00:00Z"
+          to_date: "2024-03-16T10:00:00Z"
+  math: >-
+    The mirror of b02/yearly/calendar/first-partial-period across 2024: that row bills 2024-03-16 ..
+    2024-12-31 (291 days), this one bills 2024-01-01 .. 2024-03-16 (76 days), and 291 + 76 = 367 —
+    one more than the year, because BOTH conventions bill the 16th. That is not a bug in either row;
+    it is the documented asymmetry, and pinning both halves is how the suite keeps it visible.
+    terminated_pay_in_arrears? (dates_service.rb:273-277) makes compute_from_date take
+    billing_date.beginning_of_year = 2024-01-01 (yearly_service.rb:66-68); to_datetime would be
+    2024-12-31T23:59:59Z and dates_service.rb:87-89 clamps it to terminated_at, so the period is
+    2024-01-01T00:00:00Z .. 2024-03-16T10:00:00Z, and CreateInvoiceSubscriptionService:113-127 keeps
+    those boundaries because the termination precedes the period's charges_to_datetime (:125).
+    terminated_amount (fees/subscription_service.rb:188-214) counts
+    date_diff_with_timezone(2024-01-01T00:00, 2024-03-16T10:00) = 76 days against
+    Time.days_in_year(2024) = 366 (yearly_service.rb:155-157, reached through single_day_price's
+    optional_from_date at subscription_service.rb:209-213): 76 x 100_000/366 = 20_765.027…¢ →
+    20_765¢.
+    What a wrong boundary gives. Excluding the termination day bills 75 = 20_492¢. A 365-day
+    denominator gives 20_822¢. Not clamping to_datetime bills the whole year, 100_000¢. A from_date
+    taken from base_date without the terminated branch resolves to 2023-01-01 and bills 441 days
+    instead of 76 — more than the whole plan amount, whichever denominator it then divides by.
+
+- id: b02/yearly/anniversary/first-partial-period
+  block: B2
+  axes:
+    interval: yearly
+    billing_time: anniversary
+    phase: first-partial-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    trial_period: 30
+    period_days: 365
+    days_billed: 335
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_ann_p1, interval: yearly, amount_cents: 100000, pay_in_advance: false, trial_period: 30}
+    customer: {external_id: golden_b02_yr_ann_p1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_ann_p1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2025-03-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 91781
+      taxes_amount_cents: 0
+      total_amount_cents: 91781
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 91781
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2025-02-28T23:59:59Z"
+  math: >-
+    An anniversary yearly subscription bills on its own month and day
+    (organization_billing_service.rb:333-361), so 2024-03-01 bills 2025-03-01. The period is whole by
+    construction, hence the trial: base_date = billing_date - 1.year = 2024-03-01
+    (yearly_service.rb:47-59), previous_anniversary_day returns 2024-03-01 (:143-149, since
+    period_started_in_last_year? is false for a date sitting exactly on its anniversary, :175-182),
+    and compute_to_date takes year + 1, the same month, and day subscription_at.day - 1 = 0 —
+    build_date then walks that zero back into the previous month (dates_service.rb:284-299) giving
+    2025-02-28 (:73-87). Period 2024-03-01T00:00:00Z .. 2025-02-28T23:59:59Z, and compute_duration is
+    2025-03-01 - 2024-03-01 = 365 days (:155-161) — NOT days_in_year, which is the calendar-only
+    branch.
+    A 30-day trial ends 2024-03-31. first_subscription_amount:162-170 moves its
+    local from_datetime to initial_started_at + 30.days = 2024-03-31T00:00:00Z and bills
+    date_diff_with_timezone(2024-03-31T00:00, 2025-02-28T23:59:59) = 335 days x 100_000/365 =
+    91_780.821…¢ → 91_781¢, while the fee records the whole period
+    (calculate_fees_service.rb:30-38).
+    What a wrong boundary gives. A denominator of 366 (days_in_year(2024), which is what the CALENDAR
+    branch would return for this from_date) gives 91_530¢ — the single most likely mistake here, and
+    a 251¢ difference. 365 is right because the period spans March 2024 to February 2025 and misses
+    the leap day entirely. A trial appended rather than subtracted bills 100_000¢; a trial measured
+    from the following midnight bills 334 days = 91_507¢.
+
+- id: b02/yearly/anniversary/first-full-period
+  block: B2
+  axes:
+    interval: yearly
+    billing_time: anniversary
+    phase: first-full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    period_days: 365
+    days_billed: 365
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_ann_f1, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_ann_f1_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_ann_f1_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-01T10:00:00Z", do: create_subscription}
+    - {at: "2025-03-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      currency: EUR
+      fees_amount_cents: 100000
+      taxes_amount_cents: 0
+      total_amount_cents: 100000
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 100000
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2025-02-28T23:59:59Z"
+  math: >-
+    The trial row's control, and the row that pins the length of an anniversary year that skips a
+    leap day. The period is 2024-03-01T00:00:00Z .. 2025-02-28T23:59:59Z — previous_anniversary_day
+    returns 2024-03-01 (yearly_service.rb:143-149) and compute_to_date resolves day 0 of March 2025
+    through build_date into 2025-02-28 (:73-87, dates_service.rb:284-299) — and compute_duration is
+    365 days (:155-161). 365 x 100_000/365 = 100_000¢ through the prorating branch, not a
+    short-circuit (should_use_full_amount? false on all four conditions,
+    fees/subscription_service.rb:141-156).
+    What a wrong boundary gives. Using days_in_year(2024) = 366 as the denominator against 365
+    billed days gives 99_727¢ — a full period that silently bills less than the plan, and the reason
+    this row asserts a round 100_000¢ rather than trusting the total. A period closing 2025-03-01
+    (compute_to_date without the day - 1) bills 366/365 = 100_274¢ and overlaps the next period. The
+    CALENDAR reading, 2024-01-01 .. 2024-12-31, also bills 100_000¢ over the wrong twelve months.
+
+- id: b02/yearly/anniversary/full-period
+  block: B2
+  axes:
+    interval: yearly
+    billing_time: anniversary
+    phase: full-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    calendar_edge: leap-day-anniversary
+    period_days: 365
+    days_billed: 365
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_ann_fp, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_ann_fp_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_ann_fp_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-02-29T10:00:00Z", do: create_subscription}
+    - {at: "2025-02-28T01:00:00Z", do: perform_billing}
+    - {at: "2026-02-28T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2024-02-29T00:00:00Z"
+            to_date: "2025-02-27T23:59:59Z"
+      - select: last
+        invoice_type: subscription
+        status: finalized
+        currency: EUR
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: subscription
+            amount_cents: 100000
+            from_date: "2025-02-28T00:00:00Z"
+            to_date: "2026-02-27T23:59:59Z"
+  math: >-
+    A subscription whose anniversary is 29 February, followed through the two common years after it.
+    Period 1: billed 2025-02-28, because yearly_anniversary explicitly folds day 29 into 28 February
+    of a common year (organization_billing_service.rb:333-361, the ARRAY[28, 29] branch). base_date
+    takes the last-day branch at yearly_service.rb:50-55 — 2025-02-28 is its month's last day and its
+    day 28 is below the anniversary day 29, and (2025-02-28 - 1.year).end_of_month is 2024-02-29
+    whose day 29 is not below 29 — giving 2024-02-29. previous_anniversary_day(2024-02-29) returns
+    2024-02-29 (:143-149, with anniversary_day_in guarding the comparison at :181). compute_to_date
+    then takes year + 1, month 2, day 28, and subtracts a FURTHER day at :84 because 2025-02-28 is
+    its month's last day and the anniversary day 29 is above it: 2025-02-27. Period 1 =
+    2024-02-29T00:00:00Z .. 2025-02-27T23:59:59Z. compute_duration is
+    (2025-02-28 - 2024-02-29) = 365 (:155-161), and the period is 365 days inclusive, so
+    365 x 100_000/365 = 100_000¢ — the -1.day at :84 does not shorten the period relative to its own
+    denominator, which is the fact this row nails down.
+    Period 2: billed 2026-02-28. base_date takes the last-day branch again, but this time
+    (2026-02-28 - 1.year).end_of_month is 2025-02-28 whose day 28 is BELOW 29, so the fallback at
+    yearly_service.rb:55 returns that end of month, 2025-02-28. previous_anniversary_day(2025-02-28)
+    resolves through build_date(2025, 2, 29) → 2025-02-28, and compute_to_date gives 2026-02-28 minus
+    a day = 2026-02-27. Period 2 = 2025-02-28T00:00:00Z .. 2026-02-27T23:59:59Z, 365 days, billed
+    plan.amount_cents outright (should_use_full_amount? line 147,
+    fees/subscription_service.rb:247-273).
+    What a wrong boundary gives. Dropping the -1.day at yearly_service.rb:84 makes period 1 end
+    2025-02-28 — 366 days against a 365 denominator, 100_274¢ — and makes period 2 start on a day
+    period 1 already billed. Using days_in_year(2024) = 366 as the denominator gives 99_727¢. And an
+    anniversary_day_in that compared against the raw day 29 rather than the clamped 28
+    (dates_service.rb:307-309) would leave 2025-02-28 trailing the PREVIOUS period, so period 2
+    would open on 2025-03-01 and lose a day of revenue outright.
+
+- id: b02/yearly/anniversary/terminated-mid-period
+  block: B2
+  axes:
+    interval: yearly
+    billing_time: anniversary
+    phase: terminated-mid-period
+  dimensions:
+    pay_in_advance: false
+    charges: none
+    taxes: none
+    plan_amount_cents: 100000
+    bill_charges_monthly: false
+    period_days: 365
+    days_billed: 107
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b02_yr_ann_tm, interval: yearly, amount_cents: 100000, pay_in_advance: false}
+    customer: {external_id: golden_b02_yr_ann_tm_cust, currency: EUR}
+    subscription: {external_id: golden_b02_yr_ann_tm_sub, billing_time: anniversary}
+  timeline:
+    - {at: "2024-03-01T10:00:00Z", do: create_subscription}
+    - {at: "2024-06-15T10:00:00Z", do: terminate_subscription}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      currency: EUR
+      fees_amount_cents: 29315
+      taxes_amount_cents: 0
+      total_amount_cents: 29315
+      fees_count: 1
+      fees:
+        - fee_type: subscription
+          amount_cents: 29315
+          from_date: "2024-03-01T00:00:00Z"
+          to_date: "2024-06-15T10:00:00Z"
+  math: >-
+    Terminated 107 days into an anniversary year that runs March to February.
+    terminated_pay_in_arrears? (dates_service.rb:273-277) sends compute_from_date to
+    previous_anniversary_day(2024-06-15) (yearly_service.rb:66-68): period_started_in_last_year? is
+    false because June is after the March anniversary month (:175-182), so the year stays 2024 and
+    build_date(2024, 3, 1) = 2024-03-01. to_datetime would be 2025-02-28T23:59:59Z and
+    dates_service.rb:87-89 clamps it to terminated_at, giving
+    2024-03-01T00:00:00Z .. 2024-06-15T10:00:00Z. CreateInvoiceSubscriptionService:113-127 keeps
+    those boundaries because the termination precedes the period's charges_to_datetime (:125).
+    terminated_amount (fees/subscription_service.rb:188-214) counts
+    date_diff_with_timezone(2024-03-01T00:00, 2024-06-15T10:00) = 107 days — 31 + 30 + 31 + 15, the
+    termination day billed — against compute_duration for the period holding 2024-03-01, which is
+    365 (yearly_service.rb:155-161). 107 x 100_000/365 = 29_315.068…¢ → 29_315¢.
+    What a wrong boundary gives. A 366-day denominator, which is what the calendar branch of
+    compute_duration returns for a 2024 from_date, gives 29_235¢. period_started_in_last_year?
+    answering true would put from_date on 2023-03-01 and bill 473 days instead of 107 — more than the
+    whole plan amount. Excluding the
+    termination day bills 106 = 29_041¢; not clamping to_datetime bills the whole year, 100_000¢.

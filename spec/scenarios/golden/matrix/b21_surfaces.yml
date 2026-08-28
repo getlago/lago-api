@@ -1,0 +1,1635 @@
+# B21 — what each surface makes of a representative scenario from another block.
+#
+# Sixteen of twenty blocks had only ever asserted a finalized invoice. This block asks the question
+# they never did: hold the same period open, refresh it, or quote it, and does it still say the same
+# thing? For anything involving a reducer the answer is no, because coupons, credit notes and prepaid
+# credit are all gated on `not_in_finalizing_process?` — so a draft shows the customer a number they
+# will not be billed.
+#
+# One row per (subject block, surface). The scenario is deliberately borrowed from the subject block
+# rather than invented, so a difference here is attributable to the surface and nothing else.
+---
+- id: b21/b15/draft
+  block: B21
+  axes: {subject_block: B15, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, grace_period: 5}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes: [{code: b21_b15_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_b15_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_b15, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_b15_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_b15_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_b15_sub, billing_time: calendar}
+    coupons:
+      - name: b21 b15 coupon
+        code: b21_b15_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 4000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b21_b15_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+  math: >-
+    b15/coupon/tax held open instead of issued. That row is the suite's canonical proof that a coupon
+    applies BEFORE tax: 10_000¢ of fees less a 4_000¢ coupon = 6_000¢ taxed at 20% = 1_200¢, total
+    7_200¢.
+    As a draft the same period reads 12_000¢. The coupon is not applied at all —
+    `should_create_coupon_credit?` returns false unless the invoice is finalizing
+    (calculate_fees_service.rb:368) — so tax falls on the full undiscounted 10_000¢ and there is no
+    discount to subtract.
+    Both numbers are correct for what they are, and that is the point: the interaction B15 exists to
+    pin is INVISIBLE on a draft, because only one of its two stages has run. A customer reading this
+    invoice mid-period sees 12_000¢ and will be billed 7_200¢ — a 67% overstatement, and the larger the
+    coupon the worse it gets.
+    coupons_amount_cents is asserted as 0 rather than omitted, because "no coupon" and "a coupon of
+    zero" look identical in a total.
+
+- id: b21/b19/draft
+  block: B21
+  axes: {subject_block: B19, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b21_b19_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_b19, interval: monthly, amount_cents: 5000}
+    charges: [{billable_metric_code: b21_b19_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_b19_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_b19_sub, billing_time: calendar}
+    coupons:
+      - name: b21 first coupon
+        code: b21_b19_one
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+      - name: b21 second coupon
+        code: b21_b19_two
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b21_b19_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      coupons_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    b19/coupon/equal/invoice held open. Issued, that invoice discounts 4_000¢ — two 2_000¢ coupons that
+    both apply and add — and settles at 11_000¢.
+    As a draft it reads the full 15_000¢ with neither coupon applied, and the multiplicity question B19
+    exists to answer cannot even be asked: whether two coupons add, compete or are consumed in an order
+    is undecidable on a surface that applies none of them.
+    There is a reason this gating is right, and it is worth stating because it looks like a bug. Both
+    coupons are `frequency: once`. Had the draft consumed them, a refresh would have to give them back,
+    and `should_terminate_applied_coupon?` has already decided one of them is spent. Withholding until
+    finalization is what keeps a grace period from destroying a customer's discounts.
+
+- id: b21/b12/draft
+  block: B21
+  axes: {subject_block: B12, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, grace_period: 5, commitment_amount_cents: 10000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes: [{code: b21_b12_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_b12_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b21_b12
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b21_b12_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_b12_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_b12_sub, billing_time: calendar}
+    coupons:
+      - name: b21 b12 coupon
+        code: b21_b12_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b21_b12_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    b12/in-arrears/calendar/monthly held open, and the row that shows the gating is drawn in the right
+    place rather than arbitrarily.
+    The commitment true-up is PRESENT on the draft: 2_000¢ subscription + 3_000¢ of usage against a
+    10_000¢ floor gives a 5_000¢ `commitment` fee, all three fees exactly as on the issued invoice.
+    That is because a true-up is a fee PRODUCER, created alongside the others
+    (calculate_fees_service.rb:46), and the finalizing gate sits below the producers.
+    The coupon is absent, so the draft asks 12_000¢ where the issued invoice asks 9_600¢.
+    So on one draft, in one row: the producer survives and the reducer does not, and the line between
+    them is where the gate is. Asserting the three fees individually is what makes that visible —
+    fees_amount_cents is 10_000¢ either way and could not tell the true-up was computed at all.
+
+# ---------------------------------------------------------------------------------------------
+# b21_w1 — the remaining 21 cells.
+#
+# Conventions, so the three rows of a subject block are directly comparable to each other and to
+# the block they borrow from:
+#   * the SCENARIO is lifted from a green row of the subject block and its pricing is not touched,
+#     so any difference below is attributable to the surface and to nothing else. `math` names the
+#     borrowed row and the number IT asserts — that finalized number is the other half of every
+#     assertion here.
+#   * `draft` holds the period open with invoice_grace_period 5 and asserts the untouched draft.
+#     `regenerated` does the same and then rebuilds it with PUT /invoices/:id/refresh.
+#     `preview` uses NO grace period and asserts POST /invoices/preview and the invoice it
+#     forecasts in one row, so agreement is asserted rather than described.
+#   * a preview is always taken mid-period. Invoices::PreviewService#billing_time is
+#     `end_of_periods.first + 1.day` (preview_service.rb:145), so a projection taken on 20 March
+#     quotes the very period that perform_billing raises on 1 April — the same period, twice.
+#   * every row here is `premium: true`; preview rows also need
+#     organization.premium_integrations: [preview] (preview_service.rb:22), and B5 rows need
+#     [progressive_billing] plus `no_transaction: true`.
+#   * three events wherever there is usage, valued so sum / max / latest all differ, even though
+#     no row here varies aggregation — one event cannot tell a total from a delta and the totals
+#     are identical to the borrowed row's anyway.
+# ---------------------------------------------------------------------------------------------
+
+- id: b21/b5/draft
+  block: B21
+  axes: {subject_block: B5, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, grace_period: 5, threshold_amount_cents: 2000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    taxes: [{code: b21_w1_b5d_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b5d_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b21_w1_b5d
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}]
+    charges: [{billable_metric_code: b21_w1_b5d_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b5d_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b5d_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b5d_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b5d_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b5d_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-03-05T13:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        status: finalized
+        fees_amount_cents: 3000
+        taxes_amount_cents: 600
+        total_amount_cents: 3600
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    b05/fixed/single/credited-on-final with 20% VAT added and the period held open. That row's
+    finalized period invoice reads fees 3_000¢, progressive_billing_credit 3_000¢, total 0 — and the
+    draft here reads EXACTLY the same, which is the assertion.
+    Progressive billing is the one reducer that is NOT gated on finalization: Credits::
+    ProgressiveBillingService runs at calculate_fees_service.rb:53, above the three
+    `not_in_finalizing_process?` guards at :364-379. So the draft both books the 3_000¢ credit and
+    calls apply_credit_to_fees (progressive_billing_service.rb:68-84), which pushes the credit into
+    the charge fee's precise_coupons_amount_cents. fee.sub_total_excluding_taxes_amount_cents is
+    `amount_cents - precise_coupons_amount_cents` (fee.rb:238-240) = 0, so the fee's own tax is 0 and
+    the invoice's is 0 too.
+    A draft that showed the credit at invoice level but not at fee level would read taxes 600¢ and a
+    600¢ total — tax charged twice on usage already taxed on the threshold invoice. That is exactly
+    what b21/b5/preview finds on the OTHER surface, which is why this row asserts taxes_amount_cents
+    explicitly rather than only the total: 0 and 0 look identical in a total that is zero either way.
+    The threshold invoice is asserted too, and asserted as `finalized`: Invoices::
+    ProgressiveBillingService ends in Invoices::FinalizeService.call! (:47) without ever consulting
+    grace_period?, so a threshold invoice is never a draft — the grace period only reaches the
+    period invoice, and a row that assumed otherwise would be selecting the wrong invoice.
+
+- id: b21/b5/regenerated
+  block: B21
+  axes: {subject_block: B5, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, grace_period: 5, threshold_amount_cents: 2000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    taxes: [{code: b21_w1_b5r_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b5r_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b21_w1_b5r
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}]
+    charges: [{billable_metric_code: b21_w1_b5r_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b5r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b5r_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b5r_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b5r_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b5r_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-03-05T13:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice, select: {invoice_type: subscription}}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        status: finalized
+        fees_amount_cents: 3000
+        total_amount_cents: 3600
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    The same period as b21/b5/draft, rebuilt from scratch, and the interesting number is that the
+    credit is booked ONCE and not twice.
+    Invoices::RefreshDraftService#reset_invoice_values destroys the fees AND
+    `invoice.credits.progressive_billing_invoice_kind` (refresh_draft_service.rb:123) before zeroing
+    progressive_billing_credit_amount_cents (:132). Credits::ProgressiveBillingService then runs
+    again on the rebuilt fees and re-derives the same 3_000¢ from Subscriptions::
+    ProgressiveBilledAmount, whose to_credit_amount is the threshold invoice's fees_amount_cents net
+    of coupons, its own progressive credits and its credit notes (progressive_billed_amount.rb:60-64)
+    — a figure that does not move when a different invoice is refreshed.
+    Had the reset missed the Credit rows, the second pass would ADD another 3_000¢ and the invoice
+    would read progressive_billing_credit 6_000¢ against 3_000¢ of fees; had it missed
+    apply_credit_to_fees, the per-fee reduction would be lost and the 600¢ of tax would reappear. The
+    row asserts progressive_billing_credit_amount_cents, sub_total and taxes together because the
+    total is 0 under all three readings and cannot separate them.
+    `refresh_invoice` names its target with `select: {invoice_type: subscription}` rather than
+    defaulting to the newest: the newest invoice here is the period invoice by creation order, but
+    the threshold invoice is finalized and PUT /invoices/:id/refresh on it would be a no-op
+    (refresh_draft_service.rb:32 `return result unless invoice.draft?`) — a silent pass.
+
+- id: b21/b5/preview
+  block: B21
+  axes: {subject_block: B5, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, threshold_amount_cents: 2000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  no_transaction: true
+  pins: ["F84"]
+  setup:
+    organization: {premium_integrations: [preview, progressive_billing]}
+    taxes: [{code: b21_w1_b5p_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b5p_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b21_w1_b5p
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 2000}]
+    charges: [{billable_metric_code: b21_w1_b5p_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b21_w1_b5p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b5p_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b5p_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b5p_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b5p_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-03-05T13:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      select: {invoice_type: subscription}
+      status: finalized
+      fees_amount_cents: 3000
+      progressive_billing_credit_amount_cents: 3000
+      sub_total_excluding_taxes_amount_cents: 0
+      taxes_amount_cents: 0
+      total_amount_cents: 0
+    preview:
+      fees_amount_cents: 3000
+      progressive_billing_credit_amount_cents: 3000
+      sub_total_excluding_taxes_amount_cents: 0
+      taxes_amount_cents: 600
+      total_amount_cents: 600
+  math: >-
+    PINS F84, AND THE TWO SURFACES DISAGREE. The same period is quoted on 20 March and then issued on
+    1 April, and the issued invoice is asserted in the same row so the gap is a fact rather than a
+    claim: 0¢ due, 600¢ quoted.
+    Both surfaces agree on the credit. Invoices::PreviewService#apply_progressive_billing_credits
+    (preview_service.rb:330-359) deliberately reuses the read-only Subscriptions::
+    ProgressiveBilledAmount, so it finds the same 3_000¢ and :302 subtracts it from
+    sub_total_excluding_taxes — 3_000 − 0 − 3_000 = 0 on both surfaces.
+    They disagree on the tax, and the reason is one missing line. The real pipeline calls
+    apply_credit_to_fees, so the charge fee carries precise_coupons_amount_cents 3_000 and
+    Fees::ApplyTaxesService taxes `fee.sub_total_excluding_taxes_amount_cents` = 0
+    (apply_taxes_service.rb:38, fee.rb:238-240). The preview's copy of the arithmetic bumps only the
+    invoice-level counter and never touches a fee, so :309 taxes the GROSS 3_000¢ at 20% = 600¢, and
+    :312-317 then reads sub_total_including 0 + 600 and a total of 600¢.
+    So the preview quotes 600¢ of VAT on a taxable base it has itself computed as zero — tax on usage
+    the customer already paid tax on, on the threshold invoice this row also asserts. It is the exact
+    shape of F70 reached from the other side: there the invoice lost the per-fee reduction because a
+    churn broke the charge_id join, here the preview never attempts one.
+    A zero-tax scenario cannot see this at all, which is why this row carries VAT while
+    b05/fixed/single/credited-on-final does not: with rate 0 both surfaces read 0 and agree.
+
+- id: b21/b6/draft
+  block: B21
+  axes: {subject_block: B6, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, rate_amount: 1}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b21_w1_b6d_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b6d, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b6d_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b6d_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b6d_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "10"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b6d_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b6d_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b6d_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 3000
+    wallet:
+      balance_cents: 1000
+      credits_balance: "10.0"
+  math: >-
+    b06/granted/none/partial-cover held open. That row's finalized invoice reads fees 3_000¢,
+    prepaid_credit 1_000¢, total 2_000¢, and the wallet ends empty.
+    The draft reads 3_000¢ due and the wallet still full. should_create_applied_prepaid_credit?
+    begins `return false if not_in_finalizing_process?` (calculate_fees_service.rb:375-379), so
+    Credits::AppliedPrepaidCreditsService never runs and no WalletTransaction is written.
+    Both halves are asserted because either alone is ambiguous. prepaid_credit_amount_cents 0 with an
+    empty wallet would mean the credits were spent and the invoice failed to record it — money gone
+    with nothing to show for it. A full wallet with a 2_000¢ total would mean the reverse. 0 and 1_000
+    together are the only reading in which nothing has happened yet.
+    And nothing happening yet is right: the gate is what makes a grace period reversible. Were a draft
+    to burn 1_000¢ of prepaid credit, a refresh would have to give it back, and Invoices::
+    RefreshDraftService has no code that does — it recredits nothing (compare Invoices::VoidService,
+    which recredits coupons and wallet transactions explicitly, :37-49). The draft overstating by
+    1_000¢ is the price of never having to un-spend a wallet.
+
+- id: b21/b6/regenerated
+  block: B21
+  axes: {subject_block: B6, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, rate_amount: 1}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b21_w1_b6r_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b6r, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b6r_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b6r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b6r_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "10"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b6r_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b6r_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b6r_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 3000
+    wallet:
+      balance_cents: 1000
+  math: >-
+    The b21/b6/draft period rebuilt. Same numbers, and the wallet is the assertion.
+    PUT /invoices/:id/refresh calls Invoices::RefreshDraftService with the default `context:
+    :refresh`, so CalculateFeesService still answers true to not_in_finalizing_process? and the
+    prepaid-credit gate is still shut — a refresh is a recomputation, not a partial finalization.
+    The wallet at 1_000¢ after TWO passes over the same period is what a row that only refreshed once
+    could not say. Had the gate depended on how many times the invoice was computed rather than on
+    the context, the second pass would have spent the credits on an invoice that is still a draft, and
+    the eventual finalization would spend them again — the double-spend shape the B20 lead found in
+    credit notes, in the wallet.
+    Compare b21/b6/preview, where the same 1_000¢ IS reported: the difference between the two rows is
+    not the wallet, it is whether the surface intends to collect.
+
+- id: b21/b6/preview
+  block: B21
+  axes: {subject_block: B6, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, rate_amount: 1}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b21_w1_b6p_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b6p, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b6p_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b21_w1_b6p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b6p_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "10"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b6p_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b6p_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b6p_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 1000
+      total_amount_cents: 2000
+    preview:
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 1000
+      total_amount_cents: 2000
+    wallet:
+      balance_cents: 0
+  math: >-
+    The two surfaces AGREE, and the row is built so that agreement is not free.
+    Both read fees 3_000¢, prepaid_credit 1_000¢, total 2_000¢ — the preview on 20 March and the
+    invoice b06/granted/none/partial-cover already pins on 1 April. PreviewService reaches it through
+    its own #create_applied_prepaid_credits (preview_service.rb:369-378), which calls the SAME
+    Credits::AllocatePrepaidCreditsByWalletsService the real pipeline calls; that service only
+    computes a hash of wallet → amount and writes nothing (allocate_prepaid_credits_by_wallets_
+    service.rb:29-67), which is why it can be reused on an unpersisted invoice.
+    The proof that the preview did not spend the credits is the INVOICE, not the wallet. The wallet
+    ends at 0 because the 1 April invoice spent it; had the 20 March preview spent it first, the
+    invoice would have found an empty wallet, reported prepaid_credit 0 and billed the full 3_000¢ —
+    and the wallet would read 0 in that world too. So `invoice.prepaid_credit_amount_cents: 1000` is
+    the assertion and `wallet.balance_cents: 0` is the control that the credits were consumed exactly
+    once, by the surface entitled to consume them.
+    This is the reducer that the draft withholds and the preview reports, on one scenario, in two
+    rows — which is the whole point of separating the surfaces rather than adding an axis.
+
+- id: b21/b8/draft
+  block: B21
+  axes: {subject_block: B8, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, credit_note_type: credit}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b21_w1_b8d_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b8d, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b8d_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b8d_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b8d_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b8d_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b8d_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b8d_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - at: "2024-04-03T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 3000
+        refund_amount_cents: 0
+        items:
+          - {fee_type: charge, amount_cents: 3000}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b8d_sum, timestamp: "2024-04-05T10:00:00Z", properties: {amount: 12}}
+        - {code: b21_w1_b8d_sum, timestamp: "2024-04-05T11:00:00Z", properties: {amount: 5}}
+        - {code: b21_w1_b8d_sum, timestamp: "2024-04-05T12:00:00Z", properties: {amount: 3}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 2000
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      credit_amount_cents: 3000
+      balance_amount_cents: 3000
+  math: >-
+    b08/manual-full/credit/plain, followed by a second period held open. March is finalized by hand
+    out of its grace period and credited in full, exactly as that row does: 30 units × 1.00 = 3_000¢
+    of fees, a 3_000¢ spendable note.
+    April then accrues 20 units = 2_000¢ and, finalized, would spend 2_000¢ of the note —
+    Credits::CreditNoteService#apply_credits takes min(balance, remaining invoice amount)
+    (credit_note_service.rb:40-46) — leaving credit_notes_amount_cents 2_000, a total of 0 and a
+    balance of 1_000.
+    As a draft it reads 2_000¢ due and the note untouched at 3_000¢. should_create_credit_note_credit?
+    is `!not_in_finalizing_process?` (calculate_fees_service.rb:364-366), the bluntest of the three
+    guards.
+    The note is asserted with `select: {index: -1}` rather than bare, because a bare credit_note
+    expectation compares the payload captured when the note was CREATED — on 3 April, before April's
+    invoice existed — and would report balance 3_000¢ whether or not the draft had spent it. The
+    whole row would pass while asserting nothing.
+    This is the pair the B20 lead turned on, in the direction where the gate helps: there the credit
+    was diverted into a note that a finalized invoice spent on the spot, so the total came out right
+    and only the draft showed the double-bill. Here the withholding is what it is designed to be —
+    the customer sees 2_000¢ due, will be billed 0, and the note is still theirs.
+
+- id: b21/b8/regenerated
+  block: B21
+  axes: {subject_block: B8, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, credit_note_type: credit}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b21_w1_b8r_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b8r, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b8r_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b8r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b8r_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b8r_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b8r_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b8r_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - at: "2024-04-03T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 3000
+        refund_amount_cents: 0
+        items:
+          - {fee_type: charge, amount_cents: 3000}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b8r_sum, timestamp: "2024-04-05T10:00:00Z", properties: {amount: 12}}
+        - {code: b21_w1_b8r_sum, timestamp: "2024-04-05T11:00:00Z", properties: {amount: 5}}
+        - {code: b21_w1_b8r_sum, timestamp: "2024-04-05T12:00:00Z", properties: {amount: 3}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice, select: {index: 1}}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 2000
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 3000
+  math: >-
+    The b21/b8/draft scenario with April rebuilt, and the number that matters is the note's balance
+    after a refresh: still 3_000¢, not 1_000¢.
+    Invoices::RefreshDraftService#reset_invoice_values nulls the fee_id of the items belonging to
+    credit notes RAISED FROM this invoice (:120) and re-points them afterwards through
+    CreditNotes::RefreshDraftService. The note here was raised from MARCH's invoice, so it is not in
+    `invoice.credit_notes` at all and none of that machinery touches it — it is an inbound balance,
+    reachable only through Credits::CreditNoteService, which the refresh does not reach because
+    context is `:refresh` and the guard at :364 holds.
+    Two failure modes are excluded. If a refresh had counted as finalizing, the draft would read
+    credit_notes 2_000 / total 0 and the note would sit at 1_000¢ — spent against an invoice nobody
+    has issued, and spent AGAIN at finalization if the recredit path were missed. If the refresh had
+    instead confused the inbound note with an outbound one, its items would have been re-pointed at
+    April's fees and the March credit would be attached to the wrong period.
+    `select: {index: 1}` on the refresh is load-bearing: index 0 is March, which is finalized, and
+    refresh_draft_service.rb:32 returns early on anything that is not a draft — so a defaulted
+    selector that drifted to March would make this row pass having refreshed nothing.
+
+- id: b21/b8/preview
+  block: B21
+  axes: {subject_block: B8, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, credit_note_type: credit}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b21_w1_b8p_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b8p, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b8p_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b21_w1_b8p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b8p_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b8p_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b8p_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b8p_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 3000
+        refund_amount_cents: 0
+        items:
+          - {fee_type: charge, amount_cents: 3000}
+    - at: "2024-04-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b8p_sum, timestamp: "2024-04-05T10:00:00Z", properties: {amount: 12}}
+        - {code: b21_w1_b8p_sum, timestamp: "2024-04-05T11:00:00Z", properties: {amount: 5}}
+        - {code: b21_w1_b8p_sum, timestamp: "2024-04-05T12:00:00Z", properties: {amount: 3}}
+    - {at: "2024-04-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 1}
+        status: finalized
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 2000
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 2000
+      credit_notes_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 2000
+      total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 1000
+  math: >-
+    The two surfaces AGREE, and the credit note is the reducer for which agreement was least
+    obvious — it is the one the B20 lead caught the draft withholding.
+    March is finalized at 3_000¢ and credited in full; April accrues 20 units = 2_000¢ and both
+    surfaces settle it at 0 with credit_notes_amount_cents 2_000 — the preview on 20 April and the
+    finalized invoice on 1 May, asserted side by side.
+    The preview reaches it through Invoices::Preview::CreditsService#persisted_credits, which calls
+    the very same Credits::CreditNoteService with `context: :preview`. That context skips every write
+    — no Credit row, no apply_credit_to_fees, no update_remaining_credit
+    (credit_note_service.rb:47-63) — but the invoice-level counter is bumped regardless, at :67, so
+    the breakdown is reported as fully as on a real invoice. Two routes worth naming as excluded: a
+    preview reporting the right total with a 0¢ breakdown (the total is computed at :317 from a
+    credit_notes_amount_cents that is still zero, and only :320-321 subtracts the credits, so the
+    field could easily have been left behind), and a preview that ignored inbound notes altogether
+    and quoted 2_000¢ due.
+    The note's balance is asserted at 1_000¢ with `select: {index: -1}` — the 3_000¢ note less the
+    2_000¢ the FINALIZED invoice spent, and NOT less a further 2_000¢ for the preview. A bare
+    credit_note expectation would compare the payload captured on 2 April, before either surface had
+    seen the note, and would report 3_000¢ whatever happened afterwards.
+    So the balance at 1_000¢ and the invoice's own credit_notes_amount_cents at 2_000¢ are together
+    the proof that the note was read twice and spent once. Compare b21/b8/draft, where the same note
+    is neither: 2_000¢ due, 3_000¢ still on the books.
+
+- id: b21/b9/draft
+  block: B21
+  axes: {subject_block: B9, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, created_day: 16}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b21_w1_b9d, interval: monthly, amount_cents: 3100, pay_in_advance: false}
+    customer:
+      external_id: golden_b21_w1_b9d_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b9d_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-16T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    b09/create-mid-period/arrears/none held open, and it must be identical: 16–31 March is 16 days at
+    3_100¢ / 31 = 100¢ per day = 1_600¢, on the window 16–31 rather than 1–31.
+    Proration is entirely producer-side. Fees::SubscriptionService runs at
+    calculate_fees_service.rb:44, above the finalizing gate, and the window comes from
+    DatesService#from_datetime clamping the computed 1 March to started_at (dates_service.rb:73-75) —
+    nothing in either path consults the invoice's status. So this cell is an AGREEMENT, and the reason
+    to pin it is that the whole B9 block had only ever measured proration on the finalized path: with
+    sixteen of twenty blocks in that position, "the first invoice is prorated" and "the first invoice
+    is prorated whenever we look at it" were the same statement, and only one of them had a test.
+    from_date and to_date are asserted, not just the amount, for the same reason the borrowed row
+    asserts them: a draft charging the right 1_600¢ for the wrong 1–31 March window would otherwise
+    pass, and that window is what the customer reads.
+
+- id: b21/b9/regenerated
+  block: B21
+  axes: {subject_block: B9, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, created_day: 16}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    plan: {code: golden_b21_w1_b9r, interval: monthly, amount_cents: 3100, pay_in_advance: false}
+    customer:
+      external_id: golden_b21_w1_b9r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b9r_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-16T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    The same partial period rebuilt on 2 April — a day AFTER the period it prices ended, which is the
+    reason this cell is not a duplicate of b21/b9/draft.
+    A refresh does not remember the boundaries; it recomputes them.
+    Invoices::RefreshDraftService#reset_invoice_values destroys the invoice_subscriptions outright
+    (:122) and CreateInvoiceSubscriptionService is called again with `refresh: true` at a timestamp
+    taken from the destroyed row — `invoice_subscriptions.first&.timestamp`
+    (refresh_draft_service.rb:96-104), i.e. 1 April, NOT the 2 April wall clock. That indirection is
+    the whole assertion: if the refresh had used Time.current, DatesService would resolve the period
+    containing 2 April and bill 1–30 April, and the customer would be charged 3_100¢ for a month they
+    have not had while the 16 prorated days vanished.
+    1_600¢ on 16–31 March therefore excludes three implementations at once: the correct one, the
+    wall-clock one (3_100¢ on 1–30 April), and one that recomputed the period correctly but lost the
+    started_at clamp (3_100¢ on 1–31 March). Only the fee window separates the last two, which is why
+    fees_count and both dates are asserted rather than the total alone.
+    This is BIL-537's shape without its bug: there a refresh deleted a fee it should have kept, here
+    it rebuilds one it must reproduce exactly.
+
+- id: b21/b9/preview
+  block: B21
+  axes: {subject_block: B9, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, created_day: 16}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  calendar_sensitive: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    plan: {code: golden_b21_w1_b9p, interval: monthly, amount_cents: 3100, pay_in_advance: false}
+    customer: {external_id: golden_b21_w1_b9p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b9p_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-16T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-16T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+    preview:
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-16T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    "What will my first invoice be?" asked on 20 March, four days into a subscription that started on
+    the 16th, and then compared with the invoice itself. Both must say 1_600¢ for 16–31 March.
+    The preview does NOT price the period it is asked in. PreviewService#billing_time is
+    `end_of_periods.first + 1.day` (preview_service.rb:145) where end_of_period comes from a
+    current_usage DatesService at Time.current, so a preview taken on 20 March resolves 31 March + 1
+    = 1 April and then computes boundaries AT that instant — which is why it forecasts the same period
+    perform_billing raises on 1 April rather than the period after it. This is the projection context
+    (`fetch_context` returns :default for a live subscription, :81-85; Preview::SubscriptionsService
+    #context returns :projection because subscriptions.external_ids is present), and it is what a row
+    meaning "predict my next invoice" has to be in: with no external_ids the request would silently
+    become a PROPOSAL, which skips charge fees entirely and would answer this question with 0.
+    A preview that fell into the following period would read 3_100¢ on 1–30 April, and one that priced
+    the current period without the started_at clamp would read 3_100¢ on 1–31 March. Both are
+    plausible readings of "next invoice" and both are wrong; the fee window is what tells them apart,
+    so it is asserted on the preview as well as on the invoice.
+
+- id: b21/b10/draft
+  block: B21
+  axes: {subject_block: B10, surface: draft}
+  dimensions: {interval: monthly, billing_time: calendar, grace_period: 5, coupon_type: fixed_amount, coupon_frequency: once, tax_level: charge}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes:
+      - {code: b21_w1_b10d_entity, name: entity default, rate: 5, applied_to_organization: true}
+      - {code: b21_w1_b10d_customer, name: customer, rate: 10, applied_to_organization: false}
+      - {code: b21_w1_b10d_plan, name: plan, rate: 15, applied_to_organization: false}
+      - {code: b21_w1_b10d_charge, name: charge, rate: 25, applied_to_organization: false}
+    metrics:
+      - {code: b21_w1_b10d_taxed, aggregation_type: sum_agg, field_name: amount}
+      - {code: b21_w1_b10d_untaxed, aggregation_type: sum_agg, field_name: amount}
+    plan:
+      code: golden_b21_w1_b10d
+      interval: monthly
+      amount_cents: 1000
+      tax_codes: [b21_w1_b10d_plan]
+    charges:
+      - billable_metric_code: b21_w1_b10d_taxed
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b21_w1_b10d_charge]
+      - {billable_metric_code: b21_w1_b10d_untaxed, charge_model: standard, properties: {amount: "1"}}
+    customer:
+      external_id: golden_b21_w1_b10d_cust
+      currency: EUR
+      tax_codes: [b21_w1_b10d_customer]
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b10d_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b10d coupon
+        code: b21_w1_b10d_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 1600
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b10d_taxed, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b10d_taxed, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b10d_taxed, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+        - {code: b21_w1_b10d_untaxed, timestamp: "2024-03-05T13:00:00Z", properties: {amount: 25}}
+        - {code: b21_w1_b10d_untaxed, timestamp: "2024-03-05T14:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b10d_untaxed, timestamp: "2024-03-05T15:00:00Z", properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 16000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 16000
+      taxes_amount_cents: 3400
+      total_amount_cents: 19400
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 1000, taxes_amount_cents: 150}
+        - {fee_type: charge, item_code: b21_w1_b10d_taxed, amount_cents: 10000, taxes_amount_cents: 2500}
+        - {fee_type: charge, item_code: b21_w1_b10d_untaxed, amount_cents: 5000, taxes_amount_cents: 750}
+  math: >-
+    b10/fixed_amount/once/charge held open, and it separates the block's two halves cleanly: the
+    LADDER survives the draft and the coupon does not.
+    The ladder is intact. Fees::ApplyTaxesService runs per fee inside
+    Invoices::ComputeTaxesAndTotalsService at calculate_fees_service.rb:56, which is above the gate,
+    and #applicable_taxes resolves the same three rungs it resolves on the finalized invoice
+    (apply_taxes_service.rb:64-78): the charge's own 25% for b21_w1_b10d_taxed, the plan's 15% for the
+    subscription fee and for the untaxed metric, and neither the customer's 10% nor the entity's 5%
+    anywhere. That is asserted per fee because 150 / 2_500 / 750 and any uniform blend summing to
+    3_400 are indistinguishable in an invoice total.
+    The coupon is absent, and the ladder is what makes its absence expensive. Finalized, the 1_600¢
+    coupon is spread across the three fees in proportion — 100 / 1_000 / 500 — and each remainder is
+    taxed at ITS own rate: 900×15% + 9_000×25% + 4_500×15% = 135 + 2_250 + 675 = 3_060¢, total
+    17_460¢. On the draft every fee is taxed gross: 150 + 2_500 + 750 = 3_400¢, total 19_400¢.
+    So the draft overstates by 1_940¢ — 1_600 of missing discount and 340 of tax charged on it. The
+    tax on a discount that will never be billed is the part a row asserting only coupons_amount_cents
+    would miss, and it is why sub_total_excluding_taxes and taxes_amount_cents are both named.
+    The coupon is not consumed either: `once` and still whole, because
+    Credits::AppliedCouponsService was never called (:54, guarded by :368).
+
+- id: b21/b10/regenerated
+  block: B21
+  axes: {subject_block: B10, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, grace_period: 5, coupon_type: fixed_amount, coupon_frequency: once, tax_level: charge}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes:
+      - {code: b21_w1_b10r_entity, name: entity default, rate: 5, applied_to_organization: true}
+      - {code: b21_w1_b10r_customer, name: customer, rate: 10, applied_to_organization: false}
+      - {code: b21_w1_b10r_plan, name: plan, rate: 15, applied_to_organization: false}
+      - {code: b21_w1_b10r_charge, name: charge, rate: 25, applied_to_organization: false}
+    metrics:
+      - {code: b21_w1_b10r_taxed, aggregation_type: sum_agg, field_name: amount}
+      - {code: b21_w1_b10r_untaxed, aggregation_type: sum_agg, field_name: amount}
+    plan:
+      code: golden_b21_w1_b10r
+      interval: monthly
+      amount_cents: 1000
+      tax_codes: [b21_w1_b10r_plan]
+    charges:
+      - billable_metric_code: b21_w1_b10r_taxed
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b21_w1_b10r_charge]
+      - {billable_metric_code: b21_w1_b10r_untaxed, charge_model: standard, properties: {amount: "1"}}
+    customer:
+      external_id: golden_b21_w1_b10r_cust
+      currency: EUR
+      tax_codes: [b21_w1_b10r_customer]
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b10r_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b10r coupon
+        code: b21_w1_b10r_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 1600
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b10r_taxed, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b10r_taxed, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b10r_taxed, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+        - {code: b21_w1_b10r_untaxed, timestamp: "2024-03-05T13:00:00Z", properties: {amount: 25}}
+        - {code: b21_w1_b10r_untaxed, timestamp: "2024-03-05T14:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b10r_untaxed, timestamp: "2024-03-05T15:00:00Z", properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 16000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 16000
+      taxes_amount_cents: 3400
+      total_amount_cents: 19400
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 1000, taxes_amount_cents: 150}
+        - {fee_type: charge, item_code: b21_w1_b10r_taxed, amount_cents: 10000, taxes_amount_cents: 2500}
+        - {fee_type: charge, item_code: b21_w1_b10r_untaxed, amount_cents: 5000, taxes_amount_cents: 750}
+  math: >-
+    The b21/b10/draft ladder rebuilt, and the reason this cell earns a row is that a refresh throws
+    the applied taxes away and has to find the same rungs again.
+    #reset_invoice_values calls `invoice.applied_taxes.destroy_all` and destroys every fee
+    (refresh_draft_service.rb:121-122); the Fee::AppliedTax rows go with them. The second pass
+    resolves the ladder from scratch, per fee, and must land on 150 / 2_500 / 750 — the same three
+    rungs, still shadowing the customer's 10% and the entity's 5%.
+    Three regressions are excluded by the per-fee figures and by nothing else. A rebuilt fee that lost
+    its charge association would fall to the plan's 15% and read 1_500¢ instead of 2_500¢, total
+    18_400¢. A refresh that appended taxes rather than replacing them would double them to 6_800¢. A
+    refresh that resolved the ladder against the invoice instead of the fee would apply one blended
+    rate. All three are invisible in fees_amount_cents, which is 16_000¢ throughout.
+    The coupon stays absent and unconsumed — `context: :refresh` keeps not_in_finalizing_process?
+    true — so the surface still asks 19_400¢ where b10/fixed_amount/once/charge asks 17_460¢. Two
+    passes do not move the customer any closer to the number they will pay, which is the honest
+    reading of "refreshed and nothing moved" for a reducer that is gated rather than stale.
+
+- id: b21/b10/preview
+  block: B21
+  axes: {subject_block: B10, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, coupon_type: fixed_amount, coupon_frequency: once, tax_level: charge}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    taxes:
+      - {code: b21_w1_b10p_entity, name: entity default, rate: 5, applied_to_organization: true}
+      - {code: b21_w1_b10p_customer, name: customer, rate: 10, applied_to_organization: false}
+      - {code: b21_w1_b10p_plan, name: plan, rate: 15, applied_to_organization: false}
+      - {code: b21_w1_b10p_charge, name: charge, rate: 25, applied_to_organization: false}
+    metrics:
+      - {code: b21_w1_b10p_taxed, aggregation_type: sum_agg, field_name: amount}
+      - {code: b21_w1_b10p_untaxed, aggregation_type: sum_agg, field_name: amount}
+    plan:
+      code: golden_b21_w1_b10p
+      interval: monthly
+      amount_cents: 1000
+      tax_codes: [b21_w1_b10p_plan]
+    charges:
+      - billable_metric_code: b21_w1_b10p_taxed
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b21_w1_b10p_charge]
+      - {billable_metric_code: b21_w1_b10p_untaxed, charge_model: standard, properties: {amount: "1"}}
+    customer:
+      external_id: golden_b21_w1_b10p_cust
+      currency: EUR
+      tax_codes: [b21_w1_b10p_customer]
+    subscription: {external_id: golden_b21_w1_b10p_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b10p coupon
+        code: b21_w1_b10p_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 1600
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b10p_taxed, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b10p_taxed, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b10p_taxed, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+        - {code: b21_w1_b10p_untaxed, timestamp: "2024-03-05T13:00:00Z", properties: {amount: 25}}
+        - {code: b21_w1_b10p_untaxed, timestamp: "2024-03-05T14:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b10p_untaxed, timestamp: "2024-03-05T15:00:00Z", properties: {amount: 10}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 16000
+      coupons_amount_cents: 1600
+      sub_total_excluding_taxes_amount_cents: 14400
+      taxes_amount_cents: 3060
+      total_amount_cents: 17460
+    preview:
+      fees_amount_cents: 16000
+      coupons_amount_cents: 1600
+      sub_total_excluding_taxes_amount_cents: 14400
+      taxes_amount_cents: 3060
+      total_amount_cents: 17460
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 1000, taxes_amount_cents: 135}
+        - {fee_type: charge, item_code: b21_w1_b10p_taxed, amount_cents: 10000, taxes_amount_cents: 2250}
+        - {fee_type: charge, item_code: b21_w1_b10p_untaxed, amount_cents: 5000, taxes_amount_cents: 675}
+  math: >-
+    The two surfaces AGREE on the hardest number in the block, and PreviewService gets there through
+    its own code.
+    Both read 3_060¢ of tax and 17_460¢ due, matching b10/fixed_amount/once/charge exactly. That is
+    not a shared implementation: #compute_tax_and_totals reimplements the pipeline
+    (preview_service.rb:292-321), and it happens to preserve both properties this block tests. The
+    order is right — Coupons::PreviewService at :299, taxes at :309 — and so is the per-fee
+    distribution: Coupons::PreviewService#add_credit walks the fees and increments
+    precise_coupons_amount_cents by fee.compute_precise_credit_amount_cents (preview_service, coupons/
+    preview_service.rb:57-62), the same method the real Credits::AppliedCouponsService uses. So the
+    spread is 100 / 1_000 / 500 and each fee is taxed at its own rung on what remains:
+    900×15% + 9_000×25% + 4_500×15% = 135 + 2_250 + 675.
+    The per-fee taxes are asserted on the PREVIEW rather than on the invoice, because the invoice side
+    is already pinned by the borrowed row and the preview side is where a second implementation could
+    drift. Two drifts are excluded: a preview that taxed before discounting would read 3_400¢ and
+    17_800¢ (b21/b10/draft's tax figure — the same mistake the draft makes for a different reason),
+    and a preview that discounted at invoice level without touching the fees would read the same
+    3_400¢ of fee tax while claiming a 14_400¢ sub_total, which is precisely the inconsistency
+    b21/b5/preview catches on the progressive-billing path.
+    Nothing is consumed: the coupon is `once` and still whole when 1 April spends it, which is why one
+    period is enough here — the preview and the invoice are looking at the SAME period, not
+    consecutive ones.
+    `no_transaction: true` is REQUIRED and is not decoration. Invoices::PreviewService#add_charge_fees
+    wraps each charge in `ActiveRecord::Base.connection_pool.with_connection` inside a Parallel block
+    (preview_service.rb:204-226); with more than one charge that releases the connection carrying
+    RSpec's test transaction, and the next lazy association load — `applied_coupon.coupon` at
+    coupons/preview_service.rb:22 — comes back nil against an empty database, so the request 500s with
+    `undefined method 'fixed_amount?' for nil`. Verified by bisection: the identical row with ONE
+    charge does not raise, and this row with the deletion strategy does not either. It is the same
+    mechanism as F73 (recorded as F86) and it makes every MULTI-CHARGE preview row in the suite need this flag.
+
+- id: b21/b12/regenerated
+  block: B21
+  axes: {subject_block: B12, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, grace_period: 5, commitment_amount_cents: 10000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes: [{code: b21_w1_b12r_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b12r_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b21_w1_b12r
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b21_w1_b12r_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b12r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b12r_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b12r coupon
+        code: b21_w1_b12r_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b12r_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b12r_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b12r_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    b21/b12/draft rebuilt. Same three fees, same 12_000¢, and the true-up is the assertion because it
+    is the one fee computed FROM the other fees — so a refresh has to recreate them in an order that
+    lets it see them.
+    #reset_invoice_values destroys all three fees; CalculateFeesService then recreates the
+    subscription and charge fees inside the per-invoice_subscription loop and calls
+    create_minimum_commitment_true_up_fee LAST, at :46. Commitments::Minimum::InArrears::
+    CalculateTrueUpFeeService reads its fees back through FetchInvoicesService, which for a plan with
+    no monthly-split intervals is `Invoice.where(id: invoice_subscription.invoice_id)` — this very
+    invoice (fetch_invoices_service.rb:26-28). So it sums the 2_000¢ and 3_000¢ just written and
+    charges the 5_000¢ shortfall against the 10_000¢ floor.
+    Three wrong numbers are excluded. 10_000¢ of true-up (15_000¢ of fees, 18_000¢ due) is what a
+    refresh that computed the true-up before the other fees, or against the destroyed ones, would
+    produce — the floor charged in full as if the customer had spent nothing. 0¢ is what a refresh
+    that counted the OLD commitment fee as spend would produce. And a stale 5_000¢ carried over
+    rather than recomputed is excluded by the fee having been destroyed at all.
+    The coupon stays withheld, so this surface asks 12_000¢ where the issued invoice asks 9_600¢
+    (10_000 − 2_000 = 8_000 taxed at 20%). Producer above the gate, reducer below it, twice over: the
+    line held on the first computation and holds on the second.
+
+- id: b21/b12/preview
+  block: B21
+  axes: {subject_block: B12, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, commitment_amount_cents: 10000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    taxes: [{code: b21_w1_b12p_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b12p_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b21_w1_b12p
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b21_w1_b12p_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b21_w1_b12p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b12p_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b12p coupon
+        code: b21_w1_b12p_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b12p_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 15}}
+        - {code: b21_w1_b12p_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 10}}
+        - {code: b21_w1_b12p_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 5}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 10000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 8000
+      taxes_amount_cents: 1600
+      total_amount_cents: 9600
+    preview:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 8000
+      taxes_amount_cents: 1600
+      total_amount_cents: 9600
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    The two surfaces AGREE, on the only fee in the suite that a preview has to invent rather than
+    project.
+    Both read three fees totalling 10_000¢, a 2_000¢ coupon, 1_600¢ of tax and 9_600¢ due. The
+    preview's true-up comes from a different service and a different input:
+    Invoices::PreviewService#add_commitment_fee (:259-289) builds an UNSAVED InvoiceSubscription and
+    hands Fees::Commitments::Minimum::CalculatePreviewFeeService the running fee total it has summed
+    in memory — 2_000 + 3_000 = 5_000 — rather than letting the service read fees back from the
+    database as the real InArrears path does. Two routes to `[10_000 − 5_000, 0].max`, and this row is
+    what says they meet.
+    The mid-period timing is where a commitment preview could plausibly go wrong and does not. The
+    quote is taken on 20 March with only 3_000¢ of usage recorded, so a preview that measured usage
+    to Time.current instead of to the period end would still find 3_000¢ here — but a preview that
+    treated the partial period as SHORT would prorate the floor: Commitments::CalculateAmountService
+    applies a proration_coefficient, and a coefficient of 20/31 would give a 6_452¢ floor, a 1_452¢
+    true-up, 6_452¢ of fees and 5_342¢ due. It quotes the full month because billing_time is
+    1 April (:145), not 20 March.
+    The coupon then lands identically on both surfaces, spread 400 / 600 / 1_000 across the three
+    fees, and the per-fee amounts are asserted on the preview because fees_count 3 alone cannot say
+    the true-up was 5_000¢ rather than the floor charged whole.
+
+- id: b21/b15/regenerated
+  block: B21
+  axes: {subject_block: B15, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, grace_period: 5, coupon_type: fixed_amount}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes: [{code: b21_w1_b15r_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b15r_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b15r, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b15r_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b15r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b15r_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b15r coupon
+        code: b21_w1_b15r_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 4000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b15r_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b15r_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b15r_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+  math: >-
+    b15/coupon/tax rebuilt instead of held. The issued invoice is 7_200¢ — 10_000¢ of fees less a
+    4_000¢ coupon, taxed at 20% on the 6_000¢ that remains. The refreshed draft is 12_000¢, the same
+    figure b21/b15/draft reports, and reporting it AGAIN after a rebuild is the point.
+    "Changed something, refreshed, nothing moved" is the sentence this row exists to make safe to say.
+    A refresh that had applied the coupon would read 7_200¢ and would have consumed a `once` coupon on
+    an invoice nobody has issued — and Invoices::RefreshDraftService contains no recredit path, so a
+    subsequent void or a further refresh would not give it back. The 12_000¢ is therefore not a
+    limitation of the refresh; it is the refresh declining to spend something it cannot un-spend, and
+    `context: :refresh` keeping not_in_finalizing_process? true (calculate_fees_service.rb:368) is the
+    single line that decides it.
+    The block's whole subject — that the coupon comes BEFORE the tax — is undecidable on this surface,
+    and the row says which field would have decided it: taxes_amount_cents. 2_000¢ is 20% of the gross
+    10_000¢; the issued invoice's 1_200¢ is 20% of the discounted 6_000¢; the reverse order would have
+    given 2_000¢ of tax and an 8_000¢ total. Two of those three readings produce 2_000¢ of tax, so a
+    refreshed draft cannot tell "coupon withheld" from "tax applied first" — which is exactly why the
+    interaction needs the finalized surface and why this row asserts the sub_total alongside it.
+
+- id: b21/b15/preview
+  block: B21
+  axes: {subject_block: B15, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, coupon_type: fixed_amount}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    taxes: [{code: b21_w1_b15p_vat, name: VAT, rate: 20}]
+    metrics: [{code: b21_w1_b15p_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b15p, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b21_w1_b15p_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b21_w1_b15p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b15p_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b15p coupon
+        code: b21_w1_b15p_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 4000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b15p_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b15p_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b15p_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 10000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 6000
+      taxes_amount_cents: 1200
+      total_amount_cents: 7200
+    preview:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 6000
+      taxes_amount_cents: 1200
+      total_amount_cents: 7200
+  math: >-
+    The two surfaces AGREE on the ORDER, which is the only thing B15 measures.
+    b15/coupon/tax is the suite's canonical proof that the coupon precedes the tax on a finalized
+    invoice: 10_000¢ of fees, a 4_000¢ fixed coupon, 20% on the 6_000¢ that remains = 1_200¢, total
+    7_200¢. The preview taken on 20 March reaches the same four numbers, and it is a genuinely
+    independent derivation — Invoices::PreviewService#compute_tax_and_totals calls
+    Coupons::PreviewService at :299 and only then apply_taxes at :309, mirroring
+    calculate_fees_service.rb:54 and :56 in a file that shares no code with it.
+    The row is sized so the two orders cannot coincide. Taxing first would give 10_000 + 2_000 = 12_000
+    and then the coupon → 8_000¢, so a preview with the stages transposed would quote 800¢ more than
+    the invoice it forecasts. A percentage coupon would commute and prove only that both stages ran.
+    fees_amount_cents is 10_000¢ under either order and is asserted only as a control; the sequence
+    lives in sub_total_excluding_taxes 6_000 and taxes 1_200.
+    Both are asserted on both surfaces deliberately. Assert the preview alone and a wrong preview
+    matching a wrong invoice would look like parity; assert the invoice alone and this becomes a
+    duplicate of the B15 row it borrows from. The pair is the cell.
+
+- id: b21/b19/regenerated
+  block: B21
+  axes: {subject_block: B19, surface: regenerated}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, grace_period: 5, coupon_frequency: once}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b21_w1_b19r_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b19r, interval: monthly, amount_cents: 5000}
+    charges: [{billable_metric_code: b21_w1_b19r_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b21_w1_b19r_cust
+      currency: EUR
+      invoice_grace_period: 5
+    subscription: {external_id: golden_b21_w1_b19r_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b19r first
+        code: b21_w1_b19r_one
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+      - name: b21 w1 b19r second
+        code: b21_w1_b19r_two
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b19r_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b19r_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b19r_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    b19/coupon/equal rebuilt: 5_000¢ plan + 100 units = 15_000¢, two 2_000¢ `once` coupons that both
+    apply and add on the issued invoice, settling it at 11_000¢. The refreshed draft reads 15_000¢
+    with neither applied.
+    The multiplicity question is undecidable here, and the row says how badly: one coupon applied
+    would give 13_000¢, both 11_000¢, and this surface reports 15_000¢ — further from either than they
+    are from each other. A block that varies HOW MANY instances of a feature meet cannot be measured
+    on a surface that admits none.
+    What the refresh does establish is that both coupons are still spendable after two passes.
+    `should_terminate_applied_coupon?` fires only from inside Credits::AppliedCouponService
+    (applied_coupon_service.rb:78-85), which the gate at calculate_fees_service.rb:368 keeps
+    unreached, so neither `once` coupon is marked consumed by either computation.
+    That is the failure worth excluding rather than the totals. Had a refresh evaluated the coupons —
+    even without booking the credits — the first pass could have terminated one and the second the
+    other, and the finalized invoice would then discount 0¢ and bill 15_000¢ for real: a grace period
+    silently destroying a customer's discounts, which is precisely what withholding exists to prevent.
+    The three zeroes are asserted individually because the three withheld reducers share one total:
+    15_000¢ is equally consistent with a coupon lost, a credit note lost or a wallet not spent, and
+    only naming each says which of them this scenario had none of.
+
+- id: b21/b19/preview
+  block: B21
+  axes: {subject_block: B19, surface: preview}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none, coupon_frequency: once}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b21_w1_b19p_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b21_w1_b19p, interval: monthly, amount_cents: 5000}
+    charges: [{billable_metric_code: b21_w1_b19p_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b21_w1_b19p_cust, currency: EUR}
+    subscription: {external_id: golden_b21_w1_b19p_sub, billing_time: calendar}
+    coupons:
+      - name: b21 w1 b19p first
+        code: b21_w1_b19p_one
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+      - name: b21 w1 b19p second
+        code: b21_w1_b19p_two
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b21_w1_b19p_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}
+        - {code: b21_w1_b19p_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}
+        - {code: b21_w1_b19p_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 11000
+      total_amount_cents: 11000
+    preview:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 11000
+      total_amount_cents: 11000
+  math: >-
+    The two surfaces AGREE that two coupons ADD, and reaching that through PreviewService means
+    surviving a loop that could have stopped after one.
+    Both read 4_000¢ of discount on 15_000¢ of fees and 11_000¢ due, matching b19/coupon/equal/invoice.
+    Coupons::PreviewService iterates `applied_coupons` and breaks only on
+    `unless invoice.sub_total_excluding_taxes_amount_cents&.positive?` (coupons/preview_service.rb:23)
+    — the same guard as the real Credits::AppliedCouponsService:28. With a 15_000¢ base neither 2_000¢
+    coupon exhausts it, so the loop runs twice, each AppliedCoupons::AmountService call returns the
+    full 2_000¢, and coupons_amount_cents accumulates to 4_000¢.
+    2_000¢ would be the answer if the preview took only the first applied coupon, and 15_000¢ if it
+    read `customer.applied_coupons` in a scope that excluded them; both are plausible in a service
+    whose coupons arrive as an injected array rather than from the invoice
+    (preview_service.rb:7-10, populated by PreviewContextService from customer.applied_coupons.active).
+    Neither coupon is consumed by the quote: `once` and both still whole when 1 April spends them for
+    real, which is why the preview and the invoice can look at the same period and agree. Had the
+    preview terminated them, the invoice on 1 April would have found none and billed 15_000¢ — so the
+    invoice's own 4_000¢ is the control that the preview was read-only, exactly as the wallet is in
+    b21/b6/preview and the credit-note balance in b21/b8/preview.

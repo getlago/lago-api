@@ -1,0 +1,1085 @@
+{
+  "captured_at_version": 1,
+  "surface": {
+    "constants": {
+      "AppliedCoupon::FREQUENCIES": [
+        "forever",
+        "once",
+        "recurring"
+      ],
+      "AppliedCoupon::STATUSES": [
+        "active",
+        "terminated"
+      ],
+      "BillableMetric::AGGREGATION_TYPES": [
+        "count_agg",
+        "custom_agg",
+        "latest_agg",
+        "max_agg",
+        "sum_agg",
+        "unique_count_agg",
+        "weighted_sum_agg"
+      ],
+      "BillableMetric::AGGREGATION_TYPES_PAYABLE_IN_ADVANCE": [
+        "count_agg",
+        "custom_agg",
+        "sum_agg",
+        "unique_count_agg"
+      ],
+      "BillableMetric::ROUNDING_FUNCTIONS": [
+        "ceil",
+        "floor",
+        "round"
+      ],
+      "BillableMetric::UNIQUE_COUNT_OPERATION_TYPES": [
+        "add",
+        "remove"
+      ],
+      "BillableMetric::WEIGHTED_INTERVAL": [
+        "seconds"
+      ],
+      "Charge::CHARGE_MODELS": [
+        "custom",
+        "dynamic",
+        "graduated",
+        "graduated_percentage",
+        "package",
+        "percentage",
+        "standard",
+        "volume"
+      ],
+      "Charge::REGROUPING_PAID_FEES_OPTIONS": [
+        "invoice"
+      ],
+      "Commitment::COMMITMENT_TYPES": [
+        "minimum_commitment"
+      ],
+      "Coupon::COUPON_TYPES": [
+        "fixed_amount",
+        "percentage"
+      ],
+      "Coupon::EXPIRATION_TYPES": [
+        "no_expiration",
+        "time_limit"
+      ],
+      "Coupon::FREQUENCIES": [
+        "forever",
+        "once",
+        "recurring"
+      ],
+      "Coupon::STATUSES": [
+        "active",
+        "terminated"
+      ],
+      "CreditNote::CREDIT_STATUS": [
+        "available",
+        "consumed",
+        "voided"
+      ],
+      "CreditNote::REASON": [
+        "duplicated_charge",
+        "fraudulent_charge",
+        "order_cancellation",
+        "order_change",
+        "other",
+        "product_unsatisfactory"
+      ],
+      "CreditNote::REFUND_STATUS": [
+        "failed",
+        "pending",
+        "succeeded"
+      ],
+      "CreditNote::STATUS": [
+        "deleted",
+        "draft",
+        "finalized"
+      ],
+      "CreditNote::TYPES": [
+        "credit",
+        "offset",
+        "refund"
+      ],
+      "Customer::ACCOUNT_TYPES": [
+        "customer",
+        "partner"
+      ],
+      "Customer::ADDRESS_FIELDS": [
+        "address_line1",
+        "address_line2",
+        "city",
+        "country",
+        "shipping_address_line1",
+        "shipping_address_line2",
+        "shipping_city",
+        "shipping_country",
+        "shipping_state",
+        "shipping_zipcode",
+        "state",
+        "zipcode"
+      ],
+      "Customer::BILLING_ADDRESS_FIELDS": [
+        "address_line1",
+        "address_line2",
+        "city",
+        "country",
+        "state",
+        "zipcode"
+      ],
+      "Customer::CUSTOMER_TYPES": [
+        "company",
+        "individual"
+      ],
+      "Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS": [
+        "finalize",
+        "inherit",
+        "skip"
+      ],
+      "Customer::PAYMENT_PROVIDERS": [
+        "adyen",
+        "cashfree",
+        "flutterwave",
+        "gocardless",
+        "moneyhash",
+        "stripe"
+      ],
+      "Customer::SEARCHABLE_CUSTOMER_FIELDS": [
+        "email",
+        "external_id",
+        "firstname",
+        "lastname",
+        "legal_name",
+        "name"
+      ],
+      "Customer::SHIPPING_ADDRESS_FIELDS": [
+        "shipping_address_line1",
+        "shipping_address_line2",
+        "shipping_city",
+        "shipping_country",
+        "shipping_state",
+        "shipping_zipcode"
+      ],
+      "Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS": [
+        "align_with_finalization_date",
+        "keep_anchor"
+      ],
+      "Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS": [
+        "current_period_end",
+        "next_period_start"
+      ],
+      "Fee::FEE_TYPES": [
+        "add_on",
+        "charge",
+        "commitment",
+        "credit",
+        "fixed_charge",
+        "product",
+        "subscription"
+      ],
+      "Fee::PAYMENT_STATUS": [
+        "failed",
+        "pending",
+        "refunded",
+        "succeeded"
+      ],
+      "FixedCharge::CHARGE_MODELS": [
+        "graduated",
+        "standard",
+        "volume"
+      ],
+      "Invoice::GENERATED_INVOICE_STATUSES": [
+        "closed",
+        "finalized"
+      ],
+      "Invoice::INVISIBLE_STATUS": [
+        "closed",
+        "deleted",
+        "generating",
+        "open"
+      ],
+      "Invoice::INVOICE_TYPES": [
+        "add_on",
+        "advance_charges",
+        "credit",
+        "one_off",
+        "progressive_billing",
+        "subscription"
+      ],
+      "Invoice::MANUALLY_PAYABLE_INVOICE_STATUS": [
+        "finalized",
+        "open"
+      ],
+      "Invoice::PAYMENT_STATUS": [
+        "failed",
+        "pending",
+        "succeeded"
+      ],
+      "Invoice::STATUS": [
+        "closed",
+        "deleted",
+        "draft",
+        "failed",
+        "finalized",
+        "generating",
+        "open",
+        "pending",
+        "voided"
+      ],
+      "Invoice::TAX_INVOICE_LABEL_COUNTRIES": [
+        "AE",
+        "AU",
+        "ID",
+        "NZ",
+        "SG"
+      ],
+      "Invoice::TAX_STATUSES": [
+        "failed",
+        "pending",
+        "succeeded"
+      ],
+      "Invoice::VISIBLE_STATUS": [
+        "draft",
+        "failed",
+        "finalized",
+        "pending",
+        "voided"
+      ],
+      "Plan::INTERVALS": [
+        "monthly",
+        "quarterly",
+        "semiannual",
+        "weekly",
+        "yearly"
+      ],
+      "Plan::PRICING_TYPES": [
+        "legacy",
+        "product_catalog"
+      ],
+      "RecurringTransactionRule::INTERVALS": [
+        "monthly",
+        "quarterly",
+        "semiannual",
+        "weekly",
+        "yearly"
+      ],
+      "RecurringTransactionRule::METHODS": [
+        "fixed",
+        "target"
+      ],
+      "RecurringTransactionRule::STATUSES": [
+        "active",
+        "terminated"
+      ],
+      "RecurringTransactionRule::TRIGGERS": [
+        "interval",
+        "threshold"
+      ],
+      "Subscription::BILLING_TIME": [
+        "anniversary",
+        "calendar"
+      ],
+      "Subscription::CANCELLATION_REASONS": [
+        "payment_failed",
+        "timeout"
+      ],
+      "Subscription::ON_TERMINATION_CREDIT_NOTES": [
+        "credit",
+        "offset",
+        "refund",
+        "skip"
+      ],
+      "Subscription::ON_TERMINATION_INVOICES": [
+        "generate",
+        "skip"
+      ],
+      "Subscription::STATUSES": [
+        "active",
+        "canceled",
+        "incomplete",
+        "pending",
+        "terminated"
+      ],
+      "Tax::ORDERS": [
+        "name",
+        "rate"
+      ],
+      "Wallet::REFRESH_RELEVANT_ATTRIBUTES": [
+        "allowed_fee_types",
+        "code",
+        "priority"
+      ],
+      "Wallet::STATUSES": [
+        "active",
+        "terminated"
+      ],
+      "WalletTransaction::SOURCES": [
+        "interval",
+        "manual",
+        "threshold"
+      ],
+      "WalletTransaction::STATUSES": [
+        "failed",
+        "pending",
+        "settled"
+      ],
+      "WalletTransaction::TRANSACTION_STATUSES": [
+        "granted",
+        "invoiced",
+        "purchased",
+        "voided"
+      ],
+      "WalletTransaction::TRANSACTION_TYPES": [
+        "inbound",
+        "outbound"
+      ]
+    },
+    "routes": [
+      "DELETE api/v1/add_ons#destroy",
+      "DELETE api/v1/billable_metrics#destroy",
+      "DELETE api/v1/coupons#destroy",
+      "DELETE api/v1/credit_notes/metadata#destroy",
+      "DELETE api/v1/credit_notes/metadata#destroy_key",
+      "DELETE api/v1/customers#destroy",
+      "DELETE api/v1/customers/applied_coupons#destroy",
+      "DELETE api/v1/customers/payment_methods#destroy",
+      "DELETE api/v1/customers/wallets#terminate",
+      "DELETE api/v1/customers/wallets/alerts#destroy",
+      "DELETE api/v1/customers/wallets/alerts#destroy_all",
+      "DELETE api/v1/customers/wallets/metadata#destroy",
+      "DELETE api/v1/customers/wallets/metadata#destroy_key",
+      "DELETE api/v1/features#destroy",
+      "DELETE api/v1/features/privileges#destroy",
+      "DELETE api/v1/fees#destroy",
+      "DELETE api/v1/invoices#destroy",
+      "DELETE api/v1/plans#destroy",
+      "DELETE api/v1/plans/charges#destroy",
+      "DELETE api/v1/plans/charges/filters#destroy",
+      "DELETE api/v1/plans/entitlements#destroy",
+      "DELETE api/v1/plans/entitlements/privileges#destroy",
+      "DELETE api/v1/plans/fixed_charges#destroy",
+      "DELETE api/v1/plans/metadata#destroy",
+      "DELETE api/v1/plans/metadata#destroy_key",
+      "DELETE api/v1/subscriptions#terminate",
+      "DELETE api/v1/subscriptions/alerts#destroy",
+      "DELETE api/v1/subscriptions/alerts#destroy_all",
+      "DELETE api/v1/subscriptions/charges/filters#destroy",
+      "DELETE api/v1/subscriptions/entitlements#destroy",
+      "DELETE api/v1/subscriptions/entitlements/privileges#destroy",
+      "DELETE api/v1/taxes#destroy",
+      "DELETE api/v1/wallets#terminate",
+      "DELETE api/v1/wallets/metadata#destroy",
+      "DELETE api/v1/wallets/metadata#destroy_key",
+      "DELETE api/v1/webhook_endpoints#destroy",
+      "GET api/v1/activity_logs#index",
+      "GET api/v1/activity_logs#show",
+      "GET api/v1/add_ons#index",
+      "GET api/v1/add_ons#show",
+      "GET api/v1/analytics/gross_revenues#index",
+      "GET api/v1/analytics/invoice_collections#index",
+      "GET api/v1/analytics/invoiced_usages#index",
+      "GET api/v1/analytics/mrrs#index",
+      "GET api/v1/analytics/overdue_balances#index",
+      "GET api/v1/api_logs#index",
+      "GET api/v1/api_logs#show",
+      "GET api/v1/applied_coupons#index",
+      "GET api/v1/billable_metrics#index",
+      "GET api/v1/billable_metrics#show",
+      "GET api/v1/billing_entities#index",
+      "GET api/v1/billing_entities#show",
+      "GET api/v1/coupons#index",
+      "GET api/v1/coupons#show",
+      "GET api/v1/credit_notes#index",
+      "GET api/v1/credit_notes#show",
+      "GET api/v1/customers#index",
+      "GET api/v1/customers#portal_url",
+      "GET api/v1/customers#show",
+      "GET api/v1/customers/applied_coupons#index",
+      "GET api/v1/customers/credit_notes#index",
+      "GET api/v1/customers/invoices#index",
+      "GET api/v1/customers/payment_methods#index",
+      "GET api/v1/customers/payment_requests#index",
+      "GET api/v1/customers/payments#index",
+      "GET api/v1/customers/projected_usage#current",
+      "GET api/v1/customers/subscriptions#index",
+      "GET api/v1/customers/usage#current",
+      "GET api/v1/customers/usage#past",
+      "GET api/v1/customers/wallets#index",
+      "GET api/v1/customers/wallets#show",
+      "GET api/v1/customers/wallets/alerts#index",
+      "GET api/v1/customers/wallets/alerts#show",
+      "GET api/v1/data_api/usages#index",
+      "GET api/v1/events#index",
+      "GET api/v1/events#index_enriched",
+      "GET api/v1/events#show",
+      "GET api/v1/features#index",
+      "GET api/v1/features#show",
+      "GET api/v1/fees#index",
+      "GET api/v1/fees#show",
+      "GET api/v1/invoices#index",
+      "GET api/v1/invoices#show",
+      "GET api/v1/order_forms#index",
+      "GET api/v1/order_forms#show",
+      "GET api/v1/orders#index",
+      "GET api/v1/orders#show",
+      "GET api/v1/organizations#grpc_token",
+      "GET api/v1/organizations#show",
+      "GET api/v1/payment_receipts#index",
+      "GET api/v1/payment_receipts#show",
+      "GET api/v1/payment_requests#index",
+      "GET api/v1/payment_requests#show",
+      "GET api/v1/payments#index",
+      "GET api/v1/payments#show",
+      "GET api/v1/plans#index",
+      "GET api/v1/plans#show",
+      "GET api/v1/plans/charges#index",
+      "GET api/v1/plans/charges#show",
+      "GET api/v1/plans/charges/filters#index",
+      "GET api/v1/plans/charges/filters#show",
+      "GET api/v1/plans/entitlements#index",
+      "GET api/v1/plans/entitlements#show",
+      "GET api/v1/plans/fixed_charges#index",
+      "GET api/v1/plans/fixed_charges#show",
+      "GET api/v1/quote_versions#show",
+      "GET api/v1/quotes#index",
+      "GET api/v1/quotes#show",
+      "GET api/v1/quotes/versions#index",
+      "GET api/v1/security_logs#index",
+      "GET api/v1/security_logs#show",
+      "GET api/v1/subscriptions#index",
+      "GET api/v1/subscriptions#show",
+      "GET api/v1/subscriptions/alerts#index",
+      "GET api/v1/subscriptions/alerts#show",
+      "GET api/v1/subscriptions/charges#index",
+      "GET api/v1/subscriptions/charges#show",
+      "GET api/v1/subscriptions/charges/filters#index",
+      "GET api/v1/subscriptions/charges/filters#show",
+      "GET api/v1/subscriptions/entitlements#index",
+      "GET api/v1/subscriptions/fixed_charges#index",
+      "GET api/v1/subscriptions/fixed_charges#show",
+      "GET api/v1/subscriptions/lifetime_usages#show",
+      "GET api/v1/taxes#index",
+      "GET api/v1/taxes#show",
+      "GET api/v1/wallet_transactions#consumptions",
+      "GET api/v1/wallet_transactions#fundings",
+      "GET api/v1/wallet_transactions#index",
+      "GET api/v1/wallet_transactions#show",
+      "GET api/v1/wallets#index",
+      "GET api/v1/wallets#show",
+      "GET api/v1/webhook_endpoints#index",
+      "GET api/v1/webhook_endpoints#show",
+      "GET api/v1/webhooks#json_public_key",
+      "GET api/v1/webhooks#public_key",
+      "PATCH api/v1/add_ons#update",
+      "PATCH api/v1/billable_metrics#update",
+      "PATCH api/v1/billing_entities#update",
+      "PATCH api/v1/coupons#update",
+      "PATCH api/v1/credit_notes#update",
+      "PATCH api/v1/credit_notes/metadata#update",
+      "PATCH api/v1/customers/wallets#update",
+      "PATCH api/v1/customers/wallets/alerts#update",
+      "PATCH api/v1/customers/wallets/metadata#update",
+      "PATCH api/v1/features#update",
+      "PATCH api/v1/fees#update",
+      "PATCH api/v1/invoices#update",
+      "PATCH api/v1/plans#update",
+      "PATCH api/v1/plans/charges#update",
+      "PATCH api/v1/plans/charges/filters#update",
+      "PATCH api/v1/plans/entitlements#update",
+      "PATCH api/v1/plans/fixed_charges#update",
+      "PATCH api/v1/plans/metadata#update",
+      "PATCH api/v1/subscriptions#update",
+      "PATCH api/v1/subscriptions/alerts#update",
+      "PATCH api/v1/subscriptions/charges#update",
+      "PATCH api/v1/subscriptions/charges/filters#update",
+      "PATCH api/v1/subscriptions/entitlements#update",
+      "PATCH api/v1/subscriptions/fixed_charges#update",
+      "PATCH api/v1/subscriptions/lifetime_usages#update",
+      "PATCH api/v1/taxes#update",
+      "PATCH api/v1/wallets#update",
+      "PATCH api/v1/wallets/metadata#update",
+      "PATCH api/v1/webhook_endpoints#update",
+      "POST api/v1/add_ons#create",
+      "POST api/v1/applied_coupons#create",
+      "POST api/v1/billable_metrics#create",
+      "POST api/v1/billable_metrics#evaluate_expression",
+      "POST api/v1/billing_entities#create",
+      "POST api/v1/coupons#create",
+      "POST api/v1/credit_notes#create",
+      "POST api/v1/credit_notes#download_pdf",
+      "POST api/v1/credit_notes#download_xml",
+      "POST api/v1/credit_notes#estimate",
+      "POST api/v1/credit_notes#resend_email",
+      "POST api/v1/credit_notes/metadata#create",
+      "POST api/v1/customers#checkout_url",
+      "POST api/v1/customers#create",
+      "POST api/v1/customers/wallets#create",
+      "POST api/v1/customers/wallets/alerts#create",
+      "POST api/v1/customers/wallets/metadata#create",
+      "POST api/v1/events#batch",
+      "POST api/v1/events#batch_estimate_instant_fees",
+      "POST api/v1/events#create",
+      "POST api/v1/events#estimate_fees",
+      "POST api/v1/events#estimate_instant_fees",
+      "POST api/v1/features#create",
+      "POST api/v1/invoices#create",
+      "POST api/v1/invoices#download_pdf",
+      "POST api/v1/invoices#download_xml",
+      "POST api/v1/invoices#lose_dispute",
+      "POST api/v1/invoices#payment_url",
+      "POST api/v1/invoices#preview",
+      "POST api/v1/invoices#resend_email",
+      "POST api/v1/invoices#retry",
+      "POST api/v1/invoices#retry_payment",
+      "POST api/v1/invoices#void",
+      "POST api/v1/order_forms#mark_as_signed",
+      "POST api/v1/order_forms#void",
+      "POST api/v1/orders#execute",
+      "POST api/v1/payment_receipts#resend_email",
+      "POST api/v1/payment_requests#create",
+      "POST api/v1/payments#create",
+      "POST api/v1/plans#create",
+      "POST api/v1/plans/charges#create",
+      "POST api/v1/plans/charges/filters#create",
+      "POST api/v1/plans/entitlements#create",
+      "POST api/v1/plans/fixed_charges#create",
+      "POST api/v1/plans/metadata#create",
+      "POST api/v1/quote_versions#approve",
+      "POST api/v1/quote_versions#clone",
+      "POST api/v1/quote_versions#void",
+      "POST api/v1/subscriptions#create",
+      "POST api/v1/subscriptions/alerts#create",
+      "POST api/v1/subscriptions/charges/filters#create",
+      "POST api/v1/taxes#create",
+      "POST api/v1/wallet_transactions#create",
+      "POST api/v1/wallet_transactions#payment_url",
+      "POST api/v1/wallets#create",
+      "POST api/v1/wallets/metadata#create",
+      "POST api/v1/webhook_endpoints#create",
+      "PUT api/v1/add_ons#update",
+      "PUT api/v1/billable_metrics#update",
+      "PUT api/v1/billing_entities#update",
+      "PUT api/v1/coupons#update",
+      "PUT api/v1/credit_notes#update",
+      "PUT api/v1/credit_notes#void",
+      "PUT api/v1/credit_notes/metadata#update",
+      "PUT api/v1/customers/payment_methods#set_as_default",
+      "PUT api/v1/customers/wallets#update",
+      "PUT api/v1/customers/wallets/alerts#update",
+      "PUT api/v1/customers/wallets/metadata#update",
+      "PUT api/v1/features#update",
+      "PUT api/v1/fees#update",
+      "PUT api/v1/invoices#finalize",
+      "PUT api/v1/invoices#refresh",
+      "PUT api/v1/invoices#sync_salesforce_id",
+      "PUT api/v1/invoices#update",
+      "PUT api/v1/organizations#update",
+      "PUT api/v1/plans#update",
+      "PUT api/v1/plans/charges#update",
+      "PUT api/v1/plans/charges/filters#update",
+      "PUT api/v1/plans/fixed_charges#update",
+      "PUT api/v1/plans/metadata#update",
+      "PUT api/v1/subscriptions#update",
+      "PUT api/v1/subscriptions/alerts#update",
+      "PUT api/v1/subscriptions/charges#update",
+      "PUT api/v1/subscriptions/charges/filters#update",
+      "PUT api/v1/subscriptions/fixed_charges#update",
+      "PUT api/v1/subscriptions/lifetime_usages#update",
+      "PUT api/v1/taxes#update",
+      "PUT api/v1/wallets#update",
+      "PUT api/v1/wallets/metadata#update",
+      "PUT api/v1/webhook_endpoints#update"
+    ],
+    "clock_jobs": [
+      "ActivateSubscriptionsJob",
+      "ComputeAllDailyUsagesJob",
+      "ConsumeSubscriptionRefreshedQueueJob",
+      "CreateIntervalWalletTransactionsJob",
+      "EventsValidationJob",
+      "ExecuteScheduledOrdersJob",
+      "ExpireIncompleteSubscriptionsJob",
+      "ExpireOrderFormsJob",
+      "FinalizeInvoicesJob",
+      "FreeTrialSubscriptionsBillerJob",
+      "InboundWebhooksCleanupJob",
+      "InboundWebhooksRetryJob",
+      "MarkInvoicesAsPaymentOverdueJob",
+      "ProcessAllSubscriptionActivitiesJob",
+      "ProcessDedicatedOrgsSubscriptionActivitiesJob",
+      "ProcessDunningCampaignsJob",
+      "RefreshDedicatedOrgWalletsOngoingBalanceJob",
+      "RefreshDraftInvoicesJob",
+      "RefreshLifetimeUsagesJob",
+      "RefreshWalletsOngoingBalanceJob",
+      "RetryFailedInvoicesJob",
+      "RetryGeneratingSubscriptionInvoicesJob",
+      "SubscriptionsBillerJob",
+      "SubscriptionsToBeTerminatedJob",
+      "TerminateCouponsJob",
+      "TerminateEndedSubscriptionsJob",
+      "TerminateRecurringTransactionRulesJob",
+      "TerminateWalletsJob",
+      "WebhooksCleanupJob"
+    ],
+    "error_codes": [
+      "cannot_be_empty",
+      "contains forbidden keys: %{keys}",
+      "contains invalid types: %{invalid_types}",
+      "country_must_be_present",
+      "country_not_supported",
+      "does_not_belong_to_product",
+      "feature_unavailable",
+      "file_too_large",
+      "graduated_percentage_requires_premium_license",
+      "invalid_aggregation_type_or_charge_model",
+      "invalid_amount",
+      "invalid_billable_metric_or_charge_model",
+      "invalid_charge_model",
+      "invalid_content_type",
+      "invalid_date",
+      "invalid_date_range",
+      "invalid_email_format",
+      "invalid_expression",
+      "invalid_fixed_amount",
+      "invalid_flat_amount",
+      "invalid_format",
+      "invalid_free_units",
+      "invalid_free_units_per_events",
+      "invalid_free_units_per_total_aggregation",
+      "invalid_graduated_ranges",
+      "invalid_organization",
+      "invalid_owner",
+      "invalid_package_size",
+      "invalid_per_unit_amount",
+      "invalid_rate",
+      "invalid_size",
+      "invalid_timezone",
+      "invalid_void_reason",
+      "invalid_volume_ranges",
+      "missing_graduated_ranges",
+      "missing_volume_ranges",
+      "modification_not_allowed",
+      "must_be_after_active_rate",
+      "must_be_array",
+      "must_be_greater_than_or_equal_min",
+      "must_be_greater_than_or_equal_threshold",
+      "must_be_true_unless_pay_in_advance",
+      "not_a_valid_country_code",
+      "not_a_valid_language_code",
+      "not_allowed_for_aggregation_type",
+      "not_allowed_for_billing_timing",
+      "not_allowed_for_product",
+      "not_allowed_with_display_on_invoice",
+      "not_allowed_with_proration",
+      "not_compatible_with_aggregation_type",
+      "not_compatible_with_pay_in_advance",
+      "one_of_plan_or_subscription_required",
+      "only_compatible_with_pay_in_advance_and_non_invoiceable",
+      "payment_request_is_already_succeeded",
+      "relation_must_exist",
+      "requires_recurring_metric",
+      "unsupported_value",
+      "url_is_invalid",
+      "value_already_exist",
+      "value_is_invalid",
+      "value_is_mandatory",
+      "value_is_out_of_range",
+      "value_is_reserved",
+      "value_is_too_long",
+      "value_is_too_short",
+      "value_must_be_blank"
+    ],
+    "permitted_params": {
+      "app/controllers/api/v1/add_ons_controller.rb": [
+        "amount_cents",
+        "amount_currency",
+        "code",
+        "description",
+        "invoice_display_name",
+        "name"
+      ],
+      "app/controllers/api/v1/applied_coupons_controller.rb": [
+        "amount_cents",
+        "amount_currency",
+        "coupon_code",
+        "external_customer_id",
+        "frequency",
+        "frequency_duration",
+        "percentage_rate"
+      ],
+      "app/controllers/api/v1/billable_metrics_controller.rb": [
+        "code",
+        "timestamp"
+      ],
+      "app/controllers/api/v1/billing_entities_controller.rb": [
+        "address_line1",
+        "address_line2",
+        "city",
+        "code",
+        "country",
+        "default_currency",
+        "document_locale",
+        "document_number_prefix",
+        "document_numbering",
+        "einvoicing",
+        "email",
+        "eu_tax_management",
+        "finalize_zero_amount_invoice",
+        "invoice_footer",
+        "invoice_grace_period",
+        "legal_name",
+        "legal_number",
+        "logo",
+        "name",
+        "net_payment_term",
+        "phone",
+        "state",
+        "subscription_invoice_issuing_date_adjustment",
+        "subscription_invoice_issuing_date_anchor",
+        "tax_identification_number",
+        "timezone",
+        "zipcode"
+      ],
+      "app/controllers/api/v1/coupons_controller.rb": [
+        "amount_cents",
+        "amount_currency",
+        "code",
+        "coupon_type",
+        "description",
+        "expiration",
+        "expiration_at",
+        "frequency",
+        "frequency_duration",
+        "name",
+        "percentage_rate",
+        "reusable"
+      ],
+      "app/controllers/api/v1/credit_notes_controller.rb": [
+        "amount_cents",
+        "credit_amount_cents",
+        "description",
+        "external_customer_id",
+        "fee_id",
+        "invoice_id",
+        "offset_amount_cents",
+        "reason",
+        "refund_amount_cents",
+        "refund_status"
+      ],
+      "app/controllers/api/v1/customers/usage_controller.rb": [
+        "billable_metric_code",
+        "external_subscription_id",
+        "periods_count"
+      ],
+      "app/controllers/api/v1/customers/wallets/alerts_controller.rb": [
+        "alert_type",
+        "code",
+        "name"
+      ],
+      "app/controllers/api/v1/customers/wallets_controller.rb": [
+        "currency"
+      ],
+      "app/controllers/api/v1/customers_controller.rb": [
+        "customer_type",
+        "external_id",
+        "has_customer_type",
+        "has_tax_identification_number",
+        "search_term"
+      ],
+      "app/controllers/api/v1/data_api/usages_controller.rb": [
+        "billable_metric_code",
+        "currency",
+        "customer_country",
+        "customer_type",
+        "external_customer_id",
+        "external_subscription_id",
+        "from_date",
+        "is_billable_metric_recurring",
+        "plan_code",
+        "time_granularity",
+        "to_date"
+      ],
+      "app/controllers/api/v1/events_controller.rb": [
+        "code",
+        "disable",
+        "external_subscription_id",
+        "precise_total_amount_cents",
+        "timestamp",
+        "timestamp_from",
+        "timestamp_from_started_at",
+        "timestamp_to",
+        "transaction_id"
+      ],
+      "app/controllers/api/v1/features_controller.rb": [
+        "code",
+        "description",
+        "name",
+        "value_type"
+      ],
+      "app/controllers/api/v1/fees_controller.rb": [
+        "billable_metric_code",
+        "created_at_from",
+        "created_at_to",
+        "currency",
+        "event_transaction_id",
+        "external_customer_id",
+        "external_subscription_id",
+        "failed_at_from",
+        "failed_at_to",
+        "fee_type",
+        "payment_status",
+        "refunded_at_from",
+        "refunded_at_to",
+        "succeeded_at_from",
+        "succeeded_at_to"
+      ],
+      "app/controllers/api/v1/invoices_controller.rb": [
+        "add_on_code",
+        "address_line1",
+        "address_line2",
+        "amount_cents",
+        "amount_currency",
+        "billing_entity_code",
+        "billing_time",
+        "city",
+        "code",
+        "country",
+        "coupon_type",
+        "credit_amount",
+        "currency",
+        "customer_external_id",
+        "description",
+        "external_customer_id",
+        "external_id",
+        "frequency",
+        "frequency_duration",
+        "frequency_duration_remaining",
+        "from_datetime",
+        "generate_credit_note",
+        "id",
+        "integration_code",
+        "integration_type",
+        "invoice_display_name",
+        "key",
+        "name",
+        "payment_method_id",
+        "payment_method_type",
+        "payment_status",
+        "percentage_rate",
+        "plan_code",
+        "purchase_order_number",
+        "refund_amount",
+        "skip_invoice_custom_sections",
+        "skip_psp",
+        "state",
+        "subscription_at",
+        "tax_identification_number",
+        "terminated_at",
+        "timezone",
+        "to_datetime",
+        "unit_amount_cents",
+        "units",
+        "value",
+        "zipcode"
+      ],
+      "app/controllers/api/v1/order_forms_controller.rb": [
+        "execute_at",
+        "execution_mode",
+        "signed_document"
+      ],
+      "app/controllers/api/v1/orders_controller.rb": [
+        "execution_mode"
+      ],
+      "app/controllers/api/v1/organizations_controller.rb": [
+        "address_line1",
+        "address_line2",
+        "city",
+        "country",
+        "default_currency",
+        "document_locale",
+        "document_number_prefix",
+        "document_numbering",
+        "email",
+        "finalize_zero_amount_invoice",
+        "invoice_footer",
+        "invoice_grace_period",
+        "legal_name",
+        "legal_number",
+        "net_payment_term",
+        "slug",
+        "state",
+        "tax_identification_number",
+        "timezone",
+        "webhook_url",
+        "zipcode"
+      ],
+      "app/controllers/api/v1/payment_receipts_controller.rb": [
+        "invoice_id"
+      ],
+      "app/controllers/api/v1/payment_requests_controller.rb": [
+        "email",
+        "external_customer_id",
+        "payment_status"
+      ],
+      "app/controllers/api/v1/payments_controller.rb": [
+        "amount_cents",
+        "external_customer_id",
+        "invoice_id",
+        "paid_at",
+        "reference"
+      ],
+      "app/controllers/api/v1/plans/charges/filters_controller.rb": [
+        "invoice_display_name"
+      ],
+      "app/controllers/api/v1/plans/charges_controller.rb": [
+        "accepts_target_wallet",
+        "billable_metric_id",
+        "charge_model",
+        "code",
+        "invoice_display_name",
+        "invoiceable",
+        "min_amount_cents",
+        "pay_in_advance",
+        "prorated",
+        "regroup_paid_fees"
+      ],
+      "app/controllers/api/v1/plans/fixed_charges_controller.rb": [
+        "add_on_code",
+        "add_on_id",
+        "apply_units_immediately",
+        "charge_model",
+        "code",
+        "invoice_display_name",
+        "pay_in_advance",
+        "prorated",
+        "units"
+      ],
+      "app/controllers/api/v1/plans_controller.rb": [
+        "accepts_target_wallet",
+        "add_on_id",
+        "amount_cents",
+        "amount_currency",
+        "apply_units_immediately",
+        "bill_charges_monthly",
+        "bill_fixed_charges_monthly",
+        "billable_metric_id",
+        "cascade_updates",
+        "charge_model",
+        "code",
+        "conversion_rate",
+        "description",
+        "id",
+        "interval",
+        "invoice_display_name",
+        "invoiceable",
+        "min_amount_cents",
+        "name",
+        "pay_in_advance",
+        "prorated",
+        "recurring",
+        "regroup_paid_fees",
+        "threshold_display_name",
+        "trial_period",
+        "units"
+      ],
+      "app/controllers/api/v1/subscriptions/alerts_controller.rb": [
+        "alert_type",
+        "billable_metric_code",
+        "code",
+        "name"
+      ],
+      "app/controllers/api/v1/subscriptions/charges/filters_controller.rb": [
+        "invoice_display_name"
+      ],
+      "app/controllers/api/v1/subscriptions/charges_controller.rb": [
+        "invoice_display_name",
+        "min_amount_cents"
+      ],
+      "app/controllers/api/v1/subscriptions/fixed_charges_controller.rb": [
+        "apply_units_immediately",
+        "invoice_display_name",
+        "units"
+      ],
+      "app/controllers/api/v1/subscriptions/lifetime_usages_controller.rb": [
+        "external_historical_usage_amount_cents"
+      ],
+      "app/controllers/api/v1/subscriptions_controller.rb": [
+        "billing_entity_code",
+        "billing_entity_id",
+        "billing_time",
+        "consolidate_invoice",
+        "ending_at",
+        "external_customer_id",
+        "external_id",
+        "name",
+        "on_termination_credit_note",
+        "on_termination_invoice",
+        "payment_method_id",
+        "payment_method_type",
+        "plan_code",
+        "progressive_billing_disabled",
+        "purchase_order_number",
+        "skip_invoice_custom_sections",
+        "subscription_at",
+        "timeout_hours",
+        "type"
+      ],
+      "app/controllers/api/v1/taxes_controller.rb": [
+        "applied_to_organization",
+        "code",
+        "description",
+        "name",
+        "rate"
+      ],
+      "app/controllers/api/v1/wallet_transactions_controller.rb": [
+        "granted_credits",
+        "ignore_paid_top_up_limits",
+        "invoice_requires_successful_payment",
+        "key",
+        "name",
+        "paid_credits",
+        "payment_method_id",
+        "payment_method_type",
+        "priority",
+        "purchase_order_number",
+        "skip_invoice_custom_sections",
+        "value",
+        "voided_credits",
+        "voided_transaction_id",
+        "wallet_id"
+      ],
+      "app/controllers/api/v1/wallets_controller.rb": [
+        "currency",
+        "external_customer_id"
+      ],
+      "app/controllers/api/v1/webhook_endpoints_controller.rb": [
+        "id",
+        "name",
+        "signature_algo",
+        "webhook_url"
+      ]
+    },
+    "charge_model_defaults": {
+      "standard": [
+        "amount"
+      ],
+      "graduated": [
+        "graduated_ranges"
+      ],
+      "package": [
+        "amount",
+        "free_units",
+        "package_size"
+      ],
+      "percentage": [
+        "rate"
+      ],
+      "volume": [
+        "volume_ranges"
+      ],
+      "graduated_percentage": [
+        "graduated_percentage_ranges"
+      ],
+      "custom": null,
+      "dynamic": []
+    }
+  }
+}

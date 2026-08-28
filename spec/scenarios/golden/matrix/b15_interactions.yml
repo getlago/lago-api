@@ -1,0 +1,2475 @@
+# B15 — Cross-block interactions
+#
+# Invoices::CalculateFeesService applies features in a fixed order (calculate_fees_service.rb:42-63):
+#
+#   producers   subscription → charge → fixed_charge → non_invoiceable → commitment_true_up
+#               ↓ fees_amount_cents
+#   reducers    progressive_billing → coupon → TAX → credit_note → prepaid_credit
+#
+# Two features interact when both are present and that ORDER decides the amount. The cells here are
+# the derived product of feature pairs, not a hand-written list — see GoldenLegality#interacting_pair?
+#
+# EVERY ROW'S `math` MUST STATE WHAT THE OTHER ORDER WOULD GIVE, and the amounts must be chosen so
+# the two differ. A row whose numbers commute proves the features co-existed, not that they were
+# applied in the right sequence — the same trap as a one-event pay-in-advance row.
+---
+- id: b15/coupon/tax
+  block: B15
+  axes: {feature_a: coupon, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, coupon_type: fixed_amount, tax_rate: 20}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes: [{code: b15_vat, name: VAT, rate: 20}]
+    metrics: [{code: b15_ct_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_coupon_tax, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b15_ct_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_coupon_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_tax_sub, billing_time: calendar}
+    coupons:
+      - name: b15 coupon
+        code: b15_coupon_tax
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 4000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b15_ct_sum, properties: {amount: 100}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 6000
+      taxes_amount_cents: 1200
+      total_amount_cents: 7200
+  math: >-
+    THE ORDER IS THE BEHAVIOUR. 100 units × 1.00 = 100.00 → 10_000¢ of fees, a 40.00 fixed coupon,
+    and 20% VAT.
+    Lago applies the coupon BEFORE tax (Credits::AppliedCouponsService runs at
+    calculate_fees_service.rb:54, ComputeTaxesAndTotalsService at :56), so the taxable base is
+    10_000 − 4_000 = 6_000¢ and the tax is 20% of that = 1_200¢. Total 7_200¢.
+    Taxing first would give 10_000 + 2_000 tax = 12_000, then the coupon → 8_000¢ — the customer
+    pays 800¢ more for the same invoice. The row is built so the two orders differ: with a
+    percentage coupon they would coincide, which is why this one is a FIXED amount.
+    fees_amount_cents stays 10_000 either way, so asserting the total alone would not distinguish
+    them — sub_total_excluding_taxes and taxes_amount_cents are what pin the sequence.
+
+- id: b15/prepaid_credit/tax
+  block: B15
+  axes: {feature_a: prepaid_credit, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, rate_amount: 1}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes: [{code: b15_pt_vat, name: VAT, rate: 20}]
+    metrics: [{code: b15_pt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_prepaid_tax, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b15_pt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_prepaid_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_prepaid_tax_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "50"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b15_pt_sum, properties: {amount: 100}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 7000
+  math: >-
+    Prepaid credit applies AFTER tax, so it never moves the tax base.
+    Credits::AppliedPrepaidCreditsService touches only invoice.prepaid_credit_amount_cents; it does
+    not decrement sub_total_excluding_taxes_amount_cents.
+    100 units × 1.00 = 10_000¢ of fees, taxed at 20% on the FULL 10_000 = 2_000¢, giving 12_000¢ due.
+    50 granted credits at rate 1.00 = 5_000¢ of cover leaves 7_000¢ owed.
+    Applying the credit first would tax 10_000 − 5_000 = 5_000 → 1_000¢ of tax and a 6_000¢ total, so
+    the customer would pay 1_000¢ less and the tax authority would be short. The row asserts
+    sub_total_excluding_taxes = 10_000 precisely because that is the field the two orders disagree on;
+    the total alone would too, but the sub_total says WHY.
+    Pair this with b15/progressive_billing/tax, which is the same shape with a credit that DOES move
+    the base.
+
+- id: b15/progressive_billing/tax
+  block: B15
+  axes: {feature_a: progressive_billing, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, threshold_amount_cents: 5000}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    taxes: [{code: b15_pbt_vat, name: VAT, rate: 20}]
+    metrics: [{code: b15_pbt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_pb_tax
+      interval: monthly
+      amount_cents: 5000
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_pbt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_pb_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_pb_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b15_pbt_sum, properties: {amount: 100}}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      select: {invoice_type: subscription}
+      fees_amount_cents: 15000
+      progressive_billing_credit_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 5000
+      taxes_amount_cents: 1000
+      total_amount_cents: 6000
+  math: >-
+    The mirror of b15/prepaid_credit/tax: this credit DOES move the tax base.
+    Credits::ProgressiveBillingService:56 does `sub_total_excluding_taxes_amount_cents -=
+    credit.amount_cents`, and it runs at calculate_fees_service.rb:53 — before
+    ComputeTaxesAndTotalsService at :56.
+    The period's fees are 5_000¢ subscription + 10_000¢ usage = 15_000¢. 100 units of usage crossed
+    the 5_000¢ threshold, so a progressive_billing invoice already collected the accrued 10_000¢ and
+    the final invoice credits it back: sub_total = 15_000 − 10_000 = 5_000¢, taxed at 20% = 1_000¢,
+    total 6_000¢.
+    Crediting after tax would tax the whole 15_000 → 3_000¢, giving 18_000 − 10_000 = 8_000¢ — 2_000¢
+    more. Two credits, one before tax and one after, with opposite effects on the base: that
+    difference is invisible in either row alone.
+
+- id: b15/coupon/prepaid_credit
+  block: B15
+  axes: {feature_a: coupon, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20, coupon_type: fixed_amount}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes: [{code: b15_cp_vat, name: VAT, rate: 20}]
+    metrics: [{code: b15_cp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_coupon_prepaid, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b15_cp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_coupon_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_prepaid_sub, billing_time: calendar}
+    coupons:
+      - name: b15 coupon
+        code: b15_coupon_prepaid
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 4000
+        amount_currency: EUR
+        expiration: no_expiration
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b15_cp_sum, properties: {amount: 100}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 6000
+      taxes_amount_cents: 1200
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 4200
+  math: >-
+    Two reductions that look interchangeable and are not: the coupon lands BEFORE tax, the wallet
+    AFTER. Tax present is what makes them distinguishable — without it they would commute and the row
+    would prove only that both were recorded.
+    10_000¢ of fees; coupon 4_000¢ → taxable base 6_000¢; tax 20% = 1_200¢, so 7_200¢ due; 30 credits
+    at rate 1.00 = 3_000¢ of cover → 4_200¢ owed.
+    Swap their stages — wallet before tax, coupon after — and the base becomes 10_000 − 3_000 = 7_000,
+    tax 1_400, total 8_400 − 4_000 = 4_400¢. A 200¢ difference, entirely from which reduction the tax
+    authority sees.
+
+- id: b15/coupon/progressive_billing
+  block: B15
+  axes: {feature_a: coupon, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b15_cpb_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_coupon_pb
+      interval: monthly
+      amount_cents: 5000
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_cpb_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_coupon_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_pb_sub, billing_time: calendar}
+    coupons:
+      - name: b15 coupon
+        code: b15_coupon_pb
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 3000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b15_cpb_sum, properties: {amount: 100}}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 7000
+        total_amount_cents: 7000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 8000
+        total_amount_cents: 8000
+  math: >-
+    Both reduce, but they never meet on one invoice: progressive billing runs first
+    (calculate_fees_service.rb:53) and coupons second (:54), so the mid-period threshold invoice is
+    finalized BEFORE the period invoice exists and a `frequency: once` coupon is consumed there.
+    Interim invoice: 10_000¢ usage − 3_000¢ coupon = 7_000¢ paid.
+    Period invoice: fees 5_000¢ subscription + 10_000¢ usage = 15_000¢, coupons 0 (already spent),
+    and the credit is NOT the 10_000¢ already billed but
+    `to_credit_amount = fees_amount_cents − coupons_amount_cents` (progressive_billed_amount.rb) =
+    10_000 − 3_000 = 7_000¢, i.e. the cash actually received → 8_000¢ due.
+    The alternative orders are both observable here. Had the coupon applied to the period invoice
+    instead, it would read coupons 3_000 / credit 10_000 / total 2_000. Had the credit ignored the
+    coupon (crediting the full 10_000¢ billed), the period invoice would be 5_000¢.
+    Consequence the row pins: 7_000 + 8_000 = 15_000¢ collected, the full undiscounted amount, so a
+    one-time coupon under progressive billing nets the customer NOTHING — the discount is granted on
+    the interim invoice and taken back by the period invoice. Asserting only the period invoice would
+    miss it entirely, which is why both sides are named.
+
+- id: b15/credit_note/tax
+  block: B15
+  axes: {feature_a: credit_note, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, tax_rate: 20}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes: [{code: b15_cnt_vat, name: VAT, rate: 20}]
+    metrics: [{code: b15_cnt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_cn_tax, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b15_cnt_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_cn_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_cn_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnt_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 4000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnt_sum, properties: {amount: 50}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+      - select: {index: 1}
+        fees_amount_cents: 5000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 4800
+        total_amount_cents: 1200
+  math: >-
+    A credit note is spent AFTER tax: `create_credit_note_credit` runs at
+    calculate_fees_service.rb:62, past ComputeTaxesAndTotalsService at :56, and `refresh_amounts`
+    only does `total_amount_cents -= credit_amount_cents` — it never touches the sub_total.
+    The April invoice bills 50 units × 1.00 = 5_000¢, so the tax base stays the full 5_000¢ and tax
+    is 1_000¢ → 6_000¢ due, less the 4_800¢ credit note = 1_200¢.
+    The credit note itself is 4_000¢ of fee plus its 800¢ of tax, because crediting a taxed fee
+    returns the tax too (March invoice: 10_000¢ + 2_000¢ = 12_000¢).
+    Had the credit applied before tax the base would be 5_000 − 4_800 = 200¢, tax 40¢ and the total
+    240¢ — the customer would pay 960¢ less and the tax authority would be short by the same.
+    sub_total_excluding_taxes and taxes_amount are both asserted because they are the two fields the
+    orders disagree on; the total differs too, but these say which side moved.
+    Contrast b15/coupon/tax, where the reducer runs BEFORE tax and does move the base.
+
+- id: b15/credit_note/prepaid_credit
+  block: B15
+  axes: {feature_a: credit_note, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics:
+      - {code: b15_cnp_early, aggregation_type: sum_agg, field_name: amount}
+      - {code: b15_cnp_late, aggregation_type: sum_agg, field_name: amount}
+    plan: {code: golden_b15_cn_prepaid, interval: monthly, amount_cents: 0}
+    charges:
+      - {billable_metric_code: b15_cnp_early, charge_model: standard, properties: {amount: "1"}}
+      - {billable_metric_code: b15_cnp_late, charge_model: standard, properties: {amount: "1"}}
+    customer: {external_id: golden_b15_cn_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_cn_prepaid_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "50"
+        applies_to: {billable_metric_codes: [b15_cnp_late]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnp_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnp_late, properties: {amount: 80}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 10000
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        credit_notes_amount_cents: 6000
+        prepaid_credit_amount_cents: 2000
+        total_amount_cents: 0
+    wallet:
+      balance_cents: 3000
+  math: >-
+    The last two stages of the pipeline, and the only pair that competes for the SAME money: both
+    reduce total_amount_cents through the same `refresh_amounts`, credit notes first
+    (calculate_fees_service.rb:62) and the wallet second (:63).
+    The May invoice bills 80 units × 1.00 = 8_000¢. The credit note goes first and takes 6_000¢,
+    leaving 2_000¢ for the wallet, so 2_000¢ of the 5_000¢ of credits is spent and 3_000¢ stays on
+    the wallet. Reversed, the wallet would be drained first — 5_000¢ of prepaid credit, only 3_000¢
+    of credit note, a 0¢ wallet and 3_000¢ of credit note still owed to the customer. Three fields
+    separate the two orders, which is why all three are asserted: credit_notes_amount_cents
+    (6_000 vs 3_000), prepaid_credit_amount_cents (2_000 vs 5_000) and the wallet balance
+    (3_000 vs 0). The total is 0 either way and would prove nothing.
+    The wallet is limited to `b15_cnp_late` so the April invoice, which exists only to be the source
+    of the credit note, cannot spend it — otherwise there would be no credits left to compete.
+
+- id: b15/coupon/credit_note
+  block: B15
+  axes: {feature_a: coupon, feature_b: credit_note}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_ccn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_coupon_cn, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b15_ccn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_coupon_cn_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_cn_sub, billing_time: calendar}
+    coupons:
+      - name: b15 recurring coupon
+        code: b15_coupon_cn
+        coupon_type: fixed_amount
+        frequency: recurring
+        frequency_duration: 3
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_ccn_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_ccn_sum, properties: {amount: 30}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 8000
+        total_amount_cents: 8000
+      - select: {index: 1}
+        fees_amount_cents: 3000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 1000
+        credit_notes_amount_cents: 1000
+        total_amount_cents: 0
+  math: >-
+    Two reducers on opposite sides of tax, so they never compete for the same figure: the coupon
+    lowers sub_total (calculate_fees_service.rb:54) and the credit note only lowers the total (:62).
+    The order therefore decides how much of the credit note is SPENT, not what the invoice costs.
+    May bills 30 units × 1.00 = 3_000¢. The coupon takes 2_000¢ first, leaving 1_000¢ for the credit
+    note to absorb — so 1_000¢ of the credit note is consumed and 3_800¢ of it survives. Had the
+    credit note gone first it would have absorbed the whole 3_000¢ and the coupon would have had
+    nothing to reduce, spending 2_000¢ more of the customer's credit than necessary. Both orders end
+    at a 0¢ total, so credit_notes_amount_cents (1_000 vs 3_000) is the field that separates them.
+    The coupon is `recurring` over 3 periods on purpose: a `once` coupon is consumed by the April
+    invoice — the one that exists only to source the credit note — and the pair would never meet.
+    That consumption is itself asserted by b15/coupon/progressive_billing.
+    The credit note is 4_800¢, not the 6_000¢ of fee it names, because a credited fee returns its
+    share of the coupon too: 6_000/10_000 of 2_000¢ = 1_200¢ comes off.
+
+- id: b15/credit_note/progressive_billing
+  block: B15
+  axes: {feature_a: credit_note, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b15_cnpb_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b15_cn_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_cnpb_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_cn_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_cn_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnpb_latest, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnpb_latest, properties: {amount: 20}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      credit_amount_cents: 8000
+      refund_amount_cents: 0
+      balance_amount_cents: 8000
+  math: >-
+    Progressive billing is the one reducer that can CREATE a credit note rather than spend one, and
+    this is the only row where it does. `latest_agg` lets billed usage fall: the threshold invoice is
+    cut at 100 units (10_000¢), then a later event of 20 makes the period charge 2_000¢.
+    ProgressiveBillingService caps the credit at the charges actually on the new invoice
+    (progressive_billing_service.rb) — 10_000¢ to credit against 2_000¢ of charges — and issues the
+    8_000¢ difference as a credit note on the threshold invoice instead
+    (CreditNotes::CreateFromProgressiveBillingInvoice). So the period invoice credits 2_000¢, not
+    10_000¢, and settles at 0.
+    Without that cap the period invoice would carry a 10_000¢ credit against 2_000¢ of fees — an
+    8_000¢ negative balance Lago has no way to pay out — and the customer would silently keep it.
+    The 8_000¢ credit note is asserted directly, because that is where the money went: net of it the
+    customer is out 2_000¢, which is what the period actually cost. It is the only credit note in the
+    row and nothing in the timeline creates one, so `select` is what makes it reachable at all —
+    every other credit-note row asserts one the row itself asked for.
+
+- id: b15/prepaid_credit/progressive_billing
+  block: B15
+  axes: {feature_a: prepaid_credit, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b15_ppb_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_prepaid_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_ppb_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_prepaid_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_prepaid_pb_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "50"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_ppb_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 5000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 10000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 0
+    wallet:
+      balance_cents: 0
+  math: >-
+    The asymmetry that makes b15/coupon/progressive_billing a finding rather than a curiosity.
+    `to_credit_amount` (progressive_billed_amount.rb) subtracts coupons, progressive credits and
+    credit notes from the threshold invoice's fees — but NOT prepaid credit. So the wallet's
+    contribution stays credited: the threshold invoice bills 10_000¢, the wallet covers 5_000¢ of it
+    and the customer pays 5_000¢ cash; the period invoice then credits the full 10_000¢ of fees and
+    settles at 0. Total cash 5_000¢ against 10_000¢ of usage with 5_000¢ of credits — correct.
+    Had prepaid credit been subtracted the way coupons are, the credit would be 5_000¢, the period
+    invoice would ask for another 5_000¢, and the customer would pay 10_000¢ cash with the wallet
+    drained on top. That is exactly what happens to a coupon, and this row is the control proving the
+    two stages are treated differently rather than the coupon case being a one-off.
+    The wallet ends at 0: it was spent on the threshold invoice and the period invoice, being already
+    at 0 due, never reaches the prepaid stage.
+
+# ---------------------------------------------------------------------------------------------
+# advance_charge × R — the pay-in-advance path is a SECOND implementation of the pipeline.
+# Invoices::CreatePayInAdvanceChargeService applies coupons (:28), tax (:34), credit notes (:41) and
+# prepaid credit (:42) on the invoice it raises at event time — but it has NO
+# Credits::ProgressiveBillingService call, unlike calculate_fees_service.rb:53. So four of these five
+# pairs meet on an invoice that exists before the period invoice does, and the fifth never meets at
+# all. Trap #1 in the skill: ask which invoices exist and when, then assert both.
+# ---------------------------------------------------------------------------------------------
+
+- id: b15/advance_charge/coupon
+  block: B15
+  axes: {feature_a: advance_charge, feature_b: coupon}
+  dimensions: {interval: monthly, billing_time: calendar, pay_in_advance: true, invoiceable: true, coupon_type: fixed_amount, coupon_frequency: once, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b15_acc_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_ac_coupon, interval: monthly, amount_cents: 2000}
+    charges:
+      - {billable_metric_code: b15_acc_sum, charge_model: standard, pay_in_advance: true, properties: {amount: "1"}}
+    customer: {external_id: golden_b15_ac_coupon_cust, currency: EUR}
+    subscription: {external_id: golden_b15_ac_coupon_sub, billing_time: calendar}
+    coupons:
+      - name: b15 advance coupon
+        code: b15_ac_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 4000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_acc_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 0
+        total_amount_cents: 6000
+        fees_count: 1
+        fees:
+          - {fee_type: charge, units: "100.0", amount_cents: 10000}
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 2000
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000}
+  math: >-
+    TWO INVOICES, AND THE COUPON IS SPENT ON THE FIRST. An invoiceable pay-in-advance charge raises
+    its own invoice the moment the event lands (Invoices::CreatePayInAdvanceChargeService), and that
+    service calls Credits::AppliedCouponsService itself at
+    create_pay_in_advance_charge_service.rb:28 — the same reducer calculate_fees_service.rb:54 runs,
+    on an invoice that exists a month before the period invoice.
+    Event invoice: 100 units × 1.00 = 10_000¢ of fees; the `once` coupon's remaining 4_000¢ is below
+    the 10_000¢ base (applied_coupons/amount_service.rb:37) so all 4_000¢ is taken and the applied
+    coupon is terminated (applied_coupon_service.rb:81-82) → 6_000¢ due.
+    Period invoice: the 2_000¢ subscription fee only — the charge is not billed twice — and
+    coupons_amount_cents 0, because there is nothing left to spend. Cash: 6_000 + 2_000 = 8_000¢.
+    THE OTHER ORDER, with its number: if the in-advance path did NOT run the coupon stage — exactly
+    how it treats progressive billing, which it omits — the event invoice would be 10_000¢ and the
+    coupon would first meet the 2_000¢ period invoice, where base_amount_cents is 2_000 and
+    amount_service.rb:37 caps the credit at the base. The customer would pay 10_000 + 0 = 10_000¢,
+    2_000¢ more, and 2_000¢ of coupon would be stranded on a still-active applied_coupon.
+    fees_amount_cents is 10_000 and 2_000 under both orders, which is why coupons_amount_cents and
+    sub_total_excluding_taxes are asserted on BOTH invoices: asserting the period invoice alone would
+    read 2_000¢ due with no coupon and look like a coupon that never applied.
+
+- id: b15/advance_charge/tax
+  block: B15
+  axes: {feature_a: advance_charge, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, pay_in_advance: true, invoiceable: true, plan_tax_rate: 20, charge_tax_rate: 10}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes:
+      - {code: b15_at_plan, name: plan rate, rate: 20, applied_to_organization: false}
+      - {code: b15_at_charge, name: charge rate, rate: 10, applied_to_organization: false}
+    metrics: [{code: b15_att_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_ac_tax, interval: monthly, amount_cents: 2000, tax_codes: [b15_at_plan]}
+    charges:
+      - billable_metric_code: b15_att_sum
+        charge_model: standard
+        pay_in_advance: true
+        properties: {amount: "1"}
+        tax_codes: [b15_at_charge]
+    customer: {external_id: golden_b15_ac_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_ac_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_att_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1000
+        total_amount_cents: 11000
+        fees_count: 1
+        fees:
+          - {fee_type: charge, amount_cents: 10000, taxes_amount_cents: 1000, taxes_rate: 10}
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 2000
+        taxes_amount_cents: 400
+        total_amount_cents: 2400
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400, taxes_rate: 20}
+  math: >-
+    The in-advance invoice IS taxed, and at the CHARGE's rate rather than the plan's.
+    create_pay_in_advance_charge_service.rb:34 calls the same Invoices::ComputeTaxesAndTotalsService
+    that calculate_fees_service.rb:56 does, so the event invoice is not a tax-free surface. Which rate
+    it uses is decided per FEE, not per invoice: Fees::ApplyTaxesService:68 returns
+    `fee.charge.taxes` before it ever reaches the plan rung at :71, so the pay-in-advance charge fee
+    is taxed at 10% and the subscription fee at the plan's 20%.
+    Event invoice: 10_000¢ × 10% = 1_000¢ → 11_000¢. Invoices::ApplyTaxesService:87-96 pro-rates the
+    invoice rate over the fees carrying each tax and only the 10% tax has a fee here, so the invoice's
+    own rate comes to 10 rather than 20 — not assertable, because invoice_expectation carries no
+    taxes_rate, so the row pins the same fact at fee level instead.
+    Period invoice: 2_000¢ × 20% = 400¢ → 2_400¢.
+    THE OTHER ORDER, with its number: if the in-advance invoice took the customer/entity rate instead
+    of the rate on the fee it carries — i.e. if tax ran on the invoice sub_total rather than on the
+    fee bases produced before it — 10_000 × 20% = 2_000¢ of tax and a 12_000¢ invoice. The customer
+    would pay 1_000¢ more.
+    fees_amount_cents is 10_000 either way, so taxes_amount_cents is what pins the sequence, and the
+    per-fee taxes_rate is asserted because an invoice-level figure cannot distinguish "10% on this fee"
+    from "a blend that happens to average 10%".
+
+- id: b15/advance_charge/credit_note
+  block: B15
+  axes: {feature_a: advance_charge, feature_b: credit_note}
+  dimensions: {interval: monthly, billing_time: calendar, pay_in_advance: true, invoiceable: true, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_acn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_ac_cn, interval: monthly, amount_cents: 10000}
+    charges:
+      - {billable_metric_code: b15_acn_sum, charge_model: standard, pay_in_advance: true, properties: {amount: "1"}}
+    customer: {external_id: golden_b15_ac_cn_cust, currency: EUR}
+    subscription: {external_id: golden_b15_ac_cn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: subscription, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_acn_sum, properties: {amount: 80}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        sub_total_excluding_taxes_amount_cents: 8000
+        credit_notes_amount_cents: 6000
+        total_amount_cents: 2000
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 10000
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 6000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    A credit note is spent by whichever invoice reaches the credit-note stage FIRST, and a
+    pay-in-advance charge gets there mid-period. create_pay_in_advance_charge_service.rb:41 calls
+    Credits::CreditNoteService on the event invoice, the same reducer
+    calculate_fees_service.rb:61 runs, and Credits::CreditNoteService#credit_notes takes every
+    finalized, available note of the customer regardless of which invoice it came from.
+    March period invoice: the 10_000¢ subscription fee alone — a pay-in-advance charge is excluded
+    from the period invoice — and no events yet, so 10_000¢ with one fee. A 6_000¢ credit note is cut
+    against it; with no tax anywhere the note's credit_amount_cents equals the 6_000¢ of fee it names.
+    10 April, 80 units arrive → an event invoice of 8_000¢, which consumes the whole note:
+    compute_credit_amount (credit_note_service.rb:88-94) takes min(6_000, 8_000) = 6_000 → 2_000¢ due
+    and the note is `consumed` with a 0¢ balance. `refresh_amounts` only does
+    `total_amount_cents -= credit_amount_cents`, so sub_total_excluding_taxes stays the full 8_000¢.
+    April period invoice: 10_000¢ with nothing left to credit.
+    THE OTHER ORDER, with its numbers: if the in-advance path skipped the credit-note stage — as it
+    skips progressive billing — the event invoice would be 8_000¢ and the note would survive to the
+    April period invoice, which would then be 10_000 − 6_000 = 4_000¢. The three invoices would read
+    10_000 / 8_000 / 4_000 instead of 10_000 / 2_000 / 10_000. Total cash is 12_000¢ under both
+    orders — money is conserved — so WHICH invoice the note lands on is the whole observable, and
+    asserting the last invoice alone would show 10_000¢ due and read as a credit note that was never
+    applied at all.
+
+- id: b15/advance_charge/prepaid_credit
+  block: B15
+  axes: {feature_a: advance_charge, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, pay_in_advance: true, invoiceable: true, wallet_limit: charge, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b15_acp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_ac_prepaid, interval: monthly, amount_cents: 2000}
+    charges:
+      - {billable_metric_code: b15_acp_sum, charge_model: standard, pay_in_advance: true, properties: {amount: "1"}}
+    customer: {external_id: golden_b15_ac_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_ac_prepaid_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "50"
+        applies_to: {fee_types: [charge]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_acp_sum, properties: {amount: 80}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 8000
+        sub_total_excluding_taxes_amount_cents: 8000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 2000
+    wallet:
+      balance_cents: 0
+  math: >-
+    The wallet is drained by the event invoice, a month before the period invoice exists.
+    create_pay_in_advance_charge_service.rb:42 calls Credits::AppliedPrepaidCreditsService on the
+    invoice it just raised — the same last stage calculate_fees_service.rb:62 runs — and the wallet is
+    limited to `charge` fees, so the allocator's buckets
+    (allocate_prepaid_credits_by_wallets_service.rb:70-91, keyed on [fee_type, billable_metric_id])
+    offer it exactly one bucket to pay into.
+    Event invoice: 80 units × 1.00 = 8_000¢; the charge bucket's cap is 8_000¢ and the wallet holds
+    50 credits at rate 1.00 = 5_000¢, so `[remaining, wallet_balance, remaining_invoice].min` (:53) is
+    5_000¢ → 3_000¢ due, wallet 0.
+    Period invoice: the 2_000¢ subscription fee, and `wallets` is scoped `with_positive_balance`
+    (:124-129), so an empty wallet is not even considered → prepaid_credit_amount_cents 0, 2_000¢ due.
+    Cash 5_000¢ against 10_000¢ of billing.
+    THE OTHER ORDER, with its number: if the in-advance path omitted the prepaid stage the way it
+    omits progressive billing, the event invoice would be 8_000¢ and the wallet would still hold
+    5_000¢ when the period invoice arrived — where the `charge` fee-type limit means it could not be
+    spent either, the only fee being a subscription fee. The customer would pay 8_000 + 2_000 =
+    10_000¢ cash with 5_000¢ of credits permanently stranded, against 5_000¢ actually paid.
+    prepaid_credit_amount_cents and the wallet balance are asserted because fees_amount_cents is
+    8_000 and 2_000 under both orders.
+
+- id: b15/advance_charge/progressive_billing
+  block: B15
+  pins: ["F07"]
+  axes: {feature_a: advance_charge, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, pay_in_advance: true, invoiceable: true, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics:
+      - {code: b15_apb_arr, aggregation_type: sum_agg, field_name: amount}
+      - {code: b15_apb_adv, aggregation_type: sum_agg, field_name: amount}
+    plan:
+      code: golden_b15_ac_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges:
+      - {billable_metric_code: b15_apb_arr, charge_model: standard, properties: {amount: "1"}}
+      - {billable_metric_code: b15_apb_adv, charge_model: standard, pay_in_advance: true, properties: {amount: "1"}}
+    customer: {external_id: golden_b15_ac_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_ac_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_apb_arr, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_apb_adv, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {invoice_type: subscription, index: 0}
+        fees_amount_cents: 3000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+        fees_count: 1
+      - select: {invoice_type: subscription, index: 1}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 2
+  math: >-
+    THE ONE PAIR THAT NEVER MEETS, and the reason is a missing call rather than an ordering.
+    Invoices::CreatePayInAdvanceChargeService runs coupons (:28), tax (:34), credit notes (:41) and
+    prepaid credit (:42) — every reducer calculate_fees_service.rb:53-62 runs EXCEPT
+    Credits::ProgressiveBillingService. There is no progressive-billing stage in that file at all.
+    The threshold invoice is cut from the arrears charge only: Invoices::ProgressiveBillingService's
+    `charges` scope (progressive_billing_service.rb:107-113) is `.where(invoiceable: true)
+    .where(pay_in_advance: false)`, so `b15_apb_adv` contributes no fee to it — 100 units of
+    `b15_apb_arr` cross the 5_000¢ threshold and it bills 10_000¢, one fee.
+    The 10 March event then raises its own invoice of 30 × 1.00 = 3_000¢ with
+    progressive_billing_credit_amount_cents 0. It is charged in full even though the customer has
+    already prepaid 10_000¢ of this period.
+    The period invoice carries the 0¢ subscription fee and the arrears charge's 10_000¢.
+    `to_credit_amount` is the threshold invoice's 10_000¢ net of nothing
+    (progressive_billed_amount.rb:60-63) and the cap is the period invoice's charge fees sharing a
+    charge_id with the threshold invoice's (progressive_billing_service.rb:26-31) = 10_000¢, so
+    10_000 is not greater than the cap, the whole amount is credited and sub_total falls to 0.
+    THE OTHER ORDER, with its numbers: had the in-advance path called ProgressiveBillingService the
+    way calculate_fees_service.rb:53 does, the event invoice would have found to_credit_amount 10_000¢
+    against its own 3_000¢ of charge fees, been capped at 3_000¢ by
+    progressive_billing_service.rb:36-42, settled at 0¢ instead of 3_000¢, and
+    CreditNotes::CreateFromProgressiveBillingInvoice would have cut a 7_000¢ note on the threshold
+    invoice. The observable difference is therefore 3_000¢ on the event invoice
+    (progressive_billing_credit_amount_cents 0 and 3_000¢ due, versus 3_000¢ credited and 0¢ due) plus
+    the existence of a credit note that this row expects not to exist.
+    fees_amount_cents is 3_000 and 10_000 under both orders, so
+    progressive_billing_credit_amount_cents is the field that separates them — and asserting only the
+    period invoice would show a perfectly-credited 0¢ invoice and hide the 3_000¢ the event invoice
+    collected on top of a period that was already paid for.
+
+# ---------------------------------------------------------------------------------------------
+# producer × reducer — every producer runs at calculate_fees_service.rb:42-46, before every reducer
+# at :53-62, so the question a producer/reducer pair asks is whether that producer's fee is INSIDE
+# the reducer's base. The rows below are sized so the answer changes the money: a reducer big enough
+# that being denied one producer's fee visibly caps it.
+# ---------------------------------------------------------------------------------------------
+
+- id: b15/charge/coupon
+  block: B15
+  axes: {feature_a: charge, feature_b: coupon}
+  dimensions: {interval: monthly, billing_time: calendar, coupon_type: fixed_amount, coupon_frequency: once, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b15_chc_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_charge_coupon, interval: monthly, amount_cents: 2000}
+    charges: [{billable_metric_code: b15_chc_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_charge_coupon_cust, currency: EUR}
+    subscription: {external_id: golden_b15_charge_coupon_sub, billing_time: calendar}
+    coupons:
+      - name: b15 charge coupon
+        code: b15_charge_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 8000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_chc_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      coupons_amount_cents: 8000
+      sub_total_excluding_taxes_amount_cents: 4000
+      taxes_amount_cents: 0
+      total_amount_cents: 4000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: "100.0", amount_cents: 10000}
+  math: >-
+    The coupon's base is the sum of every fee produced before it, and the charge fee is one of them.
+    calculate_fees_service.rb:43 creates the charge fee, :49-50 sets
+    sub_total_excluding_taxes_amount_cents to the sum of ALL fees, and only then does :54 run
+    Credits::AppliedCouponsService, whose base_amount_cents (applied_coupon_service.rb:103) is that
+    sub_total.
+    2_000¢ subscription + 100 units × 1.00 = 10_000¢ → 12_000¢ of fees. The `once` coupon's remaining
+    8_000¢ is below the 12_000¢ base, so amount_service.rb:37-39 grants the full 8_000¢ →
+    sub_total 4_000¢, total 4_000¢.
+    THE OTHER ORDER, with its number: if the charge fee were produced after the coupon stage — the
+    only fee then in the base being the 2_000¢ subscription fee — amount_service.rb:37 would return
+    the base instead of the coupon amount, granting 2_000¢ and leaving 12_000 − 2_000 = 10_000¢ due.
+    The customer would pay 6_000¢ more and 6_000¢ of coupon would go unused.
+    fees_amount_cents is 12_000 under both orders, which is exactly why coupons_amount_cents and
+    sub_total_excluding_taxes are the asserted fields. The coupon is a FIXED amount so that the cap is
+    reachable: a percentage coupon would scale with whatever base it was handed and both orders would
+    agree.
+
+- id: b15/charge/tax
+  block: B15
+  axes: {feature_a: charge, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, plan_tax_rate: 10, charge_tax_rate: 25}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes:
+      - {code: b15_cht_plan, name: plan rate, rate: 10, applied_to_organization: false}
+      - {code: b15_cht_charge, name: charge rate, rate: 25, applied_to_organization: false}
+    metrics: [{code: b15_cht_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_charge_tax, interval: monthly, amount_cents: 2000, tax_codes: [b15_cht_plan]}
+    charges:
+      - billable_metric_code: b15_cht_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b15_cht_charge]
+    customer: {external_id: golden_b15_charge_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_charge_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cht_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      taxes_amount_cents: 2700
+      total_amount_cents: 14700
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200, taxes_rate: 10}
+        - {fee_type: charge, amount_cents: 10000, taxes_amount_cents: 2500, taxes_rate: 25}
+  math: >-
+    Tax is computed FROM the fees, one fee at a time, not from the invoice total — which is what makes
+    a charge fee's own rate matter. calculate_fees_service.rb:43 produces the charge fee; :56 reaches
+    Invoices::ComputeTaxesAndTotalsService → ComputeAmountsFromFees:16-24, which taxes each fee
+    individually through Fees::ApplyTaxesService. That service's ladder returns `fee.charge.taxes` at
+    :68 before it can fall to the plan rung at :71, so the charge fee is taxed at 25% and the
+    subscription fee at the plan's 10%.
+    2_000 × 10% = 200¢ and 10_000 × 25% = 2_500¢ → 2_700¢ of tax on 12_000¢ of fees, total 14_700¢.
+    The invoice rate is a pro-rata blend, not a rate anyone configured:
+    Invoices::ApplyTaxesService:87-96 gives (2_000/12_000) × 10 + (10_000/12_000) × 25 = 1.66667 +
+    20.83333 = 22.5 — derived here rather than asserted, because invoice_expectation has no
+    taxes_rate field.
+    THE OTHER ORDER, with its number: if tax ran on the invoice sub_total rather than on the fees
+    produced before it, one rate would have to win — 12_000 × 10% = 1_200¢ or 12_000 × 25% = 3_000¢,
+    and both are wrong by hundreds of cents. If the charge fee were not in the tax base at all, tax
+    would be 200¢ and the invoice 12_200¢, 2_500¢ less than it is.
+    fees_amount_cents is 12_000 in every one of those worlds. The per-fee taxes_amount_cents are
+    asserted because the invoice blend of 22.5 cannot distinguish "10% here and 25% there" from a
+    uniform 22.5% applied to everything.
+
+- id: b15/charge/credit_note
+  block: B15
+  axes: {feature_a: charge, feature_b: credit_note}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_chcn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_charge_cn, interval: monthly, amount_cents: 2000}
+    charges: [{billable_metric_code: b15_chcn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_charge_cn_cust, currency: EUR}
+    subscription: {external_id: golden_b15_charge_cn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_chcn_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 9000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 9000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_chcn_sum, properties: {amount: 40}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 12000
+        total_amount_cents: 12000
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        sub_total_excluding_taxes_amount_cents: 6000
+        credit_notes_amount_cents: 6000
+        total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 9000
+      balance_amount_cents: 3000
+      credit_status: available
+  math: >-
+    A credit note is not applied to the invoice, it is applied UP TO the invoice: credit_note_service
+    .rb:88-94 takes min(note balance, remaining invoice amount), and how much of that remaining amount
+    exists is decided by the producers that ran at :42-46. The charge fee is what makes the difference.
+    March: 2_000¢ subscription + 100 units × 1.00 = 12_000¢. A 9_000¢ note is cut against its charge
+    fee — creditable because the fee is 10_000¢ — and with no tax anywhere it is worth exactly the
+    9_000¢ of fee it names.
+    May: 2_000¢ subscription + 40 units = 6_000¢ of fees. The note reaches :61 with 9_000¢ of balance
+    against 6_000¢ of remaining invoice, so 6_000¢ is consumed → 0¢ due, and 3_000¢ of the note
+    survives as an `available` balance. `refresh_amounts` never touches sub_total, which stays 6_000¢.
+    THE OTHER ORDER, with its number: if the charge fee were produced after the credit-note stage, the
+    remaining invoice amount at :61 would be the 2_000¢ subscription fee alone, only 2_000¢ of note
+    would be consumed, and the customer would owe 4_000¢ with 7_000¢ still on the note. 4_000¢ of cash
+    and 4_000¢ of note balance separate the two orders.
+    fees_amount_cents is 6_000 either way, so credit_notes_amount_cents and the note's own
+    balance_amount_cents are the fields asserted. The balance is read back through `select` rather than
+    from the step, because the step's payload is the note as CREATED and would still say 9_000¢.
+
+- id: b15/charge/prepaid_credit
+  block: B15
+  axes: {feature_a: charge, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, wallet_limit: charge, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b15_chp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_charge_prepaid, interval: monthly, amount_cents: 2000}
+    charges: [{billable_metric_code: b15_chp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_charge_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_charge_prepaid_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "120"
+        applies_to: {fee_types: [charge]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_chp_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      prepaid_credit_amount_cents: 10000
+      total_amount_cents: 2000
+    wallet:
+      balance_cents: 2000
+  math: >-
+    prepaid_credit_amount_cents is a single number on the invoice, but it is not computed against a
+    single number: Credits::AllocatePrepaidCreditsByWalletsService:70-91 buckets the fees produced at
+    :42-46 by [fee_type, billable_metric_id] and lets each wallet pay only into the buckets it is
+    allowed. So which producers exist decides how much of a limited wallet can move at all.
+    Fees: 2_000¢ subscription + 100 units × 1.00 = 12_000¢ → two buckets, ["subscription", nil] worth
+    2_000¢ and ["charge", b15_chp_sum] worth 10_000¢ (the cap at :77-79 is
+    sub_total_excluding_taxes + taxes − credit notes, all of which is the fee amount here). The wallet
+    holds 120 credits at rate 1.00 = 12_000¢ but is limited to `charge` fees, so applicable_fee?
+    (:108-122) admits one bucket and :53 takes min(10_000, 12_000, 12_000) = 10_000¢ →
+    2_000¢ due and 2_000¢ of credits left over.
+    THE OTHER ORDER, with its number: if prepaid credit were subtracted from the invoice total as one
+    figure rather than allocated per fee, the whole 12_000¢ of wallet would go and the invoice would
+    settle at 0 with an empty wallet — the fee-type limitation would be unobservable and 2_000¢ of
+    credits the customer is not entitled to spend on a subscription fee would be spent on one.
+    fees_amount_cents and sub_total are 12_000 under both orders — prepaid credit never moves the base
+    — so prepaid_credit_amount_cents and the leftover wallet balance are what pin it.
+
+- id: b15/charge/progressive_billing
+  block: B15
+  axes: {feature_a: charge, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics:
+      - {code: b15_cpb_a, aggregation_type: latest_agg, field_name: amount}
+      - {code: b15_cpb_b, aggregation_type: sum_agg, field_name: amount}
+    plan:
+      code: golden_b15_charge_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges:
+      - {billable_metric_code: b15_cpb_a, charge_model: standard, properties: {amount: "1"}}
+      - {billable_metric_code: b15_cpb_b, charge_model: standard, properties: {amount: "1"}}
+    customer: {external_id: golden_b15_charge_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_charge_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cpb_a, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b15_cpb_a, properties: {amount: 20}}
+        - {code: b15_cpb_b, properties: {amount: 50}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 7000
+        progressive_billing_credit_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 3
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 3000
+      balance_amount_cents: 3000
+      credit_status: available
+  math: >-
+    The progressive credit is capped at the period invoice's CHARGE fees, and the cap counts every
+    charge the threshold invoice touched — including one it billed at zero. That is what this pair
+    pins, and it is the difference between crediting 7_000¢ and crediting 2_000¢.
+    Invoices::ProgressiveBillingService#create_fees (progressive_billing_service.rb:94-105) iterates
+    every invoiceable arrears charge, so the 5 March threshold invoice carries TWO fees: `b15_cpb_a` at
+    100 units = 10_000¢ and `b15_cpb_b` at 0 units, whose 0¢ fee is DROPPED by should_persist_fee? because progressive_billing_service.rb:102 passes context: :finalize, not :recurring. fees_count 2 on it is the load-bearing
+    assertion, because Credits::ProgressiveBillingService:26-31 builds its cap from
+    `progressive_billing_invoice.fees.charge.pluck(:charge_id)` — a zero-amount fee still contributes
+    its charge_id.
+    `b15_cpb_a` is latest_agg, so the 20 March event of 20 makes its period fee 2_000¢, and
+    `b15_cpb_b` sums to 5_000¢. Period fees: 0¢ subscription + 2_000 + 5_000 = 7_000¢.
+    to_credit_amount is the threshold invoice's 10_000¢ (progressive_billed_amount.rb:60-63, net of
+    nothing here) and the cap is 7_000¢, so :36-42 credits 7_000¢ and hands the 3_000¢ it cannot use
+    to CreditNotes::CreateFromProgressiveBillingInvoice. sub_total 7_000 − 7_000 = 0, total 0, and with
+    nothing remaining at :61 the note is not consumed — 3_000¢ stays `available`.
+    THE OTHER ORDER, with its numbers: if the cap counted only the charges the threshold invoice
+    actually BILLED — `b15_cpb_a` alone — it would be 2_000¢, the credit would be 2_000¢, the credit
+    note 8_000¢, sub_total 5_000¢, and 5_000¢ of that note would be consumed at :61 leaving 3_000¢.
+    Both worlds end at a 0¢ total and a 3_000¢ note balance, so the total proves nothing:
+    progressive_billing_credit_amount_cents (7_000 vs 2_000) and credit_notes_amount_cents (0 vs
+    5_000) are the only fields that tell them apart, which is why both are asserted.
+
+# ---------------------------------------------------------------------------------------------
+# commitment_true_up × R — the plan-level floor is the one producer whose amount is a FUNCTION of the
+# other fees, and Commitments::Minimum::CalculateTrueUpFeeService:49-56 sums their raw amount_cents.
+# It runs at calculate_fees_service.rb:46, before every reducer, so a reducer discounts the floor
+# rather than being absorbed by the headroom under it. Each row below names which side of that line
+# it asserts, because fees_amount_cents cannot see it.
+# ---------------------------------------------------------------------------------------------
+
+- id: b15/commitment_true_up/coupon
+  block: B15
+  axes: {feature_a: commitment_true_up, feature_b: coupon}
+  dimensions: {interval: monthly, billing_time: calendar, commitment_amount_cents: 10000, coupon_type: percentage, coupon_frequency: once, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_cmc_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_commit_coupon
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b15_cmc_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_commit_coupon_cust, currency: EUR}
+    subscription: {external_id: golden_b15_commit_coupon_sub, billing_time: calendar}
+    coupons:
+      - name: b15 commitment coupon
+        code: b15_commit_coupon
+        coupon_type: percentage
+        frequency: once
+        percentage_rate: 50
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmc_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 5000
+      sub_total_excluding_taxes_amount_cents: 5000
+      taxes_amount_cents: 0
+      total_amount_cents: 5000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    THE FLOOR IS SET FIRST, THEN DISCOUNTED — so a coupon under a minimum commitment is worth real
+    money to the customer, and the commitment is not actually a floor on what they pay.
+    2_000¢ subscription + 30 units × 1.00 = 3_000¢ of real spend against a 10_000¢ commitment.
+    Commitments::Minimum::CalculateTrueUpFeeService:37-41 subtracts the raw fee total from the
+    commitment and adds the 5_000¢ difference as a `commitment` fee at
+    calculate_fees_service.rb:46 — before Credits::AppliedCouponsService at :54. The coupon then takes
+    50% of the topped-up 10_000¢ = 5_000¢, so the invoice settles at 5_000¢ against a floor the
+    customer committed to at 10_000¢.
+    THE OTHER ORDER, with its number: had the coupon run first, its base would be the 3_000¢ of real
+    fees, it would grant 1_500¢ (amount_service.rb:26-29), and the floor would then top the invoice
+    back up from 1_500¢ to a true-up of 8_500¢ — fees 11_500¢, coupons 1_500¢, sub_total 10_000¢. The
+    customer would pay the full 10_000¢ commitment, exactly twice what they pay here.
+    A PERCENTAGE coupon is deliberate: it does not commute with the true-up, because the true-up's
+    base is the very thing the percentage is taken of. fees_amount_cents differs between the two
+    orders here (10_000 vs 11_500) but the commitment fee's own 5_000¢ is what says which order ran,
+    so it is asserted at fee level.
+
+- id: b15/commitment_true_up/tax
+  block: B15
+  axes: {feature_a: commitment_true_up, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, commitment_amount_cents: 10000, plan_tax_rate: 10, charge_tax_rate: 25}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes:
+      - {code: b15_cmt_plan, name: plan rate, rate: 10, applied_to_organization: false}
+      - {code: b15_cmt_charge, name: charge rate, rate: 25, applied_to_organization: false}
+    metrics: [{code: b15_cmt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_commit_tax
+      interval: monthly
+      amount_cents: 2000
+      tax_codes: [b15_cmt_plan]
+      minimum_commitment: {amount_cents: 10000}
+    charges:
+      - billable_metric_code: b15_cmt_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b15_cmt_charge]
+    customer: {external_id: golden_b15_commit_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_commit_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 1450
+      total_amount_cents: 11450
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200, taxes_rate: 10}
+        - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 750, taxes_rate: 25}
+        - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 500, taxes_rate: 10}
+  math: >-
+    The true-up is taxed, because it is a fee like any other by the time tax runs — created at
+    calculate_fees_service.rb:46, taxed at :56. So VAT is charged on 5_000¢ that exists only to
+    satisfy a floor.
+    2_000¢ subscription + 3_000¢ charge = 5_000¢ of real spend, commitment 10_000¢ → a 5_000¢
+    `commitment` fee. Each fee then finds its own rung in Fees::ApplyTaxesService#applicable_taxes: the
+    charge fee stops at :68 on its own 25%; the commitment fee tries :70
+    (`fee.invoiceable.taxes` — the Commitment carries none) and falls to the plan's 10% at :71; the
+    subscription fee takes the same plan rung.
+    200 + 750 + 500 = 1_450¢ of tax on 10_000¢ of fees → 11_450¢. The invoice's own rate would be the
+    pro-rata blend of Invoices::ApplyTaxesService:87-96 — (7_000/10_000) × 10 + (3_000/10_000) × 25 =
+    7 + 7.5 = 14.5 — derived here rather than asserted, because invoice_expectation has no taxes_rate
+    field.
+    THE OTHER ORDER, with its number: if the floor were applied after tax — to the tax-inclusive total
+    — the real fees would be 5_000¢ carrying 950¢ of tax = 5_950¢, the top-up would be 4_050¢ and the
+    invoice would land on 10_000¢ flat with 950¢ of tax inside it. The customer pays 11_450¢ instead of
+    10_000¢, and every cent of the 1_450¢ difference is tax on a top-up.
+    fees_amount_cents is 10_000 under both orders. taxes_amount_cents and the commitment fee's own
+    500¢ are what separate them, and the per-fee figures are asserted because a 14.5% blend cannot
+    show that the true-up was charged at 10% rather than at the charge's 25%.
+
+- id: b15/commitment_true_up/credit_note
+  block: B15
+  axes: {feature_a: commitment_true_up, feature_b: credit_note}
+  dimensions: {interval: monthly, billing_time: calendar, commitment_amount_cents: 10000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_cmn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_commit_cn
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b15_cmn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_commit_cn_cust, currency: EUR}
+    subscription: {external_id: golden_b15_commit_cn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmn_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: commitment, amount_cents: 4000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmn_sum, properties: {amount: 30}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 3
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 10000
+        credit_notes_amount_cents: 4000
+        total_amount_cents: 6000
+        fees_count: 3
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 4000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    Crediting a commitment fee does not lower the floor — it defers cash, and the floor is charged
+    again in full next period.
+    Both periods are identical: 2_000¢ subscription + 30 units × 1.00 = 3_000¢, commitment 10_000¢ →
+    a 5_000¢ `commitment` fee, 10_000¢ of fees. The March true-up is credited for 4_000¢ (the
+    commitment fee is 5_000¢, so 4_000¢ is creditable) and with no tax the note is worth exactly
+    4_000¢.
+    May reaches the credit-note stage at calculate_fees_service.rb:61 with 10_000¢ remaining, consumes
+    the whole note → 6_000¢ due, note `consumed` at a 0¢ balance. sub_total stays 10_000¢ because
+    `refresh_amounts` only decrements total_amount_cents.
+    THE OTHER ORDER, with its number: if the credit note were spent BEFORE the floor was computed, the
+    period's fee total going into CalculateTrueUpFeeService would be 10_000 − 4_000 = 6_000¢, the
+    true-up would grow from 5_000¢ to 9_000¢ to reach the floor again, and the invoice would settle at
+    the full 10_000¢ — the note absorbed by the top-up and worth nothing to the customer. 6_000¢ due
+    versus 10_000¢ due.
+    fees_amount_cents is 10_000 in this row and 14_000 in that one, but the field that names the side
+    of the line is credit_notes_amount_cents (4_000 rather than 0) together with the commitment fee
+    still standing at 5_000¢ in a period where 4_000¢ of last month's floor was returned.
+
+- id: b15/commitment_true_up/prepaid_credit
+  block: B15
+  axes: {feature_a: commitment_true_up, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, commitment_amount_cents: 10000, wallet_limit: commitment, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_cmp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_commit_prepaid
+      interval: monthly
+      amount_cents: 2000
+      minimum_commitment: {amount_cents: 10000}
+    charges: [{billable_metric_code: b15_cmp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_commit_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_commit_prepaid_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "80"
+        applies_to: {fee_types: [commitment]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmp_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 5000
+      fees_count: 3
+    wallet:
+      balance_cents: 3000
+  math: >-
+    A wallet cannot shrink the floor, only pay it — and a wallet limited to `commitment` fees can pay
+    nothing else, which makes the per-fee allocation visible.
+    2_000¢ subscription + 3_000¢ charge = 5_000¢ of real spend, commitment 10_000¢ → a 5_000¢
+    `commitment` fee produced at calculate_fees_service.rb:46, long before the wallet is consulted at
+    :62. Credits::AllocatePrepaidCreditsByWalletsService:70-91 offers three buckets —
+    ["commitment", nil] 5_000¢, ["charge", b15_cmp_sum] 3_000¢, ["subscription", nil] 2_000¢, sorted by
+    size — and applicable_fee? (:108-122) admits only the first, so :53 takes
+    min(5_000, 8_000, 10_000) = 5_000¢. 5_000¢ due, 3_000¢ of the 80 credits unspent.
+    THE OTHER ORDER, with its number: if prepaid credit were taken off the invoice total as one figure
+    rather than allocated bucket by bucket, all 8_000¢ of wallet would go against the 10_000¢ due,
+    leaving 2_000¢ owed and an empty wallet. 5_000¢ versus 2_000¢ due, 3_000¢ versus 0¢ of balance.
+    And had the wallet's credits counted toward the commitment instead of paying it, the true-up would
+    have been computed against 5_000 + 8_000 = 13_000¢ of "spend", producing no top-up at all and an
+    invoice of 5_000¢ of fees with 5_000¢ of wallet consumed — 0¢ due and 3_000¢ of balance, which is
+    the same balance from a completely different arithmetic. fees_amount_cents (10_000 vs 5_000) and
+    prepaid_credit_amount_cents (5_000 either way) each separate one of those worlds but not the
+    other, so both are asserted alongside the wallet.
+
+- id: b15/commitment_true_up/progressive_billing
+  block: B15
+  pins: ["F08"]
+  axes: {feature_a: commitment_true_up, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, commitment_amount_cents: 25000, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b15_cmpb_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b15_commit_pb
+      interval: monthly
+      amount_cents: 0
+      minimum_commitment: {amount_cents: 25000}
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_cmpb_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_commit_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_commit_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmpb_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 5000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 5000
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 0}
+          - {fee_type: charge, amount_cents: 10000}
+          - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    THE FLOOR COUNTS PROGRESSIVELY-BILLED USAGE, AND THE CREDIT DOES NOT COUNT THE FLOOR. Two facts,
+    each in the other's blind spot.
+    100 units × 1.00 = 10_000¢ crosses the 5_000¢ threshold on 5 March, so a progressive_billing
+    invoice bills 10_000¢ — one charge fee, no subscription fee, because
+    Invoices::ProgressiveBillingService#create_fees only walks plan.charges.
+    At 1 April the floor is computed first (calculate_fees_service.rb:46). InArrears::
+    CalculateTrueUpFeeService#charge_fees selects by subscription and by the fee's own
+    charges_from/to_datetime with NO invoice scoping (calculate_true_up_fee_service.rb:22-38), so it
+    sees BOTH the threshold invoice's 10_000¢ fee and the period invoice's 10_000¢ fee: 20_000¢ of
+    spend against a 25_000¢ commitment → a 5_000¢ commitment fee. Period fees 0 + 10_000 + 5_000 =
+    15_000¢.
+    Then the credit: to_credit_amount is 10_000¢ and the cap
+    (progressive_billing_service.rb:26-31) is the period invoice's charge fees sharing the threshold
+    invoice's charge_id = 10_000¢ — the `commitment` fee is not a charge fee and does not enlarge it.
+    10_000 is not greater than 10_000, so no credit note is cut, 10_000¢ is credited, sub_total
+    15_000 − 10_000 = 5_000¢ and the invoice settles at 5_000¢.
+    THE OTHER ORDER, with its number: if the floor were computed from the period invoice's fees alone
+    — the natural reading, and what an invoice-scoped query would give — spend would be 10_000¢, the
+    true-up 15_000¢, fees 25_000¢ and the invoice 15_000¢ after the same 10_000¢ credit. The customer
+    pays 5_000¢ rather than 15_000¢, a 10_000¢ difference decided entirely by whether a threshold
+    invoice counts as spend toward the commitment.
+    fees_amount_cents differs there (15_000 vs 25_000) but the commitment fee's own 5_000¢ is the
+    field that names it, so the fee split is asserted. credit_notes_amount_cents 0 is asserted
+    because a cap that DID count the commitment fee would be 15_000¢ — still above to_credit_amount,
+    so still no note — while a cap that counted nothing would cut one; 0 pins the middle reading.
+
+- id: b15/coupon/fixed_charge
+  block: B15
+  axes: {feature_a: coupon, feature_b: fixed_charge}
+  dimensions: {interval: monthly, billing_time: calendar, coupon_type: fixed_amount, coupon_frequency: once, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    add_ons: [{code: b15_cfc_seat, name: Seat, amount_cents: 20000}]
+    plan: {code: golden_b15_coupon_fc, interval: monthly, amount_cents: 2000}
+    fixed_charges:
+      - {add_on_code: b15_cfc_seat, charge_model: standard, units: 4, properties: {amount: "25"}}
+    customer: {external_id: golden_b15_coupon_fc_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_fc_sub, billing_time: calendar}
+    coupons:
+      - name: b15 fixed charge coupon
+        code: b15_coupon_fc
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 8000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      coupons_amount_cents: 8000
+      sub_total_excluding_taxes_amount_cents: 4000
+      taxes_amount_cents: 0
+      total_amount_cents: 4000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: fixed_charge, units: "4.0", amount_cents: 10000}
+  math: >-
+    A fixed-charge fee is inside the coupon's base, and it is the third producer stage rather than the
+    second: calculate_fees_service.rb:44 creates it, :49-50 sums every fee into
+    sub_total_excluding_taxes, and :54 hands that sum to Credits::AppliedCouponsService as
+    base_amount_cents (applied_coupon_service.rb:103).
+    4 units at 25.00 = 100.00 → 10_000¢ of fixed charge plus the 2_000¢ subscription fee = 12_000¢.
+    The `once` coupon's 8_000¢ is under that base so amount_service.rb:37-39 grants all of it →
+    sub_total 4_000¢, total 4_000¢.
+    THE OTHER ORDER, with its number: if the fixed-charge fee were produced after the coupon stage,
+    the base would be the 2_000¢ subscription fee, amount_service.rb:37 would return the base and the
+    coupon would grant 2_000¢ — 12_000 − 2_000 = 10_000¢ due, 6_000¢ more, with 6_000¢ of coupon
+    unusable.
+    fees_amount_cents is 12_000 under both orders, so coupons_amount_cents and sub_total are the
+    asserted fields, and the coupon is a FIXED amount precisely so that the cap can bind — a
+    percentage would scale with whatever base it was given and the two orders would agree.
+
+- id: b15/coupon/min_amount_true_up
+  block: B15
+  axes: {feature_a: coupon, feature_b: min_amount_true_up}
+  dimensions: {interval: monthly, billing_time: calendar, min_amount_cents: 10000, coupon_type: percentage, coupon_frequency: once, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_cmin_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_coupon_min, interval: monthly, amount_cents: 0}
+    charges:
+      - billable_metric_code: b15_cmin_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        min_amount_cents: 10000
+    customer: {external_id: golden_b15_coupon_min_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_min_sub, billing_time: calendar}
+    coupons:
+      - name: b15 min amount coupon
+        code: b15_coupon_min
+        coupon_type: percentage
+        frequency: once
+        percentage_rate: 50
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cmin_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 5000
+      sub_total_excluding_taxes_amount_cents: 5000
+      taxes_amount_cents: 0
+      total_amount_cents: 5000
+      fees_count: 3
+  math: >-
+    The per-CHARGE spending floor — Fees::CreateTrueUpService, not the plan-level commitment — is
+    computed inside the charge stage at calculate_fees_service.rb:43, from the charge model's raw
+    result. Fees::ChargeService#init_true_up_fee (charge_service.rb:390-403) sums the charge's own fees
+    into used_amount_cents and create_true_up_service.rb:23,30 tops that up to the prorated minimum.
+    All of it happens before any reducer.
+    30 units × 1.00 = 3_000¢ against a 10_000¢ minimum over the full 31-day March
+    (prorated_min_amount_cents = 10_000/31 × 31 = 10_000), so a second `charge` fee of 7_000¢ is added
+    and the invoice carries three fees: the 0¢ subscription fee, the 3_000¢ usage fee and the 7_000¢
+    true-up. The 50% coupon then halves the topped-up 10_000¢ → sub_total 5_000¢, total 5_000¢.
+    THE OTHER ORDER, with its number: had the coupon applied before the floor, used_amount_cents would
+    be 3_000 − 1_500 = 1_500¢ and the true-up would grow to 8_500¢, giving fees of 10_000¢ net of a
+    1_500¢ coupon — the invoice would settle at 10_000¢, twice what it settles at here, and the
+    discount would have been swallowed by the top-up.
+    The two charge fees share fee_type, item_code and period, which are exactly the runner's fee
+    identity keys, so they cannot be told apart by `fees:` — fees_count 3 plus
+    coupons_amount_cents and sub_total_excluding_taxes are what this row can assert, and they are
+    enough: 5_000¢ of coupon on a 10_000¢ base is only possible if the true-up was in that base.
+
+- id: b15/coupon/subscription_fee
+  block: B15
+  axes: {feature_a: coupon, feature_b: subscription_fee}
+  dimensions: {interval: monthly, billing_time: calendar, coupon_type: fixed_amount, coupon_frequency: once, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b15_csf_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_coupon_sf, interval: monthly, amount_cents: 10000}
+    charges: [{billable_metric_code: b15_csf_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_coupon_sf_cust, currency: EUR}
+    subscription: {external_id: golden_b15_coupon_sf_sub, billing_time: calendar}
+    coupons:
+      - name: b15 subscription coupon
+        code: b15_coupon_sf
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 12000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_csf_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 13000
+      coupons_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 1000
+      taxes_amount_cents: 0
+      total_amount_cents: 1000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 10000}
+        - {fee_type: charge, amount_cents: 3000}
+  math: >-
+    The subscription fee is the FIRST producer (calculate_fees_service.rb:42) and it is in the coupon's
+    base — a coupon larger than the usage on the invoice reaches into the plan's own fee.
+    10_000¢ subscription + 30 units × 1.00 = 3_000¢ → 13_000¢ of fees. The `once` coupon's remaining
+    12_000¢ is below that base, so amount_service.rb:37-39 grants all 12_000¢ → sub_total 1_000¢, and
+    the applied coupon is terminated because the credit reached its remaining amount
+    (applied_coupon_service.rb:81-82).
+    THE OTHER ORDER, with its number: if the coupon's base were the usage alone — the subscription fee
+    produced after the coupon stage — amount_service.rb:37 would cap the credit at 3_000¢ and the
+    invoice would be 13_000 − 3_000 = 10_000¢. The customer would pay 9_000¢ more and 9_000¢ of coupon
+    would be stranded on a still-active applied_coupon rather than terminated.
+    fees_amount_cents is 13_000 under both orders. coupons_amount_cents (12_000 vs 3_000) and
+    sub_total_excluding_taxes (1_000 vs 10_000) are the fields that separate them, and the coupon is a
+    fixed amount so the cap can bind at all.
+
+- id: b15/credit_note/fixed_charge
+  block: B15
+  axes: {feature_a: credit_note, feature_b: fixed_charge}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    add_ons: [{code: b15_cnfc_seat, name: Seat, amount_cents: 20000}]
+    plan: {code: golden_b15_cn_fc, interval: monthly, amount_cents: 0}
+    fixed_charges:
+      - {add_on_code: b15_cnfc_seat, charge_model: standard, units: 4, properties: {amount: "25"}}
+    customer: {external_id: golden_b15_cn_fc_cust, currency: EUR}
+    subscription: {external_id: golden_b15_cn_fc_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: fixed_charge, amount_cents: 6000}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 2
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 10000
+        credit_notes_amount_cents: 6000
+        total_amount_cents: 4000
+        fees_count: 2
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 6000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    A fixed charge is creditable, and it is what gives the next invoice enough remaining amount for the
+    note to be spent — credit_note_service.rb:88-94 takes min(note balance, remaining invoice amount),
+    and the remaining amount is whatever the producers at :42-46 put there.
+    Each period: a 0¢ subscription fee plus 4 units at 25.00 = 10_000¢ of fixed charge. The March
+    fixed-charge fee is credited for 6_000¢ and, with no tax anywhere, the note is worth exactly the
+    6_000¢ of fee it names.
+    May arrives at the credit-note stage (:61) with 10_000¢ remaining, consumes the whole 6_000¢ → the
+    invoice is 4_000¢ and the note is `consumed` at a 0¢ balance. sub_total stays 10_000¢: the credit
+    is applied after tax and `refresh_amounts` only decrements total_amount_cents.
+    THE OTHER ORDER, with its number: if the fixed-charge fee were produced after the credit-note stage
+    the remaining amount at :61 would be the 0¢ subscription fee, compute_credit_amount would return 0
+    and nothing would be consumed — the invoice would ask for the full 10_000¢ and the note would still
+    hold 6_000¢. 4_000¢ versus 10_000¢ due, and a `consumed` note versus an untouched one.
+    fees_amount_cents is 10_000 under both orders, so credit_notes_amount_cents and the note's
+    balance_amount_cents are the asserted fields — and the balance is read through `select` because the
+    step's own payload is the note as created and would still read 6_000¢.
+
+- id: b15/credit_note/min_amount_true_up
+  block: B15
+  axes: {feature_a: credit_note, feature_b: min_amount_true_up}
+  dimensions: {interval: monthly, billing_time: calendar, min_amount_cents: 10000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_cnmin_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_cn_min, interval: monthly, amount_cents: 0}
+    charges:
+      - billable_metric_code: b15_cnmin_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        min_amount_cents: 10000
+    customer: {external_id: golden_b15_cn_min_cust, currency: EUR}
+    subscription: {external_id: golden_b15_cn_min_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnmin_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 2000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 2000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_cnmin_sum, properties: {amount: 30}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 3
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 10000
+        credit_notes_amount_cents: 2000
+        total_amount_cents: 8000
+        fees_count: 3
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 2000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    The per-charge floor is set inside the charge stage (charge_service.rb:390-403 →
+    create_true_up_service.rb:23,30, at calculate_fees_service.rb:43) and a credit note is spent at
+    :61, eighteen lines and four stages later. So a note survives the floor rather than being absorbed
+    by it.
+    Both periods are identical: 30 units × 1.00 = 3_000¢ against a 10_000¢ minimum prorated over the
+    full 31 days = 10_000¢, so a 7_000¢ true-up joins the 3_000¢ usage fee and the 0¢ subscription fee
+    — 10_000¢ of fees, three of them. The credit note is a deliberately small 2_000¢ because both
+    charge fees answer to `fee_type: charge` and the runner resolves the item to whichever it finds
+    first; 2_000¢ is creditable against either.
+    May consumes the whole note against 10_000¢ remaining → 8_000¢ due, note `consumed`, and sub_total
+    stays 10_000¢ because the credit only decrements total_amount_cents.
+    THE OTHER ORDER, with its number: had the note been spent before the floor was computed,
+    used_amount_cents would have been 3_000 − 2_000 = 1_000¢, the true-up would have grown to 9_000¢
+    to reach the same 10_000¢ floor, and the invoice would have settled at 10_000¢ with the note gone.
+    8_000¢ versus 10_000¢ due, and the 2_000¢ difference is the whole value of the note.
+    fees_amount_cents is 10_000 in both worlds — that is the point — so credit_notes_amount_cents and
+    the note's balance are the asserted fields. The two charge fees are indistinguishable under the
+    runner's identity keys, so fees_count is as far as the fee-level assertion can go.
+
+- id: b15/credit_note/subscription_fee
+  block: B15
+  axes: {feature_a: credit_note, feature_b: subscription_fee}
+  dimensions: {interval: monthly, billing_time: calendar, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    plan: {code: golden_b15_cn_sf, interval: monthly, amount_cents: 10000}
+    customer: {external_id: golden_b15_cn_sf_cust, currency: EUR}
+    subscription: {external_id: golden_b15_cn_sf_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: subscription, amount_cents: 6000}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 10000
+        credit_notes_amount_cents: 6000
+        total_amount_cents: 4000
+        fees_count: 1
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 6000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    The barest form of the producer/reducer question: one producer, one reducer, and nothing else on
+    the invoice. The subscription fee is created at calculate_fees_service.rb:42 and the credit note is
+    spent at :61.
+    Each period is a single 10_000¢ subscription fee. 6_000¢ of the March fee is credited; with no tax
+    the note is worth exactly that. May reaches :61 with 10_000¢ remaining, so
+    compute_credit_amount (credit_note_service.rb:88-94) returns the whole 6_000¢ → 4_000¢ due, note
+    `consumed`. sub_total stays at 10_000¢, which is the fact that makes this reducer different from a
+    coupon: `refresh_amounts` decrements total_amount_cents only, so a credit note never moves the
+    taxable base.
+    THE OTHER ORDER, with its number: if the subscription fee were produced after the credit-note
+    stage, the remaining invoice amount at :61 would be 0, compute_credit_amount would return 0, and
+    the invoice would ask for the full 10_000¢ with the note untouched at 6_000¢. 4_000¢ versus
+    10_000¢ due.
+    fees_amount_cents is 10_000 under both orders. credit_notes_amount_cents and the note's
+    balance_amount_cents are what separate them; sub_total is asserted at 10_000¢ as the control
+    against the coupon case, where the same 6_000¢ reduction WOULD have moved it to 4_000¢.
+
+- id: b15/fixed_charge/prepaid_credit
+  block: B15
+  axes: {feature_a: fixed_charge, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, wallet_limit: fixed_charge, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    add_ons: [{code: b15_fcp_seat, name: Seat, amount_cents: 20000}]
+    plan: {code: golden_b15_fc_prepaid, interval: monthly, amount_cents: 2000}
+    fixed_charges:
+      - {add_on_code: b15_fcp_seat, charge_model: standard, units: 4, properties: {amount: "25"}}
+    customer: {external_id: golden_b15_fc_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_fc_prepaid_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "120"
+        applies_to: {fee_types: [fixed_charge]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      prepaid_credit_amount_cents: 10000
+      total_amount_cents: 2000
+      fees_count: 2
+    wallet:
+      balance_cents: 2000
+  math: >-
+    `fixed_charge` is a fee type a wallet can be limited to, and the limit is enforced per FEE, not
+    against the invoice total. Credits::AllocatePrepaidCreditsByWalletsService:70-91 keys its buckets
+    on [fee_type, billable_metric_id] — for a fixed-charge fee `fee.charge` is nil, so the key is
+    ["fixed_charge", nil] — and :108-122 admits a bucket only when the wallet's allowed_fee_types
+    include it.
+    Fees: 2_000¢ subscription + 4 units at 25.00 = 10_000¢ of fixed charge → 12_000¢. Two buckets,
+    2_000¢ and 10_000¢. The wallet holds 120 credits at rate 1.00 = 12_000¢, enough for both, but is
+    limited to `fixed_charge`, so :53 takes min(10_000, 12_000, 12_000) = 10_000¢ → 2_000¢ due and
+    2_000¢ of credits stranded.
+    THE OTHER ORDER, with its number: if prepaid credit were taken off the invoice total as a single
+    figure — which is exactly how prepaid_credit_amount_cents reads on the invoice — the whole 12_000¢
+    would go, the invoice would settle at 0 and the wallet would be empty. The limitation would be
+    invisible and 2_000¢ of credits would have paid a subscription fee they are not allowed to pay.
+    fees_amount_cents and sub_total are 12_000 either way: prepaid credit runs after tax
+    (calculate_fees_service.rb:62) and never moves the base. prepaid_credit_amount_cents and the
+    residual wallet balance are the fields that separate the two.
+
+- id: b15/fixed_charge/progressive_billing
+  block: B15
+  axes: {feature_a: fixed_charge, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    add_ons: [{code: b15_fcpb_seat, name: Seat, amount_cents: 20000}]
+    metrics: [{code: b15_fcpb_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b15_fc_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_fcpb_latest, charge_model: standard, properties: {amount: "1"}}]
+    fixed_charges:
+      - {add_on_code: b15_fcpb_seat, charge_model: standard, units: 4, properties: {amount: "25"}}
+    customer: {external_id: golden_b15_fc_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_fc_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_fcpb_latest, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_fcpb_latest, properties: {amount: 20}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 12000
+        progressive_billing_credit_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 10000
+        credit_notes_amount_cents: 8000
+        total_amount_cents: 2000
+        fees_count: 3
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 8000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    A fixed charge is invisible to progressive billing on both sides of the transaction, and that is
+    the pair.
+    On the threshold invoice: Invoices::ProgressiveBillingService#create_fees
+    (progressive_billing_service.rb:94-105) walks `subscription.plan.charges` only, so no fixed-charge
+    fee is ever cut mid-period. 100 units × 1.00 = 10_000¢ crosses the 5_000¢ threshold and the
+    invoice is one charge fee of 10_000¢ — fees_count 1 is the assertion that says so.
+    On the period invoice: the credit is capped at charge fees, and
+    Credits::ProgressiveBillingService:26-31 scopes that sum with `.fees.charge`, so the 10_000¢
+    fixed-charge fee does not enlarge it. `latest_agg` makes the period's usage fee 2_000¢, fees are
+    0 + 2_000 + 10_000 = 12_000¢, to_credit_amount is 10_000¢ and the cap is 2_000¢. :36-42 credits
+    2_000¢ and hands the other 8_000¢ to CreditNotes::CreateFromProgressiveBillingInvoice, which cuts
+    an 8_000¢ note on the threshold invoice. sub_total 12_000 − 2_000 = 10_000¢, and at :61 the note is
+    consumed in full → 2_000¢ due.
+    THE OTHER ORDER, with its numbers: if the cap counted the fixed-charge fee too, it would be
+    12_000¢, the full 10_000¢ would be credited, no credit note would exist, sub_total would be 2_000¢
+    and the invoice 2_000¢. The total is 2_000¢ in both worlds — money is conserved — so
+    progressive_billing_credit_amount_cents (2_000 vs 10_000) and credit_notes_amount_cents (8_000 vs
+    0) are the only fields that distinguish them, and both are asserted.
+    The consequence worth naming: 8_000¢ of what the customer already paid comes back as a credit note
+    rather than as a credit on the invoice, and if the period invoice had been smaller than 8_000¢ the
+    remainder would have sat on their account instead of being netted off.
+
+- id: b15/fixed_charge/tax
+  block: B15
+  axes: {feature_a: fixed_charge, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, plan_tax_rate: 10, fixed_charge_tax_rate: 25}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes:
+      - {code: b15_fct_plan, name: plan rate, rate: 10, applied_to_organization: false}
+      - {code: b15_fct_fc, name: fixed charge rate, rate: 25, applied_to_organization: false}
+    add_ons: [{code: b15_fct_seat, name: Seat, amount_cents: 20000}]
+    plan: {code: golden_b15_fc_tax, interval: monthly, amount_cents: 2000, tax_codes: [b15_fct_plan]}
+    fixed_charges:
+      - add_on_code: b15_fct_seat
+        charge_model: standard
+        units: 4
+        properties: {amount: "25"}
+        tax_codes: [b15_fct_fc]
+    customer: {external_id: golden_b15_fc_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_fc_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      taxes_amount_cents: 2700
+      total_amount_cents: 14700
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200, taxes_rate: 10}
+        - {fee_type: fixed_charge, units: "4.0", amount_cents: 10000, taxes_amount_cents: 2500, taxes_rate: 25}
+  math: >-
+    A fixed charge has its own rung on the tax ladder, one below a metered charge's:
+    Fees::ApplyTaxesService:69 returns `fee.fixed_charge.taxes` — note that :67's add_on rung does not
+    fire, because the fee's type is `fixed_charge` and not `add_on`, so the tax on the underlying
+    add-on is irrelevant. The fixed-charge fee is produced at calculate_fees_service.rb:44 and taxed at
+    :56.
+    2_000¢ subscription at the plan's 10% = 200¢; 4 units at 25.00 = 10_000¢ of fixed charge at its own
+    25% = 2_500¢. 2_700¢ of tax on 12_000¢ → 14_700¢. The invoice's own rate would be
+    (2_000/12_000) × 10 + (10_000/12_000) × 25 = 22.5 (Invoices::ApplyTaxesService:87-96), derived
+    here rather than asserted, because invoice_expectation has no taxes_rate field.
+    THE OTHER ORDER, with its number: if tax were applied to the invoice sub_total rather than to the
+    fees produced before it, a single rate would have to win — 12_000 × 10% = 1_200¢ or
+    12_000 × 25% = 3_000¢. And if the fixed-charge fee were outside the tax base altogether, tax would
+    be 200¢ and the invoice 12_200¢, 2_500¢ short.
+    fees_amount_cents is 12_000 in all of those. The per-fee taxes_amount_cents are asserted because
+    the 22.5% blend is indistinguishable from a uniform 22.5% rate at invoice level.
+
+- id: b15/min_amount_true_up/prepaid_credit
+  block: B15
+  axes: {feature_a: min_amount_true_up, feature_b: prepaid_credit}
+  dimensions: {interval: monthly, billing_time: calendar, min_amount_cents: 10000, wallet_limit: billable_metric, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b15_mtp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_min_prepaid, interval: monthly, amount_cents: 2000}
+    charges:
+      - billable_metric_code: b15_mtp_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        min_amount_cents: 10000
+    customer: {external_id: golden_b15_min_prepaid_cust, currency: EUR}
+    subscription: {external_id: golden_b15_min_prepaid_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "90"
+        applies_to: {billable_metric_codes: [b15_mtp_sum]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_mtp_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      prepaid_credit_amount_cents: 9000
+      total_amount_cents: 3000
+      fees_count: 3
+    wallet:
+      balance_cents: 0
+  math: >-
+    A per-charge true-up is a DUPLICATE of the charge fee — create_true_up_service.rb:36 is
+    `fee.dup` — so it keeps the charge, and therefore the billable metric, of the fee it tops up. A
+    wallet limited to that metric can spend against it.
+    2_000¢ subscription + 30 units × 1.00 = 3_000¢ against a 10_000¢ minimum prorated over the whole
+    31-day March = 10_000¢, so a 7_000¢ true-up joins them: 12_000¢ of fees, three of them.
+    Credits::AllocatePrepaidCreditsByWalletsService:82 keys each bucket on
+    [fee.fee_type, fee.charge&.billable_metric_id], and both charge fees produce the same key — so the
+    ["charge", b15_mtp_sum] bucket is worth 3_000 + 7_000 = 10_000¢, not 3_000¢. The metric-limited
+    wallet matches that bucket at :117 and :53 takes min(10_000, 9_000, 12_000) = 9_000¢ → 3_000¢ due
+    and an empty wallet.
+    THE OTHER ORDER, with its number: if the true-up were not bucketed with its parent — a separate fee
+    type, or a fee without the charge association — the metric-limited wallet would see a 3_000¢
+    bucket, spend 3_000¢, and leave 9_000¢ due with 6_000¢ of credits it could never use. 3_000¢ versus
+    9_000¢ due, and a wallet at 0 versus one at 6_000¢.
+    fees_amount_cents and sub_total are 12_000 either way — prepaid credit runs at
+    calculate_fees_service.rb:62, after tax, and never moves the base — so
+    prepaid_credit_amount_cents and the wallet balance are the fields asserted. The two charge fees
+    share the runner's fee identity keys, so fees_count 3 is as far as `fees:` can go.
+
+- id: b15/min_amount_true_up/progressive_billing
+  block: B15
+  axes: {feature_a: min_amount_true_up, feature_b: progressive_billing}
+  dimensions: {interval: monthly, billing_time: calendar, min_amount_cents: 6000, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b15_mtpb_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b15_min_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges:
+      - billable_metric_code: b15_mtpb_latest
+        charge_model: standard
+        properties: {amount: "1"}
+        min_amount_cents: 6000
+    customer: {external_id: golden_b15_min_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b15_min_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_mtpb_latest, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_mtpb_latest, properties: {amount: 20}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 6000
+        progressive_billing_credit_amount_cents: 6000
+        sub_total_excluding_taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 3
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 4000
+      balance_amount_cents: 4000
+      credit_status: available
+  math: >-
+    The mirror of b15/fixed_charge/progressive_billing: a true-up fee IS a charge fee, so it ENLARGES
+    the credit cap that a fixed charge could not touch. Same mechanism, opposite answer, and that
+    contrast is the reason both rows exist.
+    The threshold invoice bills 100 units × 1.00 = 10_000¢, one fee and no true-up: used_amount_cents
+    10_000 is already above the prorated minimum (create_true_up_service.rb:23), whatever boundary the
+    mid-period invoice is cut on.
+    The period invoice: `latest_agg` drops the usage fee to 20 × 1.00 = 2_000¢, and
+    prorated_min_amount_cents over the full 31-day March is 6_000/31 × 31 = 6_000¢, so a 4_000¢ true-up
+    is added. Both are `charge` fees on the same charge, so
+    Credits::ProgressiveBillingService:26-31 — `invoice.fees.charge.where(charge_id: ...)` — caps the
+    credit at 2_000 + 4_000 = 6_000¢, not 2_000¢. to_credit_amount is 10_000¢, above that cap, so
+    :36-42 credits 6_000¢ and issues the remaining 4_000¢ as a credit note on the threshold invoice.
+    sub_total 6_000 − 6_000 = 0, total 0, and with nothing remaining at :61 the note is not consumed —
+    it stays `available` at 4_000¢.
+    THE OTHER ORDER, with its numbers: if the true-up were outside the cap the cap would be 2_000¢, the
+    credit 2_000¢, the credit note 8_000¢, sub_total 4_000¢, and 4_000¢ of that note would be consumed
+    at :61 — ending on the same 0¢ total and the same 4_000¢ of residual note balance. Only
+    progressive_billing_credit_amount_cents (6_000 vs 2_000) and credit_notes_amount_cents (0 vs 4_000)
+    tell the two apart, which is why both are asserted on the period invoice and the note is asserted
+    as untouched.
+
+- id: b15/min_amount_true_up/tax
+  block: B15
+  axes: {feature_a: min_amount_true_up, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, min_amount_cents: 10000, plan_tax_rate: 5, charge_tax_rate: 25}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    taxes:
+      - {code: b15_mtt_plan, name: plan rate, rate: 5, applied_to_organization: false}
+      - {code: b15_mtt_charge, name: charge rate, rate: 25, applied_to_organization: false}
+    metrics: [{code: b15_mtt_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_min_tax, interval: monthly, amount_cents: 2000, tax_codes: [b15_mtt_plan]}
+    charges:
+      - billable_metric_code: b15_mtt_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        min_amount_cents: 10000
+        tax_codes: [b15_mtt_charge]
+    customer: {external_id: golden_b15_min_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_min_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_mtt_sum, properties: {amount: 30}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      taxes_amount_cents: 2600
+      total_amount_cents: 14600
+      fees_count: 3
+  math: >-
+    A per-charge floor is taxed at the CHARGE's rate, because the true-up fee is a duplicate of the
+    charge fee (create_true_up_service.rb:36) and therefore stops at the same rung —
+    Fees::ApplyTaxesService:68, `fee.charge.taxes`. Both are produced inside the charge stage at
+    calculate_fees_service.rb:43 and taxed at :56.
+    30 units × 1.00 = 3_000¢ against a 10_000¢ minimum prorated over the whole 31-day March = 10_000¢,
+    so the true-up is 7_000¢ and the invoice carries three fees: 2_000¢ subscription at the plan's 5%,
+    3_000¢ usage at 25% and 7_000¢ of true-up at 25%.
+    100 + 750 + 1_750 = 2_600¢ of tax on 12_000¢ of fees → 14_600¢. (The invoice's own blended rate
+    would be (10_000/12_000) × 25 + (2_000/12_000) × 5 = 21.66667 by
+    Invoices::ApplyTaxesService:87-96, but invoice_expectation carries no taxes_rate field, so it
+    cannot be asserted.)
+    THE OTHER ORDER, with its number: if the floor were applied after tax, to the tax-inclusive total,
+    real spend would be 5_000¢ carrying 850¢ of tax = 5_850¢, the top-up would be 4_150¢ and the
+    invoice would land on 10_000¢ flat with 850¢ of tax inside it. 14_600¢ versus 10_000¢ — the
+    customer pays 4_600¢ more, of which 1_750¢ is VAT on a top-up that only exists to reach a minimum.
+    fees_amount_cents is 12_000 either way, so taxes_amount_cents is the field that pins the sequence:
+    2_600¢ is only reachable if 10_000¢ of the 12_000¢ sat at 25%, i.e. if the true-up inherited the
+    charge's tax. The two charge fees share the runner's fee identity keys and cannot be told apart by
+    `fees:`, so fees_count 3 is as far as the fee-level assertion goes.
+
+- id: b15/prepaid_credit/subscription_fee
+  block: B15
+  axes: {feature_a: prepaid_credit, feature_b: subscription_fee}
+  dimensions: {interval: monthly, billing_time: calendar, wallet_limit: subscription, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b15_psf_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_prepaid_sf, interval: monthly, amount_cents: 10000}
+    charges: [{billable_metric_code: b15_psf_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_prepaid_sf_cust, currency: EUR}
+    subscription: {external_id: golden_b15_prepaid_sf_sub, billing_time: calendar}
+    wallets:
+      - name: granted
+        rate_amount: "1"
+        currency: EUR
+        granted_credits: "120"
+        applies_to: {fee_types: [subscription]}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_psf_sum, properties: {amount: 50}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 15000
+      sub_total_excluding_taxes_amount_cents: 15000
+      prepaid_credit_amount_cents: 10000
+      total_amount_cents: 5000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 10000}
+        - {fee_type: charge, amount_cents: 5000}
+    wallet:
+      balance_cents: 2000
+  math: >-
+    The inverse of b15/charge/prepaid_credit, and the pair that shows the wallet limit is read against
+    fees rather than against the invoice: a wallet restricted to `subscription` fees can pay the plan
+    and not the usage.
+    10_000¢ subscription + 50 units × 1.00 = 5_000¢ → 15_000¢ of fees and two buckets in
+    Credits::AllocatePrepaidCreditsByWalletsService:70-91, ["subscription", nil] worth 10_000¢ and
+    ["charge", b15_psf_sum] worth 5_000¢. The wallet holds 120 credits at rate 1.00 = 12_000¢ — more
+    than the subscription fee — but applicable_fee? (:108-122) admits only the subscription bucket, so
+    :53 takes min(10_000, 12_000, 15_000) = 10_000¢. 5_000¢ due, 2_000¢ of credits left.
+    THE OTHER ORDER, with its number: if prepaid credit were subtracted from the invoice total as one
+    figure, all 12_000¢ would go and the invoice would be 3_000¢ with an empty wallet — 2_000¢ of
+    credits earmarked for subscription fees would have paid for metered usage.
+    fees_amount_cents and sub_total are 15_000 either way, because prepaid credit is the last stage
+    (calculate_fees_service.rb:62) and moves only total_amount_cents. prepaid_credit_amount_cents
+    (10_000 vs 12_000) and the wallet balance (2_000 vs 0) are the fields that separate the orders.
+
+- id: b15/progressive_billing/subscription_fee
+  block: B15
+  axes: {feature_a: progressive_billing, feature_b: subscription_fee}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b15_pbs_latest, aggregation_type: latest_agg, field_name: amount}]
+    plan:
+      code: golden_b15_pb_sf
+      interval: monthly
+      amount_cents: 20000
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b15_pbs_latest, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b15_pb_sf_cust, currency: EUR}
+    subscription: {external_id: golden_b15_pb_sf_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_pbs_latest, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-20T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_pbs_latest, properties: {amount: 20}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+        fees_count: 1
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 22000
+        progressive_billing_credit_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 20000
+        credit_notes_amount_cents: 8000
+        total_amount_cents: 12000
+        fees_count: 2
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 8000
+      balance_amount_cents: 0
+      credit_status: consumed
+  math: >-
+    A subscription fee is on neither side of the progressive-billing transaction — not billed by the
+    threshold invoice, not creditable by the period invoice — and this row asserts both halves.
+    The threshold invoice: Invoices::ProgressiveBillingService#create_fees walks plan.charges only, so
+    the 20_000¢ subscription fee is absent and the invoice is a single 10_000¢ charge fee. fees_count 1
+    is that assertion.
+    The period invoice: `latest_agg` drops the usage fee to 2_000¢, so fees are 20_000 + 2_000 =
+    22_000¢. to_credit_amount is the threshold invoice's 10_000¢, but the cap at
+    Credits::ProgressiveBillingService:26-31 is `.fees.charge` — 2_000¢ — so only 2_000¢ can be
+    credited and the other 8_000¢ leaves as a credit note on the threshold invoice. sub_total
+    22_000 − 2_000 = 20_000¢, and at :61 that note is consumed in full → 12_000¢ due.
+    THE OTHER ORDER, with its numbers: if the cap had counted the subscription fee, it would be
+    22_000¢, the whole 10_000¢ would be credited on the invoice, no credit note would exist and
+    sub_total would be 12_000¢ — the same 12_000¢ due. That coincidence is the reason this row asserts
+    progressive_billing_credit_amount_cents (2_000 vs 10_000) and credit_notes_amount_cents (8_000 vs
+    0): the total cannot see the difference, and neither can fees_amount_cents at 22_000.
+    Why it matters anyway: a credit note is only netted off if the period invoice is big enough to
+    absorb it. Here 20_000¢ of subscription fee absorbs all 8_000¢; on a smaller invoice the customer
+    would be left holding an available balance instead of a reduced bill.
+
+- id: b15/subscription_fee/tax
+  block: B15
+  axes: {feature_a: subscription_fee, feature_b: tax}
+  dimensions: {interval: monthly, billing_time: calendar, plan_tax_rate: 10, charge_tax_rate: 25}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    taxes:
+      - {code: b15_sft_plan, name: plan rate, rate: 10, applied_to_organization: false}
+      - {code: b15_sft_charge, name: charge rate, rate: 25, applied_to_organization: false}
+    metrics: [{code: b15_sft_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b15_sf_tax, interval: monthly, amount_cents: 10000, tax_codes: [b15_sft_plan]}
+    charges:
+      - billable_metric_code: b15_sft_sum
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b15_sft_charge]
+    customer: {external_id: golden_b15_sf_tax_cust, currency: EUR}
+    subscription: {external_id: golden_b15_sf_tax_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b15_sft_sum, properties: {amount: 50}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 15000
+      sub_total_excluding_taxes_amount_cents: 15000
+      taxes_amount_cents: 2250
+      total_amount_cents: 17250
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 10000, taxes_amount_cents: 1000, taxes_rate: 10}
+        - {fee_type: charge, amount_cents: 5000, taxes_amount_cents: 1250, taxes_rate: 25}
+  math: >-
+    The subscription fee is the first producer (calculate_fees_service.rb:42) and it is taxed at the
+    PLAN's rate, not at the charge's and not at any invoice-wide rate. Fees::ApplyTaxesService reaches
+    the plan rung at :71 for a subscription fee — there is no subscription-level rung above it — while
+    the charge fee stops earlier at :68 on its own tax.
+    10_000¢ at 10% = 1_000¢ and 50 units × 1.00 = 5_000¢ at 25% = 1_250¢ → 2_250¢ of tax on 15_000¢ of
+    fees, total 17_250¢. The invoice's own rate would be the pro-rata blend of
+    Invoices::ApplyTaxesService:87-96 — (10_000/15_000) × 10 + (5_000/15_000) × 25 = 6.66667 +
+    8.33333 = 15 — a figure no configuration contains; invoice_expectation has no taxes_rate field, so
+    the row pins the two real rates at fee level instead, which is the stronger assertion anyway.
+    THE OTHER ORDER, with its number: if tax were computed on the invoice sub_total instead of on the
+    fees, one rate would apply to everything — 15_000 × 10% = 1_500¢ or 15_000 × 25% = 3_750¢, out by
+    750¢ and 1_500¢ respectively. If the subscription fee were not in the tax base at all, tax would be
+    1_250¢ and the invoice 16_250¢.
+    A uniform 15% on 15_000¢ would also give 2_250¢, which is exactly why taxes_amount_cents alone is
+    not enough here and the per-fee taxes_rate values of 10 and 25 are asserted: they are what say the
+    invoice was taxed fee by fee rather than at a rate that happens to average out.

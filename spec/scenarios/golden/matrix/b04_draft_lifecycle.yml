@@ -1,0 +1,1387 @@
+# B4 — Draft lifecycle
+#
+# refresh_draft_service and refresh_draft_and_finalize_service carry 14 fix commits between them,
+# the adjusted-fee services 5, preview 9.
+#
+# A draft invoice is mutable: it can be recomputed from its period, finalized, or voided once
+# finalized. Whether an invoice starts as a draft at all is a property of the CUSTOMER — an
+# invoice_grace_period holds it open — which is why that is the context axis rather than a plan
+# setting. Grace-period rows need `premium: true`: Customers::CreateService#assign_premium_attributes
+# returns early without a licence, so invoice_grace_period (and timezone) are silently dropped and
+# the invoice would be finalized on creation, quietly testing the wrong context.
+#
+# `adjust-fee-units` and `adjust-fee-amount` have no rows and never will from this suite: fee
+# adjustment exists only as GraphQL mutations (app/graphql/mutations/adjusted_fees/), so the ledger
+# subtracts those cells via GoldenLegality::API_UNREACHABLE_OPERATIONS.
+---
+- id: b04/refresh/grace-period
+  block: B4
+  axes: {operation: refresh, context: grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_refresh_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_refresh, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_refresh_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_refresh_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_refresh_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_refresh_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_refresh_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      total_amount_cents: 3000
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    The customer's three-day grace period holds April's invoice open as a draft, worth 1_000¢ from
+    the single March event. A second event then arrives LATE — ingested on 2 April but timestamped
+    20 March, so it belongs to the period already drafted. Refreshing recomputes the draft from its
+    period and picks it up: 10 + 20 = 30 units → 3_000¢. Late-arriving usage is the whole reason
+    grace periods exist, and a refresh that failed to see it would under-bill silently.
+
+- id: b04/finalize/grace-period
+  block: B4
+  axes: {operation: finalize, context: grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_final_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_finalize, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_final_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_finalize_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_finalize_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_final_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 3000
+      total_amount_cents: 3000
+  math: >-
+    Same setup, finalized instead of refreshed. Finalizing closes the draft at 3_000¢ without
+    changing the arithmetic — the amounts are identical to what the draft held, and only `status`
+    moves. payment_status is asserted as pending because finalizing makes an invoice owed, not paid;
+    the pair status=finalized / payment_status=pending is the state a dunning run acts on.
+
+- id: b04/void/no-grace-period
+  block: B4
+  axes: {operation: void, context: no-grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b04_void_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_void, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_void_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_void_cust, currency: EUR}
+    subscription: {external_id: golden_b04_void_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_void_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: void_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: voided
+      fees_amount_cents: 3000
+      total_amount_cents: 3000
+  math: >-
+    With no grace period the invoice is finalized on creation, so voiding it is the only way back.
+    Voiding changes `status` and nothing else: fees_amount_cents and total_amount_cents still read
+    3_000¢. That is deliberate — a voided invoice remains a record of what was billed rather than
+    being zeroed — and it is why a voided invoice must be excluded by status when summing revenue,
+    not by trusting its total to be 0.
+
+- id: b04/preview/with-progressive-billing
+  block: B4
+  axes: {operation: preview, context: with-progressive-billing}
+  dimensions: {interval: monthly, billing_time: calendar, threshold_amount_cents: 5000, taxes: none}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing, preview]}
+    metrics: [{code: b04_pv_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b04_preview_pb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b04_pv_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_preview_pb_cust, currency: EUR}
+    subscription: {external_id: golden_b04_preview_pb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b04_pv_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 10000
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 10000
+      progressive_billing_credit_amount_cents: 10000
+      total_amount_cents: 0
+  math: >-
+    A preview is only worth anything if it equals the invoice it predicts, so this row asserts the
+    same three numbers twice: once on the real period invoice and once on the preview taken while
+    usage is already final.
+    100 units × 1.00 = 10_000¢ crosses the 5_000¢ threshold, so a threshold invoice bills the whole
+    10_000¢ on 5 March. The period invoice on 1 April re-bills the same 10_000¢ and credits the
+    10_000¢ already invoiced, settling at 0 — nothing more is owed.
+    The preview, taken on 25 March with no further usage, predicts the 1 April invoice: Preview's
+    `billing_time` for a persisted subscription is `end_of_periods.first + 1.day`, so it is the same
+    invoice, and it must therefore also read 0.
+
+- id: b04/refresh/no-grace-period
+  block: B4
+  axes: {operation: refresh, context: no-grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b04_rng_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_rng, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_rng_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_rng_cust, currency: EUR}
+    subscription: {external_id: golden_b04_rng_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rng_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rng_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 1000
+      total_amount_cents: 1000
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, units: "10.0", amount_cents: 1000}
+  math: >-
+    The control for b04/refresh/grace-period, and the reason the grace period is the context axis:
+    the same late event, the same refresh call, and a completely different outcome.
+    With no grace period the April invoice is finalized the moment it is created
+    (`subscription_service.rb:193` sets draft only when `grace_period?`), so
+    `PUT /invoices/:id/refresh` bails at `refresh_draft_service.rb:34` —
+    `return result unless invoice.draft?` — before it recomputes anything. It answers HTTP 200 with
+    the invoice untouched, which is why this row asserts a *successful* no-op rather than an error.
+    So the 20 units timestamped 20 March, ingested on 2 April, are never billed: the invoice stays at
+    the 10 units it saw on time, 1_000¢. b04/refresh/grace-period runs the identical timeline against
+    a draft and reaches 3_000¢. A refresh that ignored the draft guard would show 3_000¢ here too,
+    re-opening an issued invoice; one that returned an error instead would fail on the HTTP status.
+
+- id: b04/refresh/with-coupon
+  block: B4
+  axes: {operation: refresh, context: with-coupon}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, coupon: fixed 2000 once}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_rcp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_rcp, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_rcp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_rcp_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_rcp_sub, billing_time: calendar}
+    coupons:
+      - name: b04 refresh coupon
+        code: b04_rcp_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rcp_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rcp_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 3000
+      total_amount_cents: 3000
+  math: >-
+    Two things must both be true, so both are asserted: the refresh DID recompute the period, and it
+    did NOT spend the coupon.
+    Recompute: 10 units billed on time plus 20 units timestamped 20 March but ingested on 2 April =
+    30 units × 1.00 = 3_000¢ of charge, exactly as in b04/refresh/grace-period.
+    No coupon: `Invoices::CalculateFeesService#should_create_coupon_credit?`
+    (`calculate_fees_service.rb:368-373`) returns false unless the invoice is being finalized, and a
+    plain refresh passes `context: :refresh` (`refresh_draft_service.rb:7`). So
+    `coupons_amount_cents` is 0 and the taxable base is the full 3_000¢.
+    That gating is deliberate, not an oversight: this coupon is `frequency: once`, and
+    `Credits::AppliedCouponService#should_terminate_applied_coupon?` would terminate the applied
+    coupon the moment it were spent (`applied_coupon_service.rb:78-86`). A draft that consumed it
+    would have to give it back on every subsequent refresh.
+    b04/finalize/with-coupon runs this identical timeline and finalizes instead — 3_000¢ of fees,
+    2_000¢ of coupon, 1_000¢ due. A draft showing 1_000¢ here would mean the discount had been
+    allocated before the invoice was issued.
+
+- id: b04/refresh/with-credit-note
+  block: B4
+  axes: {operation: refresh, context: with-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, credit_note_cents: 1000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    metrics: [{code: b04_rcn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_rcn, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_rcn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_rcn_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_rcn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rcn_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T09:00:00Z", do: finalize_invoice}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 1000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 1000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rcn_sum, properties: {amount: 10}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - at: "2024-05-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rcn_sum, properties: {amount: 20}, timestamp: "2024-04-20T10:00:00Z"}
+    - {at: "2024-05-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: subscription, index: 0}
+        status: finalized
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription, index: 1}
+        status: draft
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 3000
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      credit_amount_cents: 1000
+      balance_amount_cents: 1000
+  math: >-
+    A credit note needs a finalized invoice to be raised against, so March is issued explicitly
+    (`finalize_invoice`) before the note is created; the note is then still unspent when April's
+    invoice is drafted, which is the state this cell is about.
+    March invoice: 30 units × 1.00 = 3_000¢. `credit_notes_amount_cents` on it is 0 — that field
+    counts notes CONSUMED by an invoice, not notes issued against it. Crediting 1_000¢ of its charge
+    fee with no tax gives an item of 1_000¢ and a credit of 1_000¢
+    (`credit_notes/create_service.rb:68-72` sets `balance_amount_cents` from `credit_amount_cents`).
+    April invoice: 10 units on time plus 20 units timestamped 20 April and ingested on 2 May, so the
+    refresh recomputes it to 3_000¢.
+    It applies nothing: `should_create_credit_note_credit?` is `!not_in_finalizing_process?`
+    (`calculate_fees_service.rb:364-366`), false for `context: :refresh`, so
+    `Credits::CreditNoteService` never runs and the note keeps its full 1_000¢ balance and
+    `available` status. The credit note is asserted through `select` on purpose — without a selector
+    the harness compares against the payload captured at creation time, which cannot show whether the
+    refresh consumed it.
+    b04/finalize/with-credit-note is the same timeline finalized instead: 1_000¢ consumed, 2_000¢ due,
+    note `consumed` with balance 0. A draft that spent the note would show 2_000¢ here and would owe
+    the customer their credit back on the next refresh.
+
+- id: b04/refresh/with-progressive-billing
+  block: B4
+  axes: {operation: refresh, context: with-progressive-billing}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, threshold_amount_cents: 5000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b04_rpb_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b04_rpb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b04_rpb_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_rpb_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_rpb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b04_rpb_sum, properties: {amount: 60}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rpb_sum, properties: {amount: 40}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        status: finalized
+        fees_amount_cents: 6000
+        total_amount_cents: 6000
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 6000
+        sub_total_excluding_taxes_amount_cents: 4000
+        total_amount_cents: 4000
+  math: >-
+    Progressive billing is the ONE reducer a draft carries, so this is the cell where a refresh has
+    to re-run a credit rather than skip one.
+    Threshold invoice: 60 units × 1.00 = 6_000¢ crosses the 5_000¢ threshold on 5 March, and a
+    threshold is a trigger not a cap, so it bills the whole 6_000¢. It is finalized regardless of the
+    grace period — `Invoices::ProgressiveBillingService` calls `FinalizeService.call!` unconditionally
+    (`progressive_billing_service.rb:47`) — which matters because
+    `Subscriptions::ProgressiveBilledAmount` only counts finalized or failed invoices
+    (`progressive_billed_amount.rb:29-33`). The threshold fires once: afterwards `invoiced_usage`
+    (6_000¢) is above the only fixed threshold and there is no recurring one, so
+    `LifetimeUsages::UsageThresholds::CheckService:36-46` selects nothing more.
+    Period draft, after the 40 late units timestamped 20 March arrive on 2 April and the refresh
+    recomputes: 100 units = 10_000¢ of charge.
+    The credit is re-derived from scratch — `reset_invoice_values` destroys the old
+    progressive-billing credits and zeroes `progressive_billing_credit_amount_cents`
+    (`refresh_draft_service.rb:130-138`), then `Credits::ProgressiveBillingService` runs at
+    `calculate_fees_service.rb:53`, AHEAD of the `not_in_finalizing_process?` gate that blocks
+    coupons, credit notes and prepaid credit. `to_credit_amount` is the threshold invoice's own
+    figure, 6_000¢ less nothing (`progressive_billed_amount.rb:60-63`), and 6_000¢ is under the
+    10_000¢ of creditable charge fees, so no excess credit note is raised and the credit is 6_000¢.
+    Base 10_000 − 6_000 = 4_000¢, no tax, 4_000¢ due.
+    Crediting the 10_000¢ now billed instead of the 6_000¢ actually collected would settle at 0 and
+    lose 4_000¢ of revenue. This row is deliberately tax-free: with tax it would also trip the
+    fee-level clamp recorded by b17/full-stack/invoice, which is a different finding.
+
+- id: b04/refresh/with-prepaid-credit
+  block: B4
+  axes: {operation: refresh, context: with-prepaid-credit}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, granted_credits: 20}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_rwl_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_rwl, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_rwl_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_rwl_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_rwl_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "20"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rwl_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_rwl_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 3000
+    wallet:
+      balance_cents: 2000
+  math: >-
+    The refresh recomputes the period — 10 units on time plus 20 timestamped 20 March and ingested on
+    2 April = 3_000¢ — and spends none of the wallet.
+    `should_create_applied_prepaid_credit?` (`calculate_fees_service.rb:375-379`) returns false unless
+    the invoice is being finalized, so `Credits::AppliedPrepaidCreditsService` never runs, the invoice
+    reports `prepaid_credit_amount_cents` 0 and the wallet still holds its 20 granted credits at
+    rate 1.00 = 2_000¢.
+    The wallet is asserted as well as the invoice because the invoice alone cannot distinguish "not
+    spent" from "spent and returned": prepaid credit is consumed by creating an OUTBOUND wallet
+    transaction and decreasing the balance (`applied_prepaid_credits_service.rb:95-108`), so a draft
+    that had spent it would leave the balance at 0 even if a later refresh reset the invoice field.
+    b04/finalize/with-prepaid-credit finalizes the identical timeline: 2_000¢ applied, 1_000¢ due,
+    wallet emptied. Spending prepaid credit on a draft is the case that gating exists to prevent —
+    every refresh would have to unwind a real money movement.
+
+- id: b04/finalize/no-grace-period
+  block: B4
+  axes: {operation: finalize, context: no-grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  setup:
+    metrics: [{code: b04_fng_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_fng, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_fng_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_fng_cust, currency: EUR}
+    subscription: {external_id: golden_b04_fng_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fng_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fng_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: perform_finalize_refresh}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 1000
+      total_amount_cents: 1000
+  math: >-
+    Without a grace period there is no draft to finalize, so the finalize operation is a no-op on
+    both of its surfaces — and this row pins the one that can be exercised.
+    `PUT /invoices/:id/finalize` is not reachable at all here: the controller looks the invoice up in
+    `current_organization.invoices.draft` (`invoices_controller.rb:111`) and answers 404 for an
+    already-issued invoice. The clock is, so the row runs `Clock::FinalizeInvoicesJob`, whose scope is
+    `Invoice.ready_to_be_finalized` = `draft.where(COALESCE(expected_finalization_date, issuing_date) <= today)`
+    (`invoice.rb:197`). With
+    the April invoice finalized on creation the scope is empty and nothing is enqueued.
+    The 20 units timestamped 20 March and ingested on 2 April therefore stay unbilled: 1_000¢, not
+    3_000¢. That is the same number, for the same reason, as b04/refresh/no-grace-period — neither
+    surface re-reads an issued invoice — and the contrast is b04/finalize/grace-period, where the
+    finalize call does recompute because there is still a draft to recompute.
+    `invoices: 1` is load-bearing: a finalize pass that re-billed the period would leave two invoices
+    for March.
+
+- id: b04/finalize/with-coupon
+  block: B4
+  axes: {operation: finalize, context: with-coupon}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, coupon: fixed 2000 once}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_fcp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_fcp, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_fcp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_fcp_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_fcp_sub, billing_time: calendar}
+    coupons:
+      - name: b04 finalize coupon
+        code: b04_fcp_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fcp_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fcp_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 3000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 1000
+      total_amount_cents: 1000
+  math: >-
+    The other half of b04/refresh/with-coupon: same setup, same late event, `finalize_invoice`
+    instead of `refresh_invoice`.
+    Fees are identical, 3_000¢, and for a reason worth pinning: finalization recomputes
+    unconditionally. `RefreshDraftAndFinalizeService` calls `RefreshDraftService` with
+    `context: :finalize` (`refresh_draft_and_finalize_service.rb:23`) without consulting
+    `ready_to_be_refreshed`, so the 20 late units are picked up whether or not anything flagged the
+    draft.
+    Now the coupon lands. `finalizing_invoice?` is true (`calculate_fees_service.rb:420-422`), so
+    `should_create_coupon_credit?` passes and `Credits::AppliedCouponsService` allocates the fixed
+    2_000¢ against the 3_000¢ base: `coupons_amount_cents` 2_000¢, base 1_000¢, no tax, 1_000¢ due.
+    The applied coupon is spent here and only here — `credit_amount (2_000) >= remaining_amount
+    (2_000)` terminates it (`applied_coupon_service.rb:78-86`).
+    `sub_total_excluding_taxes_amount_cents` is asserted separately from the total because with no tax
+    the two coincide; it is the field that would betray a coupon applied AFTER tax, which on a
+    20%-taxed version of this invoice would cost the customer 400¢ more.
+
+- id: b04/finalize/with-credit-note
+  block: B4
+  axes: {operation: finalize, context: with-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, credit_note_cents: 1000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    metrics: [{code: b04_fcn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_fcn, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_fcn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_fcn_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_fcn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fcn_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T09:00:00Z", do: finalize_invoice}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 1000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 1000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fcn_sum, properties: {amount: 10}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - at: "2024-05-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fcn_sum, properties: {amount: 20}, timestamp: "2024-04-20T10:00:00Z"}
+    - {at: "2024-05-02T10:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: subscription, index: 0}
+        status: finalized
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription, index: 1}
+        status: finalized
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 1000
+        total_amount_cents: 2000
+    credit_note:
+      select: {index: -1}
+      credit_status: consumed
+      credit_amount_cents: 1000
+      balance_amount_cents: 0
+  math: >-
+    b04/refresh/with-credit-note finalized instead of refreshed, so the two rows differ in exactly one
+    verb and every number that moves is attributable to it.
+    March invoice 3_000¢, credited 1_000¢ of its charge fee. The note is `finalized` because
+    `credit_note_status` copies the invoice's status (`credit_notes/create_service.rb:168-173`) and
+    `Credits::CreditNoteService` only looks at finalized, available notes
+    (`credit_note_service.rb:74-82`) — a note raised against a draft would be a draft note and
+    silently ineligible.
+    April invoice: 10 units on time plus 20 timestamped 20 April and ingested on 2 May, recomputed by
+    the finalize path to 3_000¢. Now `should_create_credit_note_credit?` is true, so the note is
+    applied post-tax at `calculate_fees_service.rb:61`: `compute_credit_amount` takes
+    `min(balance 1_000, remaining 3_000)` = 1_000¢, the invoice owes 2_000¢, and the note is
+    consumed to a 0 balance (`credit_note_service.rb:96-102`).
+    Two ways to get this wrong are excluded: the note is not applied twice (the refresh row proves the
+    draft left it alone, so 1_000¢ and not 2_000¢ is available), and it is not spread by gross fee
+    amount — with a single non-zero fee there is nothing to spread, which is why the weighting cases
+    live in B17 rather than here.
+
+- id: b04/finalize/with-progressive-billing
+  block: B4
+  axes: {operation: finalize, context: with-progressive-billing}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, threshold_amount_cents: 5000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b04_fpb_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b04_fpb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b04_fpb_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_fpb_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_fpb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b04_fpb_sum, properties: {amount: 60}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fpb_sum, properties: {amount: 40}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        status: finalized
+        fees_amount_cents: 6000
+        total_amount_cents: 6000
+      - select: {invoice_type: subscription}
+        status: finalized
+        payment_status: pending
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 6000
+        sub_total_excluding_taxes_amount_cents: 4000
+        total_amount_cents: 4000
+  math: >-
+    The exception that proves the gate. For coupons, credit notes and prepaid credit the draft and the
+    issued invoice DISAGREE — compare b04/refresh/with-coupon with b04/finalize/with-coupon. For
+    progressive billing they must AGREE, and this row is b04/refresh/with-progressive-billing run to
+    the same numbers through the other verb: 10_000¢ of fees, 6_000¢ credited, 4_000¢ due.
+    They agree because `Credits::ProgressiveBillingService` is called at
+    `calculate_fees_service.rb:53`, before the `not_in_finalizing_process?` gate that holds the other
+    three back at lines 54, 61 and 62. Nothing about the credit depends on `context`, so a draft and a
+    finalization of the same period compute the same 6_000¢: `to_credit_amount` is the threshold
+    invoice's collected amount (`progressive_billed_amount.rb:60-63`), capped by the 10_000¢ of
+    creditable charge fees.
+    That is also why it is safe to expose on a draft while a coupon is not — the threshold invoice was
+    already finalized and paid for by the customer, so crediting it back cannot consume anything a
+    refresh would have to return.
+    `payment_status: pending` is asserted because 4_000¢ remains owed
+    (`calculate_fees_service.rb:64`); had the credit covered the fees entirely the invoice would be
+    issued `succeeded` with nothing to collect.
+
+- id: b04/finalize/with-prepaid-credit
+  block: B4
+  axes: {operation: finalize, context: with-prepaid-credit}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, granted_credits: 20}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_fwl_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_fwl, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_fwl_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_fwl_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_fwl_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "20"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fwl_sum, properties: {amount: 10}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T09:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_fwl_sum, properties: {amount: 20}, timestamp: "2024-03-20T10:00:00Z"}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 2000
+      total_amount_cents: 1000
+    wallet:
+      balance_cents: 0
+  math: >-
+    b04/refresh/with-prepaid-credit finalized, and the point where the wallet actually moves.
+    Fees 3_000¢ (10 units on time, 20 timestamped 20 March and ingested on 2 April — finalization
+    recomputes unconditionally). Prepaid credit is the LAST reducer, spent on the post-tax total:
+    `should_create_applied_prepaid_credit?` now passes, `AllocatePrepaidCreditsByWalletsService`
+    caps each fee at `sub_total_excluding_taxes + taxes − precise_credit_notes` = 3_000¢ and takes
+    `min(fee cap 3_000, wallet balance 2_000, remaining invoice 3_000)`
+    (`allocate_prepaid_credits_by_wallets_service.rb:53`) = 2_000¢. So 2_000¢ of credit, 1_000¢ due
+    in cash, and the wallet drained to 0 by the outbound transaction and
+    `Wallets::Balance::DecreaseService` (`applied_prepaid_credits_service.rb:28-36`).
+    The wallet is asserted on both rows of the pair because that is the only field that distinguishes
+    "the draft did not spend it" from "the draft spent it and the invoice reports it late": here 0,
+    there 2_000¢.
+    Note what is NOT here — the granted credit is spent in full and the invoice keeps a positive
+    balance, so `payment_status` stays pending. A wallet large enough to cover the invoice would issue
+    it `succeeded` instead.
+
+- id: b04/void/grace-period
+  block: B4
+  axes: {operation: void, context: grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_vgp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_vgp, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_vgp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_vgp_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_vgp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_vgp_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: void_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      total_amount_cents: 3000
+  math: >-
+    A draft cannot be voided, and this is the row that says so in numbers rather than in prose.
+    The grace period holds April's 3_000¢ invoice open as a draft. `POST /invoices/:id/void` reaches
+    `invoice.void!`, and the state machine only permits that transition `from: :finalized`
+    (`invoice.rb:184-186`), so AASM raises `InvalidTransition`, `Invoices::VoidService` rescues it at
+    line 62-63 into `not_allowed_failure!(code: "not_voidable")`, and the surrounding `with_lock`
+    transaction rolls back. The invoice is left exactly as it was: still `draft`, still 3_000¢.
+    Everything the service does after the transition is therefore skipped as well — no lifetime-usage
+    reflag, no coupon recredit, no wallet recredit — which is the reason the other four void rows all
+    have to reach a finalized invoice first.
+    The correct way to discard a draft is `mark_as_deleted` (`invoice.rb:180-182`), a different
+    transition to a different terminal state; voiding is reserved for invoices that were actually
+    issued, because a voided invoice keeps its number and its amounts as a record of what was billed.
+    A row that read `voided` here would mean an invoice could be voided before it ever existed as a
+    document.
+
+- id: b04/void/with-coupon
+  block: B4
+  axes: {operation: void, context: with-coupon}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, coupon: fixed 2000 once}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    metrics: [{code: b04_vcp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_vcp, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_vcp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_vcp_cust, currency: EUR}
+    subscription: {external_id: golden_b04_vcp_sub, billing_time: calendar}
+    coupons:
+      - name: b04 void coupon
+        code: b04_vcp_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_vcp_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: void_invoice}
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_vcp_sum, properties: {amount: 30}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: subscription, index: 0}
+        status: voided
+        fees_amount_cents: 3000
+        coupons_amount_cents: 2000
+        total_amount_cents: 1000
+      - select: {invoice_type: subscription, index: 1}
+        status: finalized
+        fees_amount_cents: 3000
+        coupons_amount_cents: 2000
+        total_amount_cents: 1000
+  math: >-
+    Voiding gives a spent coupon back, and the only way to observe that is to spend it again.
+    April invoice: 30 units × 1.00 = 3_000¢, the fixed 2_000¢ coupon applied before tax → 1_000¢ due.
+    The coupon is `frequency: once` and `credit_amount (2_000) >= remaining_amount (2_000)`, so
+    `Credits::AppliedCouponService` terminates the applied coupon (`applied_coupon_service.rb:78-86`).
+    On its own, that ends it: May would be billed the full 3_000¢.
+    Voiding April changes that. `Invoices::VoidService` walks `invoice.credits` and calls
+    `AppliedCoupons::RecreditService` for every credit carrying an `applied_coupon_id`
+    (`void_service.rb:37-39`); `should_reactivate_coupon?` is satisfied (not `forever`, coupon itself
+    not terminated), so the applied coupon goes back to `active` with `terminated_at` cleared
+    (`recredit_service.rb:21-25`).
+    May invoice: 30 more units = 3_000¢, and the resurrected coupon takes 2_000¢ again → 1_000¢ due.
+    Without the recredit May would read `coupons_amount_cents: 0` and `total_amount_cents: 3_000`, so
+    the second invoice is what makes this row discriminating; asserting only the voided invoice would
+    pass whether or not the coupon came back.
+    The voided invoice keeps its own 3_000¢/2_000¢/1_000¢ — voiding never rewrites amounts
+    (`handle_void_transition!` touches only `voided_at` and the payment flags, `invoice.rb:644-650`),
+    which is why revenue must be summed by excluding voided STATUS rather than by trusting the total.
+
+- id: b04/void/with-credit-note
+  block: B4
+  pins: ["F04"]
+  axes: {operation: void, context: with-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, credit_note_cents: 1000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  setup:
+    metrics: [{code: b04_vcn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_vcn, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_vcn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_vcn_cust, currency: EUR}
+    subscription: {external_id: golden_b04_vcn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_vcn_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 1000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 1000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_vcn_sum, properties: {amount: 30}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-02T10:00:00Z", do: void_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: subscription, index: 0}
+        status: finalized
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription, index: 1}
+        status: voided
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 1000
+        total_amount_cents: 2000
+    credit_note:
+      select: {index: -1}
+      credit_status: consumed
+      credit_amount_cents: 1000
+      balance_amount_cents: 0
+  math: >-
+    The asymmetry in what voiding gives back, and the reason this row asserts the credit note rather
+    than only the invoice.
+    April invoice 3_000¢, credited 1_000¢ of its charge fee, note `available` with a 1_000¢ balance.
+    May invoice: 30 more units = 3_000¢, the note applied post-tax for `min(balance 1_000,
+    remaining 3_000)` = 1_000¢ → 2_000¢ due, note consumed to a 0 balance
+    (`credit_note_service.rb:96-102`).
+    May is then voided, and `Invoices::VoidService` recredits exactly two things: applied coupons
+    (`void_service.rb:37-39`) and outbound wallet transactions (`void_service.rb:46-49`). Credit-note
+    credits are in neither list, and nothing else in the service touches
+    `credit_note.balance_amount_cents`, so the derivation says the note stays `consumed` at 0 even
+    though the invoice that consumed it no longer bills anything. The customer's 1_000¢ of credit is
+    spent against a voided document.
+    Compare b04/void/with-coupon, where the identical structure — a reducer spent on an invoice that
+    is then voided — does give the value back, and b04/void/with-prepaid-credit, where the wallet is
+    refilled. Same pipeline, same void, three different answers, and only one of the three loses the
+    customer money.
+    The note is read through `select` deliberately: without a selector the harness would compare
+    against the payload captured at creation time, which still shows `available` / 1_000¢ and would
+    make this row pass while asserting nothing about the void at all.
+
+- id: b04/void/with-progressive-billing
+  block: B4
+  axes: {operation: void, context: with-progressive-billing}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, threshold_amount_cents: 5000}
+  provenance: coverage-gap
+  runners: [rspec]
+  premium: true
+  no_transaction: true
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b04_vpb_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan:
+      code: golden_b04_vpb
+      interval: monthly
+      amount_cents: 0
+      usage_thresholds: [{amount_cents: 5000}]
+    charges: [{billable_metric_code: b04_vpb_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_vpb_cust, currency: EUR}
+    subscription: {external_id: golden_b04_vpb_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b04_vpb_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-06T10:00:00Z", do: void_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        status: voided
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        status: finalized
+        payment_status: pending
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        total_amount_cents: 10000
+  math: >-
+    Voiding a threshold invoice must un-credit the period invoice, or the customer pays nothing at all.
+    5 March: 100 units × 1.00 = 10_000¢ crosses the 5_000¢ threshold, and a threshold invoice is
+    finalized on creation (`progressive_billing_service.rb:47`), so it is voidable immediately. It is
+    voided on 6 March and keeps its 10_000¢ — voiding never rewrites amounts.
+    1 April: the period invoice bills the same 100 units = 10_000¢ and credits NOTHING.
+    `Subscriptions::ProgressiveBilledAmount` restricts its search to
+    `Invoice.finalized.or(Invoice.failed)` (`progressive_billed_amount.rb:29-33`), and a voided
+    invoice is in neither, so `progressive_billing_invoice` comes back nil and
+    `Credits::ProgressiveBillingService` returns at `progressive_billing_service.rb:24` without
+    creating a credit. Base 10_000¢, no tax, 10_000¢ due — the whole period, collected once.
+    Had the voided invoice still counted, `to_credit_amount` would be 10_000¢, the credit would cover
+    the fees exactly and the invoice would settle at 0 with `payment_status: succeeded`: the customer
+    would be credited for an invoice that was cancelled and pay for March twice over — that is, never.
+    `invoices: 2` also matters. The threshold does not re-fire after the void even though the billed
+    amount has vanished, because `LifetimeUsages::UsageThresholds::CheckService` measures
+    `invoiced_usage` from finalized invoices, and by the time thresholds are re-checked the 1 April
+    invoice has itself invoiced the 10_000¢ (`check_service.rb:28-46`). A third invoice here would
+    mean the void re-armed a threshold that had already been served.
+
+- id: b04/void/with-prepaid-credit
+  block: B4
+  axes: {operation: void, context: with-prepaid-credit}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, granted_credits: 20}
+  provenance: coverage-gap
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b04_vwl_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_vwl, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_vwl_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_vwl_cust, currency: EUR}
+    subscription: {external_id: golden_b04_vwl_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "20"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_vwl_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: void_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: voided
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 2000
+      total_amount_cents: 1000
+    wallet:
+      balance_cents: 2000
+  math: >-
+    Voiding refills the wallet, and the wallet is the only place that shows it.
+    April invoice: 30 units × 1.00 = 3_000¢, finalized on creation because the customer has no grace
+    period, so prepaid credit is applied straight away:
+    `min(fee cap 3_000, wallet balance 2_000, remaining invoice 3_000)` = 2_000¢
+    (`allocate_prepaid_credits_by_wallets_service.rb:53`), leaving 1_000¢ due and the wallet at 0.
+    Voiding takes the `generate_credit_note` = false branch, so
+    `WalletTransactions::RecreditService` runs for each outbound transaction on the invoice
+    (`void_service.rb:46-49`) and creates a fresh inbound grant of the same 20.0 credits with
+    `reset_consumed_credits: true` (`recredit_service.rb:25-34`). The balance returns to 2_000¢.
+    The invoice keeps `prepaid_credit_amount_cents: 2_000` and a 1_000¢ total: a voided invoice is a
+    record of what was billed and what was applied to it, not a reversal of those figures. So the
+    invoice fields alone cannot tell a refilled wallet from a drained one — reading only the invoice,
+    this row and b04/finalize/with-prepaid-credit are indistinguishable, and only `balance_cents`
+    (2_000¢ here, 0 there) separates them.
+    Note the branch that is NOT taken: with `generate_credit_note` the wallet is deliberately not
+    recredited because its value is counted into the creditable amount instead
+    (`void_service.rb:41-49`). The harness's void step sends no parameters, so this row is the
+    recredit branch.
+
+- id: b04/preview/grace-period
+  block: B4
+  axes: {operation: preview, context: grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b04_pgp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_pgp, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_pgp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_pgp_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_pgp_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_pgp_sum, properties: {amount: 30}}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 3000
+    preview:
+      fees_amount_cents: 3000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 3000
+  math: >-
+    A preview is worth something only if it equals the invoice it predicts, so the same numbers are
+    asserted twice — and with no reducer in play, a preview and a DRAFT are the two computations that
+    should agree.
+    The preview is a projection, not a proposal: the step sends `subscriptions.external_ids` for the
+    persisted subscription (`golden_runner.rb:496-508`), so `PreviewService#add_charge_fees` does not
+    return early and real usage is aggregated. A proposal — no external_ids, a top-level `plan_code` —
+    would report 0 fees here and look like a broken preview.
+    Taken on 25 March, `billing_time` is `end_of_periods.first + 1.day` = 1 April
+    (`preview_service.rb:139-149`), so the previewed period is March and the 30 units already
+    ingested price at 3_000¢. The 1 April invoice bills the same March period to the same 3_000¢.
+    The grace period is what makes this cell distinct from b04/preview/no-grace-period, and it changes
+    exactly one thing: `status` is `draft` rather than `finalized`. It does NOT change either
+    arithmetic — the grace period only shifts `issuing_date`
+    (`preview_service.rb:154-163`, `issuing_date_service.rb:17-18`), a field no golden row may pin.
+    The three zeroes are asserted rather than omitted because a draft is fees plus tax and nothing
+    else, and preview only mirrors that while there is nothing to mirror; b04/preview/with-coupon is
+    the same setup with a coupon, and there the two surfaces legitimately disagree.
+
+- id: b04/preview/no-grace-period
+  block: B4
+  axes: {operation: preview, context: no-grace-period}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, plan_amount_cents: 5000}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b04_png_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_png, interval: monthly, amount_cents: 5000}
+    charges: [{billable_metric_code: b04_png_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_png_cust, currency: EUR}
+    subscription: {external_id: golden_b04_png_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_png_sum, properties: {amount: 30}}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+    preview:
+      fees_amount_cents: 8000
+      sub_total_excluding_taxes_amount_cents: 8000
+      total_amount_cents: 8000
+  math: >-
+    The sibling of b04/preview/grace-period, and the one that puts a non-zero subscription fee in the
+    preview so both producers are exercised rather than only the charge.
+    Plan 50.00 monthly in arrears plus 30 units × 1.00: the 1 April invoice carries two fees, 5_000¢
+    for 1–31 March and 3_000¢ of usage, 8_000¢ in total, and it is `finalized` on creation because
+    this customer has no grace period.
+    The preview taken on 25 March predicts that same invoice — `billing_time` = 1 April, so the
+    subscription fee spans the whole March period rather than being prorated to the preview date, and
+    `should_create_subscription_fee?` is unconditionally true in the `:default` preview context
+    (`preview_service.rb:422-426`). 8_000¢ both ways.
+    That agreement is not free: preview does not share the invoice pipeline at all, it reimplements
+    the totals in `#compute_tax_and_totals` (`preview_service.rb:289-320`). This row and
+    b04/preview/grace-period together pin the useful invariant — preview matches the issued invoice
+    AND the draft, so the grace period is not something a caller has to reason about when reading a
+    preview.
+    `sub_total_excluding_taxes_amount_cents` is asserted on the preview because that field is where
+    preview's own arithmetic is visible: it is recomputed as
+    `fees − coupons − progressive_billing_credit` (`preview_service.rb:298-300`) rather than carried
+    over, so with nothing to subtract it must equal the 8_000¢ of fees.
+
+- id: b04/preview/with-coupon
+  block: B4
+  axes: {operation: preview, context: with-coupon}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 3, coupon: fixed 2000 once}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b04_pcp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_pcp, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_pcp_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_pcp_cust, currency: EUR, invoice_grace_period: 3}
+    subscription: {external_id: golden_b04_pcp_sub, billing_time: calendar}
+    coupons:
+      - name: b04 preview coupon
+        code: b04_pcp_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 2000
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_pcp_sum, properties: {amount: 30}}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 3000
+      coupons_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 3000
+      total_amount_cents: 3000
+    preview:
+      fees_amount_cents: 3000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 1000
+      total_amount_cents: 1000
+  math: >-
+    The row where a preview and a draft MUST disagree, and both sides are pinned so neither can be
+    "fixed" into the other.
+    Same 3_000¢ of fees on both surfaces: 30 units × 1.00 for March, previewed on 25 March with
+    `billing_time` = 1 April and billed on 1 April.
+    Preview applies the coupon. `Invoices::PreviewContextService#find_or_build_applied_coupons` reads
+    the customer's own ACTIVE applied coupons first and only falls back to the request's `coupons`
+    array when there are none (`preview_context_service.rb:98-105`), and
+    `Coupons::PreviewService` then allocates the fixed 2_000¢ against the 3_000¢ base and writes
+    `coupons_amount_cents` (`coupons/preview_service.rb:62-63`). Base 1_000¢, no tax, 1_000¢ quoted.
+    The draft does not. `should_create_coupon_credit?` is gated on finalization
+    (`calculate_fees_service.rb:368-373`), so the 1 April draft shows `coupons_amount_cents: 0` and
+    3_000¢ owing.
+    Both are correct. The preview answers "what will this invoice cost me", and the invoice WILL cost
+    1_000¢ once issued — b04/finalize/with-coupon shows exactly that. The draft answers "what has been
+    computed so far", and allocating the discount early would spend a `once` coupon that every
+    subsequent refresh would have to give back. Reading the draft as the preview's ground truth is how
+    a working preview gets reported as a 2_000¢ bug; reading the preview as the draft's would hide the
+    gate.
+    Preview also leaves the coupon alone: `Coupons::PreviewService` never calls
+    `mark_as_terminated!`, so the applied coupon is still active for the real invoice — if it did not,
+    the mere act of previewing would consume the customer's discount.
+
+- id: b04/preview/with-credit-note
+  block: B4
+  axes: {operation: preview, context: with-credit-note}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, credit_note_cents: 1000}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b04_pcn_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_pcn, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_pcn_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_pcn_cust, currency: EUR}
+    subscription: {external_id: golden_b04_pcn_sub, billing_time: calendar}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_pcn_sum, properties: {amount: 30}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 1000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 1000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_pcn_sum, properties: {amount: 30}}
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: subscription, index: 0}
+        status: finalized
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription, index: 1}
+        status: finalized
+        fees_amount_cents: 3000
+        credit_notes_amount_cents: 1000
+        total_amount_cents: 2000
+    preview:
+      fees_amount_cents: 3000
+      credit_notes_amount_cents: 1000
+      total_amount_cents: 2000
+    credit_note:
+      select: {index: -1}
+      credit_status: consumed
+      credit_amount_cents: 1000
+      balance_amount_cents: 0
+  math: >-
+    Preview against a FINALIZED invoice this time, because the interesting question for a credit note
+    is whether the quote spends it and whether previewing consumes it.
+    The 1 April invoice bills March at 3_000¢ (30 units); 1_000¢ of its charge fee is then credited →
+    note `available`, balance 1_000¢. 30 more units are ingested on 10 April, inside the April period.
+    Preview on 25 April: `billing_time` = `end_of_periods.first + 1.day` = 1 May, so the previewed
+    period is April with its 30 units = 3_000¢, and
+    `Invoices::Preview::CreditsService` calls `Credits::CreditNoteService` with
+    `context: :preview` (`preview/credits_service.rb:23-27`). The credit is
+    `min(balance 1_000, remaining 3_000)` = 1_000¢ → 2_000¢ quoted.
+    1 May invoice: the same 3_000¢, the same 1_000¢ of note, 2_000¢ due. They agree, which is the
+    assertion — and the reason they can is that the preview wrote nothing: every persistence step in
+    `Credits::CreditNoteService` is skipped under `context == :preview`
+    (`credit_note_service.rb:44-63`), so no `Credit` row is saved, no fee is re-weighted and
+    `update_remaining_credit` is not called. The note is consumed exactly once, by the real invoice,
+    and ends at 0.
+    That last point is what the `credit_note` assertion is for. Had preview consumed it, the note
+    would be at 0 before 1 May, the real invoice would apply nothing and bill 3_000¢, and the two
+    surfaces would disagree by the entire credit — a preview that costs the customer their credit note
+    merely by being requested.
+
+- id: b04/preview/with-prepaid-credit
+  block: B4
+  axes: {operation: preview, context: with-prepaid-credit}
+  dimensions: {interval: monthly, billing_time: calendar, invoice_grace_period: 0, granted_credits: 20}
+  provenance: coverage-gap
+  runners: [rspec]
+  calendar_sensitive: true
+  premium: true
+  setup:
+    organization: {premium_integrations: [preview]}
+    metrics: [{code: b04_pwl_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b04_pwl, interval: monthly, amount_cents: 0}
+    charges: [{billable_metric_code: b04_pwl_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: golden_b04_pwl_cust, currency: EUR}
+    subscription: {external_id: golden_b04_pwl_sub, billing_time: calendar}
+    wallets:
+      - {name: granted, rate_amount: "1", currency: EUR, granted_credits: "20"}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b04_pwl_sum, properties: {amount: 30}}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      payment_status: pending
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 2000
+      total_amount_cents: 1000
+    preview:
+      fees_amount_cents: 3000
+      prepaid_credit_amount_cents: 2000
+      total_amount_cents: 1000
+    wallet:
+      balance_cents: 0
+  math: >-
+    Preview quotes prepaid credit, and the wallet proves it quoted rather than spent.
+    Both surfaces price March at 30 units × 1.00 = 3_000¢ and both apply 2_000¢ of wallet:
+    `min(fee cap 3_000, wallet balance 2_000, remaining invoice 3_000)` = 2_000¢, leaving 1_000¢.
+    Preview reaches that number through `Credits::AllocatePrepaidCreditsByWalletsService`
+    (`preview_service.rb:369-378`), the real invoice through
+    `Credits::AppliedPrepaidCreditsService`, which calls the SAME allocator
+    (`applied_prepaid_credits_service.rb:26`) and then creates the outbound transaction the allocator
+    itself never creates. That shared allocator is why the two agree; a preview that reimplemented the
+    per-fee cap would be free to drift from it.
+    `balance_cents: 0` is the load-bearing assertion. It is 0 because the 1 April invoice spent the
+    credits, not because the 25 March preview did — the allocator only returns a
+    `{wallet => amount}` hash and writes nothing
+    (`allocate_prepaid_credits_by_wallets_service.rb:29-67`). If previewing did burn credits, the
+    wallet would be empty before 1 April, the real invoice would apply 0 and bill 3_000¢, and the row
+    would fail on the invoice rather than on the wallet.
+    Contrast the draft surface: b04/refresh/with-prepaid-credit leaves the wallet at 2_000¢ because a
+    draft is gated out of prepaid credit entirely, so preview agrees with the ISSUED invoice here and
+    would disagree with a draft of the same period by the full 2_000¢.
