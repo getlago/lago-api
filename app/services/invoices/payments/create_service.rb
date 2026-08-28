@@ -130,12 +130,16 @@ module Invoices
       # Delay the first auto-payment for orgs using hosted checkout so it can't race a manual checkout
       # and double-charge; skip flows that pay synchronously (gated subs, auto wallet top-ups).
       def defer_for_checkout_organization?
-        return false if invoice.organization.feature_flag_enabled?(:skip_checkout_auto_payment_delay)
         return false unless invoice.payment_attempts.zero?
+        return false if invoice.credit? && skip_credit_invoice_delay?
         return false if invoice.subscription? && invoice.subscription_payment_gated?
         return false if non_manual_wallet_topup?
 
         PaymentIntent.where(organization_id: invoice.organization_id).exists?
+      end
+
+      def skip_credit_invoice_delay?
+        invoice.organization.feature_flag_enabled?(:skip_credit_invoice_auto_payment_delay)
       end
 
       def non_manual_wallet_topup?
