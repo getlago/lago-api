@@ -43,6 +43,13 @@ RSpec.describe Contract do
 
   describe "validations" do
     it { is_expected.to validate_presence_of(:external_id) }
+
+    it "rejects an ended_at before started_at" do
+      contract = build(:contract, started_at: Time.zone.parse("2026-02-15"), ended_at: Time.zone.parse("2026-02-01"))
+
+      expect(contract).not_to be_valid
+      expect(contract.errors.where(:ended_at, :must_be_after_started_at)).to be_present
+    end
   end
 
   describe "#effective_billing_anchor_date" do
@@ -52,11 +59,11 @@ RSpec.describe Contract do
       expect(contract.effective_billing_anchor_date).to eq(Date.new(2026, 1, 1))
     end
 
-    it "falls back to the activation day, then the agreed start" do
-      active = build(:contract, billing_anchor_date: nil, started_at: Time.zone.parse("2026-02-15"), starts_at: Time.zone.parse("2026-02-01"))
-      expect(active.effective_billing_anchor_date).to eq(Date.new(2026, 2, 15))
+    it "falls back to the day the contract starts" do
+      contract = build(:contract, billing_anchor_date: nil, started_at: Time.zone.parse("2026-02-15"))
+      expect(contract.effective_billing_anchor_date).to eq(Date.new(2026, 2, 15))
 
-      upcoming = build(:contract, :pending, billing_anchor_date: nil, starts_at: Time.zone.parse("2026-03-01"))
+      upcoming = build(:contract, :pending, billing_anchor_date: nil, started_at: Time.zone.parse("2026-03-01"))
       expect(upcoming.effective_billing_anchor_date).to eq(Date.new(2026, 3, 1))
     end
   end

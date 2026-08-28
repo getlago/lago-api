@@ -8,13 +8,11 @@ FactoryBot.define do
     status { :active }
     external_id { SecureRandom.uuid }
     billing_time { :calendar }
-    starts_at { 1.day.ago }
     started_at { 1.day.ago }
 
     trait :pending do
       status { :pending }
-      starts_at { 1.day.from_now }
-      started_at { nil }
+      started_at { 1.day.from_now }
     end
 
     trait :terminated do

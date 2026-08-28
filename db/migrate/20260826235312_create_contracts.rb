@@ -18,9 +18,11 @@ class CreateContracts < ActiveRecord::Migration[8.0]
       t.enum :billing_time, enum_type: :contract_billing_time, null: false, default: "calendar"
 
       t.date :billing_anchor_date
-      t.timestamp :starts_at
+      # The validity window of the agreement: charges can be processed between
+      # started_at and ended_at. Set at signature, future for an upcoming
+      # contract — the lifecycle state lives in status, never in these dates.
       t.timestamp :started_at
-      t.timestamp :ending_at
+      t.timestamp :ended_at
       t.timestamp :terminated_at
       t.timestamp :canceled_at
 

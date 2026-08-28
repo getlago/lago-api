@@ -33,10 +33,21 @@ class Contract < ApplicationRecord
 
   validates :external_id, presence: true
 
+  validate :validate_started_before_ended
+
   # The anchor every attached rate card inherits by default: the explicit
   # anchor when one was signed, otherwise the day the contract starts.
   def effective_billing_anchor_date
-    billing_anchor_date || (started_at || starts_at)&.to_date
+    billing_anchor_date || started_at&.to_date
+  end
+
+  private
+
+  def validate_started_before_ended
+    return if started_at.blank? || ended_at.blank?
+    return if started_at <= ended_at
+
+    errors.add(:ended_at, :must_be_after_started_at)
   end
 end
 
@@ -49,10 +60,9 @@ end
 #  billing_anchor_date :date
 #  billing_time        :enum             default("calendar"), not null
 #  canceled_at         :datetime
-#  ending_at           :datetime
+#  ended_at            :datetime
 #  name                :string
 #  started_at          :datetime
-#  starts_at           :datetime
 #  status              :enum             default("pending"), not null
 #  terminated_at       :datetime
 #  created_at          :datetime         not null
