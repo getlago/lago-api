@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe FixedCharge do
   subject { build(:fixed_charge) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:add_on) { create_default(:add_on) }
+
   describe "plan pricing type validation" do
     it "rejects a fixed charge on a product-catalog plan" do
       plan = create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)

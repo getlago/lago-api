@@ -19,9 +19,10 @@ RSpec.describe Entitlement::Entitlement do
 
   describe "validations" do
     describe "exactly_one_parent_present validation" do
-      let(:organization) { create(:organization) }
+      let_it_be(:organization) { create_default(:organization) }
+      let_it_be(:plan) { create_default(:plan, organization:) }
+
       let(:feature) { create(:feature, organization:) }
-      let(:plan) { create(:plan, organization:) }
       let(:subscription) { create(:subscription, organization:) }
 
       it "is valid when only plan_id is present" do

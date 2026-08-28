@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Metadata::ItemMetadata do
   subject(:item_metadata) { described_class.new(organization:, owner:, value:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:invoice) { create(:invoice, organization:) }
   let(:customer) { invoice.customer }
   let(:owner) { create(:credit_note, invoice:, customer:, organization:) }

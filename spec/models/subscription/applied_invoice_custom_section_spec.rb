@@ -7,6 +7,8 @@ RSpec.describe Subscription::AppliedInvoiceCustomSection do
     create(:subscription_applied_invoice_custom_section)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:subscription) }
   it { is_expected.to belong_to(:invoice_custom_section) }

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Fee do
   subject { build(:fee) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:add_on).optional }
   it { is_expected.to belong_to(:charge).optional }
   it { is_expected.to belong_to(:fixed_charge).optional }

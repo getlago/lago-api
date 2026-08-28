@@ -7,6 +7,8 @@ RSpec.describe RecurringTransactionRule::AppliedInvoiceCustomSection do
     create(:recurring_rule_applied_invoice_custom_section)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:recurring_transaction_rule) }
   it { is_expected.to belong_to(:invoice_custom_section) }

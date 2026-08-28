@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Subscription do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   subject(:subscription) { create(:subscription, plan:) }
 
   let(:plan) { create(:plan) }

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe LifetimeUsage do
   subject(:lifetime_usage) { create(:lifetime_usage) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:organization) }
 
   describe "default scope" do

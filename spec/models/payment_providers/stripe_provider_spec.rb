@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::StripeProvider do
   subject(:stripe_provider) { build(:stripe_provider, attributes) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:attributes) {}
 
   it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }

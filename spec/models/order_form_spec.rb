@@ -37,7 +37,7 @@ RSpec.describe OrderForm do
 
   describe "Scopes" do
     describe ".expirable" do
-      let(:organization) { create(:organization) }
+      let_it_be(:organization) { create_default(:organization) }
       let(:customer) { create(:customer, organization:) }
 
       let!(:expired_yesterday) { create(:order_form, :expired_yesterday, organization:, customer:) }
@@ -55,7 +55,7 @@ RSpec.describe OrderForm do
       end
 
       context "with customer timezone" do
-        let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+        let_it_be(:customer) { create_default(:customer, organization:, timezone: "America/New_York") }
 
         it "includes a form whose expiry day has started in the customer timezone but not in UTC" do
           # 2026-01-16 02:00 UTC is 2026-01-15 21:00 in New York

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe CreditNoteItem do
   subject(:credit_note_item) { create(:credit_note_item) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:credit_note) }
   it { is_expected.to belong_to(:fee) }
   it { is_expected.to belong_to(:organization) }

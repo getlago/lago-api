@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe WalletTransaction do
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "a model with a purchase order number"
 
   describe "validations" do

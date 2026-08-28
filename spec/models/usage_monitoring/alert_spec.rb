@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::Alert do
   let(:alert) { create(:alert, code: "my-code", thresholds: [10, 30, 50], recurring_threshold: 100) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:direction)

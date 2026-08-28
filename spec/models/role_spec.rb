@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Role do
   subject(:role) { build(:role) }
 
+  let_it_be(:organization) { create(:organization) }
+
   it { expect(described_class).to be_soft_deletable }
 
   describe "associations" do
@@ -21,9 +23,9 @@ RSpec.describe Role do
     end
   end
 
+
   describe "scopes" do
     describe ".with_code" do
-      let(:organization) { create(:organization) }
       let!(:developer) { create(:role, code: :developer, organization:) }
 
       before { create(:role, code: :designer, organization:) }
@@ -38,8 +40,7 @@ RSpec.describe Role do
     end
 
     describe ".with_organization" do
-      let(:organization) { create(:organization) }
-      let(:other_organization) { create(:organization) }
+      let_it_be(:other_organization) { create(:organization) }
       let!(:system_role) { create(:role, :admin) }
       let!(:org_role) { create(:role, organization:) }
 
@@ -133,8 +134,6 @@ RSpec.describe Role do
   end
 
   describe "database constraints" do
-    let!(:organization) { create(:organization) }
-
     it "rejects empty name" do
       expect {
         described_class.connection.execute(<<~SQL)

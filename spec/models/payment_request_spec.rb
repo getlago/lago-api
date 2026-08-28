@@ -13,8 +13,8 @@ RSpec.describe PaymentRequest do
     )
   end
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:payment) { create(:payment) }
 
   it_behaves_like "paper_trail traceable"

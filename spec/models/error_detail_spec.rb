@@ -6,6 +6,8 @@ RSpec.describe ErrorDetail do
   it { is_expected.to belong_to(:owner) }
   it { is_expected.to belong_to(:organization) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   context "when creating an invoice generation error for an invoice" do
     let(:invoice) { create(:invoice, :generating) }
     let(:result) { BaseService::Result.new }

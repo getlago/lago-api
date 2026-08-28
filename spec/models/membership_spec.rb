@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Membership do
   subject(:membership) { create(:membership) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to have_many(:data_exports) }
   it { is_expected.to have_many(:membership_roles) }
   it { is_expected.to have_many(:roles).through(:membership_roles) }
@@ -100,7 +102,7 @@ RSpec.describe Membership do
     end
 
     context "with custom role" do
-      let(:organization) { create(:organization) }
+      let_it_be(:organization) { create_default(:organization) }
       let(:role) { create(:role, :custom, organization:, permissions: %w[foo addons:view]) }
       let(:membership) { create(:membership, organization:, role:) }
 
@@ -122,7 +124,7 @@ RSpec.describe Membership do
     end
 
     context "with mixed roles" do
-      let(:organization) { create(:organization) }
+      let_it_be(:organization) { create_default(:organization) }
       let(:role) { create(:role, :custom, organization:, permissions: %w[foo addons:view]) }
       let(:membership) { create(:membership, organization:, role:, roles: %i[finance]) }
 
