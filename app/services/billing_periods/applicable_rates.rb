@@ -48,6 +48,17 @@ module BillingPeriods
       (override || at(moment))&.properties
     end
 
+    # Where the price changes hands inside a window — the moments a period has to be cut at.
+    # Almost always empty; rates rarely take effect mid-period.
+    #
+    # Strictly after the window opens, because a rate taking effect at the opening does not cut
+    # anything: it IS the window's rate. That is also what keeps a rate landing on a period
+    # BOUNDARY from cutting the period before it — the boundary is the next midnight, the window
+    # closes at 23:59:59.999 the day before, so it falls outside and governs the next period.
+    def changes_within(from, to)
+      rates.filter_map { |rate| rate.effective_from if rate.effective_from > from && rate.effective_from <= to }
+    end
+
     private
 
     attr_reader :rates

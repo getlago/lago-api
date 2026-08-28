@@ -197,6 +197,16 @@ RSpec.describe BillingPeriods::Boundaries do
       expect(june.share_of(0, Time.utc(2026, 6, 20), Time.utc(2026, 6, 10))).to eq(0)
     end
 
+    # The model forbids an interval count below 1, so a period with no days should be
+    # unreachable — but the guard is what stops an invalid ruler dividing by zero instead of
+    # saying so, and without a test someone tidying up would remove it.
+    it "is 1 rather than a division by zero when a period has no days" do
+      motionless = ruler(timezone: "UTC", count: 0)
+
+      expect(motionless.days_at(0)).to eq(0)
+      expect(motionless.share_of(0, Time.utc(2026, 6, 1), Time.utc(2026, 6, 30))).to eq(1)
+    end
+
     it "never runs over 1, however far the window reaches" do
       expect(june.share_of(0, Time.utc(2026, 6, 1), Time.utc(2027, 1, 1))).to eq(1)
     end

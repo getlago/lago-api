@@ -81,9 +81,12 @@ module BillingPeriods
       @anchor ||= billing_anchor_date.in_time_zone(timezone).beginning_of_day
     end
 
+    # The customer's zone, which is what every mark and every day count above is measured in.
+    attr_reader :timezone
+
     private
 
-    attr_reader :billing_anchor_date, :interval_count, :interval_unit, :timezone
+    attr_reader :billing_anchor_date, :interval_count, :interval_unit
 
     def boundary_at(position)
       step = position * interval_count
