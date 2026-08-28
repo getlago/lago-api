@@ -31413,7 +31413,7 @@
               "deprecationReason": null
             },
             {
-              "name": "skip_checkout_auto_payment_delay",
+              "name": "skip_credit_invoice_auto_payment_delay",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
