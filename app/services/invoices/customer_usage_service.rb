@@ -286,9 +286,7 @@ module Invoices
         (!usage_filters.full_usage || full_usage_cache_enabled?)
     end
 
-    # Lazy validation is the only invalidation reaching this entry: the eager deletion never runs for
-    # a ClickHouse organization, and the events-processor replacing it clears the current usage key
-    # alone. skip_grouping and filter_by_presentation reshape the fees without appearing in the key.
+    # Full usage is cached only with lazy validation, the one invalidation that clears its key.
     def full_usage_cache_enabled?
       organization.granular_lifetime_usage_enabled? &&
         organization.feature_flag_enabled?(:lazy_charge_usage_cache) &&
