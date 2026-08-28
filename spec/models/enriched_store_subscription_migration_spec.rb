@@ -6,6 +6,8 @@ RSpec.describe EnrichedStoreSubscriptionMigration do
   subject(:subscription_migration) { create(:enriched_store_subscription_migration) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
 
   describe "enums" do
     it do

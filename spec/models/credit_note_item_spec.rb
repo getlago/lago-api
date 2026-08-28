@@ -6,6 +6,8 @@ RSpec.describe CreditNoteItem do
   subject(:credit_note_item) { create(:credit_note_item) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
 
   it { is_expected.to belong_to(:credit_note) }
   it { is_expected.to belong_to(:fee) }

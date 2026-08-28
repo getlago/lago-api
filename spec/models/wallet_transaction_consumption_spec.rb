@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe WalletTransactionConsumption do
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   describe "associations" do
     it do

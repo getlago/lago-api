@@ -6,6 +6,7 @@ RSpec.describe Subscription::FixedChargePresenter do
   subject(:presenter) { described_class.new(fixed_charge, subscription, effective_units:) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:add_on) { create_default(:add_on) }
   let_it_be(:customer) { create_default(:customer, organization:) }
   let_it_be(:plan) { create_default(:plan, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, organization:, units: 10) }

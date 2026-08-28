@@ -6,6 +6,8 @@ RSpec.describe ChargeFilterValue do
   subject { build(:charge_filter_value) }
 
   let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
 
   it_behaves_like "paper_trail traceable"
 

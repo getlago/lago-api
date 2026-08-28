@@ -21,6 +21,7 @@ RSpec.describe Entitlement::Entitlement do
     describe "exactly_one_parent_present validation" do
       let_it_be(:organization) { create_default(:organization) }
       let_it_be(:plan) { create_default(:plan, organization:) }
+      let_it_be(:customer) { create_default(:customer) }
 
       let(:feature) { create(:feature, organization:) }
       let(:subscription) { create(:subscription, organization:) }
