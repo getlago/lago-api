@@ -6,13 +6,8 @@ RSpec.describe Mutations::Subscriptions::UpdateFixedCharge, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
-
   let(:query) do
     <<~GQL
       mutation($input: UpdateSubscriptionFixedChargeInput!) {
@@ -25,7 +20,6 @@ RSpec.describe Mutations::Subscriptions::UpdateFixedCharge, :premium do
       }
     GQL
   end
-
   let(:input) do
     {
       subscriptionId: subscription.id,
@@ -34,6 +28,12 @@ RSpec.describe Mutations::Subscriptions::UpdateFixedCharge, :premium do
       units: "20"
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
 
   before do
     fixed_charge

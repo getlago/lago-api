@@ -3,12 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::RemoveTaxes do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "billing_entities:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_2"] }
-
   let(:mutation) do
     <<~GQL
       mutation($input: RemoveTaxesInput!) {
@@ -21,6 +21,8 @@ RSpec.describe Mutations::BillingEntities::RemoveTaxes do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(BillingEntities::Taxes::RemoveTaxesService).to receive(:call).and_call_original

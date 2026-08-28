@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Types::QuoteVersions::Object do
   subject { described_class }
 
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+
   it do
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:organization).of_type("Organization!")
@@ -26,13 +29,7 @@ RSpec.describe Types::QuoteVersions::Object do
 
   describe "#mention_variables" do
     let(:required_permission) { "quotes:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:customer) do
-      create(:customer, organization:, name: "Hooli", legal_name: "Hooli Inc", firstname: "Gavin", lastname: "Belson")
-    end
     let(:quote) { create(:quote, organization:, customer:) }
-
     let(:query) do
       <<~GQL
         query($quoteId: ID!) {
@@ -41,6 +38,11 @@ RSpec.describe Types::QuoteVersions::Object do
           }
         }
       GQL
+    end
+
+    let_it_be(:membership) { create_default(:membership) }
+    let_it_be(:customer) do
+      create_default(:customer, organization:, name: "Hooli", legal_name: "Hooli Inc", firstname: "Gavin", lastname: "Belson")
     end
 
     def execute
@@ -74,7 +76,7 @@ RSpec.describe Types::QuoteVersions::Object do
     end
 
     context "when the approved snapshot holds locale-sensitive variables" do
-      let(:customer) { create(:customer, organization:, name: "Hooli", document_locale: "en") }
+      let_it_be(:customer) { create_default(:customer, organization:, name: "Hooli", document_locale: "en") }
 
       before do
         create(

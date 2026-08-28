@@ -4,21 +4,17 @@ require "rails_helper"
 
 RSpec.describe Mutations::Plans::Create, :premium do
   let(:required_permission) { "plans:create" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan_tax) { create(:tax, organization:) }
   let(:charge_tax) { create(:tax, organization:) }
   let(:commitment_tax) { create(:tax, organization:) }
   let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
   let(:minimum_commitment_amount_cents) { 100 }
-
   let(:feature) { create(:feature, code: :seats, organization:) }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
   let(:entitlement) { create(:entitlement, feature:, plan:) }
   let(:entitlement_value) { create(:entitlement_value, privilege:, entitlement:, value: "99") }
-
   let(:feature2) { create(:feature, code: "sso", organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreatePlanInput!) {
@@ -97,15 +93,6 @@ RSpec.describe Mutations::Plans::Create, :premium do
       }
     GQL
   end
-
-  let(:billable_metrics) do
-    create_list(:billable_metric, 6, organization:)
-  end
-
-  let(:add_ons) do
-    create_list(:add_on, 3, organization:)
-  end
-
   let(:billable_metric_filter) do
     create(
       :billable_metric_filter,
@@ -114,9 +101,19 @@ RSpec.describe Mutations::Plans::Create, :premium do
       values: %w[card sepa]
     )
   end
-
   let(:tax) { create(:tax, organization:) }
   let(:pricing_unit) { create(:pricing_unit, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:billable_metrics) do
+    create_list(:billable_metric, 6, organization:)
+  end
+
+  let_it_be(:add_ons) do
+    create_list(:add_on, 3, organization:)
+  end
 
   before { organization.update!(premium_integrations: ["progressive_billing"]) }
 

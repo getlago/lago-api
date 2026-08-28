@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::SubscriptionResolver do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "subscriptions:view" }
+  let(:organization) { membership.organization }
+  let(:subscription) { create(:subscription, customer:) }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID, $externalId: ID) {
@@ -35,10 +40,8 @@ RSpec.describe Resolvers::SubscriptionResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     customer
@@ -130,8 +133,8 @@ RSpec.describe Resolvers::SubscriptionResolver do
   end
 
   context "when subscription has a pending downgrade" do
-    let(:plan) { create(:plan, organization:, amount_cents: 500_00) }
-    let(:lower_plan) { create(:plan, organization:, amount_cents: 100_00) }
+    let_it_be(:plan) { create_default(:plan, organization:, amount_cents: 500_00) }
+    let_it_be(:lower_plan) { create_default(:plan, organization:, amount_cents: 100_00) }
     let(:subscription) do
       create(:subscription, :anniversary, customer:, plan:, subscription_at: Time.zone.parse("2026-04-22 00:00:00"), started_at: Time.zone.parse("2026-04-22 00:00:00"))
     end
@@ -228,11 +231,11 @@ RSpec.describe Resolvers::SubscriptionResolver do
         }
       GQL
     end
-
-    let(:plan) { create(:plan, organization:) }
-    let(:add_on) { create(:add_on, organization:) }
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
+
+    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:add_on) { create_default(:add_on, organization:) }
 
     context "without a per-subscription override" do
       before { fixed_charge }

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ProductCategoriesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,10 +16,8 @@ RSpec.describe Resolvers::ProductCategoriesResolver do
   end
 
   let(:required_permission) { "product_categories:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:variables) { {} }
-
   let(:query) do
     <<~GQL
       query($searchTerm: String) {
@@ -28,8 +28,9 @@ RSpec.describe Resolvers::ProductCategoriesResolver do
       }
     GQL
   end
-
   let!(:product_category) { create(:product_category, organization:, name: "Cards", code: "cards") }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

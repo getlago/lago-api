@@ -4,11 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::Wallets::Create, :premium do
   let(:required_permission) { "wallets:create" }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization, currency: "EUR") }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:expiration_at) { Time.zone.now + 1.year }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateCustomerWalletInput!) {
@@ -59,6 +56,10 @@ RSpec.describe Mutations::Wallets::Create, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization: membership.organization, currency: "EUR") }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

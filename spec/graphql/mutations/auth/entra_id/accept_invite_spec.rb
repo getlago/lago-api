@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::EntraId::AcceptInvite, :premium, cache: :memory do
-  let(:organization) { create(:organization, premium_integrations: ["entra_id"]) }
+  let_it_be(:organization) { create_default(:organization, premium_integrations: ["entra_id"]) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:entra_id_integration) { create(:entra_id_integration, domain: "bar.com", organization:) }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }

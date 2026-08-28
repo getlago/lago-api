@@ -3,14 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::ChargeFilters::Update, type: :graphql do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "charges:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:charge_filter) { create(:charge_filter, charge:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: ChargeFilterUpdateInput!) {
@@ -24,6 +22,10 @@ RSpec.describe Mutations::ChargeFilters::Update, type: :graphql do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

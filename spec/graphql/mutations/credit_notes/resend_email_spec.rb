@@ -3,14 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::ResendEmail do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "credit_notes:send" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, email: "customer@example.com") }
   let(:billing_entity) { customer.billing_entity }
   let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
   let(:credit_note) { create(:credit_note, invoice:, customer:, status: :finalized) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: ResendCreditNoteEmailInput!) {
@@ -20,6 +19,9 @@ RSpec.describe Mutations::CreditNotes::ResendEmail do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:, email: "customer@example.com") }
 
   before do
     billing_entity.update!(email: "billing@example.com")

@@ -6,10 +6,8 @@ RSpec.describe Mutations::Integrations::Anrok::Create, :premium do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:integrations:create" }
-  let(:membership) { create(:membership) }
   let(:code) { "anrok1" }
   let(:name) { "Anrok 1" }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateAnrokIntegrationInput!) {
@@ -23,6 +21,10 @@ RSpec.describe Mutations::Integrations::Anrok::Create, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

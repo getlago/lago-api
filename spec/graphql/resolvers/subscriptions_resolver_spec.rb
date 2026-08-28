@@ -15,9 +15,9 @@ RSpec.describe Resolvers::SubscriptionsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:plan) { create(:plan, organization:) }
-  let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
 
   before do

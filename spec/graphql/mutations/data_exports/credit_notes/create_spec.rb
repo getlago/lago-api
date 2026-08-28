@@ -3,12 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::DataExports::CreditNotes::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   include_context "with mocked security logger"
 
   let(:required_permission) { "credit_notes:export" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateDataExportsCreditNotesInput!) {
@@ -19,7 +19,6 @@ RSpec.describe Mutations::DataExports::CreditNotes::Create do
       }
     GQL
   end
-
   let(:variables) do
     {
       input: {
@@ -41,6 +40,8 @@ RSpec.describe Mutations::DataExports::CreditNotes::Create do
       }
     }
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

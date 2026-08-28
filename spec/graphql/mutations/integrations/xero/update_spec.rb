@@ -6,12 +6,8 @@ RSpec.describe Mutations::Integrations::Xero::Update, :premium do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:xero_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:code) { "xero1" }
   let(:name) { "Xero 1" }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateXeroIntegrationInput!) {
@@ -26,6 +22,11 @@ RSpec.describe Mutations::Integrations::Xero::Update, :premium do
       }
     GQL
   end
+  let(:integration) { create(:xero_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     integration

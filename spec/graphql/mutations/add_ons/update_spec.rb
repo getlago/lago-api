@@ -3,12 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Mutations::AddOns::Update do
+  let_it_be(:organization) { create_default(:organization) }
   let(:required_permission) { "addons:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:) }
   let(:tax2) { create(:tax, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateAddOnInput!) {
@@ -25,6 +23,9 @@ RSpec.describe Mutations::AddOns::Update do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
 
   before { create(:add_on_applied_tax, add_on:, tax:) }
 

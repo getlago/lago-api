@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CatalogPlans::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -13,7 +15,7 @@ RSpec.describe Mutations::CatalogPlans::Create do
     )
   end
 
-  let(:membership) { create(:membership) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:organization) { membership.organization }
   let(:required_permission) { "plans:create" }
   let(:input) { {name: "Growth", code: "growth", currency: "EUR"} }

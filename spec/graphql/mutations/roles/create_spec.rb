@@ -27,14 +27,15 @@ RSpec.describe Mutations::Roles::Create do
       }
     GQL
   end
-
-  let(:required_permission) { "roles:create" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
   let(:code) { "custom_role" }
   let(:name) { "Custom Role" }
   let(:description) { "A custom role" }
   let(:role_permissions) { %w[customers_view customers_create] }
+
+  let(:required_permission) { "roles:create" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -101,7 +102,7 @@ RSpec.describe Mutations::Roles::Create do
       )
     end
 
-    let!(:membership) { create(:membership, organization:, roles: [:admin]) }
+    let_it_be(:membership) { create_default(:membership, organization:, roles: [:admin]) }
 
     context "with premium organization and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }

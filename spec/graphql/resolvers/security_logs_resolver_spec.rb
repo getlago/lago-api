@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::SecurityLogsResolver, clickhouse: true do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($toDatetime: ISO8601DateTime!) {
@@ -18,9 +20,10 @@ RSpec.describe Resolvers::SecurityLogsResolver, clickhouse: true do
       }
     GQL
   end
-  let(:variables) { {toDatetime: Time.current.iso8601} }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:variables) { {toDatetime: Time.current.iso8601} }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { organization.update!(premium_integrations: ["security_logs"]) }
 

@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Sources::AttachedToPlanOrSubscription do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let(:product) { create(:product, organization:) }
 
   describe "#fetch" do

@@ -4,9 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Wallets::Update, :premium do
   let(:required_permission) { "wallets:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
@@ -16,7 +13,6 @@ RSpec.describe Mutations::Wallets::Update, :premium do
     create(:recurring_transaction_rule, wallet:, purchase_order_number: recurring_transaction_rule_purchase_order_number)
   end
   let(:recurring_transaction_rule_purchase_order_number) { nil }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateCustomerWalletInput!) {
@@ -65,6 +61,11 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     subscription

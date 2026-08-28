@@ -14,9 +14,7 @@ RSpec.describe Mutations::ProductCategories::Create do
   end
 
   let(:required_permission) { "product_categories:create" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:input) do
     {
       name: "Cards",
@@ -25,7 +23,6 @@ RSpec.describe Mutations::ProductCategories::Create do
       invoiceDisplayName: "Cards"
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateProductCategoryInput!) {
@@ -35,6 +32,9 @@ RSpec.describe Mutations::ProductCategories::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PricingUnitsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -27,11 +29,11 @@ RSpec.describe Resolvers::PricingUnitsResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:required_permission) { "pricing_units:view" }
   let(:pricing_unit) { create(:pricing_unit, name: "Compute token", organization:) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     create(:pricing_unit, name: "Cloud token", organization:)

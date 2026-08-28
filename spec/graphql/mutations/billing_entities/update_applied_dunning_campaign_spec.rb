@@ -4,9 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign do
   let(:required_permission) { "billing_entities:update" }
-  let(:membership) { create(:membership, organization:) }
-  let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:, applied_dunning_campaign:) }
+  let(:billing_entity) { create_default(:billing_entity, organization:, applied_dunning_campaign:) }
   let(:dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:applied_dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:mutation) do
@@ -21,6 +19,10 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign do
       }
     GQL
   end
+
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
