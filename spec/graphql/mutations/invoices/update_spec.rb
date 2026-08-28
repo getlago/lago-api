@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Update do
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
   let(:mutation) do
     <<~GQL
@@ -18,6 +16,9 @@ RSpec.describe Mutations::Invoices::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires permission", "invoices:update"

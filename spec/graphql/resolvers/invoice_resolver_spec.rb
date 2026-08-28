@@ -111,8 +111,11 @@ RSpec.describe Resolvers::InvoiceResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
   let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }

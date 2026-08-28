@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Mutations::PasswordResets::Create do
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
   let(:user) { membership.user }
   let(:email) { user.email }
 

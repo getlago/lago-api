@@ -14,11 +14,8 @@ RSpec.describe Mutations::Products::Create do
   end
 
   let(:required_permission) { "products:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:product_category) { create(:product_category, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
-
   let(:input) do
     {
       name: "Storage",
@@ -28,7 +25,6 @@ RSpec.describe Mutations::Products::Create do
       billableMetricId: billable_metric.id
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateProductInput!) {
@@ -40,6 +36,9 @@ RSpec.describe Mutations::Products::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -6,7 +6,6 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
   include_context "with mocked security logger"
 
   let(:required_permission) { "developers:manage" }
-  let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
   let(:input) do
     {
@@ -29,6 +28,9 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

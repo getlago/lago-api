@@ -11,8 +11,6 @@ RSpec.describe Mutations::Subscriptions::Terminate do
   end
 
   let(:required_permission) { "subscriptions:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:subscription) { create(:subscription, organization:) }
   let(:mutation) do
     <<~GQL
@@ -28,6 +26,10 @@ RSpec.describe Mutations::Subscriptions::Terminate do
     GQL
   end
   let(:input) { {id: subscription.id} }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -67,7 +69,7 @@ RSpec.describe Mutations::Subscriptions::Terminate do
   end
 
   context "when plan is pay in advance" do
-    let(:subscription) { create(:subscription, organization:, plan: create(:plan, :pay_in_advance)) }
+    let_it_be(:subscription) { create(:subscription, organization:, plan: create_default(:plan, :pay_in_advance)) }
 
     it "terminates a subscription" do
       result_data = result["data"]["terminateSubscription"]

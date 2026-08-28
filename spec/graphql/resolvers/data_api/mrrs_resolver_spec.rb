@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::DataApi::MrrsResolver, :premium do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "data_api:view" }
+  let(:organization) { membership.organization }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/mrrs.json") }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum) {
@@ -25,9 +29,7 @@ RSpec.describe Resolvers::DataApi::MrrsResolver, :premium do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:body_response) { File.read("spec/fixtures/lago_data_api/mrrs.json") }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/mrrs/#{organization.id}/")

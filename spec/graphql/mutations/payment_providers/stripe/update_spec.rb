@@ -4,10 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Stripe::Update do
   let(:required_permission) { "organization:integrations:update" }
-  let(:membership) { create(:membership) }
   let(:stripe_provider) { create(:stripe_provider, organization: membership.organization) }
   let(:success_redirect_url) { Faker::Internet.url }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateStripePaymentProviderInput!) {
@@ -20,6 +18,9 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { stripe_provider }
 

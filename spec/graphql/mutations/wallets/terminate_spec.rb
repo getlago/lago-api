@@ -4,12 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::Wallets::Terminate do
   let(:required_permission) { "wallets:terminate" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: TerminateCustomerWalletInput!) {
@@ -19,6 +15,11 @@ RSpec.describe Mutations::Wallets::Terminate do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { subscription }
 

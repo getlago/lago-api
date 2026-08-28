@@ -4,14 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
   let(:required_permission) { "invoices:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:currency) { "EUR" }
-  let(:customer) { create(:customer, organization:) }
-  let(:add_on_first) { create(:add_on, organization:) }
-  let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
@@ -80,6 +75,13 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:add_on_first) { create_default(:add_on, organization:) }
+  let_it_be(:add_on_second) { create_default(:add_on, amount_cents: 400, organization:) }
 
   before do
     integration_customer

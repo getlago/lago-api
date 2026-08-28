@@ -16,13 +16,8 @@ RSpec.describe Mutations::Integrations::SyncInvoice do
   end
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:invoice) { create(:invoice, customer:, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: SyncIntegrationInvoiceInput!) {
@@ -30,14 +25,18 @@ RSpec.describe Mutations::Integrations::SyncInvoice do
       }
     GQL
   end
-
   let(:service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
-
   let(:result) do
     r = Integrations::Aggregator::Invoices::CreateService::Result.new
     r.invoice_id = invoice.id
     r
   end
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     integration_customer

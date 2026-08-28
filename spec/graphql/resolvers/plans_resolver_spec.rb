@@ -3,7 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PlansResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "plans:view" }
+  let(:plan) { create(:plan, organization:) }
   let(:query) do
     <<~GQL
       query($withDeleted: Boolean) {
@@ -15,10 +18,10 @@ RSpec.describe Resolvers::PlansResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:plan) { create(:plan, organization:) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:organization) { membership.organization }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     plan

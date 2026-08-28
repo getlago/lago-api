@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($invoiceId: ID!, $items: [CreditNoteItemInput!]!) {
@@ -20,12 +23,8 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
-
   let(:fees) do
     create_list(
       :fee,
@@ -35,7 +34,6 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
       precise_coupons_amount_cents: 50
     )
   end
-
   let(:coupon) do
     create(
       :coupon,
@@ -46,10 +44,11 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
       frequency: :forever
     )
   end
-
   let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
-
   let(:credit) { create(:credit, invoice:, applied_coupon:, amount_cents: 100) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { credit }
 

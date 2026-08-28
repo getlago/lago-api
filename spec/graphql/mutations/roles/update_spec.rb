@@ -26,13 +26,14 @@ RSpec.describe Mutations::Roles::Update do
       }
     GQL
   end
-
-  let(:required_permission) { "roles:update" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
   let(:role) { create(:role, organization:, name: "Old Name", description: "Old description") }
   let(:new_name) { "New Name" }
   let(:new_description) { "New description" }
+
+  let(:required_permission) { "roles:update" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

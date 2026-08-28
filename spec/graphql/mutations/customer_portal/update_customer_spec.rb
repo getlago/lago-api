@@ -13,6 +13,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     )
   end
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, legal_name: nil) }
 
   let(:mutation) do

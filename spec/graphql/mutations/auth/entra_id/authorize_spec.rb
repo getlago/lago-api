@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::EntraId::Authorize do
+  let_it_be(:organization) { create_default(:organization) }
   let(:user) { create(:user) }
   let(:entra_id_integration) { create(:entra_id_integration) }
 

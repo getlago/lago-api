@@ -6,10 +6,8 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
   include_context "with mocked security logger"
 
   let(:required_permission) { "developers:manage" }
-  let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
   let(:webhook_endpoint) { create(:webhook_endpoint, organization: membership.organization) }
-
   let(:input) do
     {
       id: webhook_endpoint.id,
@@ -19,7 +17,6 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
       eventTypes: ["customer_updated"]
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: WebhookEndpointUpdateInput!) {
@@ -33,6 +30,9 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { webhook_endpoint }
 

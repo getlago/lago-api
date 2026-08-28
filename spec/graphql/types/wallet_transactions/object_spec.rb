@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Types::WalletTransactions::Object do
   subject { described_class }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it "has the expected fields with correct types" do
     expect(subject).to have_field(:wallet).of_type("Wallet")
 

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::DunningCampaignResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -14,6 +16,9 @@ RSpec.describe Resolvers::DunningCampaignResolver do
   end
 
   let(:required_permission) { "dunning_campaigns:view" }
+  let(:organization) { membership.organization }
+  let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails: %w[earl@example.com]) }
+  let(:dunning_campaign_threshold) { create(:dunning_campaign_threshold, dunning_campaign:) }
   let(:query) do
     <<~GQL
       query($dunningCampaignId: ID!) {
@@ -36,10 +41,7 @@ RSpec.describe Resolvers::DunningCampaignResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails: %w[earl@example.com]) }
-  let(:dunning_campaign_threshold) { create(:dunning_campaign_threshold, dunning_campaign:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     dunning_campaign

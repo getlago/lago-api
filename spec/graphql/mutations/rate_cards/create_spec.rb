@@ -14,10 +14,7 @@ RSpec.describe Mutations::RateCards::Create do
   end
 
   let(:required_permission) { "rate_cards:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:product) { create(:product, organization:) }
-
   let(:input) do
     {
       productId: product.id,
@@ -27,7 +24,6 @@ RSpec.describe Mutations::RateCards::Create do
       billingTiming: "arrears"
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateRateCardInput!) {
@@ -40,6 +36,10 @@ RSpec.describe Mutations::RateCards::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

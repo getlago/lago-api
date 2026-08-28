@@ -4,11 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Delete do
   let(:required_permission) { "invoices:delete" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, :draft, customer:, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: DeleteInvoiceInput!) {
@@ -19,6 +15,11 @@ RSpec.describe Mutations::Invoices::Delete do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

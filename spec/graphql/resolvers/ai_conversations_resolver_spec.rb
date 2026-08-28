@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe Resolvers::AiConversationsResolver do
   let(:required_permission) { "ai_conversations:view" }
+  let(:organization) { membership.organization }
+  let!(:ai_conversation) { create(:ai_conversation, organization:, membership:, mistral_conversation_id: "conv_123") }
   let(:query) do
     <<~GQL
       query($limit: Int) {
@@ -20,9 +22,8 @@ RSpec.describe Resolvers::AiConversationsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let!(:ai_conversation) { create(:ai_conversation, organization:, membership:, mistral_conversation_id: "conv_123") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

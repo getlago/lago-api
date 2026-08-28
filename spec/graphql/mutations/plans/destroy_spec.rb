@@ -11,10 +11,6 @@ RSpec.describe Mutations::Plans::Destroy do
   end
 
   let(:required_permission) { "plans:delete" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization: membership.organization) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyPlanInput!) {
@@ -24,6 +20,10 @@ RSpec.describe Mutations::Plans::Destroy do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization: membership.organization) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

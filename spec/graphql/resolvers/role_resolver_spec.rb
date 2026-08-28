@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::RoleResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($roleId: ID!) {
@@ -12,12 +14,12 @@ RSpec.describe Resolvers::RoleResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:current_organization) { membership.organization }
   let(:current_user) { membership.user }
   let(:permissions) { "roles:view" }
   let(:role) { create(:role, organization: current_organization) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

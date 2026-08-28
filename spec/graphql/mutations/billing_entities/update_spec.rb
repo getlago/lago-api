@@ -3,14 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::Update, :premium do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   include_context "with mocked security logger"
 
   let(:required_permission) { "billing_entities:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:invoice_custom_sections) { create_list(:invoice_custom_section, 2, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: UpdateBillingEntityInput!) {
@@ -50,14 +49,12 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       }
     GQL
   end
-
   let(:logo) do
     logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
     base64_logo = Base64.encode64(logo_file)
 
     "data:image/png;base64,#{base64_logo}"
   end
-
   let(:input) do
     {
       id: billing_entity.id,
@@ -93,6 +90,9 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       invoiceCustomSectionIds: invoice_custom_sections.map(&:id)
     }
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

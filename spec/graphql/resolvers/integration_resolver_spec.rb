@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::IntegrationResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "organization:integrations:view" }
+  let(:organization) { membership.organization }
+  let(:netsuite_integration) { create(:netsuite_integration, organization:) }
   let(:query) do
     <<~GQL
       query($integrationId: ID!) {
@@ -20,10 +24,8 @@ RSpec.describe Resolvers::IntegrationResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:netsuite_integration) { create(:netsuite_integration, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     customer

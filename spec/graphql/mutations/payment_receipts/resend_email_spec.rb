@@ -4,14 +4,10 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentReceipts::ResendEmail do
   let(:required_permission) { "payment_receipts:send" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, email: "customer@example.com") }
   let(:billing_entity) { customer.billing_entity }
   let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
   let(:payment) { create(:payment, payable: invoice) }
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: ResendPaymentReceiptEmailInput!) {
@@ -21,6 +17,10 @@ RSpec.describe Mutations::PaymentReceipts::ResendEmail do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:, email: "customer@example.com") }
 
   before do
     billing_entity.update!(email: "billing@example.com")

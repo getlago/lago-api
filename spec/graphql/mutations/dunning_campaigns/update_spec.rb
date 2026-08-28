@@ -4,7 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::DunningCampaigns::Update, :premium do
   let(:required_permission) { "dunning_campaigns:update" }
-  let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
   let(:membership) { create(:membership, organization:) }
   let(:dunning_campaign) do
     create(:dunning_campaign, organization:)
@@ -12,7 +11,6 @@ RSpec.describe Mutations::DunningCampaigns::Update, :premium do
   let(:dunning_campaign_threshold) do
     create(:dunning_campaign_threshold, dunning_campaign:)
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateDunningCampaignInput!) {
@@ -25,7 +23,6 @@ RSpec.describe Mutations::DunningCampaigns::Update, :premium do
       }
     GQL
   end
-
   let(:input) do
     {
       id: dunning_campaign.id,
@@ -44,6 +41,8 @@ RSpec.describe Mutations::DunningCampaigns::Update, :premium do
       ]
     }
   end
+
+  let_it_be(:organization) { create_default(:organization, premium_integrations: ["auto_dunning"]) }
 
   before do
     organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign)

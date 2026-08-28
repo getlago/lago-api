@@ -3,7 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::AddOnsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "addons:view" }
+  let(:organization) { membership.organization }
   let(:query) do
     <<~GQL
       query {
@@ -15,9 +18,9 @@ RSpec.describe Resolvers::AddOnsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
 
   before { add_on }
 

@@ -4,19 +4,15 @@ require "rails_helper"
 
 RSpec.describe Mutations::Quotes::AddImage do
   let(:required_permission) { "quotes:update" }
-  let(:membership) { create(:membership) }
   let(:quote) { create(:quote, organization: membership.organization) }
-
   let(:png_bytes) { "\x89PNG\r\n\x1A\n".b }
   let(:image) { "data:image/png;base64,#{Base64.strict_encode64(png_bytes)}" }
-
   let(:input) do
     {
       id: quote.id,
       image:
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: AddQuoteImageInput!) {
@@ -27,6 +23,10 @@ RSpec.describe Mutations::Quotes::AddImage do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

@@ -3,12 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Mutations::FixedCharges::Create, type: :graphql do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "charges:create" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: FixedChargeCreateInput!) {
@@ -30,6 +29,9 @@ RSpec.describe Mutations::FixedCharges::Create, type: :graphql do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

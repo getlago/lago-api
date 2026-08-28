@@ -4,12 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::AppliedCoupons::Terminate do
   let(:required_permission) { "coupons:detach" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
   let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: TerminateAppliedCouponInput!) {
@@ -19,6 +15,10 @@ RSpec.describe Mutations::AppliedCoupons::Terminate do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { applied_coupon }
 

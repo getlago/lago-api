@@ -3,7 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Customers::InvoicesResolver do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "invoices:view" }
+  let(:organization) { membership.organization }
+  let(:subscription) { create(:subscription, customer:, organization:) }
+  let(:draft_invoice) { create(:invoice, :draft, customer:, organization:) }
+  let(:finalized_invoice) { create(:invoice, customer:, organization:) }
   let(:query) do
     <<~GQL
       query($customerId: ID!) {
@@ -15,12 +22,8 @@ RSpec.describe Resolvers::Customers::InvoicesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:, organization:) }
-  let(:draft_invoice) { create(:invoice, :draft, customer:, organization:) }
-  let(:finalized_invoice) { create(:invoice, customer:, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     subscription

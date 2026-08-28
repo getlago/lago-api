@@ -6,14 +6,10 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, :p
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
-  let(:organization) { create(:organization) }
-
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats", name: "SEATS") }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
   let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
-
   let(:query) do
     <<~GQL
       mutation($input: CreateOrUpdateSubscriptionEntitlementInput!) {
@@ -25,7 +21,6 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, :p
       }
     GQL
   end
-
   let(:input) do
     {
       subscriptionId: subscription.id,
@@ -37,6 +32,11 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, :p
       }
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

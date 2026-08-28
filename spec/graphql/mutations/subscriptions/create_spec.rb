@@ -4,22 +4,15 @@ require "rails_helper"
 
 RSpec.describe Mutations::Subscriptions::Create, :premium do
   let(:required_permission) { "subscriptions:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, plan:) }
   let(:fixed_charge) { create(:fixed_charge, plan:) }
   let(:threshold) { create(:usage_threshold, plan:) }
   let(:ending_at) { Time.current.beginning_of_day + 1.year }
-  let(:customer) { create(:customer, organization:) }
-
   let(:feature) { create(:feature, code: :seats, organization:) }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
   let(:entitlement) { create(:entitlement, feature:, plan:) }
   let(:entitlement_value) { create(:entitlement_value, privilege:, entitlement:, value: "99") }
-
   let(:feature2) { create(:feature, code: "sso", organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateSubscriptionInput!) {
@@ -53,6 +46,11 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { organization.update!(premium_integrations: ["progressive_billing"]) }
 

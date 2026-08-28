@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PlanResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -14,6 +16,11 @@ RSpec.describe Resolvers::PlanResolver do
   end
 
   let(:required_permission) { "plans:view" }
+  let(:organization) { membership.organization }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
+  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
   let(:query) do
     <<~GQL
       query($planId: ID!) {
@@ -70,15 +77,9 @@ RSpec.describe Resolvers::PlanResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-
-  let(:add_on) { create(:add_on, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
-  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   before do
     customer

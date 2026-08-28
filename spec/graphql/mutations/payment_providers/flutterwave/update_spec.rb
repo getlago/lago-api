@@ -4,10 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Flutterwave::Update do
   let(:required_permission) { "organization:integrations:update" }
-  let(:membership) { create(:membership) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization: membership.organization) }
   let(:success_redirect_url) { Faker::Internet.url }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateFlutterwavePaymentProviderInput!) {
@@ -18,6 +16,9 @@ RSpec.describe Mutations::PaymentProviders::Flutterwave::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

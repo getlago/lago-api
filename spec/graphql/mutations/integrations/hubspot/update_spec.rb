@@ -6,12 +6,8 @@ RSpec.describe Mutations::Integrations::Hubspot::Update, :premium do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:hubspot_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:code) { "hubspot1" }
   let(:name) { "Hubspot 1" }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateHubspotIntegrationInput!) {
@@ -27,6 +23,11 @@ RSpec.describe Mutations::Integrations::Hubspot::Update, :premium do
       }
     GQL
   end
+  let(:integration) { create(:hubspot_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     integration

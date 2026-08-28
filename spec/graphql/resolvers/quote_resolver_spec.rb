@@ -3,7 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::QuoteResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "quotes:view" }
+  let(:organization) { membership.organization }
   let(:query) do
     <<-GQL
       query($quoteId: ID!) {
@@ -25,9 +28,9 @@ RSpec.describe Resolvers::QuoteResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

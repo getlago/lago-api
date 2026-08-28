@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::BillableMetricResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:graphql_request) do
     execute_graphql(
       current_user: membership.user,
@@ -14,6 +16,8 @@ RSpec.describe Resolvers::BillableMetricResolver do
   end
 
   let(:required_permission) { "billable_metrics:view" }
+  let(:organization) { membership.organization }
+  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:query) do
     <<~GQL
       query($billableMetricId: ID!) {
@@ -29,9 +33,7 @@ RSpec.describe Resolvers::BillableMetricResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

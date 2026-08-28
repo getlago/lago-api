@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::AiConversations::Create do
+  let_it_be(:organization) { create_default(:organization) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -20,10 +21,11 @@ RSpec.describe Mutations::AiConversations::Create do
       }
     GQL
   end
+  let(:message) { Faker::Lorem.word }
 
   let(:required_permission) { "ai_conversations:create" }
-  let!(:membership) { create(:membership) }
-  let(:message) { Faker::Lorem.word }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

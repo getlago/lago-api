@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::BillingEntityTaxesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($billing_entity_id: ID!) {
@@ -18,12 +20,12 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax1) { create(:tax, organization: organization) }
   let(:tax2) { create(:tax, organization: organization) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     create(:billing_entity_applied_tax, billing_entity:, tax: tax1, organization:)

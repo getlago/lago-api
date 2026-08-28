@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::FinanceAssistant::Export do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -23,9 +25,6 @@ RSpec.describe Mutations::FinanceAssistant::Export do
       }
     GQL
   end
-
-  let(:required_permission) { "ai_conversations:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:message_id) { SecureRandom.uuid }
   let(:file_url) { "http://api.lago.test/rails/active_storage/blobs/redirect/abc/finance_export.csv" }
@@ -33,6 +32,10 @@ RSpec.describe Mutations::FinanceAssistant::Export do
   let(:service_result) do
     BaseResult[:export].new.tap { |r| r.export = {file_url:, filename:} }
   end
+
+  let(:required_permission) { "ai_conversations:view" }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(FinanceAssistant::ExportService).to receive(:call).and_return(service_result)

@@ -3,7 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PaymentProvidersResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "customers:view" }
+  let(:organization) { membership.organization }
+  let(:adyen_provider) { create(:adyen_provider, organization:) }
+  let(:cashfree_provider) { create(:cashfree_provider, organization:) }
+  let(:gocardless_provider) { create(:gocardless_provider, organization:) }
+  let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:query) do
     <<~GQL
       query {
@@ -36,12 +43,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:adyen_provider) { create(:adyen_provider, organization:) }
-  let(:cashfree_provider) { create(:cashfree_provider, organization:) }
-  let(:gocardless_provider) { create(:gocardless_provider, organization:) }
-  let(:stripe_provider) { create(:stripe_provider, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     adyen_provider

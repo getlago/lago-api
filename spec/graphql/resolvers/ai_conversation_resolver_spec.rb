@@ -3,27 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::AiConversationResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "ai_conversations:view" }
-  let(:query) do
-    <<~GQL
-      query($id: ID!) {
-        aiConversation(id: $id) {
-          id
-          name
-          mistralConversationId
-          messages {
-            content
-            createdAt
-            type
-          }
-          createdAt
-          updatedAt
-        }
-      }
-    GQL
-  end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:ai_conversation) { create(:ai_conversation, organization:, mistral_conversation_id: "conv_123") }
   let(:fetch_messages_service) { instance_double(AiConversations::FetchMessagesService) }
@@ -43,6 +25,26 @@ RSpec.describe Resolvers::AiConversationResolver do
     ]
     result
   end
+  let(:query) do
+    <<~GQL
+      query($id: ID!) {
+        aiConversation(id: $id) {
+          id
+          name
+          mistralConversationId
+          messages {
+            content
+            createdAt
+            type
+          }
+          createdAt
+          updatedAt
+        }
+      }
+    GQL
+  end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     ai_conversation

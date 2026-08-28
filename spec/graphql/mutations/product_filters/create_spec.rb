@@ -14,13 +14,9 @@ RSpec.describe Mutations::ProductFilters::Create do
   end
 
   let(:required_permission) { "product_filters:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
   let(:scheme_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "scheme", values: %w[visa]) }
-
   let(:input) do
     {
       productId: product.id,
@@ -32,7 +28,6 @@ RSpec.describe Mutations::ProductFilters::Create do
       ]
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateProductFilterInput!) {
@@ -44,6 +39,10 @@ RSpec.describe Mutations::ProductFilters::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

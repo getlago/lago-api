@@ -20,12 +20,13 @@ RSpec.describe Mutations::ApiKeys::Update, :premium do
       }
     GQL
   end
-
-  let(:required_permission) { "developers:keys:manage" }
-  let!(:membership) { create(:membership) }
   let(:input_params) { {id: api_key.id, permissions:, name:} }
   let(:permissions) { api_key.permissions.merge("add_on" => ["read"]) }
   let(:name) { Faker::Lorem.words.join(" ") }
+
+  let(:required_permission) { "developers:keys:manage" }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   include_context "with mocked security logger"
 

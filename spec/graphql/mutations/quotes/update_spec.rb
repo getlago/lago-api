@@ -4,16 +4,13 @@ require "rails_helper"
 
 RSpec.describe Mutations::Quotes::Update do
   let(:required_permission) { "quotes:update" }
-  let(:membership) { create(:membership) }
   let(:quote) { create(:quote, :with_version, organization: membership.organization) }
-
   let(:input) do
     {
       id: quote.id,
       owners: [membership.user.id]
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateQuoteInput!) {
@@ -25,6 +22,10 @@ RSpec.describe Mutations::Quotes::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

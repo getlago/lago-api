@@ -6,8 +6,6 @@ RSpec.describe Mutations::Entitlement::DestroyFeature, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "features:delete" }
-
-  let(:organization) { create(:organization) }
   let(:feature) { create(:feature, organization:) }
   let(:input) { {id: feature.id} }
   let(:query) do
@@ -22,6 +20,8 @@ RSpec.describe Mutations::Entitlement::DestroyFeature, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

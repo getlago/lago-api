@@ -3,7 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Analytics::MrrsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "analytics:view" }
+  let(:organization) { membership.organization }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $billingEntityCode: String) {
@@ -18,8 +21,7 @@ RSpec.describe Resolvers::Analytics::MrrsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

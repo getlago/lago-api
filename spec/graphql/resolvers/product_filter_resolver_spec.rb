@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ProductFilterResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,10 +16,8 @@ RSpec.describe Resolvers::ProductFilterResolver do
   end
 
   let(:required_permission) { "product_filters:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:product_filter) { create(:product_filter, :with_values, organization:) }
-
   let(:query) do
     <<~GQL
       query($filterId: ID!) {
@@ -28,6 +28,8 @@ RSpec.describe Resolvers::ProductFilterResolver do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

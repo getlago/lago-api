@@ -4,11 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::GeneratePaymentUrl do
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: GeneratePaymentUrlInput!) {
@@ -18,12 +14,16 @@ RSpec.describe Mutations::Invoices::GeneratePaymentUrl do
       }
     GQL
   end
-
   let(:service_result) do
     result = Invoices::Payments::GeneratePaymentUrlService::Result.new
     result.payment_url = "https://payment.example.com/pay/123"
     result
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     allow(Invoices::Payments::GeneratePaymentUrlService).to receive(:call).and_return(service_result)

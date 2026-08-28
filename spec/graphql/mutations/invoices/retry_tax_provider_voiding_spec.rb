@@ -4,11 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding do
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, payment_provider: "gocardless") }
   let(:user) { membership.user }
-
   let(:invoice) do
     create(
       :invoice,
@@ -21,7 +17,6 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding do
       currency: "EUR"
     )
   end
-
   let(:subscription) do
     create(
       :subscription,
@@ -31,10 +26,8 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding do
       created_at: started_at
     )
   end
-
   let(:timestamp) { Time.zone.now - 1.year }
   let(:started_at) { Time.zone.now - 2.years }
-  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:fee_subscription) do
     create(
       :fee,
@@ -44,7 +37,6 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding do
       amount_cents: 2_000
     )
   end
-
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:response) { instance_double(Net::HTTPOK) }
@@ -72,6 +64,12 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:, payment_provider: "gocardless") }
+
+  let_it_be(:plan) { create_default(:plan, organization:, interval: "monthly") }
 
   before do
     integration_collection_mapping

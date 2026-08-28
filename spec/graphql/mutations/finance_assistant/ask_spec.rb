@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::FinanceAssistant::Ask do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -27,9 +29,6 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
       }
     GQL
   end
-
-  let(:required_permission) { "ai_conversations:create" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:question) { "Show MRR for the past 3 months" }
   let(:session_id) { SecureRandom.uuid }
@@ -46,6 +45,10 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
       }
     end
   end
+
+  let(:required_permission) { "ai_conversations:create" }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(FinanceAssistant::AskService).to receive(:call).and_return(service_result)

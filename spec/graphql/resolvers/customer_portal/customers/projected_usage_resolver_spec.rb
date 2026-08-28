@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID!) {
@@ -43,12 +45,8 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:, rate: 20) }
-
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) do
     create(
       :subscription,
@@ -57,9 +55,6 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       started_at: Time.zone.now - 2.years
     )
   end
-  let(:plan) { create(:plan, interval: "monthly") }
-
-  let(:metric) { create(:billable_metric, aggregation_type: "count_agg") }
   let(:sum_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) do
     create(
@@ -90,15 +85,20 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       }
     )
   end
-
   let(:billable_metric_filter) do
     create(:billable_metric_filter, billable_metric: sum_metric, key: "cloud", values: %w[aws gcp])
   end
-
   let(:charge_filter) { create(:charge_filter, charge: standard_charge, invoice_display_name: nil) }
   let(:charge_filter_value) do
     create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["aws"])
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, interval: "monthly") }
+
+  let_it_be(:metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
 
   before do
     subscription

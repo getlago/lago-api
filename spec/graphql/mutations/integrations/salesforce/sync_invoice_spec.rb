@@ -16,11 +16,6 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice do
   end
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:invoice) { create(:invoice, customer:, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: SyncSalesforceInvoiceInput!) {
@@ -28,6 +23,11 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice do
       }
     GQL
   end
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { execute_graphql_call }
 

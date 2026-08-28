@@ -4,16 +4,13 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationItems::FetchItems do
   let(:required_permission) { "organization:integrations:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_item) { create(:integration_item, integration:) }
   let(:sync_service) { instance_double(Integrations::Aggregator::SyncService) }
-
   let(:items_response) do
     File.read(Rails.root.join("spec/fixtures/integration_aggregator/items_response.json"))
   end
-
   let(:mutation) do
     <<~GQL
       mutation($input: FetchIntegrationItemsInput!) {
@@ -23,6 +20,10 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(Integrations::Aggregator::SyncService).to receive(:call).and_return(true)

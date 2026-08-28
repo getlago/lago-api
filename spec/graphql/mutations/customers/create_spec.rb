@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Customers::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permissions) { "customers:create" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateCustomerInput!) {
@@ -45,13 +45,14 @@ RSpec.describe Mutations::Customers::Create do
       }
     GQL
   end
-
   let(:body) do
     {
       object: "event",
       data: {url: "test.url"}
     }
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     stub_request(:post, "https://api.stripe.com/v1/checkout/sessions")

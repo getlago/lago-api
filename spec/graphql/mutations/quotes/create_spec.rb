@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Quotes::Create do
   let(:required_permission) { "quotes:create" }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization) }
   let(:input) do
     {
       customerId: customer.id,
@@ -29,6 +27,10 @@ RSpec.describe Mutations::Quotes::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization: membership.organization) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

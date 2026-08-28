@@ -3,7 +3,16 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceCustomSectionsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "invoice_custom_sections:view" }
+  let(:organization) { membership.organization }
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
+  let(:invoice_custom_section_1_manual) { create(:invoice_custom_section, organization:, name: "x") }
+  let(:invoice_custom_section_2_manual) { create(:invoice_custom_section, organization:, name: "a") }
+  let(:invoice_custom_section_3_manual) { create(:invoice_custom_section, organization:, name: "c") }
+  let(:invoice_custom_section_4_system_generated) { create(:invoice_custom_section, :system_generated, organization:, name: "not show") }
   let(:query) do
     <<~GQL
       query() {
@@ -15,14 +24,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:) }
-  let(:customer) { create(:customer, organization:, billing_entity:) }
-  let(:invoice_custom_section_1_manual) { create(:invoice_custom_section, organization:, name: "x") }
-  let(:invoice_custom_section_2_manual) { create(:invoice_custom_section, organization:, name: "a") }
-  let(:invoice_custom_section_3_manual) { create(:invoice_custom_section, organization:, name: "c") }
-  let(:invoice_custom_section_4_system_generated) { create(:invoice_custom_section, :system_generated, organization:, name: "not show") }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     invoice_custom_section_1_manual

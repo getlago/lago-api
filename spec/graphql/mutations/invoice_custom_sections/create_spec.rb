@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::InvoiceCustomSections::Create do
   let(:required_permission) { "invoice_custom_sections:create" }
-  let(:membership) { create(:membership) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateInvoiceCustomSectionInput!) {
@@ -20,6 +18,10 @@ RSpec.describe Mutations::InvoiceCustomSections::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

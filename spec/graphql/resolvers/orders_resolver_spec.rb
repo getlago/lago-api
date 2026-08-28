@@ -3,17 +3,19 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::OrdersResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "orders:view" }
-  let(:query) {}
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
   let(:quote_two) { create(:quote, organization:, customer:) }
   let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote: quote_two) }
   let!(:order_two) { create(:order, organization:, customer:, order_form: order_form_two) }
+  let(:query) {}
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { create(:order, organization:, customer:, order_form:) }
 

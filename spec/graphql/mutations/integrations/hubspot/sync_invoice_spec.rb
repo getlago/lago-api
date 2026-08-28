@@ -16,13 +16,8 @@ RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice do
   end
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:invoice) { create(:invoice, customer:, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:integration_customer) { create(:hubspot_customer, customer:, integration:) }
   let(:integration) { create(:hubspot_integration, organization:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: SyncHubspotIntegrationInvoiceInput!) {
@@ -30,14 +25,18 @@ RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice do
       }
     GQL
   end
-
   let(:service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }
-
   let(:result) do
     r = Integrations::Aggregator::Invoices::Hubspot::CreateService::Result.new
     r.invoice_id = invoice.id
     r
   end
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     integration_customer
