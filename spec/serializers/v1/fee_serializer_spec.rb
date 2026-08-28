@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe ::V1::FeeSerializer do
   subject(:serializer) { described_class.new(fee, root_name: "fee", includes: inclusion) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:invoice) { create_default(:invoice) }
   let(:charge) do
     create(:standard_charge, properties: {
       "amount" => "100",
@@ -189,9 +194,9 @@ RSpec.describe ::V1::FeeSerializer do
   end
 
   context "when fee is fixed_charge" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:plan) { create(:plan, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
+    let_it_be(:plan) { create_default(:plan, organization:) }
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }

@@ -7,6 +7,9 @@ RSpec.describe ::V1::ChargeSerializer do
 
   let(:serializer) { described_class.new(charge, root_name: "charge", includes: %i[taxes]) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
   let(:charge) { create(:standard_charge, properties:) }
   let(:properties) { {"amount" => "1000"} }
 
