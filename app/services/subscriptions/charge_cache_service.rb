@@ -37,11 +37,11 @@ module Subscriptions
       expire_cache(subscription:, charge:)
     end
 
-    # NOTE: A charge can hold both a current usage and a full usage entry, and an event invalidates
-    #       both. Neither deletion may be conditional on the organization still being granted
-    #       granular lifetime usage: an entry written while it was granted survives every event
-    #       ingested after it was revoked, and would serve that stale usage the moment it is granted
-    #       again, until the end of the billing period.
+    # NOTE: A charge can hold both a current usage and a full usage entry, and both are cleared.
+    #       The per-event caller only ever finds the current usage one, since a full usage entry
+    #       requires the lazy validation that turns that caller off. The explicit ones do find it:
+    #       deleting a billable metric or de-duplicating events removes usage without advancing the
+    #       ingestion watermark, so lazy validation would keep serving whatever was left behind.
     def self.expire_cache(subscription:, charge:, charge_filter: nil)
       new(subscription:, charge:, charge_filter:).expire_cache
       new(subscription:, charge:, charge_filter:, full_usage: true).expire_cache

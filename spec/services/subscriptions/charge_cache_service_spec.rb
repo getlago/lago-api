@@ -66,10 +66,9 @@ RSpec.describe Subscriptions::ChargeCacheService do
     let(:current_usage_key) { described_class.new(subscription:, charge:, charge_filter:).cache_key }
     let(:full_usage_key) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true).cache_key }
 
-    # The organization here holds no granular lifetime usage integration, so it cannot write a full
-    # usage entry today. Its deletion must happen anyway: an entry written while the integration was
-    # granted would otherwise survive every event ingested after it was revoked, and be served again
-    # the moment it is granted back, until the end of the billing period.
+    # Both entries go unconditionally. Events::DeleteForMetricService and the ClickHouse
+    # de-duplication clear the cache after removing usage, which does not advance the ingestion
+    # watermark, so a full usage entry left behind here would be served for the rest of the period.
     it "deletes both the current usage and the full usage entries" do
       allow(Rails.cache).to receive(:delete)
 
