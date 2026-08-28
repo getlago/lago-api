@@ -120,5 +120,14 @@ RSpec.describe PlansQuery do
       expect(returned_plan.subscriptions_count).to eq(1)
       expect(Plan::CountsQuery).to have_received(:call)
     end
+
+    context "when no plans match" do
+      let(:search_term) { "missing" }
+
+      it "does not query the plan counts" do
+        expect(result.plans).to be_empty
+        expect(Plan::CountsQuery).not_to have_received(:call)
+      end
+    end
   end
 end

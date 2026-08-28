@@ -78,9 +78,7 @@ class Plan
             SELECT
               plan_hierarchy.root_plan_id AS plan_id,
               COUNT(subscriptions.id) AS active_subscriptions_count,
-              COUNT(DISTINCT subscriptions.customer_id) FILTER (WHERE plan_hierarchy.direct)
-                + COUNT(DISTINCT subscriptions.customer_id) FILTER (WHERE NOT plan_hierarchy.direct)
-                AS customers_count
+              COUNT(DISTINCT subscriptions.customer_id) AS customers_count
             FROM
               plan_hierarchy
               INNER JOIN subscriptions ON subscriptions.plan_id = plan_hierarchy.plan_id
@@ -92,9 +90,7 @@ class Plan
           draft_invoice_counts AS (
             SELECT
               plan_hierarchy.root_plan_id AS plan_id,
-              COUNT(DISTINCT invoices.id) FILTER (WHERE plan_hierarchy.direct)
-                + COUNT(DISTINCT invoices.id) FILTER (WHERE NOT plan_hierarchy.direct)
-                AS draft_invoices_count
+              COUNT(DISTINCT invoices.id) AS draft_invoices_count
             FROM
               plan_hierarchy
               INNER JOIN subscriptions ON subscriptions.plan_id = plan_hierarchy.plan_id

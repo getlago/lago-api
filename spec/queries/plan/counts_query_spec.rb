@@ -32,13 +32,11 @@ RSpec.describe Plan::CountsQuery do
     create(:fixed_charge, plan:, organization:, add_on:)
     create(:fixed_charge, :deleted, plan:, organization:, add_on:)
 
-    direct_invoice = create(:invoice, :draft, customer:, organization:)
-    create(:invoice_subscription, invoice: direct_invoice, subscription: direct_subscription1, organization:)
-    create(:invoice_subscription, invoice: direct_invoice, subscription: direct_subscription2, organization:)
-
-    child_invoice = create(:invoice, :draft, customer:, organization:)
-    create(:invoice_subscription, invoice: child_invoice, subscription: child_subscription1, organization:)
-    create(:invoice_subscription, invoice: child_invoice, subscription: child_subscription2, organization:)
+    shared_invoice = create(:invoice, :draft, customer:, organization:)
+    create(:invoice_subscription, invoice: shared_invoice, subscription: direct_subscription1, organization:)
+    create(:invoice_subscription, invoice: shared_invoice, subscription: direct_subscription2, organization:)
+    create(:invoice_subscription, invoice: shared_invoice, subscription: child_subscription1, organization:)
+    create(:invoice_subscription, invoice: shared_invoice, subscription: child_subscription2, organization:)
 
     finalized_invoice = create(:invoice, customer:, organization:)
     create(:invoice_subscription, invoice: finalized_invoice, subscription: direct_subscription1, organization:)
@@ -47,13 +45,13 @@ RSpec.describe Plan::CountsQuery do
     terminated_child_subscription
   end
 
-  it "returns all counts for the requested organization plans" do
+  it "returns all counts and deduplicates customers and invoices across the plan hierarchy" do
     expect(plans).to eq({
       plan.id => {
         active_subscriptions_count: 4,
         charges_count: 2,
-        customers_count: 3,
-        draft_invoices_count: 2,
+        customers_count: 2,
+        draft_invoices_count: 1,
         fixed_charges_count: 1,
         subscriptions_count: 6
       },

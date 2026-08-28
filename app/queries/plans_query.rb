@@ -55,10 +55,13 @@ class PlansQuery < BaseQuery
   end
 
   def preload_counts(plans)
+    plan_ids = plans.map(&:id)
+    return if plan_ids.empty?
+
     counts = Plan::CountsQuery.call(
       organization:,
       filters: {
-        plan_ids: plans.map(&:id)
+        plan_ids:
       }
     ).plans
 
