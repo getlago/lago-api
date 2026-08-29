@@ -4,7 +4,8 @@ require "rails_helper"
 
 describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
-  let(:customer) { create(:customer, organization:, invoice_grace_period: 3, timezone: "UTC") }
+  let(:customer) { create(:customer, organization:, invoice_grace_period:, timezone: "UTC") }
+  let(:invoice_grace_period) { 3 }
   let(:add_on) { create(:add_on, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, interval: "monthly", pay_in_advance: true) }
 
@@ -24,8 +25,10 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
   let(:subscription_date) { DateTime.new(2024, 3, 1) }
   let(:subscription) { customer.subscriptions.sole }
   let(:draft) { subscription.invoices.draft.sole }
-  # 2 units x 239.90, a full calendar month so proration is a no-op
-  let(:fee_amount_cents) { 47_980 }
+  let(:initial_units) { 2 }
+  let(:updated_units) { initial_units }
+  let(:update_date) { subscription_date + 1.hour }
+  let(:fee_amount_cents) { initial_units * 23_990 }
 
   before do
     fixed_charge
@@ -37,17 +40,17 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
           external_id: "sub_#{customer.external_id}",
           plan_code: plan.code,
           billing_time: "calendar",
-          plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2}]}
+          plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: initial_units}]}
         }
       )
     end
 
     # Repeating units that are already billed leaves the pay in advance run with nothing
     # to bill, so it writes a fee of zero units on a second invoice.
-    travel_to subscription_date + 1.hour do
+    travel_to update_date do
       update_subscription(
         subscription,
-        {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 2, apply_units_immediately: true}]}}
+        {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: updated_units, apply_units_immediately: true}]}}
       )
     end
   end
@@ -72,5 +75,30 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
     draft.reload
     expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(fee_amount_cents)
     expect(draft.total_amount_cents).to eq(fee_amount_cents)
+  end
+
+  context "when units increase after the initial fee" do
+    let(:invoice_grace_period) { 10 }
+    let(:initial_units) { 10 }
+    let(:updated_units) { 12 }
+    let(:update_date) { subscription_date + 8.days }
+
+    it "keeps the full-period amount after deducting the invoiced increase" do
+      increase_invoice = subscription.invoices.where.not(id: draft.id).sole
+      increase_amount_cents = increase_invoice.total_amount_cents
+
+      expect(increase_invoice.fees.fixed_charge.sole.units).to eq(2)
+      expect(increase_amount_cents).to eq(35_598)
+      expect(draft.fees.fixed_charge.sole).to have_attributes(units: 10, amount_cents: fee_amount_cents)
+
+      travel_to subscription_date + 9.days do
+        refresh_invoice(draft)
+      end
+
+      refreshed_fee = draft.reload.fees.fixed_charge.sole
+      expect(refreshed_fee).to have_attributes(units: 12, amount_cents: fee_amount_cents)
+      expect(draft.total_amount_cents).to eq(fee_amount_cents)
+      expect(subscription.invoices.sum(:total_amount_cents)).to eq(fee_amount_cents + increase_amount_cents)
+    end
   end
 end
