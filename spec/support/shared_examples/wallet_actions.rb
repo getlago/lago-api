@@ -836,6 +836,21 @@ RSpec.shared_examples "a wallet update endpoint" do
     end
   end
 
+  context "when applies_to is omitted" do
+    let(:bm) { create(:billable_metric, organization:) }
+    let(:update_params) { {name: "wallet1"} }
+
+    before { create(:wallet_target, wallet:, billable_metric: bm) }
+
+    it "keeps the existing billable metric limitations" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
+      expect(wallet.reload.billable_metrics).to eq([bm])
+    end
+  end
+
   context "with invoice_custom_section" do
     let(:invoice_custom_section) { nil }
     let(:update_params) do
