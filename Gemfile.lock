@@ -818,10 +818,10 @@ GEM
       tsort
     redis (5.4.1)
       redis-client (>= 0.22.0)
-    redis-client (0.26.3)
+    redis-client (0.30.1)
       connection_pool
     redis-prescription (2.6.0)
-    redlock (2.0.6)
+    redlock (2.1.0)
       redis-client (>= 0.14.1, < 1.0.0)
     regexp_parser (2.11.3)
     reline (0.6.3)
@@ -1151,7 +1151,7 @@ DEPENDENCIES
   rails (~> 8.0)
   ransack
   redis
-  redlock (~> 2.0.6)
+  redlock (~> 2.1.0)
   rspec-graphql_matchers
   rspec-rails
   rspec-snapshot (~> 2.0)
