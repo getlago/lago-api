@@ -10,8 +10,8 @@ RSpec.describe PaymentReceiptsQuery do
   let(:returned_ids) { result.payment_receipts.pluck(:id) }
   let(:pagination) { nil }
   let(:filters) { nil }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
   let(:invoice2) { create(:invoice, organization:) }
   let(:payment_request) { create(:payment_request, organization:) }

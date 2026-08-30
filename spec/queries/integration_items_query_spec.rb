@@ -11,8 +11,8 @@ RSpec.describe IntegrationItemsQuery do
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { membership.organization }
 
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_second) { create(:netsuite_integration, organization:) }

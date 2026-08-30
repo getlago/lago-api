@@ -3,12 +3,18 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::AlertsQuery do
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
+
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end
 
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create_default(:organization) }
   let(:subscription) { create(:subscription, organization:) }
   let(:alert_first) { create(:alert, organization:, subscription_external_id: subscription.external_id) }
   let(:alert_second) { create(:billable_metric_current_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
