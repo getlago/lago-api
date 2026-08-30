@@ -3,23 +3,21 @@
 require "rails_helper"
 
 RSpec.describe ChargeFilters::CascadeService do
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:bm_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
-  let(:parent_plan) { create(:plan, organization:) }
   let(:parent_charge) { create(:standard_charge, plan: parent_plan, billable_metric:, properties: {amount: "0"}) }
-
-  let(:child_plan) { create(:plan, organization:, parent: parent_plan) }
   let(:child_charge) { create(:standard_charge, plan: child_plan, billable_metric:, parent: parent_charge, properties: {amount: "0"}) }
-
   # The override deep-copies the plan's filters, code included, so both sides hold the same one
   let(:us_code) { "region_us_1a2b3c4d" }
-
   let(:child_filter) do
     filter = create(:charge_filter, charge: child_charge, invoice_display_name: "US region", properties: {amount: "10"}, code: us_code)
     create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: ["us"])
     filter
   end
+
+  let_it_be(:parent_plan) { create(:plan, organization:) }
+  let_it_be(:child_plan) { create(:plan, organization:, parent: parent_plan) }
 
   before do
     create(:subscription, plan: child_plan, status: :active)

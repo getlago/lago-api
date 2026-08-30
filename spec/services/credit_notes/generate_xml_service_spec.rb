@@ -4,18 +4,16 @@ require "rails_helper"
 
 RSpec.describe CreditNotes::GenerateXmlService, type: :service do
   let(:context) { "graphql" }
-
-  let(:organization) { create(:organization, name: "LAGO") }
-  let(:billing_entity) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
-  let(:einvoicing) { true }
-
   let(:credit_note) { create(:credit_note, status:, billing_entity:) }
   let(:status) { :finalized }
-
   let(:xml_service) { EInvoices::CreditNotes::Ubl::CreateService }
   let(:fake_xml) { "<xml>content</xml>" }
   let(:create_xml_result) { EInvoices::CreditNotes::Ubl::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
   let(:blank_xml_path) { Rails.root.join("spec/fixtures/blank.xml") }
+
+  let_it_be(:organization) { create(:organization, name: "LAGO") }
+  let_it_be(:einvoicing) { true }
+  let_it_be(:billing_entity) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
 
   before do
     credit_note
@@ -117,6 +115,7 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
       end
 
       context "when einvoicing is disabled" do
+        let(:billing_entity) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
         let(:einvoicing) { false }
 
         it_behaves_like "dont generate"

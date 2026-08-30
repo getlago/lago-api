@@ -11,9 +11,9 @@ RSpec.describe CreditNotes::CreateFromTermination do
   let(:subscription_at) { Time.zone.parse("2022-09-01 10:00") }
   let(:terminated_at) { Time.zone.parse("2022-10-15 10:00") }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, **(customer_timezone ? {timezone: customer_timezone} : {})) }
   let(:customer_timezone) { nil }
-  let(:organization) { customer.organization }
   let(:context) { nil }
 
   let(:subscription) do

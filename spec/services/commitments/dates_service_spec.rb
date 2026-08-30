@@ -6,8 +6,9 @@ RSpec.describe Commitments::DatesService do
   let(:commitment) { create(:commitment) }
   let(:invoice_subscription) { create(:invoice_subscription, subscription:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, pay_in_advance:) }
 
   describe ".new_instance" do
@@ -33,7 +34,8 @@ RSpec.describe Commitments::DatesService do
   describe "#call" do
     subject(:service) { described_class.new_instance(commitment:, invoice_subscription:) }
 
-    let(:pay_in_advance) { [false, true].sample }
+    let_it_be(:pay_in_advance) { [false, true].sample }
+    let_it_be(:plan) { create(:plan, organization:, pay_in_advance:) }
     let(:terminated_service) { instance_double("Subscriptions::TerminatedDatesService") }
 
     before do

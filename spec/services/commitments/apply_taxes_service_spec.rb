@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe Commitments::ApplyTaxesService do
   subject(:apply_service) { described_class.new(commitment:, tax_codes:) }
 
-  let(:commitment) { create(:commitment, plan:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:organization) { create(:organization) }
-  let(:tax1) { create(:tax, organization:, code: "tax1") }
-  let(:tax2) { create(:tax, organization:, code: "tax2") }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:commitment) { create(:commitment, plan:) }
+  let_it_be(:tax1) { create(:tax, organization:, code: "tax1") }
+  let_it_be(:tax2) { create(:tax, organization:, code: "tax2") }
   let(:tax_codes) { [tax1.code, tax2.code] }
 
   describe "call" do

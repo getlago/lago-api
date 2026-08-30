@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Charges::GenerateCodeService do
   subject(:result) { described_class.call(plan:, billable_metric:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
 
   describe "#call" do
     context "when no charges exist for the plan" do

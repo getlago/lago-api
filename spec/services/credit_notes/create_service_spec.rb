@@ -16,8 +16,8 @@ RSpec.describe CreditNotes::CreateService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:args) { {} }
 
   let(:invoice) do
