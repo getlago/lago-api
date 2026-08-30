@@ -5,6 +5,12 @@ require "rails_helper"
 RSpec.describe BillableMetrics::AggregationFactory do
   subject(:factory) { described_class }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:billable_metric) { create(billable_aggregation, recurring:) }
   let(:billable_aggregation) { :billable_metric }
   let(:recurring) { false }
@@ -13,7 +19,7 @@ RSpec.describe BillableMetrics::AggregationFactory do
   let(:pay_in_advance) { false }
   let(:prorated) { false }
 
-  let(:subscription) { create(:subscription, started_at: DateTime.parse("2023-03-15")) }
+  let_it_be(:subscription) { create(:subscription, started_at: DateTime.parse("2023-03-15")) }
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
