@@ -5,10 +5,21 @@ require "rails_helper"
 RSpec.describe AdjustedFees::EstimateService do
   subject(:result) { described_class.call(invoice:, params:) }
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create(:plan, organization:, interval: "monthly") }
 
-  let(:invoice) do
+  let_it_be(:started_at) { Time.zone.now - 2.years }
+  let_it_be(:subscription) do
+    create(
+      :subscription,
+      plan:,
+      subscription_at: started_at,
+      started_at:,
+      created_at: started_at
+    )
+  end
+  let_it_be(:invoice) do
     create(
       :invoice,
       :voided,
@@ -20,19 +31,7 @@ RSpec.describe AdjustedFees::EstimateService do
     )
   end
 
-  let(:subscription) do
-    create(
-      :subscription,
-      plan:,
-      subscription_at: started_at,
-      started_at:,
-      created_at: started_at
-    )
-  end
-
   let(:timestamp) { Time.zone.now - 1.year }
-  let(:started_at) { Time.zone.now - 2.years }
-  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:fee_subscription) do
     create(
       :fee,
@@ -160,7 +159,7 @@ RSpec.describe AdjustedFees::EstimateService do
   end
 
   context "when adjusting fixed charge fees" do
-    let(:add_on) { create(:add_on, organization:) }
+    let_it_be(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) do
       create(
         :fixed_charge,
@@ -334,7 +333,7 @@ RSpec.describe AdjustedFees::EstimateService do
   end
 
   context "when adjusting charge fees" do
-    let(:billable_metric) { create(:billable_metric, organization:) }
+    let_it_be(:billable_metric) { create(:billable_metric, organization:) }
     let(:charge) { create(:standard_charge, billable_metric:, plan:) }
     let(:charge_fee) do
       create(

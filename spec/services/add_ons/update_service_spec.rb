@@ -5,12 +5,12 @@ require "rails_helper"
 RSpec.describe AddOns::UpdateService do
   subject(:add_ons_service) { described_class.new(add_on:, params: update_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:tax) { create(:tax, organization:) }
-  let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
-  let(:tax2) { create(:tax, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:tax) { create(:tax, organization:) }
+  let_it_be(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
+  let_it_be(:tax2) { create(:tax, organization:) }
 
   before { add_on_applied_tax }
 
