@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe DataExports::Csv::InvoiceFees do
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, timezone:) }
-  let(:plan) { create(:plan, organization: customer.organization) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization: customer.organization) }
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
   let(:to_utc) { "2024-06-06 12:48:59 UTC" }

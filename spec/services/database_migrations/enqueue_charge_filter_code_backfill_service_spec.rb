@@ -5,12 +5,12 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::EnqueueChargeFilterCodeBackfillService do
   subject(:service) { described_class.call(poll_interval: 0) }
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:bm_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
-
-  let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+
+  let_it_be(:plan) { create(:plan, organization:) }
 
   def build_filter(on, values, **attrs)
     filter = create(:charge_filter, charge: on, **attrs)
