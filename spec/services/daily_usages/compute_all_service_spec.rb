@@ -7,14 +7,16 @@ RSpec.describe DailyUsages::ComputeAllService do
 
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
 
-  let(:organization) { create(:organization, premium_integrations:) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:premium_integrations) { ["revenue_analytics"] }
+  let_it_be(:organization) { create_default(:organization, premium_integrations:) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
+
+  before_all do
+    create_default(:plan)
+  end
+
   let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date - 1.day) }
-
-  let(:premium_integrations) do
-    ["revenue_analytics"]
-  end
 
   before { subscriptions }
 
@@ -95,6 +97,7 @@ RSpec.describe DailyUsages::ComputeAllService do
 
     context "when the organization has a timezone" do
       let(:organization) { create(:organization, timezone: "America/Sao_Paulo", premium_integrations:) }
+      let(:billing_entity) { create_default(:billing_entity, organization:) }
 
       before do
         billing_entity.update(timezone: "America/Sao_Paulo")
@@ -285,7 +288,7 @@ RSpec.describe DailyUsages::ComputeAllService do
     end
 
     context "when revenue_analytics premium integration flag is not present" do
-      let(:premium_integrations) { [] }
+      let(:organization) { create_default(:organization, premium_integrations: []) }
 
       it "does not enqueue any job" do
         expect(compute_service.call).to be_success

@@ -4,45 +4,6 @@ require "rails_helper"
 
 RSpec.describe DataExports::Csv::Invoices, :premium do
   let(:data_export) { create :data_export, :processing, resource_query:, organization: }
-
-  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1, organization:) }
-
-  let(:resource_query) do
-    {
-      currency:,
-      customer_external_id:,
-      customer_id:,
-      invoice_type:,
-      issuing_date_from:,
-      issuing_date_to:,
-      payment_dispute_lost:,
-      payment_overdue:,
-      payment_status:,
-      search_term:,
-      self_billed:,
-      status:
-    }
-  end
-
-  let(:currency) { "EUR" }
-  let(:customer_id) { "customer-lago-id-123" }
-  let(:customer_external_id) { "custext123" }
-  let(:invoice_type) { "credit" }
-  let(:issuing_date_from) { "2023-12-25" }
-  let(:issuing_date_to) { "2024-07-01" }
-  let(:payment_dispute_lost) { false }
-  let(:payment_overdue) { true }
-  let(:payment_status) { "pending" }
-  let(:search_term) { "service ABC" }
-  let(:self_billed) { false }
-  let(:status) { "finalized" }
-
-  let(:serializer_klass) { class_double("V1::InvoiceSerializer") }
-  let(:invoice_serializer) do
-    instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
-  end
-  let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
-  let(:invoice) { create :invoice, organization: }
   let(:serialized_invoice) do
     {
       lago_id: "invoice-lago-id-123",
@@ -80,6 +41,51 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
       billing_entity_code: "the-test-bil-ent"
     }
   end
+
+  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1, organization:) }
+
+  let(:resource_query) do
+    {
+      currency:,
+      customer_external_id:,
+      customer_id:,
+      invoice_type:,
+      issuing_date_from:,
+      issuing_date_to:,
+      payment_dispute_lost:,
+      payment_overdue:,
+      payment_status:,
+      search_term:,
+      self_billed:,
+      status:
+    }
+  end
+
+  let(:currency) { "EUR" }
+  let(:customer_id) { "customer-lago-id-123" }
+  let(:customer_external_id) { "custext123" }
+  let(:invoice_type) { "credit" }
+  let(:issuing_date_from) { "2023-12-25" }
+  let(:issuing_date_to) { "2024-07-01" }
+  let(:payment_dispute_lost) { false }
+  let(:payment_overdue) { true }
+  let(:payment_status) { "pending" }
+  let(:search_term) { "service ABC" }
+  let(:self_billed) { false }
+  let(:status) { "finalized" }
+
+  let(:serializer_klass) { class_double("V1::InvoiceSerializer") }
+  let(:invoice_serializer) do
+    instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
+  end
+
+  let_it_be(:organization) { create_default(:organization, premium_integrations: ["progressive_billing"]) }
+
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:invoice) { create :invoice, organization: }
 
   before do
     invoice

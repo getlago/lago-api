@@ -5,6 +5,12 @@ require "rails_helper"
 RSpec.describe DailyUsages::ComputeDiffService do
   subject(:diff_service) { described_class.new(daily_usage:, previous_daily_usage:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:daily_usage) { create(:daily_usage, usage:) }
   let(:previous_daily_usage) { create(:daily_usage, usage: previous_usage) }
 
