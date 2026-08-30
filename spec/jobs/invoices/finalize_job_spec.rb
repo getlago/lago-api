@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Invoices::FinalizeJob do
-  let(:invoice) { create(:invoice) }
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
+  let_it_be(:invoice) { create(:invoice) }
 
   let(:result) { Invoices::RefreshDraftAndFinalizeService::Result.new }
 

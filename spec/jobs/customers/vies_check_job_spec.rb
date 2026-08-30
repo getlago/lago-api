@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Customers::ViesCheckJob do
-  let(:customer) { create(:customer, tax_identification_number: "IE6388047V") }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:customer) { create(:customer, tax_identification_number: "IE6388047V") }
   let(:vies_response) do
     {
       country_code: "FR"
@@ -39,13 +43,13 @@ RSpec.describe Customers::ViesCheckJob do
     end
 
     context "when customer has pending invoices blocked by VIES" do
-      let(:pending_invoice) do
+      let_it_be(:pending_invoice) do
         create(:invoice, :pending, customer:, organization: customer.organization, tax_status: :pending)
       end
-      let(:finalized_invoice) do
+      let_it_be(:finalized_invoice) do
         create(:invoice, :finalized, customer:, organization: customer.organization)
       end
-      let(:pending_but_tax_succeeded_invoice) do
+      let_it_be(:pending_but_tax_succeeded_invoice) do
         create(:invoice, :pending, customer:, organization: customer.organization, tax_status: :succeeded)
       end
 
@@ -92,7 +96,7 @@ RSpec.describe Customers::ViesCheckJob do
   end
 
   context "when valvat has an error" do
-    let(:pending_invoice) do
+    let_it_be(:pending_invoice) do
       create(:invoice, :pending, customer:, organization: customer.organization, tax_status: :pending)
     end
 

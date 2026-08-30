@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob, type: :job do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:provider_customer) do
     create(:stripe_customer, customer:, provider_customer_id: "cus_123", payment_provider: stripe_provider)

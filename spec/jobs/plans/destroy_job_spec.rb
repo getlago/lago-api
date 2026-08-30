@@ -3,10 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Plans::DestroyJob do
+  before_all do
+    create_default(:organization)
+  end
+
   include ActiveJob::TestHelper
 
-  let(:plan) { create(:plan) }
-  let(:child_plan) { create(:plan, parent: plan) }
+  let_it_be(:plan) { create(:plan) }
+  let_it_be(:child_plan) { create(:plan, parent: plan) }
   let(:service_result) { Plans::DestroyService::Result.new }
 
   before do
