@@ -3,11 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::FeaturesQuery do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let!(:feature1) { create(:feature, organization:, code: "seats", name: "Number of seats") }
   let!(:feature2) { create(:feature, organization:, code: "storage", name: "Storage") }
   let!(:feature3) { create(:feature, organization:, code: "api_calls", name: "API Calls") }
-  let!(:other_organization_feature) { create(:feature, organization: create(:organization), code: "other") }
+
+  let_it_be(:other_organization_feature) { create(:feature, organization: create(:organization), code: "other") }
 
   describe "#call" do
     subject { described_class.call(organization:, pagination:, search_term:, filters:) }

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PastUsageQuery do
   subject(:result) { described_class.call(organization:, pagination:, filters:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:pagination) { nil }
   let(:filters) do
     {
@@ -14,8 +14,8 @@ RSpec.describe PastUsageQuery do
     }
   end
 
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:subscription2) { create(:subscription, customer:, plan:) }
 
@@ -158,10 +158,10 @@ RSpec.describe PastUsageQuery do
   end
 
   context "with billable_metric_code" do
-    let(:billable_metric1) { create(:billable_metric, organization:) }
+    let_it_be(:billable_metric1) { create(:billable_metric, organization:) }
     let(:billable_metric_code) { billable_metric1&.code }
 
-    let(:billable_metric2) { create(:billable_metric, organization:) }
+    let_it_be(:billable_metric2) { create(:billable_metric, organization:) }
 
     let(:charge1) { create(:standard_charge, plan:, billable_metric: billable_metric1) }
     let(:charge2) { create(:standard_charge, plan:, billable_metric: billable_metric2) }

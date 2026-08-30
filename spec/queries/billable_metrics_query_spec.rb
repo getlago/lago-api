@@ -11,8 +11,9 @@ RSpec.describe BillableMetricsQuery do
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billable_metric_first) { create(:billable_metric, organization:, name: "defgh", code: "11") }
   let(:billable_metric_second) { create(:billable_metric, organization:, name: "abcde", code: "22") }
   let(:billable_metric_third) { create(:billable_metric, organization:, name: "presuv", code: "33") }
