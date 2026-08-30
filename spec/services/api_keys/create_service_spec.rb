@@ -9,7 +9,8 @@ RSpec.describe ApiKeys::CreateService do
     subject(:service_result) { described_class.call(params) }
 
     let(:name) { Faker::Lorem.words.join(" ") }
-    let(:organization) { create(:organization) }
+
+    let_it_be(:organization) { create(:organization) }
 
     context "with premium organization", :premium do
       context "when permissions hash is provided" do

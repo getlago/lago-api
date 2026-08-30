@@ -38,8 +38,8 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
   end
 
   describe "#call" do
-    let(:organization) { create(:organization, api_keys: [api_key]) }
-    let(:api_key) { create(:api_key) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:api_key) { create(:api_key) }
     let(:auth_token) { api_key.value }
 
     before { organization }
