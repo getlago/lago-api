@@ -4,12 +4,18 @@ require "rails_helper"
 
 # rubocop:disable RSpec/AnyInstance
 RSpec.describe SendEmailJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject(:perform_job) { job.perform_now }
 
   let(:job) { described_class.new("InvoiceMailer", "created", "deliver_now", args: [], params:) }
-  let(:invoice) { create(:invoice, fees_amount_cents: 100) }
   let(:params) { {invoice:} }
   let(:error) { Net::SMTPServerBusy.new("busy") }
+
+  let_it_be(:invoice) { create(:invoice, fees_amount_cents: 100) }
 
   before do
     allow(Utils::EmailActivityLog).to receive(:produce)
@@ -62,7 +68,7 @@ RSpec.describe SendEmailJob do
   end
 
   context "when email is not sent" do
-    let(:invoice) { create(:invoice, fees_amount_cents: 0) }
+    let_it_be(:invoice) { create(:invoice, fees_amount_cents: 0) }
 
     it "does not deliver email" do
       expect { perform_job }.not_to change { ActionMailer::Base.deliveries.count }

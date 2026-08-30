@@ -3,10 +3,15 @@
 require "rails_helper"
 
 describe Invoices::Payments::MarkOverdueJob, job: true do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject { described_class.new }
 
   describe ".perform" do
-    let(:overdue_invoice) { create(:invoice, payment_due_date: 1.day.ago) }
+    let_it_be(:overdue_invoice) { create(:invoice, payment_due_date: 1.day.ago) }
 
     before do
       overdue_invoice

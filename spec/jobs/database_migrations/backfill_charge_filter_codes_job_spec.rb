@@ -5,15 +5,14 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillChargeFilterCodesJob do
   subject(:perform) { described_class.perform_now(charge.id) }
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:bm_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
-
-  let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
-
   let(:us_code) { ChargeFilter.generate_code({"region" => ["us"]}) }
   let(:eu_code) { ChargeFilter.generate_code({"region" => ["eu"]}) }
+
+  let_it_be(:plan) { create(:plan, organization:) }
 
   def build_filter(on, values, **attrs)
     filter = create(:charge_filter, charge: on, **attrs)
@@ -56,7 +55,7 @@ RSpec.describe DatabaseMigrations::BackfillChargeFilterCodesJob do
   # Handed one directly it must still refuse: an override's code comes from the filter it was
   # copied from, and deriving one here would claim a link that was never checked.
   context "when the charge sits on a plan that overrides another" do
-    let(:child_plan) { create(:plan, organization:, parent: plan) }
+    let_it_be(:child_plan) { create(:plan, organization:, parent: plan) }
 
     it "does nothing" do
       child_charge = create(:standard_charge, plan: child_plan, billable_metric:, parent: charge)

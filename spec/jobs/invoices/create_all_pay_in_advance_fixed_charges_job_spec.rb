@@ -3,10 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Invoices::CreateAllPayInAdvanceFixedChargesJob do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:perform_now) { described_class.perform_now(plan, timestamp, fixed_charge) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:timestamp) { Time.current.to_i }
   let(:fixed_charge) { nil }
 

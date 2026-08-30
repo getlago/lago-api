@@ -3,6 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
+  before_all do
+    create_default(:organization)
+    create_default(:billable_metric)
+    create_default(:plan)
+    create_default(:customer)
+  end
+
   describe "#perform" do
     let(:charge) { create(:standard_charge, :pay_in_advance, invoiceable: true) }
     let(:event) { create(:event) }

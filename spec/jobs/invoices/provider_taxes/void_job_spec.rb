@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::ProviderTaxes::VoidJob do
-  let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice, customer:) }
+  let_it_be(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
+  let(:invoice) { create(:invoice, customer:) }
 
   let(:result) { Invoices::ProviderTaxes::VoidService::Result.new }
 

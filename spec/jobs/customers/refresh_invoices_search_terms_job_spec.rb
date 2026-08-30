@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::RefreshInvoicesSearchTermsJob do
   subject(:perform_job) { described_class.perform_now(customer_id) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:customer_id) { customer.id }
 
   before do

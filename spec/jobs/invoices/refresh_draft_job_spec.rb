@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Invoices::RefreshDraftJob do
-  let(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
+  let_it_be(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
   let(:result) { Invoices::RefreshDraftService::Result.new }
 
   it "delegates to the RefreshDraft service" do

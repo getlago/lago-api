@@ -3,12 +3,17 @@
 require "rails_helper"
 
 RSpec.describe Invoices::FinalizeAllJob do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:finalize_all_job) { described_class }
 
   let(:finalize_batch_service) { instance_double(Invoices::FinalizeBatchService) }
   let(:result) { Invoices::FinalizeBatchService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice, :draft, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:invoice) { create(:invoice, :draft, organization:) }
 
   context "when succesfully fetching taxes" do
     before do

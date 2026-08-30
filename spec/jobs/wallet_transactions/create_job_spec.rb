@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe WalletTransactions::CreateJob do
   subject(:create_job) { described_class }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:) }
   let(:wallet_transaction_create_service) { instance_double(WalletTransactions::CreateFromParamsService) }
   let(:params) do

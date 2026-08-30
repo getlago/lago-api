@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::FixInvoicesOrganizationSequentialIdJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization, document_numbering: :per_organization) }
+  let_it_be(:organization) { create(:organization, document_numbering: :per_organization) }
 
   context "when maximum sequential_id matches invoice count" do
     it "does not change the last invoice" do

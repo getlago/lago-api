@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe BillPaidCreditJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:wallet_transaction) { create(:wallet_transaction) }
   let(:timestamp) { Time.current.to_i }
 

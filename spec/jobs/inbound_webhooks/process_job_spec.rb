@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe InboundWebhooks::ProcessJob do
+  before_all do
+    create_default(:organization)
+  end
+
   subject(:process_job) { described_class }
 
   let(:inbound_webhook) { create :inbound_webhook }

@@ -3,9 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Invoices::SearchIndexJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject(:perform) { described_class.perform_now(invoice_id) }
 
-  let(:invoice) { create(:invoice) }
+  let_it_be(:invoice) { create(:invoice) }
 
   before do
     allow(Invoices::Search::IndexService).to receive(:call!)

@@ -5,13 +5,14 @@ require "rails_helper"
 describe WalletTransactions::RecreditJob do
   subject(:perform_job) { described_class.perform_now(wallet_transaction) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, organization:) }
-  let(:invoice) { create(:invoice, organization:, customer:) }
   let(:wallet_transaction) do
     create(:wallet_transaction, wallet:, organization:, transaction_type: :outbound, invoice:)
   end
+
+  let_it_be(:invoice) { create(:invoice, organization:, customer:) }
 
   before { allow(WalletTransactions::RecreditService).to receive(:call!) }
 
