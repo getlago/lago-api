@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::DestroyService do
   subject(:destroy_service) { described_class.new(customer:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization:) }
 
   before do

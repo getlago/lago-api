@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe ChargeFilters::CascadeDispatcher do
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
   let(:us_values) { {"region" => ["us"]} }

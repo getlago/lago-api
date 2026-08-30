@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
+  before_all do
+    create_default(:organization)
+    create_default(:plan)
+  end
+
   let(:invoice) do
     create(
       :invoice,
@@ -52,7 +57,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       priority_limited_subscription_wallet
     ]
   end
-  let(:customer) { create(:customer) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:subscription) { create(:subscription, customer:) }
 
   before do

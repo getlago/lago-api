@@ -28,8 +28,12 @@ RSpec.describe ChargeModels::PercentageService do
 
   let(:rate) { "1.3" }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+
+  before_all do
+    create_default(:customer)
+  end
 
   let(:charge) do
     create(
@@ -251,7 +255,7 @@ RSpec.describe ChargeModels::PercentageService do
     let(:per_transaction_max_amount) { "12" }
     let(:per_transaction_min_amount) { "1.75" }
 
-    let(:subscription) { create(:subscription, organization:, plan:) }
+    let_it_be(:subscription) { create(:subscription, organization:, plan:) }
 
     let(:aggregator) do
       BillableMetrics::Aggregations::SumService.new(

@@ -9,9 +9,9 @@ RSpec.describe Commitments::CalculateAmountService do
     create(:invoice_subscription, subscription:, from_datetime:, to_datetime:, timestamp:)
   end
 
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, billing_time:, subscription_at:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:, interval:) }
   let(:billing_time) { :calendar }
 

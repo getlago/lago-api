@@ -11,9 +11,14 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, plan:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:subscription) { create(:subscription, organization:, plan:) }
 
   let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:billable_metric) { create(:sum_billable_metric, recurring: true) }

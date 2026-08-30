@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Charges::BulkForecastedUsageAmountService do
   subject(:service) { described_class.new(charges_data: charges_data) }
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
-  let(:plan) { create(:plan, organization: organization, amount_cents: 1000) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization: organization) }
+  let_it_be(:plan) { create(:plan, organization: organization, amount_cents: 1000) }
   let(:charge1) do
     create(
       :standard_charge,

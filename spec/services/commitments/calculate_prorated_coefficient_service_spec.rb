@@ -5,10 +5,13 @@ require "rails_helper"
 RSpec.describe Commitments::CalculateProratedCoefficientService do
   let(:service) { described_class.new(commitment:, invoice_subscription:) }
   let(:commitment) { create(:commitment, plan:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:organization) { create(:organization) }
-  let(:subscription) { create(:subscription, customer:, plan:, started_at:) }
-  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
+
+  let_it_be(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
+  let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
 
   let(:invoice_subscription) do
     create(
@@ -21,9 +24,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
       timestamp:
     )
   end
-
   let(:from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
-  let(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
   let(:to_datetime) { DateTime.parse("2024-01-31T23:59:59") }
   let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
   let(:charges_to_datetime) { DateTime.parse("2024-01-31T23:59:59") }
@@ -48,9 +49,11 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
 
     context "when subscription is terminated" do
       let(:from_datetime) { DateTime.current.beginning_of_day }
-      let(:started_at) { DateTime.current }
       let(:to_datetime) { nil }
       let(:days_in_month) { Date.current.end_of_month.day }
+
+      let_it_be(:started_at) { DateTime.current }
+      let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
 
       before do
         Subscriptions::TerminateService.call(subscription:, async: false)
@@ -65,7 +68,8 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
     end
 
     context "when subscription is downgraded right after the period ended" do
-      let(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
+      let_it_be(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
+      let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
       let(:from_datetime) { DateTime.parse("2024-07-01T00:00:00") }
       let(:to_datetime) { DateTime.parse("2024-07-31T23:59:59") }
       let(:charges_from_datetime) { from_datetime }

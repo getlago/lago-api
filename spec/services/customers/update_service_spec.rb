@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpdateService do
   subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
-  let(:billing_entity) { create(:billing_entity) }
-  let(:organization) { billing_entity.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity) { create_default(:billing_entity) }
   let(:payment_provider_code) { "stripe_1" }
 
   describe "call" do

@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Credits::AppliedCouponsService do
   subject(:credit_service) { described_class.new(invoice:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:invoice) do
     create(
       :invoice,

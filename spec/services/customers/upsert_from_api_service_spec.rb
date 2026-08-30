@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Customers::UpsertFromApiService do
   subject(:result) { described_class.call(organization:, params: create_args) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
-  let(:membership) { create(:membership, organization:) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
   let(:external_id) { SecureRandom.uuid }
 
   let(:create_args) do

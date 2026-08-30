@@ -6,9 +6,9 @@ RSpec.describe Customers::RefreshWalletsService do
 
     let(:include_generating_invoices) { false }
     let(:customer) { create(:customer, awaiting_wallet_refresh: true) }
-    let(:organization) { customer.organization }
-    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
-    let(:pay_in_advance_billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:billable_metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
+    let_it_be(:pay_in_advance_billable_metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
 
     let(:subscriptions) do
       [
