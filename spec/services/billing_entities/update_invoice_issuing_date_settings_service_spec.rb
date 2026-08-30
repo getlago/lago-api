@@ -7,8 +7,8 @@ RSpec.describe BillingEntities::UpdateInvoiceIssuingDateSettingsService do
 
   subject(:update_service) { described_class.new(billing_entity:, params:) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { create(:billing_entity, invoice_grace_period: 9) }
-  let(:organization) { billing_entity.organization }
   let(:customer) { create(:customer, organization:, net_payment_term: 5) }
   let(:params) do
     {
@@ -19,7 +19,7 @@ RSpec.describe BillingEntities::UpdateInvoiceIssuingDateSettingsService do
   end
 
   describe "#call" do
-    let!(:invoice_draft) do
+    let(:invoice_draft) do
       create(
         :invoice,
         customer:,

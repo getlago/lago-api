@@ -21,8 +21,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
   let(:bypass_aggregation) { false }
   let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:subscription) { create(:subscription) }
-  let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
   let(:presentation_by) { nil }
