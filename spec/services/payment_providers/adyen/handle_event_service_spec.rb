@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Adyen::HandleEventService do
   subject(:event_service) { described_class.new(organization:, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   describe "#call" do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }

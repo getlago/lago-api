@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::CreateService do
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   describe "create" do
     let(:create_args) do

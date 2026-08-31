@@ -6,8 +6,9 @@ RSpec.describe Integrations::Anrok::UpdateService do
   include_context "with mocked security logger"
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(integration:, params: update_args) }

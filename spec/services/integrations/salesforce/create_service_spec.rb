@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Integrations::Salesforce::CreateService do
   include_context "with mocked security logger"
 
+  let(:organization) { create_default(:organization) }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
 
   describe "#call" do
     subject(:service_call) { described_class.call(params: create_args) }

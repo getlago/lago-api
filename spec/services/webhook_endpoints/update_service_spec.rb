@@ -7,7 +7,7 @@ RSpec.describe WebhookEndpoints::UpdateService do
 
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let!(:webhook_endpoint) { create(:webhook_endpoint, organization:, name: "Original Webhook", event_types: ["customer.created"]) }
   let(:update_params) do
     {

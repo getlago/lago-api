@@ -6,8 +6,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
   let(:customer) { create(:customer, payment_provider_code: code, country:) }
-  let(:country) { "CA" }
-  let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
   let(:code) { "stripe_1" }
@@ -26,7 +24,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       lago_billing_entity_id: payment.payable.billing_entity.id
     }
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -37,9 +34,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       ready_for_payment_processing: true
     )
   end
-
   let(:payment_method) { create(:payment_method, customer:, provider_method_id: "pm_123456") }
-
   let(:payment) do
     create(
       :payment,
@@ -53,6 +48,9 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       provider_payment_id: nil
     )
   end
+  let(:country) { "CA" }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   describe ".call" do
     let(:provider_customer_service_result) do

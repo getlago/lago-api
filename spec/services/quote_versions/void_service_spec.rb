@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe QuoteVersions::VoidService do
   subject(:void_service) { described_class.new(quote_version:, reason:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+
+  before_all do
+    create_default(:customer)
+  end
+
   let(:quote_version) { create(:quote_version, organization:) }
   let(:reason) { "manual" }
 

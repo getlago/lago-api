@@ -5,9 +5,13 @@ require "rails_helper"
 RSpec.describe Products::UpdateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:product) { create(:product, organization:, name: "Before", code: "before") }
+  let_it_be(:organization) { create(:organization) }
 
+  before_all do
+    create_default(:billable_metric)
+  end
+
+  let(:product) { create(:product, organization:, name: "Before", code: "before") }
   let(:params) { {name: "After", description: "new", invoice_display_name: "Display"} }
 
   it "updates the mutable attributes" do

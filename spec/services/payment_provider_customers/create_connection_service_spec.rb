@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::CreateConnectionService do
   subject(:create_service) { described_class.new(customer:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
   let(:params) { {payment_provider: "stripe", provider_customer_id: "cus_123"} }

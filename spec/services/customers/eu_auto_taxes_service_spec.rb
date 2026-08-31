@@ -5,17 +5,18 @@ require "rails_helper"
 RSpec.describe Customers::EuAutoTaxesService do
   subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }
 
-  let(:organization) { create(:organization, country: "IT", eu_tax_management: true) }
-  let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
-  let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
+  let_it_be(:organization) { create(:organization, country: "IT", eu_tax_management: true) }
+  let_it_be(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+  let_it_be(:tax_identification_number) { nil }
+  let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
   let(:new_record) { true }
   let(:tax_attributes_changed) { true }
-  let(:tax_identification_number) { nil }
 
   describe ".call" do
     context "when eu_tax_management is false" do
       let(:organization) { create(:organization, country: "IT", eu_tax_management: false) }
       let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: false) }
+      let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
       it "returns error" do
         result = eu_tax_service.call
@@ -60,7 +61,8 @@ RSpec.describe Customers::EuAutoTaxesService do
     end
 
     context "when tax_identification_number is blank" do
-      let(:tax_identification_number) { nil }
+      let_it_be(:tax_identification_number) { nil }
+      let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
       before { customer.update!(country: "DE") }
 
@@ -78,7 +80,8 @@ RSpec.describe Customers::EuAutoTaxesService do
     end
 
     context "when tax_identification_number is present" do
-      let(:tax_identification_number) { "IT12345678901" }
+      let_it_be(:tax_identification_number) { "IT12345678901" }
+      let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
       it "creates a PendingViesCheck" do
         expect { eu_tax_service.call }.to change(PendingViesCheck, :count).by(1)
@@ -118,7 +121,8 @@ RSpec.describe Customers::EuAutoTaxesService do
     end
 
     context "with non B2B (no TIN)" do
-      let(:tax_identification_number) { nil }
+      let_it_be(:tax_identification_number) { nil }
+      let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
       context "when the customer has no country" do
         before { customer.update(country: nil) }
@@ -162,7 +166,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when B2B customer (non-France territories apply exception regardless)" do
-        let(:tax_identification_number) { "IT12345678901" }
+        let_it_be(:tax_identification_number) { "IT12345678901" }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         it_behaves_like "a special territory tax assignment",
           country: "ES", zipcode: "35001", expected_tax_code: "lago_eu_es_exception_canary_islands"
@@ -197,7 +202,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when B2C customer (non-France territories apply exception regardless)" do
-        let(:tax_identification_number) { nil }
+        let_it_be(:tax_identification_number) { nil }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         it_behaves_like "a special territory tax assignment",
           country: "ES", zipcode: "35001", expected_tax_code: "lago_eu_es_exception_canary_islands"
@@ -214,7 +220,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when B2B customer in France DOM-TOM (exception rate applies)" do
-        let(:tax_identification_number) { "IT12345678901" }
+        let_it_be(:tax_identification_number) { "IT12345678901" }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         it_behaves_like "a special territory tax assignment",
           country: "FR", zipcode: "97200", expected_tax_code: "lago_eu_fr_exception_martinique"
@@ -229,7 +236,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when B2C customer in France DOM-TOM (standard rate applies)" do
-        let(:tax_identification_number) { nil }
+        let_it_be(:tax_identification_number) { nil }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         it_behaves_like "a special territory tax assignment",
           country: "FR", zipcode: "97200", expected_tax_code: "lago_eu_fr_standard"
@@ -244,7 +252,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when territory is detected" do
-        let(:tax_identification_number) { "IT12345678901" }
+        let_it_be(:tax_identification_number) { "IT12345678901" }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         before { customer.update(country: "ES", zipcode: "35001") }
 
@@ -268,7 +277,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when zipcode contains spaces" do
-        let(:tax_identification_number) { nil }
+        let_it_be(:tax_identification_number) { nil }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         it "normalizes the zipcode before matching" do
           customer.update(country: "ES", zipcode: " 35 001 ")
@@ -279,10 +289,12 @@ RSpec.describe Customers::EuAutoTaxesService do
 
       context "when customer relocates from mainland to special territory" do
         let(:new_record) { false }
-        let(:tax_attributes_changed) { true }
-        let(:tax_identification_number) { nil }
         let(:applied_tax) { create(:customer_applied_tax, tax:, customer:) }
         let(:tax) { create(:tax, organization:, code: "lago_eu_es_standard") }
+        let(:tax_attributes_changed) { true }
+
+        let_it_be(:tax_identification_number) { nil }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         before do
           applied_tax
@@ -296,7 +308,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when customer has an invalid VAT number in a special territory" do
-        let(:tax_identification_number) { "INVALID123" }
+        let_it_be(:tax_identification_number) { "INVALID123" }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         before { customer.update(country: "FR", zipcode: "97100") }
 
@@ -310,7 +323,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
 
       context "when territory is not detected" do
-        let(:tax_identification_number) { nil }
+        let_it_be(:tax_identification_number) { nil }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
         it "falls through when zipcode does not match any exception" do
           customer.update(country: "ES", zipcode: "28001")

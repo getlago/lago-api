@@ -3,9 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Invoices::GenerateDocumentsJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject { described_class.perform_now(invoice:, notify:) }
 
-  let(:invoice) { create(:invoice) }
+  let_it_be(:invoice) { create(:invoice) }
   let(:result) { Invoices::GeneratePdfService::Result.new }
   let(:notify) { false }
 

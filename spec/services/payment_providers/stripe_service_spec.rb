@@ -7,8 +7,8 @@ RSpec.describe PaymentProviders::StripeService do
 
   include_context "with mocked security logger"
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   let(:code) { "code_1" }
   let(:name) { "Name 1" }

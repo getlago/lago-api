@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe ChargeFilters::CascadeJob do
+  before_all do
+    create_default(:organization)
+    create_default(:billable_metric)
+    create_default(:plan)
+  end
+
   let(:charge) { create(:standard_charge) }
   let(:filter_values) { {"region" => ["us"]} }
   let(:old_properties) { {"amount" => "10"} }

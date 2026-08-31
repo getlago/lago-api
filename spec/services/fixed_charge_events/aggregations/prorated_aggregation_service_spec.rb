@@ -5,6 +5,12 @@ require "rails_helper"
 RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
   subject { described_class.new(fixed_charge:, subscription:, boundaries:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:add_on)
+    create_default(:plan)
+  end
+
   let(:fixed_charge) { create(:fixed_charge) }
   let(:subscription) { create(:subscription) }
   let(:fixed_charges_from_datetime) { 9.days.ago } # total duration is 10 days

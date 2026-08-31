@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::PerformSyncJob do
+  before_all do
+    create_default(:organization)
+  end
+
   subject(:perform_sync_job) { described_class.perform_now(integration:, sync_items:) }
 
   let(:integration) { create(:netsuite_integration) }

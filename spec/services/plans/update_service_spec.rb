@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Plans::UpdateService do
   subject(:plans_service) { described_class.new(plan:, params: update_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let(:membership) { create_default(:membership) }
+  let(:plan) { create_default(:plan, organization:) }
   let(:plan_name) { "Updated plan name" }
   let(:plan_invoice_display_name) { "Updated plan invoice display name" }
   let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
@@ -724,6 +724,7 @@ RSpec.describe Plans::UpdateService do
     end
 
     context "with metrics from other organization" do
+      let(:organization) { create(:organization) }
       let(:billable_metric) { create(:billable_metric) }
 
       it "returns an error" do

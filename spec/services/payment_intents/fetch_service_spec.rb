@@ -4,6 +4,11 @@ RSpec.describe PaymentIntents::FetchService do
   describe ".call" do
     subject(:result) { described_class.call(invoice:) }
 
+    before_all do
+      create_default(:organization)
+      create_default(:customer)
+    end
+
     context "when invoice does not exist" do
       let(:invoice) { nil }
 

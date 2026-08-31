@@ -7,8 +7,8 @@ RSpec.describe QuoteVersions::CreateService do
     described_class.new(quote:, params: create_params)
   end
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:create_params) do
     {
@@ -133,6 +133,7 @@ RSpec.describe QuoteVersions::CreateService do
     end
 
     context "when feature flag is disabled", :premium do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization) }
 
       it "returns forbidden status" do

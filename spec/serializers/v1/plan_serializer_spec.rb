@@ -11,6 +11,8 @@ RSpec.describe ::V1::PlanSerializer do
     )
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let(:plan) { create(:plan) }
   let(:customer) { create(:customer, organization: plan.organization) }
   let(:subscription) { create(:subscription, customer:, plan:) }

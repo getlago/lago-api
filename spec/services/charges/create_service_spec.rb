@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Charges::CreateService do
   let(:create_service) { described_class.new(plan:, params:) }
 
-  let(:plan) { create(:plan) }
-  let(:organization) { plan.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan) }
 
   describe "#call" do
     subject(:result) { create_service.call }
@@ -189,6 +189,8 @@ RSpec.describe Charges::CreateService do
 
           context "with accepts_target_wallet" do
             context "when events_targeting_wallets is enabled" do
+              let(:plan) { create(:plan) }
+
               before do
                 organization.update!(premium_integrations: ["events_targeting_wallets"])
               end

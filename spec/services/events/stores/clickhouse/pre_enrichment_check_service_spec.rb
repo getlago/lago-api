@@ -7,15 +7,15 @@ RSpec.describe Events::Stores::Clickhouse::PreEnrichmentCheckService do
     described_class.new(organization:, reprocess:, batch_size: 1000, sleep_seconds: 0)
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:reprocess) { false }
-
-  let(:plan) { create(:plan, organization:) }
   let(:started_at) { Time.zone.parse("2024-12-01") }
   let(:subscription) do
     create(:subscription, organization:, customer:, plan:, started_at:)
   end
+
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   before { subscription }
 

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::CouponSerializer do
   subject(:serializer) { described_class.new(coupon, root_name: "coupon") }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
   let(:coupon_plan) { create(:coupon_plan) }
   let(:coupon) { coupon_plan.coupon }
 

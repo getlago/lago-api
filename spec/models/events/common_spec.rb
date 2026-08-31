@@ -15,14 +15,13 @@ RSpec.describe Events::Common do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization: organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+
   let(:timestamp) { Time.current - 1.second }
-
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at:) }
-
   let(:started_at) { Time.current - 3.days }
   let(:external_subscription_id) { subscription.external_id }
 

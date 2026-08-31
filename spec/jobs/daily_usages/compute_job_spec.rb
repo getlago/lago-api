@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe DailyUsages::ComputeJob do
+  before_all do
+    create_default(:organization)
+    create_default(:plan)
+  end
+
   subject(:compute_job) { described_class }
 
   let(:subscription) { create(:subscription) }
@@ -24,7 +29,7 @@ RSpec.describe DailyUsages::ComputeJob do
   end
 
   describe "#lock_key_arguments" do
-    let(:customer) { create(:customer, timezone: "Europe/Paris") }
+    let_it_be(:customer) { create(:customer, timezone: "Europe/Paris") }
     let(:subscription) { create(:subscription, customer:) }
 
     it "returns subscription id and date in customer timezone" do

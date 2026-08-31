@@ -5,10 +5,10 @@ require "rails_helper"
 describe CreditNotes::RecreditJob do
   subject(:perform_job) { described_class.perform_now(credit) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, organization:, customer:) }
-  let(:source_invoice) { create(:invoice, organization:, customer:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:invoice) { create(:invoice, organization:, customer:) }
+  let_it_be(:source_invoice) { create(:invoice, organization:, customer:) }
   let(:credit_note) do
     create(:credit_note, organization:, customer:, invoice: source_invoice, credit_status: :available)
   end

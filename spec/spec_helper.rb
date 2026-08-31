@@ -29,7 +29,7 @@ end
 require "sentry/test_helper"
 require "sentry/rspec"
 require "webmock/rspec"
-require "simplecov"
+#require "simplecov"
 require "money-rails/test_helpers"
 require "active_storage_validations/matchers"
 require "karafka/testing/rspec/helpers"
@@ -37,19 +37,19 @@ require "super_diff/rspec-rails"
 
 DatabaseCleaner.allow_remote_database_url = true
 
-SimpleCov.start do
-  enable_coverage :branch
+#SimpleCov.start do
+  #enable_coverage :branch
 
-  add_filter %r{^/config/}
-  add_filter %r{^/db/}
-  add_filter "/spec/"
+  #add_filter %r{^/config/}
+  #add_filter %r{^/db/}
+  #add_filter "/spec/"
 
-  add_group "Controllers", "app/controllers"
-  add_group "Models", "app/models"
-  add_group "Jobs", %w[app/jobs app/workers]
-  add_group "Services", "app/services"
-  add_group "GraphQL", "app/graphql"
-end
+  #add_group "Controllers", "app/controllers"
+  #add_group "Models", "app/models"
+  #add_group "Jobs", %w[app/jobs app/workers]
+  #add_group "Services", "app/services"
+  #add_group "GraphQL", "app/graphql"
+#end
 
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production? # rubocop:disable Rails/Exit
@@ -75,6 +75,10 @@ Sentry.init do |config|
   config.environment = :test
   config.transport.transport_class = Sentry::DummyTransport
 end
+
+require "test_prof/recipes/rspec/sample"
+require "test_prof/recipes/rspec/let_it_be"
+require "test_prof/recipes/rspec/factory_default"
 
 RSpec.configure do |config|
   config.include ActiveJob::TestHelper

@@ -6,16 +6,9 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   subject(:service_call) { described_class.call(credit_note: credit_note.reload) }
 
   let(:service) { described_class.new(credit_note: credit_note.reload) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/netsuite/creditnotes" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:) }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -74,7 +67,6 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       settings: {external_id: "m2", external_account_code: "m22", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -118,9 +110,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       precise_unit_amount: 4.12
     )
   end
-
   let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: charge_fee, amount_cents: 212) }
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -128,7 +118,6 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       "Provider-Config-Key" => "netsuite-tba"
     }
   end
-
   let(:params) do
     {
       "type" => "creditmemo",
@@ -212,8 +201,19 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       }
     }
   end
-
   let(:description) { credit_note.invoice.credits.coupon_kind.map(&:item_name).join(",") }
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

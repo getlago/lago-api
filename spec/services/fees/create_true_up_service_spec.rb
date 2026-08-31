@@ -4,12 +4,7 @@ require "rails_helper"
 
 RSpec.describe Fees::CreateTrueUpService do
   let(:create_service) { described_class.new(fee:, used_amount_cents:, used_precise_amount_cents:) }
-
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
-  let(:plan) { create(:plan, organization:) }
-
   let(:charge) { create(:standard_charge, plan:, min_amount_cents: 1000) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:fee) do
@@ -30,6 +25,10 @@ RSpec.describe Fees::CreateTrueUpService do
   end
   let(:used_amount_cents) { 700 }
   let(:used_precise_amount_cents) { 700.0 }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   before { tax }
 

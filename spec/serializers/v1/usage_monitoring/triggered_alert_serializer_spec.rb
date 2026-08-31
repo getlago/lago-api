@@ -6,7 +6,11 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
   subject(:serializer) { described_class.new(triggered_alert, root_name: "triggered_alert") }
 
   let(:triggered_alert) { create(:triggered_alert, alert:, subscription:, triggered_at: DateTime.new(2000, 1, 1, 12, 0, 0)) }
-  let(:subscription) { create(:subscription, external_id: "ext-id", customer: create(:customer, external_id: "cust-ext-id")) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:subscription) { create(:subscription, external_id: "ext-id", customer: create_default(:customer, external_id: "cust-ext-id")) }
 
   before { triggered_alert }
 

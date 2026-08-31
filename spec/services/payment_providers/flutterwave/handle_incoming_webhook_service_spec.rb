@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Flutterwave::HandleIncomingWebhookService do
   subject(:webhook_service) { described_class.new(organization_id:, body:, secret:, code:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:organization_id) { organization.id }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:, webhook_secret:) }
   let(:webhook_secret) { "webhook_secret_hash" }

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Plans::DestroyService do
   subject(:destroy_service) { described_class.new(plan:) }
 
+  let(:organization) { create_default(:organization) }
   let(:plan) { create(:plan, organization:, pending_deletion: true) }
-  let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
 
   before do

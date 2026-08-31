@@ -3,12 +3,17 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Companies::Payloads::Hubspot do
+  before_all do
+    create_default(:organization)
+  end
+
   let(:integration) { integration_customer.integration }
-  let(:integration_customer) { FactoryBot.create(:hubspot_customer, customer:) }
-  let(:customer) { create(:customer, customer_type: "company") }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:) }
   let(:customer_link) { payload.__send__(:customer_url) }
   let(:domain) { payload.__send__(:clean_url, customer.url) }
+  let(:integration_customer) { FactoryBot.create(:hubspot_customer, customer:) }
+
+  let_it_be(:customer) { create(:customer, customer_type: "company") }
 
   describe "#create_body" do
     subject(:create_body_call) { payload.create_body }

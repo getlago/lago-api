@@ -3,10 +3,15 @@
 require "rails_helper"
 
 describe Clock::RefreshLifetimeUsagesJob, job: true do
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   subject { described_class }
 
   describe ".perform" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let(:lifetime_usage1) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: true) }
     let(:lifetime_usage2) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: false) }
 

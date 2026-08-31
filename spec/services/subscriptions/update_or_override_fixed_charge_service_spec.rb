@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
   subject(:service) { described_class.new(subscription:, fixed_charge:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:) }
   let(:params) do
@@ -176,7 +176,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
       end
 
       context "when subscription already has a plan override" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
 
         it "does not create a new plan" do
@@ -192,7 +192,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
       end
 
       context "when fixed charge override already exists" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let!(:existing_override) { create(:fixed_charge, plan: overridden_plan, organization:, add_on:, parent: fixed_charge, code: fixed_charge.code) }
 
@@ -244,7 +244,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
       end
 
       context "when the fixed charge passed is itself an override" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let(:parent_fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:) }
         let!(:fixed_charge) { create(:fixed_charge, plan: overridden_plan, organization:, add_on:, parent: parent_fixed_charge, code: parent_fixed_charge.code) }

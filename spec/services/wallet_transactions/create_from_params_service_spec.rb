@@ -3,8 +3,7 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateFromParamsService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency:) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:currency) { "EUR" }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) do
@@ -22,6 +21,11 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
   end
   let(:wallet_invoice_requires_successful_payment) { false }
   let(:rate_amount) { 1 }
+  let(:customer) { create_default(:customer, organization:, currency:) }
+
+  before_all do
+    create_default(:plan)
+  end
 
   before do
     subscription
@@ -472,7 +476,9 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
 
     context "with decimal value and currency without digits" do
       let(:paid_credits) { "4.39999" }
-      let(:currency) { "JPY" }
+
+      let_it_be(:currency) { "JPY" }
+      let_it_be(:customer) { create_default(:customer, organization:, currency:) }
 
       it "creates wallet transaction with rounded value" do
         expect(result.wallet_transactions.first.credit_amount).to eq(4)

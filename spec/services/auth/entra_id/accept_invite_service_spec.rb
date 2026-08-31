@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::EntraId::AcceptInviteService, :premium, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code:, state:) }
 
-  let(:organization) { create(:organization, premium_integrations: ["entra_id"]) }
+  let_it_be(:organization) { create(:organization, premium_integrations: ["entra_id"]) }
   let(:entra_id_integration) { create(:entra_id_integration, domain: "bar.com", organization:) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:invite_token) { invite.token }

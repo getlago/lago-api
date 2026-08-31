@@ -7,16 +7,22 @@ RSpec.describe InvoiceCustomSections::AttachToResourceService do
     subject { service.call }
 
     let(:resource) { create(:subscription) }
+    let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+    let(:section_2) { create(:invoice_custom_section, organization:, code: "section_code_2") }
+    let(:section_3) { create(:invoice_custom_section, organization:, code: "section_code_3") }
+    let(:section_4) { create(:invoice_custom_section, organization:, code: "section_code_4") }
     let(:params) do
       {invoice_custom_section: {}}
     end
 
     let(:service) { described_class.new(resource:, params:) }
-    let(:organization) { resource.organization }
-    let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
-    let(:section_2) { create(:invoice_custom_section, organization:, code: "section_code_2") }
-    let(:section_3) { create(:invoice_custom_section, organization:, code: "section_code_3") }
-    let(:section_4) { create(:invoice_custom_section, organization:, code: "section_code_4") }
+
+    let_it_be(:organization) { create_default(:organization) }
+
+    before_all do
+      create_default(:customer)
+      create_default(:plan)
+    end
 
     before do
       CurrentContext.source = "api"

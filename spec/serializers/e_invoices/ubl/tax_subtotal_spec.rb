@@ -10,13 +10,15 @@ RSpec.describe EInvoices::Ubl::TaxSubtotal do
   end
 
   let(:resource) { invoice }
+  let(:root) { "//cac:TaxSubtotal" }
   let(:tax_category) { described_class::S_CATEGORY }
   let(:tax_rate) { 20.00 }
   let(:basis_amount) { 10 }
   let(:tax_amount) { basis_amount * (tax_rate / 100) }
-  let(:invoice) { create(:invoice) }
 
-  let(:root) { "//cac:TaxSubtotal" }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice) }
 
   describe ".serialize" do
     it { is_expected.not_to be_nil }

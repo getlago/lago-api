@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Avalara do
+  before_all do
+    create_default(:organization)
+  end
+
   let(:integration) { create(:avalara_integration, company_id: "12345") }
   let(:integration_customer) { create(:avalara_customer, customer:, integration:, external_customer_id: "abc-12345") }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:) }

@@ -12,7 +12,7 @@ RSpec.describe DunningCampaigns::BulkProcessService do
   let(:currency) { "EUR" }
 
   context "when premium features are enabled", :premium do
-    let(:organization) { create :organization, premium_integrations: %w[auto_dunning] }
+    let_it_be(:organization) { create_default(:organization, premium_integrations: %w[auto_dunning]) }
     let(:billing_entity) { organization.default_billing_entity }
     let(:customer) { create :customer, organization:, billing_entity:, currency: }
 

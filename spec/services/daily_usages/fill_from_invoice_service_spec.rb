@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe DailyUsages::FillFromInvoiceService do
   subject(:fill_service) { described_class.new(invoice:, subscriptions:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:, timezone: "America/New_York") }
   let(:subscription) { create(:subscription, customer:) }
   let(:subscriptions) { [subscription] }
 

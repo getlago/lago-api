@@ -3,6 +3,12 @@
 require "rails_helper"
 
 describe Clock::TerminateEndedSubscriptionsJob, job: true do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   subject { described_class }
 
   let(:ending_at) { (Time.current + 2.months).beginning_of_day }

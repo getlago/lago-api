@@ -5,14 +5,18 @@ require "rails_helper"
 RSpec.describe Event do
   subject { build(:event) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan) }
+
   it { is_expected.to have_many(:enriched_events) }
 
   it { is_expected.to validate_presence_of(:transaction_id) }
   it { is_expected.to validate_presence_of(:code) }
 
   describe "#customer" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
     let(:external_customer_id) { customer.external_id }
     let(:external_subscription_id) { subscription.external_id }
@@ -56,9 +60,9 @@ RSpec.describe Event do
   end
 
   describe "#subscription" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:plan) { create(:plan, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
+    let_it_be(:plan) { create_default(:plan, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at:) }
 
     let(:started_at) { Time.current - 3.days }

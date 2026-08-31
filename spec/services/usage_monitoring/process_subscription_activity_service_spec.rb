@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
   subject(:service) { described_class.new(subscription_activity:) }
 
-  let(:organization) { create(:organization, premium_integrations:) }
+  let(:organization) { create_default(:organization, premium_integrations:) }
   let(:mocked_current_usage) { double("current_usage") } # rubocop:disable RSpec/VerifiedDoubles
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:subscription) { create_default(:subscription, customer:) }
   let(:subscription_activity) { create(:subscription_activity, subscription:, organization:) }
 
   before do

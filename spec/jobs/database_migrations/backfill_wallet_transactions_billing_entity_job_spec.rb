@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillWalletTransactionsBillingEntityJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, organization:) }
 
   context "when a wallet transaction has no billing entity" do

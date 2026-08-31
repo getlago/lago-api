@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
   subject(:service) { described_class.new(subscription:, charge:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
   let(:params) do
@@ -75,7 +75,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
       end
 
       context "when subscription already has a plan override" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
 
         it "does not create a new plan" do
@@ -91,7 +91,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
       end
 
       context "when charge override already exists" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let!(:existing_override) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
 
@@ -109,7 +109,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
       end
 
       context "when the charge passed is itself an override" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let(:parent_charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
         let!(:charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: parent_charge, code: parent_charge.code) }
@@ -127,7 +127,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
       end
 
       context "when the charge passed lives directly on the overridden plan with parent_id: nil" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let!(:charge) do
           create(:standard_charge, plan: overridden_plan, organization:, billable_metric:)

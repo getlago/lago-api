@@ -3,14 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Events::ReEnrichAllService do
-  let(:re_enrich_service) { described_class.new(subscription:) }
+  before_all do
+    create_default(:customer)
+  end
 
-  let(:organization) { create(:organization) }
+  let(:re_enrich_service) { described_class.new(subscription:) }
   let(:subscription) { create(:subscription, organization:) }
-  let(:plan) { subscription.plan }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
-
   let(:event) do
     create(
       :event,
@@ -23,6 +23,9 @@ RSpec.describe Events::ReEnrichAllService do
       timestamp: Time.current
     )
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
 
   before do
     event

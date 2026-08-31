@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::ChargeFilters::CreateService do
   subject(:service) { described_class.new(subscription:, charge:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::ViesCheckService do
   subject(:vies_check_service) { described_class.new(customer:) }
 
-  let(:organization) { create(:organization, country: "IT", eu_tax_management: true) }
-  let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+  let_it_be(:organization) { create_default(:organization, country: "IT", eu_tax_management: true) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
   let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil, country: "DE") }
   let(:tax_identification_number) { "IT12345678901" }
 

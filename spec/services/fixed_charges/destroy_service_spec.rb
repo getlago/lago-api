@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe FixedCharges::DestroyService do
   subject(:destroy_service) { described_class.new(fixed_charge:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
 
   describe "#call" do
@@ -84,7 +84,7 @@ RSpec.describe FixedCharges::DestroyService do
     context "with cascade_updates" do
       subject(:destroy_service) { described_class.new(fixed_charge:, cascade_updates: true) }
 
-      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let_it_be(:child_plan) { create(:plan, organization:, parent: plan) }
       let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, add_on:, parent: fixed_charge) }
 
       before do

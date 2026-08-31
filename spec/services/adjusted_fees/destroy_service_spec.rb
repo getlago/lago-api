@@ -5,11 +5,15 @@ require "rails_helper"
 RSpec.describe AdjustedFees::DestroyService do
   subject(:destroy_service) { described_class.new(fee:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:invoice) { create(:invoice, status: :draft, organization:) }
-  let(:fee) { create(:charge_fee, invoice:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:invoice) { create(:invoice, status: :draft, organization:) }
+  let_it_be(:fee) { create(:charge_fee, invoice:) }
   let(:adjusted_fee) { create(:adjusted_fee, invoice:, fee:) }
+
+  before_all do
+    create_default(:customer)
+  end
 
   describe "#call" do
     before do

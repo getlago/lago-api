@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe ProductFilters::DestroyService do
   subject(:result) { described_class.call(product_filter:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
+
   let(:product_filter) { create(:product_filter, :with_values, organization:) }
 
   it "soft deletes the filter and its values" do

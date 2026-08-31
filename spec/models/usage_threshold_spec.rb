@@ -23,8 +23,9 @@ RSpec.describe UsageThreshold do
     it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0) }
 
     describe "exactly_one_parent_present validation" do
-      let(:organization) { create(:organization) }
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:organization) { create_default(:organization) }
+      let_it_be(:plan) { create_default(:plan, organization:) }
+      let_it_be(:customer) { create_default(:customer) }
       let(:subscription) { create(:subscription, organization:) }
 
       it "is valid when only plan_id is present" do
@@ -52,7 +53,7 @@ RSpec.describe UsageThreshold do
   end
 
   describe "#currency" do
-    let(:organization) { create(:organization, default_currency: "USD") }
+    let_it_be(:organization) { create_default(:organization, default_currency: "USD") }
 
     context "when threshold belongs to a plan" do
       let(:plan) { create(:plan, organization:, amount_currency: "GBP") }

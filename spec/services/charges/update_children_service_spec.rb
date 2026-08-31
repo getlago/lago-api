@@ -13,25 +13,12 @@ RSpec.describe Charges::UpdateChildrenService do
     )
   end
 
-  let(:billable_metric) { create(:billable_metric) }
-  let(:organization) { billable_metric.organization }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:parent_id) { plan.id }
+  let_it_be(:child_plan) { create(:plan, organization:, parent_id:) }
   let(:old_parent_attrs) { charge&.attributes }
-  let(:old_parent_applied_pricing_unit_attrs) { charge&.applied_pricing_unit&.attributes }
-  let(:charge) do
-    create(
-      :standard_charge,
-      plan:,
-      billable_metric:,
-      amount_currency: "USD",
-      properties: {
-        amount: "300"
-      }
-    )
-  end
-
-  let(:child_plan) { create(:plan, organization:, parent_id:) }
-  let(:parent_id) { plan.id }
   let(:charge_parent_id) { charge.id }
   let(:child_ids) { [child_charge&.id] }
   let(:child_charge) do
@@ -59,6 +46,18 @@ RSpec.describe Charges::UpdateChildrenService do
       # via per-filter ChargeFilters::CascadeJob (see
       # Charges::CascadeUpdatable / Plans::UpdateService).
     }
+  end
+  let(:old_parent_applied_pricing_unit_attrs) { charge&.applied_pricing_unit&.attributes }
+  let(:charge) do
+    create(
+      :standard_charge,
+      plan:,
+      billable_metric:,
+      amount_currency: "USD",
+      properties: {
+        amount: "300"
+      }
+    )
   end
 
   before do

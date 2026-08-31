@@ -11,11 +11,13 @@ RSpec.describe EInvoices::Cii::TradeAllowanceCharge do
   end
 
   let(:indicator) { described_class::INVOICE_DISCOUNT }
-  let(:resource) { create(:invoice) }
   let(:tax_rate) { 19.00 }
   let(:amount) { Money.new(1000) }
-
   let(:root) { "//ram:SpecifiedTradeAllowanceCharge" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:resource) { create_default(:invoice) }
 
   describe ".serialize" do
     it { is_expected.not_to be_nil }

@@ -19,17 +19,10 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:bypass_aggregation) { false }
-  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
-
-  let(:subscription) { create(:subscription) }
-  let(:organization) { subscription.organization }
-  let(:customer) { subscription.customer }
-
   let(:grouped_by) { nil }
   let(:matching_filters) { nil }
   let(:ignored_filters) { nil }
   let(:event) { nil }
-
   let(:billable_metric) do
     create(:custom_billable_metric, organization:, custom_aggregator:)
   end
@@ -78,7 +71,6 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
       end
     RUBY
   end
-
   let(:charge) { create(:standard_charge, billable_metric:, properties: charge_properties) }
   let(:charge_properties) do
     {
@@ -92,10 +84,8 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
       }
     }
   end
-
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
-
   let(:event_list) do
     [
       create(
@@ -127,6 +117,16 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
       )
     ]
   end
+  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:subscription) { create(:subscription) }
 
   before do
     event_list

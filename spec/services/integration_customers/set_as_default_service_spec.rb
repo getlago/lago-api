@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe IntegrationCustomers::SetAsDefaultService do
   subject(:set_as_default_service) { described_class.new(integration_customer:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   # accounting category
   let(:netsuite_customer) { create(:netsuite_customer, customer:, organization:, category: "accounting", is_default: true) }

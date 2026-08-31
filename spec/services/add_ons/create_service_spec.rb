@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe AddOns::CreateService do
   subject(:create_service) { described_class.new(create_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:add_on_code) { "free-beer-for-us" }
-  let(:tax) { create(:tax, organization:) }
+
+  let_it_be(:tax) { create(:tax, organization:) }
 
   describe "create" do
     let(:create_args) do

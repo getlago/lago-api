@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Hubspot::SavePortalIdService do
+  before_all do
+    create_default(:organization)
+  end
+
   describe "#call" do
     let(:portal_id) { "123456" }
     let(:integration) { create(:hubspot_integration) }

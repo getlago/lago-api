@@ -6,6 +6,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
   subject(:service_call) { described_class.call(invoice_subscription:) }
 
   let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false) }
   let(:invoice_subscription) do
     create(
       :invoice_subscription,
@@ -21,8 +22,8 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
   let(:to_datetime) { DateTime.parse("2024-12-31T23:59:59") }
   let(:timestamp) { DateTime.parse("2025-01-01T10:00:00") }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false) }
-  let(:organization) { create(:organization) }
+
+  let_it_be(:organization) { create(:organization) }
 
   context "when plan has no minimum commitment" do
     it "does not create a commitment fee" do

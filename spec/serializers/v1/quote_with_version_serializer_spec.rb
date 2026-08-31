@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::QuoteWithVersionSerializer do
   subject(:serializer) { described_class.new(quote_version, root_name: "quote") }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) do
     create(:quote_version, :voided, organization:, quote:, currency: "EUR", content: "<p>Terms</p>")

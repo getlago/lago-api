@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe DunningCampaigns::UpdateService do
   subject(:update_service) { described_class.new(organization:, dunning_campaign:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:billing_entity_2) { create(:billing_entity, organization:) }
   let(:membership) { create(:membership, organization:) }

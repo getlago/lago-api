@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::TrackConsumptionService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, organization:, balance_cents: 10000, credits_balance: 100.0) }
 
   describe "#call" do

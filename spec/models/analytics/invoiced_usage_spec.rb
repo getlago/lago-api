@@ -78,38 +78,33 @@ RSpec.describe Analytics::InvoicedUsage do
   describe ".find_all_by" do
     subject(:invoiced_usages) { described_class.find_all_by(organization.id, **args) }
 
-    let(:organization) { create(:organization, created_at: 3.months.ago) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:plan) { create_default(:plan) }
+    let_it_be(:organization) { create_default(:organization, created_at: 3.months.ago) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:billing_entity1) { organization.default_billing_entity }
-    let(:billing_entity2) { create(:billing_entity, organization: organization) }
-
-    let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
     let(:charge) { create(:standard_charge, billable_metric:) }
-
     let(:fee1) do
       create(:charge_fee, charge:, subscription:, amount_cents: 100, amount_currency: "EUR", created_at: 2.months.ago)
     end
-
     let(:fee2) do
       create(:charge_fee, charge:, subscription:, amount_cents: 200, amount_currency: "EUR", created_at: 2.months.ago)
     end
-
     let(:fee3) do
       create(:charge_fee, charge:, subscription:, amount_cents: 300, amount_currency: "EUR", created_at: 1.month.ago)
     end
-
     let(:fee4) do
       create(:charge_fee, charge:, subscription:, amount_cents: 400, amount_currency: "EUR", created_at: 1.month.ago)
     end
-
     let(:invoice1) do
       create(:invoice, organization:, billing_entity: billing_entity1, issuing_date: 2.months.ago, status: :finalized, fees: [fee1, fee2])
     end
-
     let(:invoice2) do
       create(:invoice, organization:, billing_entity: billing_entity2, issuing_date: 1.month.ago, status: :finalized, fees: [fee3, fee4])
     end
+    let(:billing_entity1) { organization.default_billing_entity }
+
+    let_it_be(:billing_entity2) { create(:billing_entity, organization: organization) }
+    let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
 
     before do
       invoice1

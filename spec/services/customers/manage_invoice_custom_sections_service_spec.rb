@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::ManageInvoiceCustomSectionsService do
   subject(:result) { described_class.call(customer:, section_ids:, skip_invoice_custom_sections:, section_codes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
   let(:billing_entity) { customer.billing_entity }
   let(:invoice_custom_section_1) { create(:invoice_custom_section, organization:) }
   let(:invoice_custom_section_2) { create(:invoice_custom_section, organization:) }

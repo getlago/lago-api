@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe DunningCampaigns::ProcessAttemptService do
   subject(:result) { described_class.call(customer:, dunning_campaign_threshold:, billing_entity:) }
 
-  let(:customer) { create :customer, organization:, currency:, billing_entity: }
-  let(:organization) { create :organization }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
+  let(:customer) { create :customer, organization:, currency:, billing_entity: }
   let(:currency) { "EUR" }
   let(:dunning_campaign) { create :dunning_campaign, organization: }
   let(:dunning_campaign_threshold) do

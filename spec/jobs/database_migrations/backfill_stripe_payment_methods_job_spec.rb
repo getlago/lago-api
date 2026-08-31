@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodsJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:stripe_customer) do
     create(:stripe_customer, customer:, payment_provider: stripe_provider).tap do |sc|

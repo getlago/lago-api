@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Plans::UpdateUsageThresholdsService do
   subject { described_class.call(plan:, usage_thresholds_params:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   context "when usage_thresholds_params is empty" do
     let(:usage_thresholds_params) { [] }

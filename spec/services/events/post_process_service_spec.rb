@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe Events::PostProcessService do
   subject(:process_service) { described_class.new(event:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
   let(:started_at) { Time.current - 3.days }
@@ -210,6 +210,7 @@ RSpec.describe Events::PostProcessService do
         end
 
         context "when active wallet with target code does not exist" do
+          let(:organization) { create(:organization) }
           let(:wallet) { create(:wallet, customer:, code: target_wallet_code, status: :terminated) }
 
           before { wallet }

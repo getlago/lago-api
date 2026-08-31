@@ -366,8 +366,8 @@ RSpec.describe Events::BillingPeriodFilterService do
     end
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   let(:subscription) do
     create(

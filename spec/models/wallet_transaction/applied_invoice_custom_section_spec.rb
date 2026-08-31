@@ -7,6 +7,9 @@ RSpec.describe WalletTransaction::AppliedInvoiceCustomSection do
     create(:wallet_transaction_applied_invoice_custom_section)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:wallet_transaction) }
   it { is_expected.to belong_to(:invoice_custom_section) }
