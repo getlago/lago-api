@@ -682,12 +682,12 @@ RSpec.describe Api::V2::SubscriptionsController do
     end
   end
 
-  describe "GET /api/v2/subscriptions/:external_id/cycles" do
+  describe "GET /api/v2/subscriptions/:external_id/segments" do
     subject do
       travel_to(Time.zone.parse("2026-09-15")) do
         get_with_token(
           organization,
-          "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+          "/api/v2/subscriptions/#{subscription.external_id}/segments",
           {end_on: "2026-10-09"}
         )
       end
@@ -761,7 +761,7 @@ RSpec.describe Api::V2::SubscriptionsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:next_billing_at]).to eq(Time.zone.parse("2026-10-10").iso8601)
-      expect(json[:cycles]).to eq(
+      expect(json[:segments]).to eq(
         [
           {
             subscription_external_id: subscription.external_id,
@@ -813,7 +813,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-09-15")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/cycles",
+            "/api/v2/subscriptions/segments",
             {subscription_external_ids: [subscription.external_id], end_on: "2026-10-09"}
           )
         end
@@ -823,7 +823,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:subscription_external_id] })
+        expect(json[:segments].map { |segment| segment[:subscription_external_id] })
           .to eq([subscription.external_id] * 2)
       end
     end
@@ -833,7 +833,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-08-10")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/cycles",
+            "/api/v2/subscriptions/segments",
             {
               subscription_external_ids: [subscription.external_id],
               start_on: "2026-08-10",
@@ -850,7 +850,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles]).to eq([])
+        expect(json[:segments]).to eq([])
         expect(json).not_to have_key(:next_billing_at)
       end
     end
@@ -860,7 +860,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-08-11")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/cycles",
+            "/api/v2/subscriptions/segments",
             {
               subscription_external_ids: subscription.external_id,
               start_on: "2026-08-01",
@@ -898,15 +898,15 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].first[:subscription_started_at]).to be_nil
-        expect(json[:cycles].first[:period_from]).to eq(Time.zone.parse("2026-09-01").iso8601)
+        expect(json[:segments].first[:subscription_started_at]).to be_nil
+        expect(json[:segments].first[:period_from]).to eq(Time.zone.parse("2026-09-01").iso8601)
       end
     end
 
     context "without end_on" do
       subject do
         travel_to(Time.zone.parse("2026-09-15")) do
-          get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/cycles")
+          get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/segments")
         end
       end
 
@@ -914,8 +914,8 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([1, 2])
-        expect(json[:cycles].last[:period_to]).to eq(Time.zone.parse("2026-10-09 23:59:59").iso8601)
+        expect(json[:segments].map { |segment| segment[:cycle_index] }).to eq([1, 2])
+        expect(json[:segments].last[:period_to]).to eq(Time.zone.parse("2026-10-09 23:59:59").iso8601)
       end
     end
 
@@ -924,7 +924,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-08-11")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+            "/api/v2/subscriptions/#{subscription.external_id}/segments",
             {end_on: "2026-08-11"}
           )
         end
@@ -934,9 +934,9 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([1])
-        expect(json[:cycles].sole[:period_from]).to eq(Time.zone.parse("2026-08-10").iso8601)
-        expect(json[:cycles].sole[:period_to]).to eq(Time.zone.parse("2026-09-09 23:59:59").iso8601)
+        expect(json[:segments].map { |segment| segment[:cycle_index] }).to eq([1])
+        expect(json[:segments].sole[:period_from]).to eq(Time.zone.parse("2026-08-10").iso8601)
+        expect(json[:segments].sole[:period_to]).to eq(Time.zone.parse("2026-09-09 23:59:59").iso8601)
       end
     end
 
@@ -944,7 +944,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       subject do
         get_with_token(
           organization,
-          "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+          "/api/v2/subscriptions/#{subscription.external_id}/segments",
           {end_on: "2026-10-31"}
         )
       end
@@ -965,7 +965,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       it "continues the base interval from the weekly override end" do
         subject
 
-        period = json[:cycles].find { |cycle| cycle[:cycle_index] == 7 }
+        period = json[:segments].find { |segment| segment[:cycle_index] == 7 }
         expect(period[:period_from]).to eq(Time.zone.parse("2026-09-21").iso8601)
         expect(period[:period_to]).to eq(Time.zone.parse("2026-10-20").end_of_day.iso8601)
       end

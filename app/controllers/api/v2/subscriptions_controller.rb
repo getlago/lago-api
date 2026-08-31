@@ -60,7 +60,7 @@ module Api
       end
 
       # Terminates a subscription in the new engine: ends every product it holds
-      # and emits each one's final prorated cycle. Separate from the legacy v1
+      # and emits each one's final prorated segment. Separate from the legacy v1
       # subscription terminate (which bills charges / issues credit notes) — the two
       # engines run side by side.
       def terminate
@@ -124,13 +124,13 @@ module Api
 
       # Testing helper: returns the billing periods that would be generated for
       # active product-catalog subscriptions without creating billing segments or invoices.
-      def cycles
-        subscriptions = cycle_subscriptions
+      def segments
+        subscriptions = segment_subscriptions
         return not_found_error(resource: "subscription") unless subscriptions
 
-        preload_cycle_associations(subscriptions)
-        cycles, next_billing_at = cycles_payload_for(subscriptions)
-        payload = {cycles:}
+        preload_segment_associations(subscriptions)
+        segments, next_billing_at = segments_payload_for(subscriptions)
+        payload = {segments:}
         payload[:next_billing_at] = next_billing_at.iso8601 if next_billing_at
 
         render json: payload
@@ -167,7 +167,7 @@ module Api
         subscriptions
       end
 
-      def cycle_subscriptions
+      def segment_subscriptions
         return if subscription_external_ids.empty?
 
         subscriptions = current_organization.subscriptions
@@ -178,23 +178,23 @@ module Api
         subscriptions
       end
 
-      def cycles_payload_for(subscriptions)
-        cycles = []
+      def segments_payload_for(subscriptions)
+        segments = []
         next_billing_ats = []
 
         subscriptions.each do |subscription|
-          subscription_cycles, subscription_next_billing_ats = cycles_for(subscription)
-          cycles.concat(subscription_cycles)
+          subscription_segments, subscription_next_billing_ats = segments_for(subscription)
+          segments.concat(subscription_segments)
           next_billing_ats.concat(subscription_next_billing_ats)
         end
 
-        next_billing_at = cycles.empty? ? nil : next_billing_ats.compact.max
+        next_billing_at = segments.empty? ? nil : next_billing_ats.compact.max
 
-        [cycles, next_billing_at]
+        [segments, next_billing_at]
       end
 
-      def cycles_for(subscription)
-        cycles = []
+      def segments_for(subscription)
+        segments = []
         next_billing_ats = []
         plan_rate_cards = subscription.plan.applied_rate_cards.to_a
 
@@ -206,22 +206,22 @@ module Api
             subscription_rate_card,
             rates:,
             rate_phases: rate_phases_for(subscription_rate_card, plan_rate_cards:),
-            range: cycles_start_at(subscription_rate_card)..cycles_end_at,
-            options: cycles_date_options(subscription)
+            range: window_start_at(subscription_rate_card)..window_end_at,
+            options: segments_date_options(subscription)
           )
 
           next_billing_ats << dates.next_billing_at
-          cycles.concat(dates.periods.map { |period| serialize_period(subscription_rate_card, period) })
+          segments.concat(dates.periods.map { |period| serialize_segment(subscription_rate_card, period) })
         end
 
-        [cycles, next_billing_ats]
+        [segments, next_billing_ats]
       end
 
       def rates_for(subscription_rate_card)
         subscription_rate_card.rate_card.rates.order(:effective_from)
       end
 
-      def preload_cycle_associations(subscriptions)
+      def preload_segment_associations(subscriptions)
         ActiveRecord::Associations::Preloader.new(
           records: subscriptions,
           associations: [
@@ -239,15 +239,15 @@ module Api
         ).rate_phases
       end
 
-      def cycles_end_at
-        @cycles_end_at ||= if params[:end_on].present?
+      def window_end_at
+        @window_end_at ||= if params[:end_on].present?
           params[:end_on].to_date.end_of_day
         else
           Time.current
         end
       end
 
-      def cycles_start_at(subscription_rate_card)
+      def window_start_at(subscription_rate_card)
         if params[:start_on].present?
           params[:start_on].to_date.beginning_of_day
         else
@@ -255,7 +255,7 @@ module Api
         end
       end
 
-      def cycles_date_options(subscription)
+      def segments_date_options(subscription)
         BillingPeriods::DatesService::Options.new(
           timezone: subscription.customer.applicable_timezone,
           exclude_out_of_range: false,
@@ -264,7 +264,7 @@ module Api
         )
       end
 
-      def serialize_period(subscription_rate_card, period)
+      def serialize_segment(subscription_rate_card, period)
         {
           subscription_external_id: subscription_rate_card.subscription.external_id,
           subscription_started_at: subscription_rate_card.subscription.started_at&.iso8601,
