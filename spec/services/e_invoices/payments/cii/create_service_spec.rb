@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe EInvoices::Payments::Cii::CreateService, :premium do
-  let(:organization) { create(:organization, premium_integrations: %w[issue_receipts]) }
+  let_it_be(:organization) { create(:organization, premium_integrations: %w[issue_receipts]) }
   let(:payment) { create(:payment, organization:) }
   let(:xml_builder_double) { instance_double(Nokogiri::XML::Builder, to_xml: xml_content) }
   let(:xml_content) { "<xml>content</xml>" }

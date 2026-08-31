@@ -7,9 +7,14 @@ RSpec.describe Events::EnrichService do
     described_class.new(event:, subscription:, billable_metric:, charges_and_filters:, persist:)
   end
 
-  let(:organization) { create(:organization) }
-  let(:subscription) { create(:subscription, organization:) }
-  let(:plan) { subscription.plan }
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:subscription) { create(:subscription, organization:) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:charges_and_filters) { {charge => charge_filter} }
@@ -319,7 +324,7 @@ RSpec.describe Events::EnrichService do
     end
 
     context "when the charge has the accepts_target_wallet flag set to true", :premium do
-      let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+      let_it_be(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
       let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true) }
 
       let(:event) do
