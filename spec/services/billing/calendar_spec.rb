@@ -184,7 +184,7 @@ RSpec.describe Billing::Calendar do
     # A DST transition makes one day 23 or 25 hours long. Without the timezone-aware
     # day count these periods would come out as 30.96 and 30.04 days, and a full
     # period would silently prorate.
-    context "across a daylight saving transition" do
+    context "when a daylight saving transition falls inside the period" do
       let(:new_york) { Time.find_zone!("America/New_York") }
 
       it "is 1.0 over a spring forward" do
@@ -208,7 +208,7 @@ RSpec.describe Billing::Calendar do
     def walk(subject, from, count)
       cursor = from
 
-      count.times.map do
+      Array.new(count) do
         period = subject.period_at(cursor)
         cursor = period.end
         period
