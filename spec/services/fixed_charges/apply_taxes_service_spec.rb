@@ -5,8 +5,12 @@ require "rails_helper"
 RSpec.describe FixedCharges::ApplyTaxesService do
   subject(:apply_service) { described_class.new(fixed_charge:, tax_codes:) }
 
-  let(:plan) { create(:plan) }
-  let(:add_on) { create(:add_on, organization: plan.organization) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:plan) { create(:plan) }
+  let_it_be(:add_on) { create(:add_on, organization: plan.organization) }
   let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
   let(:tax1) { create(:tax, organization: plan.organization, code: "tax1") }
   let(:tax2) { create(:tax, organization: plan.organization, code: "tax2") }

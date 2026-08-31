@@ -6,11 +6,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
   subject(:service_call) { described_class.call(integration:, integration_customer:) }
 
   let(:service) { described_class.new(integration:, integration_customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/#{integration_type}/contacts" }
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -18,12 +15,14 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
       "Provider-Config-Key" => integration_type_key
     }
   end
-
   let(:customer_link) do
     url = Rails.application.config.lago_front_url
 
     URI.join(url, "/#{customer.organization.slug}/customer/", customer.id).to_s
   end
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

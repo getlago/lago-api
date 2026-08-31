@@ -4,9 +4,10 @@ require "rails_helper"
 
 RSpec.describe IntegrationCustomers::AvalaraService do
   let(:integration) { create(:avalara_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#create" do
     subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil).create }

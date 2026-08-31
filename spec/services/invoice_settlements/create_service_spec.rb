@@ -13,8 +13,8 @@ RSpec.describe InvoiceSettlements::CreateService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:invoice) do
     create(
       :invoice,

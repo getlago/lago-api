@@ -6,7 +6,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService d
   subject(:service_call) { described_class.call(integration:) }
 
   let(:integration) { create(:avalara_integration, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/avalara/companies" }
   let(:headers) do
@@ -23,6 +22,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService d
       }
     ]
   end
+
+  let_it_be(:organization) { create(:organization) }
 
   before do
     integration

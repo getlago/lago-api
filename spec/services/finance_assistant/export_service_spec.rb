@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe FinanceAssistant::ExportService do
   subject(:result) { described_class.call(organization:, message_id:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:message_id) { SecureRandom.uuid }
   let(:finance_assistant_url) { "http://finance-assistant.test" }
 

@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invites::UpdateService do
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:acting_user) { create(:membership, organization:).user }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:acting_user) { create(:membership, organization:).user }
   let(:invite) { create(:invite, organization:) }
   let(:params) { {roles: %w[manager]} }
 

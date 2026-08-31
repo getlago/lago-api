@@ -3,10 +3,11 @@
 require "rails_helper"
 
 RSpec.describe IntegrationCustomers::CreateOrUpdateBatchService do
+  before_all do
+    create_default(:organization)
+  end
+
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization:) }
   let(:subsidiary_id) { "1" }
   let(:integration_customers) do
     [
@@ -19,6 +20,10 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateBatchService do
       }
     ]
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(integration_customers:, customer:, new_customer:) }

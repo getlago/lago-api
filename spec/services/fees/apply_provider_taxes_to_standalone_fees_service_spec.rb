@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Fees::ApplyProviderTaxesToStandaloneFeesService do
   subject(:service) { described_class.new(customer:, fees:, currency: "EUR") }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }

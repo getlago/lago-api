@@ -5,13 +5,10 @@ require "rails_helper"
 RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
   subject { described_class.new(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: "0.1", fixed_amount: "0"}) }
-
   let(:customer) { create(:customer, organization:) }
-
   let(:subscription) do
     create(
       :subscription,
@@ -20,7 +17,6 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
       started_at: 1.year.ago
     )
   end
-
   let(:params) do
     {
       organization_id:,
@@ -32,17 +28,16 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
       properties:
     }
   end
-
   let(:transaction_id) { SecureRandom.uuid }
-
   let(:properties) { nil }
-
   let(:code) { billable_metric&.code }
   let(:external_customer_id) { customer&.external_id }
   let(:external_subscription_id) { subscription&.external_id }
   let(:organization_id) { organization.id }
   let(:timestamp) { Time.current.to_i.to_s }
   let(:currency) { subscription.plan.amount.currency }
+
+  let_it_be(:plan) { create(:plan, organization:) }
 
   before { charge }
 

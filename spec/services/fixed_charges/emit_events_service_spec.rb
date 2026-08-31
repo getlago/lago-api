@@ -8,12 +8,7 @@ RSpec.describe FixedCharges::EmitEventsService do
   end
 
   let(:subscription) { nil }
-
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
-  let(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
-
   let(:customer_1) { create(:customer, organization:) }
   let(:customer_2) { create(:customer, organization:) }
   let(:active_subscription_1) do
@@ -27,7 +22,6 @@ RSpec.describe FixedCharges::EmitEventsService do
       subscription_at: 2.days.ago
     )
   end
-
   let(:active_subscription_2) {
     create(
       :subscription,
@@ -40,6 +34,10 @@ RSpec.describe FixedCharges::EmitEventsService do
     )
   }
   let(:terminated_subscription) { create(:subscription, :terminated, plan:, customer: customer_1) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
 
   describe "#call" do
     subject(:result) { service.call }
