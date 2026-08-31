@@ -8,20 +8,19 @@ RSpec.describe IntegrationItemsQuery do
   end
 
   let(:returned_ids) { result.integration_items.pluck(:id) }
-  let(:pagination) { nil }
-  let(:search_term) { nil }
-  let(:filters) { {} }
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:organization) { membership.organization }
-
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_second) { create(:netsuite_integration, organization:) }
   let(:integration_third) { create(:netsuite_integration) }
-
   let(:integration_item_first) { create(:integration_item, item_type: "tax", integration:) }
   let(:integration_item_second) { create(:integration_item, integration: integration_second) }
   let(:integration_item_third) { create(:integration_item, integration: integration_third) }
   let(:integration_item_fourth) { create(:integration_item, external_name: "Findme", integration:) }
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { {} }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { membership.organization }
 
   before do
     integration_item_first

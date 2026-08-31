@@ -8,20 +8,20 @@ RSpec.describe PaymentReceiptsQuery do
   end
 
   let(:returned_ids) { result.payment_receipts.pluck(:id) }
-  let(:pagination) { nil }
-  let(:filters) { nil }
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
   let(:invoice2) { create(:invoice, organization:) }
   let(:payment_request) { create(:payment_request, organization:) }
   let(:payment_one) { create(:payment, payable: invoice) }
   let(:payment_two) { create(:payment, payable: invoice2) }
   let(:payment_three) { create(:payment, payable: payment_request) }
-
   let!(:payment_receipt_one) { create(:payment_receipt, payment: payment_one, organization:) }
   let!(:payment_receipt_two) { create(:payment_receipt, payment: payment_two, organization:) }
   let!(:payment_receipt_three) { create(:payment_receipt, payment: payment_three, organization:) }
+  let(:pagination) { nil }
+  let(:filters) { nil }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { membership.organization }
 
   before do
     create(:payment_receipt)

@@ -7,6 +7,32 @@ RSpec.describe PastUsageQuery do
 
   let_it_be(:organization) { create(:organization) }
   let(:pagination) { nil }
+  let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:subscription2) { create(:subscription, customer:, plan:) }
+  let(:invoice_subscription1) do
+    create(
+      :invoice_subscription,
+      charges_from_datetime: DateTime.parse("2023-08-17T00:00:00"),
+      charges_to_datetime: DateTime.parse("2023-09-16T23:59:59"),
+      subscription:
+    )
+  end
+  let(:invoice_subscription2) do
+    create(
+      :invoice_subscription,
+      charges_from_datetime: DateTime.parse("2023-07-17T00:00:00"),
+      charges_to_datetime: DateTime.parse("2023-08-16T23:59:59"),
+      subscription:
+    )
+  end
+  let(:invoice_subscription3) do
+    create(
+      :invoice_subscription,
+      charges_from_datetime: DateTime.parse("2023-07-17T00:00:00"),
+      charges_to_datetime: DateTime.parse("2023-08-16T23:59:59"),
+      subscription: subscription2
+    )
+  end
   let(:filters) do
     {
       external_customer_id: customer.external_id,
@@ -16,35 +42,6 @@ RSpec.describe PastUsageQuery do
 
   let_it_be(:customer) { create_default(:customer, organization:) }
   let_it_be(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:subscription2) { create(:subscription, customer:, plan:) }
-
-  let(:invoice_subscription1) do
-    create(
-      :invoice_subscription,
-      charges_from_datetime: DateTime.parse("2023-08-17T00:00:00"),
-      charges_to_datetime: DateTime.parse("2023-09-16T23:59:59"),
-      subscription:
-    )
-  end
-
-  let(:invoice_subscription2) do
-    create(
-      :invoice_subscription,
-      charges_from_datetime: DateTime.parse("2023-07-17T00:00:00"),
-      charges_to_datetime: DateTime.parse("2023-08-16T23:59:59"),
-      subscription:
-    )
-  end
-
-  let(:invoice_subscription3) do
-    create(
-      :invoice_subscription,
-      charges_from_datetime: DateTime.parse("2023-07-17T00:00:00"),
-      charges_to_datetime: DateTime.parse("2023-08-16T23:59:59"),
-      subscription: subscription2
-    )
-  end
 
   before do
     invoice_subscription1
@@ -160,15 +157,10 @@ RSpec.describe PastUsageQuery do
   context "with billable_metric_code" do
     let_it_be(:billable_metric1) { create(:billable_metric, organization:) }
     let(:billable_metric_code) { billable_metric1&.code }
-
-    let_it_be(:billable_metric2) { create(:billable_metric, organization:) }
-
     let(:charge1) { create(:standard_charge, plan:, billable_metric: billable_metric1) }
     let(:charge2) { create(:standard_charge, plan:, billable_metric: billable_metric2) }
-
     let(:fee1) { create(:charge_fee, charge: charge1, subscription:, invoice: invoice_subscription1.invoice) }
     let(:fee2) { create(:charge_fee, charge: charge2, subscription:, invoice: invoice_subscription1.invoice) }
-
     let(:filters) do
       {
         external_customer_id: customer.external_id,
@@ -176,6 +168,8 @@ RSpec.describe PastUsageQuery do
         billable_metric_code:
       }
     end
+
+    let_it_be(:billable_metric2) { create(:billable_metric, organization:) }
 
     before do
       fee1
