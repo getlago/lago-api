@@ -8,10 +8,10 @@ RSpec.describe DailyUsages::FillHistoryService do
   describe "#call" do
     subject(:call_service) { service.call }
 
-    let(:organization) { create(:organization) }
-    let(:billing_entity) { create(:billing_entity, organization:) }
-    let(:customer) { create(:customer, organization:, billing_entity:) }
-    let(:plan) { create(:plan, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
+    let_it_be(:customer) { create_default(:customer, organization:, billing_entity:) }
+    let_it_be(:plan) { create_default(:plan, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:subscription_started_at) { Time.zone.parse("2024-10-01 00:00:00") }
     let(:subscription) do
@@ -281,6 +281,12 @@ RSpec.describe DailyUsages::FillHistoryService do
   end
 
   describe "#to" do
+    before_all do
+      create_default(:organization)
+      create_default(:customer)
+      create_default(:plan)
+    end
+
     subject(:to) { service.to }
 
     let(:subscription) { create(:subscription, started_at: Time.current - 1.month) }

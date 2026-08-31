@@ -18,17 +18,12 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:bypass_aggregation) { false }
-  let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
-
   let(:subscription) { create(:subscription) }
-  let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
   let(:presentation_by) { nil }
   let(:matching_filters) { {} }
   let(:ignored_filters) { [] }
-
   let(:billable_metric) do
     create(
       :billable_metric,
@@ -37,17 +32,14 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
       field_name: "total_count"
     )
   end
-
   let(:charge) do
     create(
       :standard_charge,
       billable_metric:
     )
   end
-
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
-
   let(:events) do
     [
       create_list(
@@ -76,6 +68,10 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
       )
     ].flatten
   end
+  let(:bypass_aggregation) { false }
+  let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before { events }
 

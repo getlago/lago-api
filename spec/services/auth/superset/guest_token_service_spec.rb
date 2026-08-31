@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::Superset::GuestTokenService do
   subject(:service) { described_class.new(organization:, dashboard_id:, user:) }
 
-  let(:organization) { create(:organization, name: "Test Org") }
+  let_it_be(:organization) { create(:organization, name: "Test Org") }
   let(:dashboard_id) { "42" }
   let(:user) { nil }
 

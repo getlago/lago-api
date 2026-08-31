@@ -3,13 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
+  before_all do
+    create_default(:customer)
+  end
+
   let(:charge_service) { described_class.new(charge:, aggregation_result:, properties:) }
-
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
-  let(:subscription) { create(:subscription, plan:) }
-
   let(:aggregation_result) do
     BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
       result.aggregation = 10
@@ -21,7 +20,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
     end
   end
   let(:properties) { {} }
-
   let(:aggregator) do
     BillableMetrics::Aggregations::CountService.new(
       event_store_class: Events::Stores::PostgresStore,
@@ -30,7 +28,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       boundaries: nil
     )
   end
-
   let(:pay_in_advance_event) do
     source = create(
       :event,
@@ -41,6 +38,10 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
     )
     Events::CommonFactory.new_instance(source:)
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, plan:) }
 
   describe "#call" do
     context "when charge is not pay_in_advance" do
@@ -214,9 +215,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
 
     describe "when dynamic charge model" do
       let(:charge) { create(:dynamic_charge, :pay_in_advance, plan:) }
-      let(:charge_model_class) { ChargeModels::DynamicService }
-      let(:subscription) { create(:subscription, organization:, plan:) }
-
       let(:aggregator) do
         BillableMetrics::Aggregations::SumService.new(
           event_store_class: Events::Stores::PostgresStore,
@@ -225,6 +223,9 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           boundaries: nil
         )
       end
+      let(:charge_model_class) { ChargeModels::DynamicService }
+
+      let_it_be(:subscription) { create(:subscription, organization:, plan:) }
 
       it_behaves_like "a charge model"
     end

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe BillingEntities::Taxes::ManageTaxesService do
   subject(:service) { described_class.new(billing_entity:, tax_codes:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
   let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }

@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe Charges::ApplyTaxesService do
   subject(:apply_service) { described_class.new(charge:, tax_codes:) }
 
-  let(:plan) { create(:plan) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:plan) { create(:plan) }
   let(:charge) { create(:standard_charge, plan:) }
   let(:tax1) { create(:tax, organization: plan.organization, code: "tax1") }
   let(:tax2) { create(:tax, organization: plan.organization, code: "tax2") }

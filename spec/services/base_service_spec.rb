@@ -5,6 +5,12 @@ require "rails_helper"
 RSpec.describe ::BaseService do
   subject(:service) { described_class.new }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   it { is_expected.to be_a(AfterCommitEverywhere) }
   it { is_expected.to respond_to(:call) }
   it { is_expected.to respond_to(:call_async) }
@@ -38,9 +44,9 @@ RSpec.describe ::BaseService do
         attr_reader :subscription
       end
     end
+    let(:activity_loggable_after_commit) { false }
 
     let(:subscription) { create(:subscription, name: "My Subscription") }
-    let(:activity_loggable_after_commit) { false }
 
     def test_service_with_activity_loggable(after_commit:, action_match_updated: false)
       expect(service_class).to use_middleware(Middlewares::ActivityLogMiddleware)

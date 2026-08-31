@@ -5,14 +5,11 @@ require "rails_helper"
 RSpec.describe CreditNotes::Refunds::GocardlessService do
   subject(:gocardless_service) { described_class.new(credit_note) }
 
-  let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:invoice) { create(:invoice, organization:, customer:) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:code) { "gocardless_1" }
+  let_it_be(:customer) { create(:customer, payment_provider_code: code) }
+  let_it_be(:invoice) { create(:invoice, organization:, customer:) }
   let(:gocardless_payment_provider) { create(:gocardless_provider, organization:, code:) }
-  let(:gocardless_customer) { create(:gocardless_customer, customer:) }
-  let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
-  let(:gocardless_refunds_service) { instance_double(GoCardlessPro::Services::RefundsService) }
-  let(:code) { "gocardless_1" }
   let(:payment) do
     create(
       :payment,
@@ -23,7 +20,6 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       payable: credit_note.invoice
     )
   end
-
   let(:credit_note) do
     create(
       :credit_note,
@@ -34,6 +30,9 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       refund_status: :pending
     )
   end
+  let(:gocardless_customer) { create(:gocardless_customer, customer:) }
+  let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
+  let(:gocardless_refunds_service) { instance_double(GoCardlessPro::Services::RefundsService) }
 
   describe "#create" do
     before do

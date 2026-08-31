@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Entitlement::PlanEntitlementsUpdateService do
   subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: false) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
   let(:entitlements_params) do

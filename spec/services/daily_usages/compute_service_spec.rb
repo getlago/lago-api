@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe DailyUsages::ComputeService do
   subject(:compute_service) { described_class.new(subscription:, timestamp:) }
 
-  let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: properties) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) do

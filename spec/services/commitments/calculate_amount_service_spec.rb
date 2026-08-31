@@ -8,12 +8,12 @@ RSpec.describe Commitments::CalculateAmountService do
   let(:invoice_subscription) do
     create(:invoice_subscription, subscription:, from_datetime:, to_datetime:, timestamp:)
   end
-
   let(:subscription) { create(:subscription, customer:, plan:, billing_time:, subscription_at:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:, interval:) }
   let(:billing_time) { :calendar }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "call" do
     context "when plan has weekly interval" do

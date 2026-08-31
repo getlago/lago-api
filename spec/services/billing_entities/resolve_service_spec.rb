@@ -3,7 +3,7 @@
 RSpec.describe BillingEntities::ResolveService do
   subject(:result) { described_class.call(organization:, billing_entity_code:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   context "when organization has no active billing entity" do
     let(:billing_entity_code) { organization.all_billing_entities.first.code }
@@ -23,7 +23,7 @@ RSpec.describe BillingEntities::ResolveService do
   context "when billing_entity_code is not provided" do
     let(:billing_entity_code) { nil }
 
-    let(:billing_entities) { create_list(:billing_entity, 3, organization:) }
+    let_it_be(:billing_entities) { create_list(:billing_entity, 3, organization:) }
 
     before do
       billing_entities

@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe Charges::OverrideService do
   subject(:override_service) { described_class.new(charge:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   describe "#call" do
-    let(:billable_metric) { create(:billable_metric, organization:) }
+    let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+    let_it_be(:plan) { create(:plan, organization:) }
     let(:tax) { create(:tax, organization:) }
 
     let(:charge) do
@@ -19,7 +20,7 @@ RSpec.describe Charges::OverrideService do
         properties: {amount: "300"}
       )
     end
-    let(:plan) { create(:plan, organization:) }
+
     let(:params) do
       {
         id: charge.id,

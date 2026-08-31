@@ -7,7 +7,7 @@ RSpec.describe BillingEntities::CreateService do
 
   include_context "with mocked security logger"
 
-  let(:organization) { create :organization }
+  let(:organization) { create_default(:organization) }
   let(:params) do
     {
       name: "Billing Entity",

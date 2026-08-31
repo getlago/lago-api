@@ -6,11 +6,12 @@ RSpec.describe Emails::ResendService do
   subject(:service) { described_class.new(resource:, to:, cc:, bcc:) }
 
   let(:to) { nil }
-  let(:cc) { nil }
-  let(:bcc) { nil }
-  let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, email: "customer@example.com") }
   let(:billing_entity) { customer.billing_entity }
+  let(:cc) { nil }
+  let(:bcc) { nil }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     billing_entity.update!(email: "billing@example.com")
