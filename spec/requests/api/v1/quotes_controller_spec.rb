@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::QuotesController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "GET /api/v1/quotes" do
     subject { get_with_token(organization, "/api/v1/quotes", params) }
@@ -238,6 +238,8 @@ RSpec.describe Api::V1::QuotesController do
 
     context "when the quote belongs to another organization" do
       let(:quote) { create(:quote) }
+      let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+      let(:customer) { create(:customer, organization:) }
 
       it "returns not found" do
         subject

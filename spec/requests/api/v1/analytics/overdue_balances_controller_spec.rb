@@ -7,9 +7,10 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController do
     subject { get_with_token(organization, "/api/v1/analytics/overdue_balance", params) }
 
     let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization, created_at: DateTime.new(2023, 11, 1)) }
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
+
+    let_it_be(:organization) { create_default(:organization, created_at: DateTime.new(2023, 11, 1)) }
 
     before do
       allow(Analytics::OverdueBalancesService).to receive(:call).and_call_original

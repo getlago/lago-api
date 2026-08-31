@@ -7,14 +7,14 @@ RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable Rails/Fil
     subject { get_with_token(organization, "/api/v1/analytics/usage", params) }
 
     let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
     let(:params) { {currency: "EUR"} }
-
     let(:result) do
       DataApi::UsagesService::Result.new.tap do |result|
         result.usages = [{amount_currency: nil, amount_cents: nil}]
       end
     end
+
+    let_it_be(:organization) { create_default(:organization) }
 
     before do
       allow(DataApi::UsagesService).to receive(:call).and_return(result)

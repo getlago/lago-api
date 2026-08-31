@@ -4,11 +4,13 @@ require "rails_helper"
 
 RSpec.describe Api::V1::Subscriptions::LifetimeUsagesController do
   let!(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:) }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, organization:, subscription_at:, customer:) }
   let(:subscription_at) { Date.new(2022, 8, 22) }
-  let(:plan) { create(:plan) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  let_it_be(:plan) { create_default(:plan) }
 
   before { create(:usage_threshold, plan:, amount_cents: 100) }
 

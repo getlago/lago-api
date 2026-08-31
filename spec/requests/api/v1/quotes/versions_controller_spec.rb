@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Quotes::VersionsController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "GET /api/v1/quotes/:quote_id/versions" do
     subject { get_with_token(organization, "/api/v1/quotes/#{quote_id}/versions", params) }

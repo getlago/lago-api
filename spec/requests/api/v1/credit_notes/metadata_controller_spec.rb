@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::CreditNotes::MetadataController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:credit_note) { create(:credit_note, customer:) }
 
   describe "POST /api/v1/credit_notes/:id/metadata" do

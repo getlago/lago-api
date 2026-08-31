@@ -7,9 +7,10 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
     subject { get_with_token(organization, "/api/v1/analytics/invoice_collection", params) }
 
     let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
+
+    let_it_be(:organization) { create_default(:organization) }
 
     before do
       allow(Analytics::InvoiceCollectionsService).to receive(:call).and_call_original

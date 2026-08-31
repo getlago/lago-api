@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Subscriptions::ChargesController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
   let(:external_id) { "sub_123" }
   let(:external_id_query_param) { external_id }
   let(:subscription) { create(:subscription, customer:, plan:, external_id:) }
@@ -208,7 +208,7 @@ RSpec.describe Api::V1::Subscriptions::ChargesController do
       end
 
       context "when subscription already has plan override" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan) { create_default(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }
         let(:overridden_charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
 

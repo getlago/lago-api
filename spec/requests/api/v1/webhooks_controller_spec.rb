@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WebhooksController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
 
   describe "GET /api/v1/webhooks/public_key" do
     subject { get_with_token(organization, "/api/v1/webhooks/public_key") }

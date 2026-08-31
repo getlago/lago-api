@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::OrderFormsController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) { create(:quote_version, quote:, organization:) }
   let(:order_form) { create(:order_form, organization:, customer:, quote_version:) }

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController do
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max_users") }
   let(:privilege2) { create(:privilege, organization:, feature:, code: "max_admins") }

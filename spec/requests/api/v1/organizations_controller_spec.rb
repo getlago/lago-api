@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::OrganizationsController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:webhook_url) { Faker::Internet.url }
 
   describe "PUT /api/v1/organizations" do

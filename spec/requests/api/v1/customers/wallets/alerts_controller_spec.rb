@@ -3,14 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Customers::Wallets::AlertsController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer_external_id) { customer.external_id }
-  let(:wallet_code) { wallet.code }
-  let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, organization:) }
   let(:code) { "my-wallet-alert" }
   let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:) }
   let(:deleted_alert) { create(:wallet_balance_amount_alert, :processed, deleted_at: Time.current, wallet:, organization:, thresholds: []) }
+  let(:wallet_code) { wallet.code }
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     alert

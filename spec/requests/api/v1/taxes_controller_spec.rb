@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::TaxesController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
 
   describe "POST /api/v1/taxes" do
     subject { post_with_token(organization, "/api/v1/taxes", {tax: create_params}) }

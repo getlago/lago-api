@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::AppliedCouponsController, :bullet do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, organization:) }
 
   describe "POST /api/v1/applied_coupons" do
@@ -58,7 +58,6 @@ RSpec.describe Api::V1::AppliedCouponsController, :bullet do
 
       context "with external_customer_id filter" do
         let(:params) { {external_customer_id: customer.external_id} }
-
         let(:other_customer) { create(:customer, organization:) }
         let(:other_customer_applied_coupon) do
           create(:applied_coupon, customer: other_customer, coupon: coupon_1)
