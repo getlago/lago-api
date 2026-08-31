@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe LifetimeUsages::FlagRefreshFromPlanUpdateService do
   subject { described_class.call(plan:) }
 
-  let(:plan) { create(:plan) }
+before_all do
+  create_default(:organization)
+end
+
+  let_it_be(:plan) { create(:plan) }
   let(:result) { subject }
 
   describe "#call" do

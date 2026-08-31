@@ -9,10 +9,14 @@ RSpec.describe LifetimeUsages::CalculateService do
   let(:recalculate_current_usage) { false }
   let(:recalculate_invoiced_usage) { false }
   let(:subscription) { create(:subscription, customer:, subscription_at:) }
-  let(:organization) { customer.organization }
-  let(:customer) { create(:customer) }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+  let_it_be(:customer) { create_default(:customer) }
 
-  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+before_all do
+  create_default(:plan)
+end
+
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
   let(:subscription_at) { timestamp - 6.months }
