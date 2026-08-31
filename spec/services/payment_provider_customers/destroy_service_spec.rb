@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::DestroyService do
   subject(:destroy_service) { described_class.new(payment_provider_customer:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   let(:payment_provider_customer) do
     create(:stripe_customer, organization:, customer:, is_default: true)

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Plans::OverrideService do
   subject(:override_service) { described_class.new(plan: parent_plan, params:, subscription:) }
 
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:subscription) { nil }
 
   describe "product catalog gating", :premium do
@@ -22,9 +22,9 @@ RSpec.describe Plans::OverrideService do
   end
 
   describe "#call", :premium do
-    let(:parent_plan) { create(:plan, organization:) }
-    let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:add_on) { create(:add_on, organization:) }
+    let_it_be(:parent_plan) { create(:plan, organization:) }
+    let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+    let_it_be(:add_on) { create(:add_on, organization:) }
     let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
     let(:tax) { create(:tax, organization:) }
 
@@ -276,7 +276,7 @@ RSpec.describe Plans::OverrideService do
     end
 
     context "when subscription parameter is provided" do
-      let(:customer) { create(:customer, organization:) }
+      let_it_be(:customer) { create(:customer, organization:) }
       let(:subscription) { create(:subscription, plan: parent_plan, customer:) }
 
       it "creates a plan successfully with subscription parameter" do

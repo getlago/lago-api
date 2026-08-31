@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Cashfree::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
   let(:chasfree_payment_provider) { create(:cashfree_provider, organization:, code:) }
   let(:cashfree_customer) { create(:cashfree_customer, customer:, payment_provider: chasfree_payment_provider) }
   let(:code) { "stripe_1" }

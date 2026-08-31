@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentMethods::DestroyService do
   subject(:destroy_service) { described_class.new(payment_method:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:membership) { create(:membership, organization:) }
 
   let(:payment_method) { create(:payment_method, organization:, customer:, is_default: true) }

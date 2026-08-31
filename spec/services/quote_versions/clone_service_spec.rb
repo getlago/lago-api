@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe QuoteVersions::CloneService do
   subject(:clone_service) { described_class.new(quote_version:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+
+  before_all do
+    create_default(:customer)
+  end
+
   let!(:quote) { create(:quote, organization:) }
   let!(:versions) do
     QuoteVersion.transaction do

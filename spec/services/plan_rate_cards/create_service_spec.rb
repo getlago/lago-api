@@ -5,8 +5,13 @@ require "rails_helper"
 RSpec.describe PlanRateCards::CreateService do
   subject(:result) { described_class.call(plan:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let_it_be(:organization) { create(:organization) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
+
+  let_it_be(:plan) { create(:plan, :product_catalog, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   let(:params) { {rate_card_code: rate_card.code, units: "10"} }

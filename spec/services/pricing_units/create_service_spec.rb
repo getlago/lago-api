@@ -6,7 +6,7 @@ RSpec.describe PricingUnits::CreateService do
   describe "#call" do
     subject(:result) { described_class.call(params) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create(:organization) }
     let(:name) { "Cloud tokens" }
     let(:short_name) { "CT" }
     let(:description) { "description" }

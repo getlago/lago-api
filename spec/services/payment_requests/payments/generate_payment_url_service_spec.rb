@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
   subject(:generate_payment_url_service) { described_class.new(payable: payment_request) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code: code) }
   let(:payment_request) { create(:payment_request, customer:) }
   let(:provider) { "stripe" }

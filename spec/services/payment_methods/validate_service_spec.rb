@@ -6,8 +6,6 @@ RSpec.describe PaymentMethods::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseResult[:payment_method].new }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:payment_method) { create(:payment_method, organization:) }
   let(:payment_method_params) do
     {
@@ -19,6 +17,13 @@ RSpec.describe PaymentMethods::ValidateService do
     {
       payment_method: payment_method_params
     }
+  end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+
+  before_all do
+    create_default(:customer)
   end
 
   describe ".valid?" do

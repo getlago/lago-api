@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe Products::DestroyService do
   subject(:result) { described_class.call(product:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
+
   let(:product) { create(:product, :with_filters, organization:) }
 
   before do

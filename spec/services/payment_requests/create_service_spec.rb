@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe PaymentRequests::CreateService, :premium do
   subject(:create_service) { described_class.new(organization:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   let(:first_invoice) do
     create(:invoice, customer:, payment_overdue: true, total_amount_cents: 200, total_paid_amount_cents: 100)
