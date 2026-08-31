@@ -89,9 +89,19 @@ module SubscriptionRateCards
         period_to: covered_until(segment),
         rate_card_rate: segment.rate,
         rate_override: cycle.phase.override,
+        pricing_unit: pricing_unit,
         rate_properties: (cycle.phase.override || segment.rate).properties,
         proration_ratio: proration_ratio(cycle, segment)
       )
+    end
+
+    # The unit the card prices in, if it prices in one. The fee amounts read it back off
+    # the row, so a final segment without it would be converted at the wrong rate.
+    def pricing_unit
+      return @pricing_unit if defined?(@pricing_unit)
+
+      code = subscription_rate_card.rate_card.applied_pricing_unit_code
+      @pricing_unit = code.presence && organization.pricing_units.find_by(code:)
     end
 
     # Cycle ends are exclusive boundaries, so the last instant they cover is a moment

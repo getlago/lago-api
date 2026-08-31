@@ -74,6 +74,30 @@ RSpec.describe SubscriptionRateCards::TerminateService do
       end
     end
 
+    # The fee amounts read the unit back off the row, so a final segment without it would
+    # convert at the wrong rate.
+    context "with a rate card priced in a pricing unit" do
+      let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits") }
+      let(:rate_card) do
+        create(:rate_card, organization:, applied_pricing_unit_code: pricing_unit.code)
+      end
+      let(:rate_card_rate) do
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          effective_from: Time.zone.parse("2026-01-01"),
+          applied_pricing_unit_conversion_rate: 0.5
+        )
+      end
+
+      before { pricing_unit }
+
+      it "carries the pricing unit onto the final segment" do
+        expect(result.billing_segments.sole.pricing_unit).to eq(pricing_unit)
+      end
+    end
+
     context "with a future termination date" do
       around do |example|
         travel_to(Time.zone.parse("2026-08-17 12:00:00")) { example.run }
