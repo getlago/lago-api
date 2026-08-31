@@ -14,9 +14,9 @@ RSpec.describe WalletTransactionConsumptionsQuery do
     )
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, traceable: true) }
   let(:pagination) { nil }
 
