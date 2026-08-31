@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Fees::ProjectionService do
   subject(:service) { described_class.new(fees: fees) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
 
   let(:fees) { [fee] }
   let(:fee) do
@@ -18,7 +18,7 @@ RSpec.describe Fees::ProjectionService do
       amount_currency: currency)
   end
 
-  let(:billable_metric) do
+  let_it_be(:billable_metric) do
     create(:billable_metric, recurring: false, organization:)
   end
 
@@ -31,8 +31,8 @@ RSpec.describe Fees::ProjectionService do
 
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, organization:, customer:) }
-  let(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
-  let(:currency) { "EUR" }
+  let_it_be(:currency) { "EUR" }
+  let_it_be(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
 
   let(:charge_filter) { nil }
   let(:applied_pricing_unit) { nil }
@@ -285,7 +285,7 @@ RSpec.describe Fees::ProjectionService do
     end
 
     context "when billable metric is recurring" do
-      let(:billable_metric) { create(:billable_metric, recurring: true, aggregation_type: "sum_agg", field_name: "amount", organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, recurring: true, aggregation_type: "sum_agg", field_name: "amount", organization:) }
 
       it "returns projected values without applying period_ratio" do
         result = service.call
@@ -384,6 +384,7 @@ RSpec.describe Fees::ProjectionService do
 
     context "when currency has different exponent" do
       let(:currency) { "KWD" }
+      let(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
 
       it "rounds and converts correctly" do
         result = service.call

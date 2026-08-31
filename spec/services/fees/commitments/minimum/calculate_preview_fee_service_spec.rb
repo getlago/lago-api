@@ -11,7 +11,7 @@ RSpec.describe Fees::Commitments::Minimum::CalculatePreviewFeeService do
     )
   end
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: false, amount_cents: 100_00) }
   let(:subscription) { create(:subscription, customer:, plan:, started_at: from_datetime) }

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe FinanceAssistant::AskService do
   subject(:result) { described_class.call(organization:, question:, session_id:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:question) { "Show MRR for the past 3 months" }
   let(:session_id) { SecureRandom.uuid }
   let(:message_id) { SecureRandom.uuid }
