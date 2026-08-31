@@ -61,6 +61,7 @@ ALTER TABLE IF EXISTS ONLY public.enriched_store_subscription_migrations DROP CO
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_db9140d0fd;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_d9ea200904;
+ALTER TABLE IF EXISTS ONLY public.streaming_destinations DROP CONSTRAINT IF EXISTS fk_rails_d94733afa1;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_d9342a8ca7;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_d72a9877be;
@@ -422,6 +423,7 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
+DROP INDEX IF EXISTS public.index_unique_streaming_destinations_on_organization_code;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_sequential_id;
 DROP INDEX IF EXISTS public.index_unique_quotes_on_organization_number;
@@ -462,6 +464,8 @@ DROP INDEX IF EXISTS public.index_subscription_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_subscription_fixed_charge_units_overrides_on_deleted_at;
 DROP INDEX IF EXISTS public.index_subscription_activation_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_sub_fc_units_overrides_on_sub_id_and_fc_id;
+DROP INDEX IF EXISTS public.index_streaming_destinations_on_organization_id;
+DROP INDEX IF EXISTS public.index_streaming_destinations_on_deleted_at;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_rtr_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_roles_on_organization_id;
@@ -1019,6 +1023,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CON
 ALTER TABLE IF EXISTS ONLY public.subscription_rate_cards DROP CONSTRAINT IF EXISTS subscription_rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS subscription_fixed_charge_units_overrides_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS subscription_activation_rules_pkey;
+ALTER TABLE IF EXISTS ONLY public.streaming_destinations DROP CONSTRAINT IF EXISTS streaming_destinations_pkey;
 ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_pkey;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
@@ -1152,6 +1157,7 @@ DROP TABLE IF EXISTS public.subscriptions_invoice_custom_sections;
 DROP TABLE IF EXISTS public.subscription_rate_cards;
 DROP TABLE IF EXISTS public.subscription_fixed_charge_units_overrides;
 DROP TABLE IF EXISTS public.subscription_activation_rules;
+DROP TABLE IF EXISTS public.streaming_destinations;
 DROP TABLE IF EXISTS public.schema_migrations;
 DROP TABLE IF EXISTS public.roles;
 DROP TABLE IF EXISTS public.refunds;
@@ -5622,6 +5628,25 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: streaming_destinations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.streaming_destinations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    type character varying NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    event_types character varying[],
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    secrets character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: subscription_activation_rules; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6834,6 +6859,14 @@ ALTER TABLE ONLY public.roles
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: streaming_destinations streaming_destinations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.streaming_destinations
+    ADD CONSTRAINT streaming_destinations_pkey PRIMARY KEY (id);
 
 
 --
@@ -10790,6 +10823,20 @@ CREATE INDEX index_search_quantified_events ON public.quantified_events USING bt
 
 
 --
+-- Name: index_streaming_destinations_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_streaming_destinations_on_deleted_at ON public.streaming_destinations USING btree (deleted_at);
+
+
+--
+-- Name: index_streaming_destinations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_streaming_destinations_on_organization_id ON public.streaming_destinations USING btree (organization_id);
+
+
+--
 -- Name: index_sub_fc_units_overrides_on_sub_id_and_fc_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11067,6 +11114,13 @@ CREATE UNIQUE INDEX index_unique_quotes_on_organization_sequential_id ON public.
 --
 
 CREATE UNIQUE INDEX index_unique_starting_invoice_subscription ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE ((invoicing_reason = 'subscription_starting'::public.subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL));
+
+
+--
+-- Name: index_unique_streaming_destinations_on_organization_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_unique_streaming_destinations_on_organization_code ON public.streaming_destinations USING btree (organization_id, code) WHERE (deleted_at IS NULL);
 
 
 --
@@ -13793,6 +13847,14 @@ ALTER TABLE ONLY public.integration_resources
 
 
 --
+-- Name: streaming_destinations fk_rails_d94733afa1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.streaming_destinations
+    ADD CONSTRAINT fk_rails_d94733afa1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_alerts fk_rails_d9ea200904; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14215,6 +14277,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831120000'),
 ('20260819111435'),
 ('20260819111434'),
 ('20260819000710'),

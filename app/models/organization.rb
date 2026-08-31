@@ -75,6 +75,7 @@ class Organization < ApplicationRecord
   has_many :wallet_transactions
   has_many :webhook_endpoints
   has_many :webhooks
+  has_many :streaming_destinations, class_name: "StreamingDestinations::BaseDestination", dependent: :destroy
   has_many :cached_aggregations
   has_many :data_exports
   has_many :error_details
@@ -203,6 +204,14 @@ class Organization < ApplicationRecord
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
+  end
+
+  # Single source of truth for "is there anywhere for a webhook payload to go?".
+  # Webhooks::BaseService#call and SendWebhookJob.perform_later both guard on
+  # this. They must not drift: a guard that only counts webhook_endpoints makes
+  # streaming destinations fail silently, with no error anywhere.
+  def webhook_destinations?
+    webhook_endpoints.any? || streaming_destinations.any?
   end
 
   # Product catalog (billing v2) is a rollout feature flag, not a license-gated
