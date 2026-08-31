@@ -5,9 +5,13 @@ require "rails_helper"
 RSpec.describe Subscriptions::CreateService do
   subject(:create_service) { described_class.new(customer:, plan:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR") }
-  let(:customer) { create(:customer, organization:, currency: "EUR") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR") }
+  let_it_be(:customer) { create_default(:customer, organization:, currency: "EUR") }
+
+before_all do
+  create_default(:add_on)
+end
 
   let(:external_id) { SecureRandom.uuid }
   let(:billing_time) { "anniversary" }
@@ -123,7 +127,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "when subscription should sync with Hubspot" do
-      let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
+      let_it_be(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
 
       it "enqueues the Hubspot create job for a new subscription" do
         create_service.call
@@ -565,7 +569,7 @@ RSpec.describe Subscriptions::CreateService do
       end
 
       context "when an entry references a fixed_charge id not on the plan" do
-        let(:other_plan) { create(:plan, organization:) }
+        let_it_be(:other_plan) { create(:plan, organization:) }
         let(:foreign_fixed_charge) { create(:fixed_charge, plan: other_plan) }
         let(:params) do
           {
@@ -693,7 +697,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "when plan is pay_in_advance" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
+      let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
       context "when subscription_at is current date" do
         it "enqueues a job to bill the subscription" do
@@ -710,7 +714,7 @@ RSpec.describe Subscriptions::CreateService do
       end
 
       context "when subscription_at is current date but there is a trial period" do
-        let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+        let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
 
         it "does not enqueue a job to bill the subscription" do
           expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
@@ -747,7 +751,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "when plan is not pay_in_advance, subscription_at is current date and there are fixed charges" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
+      let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
       let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
 
       before do
@@ -766,7 +770,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan has a trial period" do
-          let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+          let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
 
           it "does not queue a job to bill the subscription" do
             expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
@@ -1137,9 +1141,9 @@ RSpec.describe Subscriptions::CreateService do
 
       context "when plan is not the same" do
         context "when we upgrade the plan" do
-          let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
-          let(:plan) { create(:plan, amount_cents: 200, organization:) }
-          let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+          let_it_be(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
+          let_it_be(:plan) { create(:plan, amount_cents: 200, organization:) }
+          let_it_be(:old_plan) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { "invoice display name new" }
 
           before do
@@ -1433,8 +1437,8 @@ RSpec.describe Subscriptions::CreateService do
             subscription.mark_as_active!
           end
 
-          let(:plan) { create(:plan, amount_cents: 50, organization:) }
-          let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+          let_it_be(:plan) { create(:plan, amount_cents: 50, organization:) }
+          let_it_be(:old_plan) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { "invoice display name new" }
 
           it "creates a new subscription" do
@@ -1743,7 +1747,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "with activation_rules" do
-      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+      let_it_be(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
       let(:params) do
         {
@@ -1787,7 +1791,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan is pay in advance" do
-          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true) }
+          let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true) }
 
           it "creates incomplete subscription with pending activation rule" do
             result = create_service.call
@@ -1821,7 +1825,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan is pay in arrears with pay-in-advance fixed charges" do
-          let(:add_on) { create(:add_on, organization:) }
+          let_it_be(:add_on) { create(:add_on, organization:) }
 
           before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
 
@@ -1841,7 +1845,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan is pay in advance with trial period" do
-          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true, trial_period: 30) }
+          let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true, trial_period: 30) }
 
           it "creates active subscription with not_applicable activation rule" do
             result = create_service.call
@@ -2012,7 +2016,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     describe "billing entity binding" do
-      let(:billing_entity) { create(:billing_entity, organization:) }
+      let_it_be(:billing_entity) { create(:billing_entity, organization:) }
 
       context "when binding a billing entity" do
         it "persists nil when no billing entity reference is provided" do
@@ -2074,10 +2078,10 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     describe "billing entity binding on downgrade" do
-      let(:current_entity) { create(:billing_entity, organization:, code: "entity-x") }
-      let(:target_entity) { create(:billing_entity, organization:, code: "entity-y") }
-      let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
-      let(:plan) { create(:plan, amount_cents: 50, organization:) }
+      let_it_be(:current_entity) { create(:billing_entity, organization:, code: "entity-x") }
+      let_it_be(:target_entity) { create(:billing_entity, organization:, code: "entity-y") }
+      let_it_be(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+      let_it_be(:plan) { create(:plan, amount_cents: 50, organization:) }
 
       let(:subscription) do
         create(

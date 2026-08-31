@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::UpdateUsageThresholdsService, :premium do
   subject(:service) { described_class.new(subscription:, usage_thresholds_params:, partial:) }
 
-  let(:organization) { create(:organization, premium_integrations:) }
-  let(:premium_integrations) { ["progressive_billing"] }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:premium_integrations) { ["progressive_billing"] }
+      let_it_be(:organization) { create(:organization, premium_integrations:) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization:) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:) }
   let(:usage_thresholds_params) { [{amount_cents: 1000, threshold_display_name: "Test"}] }
@@ -21,7 +21,8 @@ RSpec.describe Subscriptions::UpdateUsageThresholdsService, :premium do
 
   describe "#call" do
     context "when progressive_billing is not enabled" do
-      let(:premium_integrations) { [] }
+      let_it_be(:premium_integrations) { [] }
+      let_it_be(:organization) { create(:organization, premium_integrations:) }
 
       it "returns early without calling UsageThresholds::UpdateService" do
         result = service.call

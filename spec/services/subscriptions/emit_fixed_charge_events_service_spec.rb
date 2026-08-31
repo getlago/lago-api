@@ -6,9 +6,13 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService do
   subject(:service) { described_class.new(subscriptions:, timestamp:) }
 
   let(:timestamp) { Time.current }
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+
+before_all do
+  create_default(:customer)
+end
 
   let(:fixed_charge_1) { create(:fixed_charge, plan:, add_on:) }
   let(:fixed_charge_2) { create(:fixed_charge, plan:, add_on:) }

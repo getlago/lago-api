@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Subscriptions::ActivationRules::ExpireService do
   subject(:result) { described_class.call(subscription:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:, pay_in_advance: true) }
   let(:subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }
   let(:invoice) do
     create(:invoice, :open, customer:, organization:, invoice_type: :subscription)

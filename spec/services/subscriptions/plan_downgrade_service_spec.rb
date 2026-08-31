@@ -17,11 +17,11 @@ RSpec.describe Subscriptions::PlanDowngradeService do
     )
   end
 
-  let(:old_plan) { create(:plan, amount_cents: 100, organization:, amount_currency: currency) }
-  let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency:) }
-  let(:organization) { create(:organization) }
-  let(:currency) { "EUR" }
-  let(:plan) { create(:plan, amount_cents: 50, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, :with_hubspot_integration, organization:, currency:) }
+  let_it_be(:currency) { "EUR" }
+  let_it_be(:old_plan) { create(:plan, amount_cents: 100, organization:, amount_currency: currency) }
+  let_it_be(:plan) { create(:plan, amount_cents: 50, organization:) }
   let(:params) { {name: subscription_name} }
   let(:subscription_name) { "new invoice display name" }
 

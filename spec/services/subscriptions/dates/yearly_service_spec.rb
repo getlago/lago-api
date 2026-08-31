@@ -16,8 +16,12 @@ RSpec.describe Subscriptions::Dates::YearlyService do
     )
   end
 
-  let(:customer) { create(:customer, timezone:) }
-  let(:plan) { create(:plan, interval: :yearly, pay_in_advance:) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let(:customer) { create_default(:customer, timezone:) }
+  let(:plan) { create_default(:plan, interval: :yearly, pay_in_advance:) }
   let(:pay_in_advance) { false }
   let(:current_usage) { false }
 

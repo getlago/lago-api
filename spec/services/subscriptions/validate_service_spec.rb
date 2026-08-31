@@ -6,10 +6,10 @@ RSpec.describe Subscriptions::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { Subscriptions::CreateService::Result.new }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription_at) { Time.current.iso8601 }
   let(:ending_at) { (Time.current + 1.year).iso8601 }
 
@@ -342,7 +342,7 @@ RSpec.describe Subscriptions::ValidateService do
         }
       end
 
-      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+      let_it_be(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
       context "when activation_rules contains valid payment rule" do
         let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }

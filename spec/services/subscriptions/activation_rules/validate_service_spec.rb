@@ -6,9 +6,9 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { nil }
   let(:subscription_type) { "create" }
   let(:activation_rules) { nil }

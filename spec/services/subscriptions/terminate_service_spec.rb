@@ -5,6 +5,12 @@ require "rails_helper"
 RSpec.describe Subscriptions::TerminateService do
   subject(:terminate_service) { described_class.new(subscription:) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+create_default(:plan)
+end
+
   let(:on_termination_credit_note) { nil }
 
   describe ".call" do
@@ -111,9 +117,9 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context "when subscription is incomplete" do
-      let(:organization) { create(:organization) }
-      let(:customer) { create(:customer, organization:) }
-      let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+      let_it_be(:organization) { create(:organization) }
+      let_it_be(:customer) { create(:customer, organization:) }
+      let_it_be(:plan) { create(:plan, organization:, pay_in_advance: true) }
       let(:subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }
       let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
 
@@ -259,7 +265,7 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context "when subscription was paid in advance" do
-      let(:plan) { create(:plan, :pay_in_advance) }
+      let_it_be(:plan) { create(:plan, :pay_in_advance) }
       let(:subscription) do
         create(
           :subscription,

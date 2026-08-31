@@ -19,11 +19,11 @@ RSpec.describe Subscriptions::PlanUpgradeService do
     )
   end
 
-  let(:old_plan) { create(:plan, amount_cents: 100, organization:, amount_currency: currency) }
-  let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency:) }
-  let(:organization) { create(:organization) }
-  let(:currency) { "EUR" }
-  let(:plan) { create(:plan, amount_cents: 100, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:currency) { "EUR" }
+  let_it_be(:old_plan) { create(:plan, amount_cents: 100, organization:, amount_currency: currency) }
+  let_it_be(:customer) { create(:customer, :with_hubspot_integration, organization:, currency:) }
+  let_it_be(:plan) { create(:plan, amount_cents: 100, organization:) }
   let(:params) { {name: subscription_name} }
   let(:subscription_name) { "new invoice display name" }
 
@@ -252,7 +252,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       end
 
       context "when the plan is pay-in-advance" do
-        let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
+        let_it_be(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
 
         it "keeps the current subscription active" do
           result
@@ -298,7 +298,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       end
 
       context "when the plan has no upfront billing" do
-        let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
+        let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
 
         it "marks the activation rule as not_applicable" do
           expect(result).to be_success
@@ -431,7 +431,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
     end
 
     context "when new subscription is pay in advance and has trial period" do
-      let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true, trial_period: 3) }
+      let_it_be(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true, trial_period: 3) }
 
       context "without pay in advance fixed charges" do
         it "does not include new subscription in BillSubscriptionJob" do
@@ -476,8 +476,8 @@ RSpec.describe Subscriptions::PlanUpgradeService do
     end
 
     describe "billing entity binding" do
-      let(:billing_entity) { create(:billing_entity, organization:) }
-      let(:other_entity) { create(:billing_entity, organization:) }
+      let_it_be(:billing_entity) { create(:billing_entity, organization:) }
+      let_it_be(:other_entity) { create(:billing_entity, organization:) }
 
       context "when binding a billing entity" do
         it "carries over the current subscription's billing_entity_id when no param is provided" do
@@ -534,7 +534,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       end
 
       context "when bill_subscriptions runs after the upgrade" do
-        let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
+        let_it_be(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
 
         it "carries the current subscription's entity into termination and new-period billing context" do
           subscription.update!(billing_entity:)
