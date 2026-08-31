@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Salesforce::Invoices::SyncService do
-before_all do
-  create_default(:organization)
-create_default(:customer)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
 
   subject(:sync_service) { described_class.new(invoice) }
 

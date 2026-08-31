@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe IntegrationMappings::UpdateService do
   let(:integration_mapping) { create(:netsuite_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
-  let_it_be(:organization) { create_default(:organization)}
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
 
   before_all do

@@ -9,8 +9,6 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
 
   let_it_be(:organization) { create(:organization) }
   let(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
-  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:subscription) do
     create(
       :subscription,
@@ -21,7 +19,6 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       started_at: Time.zone.parse("2024-03-01")
     )
   end
-
   let(:fixed_charge) do
     create(
       :fixed_charge,
@@ -33,8 +30,10 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       pay_in_advance: true
     )
   end
-
   let(:timestamp) { Time.zone.parse("2024-03-15").to_i }
+
+  let_it_be(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
 
   context "when there are no existing fees (fixed charge added)" do
     let(:fixed_charge_event) do

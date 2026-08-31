@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Hubspot::Subscriptions::DeployPropertiesService do
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   subject(:deploy_properties_service) { described_class.new(integration:) }
 

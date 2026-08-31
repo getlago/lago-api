@@ -8,7 +8,8 @@ RSpec.describe Invites::CreateService do
   include_context "with mocked security logger"
 
   let(:admin_role) { create(:role, :admin) }
-  let_it_be(:organization) { create_default(:organization)}
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
 
   before { create(:membership_role, membership:, role: admin_role) }

@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   subject(:deploy_object_service) { described_class.new(integration:) }
 

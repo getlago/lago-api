@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe InboundWebhooks::ProcessService do
   subject(:result) { described_class.call(inbound_webhook:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let(:inbound_webhook) { create :inbound_webhook, source: webhook_source }
   let(:webhook_source) { "stripe" }

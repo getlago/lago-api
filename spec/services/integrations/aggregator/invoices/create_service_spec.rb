@@ -6,23 +6,10 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:service) { described_class.new(invoice:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:customer) { create_default(:customer, organization:) }
-
-before_all do
-  create_default(:plan)
-create_default(:billing_entity)
-end
-
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/netsuite/invoices" }
-  let_it_be(:add_on) { create(:add_on, organization:) }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:) }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -89,7 +76,6 @@ end
       settings: {external_id: "m2", external_account_code: "m22", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -125,7 +111,6 @@ end
       created_at: current_time
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -133,16 +118,13 @@ end
       "Provider-Config-Key" => "netsuite-tba"
     }
   end
-
   let(:invoice_url) do
     url = Rails.application.config.lago_front_url
 
     URI.join(url, "/#{invoice.customer.organization.slug}/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
   end
-
   let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
   let(:issuing_date) { invoice.issuing_date.strftime("%-m/%-d/%Y") }
-
   let(:params) do
     {
       "type" => "invoice",
@@ -287,6 +269,19 @@ end
       }
     }
   end
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  before_all do
+    create_default(:plan)
+    create_default(:billing_entity)
+  end
+
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

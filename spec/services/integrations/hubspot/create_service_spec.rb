@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Integrations::Hubspot::CreateService do
   include_context "with mocked security logger"
 
-  let(:organization) { create_default(:organization)}
+  let(:organization) { create_default(:organization) }
   let(:membership) { create(:membership) }
 
   describe "#call" do

@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::AccountsService do
   subject(:accounts_service) { described_class.new(integration:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let(:integration) { create(:netsuite_integration) }
 

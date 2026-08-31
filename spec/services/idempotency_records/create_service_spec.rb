@@ -5,11 +5,12 @@ require "rails_helper"
 RSpec.describe IdempotencyRecords::CreateService do
   subject(:result) { described_class.call(idempotency_key:, resource:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let(:idempotency_key) { SecureRandom.uuid }
+
   let_it_be(:resource) { create(:customer) }
 
   it "creates a new idempotency record" do

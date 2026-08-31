@@ -4,10 +4,11 @@ require "rails_helper"
 
 RSpec.describe IntegrationCustomers::CreateService do
   let(:integration) { create(:netsuite_integration, organization:) }
-  let_it_be(:organization) { create_default(:organization)}
+  let(:integration_type) { "netsuite" }
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:customer) { create(:customer, organization:) }
-  let(:integration_type) { "netsuite" }
 
   describe "#call" do
     subject(:service_call) { described_class.call(params:, integration:, customer:) }

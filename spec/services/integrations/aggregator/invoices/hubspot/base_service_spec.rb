@@ -7,6 +7,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::BaseService do
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:integration) { create(:hubspot_integration, organization:) }
   let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:) }
 
