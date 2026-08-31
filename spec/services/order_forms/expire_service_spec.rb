@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe OrderForms::ExpireService do
   subject(:service) { described_class.new(order_form:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+      let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) { create(:quote_version, :approved, organization:, quote:) }
   let(:order_form) { create(:order_form, :expired_yesterday, customer:, organization:, quote_version:) }
@@ -23,6 +23,7 @@ RSpec.describe OrderForms::ExpireService do
     end
 
     context "when the order_forms feature flag is disabled", :premium do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization) }
 
       it "returns a forbidden failure" do

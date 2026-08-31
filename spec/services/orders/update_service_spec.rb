@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Orders::UpdateService do
   subject(:service) { described_class.new(order:, params:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+        let_it_be(:customer) { create(:customer, organization:) }
   let(:order) { create(:order, organization:, customer:) }
   let(:params) { {execution_mode: "execute_in_lago", execute_at: 1.month.from_now.iso8601} }
 
@@ -35,6 +35,7 @@ RSpec.describe Orders::UpdateService do
       end
 
       context "when the order_forms feature flag is disabled" do
+        let(:customer) { create(:customer, organization:) }
         let(:organization) { create(:organization) }
 
         it "returns a forbidden failure" do
