@@ -7,6 +7,11 @@ RSpec.describe WalletTransactions::RecreditService do
 
   let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   context "when wallet is terminated" do
     let(:wallet) { create(:wallet, :terminated) }
 

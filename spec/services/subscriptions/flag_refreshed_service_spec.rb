@@ -3,9 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::FlagRefreshedService, :premium do
-  let(:organization) { create(:organization, premium_integrations: %w[lifetime_usage]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, premium_integrations: %w[lifetime_usage]) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
+
+  before_all do
+    create_default(:plan)
+  end
 
   before do
     allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call).and_call_original

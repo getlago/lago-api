@@ -21,6 +21,11 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
   end
   let(:transaction_metadata) { [] }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   describe "#call" do
     subject(:result) { described_class.call(wallet:, params:) }
 

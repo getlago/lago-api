@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe WebhookEndpoints::CreateService do
   subject(:create_service) { described_class.new(organization:, params: create_params) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:create_params) do
     {
       webhook_url: "http://foo.bar",
