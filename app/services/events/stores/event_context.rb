@@ -99,9 +99,24 @@ module Events
         ).charges_duration_in_days
       end
 
-      private
+      # NOTE: two contexts answer for the same events when they wrap the same record, so
+      #       equality is the record's. `Provider#scoped_to?` compares contexts, and a caller
+      #       that mints its own context for the aggregation it hands to the factory must not
+      #       be refused by a provider built on an equivalent one.
+      def ==(other)
+        other.is_a?(self.class) && record == other.record
+      end
+      alias_method :eql?, :==
+
+      def hash
+        [self.class, record].hash
+      end
+
+      protected
 
       attr_reader :record
+
+      private
 
       def subscription?
         record.is_a?(::Subscription)

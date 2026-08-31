@@ -5,18 +5,11 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: false do
   subject(:service) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       metered_item:,
-      context: Events::Stores::EventContext.from(subscription:),
-      boundaries: {
-        from_datetime:,
-        to_datetime:,
-        charges_duration: (to_datetime - from_datetime).fdiv(1.day).round
-      },
-      filters: {
-        matching_filters:,
-        ignored_filters:
-      }
+      context:,
+      boundaries:,
+      filters:
     )
   end
 
@@ -33,6 +26,12 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
         timestamp: to_datetime
       )
     )
+  end
+  let(:filters) { {matching_filters:, ignored_filters:} }
+  let(:boundaries) { {from_datetime:, to_datetime:, charges_duration: (to_datetime - from_datetime).fdiv(1.day).round} }
+  let(:context) { Events::Stores::EventContext.from(subscription:) }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, context:, boundaries:, filters:)
   end
 
   let(:organization) { create(:organization) }

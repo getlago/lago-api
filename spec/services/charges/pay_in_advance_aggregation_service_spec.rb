@@ -54,7 +54,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         agg_service.call
 
         expect(BillableMetrics::Aggregations::CustomService).to have_received(:new).with(
-          event_store_class: Events::Stores::PostgresStore,
+          event_store: an_instance_of(Events::Stores::PostgresStore),
           metered_item: have_attributes(properties: charge.properties),
           context: subscription_context,
           boundaries: anything,
@@ -73,7 +73,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
           .with(
-            event_store_class: Events::Stores::PostgresStore,
+            event_store: an_instance_of(Events::Stores::PostgresStore),
             metered_item:,
             context: subscription_context,
             boundaries: {
@@ -120,7 +120,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
+              event_store: an_instance_of(Events::Stores::PostgresStore),
               metered_item:,
               context: subscription_context,
               boundaries: {
@@ -168,7 +168,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
+              event_store: an_instance_of(Events::Stores::PostgresStore),
               metered_item:,
               context: subscription_context,
               boundaries: {
@@ -219,7 +219,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
             expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
               .with(
-                event_store_class: Events::Stores::PostgresStore,
+                event_store: an_instance_of(Events::Stores::PostgresStore),
                 metered_item:,
                 context: subscription_context,
                 boundaries: {
@@ -265,7 +265,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
+              event_store: an_instance_of(Events::Stores::PostgresStore),
               metered_item:,
               context: subscription_context,
               boundaries: {
@@ -313,7 +313,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
+              event_store: an_instance_of(Events::Stores::PostgresStore),
               metered_item:,
               context: subscription_context,
               boundaries: {
@@ -357,7 +357,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
+              event_store: an_instance_of(Events::Stores::PostgresStore),
               metered_item:,
               context: subscription_context,
               boundaries: {
@@ -396,7 +396,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
         expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
           .with(
-            event_store_class: Events::Stores::PostgresStore,
+            event_store: an_instance_of(Events::Stores::PostgresStore),
             metered_item:,
             context: subscription_context,
             boundaries: {
@@ -430,7 +430,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
         expect(BillableMetrics::Aggregations::UniqueCountService).to have_received(:new)
           .with(
-            event_store_class: Events::Stores::PostgresStore,
+            event_store: an_instance_of(Events::Stores::PostgresStore),
             metered_item:,
             context: subscription_context,
             boundaries: {

@@ -36,7 +36,9 @@ RSpec.describe BillableMetrics::AggregationFactory do
     )
   end
 
-  let(:result) { factory.new_instance(metered_item:, current_usage:, context: Events::Stores::EventContext.from(subscription:), boundaries:) }
+  let(:context) { Events::Stores::EventContext.from(subscription:) }
+
+  let(:result) { factory.new_instance(metered_item:, current_usage:, context:, boundaries:) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do
@@ -129,6 +131,92 @@ RSpec.describe BillableMetrics::AggregationFactory do
       let(:billable_aggregation) { :custom_billable_metric }
 
       it { expect(result).to be_a(BillableMetrics::Aggregations::CustomService) }
+    end
+
+    describe "the event store the aggregator is built with" do
+      let(:store) { result.__send__(:event_store) }
+
+      it "carries the metric, the event context and the aggregation window" do
+        expect(store).to be_a(Events::Stores::PostgresStore)
+        expect(store.code).to eq(billable_metric.code)
+        expect(store.context).to eq(context)
+        expect(store.boundaries).to eq(boundaries)
+        expect(store.deduplicate).to be(false)
+      end
+
+      it "forwards the aggregation filters" do
+        charge_filter = create(:charge_filter, charge: create(:standard_charge, billable_metric:))
+        filters = {charge_id: charge.id, charge_filter:}
+
+        store = factory.new_instance(metered_item:, context:, boundaries:, filters:).__send__(:event_store)
+
+        expect(store.filters).to eq(filters)
+      end
+
+      context "when the organization deduplicates its clickhouse events" do
+        include_context "with clickhouse availability"
+
+        let(:billable_metric) do
+          create(
+            billable_aggregation,
+            recurring:,
+            organization: create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
+          )
+        end
+
+        it "resolves the store class and the deduplication mode from the organization" do
+          expect(store).to be_a(Events::Stores::ClickhouseStore)
+          expect(store.deduplicate).to be(true)
+        end
+      end
+
+      context "with a provider running on the same event context and window" do
+        let(:provider) do
+          Events::Stores::Provider.new(organization: billable_metric.organization, context:, boundaries:)
+        end
+
+        it "mints the store from it rather than building another one" do
+          allow(Events::Stores::Provider).to receive(:new).and_call_original
+          provider # built here, before the factory runs
+          allow(provider).to receive(:store_for).and_call_original
+
+          store = factory.new_instance(metered_item:, context:, boundaries:, provider:).__send__(:event_store)
+
+          expect(provider).to have_received(:store_for)
+          expect(Events::Stores::Provider).to have_received(:new).once
+          expect(store.code).to eq(billable_metric.code)
+        end
+      end
+
+      context "with a provider running on another window" do
+        let(:provider) do
+          Events::Stores::Provider.new(
+            organization: billable_metric.organization,
+            context:,
+            boundaries: boundaries.merge(max_timestamp: subscription.started_at)
+          )
+        end
+
+        it "refuses to mint a store for a scope it does not aggregate" do
+          expect { factory.new_instance(metered_item:, context:, boundaries:, provider:) }
+            .to raise_error(ArgumentError, /another event context or window/)
+        end
+      end
+
+      context "with a provider running on another event context" do
+        let(:provider) do
+          Events::Stores::Provider.new(
+            organization: billable_metric.organization,
+            context: Events::Stores::EventContext.from(subscription: create(:subscription)),
+            boundaries:
+          )
+        end
+
+        it "refuses to mint a store for a scope it does not aggregate" do
+          expect { factory.new_instance(metered_item:, context:, boundaries:, provider:) }
+            .to raise_error(ArgumentError, /another event context or window/)
+        end
+      end
     end
   end
 end

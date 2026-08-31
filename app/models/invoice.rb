@@ -309,19 +309,26 @@ class Invoice < ApplicationRecord
       filters[:ignored_filters] = result.ignored_filters
     end
 
+    boundaries = {
+      from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
+      to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
+      charges_duration: fee.properties["charges_duration"]
+    }
+
+    context = Events::Stores::EventContext.from(subscription: fee.subscription)
+    provider = Events::Stores::Provider.new(organization:, context:, boundaries:)
+
+    metered_item = Fees::ChargeService::MeteredItem.from_charge(
+      charge: fee.charge,
+      boundaries: BillingPeriodBoundaries.from_fee(fee),
+      charge_filter: fee.charge_filter
+    )
+
     service.new(
-      event_store_class: Events::Stores::StoreFactory.store_class(organization:),
-      metered_item: Fees::ChargeService::MeteredItem.from_charge(
-        charge: fee.charge,
-        boundaries: BillingPeriodBoundaries.from_fee(fee),
-        charge_filter: fee.charge_filter
-      ),
-      context: Events::Stores::EventContext.from(subscription: fee.subscription),
-      boundaries: {
-        from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
-        to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
-        charges_duration: fee.properties["charges_duration"]
-      },
+      event_store: provider.store_for(metered_item:, filters:),
+      metered_item:,
+      context:,
+      boundaries:,
       filters:
     ).breakdown.breakdown
   end

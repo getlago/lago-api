@@ -33,12 +33,13 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   let(:aggregation) { 5.96667 }
   let(:aggregator) do
     BillableMetrics::ProratedAggregations::SumService.new(
-      event_store_class:,
+      event_store: event_store_class.new(context:, boundaries: nil),
       metered_item:,
-      context: Events::Stores::EventContext.from(subscription:),
+      context:,
       boundaries: nil
     )
   end
+  let(:context) { Events::Stores::EventContext.from(subscription:) }
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:per_event_aggregation) do
     BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|

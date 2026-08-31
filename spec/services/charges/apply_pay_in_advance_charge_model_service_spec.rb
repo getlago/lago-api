@@ -35,11 +35,13 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
   end
   let(:properties) { {} }
 
+  let(:context) { Events::Stores::EventContext.from(subscription:) }
+
   let(:aggregator) do
     BillableMetrics::Aggregations::CountService.new(
-      event_store_class: Events::Stores::PostgresStore,
+      event_store: Events::Stores::PostgresStore.new(context:, boundaries: nil),
       metered_item:,
-      context: Events::Stores::EventContext.from(subscription:),
+      context:,
       boundaries: nil
     )
   end
@@ -232,9 +234,9 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
 
       let(:aggregator) do
         BillableMetrics::Aggregations::SumService.new(
-          event_store_class: Events::Stores::PostgresStore,
+          event_store: Events::Stores::PostgresStore.new(context:, boundaries: nil),
           metered_item:,
-          context: Events::Stores::EventContext.from(subscription:),
+          context:,
           boundaries: nil
         )
       end
