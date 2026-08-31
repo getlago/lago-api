@@ -90,7 +90,6 @@ RSpec.describe Analytics::InvoiceCollection do
 
     let_it_be(:organization) { create_default(:organization, created_at: 3.months.ago) }
     let(:billing_entity1) { organization.default_billing_entity }
-    let_it_be(:billing_entity2) { create(:billing_entity, organization: organization) }
     let(:invoices) {
       [
         create(:invoice, organization:, customer: customer1, billing_entity: billing_entity1, issuing_date: 2.months.ago, total_amount_cents: 100, status: :pending),
@@ -99,6 +98,9 @@ RSpec.describe Analytics::InvoiceCollection do
         create(:invoice, organization:, customer: customer2, billing_entity: billing_entity2, issuing_date: 1.month.ago, total_amount_cents: 400, status: :finalized)
       ]
     }
+
+    let_it_be(:billing_entity2) { create(:billing_entity, organization: organization) }
+
     let_it_be(:customer1) { create(:customer, organization:, tax_identification_number: nil) }
     let_it_be(:customer2) { create(:customer, organization:, tax_identification_number: "123456789") }
 
