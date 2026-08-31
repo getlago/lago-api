@@ -105,6 +105,9 @@ gem "google-cloud-storage", require: false
 # stdlib json, so multi_json is no longer pulled in transitively and must be pinned.
 gem "multi_json", require: false
 
+# Streaming
+gem "aws-sdk-kinesis", require: false
+
 # Templating
 gem "slim"
 gem "slim-rails"
