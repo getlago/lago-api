@@ -157,6 +157,7 @@ end
 #  paid_top_up_max_amount_cents        :bigint
 #  paid_top_up_min_amount_cents        :bigint
 #  payment_method_type                 :enum             default("provider"), not null
+#  payment_term                        :jsonb
 #  priority                            :integer          default(50), not null
 #  purchase_order_number               :string
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
