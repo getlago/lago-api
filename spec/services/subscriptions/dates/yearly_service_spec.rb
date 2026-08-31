@@ -15,20 +15,18 @@ RSpec.describe Subscriptions::Dates::YearlyService do
       started_at:
     )
   end
-
-  before_all do
-    create_default(:organization)
-  end
-
   let(:customer) { create_default(:customer, timezone:) }
   let(:plan) { create_default(:plan, interval: :yearly, pay_in_advance:) }
   let(:pay_in_advance) { false }
   let(:current_usage) { false }
-
   let(:subscription_at) { Time.zone.parse("02 Feb 2021") }
   let(:billing_at) { Time.zone.parse("07 Mar 2022") }
   let(:started_at) { subscription_at }
   let(:timezone) { "UTC" }
+
+  before_all do
+    create_default(:organization)
+  end
 
   describe "from_datetime" do
     let(:result) { date_service.from_datetime.to_s }

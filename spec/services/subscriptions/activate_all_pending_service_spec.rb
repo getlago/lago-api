@@ -5,12 +5,12 @@ require "rails_helper"
 RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
   subject(:activate_service) { described_class.new(timestamp: timestamp.to_i) }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-create_default(:plan)
-create_default(:add_on)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+    create_default(:add_on)
+  end
 
   let(:timestamp) { Time.current }
 
@@ -112,7 +112,6 @@ end
 
     context "with customer timezone" do
       let(:timestamp) { DateTime.parse("2023-08-24 00:07:00") }
-      let_it_be(:customer) { create(:customer, :with_hubspot_integration, timezone: "America/Bogota") }
       let!(:pending_subscription) do
         create(
           :subscription,
@@ -121,6 +120,8 @@ end
           subscription_at: timestamp
         )
       end
+
+      let_it_be(:customer) { create(:customer, :with_hubspot_integration, timezone: "America/Bogota") }
 
       it "enqueues Integrations::Aggregator::Subscriptions::Hubspot::CreateJob" do
         activate_service.call

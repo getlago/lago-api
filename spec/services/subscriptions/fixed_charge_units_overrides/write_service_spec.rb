@@ -16,10 +16,10 @@ RSpec.describe Subscriptions::FixedChargeUnitsOverrides::WriteService do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:plan) { create(:plan, organization:) }
 
-before_all do
-  create_default(:customer)
-create_default(:add_on)
-end
+  before_all do
+    create_default(:customer)
+    create_default(:add_on)
+  end
 
   let(:fixed_charge) { create(:fixed_charge, plan:, organization:, units: 5) }
   let(:subscription) { create(:subscription, plan:) }

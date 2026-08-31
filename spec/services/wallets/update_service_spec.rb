@@ -13,9 +13,9 @@ RSpec.describe Wallets::UpdateService do
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:priority) { 5 }
 
-before_all do
-  create_default(:plan)
-end
+  before_all do
+    create_default(:plan)
+  end
 
   describe "#call" do
     before do

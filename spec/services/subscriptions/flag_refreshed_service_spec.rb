@@ -7,9 +7,9 @@ RSpec.describe Subscriptions::FlagRefreshedService, :premium do
   let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
 
-before_all do
-  create_default(:plan)
-end
+  before_all do
+    create_default(:plan)
+  end
 
   before do
     allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call).and_call_original

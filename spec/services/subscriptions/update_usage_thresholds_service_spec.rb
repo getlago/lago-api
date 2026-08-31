@@ -6,7 +6,7 @@ RSpec.describe Subscriptions::UpdateUsageThresholdsService, :premium do
   subject(:service) { described_class.new(subscription:, usage_thresholds_params:, partial:) }
 
   let_it_be(:premium_integrations) { ["progressive_billing"] }
-      let_it_be(:organization) { create(:organization, premium_integrations:) }
+  let_it_be(:organization) { create(:organization, premium_integrations:) }
   let_it_be(:customer) { create(:customer, organization:) }
   let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization:) }

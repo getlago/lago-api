@@ -5,13 +5,11 @@ require "rails_helper"
 RSpec.describe UsageThresholds::OverrideService do
   subject(:override_service) { described_class.new(usage_thresholds_params:, new_plan: plan) }
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
 
   describe "#call" do
     let(:threshold) { create(:usage_threshold, plan:) }
-    let_it_be(:plan) { create(:plan, organization:) }
-
     let(:usage_thresholds_params) do
       [
         {
@@ -21,6 +19,8 @@ RSpec.describe UsageThresholds::OverrideService do
         }
       ]
     end
+
+    let_it_be(:plan) { create(:plan, organization:) }
 
     before { threshold }
 

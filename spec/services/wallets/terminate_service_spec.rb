@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe Wallets::TerminateService do
   subject(:terminate_service) { described_class.new(wallet:) }
 
-before_all do
-  create_default(:plan)
-end
+  before_all do
+    create_default(:plan)
+  end
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }

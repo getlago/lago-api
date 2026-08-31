@@ -8,6 +8,7 @@ RSpec.describe Taxes::UpdateService do
   let_it_be(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
   let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#call" do

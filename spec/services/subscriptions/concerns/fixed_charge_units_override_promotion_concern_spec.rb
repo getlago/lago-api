@@ -13,10 +13,10 @@ RSpec.describe Subscriptions::Concerns::FixedChargeUnitsOverridePromotionConcern
     end.new
   end
 
-before_all do
-  create_default(:customer)
-create_default(:add_on)
-end
+  before_all do
+    create_default(:customer)
+    create_default(:add_on)
+  end
 
   describe "#promote_units_overrides_to_fixed_charges_params" do
     let_it_be(:organization) { create_default(:organization) }

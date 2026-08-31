@@ -17,9 +17,9 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer, organization:) }
 
-before_all do
-  create_default(:plan)
-end
+  before_all do
+    create_default(:plan)
+  end
 
   let(:subscription) { create(:subscription, customer:, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }

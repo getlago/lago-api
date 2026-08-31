@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe Subscriptions::TerminateService do
   subject(:terminate_service) { described_class.new(subscription:) }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-create_default(:plan)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   let(:on_termination_credit_note) { nil }
 

@@ -54,7 +54,7 @@ RSpec.describe Utils::SecurityLog do
     end
 
     let_it_be(:organization) { create(:organization, premium_integrations: ["security_logs"]) }
-      let_it_be(:membership) { create(:membership, organization:) }
+    let_it_be(:membership) { create(:membership, organization:) }
     let(:user) { membership.user }
     let(:api_key) { create(:api_key, organization:) }
 
