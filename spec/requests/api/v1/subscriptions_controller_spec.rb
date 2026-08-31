@@ -222,7 +222,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         it "bills the generated cycle boundaries instead of a one-day activation window" do
           travel_to(Time.zone.parse("2026-08-11 12:45:13")) do
             expect do
-              perform_enqueued_jobs(only: BillingCycles::BillSubscriptionJob) { subject }
+              perform_enqueued_jobs(only: BillingSegments::BillSubscriptionJob) { subject }
             end.to change(Invoice, :count).by(1)
           end
 

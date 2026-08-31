@@ -202,7 +202,7 @@ module Subscriptions
       # invoice on subscribe instead of waiting for the clock tick. Arrears items and
       # future subscriptions aren't due yet, so they wait for the scheduler.
       if new_subscription.active?
-        after_commit { BillingCycles::BillSubscriptionJob.perform_later(new_subscription) }
+        after_commit { BillingSegments::BillSubscriptionJob.perform_later(new_subscription) }
       end
     end
 

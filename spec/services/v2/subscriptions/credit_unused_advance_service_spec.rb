@@ -41,7 +41,7 @@ RSpec.describe V2::Subscriptions::CreditUnusedAdvanceService do
     before do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"))
       create(
-        :billing_cycle,
+        :billing_segment,
         organization:,
         subscription:,
         customer:,
@@ -113,7 +113,7 @@ RSpec.describe V2::Subscriptions::CreditUnusedAdvanceService do
       end
 
       before do
-        BillingCycle.sole.update!(
+        BillingSegment.sole.update!(
           billing_at: Time.zone.parse("2026-09-10"),
           period_from: Time.zone.parse("2026-09-10"),
           period_to: Time.zone.parse("2026-10-09 23:59:59.999999")

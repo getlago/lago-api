@@ -48,29 +48,29 @@ RSpec.describe SubscriptionRateCards::TerminateService do
       rate_card_rate
     end
 
-    it "terminates the rate card and creates a pending billing cycle" do
-      expect { result }.to change(BillingCycle, :count).by(1)
+    it "terminates the rate card and creates a pending billing segment" do
+      expect { result }.to change(BillingSegment, :count).by(1)
 
       expect(result).to be_success
-      expect(result.billing_cycles).to be_present
+      expect(result.billing_segments).to be_present
       expect(subscription_rate_card.reload.ended_at).to eq(terminated_at)
       expect(subscription_rate_card.next_billing_at).to eq(terminated_at)
 
-      billing_cycle = result.billing_cycles.sole
-      expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-01"))
-      expect(billing_cycle.period_to).to eq(terminated_at)
-      expect(billing_cycle.billing_at).to eq(terminated_at)
-      expect(billing_cycle.proration_ratio).to eq(1)
-      expect(billing_cycle.status).to eq("pending")
+      billing_segment = result.billing_segments.sole
+      expect(billing_segment.period_from).to eq(Time.zone.parse("2026-08-01"))
+      expect(billing_segment.period_to).to eq(terminated_at)
+      expect(billing_segment.billing_at).to eq(terminated_at)
+      expect(billing_segment.proration_ratio).to eq(1)
+      expect(billing_segment.status).to eq("pending")
     end
 
     context "with proration enabled" do
       let(:rate_card) { create(:rate_card, organization:, product: fixed_product, proration: true) }
 
       it "stores the final cycle proration ratio" do
-        expect { result }.to change(BillingCycle, :count).by(1)
+        expect { result }.to change(BillingSegment, :count).by(1)
 
-        expect(result.billing_cycles.sole.proration_ratio).to eq(BigDecimal("0.5483870968"))
+        expect(result.billing_segments.sole.proration_ratio).to eq(BigDecimal("0.5483870968"))
       end
     end
 
@@ -93,10 +93,10 @@ RSpec.describe SubscriptionRateCards::TerminateService do
         )
       end
 
-      it "creates billing cycles overlapping now through the termination date" do
-        expect { result }.to change(BillingCycle, :count).by(3)
+      it "creates billing segments overlapping now through the termination date" do
+        expect { result }.to change(BillingSegment, :count).by(3)
 
-        expect(result.billing_cycles.map { [it.period_from, it.period_to] }).to eq(
+        expect(result.billing_segments.map { [it.period_from, it.period_to] }).to eq(
           [
             [Time.zone.parse("2026-08-01"), Time.zone.parse("2026-08-31 23:59:59.999999")],
             [Time.zone.parse("2026-09-01"), Time.zone.parse("2026-09-30 23:59:59.999999")],
@@ -121,11 +121,11 @@ RSpec.describe SubscriptionRateCards::TerminateService do
         )
       end
 
-      it "terminates the rate card without creating billing cycles inline" do
-        expect { result }.not_to change(BillingCycle, :count)
+      it "terminates the rate card without creating billing segments inline" do
+        expect { result }.not_to change(BillingSegment, :count)
 
         expect(result).to be_success
-        expect(result.billing_cycles).to eq([])
+        expect(result.billing_segments).to eq([])
         expect(subscription_rate_card.reload.ended_at).to eq(terminated_at)
         expect(subscription_rate_card.next_billing_at).to eq(Time.zone.parse("2026-08-01"))
       end

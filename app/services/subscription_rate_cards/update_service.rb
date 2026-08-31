@@ -148,7 +148,7 @@ module SubscriptionRateCards
         # that is recorded but never billed is silent revenue loss, so if the charge cannot
         # be scheduled the change does not stand either. Returns without doing anything for
         # arrears, for decreases, and for a rise that stays under the watermark.
-        BillingCycles::ScheduleAdvanceIncrementService.call!(subscription_rate_card: successor, at:)
+        BillingSegments::ScheduleAdvanceIncrementService.call!(subscription_rate_card: successor, at:)
 
         result.subscription_rate_card = successor
       end

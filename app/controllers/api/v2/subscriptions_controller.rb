@@ -123,7 +123,7 @@ module Api
       end
 
       # Testing helper: returns the billing periods that would be generated for
-      # active product-catalog subscriptions without creating billing cycles or invoices.
+      # active product-catalog subscriptions without creating billing segments or invoices.
       def cycles
         subscriptions = cycle_subscriptions
         return not_found_error(resource: "subscription") unless subscriptions

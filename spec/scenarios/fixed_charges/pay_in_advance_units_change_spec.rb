@@ -1493,7 +1493,7 @@ describe "Pay in advance fixed charge units change mid-period", :premium do
         expect(delta_fee.amount_cents).to eq(5_000)
       end
 
-      it "next regular billing cycle bills the new units (15), not the old (10)" do
+      it "next regular billing segment bills the new units (15), not the old (10)" do
         expect {
           travel_to subscription_date + 1.month + 1.minute do
             perform_billing

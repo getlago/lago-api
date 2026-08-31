@@ -15,7 +15,7 @@ class SubscriptionRateCard < ApplicationRecord
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
-  has_many :billing_cycles
+  has_many :billing_segments
 
   delegate :proration?, to: :rate_card
 

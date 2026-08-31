@@ -3,16 +3,16 @@
 module SubscriptionRateCards
   # Terminates a single product-catalog item.
   #
-  # Arrears items create pending BillingCycles for periods overlapping the termination
+  # Arrears items create pending BillingSegments for periods overlapping the termination
   # window. The final period is clamped to terminated_at and left pending for the clock
   # processor to invoice. The item's next_billing_at is set to terminated_at so the
   # due-items scope will no longer treat it as an unbilled future cycle.
   #
-  # Advance items do not create a BillingCycle: the current period was already billed
+  # Advance items do not create a BillingSegment: the current period was already billed
   # up front. This service only sets ended_at; the subscription-level termination flow
   # handles any unused-period credit note separately.
   class TerminateService < BaseService
-    Result = BaseResult[:subscription_rate_card, :billing_cycles]
+    Result = BaseResult[:subscription_rate_card, :billing_segments]
 
     def initialize(subscription_rate_card:, terminated_at: Time.current)
       @subscription_rate_card = subscription_rate_card
@@ -23,11 +23,11 @@ module SubscriptionRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless subscription_rate_card
 
-      result.billing_cycles = []
+      result.billing_segments = []
       return result if subscription_rate_card.ended_at.present?
 
       ActiveRecord::Base.transaction do
-        result.billing_cycles = final_cycles
+        result.billing_segments = final_cycles
         subscription_rate_card.update!(termination_attributes)
       end
 
@@ -51,7 +51,7 @@ module SubscriptionRateCards
     def final_cycles
       return [] unless arrears?
 
-      dates.periods.filter_map { |period| billing_cycle_for(period) }
+      dates.periods.filter_map { |period| billing_segment_for(period) }
     end
 
     # Termination emits every period overlapping the termination window instead of
@@ -74,8 +74,8 @@ module SubscriptionRateCards
       end
     end
 
-    def billing_cycle_for(period)
-      BillingCycle.create!(
+    def billing_segment_for(period)
+      BillingSegment.create!(
         organization:,
         subscription:,
         customer:,

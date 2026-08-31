@@ -36,7 +36,7 @@ module BillingPeriods
       end
     end
 
-    # One logical billing cycle for a subscription rate card. It owns the
+    # One logical billing segment for a subscription rate card. It owns the
     # cycle index and phase resolution; rate effective dates may split it into
     # several Periods without advancing this index.
     Cycle = Data.define(
@@ -53,7 +53,7 @@ module BillingPeriods
 
     # A concrete date slice priced with one catalog rate. Several periods can
     # belong to the same Cycle when a rate effective date cuts the logical
-    # billing cycle.
+    # billing segment.
     Period = Data.define(
       :period_from,
       :period_to,

@@ -2,11 +2,11 @@
 
 # Shared by the two rate-phase parents (plan_rate_card and
 # subscription_rate_card): walking the ordered phase sequence to find the
-# one covering a billing cycle.
+# one covering a billing segment.
 module RatePhaseable
   extend ActiveSupport::Concern
 
-  # Returns the rate phase covering the given zero-based billing cycle index.
+  # Returns the rate phase covering the given zero-based billing segment index.
   # Phases (ordered by position) partition the timeline by their cumulative
   # billing_interval_cycle_count; the final phase may carry a nil count,
   # meaning it runs indefinitely. Returns nil when no phase covers the cycle.

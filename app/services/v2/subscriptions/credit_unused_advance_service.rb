@@ -4,7 +4,7 @@ module V2
   module Subscriptions
     # Credits the paid-but-unused remainder of a terminated subscription's advance
     # items. Arrears items are skipped: their final usage is billed by the pending
-    # BillingCycle created during item termination.
+    # BillingSegment created during item termination.
     #
     # Advance bills the whole period up front, so ending mid-period leaves an unused
     # portion on the already-invoiced fee. The billed period is read from the cycle that
@@ -58,7 +58,7 @@ module V2
       # The already-done advance cycle whose period the termination falls in — the one
       # that billed the period we're now partially refunding.
       def open_cycle(subscription_rate_card)
-        BillingCycle.done
+        BillingSegment.done
           .where(subscription_rate_card:)
           .where("period_from <= ? AND period_to >= ?", terminated_at, terminated_at)
           .where.not(invoice_id: nil)

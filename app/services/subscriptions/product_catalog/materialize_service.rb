@@ -43,6 +43,13 @@ module Subscriptions
         item
       end
 
+      # When the clock should first look at this card: the instant its first cycle becomes
+      # billable. Advance is billable as soon as the cycle opens, arrears once it closes.
+      #
+      # Rate phases are NOT considered yet: a first phase carrying an interval override
+      # (QA plan PH3) would open on a different cadence than the one seeded here. Without a
+      # resolvable rate there is no interval at all, so fall back to started_at and let a
+      # later scheduler pass move the clock on.
       def initial_next_billing_at(item)
         rate = item.rate_card&.rate_active_at(started_at)
         return started_at unless rate
