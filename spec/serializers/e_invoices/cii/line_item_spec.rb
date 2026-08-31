@@ -9,7 +9,10 @@ RSpec.describe EInvoices::Cii::LineItem do
     end
   end
 
-  let(:resource) { create(:invoice) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:resource) { create_default(:invoice) }
   let(:data) do
     described_class::Data.new(
       line_id:,

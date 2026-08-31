@@ -10,12 +10,14 @@ RSpec.describe EInvoices::Ubl::AllowanceCharge do
   end
 
   let(:indicator) { described_class::INVOICE_DISCOUNT }
-  let(:resource) { invoice }
-  let(:invoice) { create(:invoice, currency: "USD") }
   let(:tax_rate) { 19.00 }
   let(:amount) { Money.new(1000) }
-
   let(:root) { "//cac:AllowanceCharge" }
+  let(:resource) { invoice }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice, currency: "USD") }
 
   before { invoice }
 

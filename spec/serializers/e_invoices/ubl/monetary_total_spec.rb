@@ -10,7 +10,10 @@ RSpec.describe EInvoices::Ubl::MonetaryTotal do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:resource) { invoice }
+  let(:root) { "//cac:LegalMonetaryTotal" }
   let(:amounts) do
     described_class::Amounts.new(
       line_extension_amount: 1000,
@@ -22,11 +25,10 @@ RSpec.describe EInvoices::Ubl::MonetaryTotal do
       payable_amount: 1188.84
     )
   end
-  let(:invoice) do
-    create(:invoice, currency: "USD")
-  end
 
-  let(:root) { "//cac:LegalMonetaryTotal" }
+  let_it_be(:invoice) do
+    create_default(:invoice, currency: "USD")
+  end
 
   describe ".serialize" do
     it { is_expected.not_to be_nil }
