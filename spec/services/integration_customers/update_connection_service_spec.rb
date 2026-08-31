@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe IntegrationCustomers::UpdateConnectionService do
   subject(:update_service) { described_class.new(integration_customer:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:, code: "old_code") }
   let(:params) { {} }
@@ -136,7 +136,7 @@ RSpec.describe IntegrationCustomers::UpdateConnectionService do
     end
 
     context "when the customer is a partner account" do
-      let(:customer) { create(:customer, organization:, account_type: "partner") }
+      let_it_be(:customer) { create(:customer, organization:, account_type: "partner") }
       let(:params) { {code: "new_code", external_customer_id: "external-123"} }
 
       it "updates the code" do

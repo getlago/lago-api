@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe InvoiceCustomSections::UpdateService do
   subject(:service_result) { described_class.call(invoice_custom_section:, update_params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
   let(:update_params) { nil }
 

@@ -6,8 +6,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::BasePayload do
   let(:payload) { described_class.new(integration_customer:, invoice:) }
   let(:integration_customer) { create(:xero_customer, integration:, customer:) }
   let(:integration) { create(:xero_integration, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
   describe "#fees" do

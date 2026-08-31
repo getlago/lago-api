@@ -6,8 +6,8 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
   subject(:service_call) { described_class.call(integration:, integration_customer:) }
 
   let(:service) { described_class.new(integration:, integration_customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/#{integration_type}/companies" }
 

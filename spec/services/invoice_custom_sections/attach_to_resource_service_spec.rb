@@ -12,7 +12,13 @@ RSpec.describe InvoiceCustomSections::AttachToResourceService do
     end
 
     let(:service) { described_class.new(resource:, params:) }
-    let(:organization) { resource.organization }
+    let_it_be(:organization) { create_default(:organization)}
+
+before_all do
+  create_default(:customer)
+create_default(:plan)
+end
+
     let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
     let(:section_2) { create(:invoice_custom_section, organization:, code: "section_code_2") }
     let(:section_3) { create(:invoice_custom_section, organization:, code: "section_code_3") }

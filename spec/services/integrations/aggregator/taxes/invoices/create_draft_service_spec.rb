@@ -7,11 +7,16 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-  let(:organization) { create(:organization) }
+
+before_all do
+  create_default(:plan)
+end
+
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:add_on_two) { create(:add_on, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on_two) { create(:add_on, organization:) }
   let(:current_time) { Time.current }
 
   let(:integration_collection_mapping1) do
