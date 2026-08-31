@@ -4,15 +4,6 @@ require "rails_helper"
 
 RSpec.describe Commitments::CalculateProratedCoefficientService do
   let(:service) { described_class.new(commitment:, invoice_subscription:) }
-  let(:commitment) { create(:commitment, plan:) }
-
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:customer) { create(:customer, organization:) }
-
-  let_it_be(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
-  let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
-
   let(:invoice_subscription) do
     create(
       :invoice_subscription,
@@ -29,6 +20,14 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
   let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
   let(:charges_to_datetime) { DateTime.parse("2024-01-31T23:59:59") }
   let(:timestamp) { DateTime.parse("2024-02-01T10:00:00") }
+  let(:commitment) { create(:commitment, plan:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
+
+  let_it_be(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
+  let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
 
   describe "#proration_coefficient" do
     subject(:apply_service) { service.proration_coefficient }

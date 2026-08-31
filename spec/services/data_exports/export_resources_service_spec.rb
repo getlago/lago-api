@@ -6,9 +6,9 @@ RSpec.describe DataExports::ExportResourcesService do
   subject(:result) { described_class.call(data_export:, batch_size:) }
 
   let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }
+  let(:batch_size) { 100 }
 
   let_it_be(:organization) { create_default(:organization) }
-  let(:batch_size) { 100 }
 
   before_all do
     create_default(:customer)

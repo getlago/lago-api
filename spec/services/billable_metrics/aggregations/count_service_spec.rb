@@ -405,7 +405,6 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
 
   context "with clickhouse event store", :clickhouse do
     let(:event_store_class) { Events::Stores::ClickhouseStore }
-    let_it_be(:organization) { create(:organization, clickhouse_events_store: true) }
     let(:event_list) do
       create_list(
         :clickhouse_events_enriched,
@@ -417,6 +416,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
         timestamp: Time.zone.now - 1.day
       )
     end
+
+    let_it_be(:organization) { create(:organization, clickhouse_events_store: true) }
 
     let_it_be(:billable_metric) do
       create(

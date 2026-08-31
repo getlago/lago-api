@@ -16,15 +16,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
   end
 
   let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
-  let(:charge_filter) { nil }
-  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
-  let(:properties) { {} }
-
-  let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:subscription) do
-    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
-  end
-
   let(:boundaries) do
     BillingPeriodBoundaries.new(
       from_datetime: subscription.started_at.beginning_of_day,
@@ -36,6 +27,14 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     )
   end
   let(:agg_result) { BaseService::Result.new }
+  let(:charge_filter) { nil }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
+  let(:properties) { {} }
+
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:subscription) do
+    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
+  end
 
   describe "#call" do
     describe "when count aggregation" do

@@ -21,7 +21,6 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
     }
   end
 
-
   describe "#call" do
     let(:legacy_fee) do
       Fee.new(

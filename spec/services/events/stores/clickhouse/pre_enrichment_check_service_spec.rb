@@ -10,12 +10,12 @@ RSpec.describe Events::Stores::Clickhouse::PreEnrichmentCheckService do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer, organization:) }
   let(:reprocess) { false }
-
-  let_it_be(:plan) { create_default(:plan, organization:) }
   let(:started_at) { Time.zone.parse("2024-12-01") }
   let(:subscription) do
     create(:subscription, organization:, customer:, plan:, started_at:)
   end
+
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   before { subscription }
 
