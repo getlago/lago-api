@@ -3651,6 +3651,7 @@ CREATE TABLE public.invoices (
     payment_term jsonb,
     payment_term_source character varying,
     search_terms text,
+    payment_refund_blocked_at timestamp(6) without time zone,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -14215,6 +14216,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831110847'),
 ('20260819111435'),
 ('20260819111434'),
 ('20260819000710'),
