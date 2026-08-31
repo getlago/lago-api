@@ -6,19 +6,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-
-before_all do
-  create_default(:plan)
-end
-
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
-  let_it_be(:add_on) { create(:add_on, organization:) }
-  let_it_be(:add_on_two) { create(:add_on, organization:) }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -36,7 +26,6 @@ end
       settings: {external_id: "m1", external_account_code: "m11", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -60,7 +49,6 @@ end
       created_at: current_time - 2.seconds
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -69,7 +57,6 @@ end
     }
   end
   let(:response_status) { 200 }
-
   let(:params) do
     [
       {
@@ -103,6 +90,16 @@ end
       }
     ]
   end
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on_two) { create(:add_on, organization:) }
 
   before do
     integration_customer

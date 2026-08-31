@@ -6,7 +6,8 @@ RSpec.describe Integrations::Avalara::UpdateService do
   include_context "with mocked security logger"
 
   let(:integration) { create(:avalara_integration, organization:) }
-  let_it_be(:organization) { create_default(:organization)}
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
 
   describe "#call" do

@@ -8,6 +8,43 @@ RSpec.describe Fees::ProjectionService do
   let_it_be(:organization) { create_default(:organization) }
 
   let(:fees) { [fee] }
+  let(:charge) do
+    create(:standard_charge,
+      applied_pricing_unit: applied_pricing_unit,
+      filters: [],
+      billable_metric: billable_metric)
+  end
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, plan:, organization:, customer:) }
+  let(:charge_filter) { nil }
+  let(:applied_pricing_unit) { nil }
+  let(:fee_properties) do
+    {
+      "from_datetime" => from_datetime,
+      "to_datetime" => to_datetime,
+      "charges_duration" => charges_duration
+    }
+  end
+  let(:from_datetime) { Time.current.beginning_of_month }
+  let(:to_datetime) { Time.current.end_of_month }
+  let(:charges_duration) { nil }
+  let(:aggregation_result) do
+    instance_double(
+      "AggregationResult",
+      success?: true,
+      error: nil
+    )
+  end
+  let(:charge_model_result) do
+    instance_double(
+      "ChargeModelResult",
+      success?: true,
+      error: nil,
+      projected_amount: BigDecimal("100.50"),
+      projected_units: BigDecimal(10),
+      unit_amount: BigDecimal("10.05")
+    )
+  end
   let(:fee) do
     build(:fee,
       charge: charge,
@@ -22,51 +59,8 @@ RSpec.describe Fees::ProjectionService do
     create(:billable_metric, recurring: false, organization:)
   end
 
-  let(:charge) do
-    create(:standard_charge,
-      applied_pricing_unit: applied_pricing_unit,
-      filters: [],
-      billable_metric: billable_metric)
-  end
-
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, plan:, organization:, customer:) }
   let_it_be(:currency) { "EUR" }
   let_it_be(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
-
-  let(:charge_filter) { nil }
-  let(:applied_pricing_unit) { nil }
-
-  let(:fee_properties) do
-    {
-      "from_datetime" => from_datetime,
-      "to_datetime" => to_datetime,
-      "charges_duration" => charges_duration
-    }
-  end
-
-  let(:from_datetime) { Time.current.beginning_of_month }
-  let(:to_datetime) { Time.current.end_of_month }
-  let(:charges_duration) { nil }
-
-  let(:aggregation_result) do
-    instance_double(
-      "AggregationResult",
-      success?: true,
-      error: nil
-    )
-  end
-
-  let(:charge_model_result) do
-    instance_double(
-      "ChargeModelResult",
-      success?: true,
-      error: nil,
-      projected_amount: BigDecimal("100.50"),
-      projected_units: BigDecimal(10),
-      unit_amount: BigDecimal("10.05")
-    )
-  end
 
   before do
     allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(

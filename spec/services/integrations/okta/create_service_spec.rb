@@ -6,7 +6,7 @@ RSpec.describe Integrations::Okta::CreateService do
   include_context "with mocked security logger"
 
   let(:service) { described_class.new(membership.user) }
-  let(:organization) { create_default(:organization)}
+  let(:organization) { create_default(:organization) }
   let(:membership) { create(:membership) }
   let(:domain) { "foo.bar" }
   let(:host) { "test.com" }

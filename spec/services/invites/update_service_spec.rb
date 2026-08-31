@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invites::UpdateService do
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:acting_user) { create(:membership, organization:).user }
   let(:invite) { create(:invite, organization:) }

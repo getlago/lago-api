@@ -4,10 +4,11 @@ require "rails_helper"
 
 RSpec.describe IntegrationCustomers::HubspotService do
   let(:integration) { create(:hubspot_integration, organization:) }
-  let_it_be(:organization) { create_default(:organization)}
+  let(:targeted_object) { "contacts" }
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:customer) { create(:customer, organization:, customer_type: "individual") }
-  let(:targeted_object) { "contacts" }
 
   describe "#create" do
     subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil, targeted_object:).create }

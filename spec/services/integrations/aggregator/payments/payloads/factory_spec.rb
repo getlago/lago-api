@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Payments::Payloads::Factory do
-before_all do
-  create_default(:organization)
-create_default(:customer)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
 
   describe ".new_instance" do
     subject(:new_instance_call) { described_class.new_instance(integration:, payment:) }

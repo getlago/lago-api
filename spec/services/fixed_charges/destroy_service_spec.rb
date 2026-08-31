@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe FixedCharges::DestroyService do
   subject(:destroy_service) { described_class.new(fixed_charge:) }
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:plan) { create_default(:plan, organization:) }
   let_it_be(:add_on) { create(:add_on, organization:) }

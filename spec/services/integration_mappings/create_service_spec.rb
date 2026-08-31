@@ -6,7 +6,8 @@ RSpec.describe IntegrationMappings::CreateService do
   let(:service) { described_class.new(membership.user) }
 
   let(:integration) { create(:netsuite_integration, organization:) }
-  let_it_be(:organization) { create_default(:organization)}
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:add_on) { create(:add_on, organization:) }
 

@@ -9,7 +9,7 @@ RSpec.describe Integrations::DestroyService do
 
   let_it_be(:membership) { create(:membership) }
   let_it_be(:membership) { create(:membership) }
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let(:integration) { create(:netsuite_integration, organization:) }
 
   describe ".call" do

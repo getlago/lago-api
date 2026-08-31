@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe IntegrationCustomers::UpdateService do
   let(:integration) { create(:netsuite_integration, organization:) }
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:customer) { create(:customer, organization:) }
 

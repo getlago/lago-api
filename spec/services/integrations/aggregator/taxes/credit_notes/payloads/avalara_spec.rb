@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara do
   subject(:payload) { described_class.new(integration:, customer:, integration_customer:, credit_note:).body }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   describe "shipping address fallback" do
     let(:integration) { create(:avalara_integration) }

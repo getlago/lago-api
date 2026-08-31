@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe IntegrationCollectionMappings::UpdateService do
   let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
-  let_it_be(:organization) { create_default(:organization)}
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
 
   describe "#call" do
