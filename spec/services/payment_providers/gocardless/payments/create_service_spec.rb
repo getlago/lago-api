@@ -95,7 +95,6 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
         create(:subscription, organization:, customer:)
       end
 
-      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
       let(:organization) do
         create(:organization, webhook_url: "https://webhook.com")
       end
@@ -123,7 +122,6 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
     end
 
     context "when customer has no mandate to make a payment" do
-      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
       let(:customer) { create(:customer, organization:, payment_provider_code: code) }
       let(:organization) { create(:organization, webhook_url: "https://webhook.com") }
 
