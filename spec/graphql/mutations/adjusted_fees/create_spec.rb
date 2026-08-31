@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::AdjustedFees::Create, :premium do
   let(:required_permission) { "invoices:update" }
+  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, invoice_type: :subscription, organization:, customer:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:subscription) { create(:subscription, customer:, plan:, started_at: Time.current - 1.year) }
@@ -60,7 +61,6 @@ RSpec.describe Mutations::AdjustedFees::Create, :premium do
   let_it_be(:membership) { create_default(:membership, organization:) }
   let_it_be(:plan) { create_default(:plan, organization:) }
   let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
-  let(:customer) { create(:customer, organization:) }
 
   before { fee.invoice.draft! }
 

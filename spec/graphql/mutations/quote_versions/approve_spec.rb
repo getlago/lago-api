@@ -4,6 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::QuoteVersions::Approve do
   let(:required_permission) { "quotes:approve" }
+  let(:membership) { create(:membership) }
+  let(:customer) { create(:customer) }
+  let(:plan) { create(:plan) }
   let(:quote) { create(:quote, organization: membership.organization) }
   let(:quote_version) do
     create(
@@ -33,9 +36,6 @@ RSpec.describe Mutations::QuoteVersions::Approve do
   end
 
   let_it_be(:organization) { create_default(:organization) }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer) }
-  let(:plan) { create(:plan) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

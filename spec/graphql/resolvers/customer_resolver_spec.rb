@@ -4,6 +4,9 @@ require "rails_helper"
 
 RSpec.describe Resolvers::CustomerResolver do
   let(:required_permission) { "customers:view" }
+  let(:customer) do
+    create(:customer, billing_entity:, organization:, currency: "EUR", skip_invoice_custom_sections: false)
+  end
   let(:organization) { membership.organization }
   let(:subscription) { create(:subscription, customer:) }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
@@ -68,9 +71,6 @@ RSpec.describe Resolvers::CustomerResolver do
   let_it_be(:add_on) { create_default(:add_on) }
   let_it_be(:plan) { create_default(:plan) }
   let_it_be(:membership) { create_default(:membership) }
-  let(:customer) do
-    create(:customer, billing_entity:, organization:, currency: "EUR", skip_invoice_custom_sections: false)
-  end
 
   before do
     create_list(:invoice, 2, customer:)

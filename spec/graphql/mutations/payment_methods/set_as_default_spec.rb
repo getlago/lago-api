@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentMethods::SetAsDefault do
   let(:required_permission) { "payment_methods:update" }
+  let(:customer) { create(:customer, organization:) }
   let(:user) { membership.user }
   let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false) }
   let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: true) }
@@ -20,7 +21,6 @@ RSpec.describe Mutations::PaymentMethods::SetAsDefault do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
-  let(:customer) { create(:customer, organization:) }
 
   before do
     payment_method
