@@ -60,7 +60,6 @@ module Resolvers
     )
       result = InvoicesQuery.call(
         organization: current_organization,
-        meilisearch: true,
         pagination: {page:, limit:},
         search_term:,
         filters: {
@@ -88,9 +87,7 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      invoices = result.invoices
-      # Meilisearch returns a paginated array, which has no `without_count` and carries its own total.
-      invoices = invoices.without_count.extend(BaseQuery::CappedTotalCount) if invoices.respond_to?(:without_count)
+      invoices = result.invoices.without_count.extend(BaseQuery::CappedTotalCount)
 
       ActiveRecord::Associations::Preloader.new(
         records: invoices.to_a,

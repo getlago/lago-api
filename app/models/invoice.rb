@@ -7,58 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
-  include MeiliSearch::Rails
   include HasPurchaseOrderNumber
-
-  meilisearch(index_uid: "invoices", auto_index: false, auto_remove: true) do
-    attribute :number, :organization_id, :billing_entity_id, :currency, :customer_id,
-      :invoice_type, :status, :payment_status, :payment_overdue, :self_billed,
-      :total_amount_cents, :total_paid_amount_cents, :purchase_order_number
-
-    attribute(:created_at) { created_at.to_i }
-    attribute(:issuing_date) { issuing_date&.to_time(:utc)&.to_i }
-    attribute(:due_amount_cents) { total_amount_cents - total_paid_amount_cents }
-    attribute(:partially_paid) { total_amount_cents > total_paid_amount_cents && total_paid_amount_cents.positive? }
-    attribute(:payment_dispute_lost) { payment_dispute_lost_at.present? }
-    attribute(:customer_name) { customer.name if customer&.kept? }
-    attribute(:customer_firstname) { customer.firstname if customer&.kept? }
-    attribute(:customer_lastname) { customer.lastname if customer&.kept? }
-    attribute(:customer_legal_name) { customer.legal_name if customer&.kept? }
-    attribute(:customer_external_id) { customer.external_id if customer&.kept? }
-    attribute(:customer_email) { customer.email if customer&.kept? }
-    attribute(:subscription_ids) { invoice_subscriptions.map(&:subscription_id).uniq }
-    attribute(:settlement_types) { invoice_settlements.map(&:settlement_type).uniq }
-    attribute(:metadata) { metadata.map { |meta| "#{meta.key}::#{meta.value}" } }
-    attribute(:metadata_keys) { metadata.map(&:key) }
-
-    searchable_attributes %i[number customer_name customer_firstname customer_lastname
-      customer_legal_name customer_external_id customer_email purchase_order_number]
-
-    # NOTE: The gem compares these rules against the server response via Hash#to_s
-    #       (meilisearch_settings_changed?), so keys must be strings and stay in the
-    #       server's serialization order, otherwise every ms_index call enqueues a
-    #       settingsUpdate task.
-    filterable_attributes [
-      {
-        # Exact match only
-        "attributePatterns" => %w[id organization_id billing_entity_id customer_id
-          customer_external_id subscription_ids metadata metadata_keys
-          currency invoice_type status payment_status settlement_types
-          payment_dispute_lost payment_overdue self_billed partially_paid
-          purchase_order_number],
-        "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => false}}
-      },
-      {
-        # range queries
-        "attributePatterns" => %w[issuing_date total_amount_cents due_amount_cents],
-        "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => true}}
-      }
-    ]
-    sortable_attributes %i[issuing_date created_at id]
-    proximity_precision "byAttribute"
-    typo_tolerance disable_on_attributes: %w[number customer_external_id customer_email]
-    pagination max_total_hits: 100_000
-  end
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -67,7 +16,6 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
-  after_save_commit :enqueue_search_index_job, if: -> { Lago::Meilisearch.indexing_enabled? && visible? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -189,7 +137,6 @@ class Invoice < ApplicationRecord
   sequenced scope: ->(invoice) { invoice.customer.invoices.where(billing_entity_id: invoice.billing_entity_id) },
     lock_key: ->(invoice) { "#{invoice.customer_id}-#{invoice.billing_entity_id}" }
 
-  scope :meilisearch_import, -> { includes(:customer, :invoice_subscriptions, :invoice_settlements, :metadata) }
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
@@ -600,10 +547,6 @@ class Invoice < ApplicationRecord
   end
 
   private
-
-  def enqueue_search_index_job
-    Invoices::SearchIndexJob.perform_later(id)
-  end
 
   # Returns the wallet associated with this credit invoice's prepaid credit fee.
   # Can be nil for historical invoices where the fee or wallet transaction is missing.
