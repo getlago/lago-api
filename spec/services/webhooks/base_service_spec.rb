@@ -154,6 +154,93 @@ RSpec.describe Webhooks::BaseService do
         end
       end
     end
+
+    context "with a streaming destination" do
+      let(:streaming_destination) { create(:kinesis_destination, organization:) }
+
+      before do
+        streaming_destination
+        object.reload
+      end
+
+      it "delivers over both transports" do
+        webhook_service.call
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.once
+        expect(StreamingDestinations::DeliverJob).to have_been_enqueued.once
+      end
+
+      it "hands the job the payload the http path got, plus emitted_at" do
+        webhook_service.call
+
+        webhook = Webhook.order(created_at: :desc).first
+
+        expect(StreamingDestinations::DeliverJob).to have_been_enqueued.with(
+          destination: streaming_destination,
+          payload: satisfy { |payload|
+            JSON.parse(payload.except(:emitted_at).to_json) == webhook.payload &&
+              payload[:emitted_at].present?
+          },
+          partition_key: organization.id
+        )
+      end
+
+      context "when the destination is not subscribed to the event type" do
+        let(:streaming_destination) do
+          create(:kinesis_destination, organization:, event_types: ["other.type"])
+        end
+
+        it "skips the destination but still delivers over http" do
+          webhook_service.call
+
+          expect(SendHttpWebhookJob).to have_been_enqueued.once
+          expect(StreamingDestinations::DeliverJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the destination is subscribed to the event type" do
+        let(:streaming_destination) do
+          create(:kinesis_destination, organization:, event_types: ["dummy.test"])
+        end
+
+        it "enqueues the deliver job" do
+          webhook_service.call
+
+          expect(StreamingDestinations::DeliverJob).to have_been_enqueued.once
+        end
+      end
+
+      context "when the destination is discarded" do
+        before { streaming_destination.discard! }
+
+        it "does not enqueue the deliver job" do
+          webhook_service.call
+
+          expect(StreamingDestinations::DeliverJob).not_to have_been_enqueued
+        end
+      end
+    end
+
+    # Regression guard for the two widened guard conditions. Both this service
+    # and SendWebhookJob.perform_later used to return early on
+    # `webhook_endpoints.none?`; if either reverts, streaming destinations go
+    # silent with no error raised anywhere.
+    context "with a streaming destination and no webhook endpoint" do
+      let(:organization) { create(:organization, webhook_url: nil) }
+
+      before do
+        create(:kinesis_destination, organization:)
+        object.reload
+      end
+
+      it "still enqueues the deliver job" do
+        webhook_service.call
+
+        expect(StreamingDestinations::DeliverJob).to have_been_enqueued.once
+        expect(SendHttpWebhookJob).not_to have_been_enqueued
+        expect(Webhook.where(object: invoice)).not_to exist
+      end
+    end
   end
 end
 

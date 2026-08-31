@@ -12,5 +12,22 @@ RSpec.describe Webhooks::Wallets::UpdatedService do
       "purchase_order_number" => "PO-123",
       "recurring_transaction_rules" => []
     }
+
+    context "with a streaming destination" do
+      before do
+        create(:kinesis_destination, organization: wallet.organization)
+        wallet.reload
+      end
+
+      it "partitions the stream by the customer external id" do
+        webhook_service.call
+
+        expect(StreamingDestinations::DeliverJob).to have_been_enqueued.with(
+          destination: anything,
+          payload: anything,
+          partition_key: wallet.customer.external_id
+        )
+      end
+    end
   end
 end

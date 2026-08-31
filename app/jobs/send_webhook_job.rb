@@ -98,11 +98,16 @@ class SendWebhookJob < ApplicationJob
   UNDEFINED = Object.new.freeze
   private_constant :UNDEFINED
 
-  # Override the default perform_later to avoid creating webhooks if no webhook endpoints are present.
+  # Override the default perform_later to avoid creating webhooks if the organization
+  # has nowhere to deliver them.
   #
   # This will prevent enqueueing jobs only to return early from the jobs.
+  #
+  # NOTE: shares Organization#webhook_destinations? with Webhooks::BaseService#call
+  #       on purpose. If the two guards drift, one of the transports goes silent
+  #       with no error raised anywhere.
   def self.perform_later(webhook_type, object, options = UNDEFINED, webhook_id = UNDEFINED)
-    return if (webhook_id.nil? || webhook_id == UNDEFINED) && object.organization.webhook_endpoints.none?
+    return if (webhook_id.nil? || webhook_id == UNDEFINED) && !object.organization.webhook_destinations?
 
     args = [webhook_type, object, options, webhook_id].filter { |arg| arg != UNDEFINED }
     super(*args)

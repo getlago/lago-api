@@ -25,6 +25,18 @@ RSpec.describe SendWebhookJob do
           end.not_to have_enqueued_job(described_class)
         end
       end
+
+      # Companion guard to Webhooks::BaseService#call. Both must consider
+      # streaming destinations or the transport goes silent with no error.
+      context "when the organization has a streaming destination" do
+        before { create(:kinesis_destination, organization:) }
+
+        it "enqueues a job" do
+          expect do
+            described_class.perform_later("invoice.created", invoice)
+          end.to have_enqueued_job(described_class)
+        end
+      end
     end
 
     context "when webhook_id is present" do

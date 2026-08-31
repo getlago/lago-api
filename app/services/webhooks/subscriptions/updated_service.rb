@@ -20,6 +20,12 @@ module Webhooks
       def object_type
         "subscription"
       end
+
+      # Groups every change to one customer onto a single Kinesis shard, so a
+      # consumer can process that customer's records on one worker.
+      def partition_key
+        object.customer.external_id
+      end
     end
   end
 end
