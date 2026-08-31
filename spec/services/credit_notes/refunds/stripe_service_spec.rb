@@ -34,9 +34,32 @@ RSpec.describe CreditNotes::Refunds::StripeService do
     )
   end
 
+  let(:charge_amount_captured) { 200 }
+  let(:charge_amount_refunded) { 0 }
+  let(:stripe_charges) do
+    Stripe::ListObject.construct_from(
+      object: "list",
+      url: "/v1/charges",
+      has_more: false,
+      data: [
+        {
+          id: "ch_123456",
+          object: "charge",
+          status: "succeeded",
+          currency: "chf",
+          amount: 200,
+          amount_captured: charge_amount_captured,
+          amount_refunded: charge_amount_refunded
+        }
+      ]
+    )
+  end
+
   describe "#create" do
     before do
       payment
+
+      allow(Stripe::Charge).to receive(:list).and_return(stripe_charges)
 
       allow(Stripe::Refund).to receive(:create)
         .and_return(
@@ -173,6 +196,31 @@ RSpec.describe CreditNotes::Refunds::StripeService do
         expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
       end
 
+      [
+        CreditNotes::Refunds::StripeService::CHARGE_DISPUTED_ERROR,
+        CreditNotes::Refunds::StripeService::CHARGE_ALREADY_REFUNDED_ERROR
+      ].each do |code|
+        context "when error is #{code}" do
+          let(:error_message) { code }
+
+          it "does not raise and marks the credit note as failed" do
+            result = stripe_service.create
+
+            expect(result).to be_success
+            expect(result.refund).to be_nil
+            expect(credit_note.reload.refund_status).to eq("failed")
+
+            expect(SendWebhookJob).to have_been_enqueued
+              .with(
+                "credit_note.provider_refund_failure",
+                credit_note,
+                provider_customer_id: stripe_customer.provider_customer_id,
+                provider_error: {message: error_message, error_code: error_message}
+              )
+          end
+        end
+      end
+
       context "when error is about non refundable payment method" do
         let(:error_message) { described_class::INVALID_PAYMENT_METHOD_ERROR }
 
@@ -217,6 +265,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
         expect(result.refund).to be_nil
 
         expect(Stripe::Refund).not_to have_received(:create)
+        expect(Stripe::Charge).not_to have_received(:list)
       end
     end
 
@@ -232,6 +281,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
         expect(result.refund).to be_nil
 
         expect(Stripe::Refund).not_to have_received(:create)
+        expect(Stripe::Charge).not_to have_received(:list)
       end
     end
 
@@ -272,6 +322,197 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
         expect(Stripe::Refund).not_to have_received(:create)
       end
+    end
+
+    context "when a dispute is open on the invoice" do
+      let(:invoice) { create(:invoice, :refund_blocked, customer:, organization:) }
+
+      it "does not create a refund and marks the credit note as failed" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(credit_note.reload.refund_status).to eq("failed")
+
+        expect(Stripe::Refund).not_to have_received(:create)
+      end
+
+      it "does not query stripe for the charge" do
+        stripe_service.create
+
+        expect(Stripe::Charge).not_to have_received(:list)
+      end
+
+      it "delivers an error webhook" do
+        stripe_service.create
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "credit_note.provider_refund_failure",
+            credit_note,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: "The charge is disputed and cannot be refunded",
+              error_code: described_class::CHARGE_DISPUTED_ERROR
+            }
+          )
+      end
+
+      it "produces an activity log" do
+        stripe_service.create
+
+        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+      end
+    end
+
+    context "when the charge is already fully refunded" do
+      let(:charge_amount_refunded) { 200 }
+
+      it "does not create a refund and marks the credit note as failed" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(credit_note.reload.refund_status).to eq("failed")
+
+        expect(Stripe::Refund).not_to have_received(:create)
+      end
+
+      it "delivers an error webhook" do
+        stripe_service.create
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "credit_note.provider_refund_failure",
+            credit_note,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: "The charge has already been fully refunded",
+              error_code: described_class::CHARGE_ALREADY_REFUNDED_ERROR
+            }
+          )
+      end
+    end
+
+    context "when the charge has less refundable amount than the credit note" do
+      let(:charge_amount_refunded) { 100 }
+
+      it "does not refund the remainder" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(credit_note.reload.refund_status).to eq("failed")
+
+        expect(Stripe::Refund).not_to have_received(:create)
+      end
+
+      it "delivers an error webhook naming both amounts" do
+        stripe_service.create
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "credit_note.provider_refund_failure",
+            credit_note,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: "The charge has only 100 cents left to refund, 134 are required",
+              error_code: described_class::INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR
+            }
+          )
+      end
+    end
+
+    context "when the charge has exactly the credit note amount left" do
+      let(:charge_amount_refunded) { 66 }
+
+      it "creates the refund" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_present
+        expect(Stripe::Refund).to have_received(:create)
+      end
+    end
+
+    context "when the charge cannot be retrieved from stripe" do
+      before do
+        allow(Stripe::Charge).to receive(:list).and_raise(::Stripe::APIConnectionError.new("boom"))
+      end
+
+      it "falls back to attempting the refund" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_present
+        expect(Stripe::Refund).to have_received(:create)
+      end
+    end
+
+    context "when the payment intent has no succeeded charge" do
+      let(:stripe_charges) do
+        Stripe::ListObject.construct_from(object: "list", url: "/v1/charges", has_more: false, data: [])
+      end
+
+      it "falls back to attempting the refund" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(Stripe::Refund).to have_received(:create)
+      end
+    end
+
+    context "when the payment intent carries a failed attempt" do
+      let(:stripe_charges) do
+        Stripe::ListObject.construct_from(
+          object: "list",
+          url: "/v1/charges",
+          has_more: false,
+          data: [
+            {id: "ch_failed", object: "charge", status: "failed", amount: 200, amount_captured: 0, amount_refunded: 0},
+            {id: "ch_ok", object: "charge", status: "succeeded", amount: 200, amount_captured: 200, amount_refunded: 200}
+          ]
+        )
+      end
+
+      it "decides on the succeeded charge" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(Stripe::Refund).not_to have_received(:create)
+      end
+    end
+
+    context "when the payment has no provider payment id" do
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: stripe_payment_provider,
+          payment_provider_customer: stripe_customer,
+          amount_cents: 200,
+          amount_currency: "CHF",
+          payable_payment_status: "succeeded",
+          payable: credit_note.invoice,
+          provider_payment_id: nil
+        )
+      end
+
+      it "does not list charges and attempts the refund" do
+        stripe_service.create
+
+        expect(Stripe::Charge).not_to have_received(:list)
+        expect(Stripe::Refund).to have_received(:create)
+      end
+    end
+
+    it "queries stripe for the charges of the payment intent" do
+      stripe_service.create
+
+      expect(Stripe::Charge).to have_received(:list).with(
+        {payment_intent: payment.provider_payment_id, limit: 10},
+        {api_key: stripe_payment_provider.secret_key}
+      )
     end
   end
 
