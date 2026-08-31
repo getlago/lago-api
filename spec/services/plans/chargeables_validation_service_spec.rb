@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Plans::ChargeablesValidationService do
   subject(:validation_service) { described_class.call(organization:, charges:, fixed_charges:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:charges) { nil }
   let(:fixed_charges) { nil }
 
@@ -17,7 +17,7 @@ RSpec.describe Plans::ChargeablesValidationService do
     end
 
     context "when validating billable metrics" do
-      let(:billable_metric) { create(:billable_metric, organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
       let(:charges) do
         [
           {billable_metric_id: billable_metric.id}
@@ -60,7 +60,7 @@ RSpec.describe Plans::ChargeablesValidationService do
     end
 
     context "when validating add ons by id" do
-      let(:add_on) { create(:add_on, organization:) }
+      let_it_be(:add_on) { create(:add_on, organization:) }
       let(:fixed_charges) do
         [
           {add_on_id: add_on.id}
@@ -151,8 +151,8 @@ RSpec.describe Plans::ChargeablesValidationService do
     end
 
     context "when validating both charges and fixed_charges" do
-      let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:add_on) { create(:add_on, organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+      let_it_be(:add_on) { create(:add_on, organization:) }
       let(:charges) do
         [
           {billable_metric_id: billable_metric.id}

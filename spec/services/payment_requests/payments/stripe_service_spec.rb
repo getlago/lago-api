@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::StripeService do
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) {

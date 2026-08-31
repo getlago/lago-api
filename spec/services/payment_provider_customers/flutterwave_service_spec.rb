@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::FlutterwaveService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization: organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization: organization) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization: organization) }
   let(:flutterwave_customer) { create(:flutterwave_customer, customer: customer, payment_provider: flutterwave_provider) }
 

@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:moneyhash_customer) { create(:moneyhash_customer, customer:, payment_provider: moneyhash_provider) }
 
   let(:reference) { "1234567890" }

@@ -4,9 +4,9 @@ require "rails_helper"
 
 RSpec.describe PaymentReceipts::CreateService do
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:payment) { create(:payment, payable: invoice) }
 
   describe "#call" do

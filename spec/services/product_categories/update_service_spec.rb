@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductCategories::UpdateService do
   subject(:result) { described_class.call(product_category:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:product_category) { create(:product_category, organization:, name: "Before", code: "before") }
 
   let(:params) { {name: "After", description: "new", invoice_display_name: "Display"} }

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Cashfree::HandleIncomingWebhookService do
   let(:webhook_service) { described_class.new(organization_id:, body:, code:, timestamp:, signature:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:organization_id) { organization.id }
   let(:cashfree_provider) { create(:cashfree_provider, organization:, client_secret:) }
   let(:client_secret) { "cfsk_ma_prod_abc_123456" }
