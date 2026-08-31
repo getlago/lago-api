@@ -3,14 +3,19 @@
 require "rails_helper"
 
 RSpec.describe SendWebhookJob do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:send_webhook_job) { described_class }
 
-  let(:organization) { create(:organization, webhook_url: "http://foo.bar") }
-  let(:invoice) { create(:invoice, organization:) }
+  let_it_be(:organization) { create_default(:organization, webhook_url: "http://foo.bar") }
+  let_it_be(:invoice) { create(:invoice, organization:) }
 
   describe ".perform_later" do
     context "when no webhook endpoints is present" do
-      let(:organization) { create(:organization, webhook_url: nil) }
+      let_it_be(:organization) { create_default(:organization, webhook_url: nil) }
+      let_it_be(:invoice) { create(:invoice, organization:) }
 
       it "does not enqueue a job" do
         expect do

@@ -5,9 +5,9 @@ require "rails_helper"
 describe AppliedCoupons::RecreditJob do
   subject(:perform_job) { described_class.perform_now(credit) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, organization:, customer:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:invoice) { create(:invoice, organization:, customer:) }
   let(:applied_coupon) { create(:applied_coupon, organization:, customer:) }
   let(:credit) { create(:credit, organization:, invoice:, applied_coupon:) }
 

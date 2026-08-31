@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Customers::ReindexInvoicesJob do
   subject(:perform) { described_class.perform_now(customer.id) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:other_invoice) { create(:invoice, organization:) }

@@ -4,11 +4,11 @@ require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::HandleEventJob do
   let(:result) { PaymentProviders::Stripe::HandleEventService::Result.new }
-  let(:organization) { create(:organization) }
-
   let(:stripe_event) do
     {}
   end
+
+  let_it_be(:organization) { create(:organization) }
 
   before do
     allow(PaymentProviders::Stripe::HandleEventService)
