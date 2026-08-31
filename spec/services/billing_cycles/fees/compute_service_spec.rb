@@ -86,14 +86,16 @@ RSpec.describe BillingCycles::Fees::ComputeService do
         let(:min_amount_cents) { 100_000 }
 
         before do
-          allow(BillingPeriods::Boundaries).to receive(:new).and_call_original
+          allow(Billing::Calendar).to receive(:new).and_call_original
         end
 
+        # The ratio the scheduler stored is what the cycle was billed on. Re-deriving it
+        # here would let a later catalog change move the amount on a retry.
         it "uses the stored proration ratio" do
           expect(result).to be_success
           expect(result.fee.amount_cents).to eq(22_500)
           expect(result.true_up_fee.amount_cents).to eq(27_500)
-          expect(BillingPeriods::Boundaries).not_to have_received(:new)
+          expect(Billing::Calendar).not_to have_received(:new)
         end
       end
 

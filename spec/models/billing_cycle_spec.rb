@@ -56,6 +56,37 @@ RSpec.describe BillingCycle do
     end
   end
 
+  describe "#billing_interval" do
+    subject(:billing_interval) { billing_cycle.billing_interval }
+
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, billing_interval_count: 1, billing_interval_unit: "month") }
+    let(:billing_cycle) { described_class.new(rate_card_rate:) }
+
+    it "returns the rate's cadence" do
+      expect(billing_interval).to eq(Billing::Interval.new(count: 1, unit: :month))
+    end
+
+    context "with a rate override carrying its own cadence" do
+      let(:rate_override) { build_stubbed(:rate_override, billing_interval_count: 2, billing_interval_unit: "week") }
+      let(:billing_cycle) { described_class.new(rate_card_rate:, rate_override:) }
+
+      it "returns the override's cadence" do
+        expect(billing_interval).to eq(Billing::Interval.new(count: 2, unit: :week))
+      end
+    end
+
+    # The override's two cadence columns are independently nullable, so a partial override
+    # must not leave the interval half-built.
+    context "with a rate override that sets no cadence" do
+      let(:rate_override) { build_stubbed(:rate_override) }
+      let(:billing_cycle) { described_class.new(rate_card_rate:, rate_override:) }
+
+      it "falls back to the rate's cadence" do
+        expect(billing_interval).to eq(Billing::Interval.new(count: 1, unit: :month))
+      end
+    end
+  end
+
   describe "#pricing_unit_conversion_rate" do
     subject(:pricing_unit_conversion_rate) { billing_cycle.pricing_unit_conversion_rate }
 

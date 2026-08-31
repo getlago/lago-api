@@ -2,15 +2,6 @@
 
 module Subscriptions
   module ProductCatalog
-    # Materializes the plan's rate cards onto the subscription: one
-    # subscription_rate_card per plan_rate_card, carrying the billing
-    # lifecycle (anchor, clock, units). Pricing is not copied — a plan is
-    # immutable once it has subscriptions, so phases and rates resolve by
-    # reference through the plan entry.
-    #
-    # next_billing_at is seeded through FirstPeriodService, which clamps the first
-    # period to max(started_at, now): a backdated start bills the current period
-    # forward instead of back-billing the missed ones (parity with the legacy engine).
     class MaterializeService < BaseService
       Result = BaseResult[:subscription_rate_cards]
 
@@ -52,18 +43,39 @@ module Subscriptions
         item
       end
 
-      # The rate at signing sets the interval/timing FirstPeriodService needs. Without a
-      # resolvable rate there is no boundary to compute, so fall back to started_at and
-      # let a later scheduler pass advance the clock once the catalog resolves.
-      #
-      # NOTE: Shall we consider the rate phases here as well?
       def initial_next_billing_at(item)
         rate = item.rate_card&.rate_active_at(started_at)
         return started_at unless rate
 
-        BillingPeriods::FirstPeriodService
-          .from_subscription_rate_card(item, rate:)
-          .next_billing_at
+        period = calendar_for(item, rate).period_at(first_billable_at)
+        opens_at = [period.begin, billing_starts_at].max
+
+        item.rate_card.advance? ? opens_at : period.end
+      end
+
+      def calendar_for(item, rate)
+        Billing::Calendar.new(
+          anchor_date: item.billing_anchor_date,
+          interval: Billing::Interval.new(count: rate.billing_interval_count, unit: rate.billing_interval_unit),
+          timezone:
+        )
+      end
+
+      # A backdated subscription bills the period it lands in today, not the ones it
+      # missed. The gap is deliberate: the past is either already invoiced elsewhere or
+      # given away, and back-billing it on signup would surprise the customer.
+      def first_billable_at
+        [started_at, Time.current].max
+      end
+
+      # Cycles start at the beginning of a day in the customer's timezone, so a card
+      # signed at 14:30 is billed for the whole of that day.
+      def billing_starts_at
+        started_at.in_time_zone(timezone).beginning_of_day
+      end
+
+      def timezone
+        @timezone ||= subscription.customer.applicable_timezone
       end
 
       def started_at
