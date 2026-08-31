@@ -9,6 +9,33 @@ RSpec.describe PaymentTerms::ResolveService do
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
 
+  context "when a subscription with its own payment term is given" do
+    subject(:result) { described_class.call(customer:, subscription:) }
+
+    let(:subscription) { create(:subscription, customer:, payment_term: {term_type: "net", days: 60}) }
+
+    before do
+      customer.update!(payment_term: {term_type: "net", days: 30})
+    end
+
+    it "returns the subscription term with source subscription" do
+      expect(result).to be_success
+      expect(result.payment_term.term_type).to eq("net")
+      expect(result.payment_term.days).to eq(60)
+      expect(result.source).to eq("subscription")
+    end
+
+    context "when the subscription has no payment term" do
+      let(:subscription) { create(:subscription, customer:) }
+
+      it "falls back to the customer term" do
+        expect(result).to be_success
+        expect(result.payment_term.days).to eq(30)
+        expect(result.source).to eq("customer")
+      end
+    end
+  end
+
   context "when the customer has a payment term" do
     before do
       customer.update!(payment_term: {term_type: "net", days: 45})
