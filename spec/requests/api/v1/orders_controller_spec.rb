@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::OrdersController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
   let(:order) { create(:order, organization:, customer:, order_form:) }
@@ -106,7 +107,6 @@ RSpec.describe Api::V1::OrdersController do
     subject { post_with_token(organization, "/api/v1/orders/#{order.id}/execute", params) }
 
     let(:params) { {} }
-    let(:customer) { create(:customer, organization:, currency: "EUR") }
     let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
     let(:quote_version) do
       create(:quote_version, :approved, :with_one_off_billing_items, quote:, organization:)
@@ -114,6 +114,8 @@ RSpec.describe Api::V1::OrdersController do
     let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
     let(:order) { create(:order, organization:, customer:, order_form:, execution_mode:) }
     let(:execution_mode) { :order_only }
+
+    let_it_be(:customer) { create_default(:customer, organization:, currency: "EUR") }
 
     before { order }
 

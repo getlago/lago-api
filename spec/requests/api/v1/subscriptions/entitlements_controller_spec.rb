@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Subscriptions::EntitlementsController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege1) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }

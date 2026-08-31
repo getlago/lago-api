@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WalletsController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency: "EUR") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:, currency: "EUR") }
+  let(:plan) { create_default(:plan) }
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
@@ -62,6 +63,9 @@ RSpec.describe Api::V1::WalletsController do
     it_behaves_like "a wallet terminate endpoint" do
       subject { delete_with_token(organization, "/api/v1/wallets/#{id}") }
 
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+
       let(:id) { wallet.id }
     end
   end
@@ -71,6 +75,9 @@ RSpec.describe Api::V1::WalletsController do
       subject do
         get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}", params)
       end
+
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
 
       context "when external_customer_id does not belong to the current organization" do
         let(:other_org_customer) { create(:customer) }

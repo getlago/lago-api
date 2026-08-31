@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe Api::V1::Features::PrivilegesController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:feature1) { create(:feature, organization:, code: "seats", name: "Number of seats", description: "Number of users of the account") }
   let(:privilege1) { create(:privilege, feature: feature1, code: "max_admins", name: "", value_type: "integer") }
   let(:privilege2) { create(:privilege, feature: feature1, code: "max", name: "Maximum", value_type: "integer") }

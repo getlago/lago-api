@@ -3,10 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::QuoteVersionsController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) { create(:quote_version, quote:, organization:) }
+
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "GET /api/v1/quote_versions/:id" do
     subject { get_with_token(organization, "/api/v1/quote_versions/#{quote_version_id}") }
@@ -41,6 +43,9 @@ RSpec.describe Api::V1::QuoteVersionsController do
 
     context "when the quote version belongs to another organization" do
       let(:quote_version) { create(:quote_version) }
+
+      let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+      let(:customer) { create(:customer, organization:) }
 
       it "returns not found" do
         subject

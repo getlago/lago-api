@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V2::PlansController do
-  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["product_catalog"]) }
 
   describe "POST /api/v2/plans" do
     subject { post_with_token(organization, "/api/v2/plans", {plan: create_params}) }
@@ -84,6 +84,7 @@ RSpec.describe Api::V2::PlansController do
     subject { get_with_token(organization, "/api/v2/plans", params) }
 
     let(:params) { {} }
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
     let!(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
 
     include_examples "requires API permission", "plan", "read"
