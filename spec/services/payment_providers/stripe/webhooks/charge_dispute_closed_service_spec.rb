@@ -159,6 +159,57 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
           end
         end
       end
+
+      context "with an invoice whose refunds are blocked" do
+        let(:payable) do
+          create(:invoice, :refund_blocked, customer:, organization:, status: "finalized", payment_status: "succeeded")
+        end
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/charge_dispute_closed.json", version:) do |h|
+            h[:data][:object][:payment_intent] = intent_id
+            h[:data][:object][:status] = status
+            h[:data][:object][:is_charge_refundable] = is_charge_refundable
+          end
+        end
+
+        context "when the dispute is won" do
+          let(:status) { "won" }
+          let(:is_charge_refundable) { true }
+
+          it "clears the dispute flag" do
+            expect { service.call && payable.reload }.to change(payable, :payment_refund_blocked_at).to(nil)
+          end
+        end
+
+        context "when the dispute is closed as a warning" do
+          let(:status) { "warning_closed" }
+          let(:is_charge_refundable) { true }
+
+          it "clears the dispute flag" do
+            expect { service.call && payable.reload }.to change(payable, :payment_refund_blocked_at).to(nil)
+          end
+
+          it "does not call LoseDisputeService" do
+            service.call
+            expect(::Payments::LoseDisputeService).not_to have_received(:call)
+          end
+        end
+
+        context "when the dispute is lost" do
+          let(:status) { "lost" }
+          let(:is_charge_refundable) { false }
+
+          # NOTE: the charge stays unrefundable, so the flag must survive and keep blocking refunds
+          #       even if marking the invoice as dispute lost fails.
+          it "leaves the dispute flag in place" do
+            expect { service.call && payable.reload }.not_to change(payable, :payment_refund_blocked_at)
+          end
+
+          it "marks the invoice as dispute lost" do
+            expect { service.call && payable.reload }.to change(payable, :payment_dispute_lost_at).from(nil)
+          end
+        end
+      end
     end
   end
 end
