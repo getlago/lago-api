@@ -5,8 +5,13 @@ require "rails_helper"
 RSpec.describe Orders::ExecuteService do
   subject(:execute_service) { described_class.new(order:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+        let_it_be(:customer) { create(:customer, organization:) }
+
+before_all do
+  create_default(:plan)
+end
+
   let(:quote) { create(:quote, organization:, customer:, order_type:) }
   let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
@@ -38,6 +43,7 @@ RSpec.describe Orders::ExecuteService do
       end
 
       context "when the order_forms feature flag is disabled" do
+        let(:customer) { create(:customer, organization:) }
         let(:organization) { create(:organization) }
 
         it "returns a forbidden failure" do

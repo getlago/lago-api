@@ -7,11 +7,11 @@ require "rails_helper"
 RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
   subject(:execute_service) { described_class.new(order:) }
 
-  let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
-  let(:customer) { create(:customer, organization:, billing_entity:, currency: "EUR") }
+  let_it_be(:organization) { create(:organization) }
+        let_it_be(:billing_entity) { create(:billing_entity, organization:) }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, currency: "EUR") }
 
-  let(:target_plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 50_000) }
+        let_it_be(:target_plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 50_000) }
   let(:target_subscription) do
     create(
       :subscription,
@@ -27,8 +27,8 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
     )
   end
 
-  let(:plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
-  let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
+        let_it_be(:plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
+        let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "50"}) }
 
   let(:plan_item) do
@@ -254,6 +254,11 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
       end
 
       context "with usage thresholds" do
+        let(:plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
+        let(:target_plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 50_000) }
+        let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:customer) { create(:customer, organization:, billing_entity:, currency: "EUR") }
         let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
         let(:plan_overrides) do
           super().merge(

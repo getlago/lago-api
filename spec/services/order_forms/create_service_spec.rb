@@ -5,7 +5,13 @@ require "rails_helper"
 RSpec.describe OrderForms::CreateService do
   subject(:create_service) { described_class.new(quote_version:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+
+before_all do
+  create_default(:customer)
+create_default(:plan)
+end
+
   let(:quote) { create(:quote, organization:) }
   let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
 
