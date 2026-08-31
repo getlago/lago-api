@@ -66,7 +66,7 @@ RSpec.describe WebhooksController do
   end
 
   describe "POST /gocardless" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     let(:gocardless_provider) do
       create(
@@ -138,7 +138,7 @@ RSpec.describe WebhooksController do
   end
 
   describe "POST /adyen" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     let(:adyen_provider) do
       create(:adyen_provider, organization:)
@@ -199,7 +199,7 @@ RSpec.describe WebhooksController do
   end
 
   describe "POST /cashfree" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     let(:cashfree_provider) do
       create(:cashfree_provider, organization:)
@@ -329,7 +329,7 @@ RSpec.describe WebhooksController do
   end
 
   describe "POST /flutterwave" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     let(:flutterwave_provider) do
       create(:flutterwave_provider, organization:)

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe "v1 pricing endpoints on a product-catalog organization", type: :request do
-  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
-  let(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:plan) { create_default(:plan, organization:, pricing_type: "product_catalog") }
 
   it "rejects legacy pricing fields on plan creation" do
     post_with_token(organization, "/api/v1/plans", {plan: {name: "Legacy", code: "legacy", interval: "monthly", amount_cents: 100, amount_currency: "USD", pay_in_advance: false}})

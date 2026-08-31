@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WebhookEndpointsController do
+  let_it_be(:organization) { create_default(:organization) }
   describe "POST /api/v1/webhook_endpoints" do
     subject do
       post_with_token(
@@ -12,7 +13,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       )
     end
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let(:create_params) do
       {
         webhook_url: Faker::Internet.url,

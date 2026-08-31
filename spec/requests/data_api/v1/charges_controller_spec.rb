@@ -22,21 +22,6 @@ RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePat
         properties: {amount: "10"}
       )
     end
-
-    let(:charge2) do
-      create(
-        :standard_charge,
-        plan:,
-        billable_metric:,
-        properties: {amount: "20"}
-      )
-    end
-
-    let(:charge_filter) { create(:charge_filter, charge: charge1) }
-    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
-    let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:organization) { create(:organization) }
-
     let(:params) do
       {
         charges: [
@@ -58,7 +43,6 @@ RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePat
         ]
       }
     end
-
     let(:result) do
       Charges::CalculatePriceService::Result.new.tap do |result|
         result.charge_amount_cents = 10
@@ -66,6 +50,21 @@ RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePat
         result.total_amount_cents = 20
       end
     end
+
+    let(:charge2) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        properties: {amount: "20"}
+      )
+    end
+
+    let(:charge_filter) { create(:charge_filter, charge: charge1) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000) }
+
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
 
     before do
       allow(Charges::CalculatePriceService).to receive(:call).and_return(result)

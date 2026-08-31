@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Plans::FixedChargesController do
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
 
   describe "GET /api/v1/plans/:plan_code/fixed_charges" do
     subject { get_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges") }

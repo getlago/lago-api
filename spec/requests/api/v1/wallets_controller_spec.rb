@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WalletsController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency: "EUR") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:, currency: "EUR") }
+  let(:plan) { create_default(:plan) }
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
@@ -60,6 +61,9 @@ RSpec.describe Api::V1::WalletsController do
 
   describe "DELETE /api/v1/wallets/:id" do
     it_behaves_like "a wallet terminate endpoint" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+
       subject { delete_with_token(organization, "/api/v1/wallets/#{id}") }
 
       let(:id) { wallet.id }
@@ -68,6 +72,9 @@ RSpec.describe Api::V1::WalletsController do
 
   describe "GET /api/v1/wallets" do
     it_behaves_like "a wallet index endpoint" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+
       subject do
         get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}", params)
       end

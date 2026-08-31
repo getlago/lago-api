@@ -7,9 +7,10 @@ RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable Rails/Fil
     subject { get_with_token(organization, "/api/v1/analytics/mrr", params) }
 
     let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
+
+    let_it_be(:organization) { create_default(:organization) }
 
     before do
       allow(Analytics::MrrsService).to receive(:call).and_call_original

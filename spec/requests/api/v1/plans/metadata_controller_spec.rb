@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Plans::MetadataController do
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   describe "POST /api/v1/plans/:code/metadata" do
     subject { post_with_token(organization, "/api/v1/plans/#{plan_code}/metadata", {metadata: params}) }
