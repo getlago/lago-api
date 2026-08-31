@@ -6,8 +6,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
   subject(:validator) { described_class.new(result, quote_version:, scope:) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :subscription_creation) }
   let(:quote_version) do
     create(
@@ -18,7 +18,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
       billing_items:
     )
   end
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:coupon) { create(:coupon, organization:) }
   let(:scope) { :approve }
 
