@@ -8,8 +8,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
   let(:service) { described_class.new(payment:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/netsuite/payments" }
   let(:payment) { create(:payment, payable: invoice) }

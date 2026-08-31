@@ -7,8 +7,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
   let(:current_time) { Time.current }

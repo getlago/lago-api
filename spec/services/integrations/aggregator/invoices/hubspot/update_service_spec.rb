@@ -9,8 +9,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
   let(:integration) { create(:hubspot_integration, organization:, invoices_properties_version: 2) }
   let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
   let(:integration_invoice) { create(:integration_resource, syncable: invoice, integration:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/hubspot/records" }
   let(:invoice_file_url) { invoice.file_url }

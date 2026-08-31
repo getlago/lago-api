@@ -6,11 +6,11 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Payloads::Hubspot do
   let(:payload) { described_class.new(integration_customer:, subscription:) }
   let(:integration_customer) { FactoryBot.create(:hubspot_customer, integration:, customer:) }
   let(:integration) { create(:hubspot_integration, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:file_url) { Faker::Internet.url }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:plan) { create(:plan, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   let(:integration_subscription) do
     create(:integration_resource, integration:, resource_type: "subscription", syncable: subscription)

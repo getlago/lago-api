@@ -116,13 +116,13 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
     end
 
     context "with a single billable metric charge" do
-      let(:organization) { create(:organization) }
-      let(:billing_entity) { create(:billing_entity, organization:) }
+      let_it_be(:organization) { create(:organization) }
+      let_it_be(:billing_entity) { create(:billing_entity, organization:) }
       let(:integration) { create(:xero_integration, organization:) }
-      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let_it_be(:customer) { create_default(:customer, organization:, billing_entity:) }
       let(:integration_customer) { create(:xero_customer, customer:, integration:) }
-      let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+      let_it_be(:plan) { create(:plan, organization:) }
       let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
       let(:subscription) { create(:subscription, organization:, plan:) }
 

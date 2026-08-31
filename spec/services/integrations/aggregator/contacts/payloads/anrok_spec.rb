@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Anrok do
-  let(:integration) { integration_customer.integration }
+  let(:integration) { create_default(:organization) }
   let(:integration_customer) { FactoryBot.create(:anrok_customer, customer:) }
-  let(:customer) { create(:customer) }
+  let_it_be(:customer) { create(:customer) }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:) }
   let(:customer_link) { payload.__send__(:customer_url) }
 

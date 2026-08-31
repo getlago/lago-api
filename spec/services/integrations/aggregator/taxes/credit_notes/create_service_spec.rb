@@ -7,12 +7,17 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::CreateService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:, external_customer_id: nil) }
+  let_it_be(:organization) { create_default(:organization) }
+
+before_all do
+  create_default(:plan)
+end
+
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:add_on_two) { create(:add_on, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on_two) { create(:add_on, organization:) }
   let(:current_time) { Time.current }
 
   let(:integration_collection_mapping1) do

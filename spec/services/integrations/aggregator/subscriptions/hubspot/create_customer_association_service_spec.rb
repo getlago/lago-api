@@ -8,11 +8,11 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateCustomerA
   let(:service) { described_class.new(subscription:) }
   let(:integration) { create(:hubspot_integration, organization:, sync_subscriptions:) }
   let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/hubspot/association" }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, organization:, plan:) }
 
   let(:integration_subscription) do

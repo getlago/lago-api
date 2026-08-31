@@ -8,8 +8,8 @@ RSpec.describe Integrations::Okta::UpdateService do
   let(:integration) do
     create(:okta_integration, organization:, secrets: {client_secret: stored_client_secret}.to_json)
   end
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:stored_client_secret) { "stored-client-secret" }
   let(:domain) { "foo.bar" }
   let(:organization_name) { "Footest" }

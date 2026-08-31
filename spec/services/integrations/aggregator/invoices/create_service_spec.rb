@@ -8,12 +8,18 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   let(:service) { described_class.new(invoice:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+before_all do
+  create_default(:plan)
+create_default(:billing_entity)
+end
+
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/netsuite/invoices" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:) }
   let(:current_time) { Time.current }
 

@@ -8,12 +8,17 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   let(:service) { described_class.new(credit_note: credit_note.reload) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+
+before_all do
+  create_default(:plan)
+end
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/netsuite/creditnotes" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:) }
 
   let(:integration_collection_mapping1) do
