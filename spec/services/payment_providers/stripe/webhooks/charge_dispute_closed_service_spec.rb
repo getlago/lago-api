@@ -6,9 +6,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
   subject(:service) { described_class.new(organization_id:, event:) }
 
   let(:organization_id) { organization.id }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:membership) { create(:membership, organization:) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:intent_id) { "pi_3OzgpDH4tiDZlIUa0Ezzggtg" }
   let(:payment) { create(:payment, payable:, provider_payment_id: intent_id) }
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }

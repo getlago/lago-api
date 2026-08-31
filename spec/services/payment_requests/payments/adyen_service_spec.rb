@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::AdyenService do
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
   let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
   let(:adyen_customer) { create(:adyen_customer, customer:) }
   let(:adyen_client) { instance_double(Adyen::Client) }

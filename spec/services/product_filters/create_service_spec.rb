@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe ProductFilters::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
   let(:scheme_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "scheme", values: %w[visa mastercard]) }

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService do
   let(:webhook_service) { described_class.new(organization_id:, body:, code:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:organization_id) { organization.id }
   let(:adyen_provider) { create(:adyen_provider, organization:, hmac_key:) }
   let(:hmac_key) { "a1b2c3d4e5f6" }

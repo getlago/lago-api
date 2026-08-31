@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
   subject(:authorize_service) { described_class.new(amount:, currency:, provider_customer:, payment_method:, unique_id:, metadata:) }
 
+before_all do
+  create_default(:organization)
+end
+
   let(:amount) { 0.20 }
   let(:currency) { "USD" }
   let(:provider_customer) { create(:stripe_customer, payment_provider: create(:stripe_provider), customer:, payment_method_id:) }
@@ -12,7 +16,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
   let(:unique_id) { SecureRandom.uuid }
   let(:metadata) { {} }
 
-  let(:customer) { create(:customer) }
+  let_it_be(:customer) { create(:customer) }
   let(:provider_method_id) { "pm_from_payment_method" }
   let(:payment_method_id) { "pm_from_provider_customer" }
   let(:stripe_result) do

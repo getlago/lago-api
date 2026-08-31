@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductCategories::DestroyService do
   subject(:result) { described_class.call(product_category:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:product_category) { create(:product_category, organization:) }
 
   before do

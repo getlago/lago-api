@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
   let(:create_service) { described_class.new(customer:, payment_provider_id:, params:, async:) }
 
-  let(:customer) { create(:customer) }
+before_all do
+  create_default(:organization)
+end
+
+  let_it_be(:customer) { create(:customer) }
   let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
   let(:payment_provider_id) { stripe_provider.id }
   let(:params) { {provider_customer_id: "id", sync_with_provider: true, provider_payment_methods:} }

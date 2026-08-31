@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
   let(:customer) { create(:customer, payment_provider_code: code, country:) }
   let(:country) { "CA" }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
   let(:code) { "stripe_1" }

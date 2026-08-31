@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
   subject(:update_service) { described_class.new(payment_provider_customer:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:params) { {} }
 
   describe "#call" do
