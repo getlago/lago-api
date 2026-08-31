@@ -37,6 +37,7 @@ RSpec.describe V1::BillingEntitySerializer do
     expect(billing_entity_serialized.fetch("legal_number")).to eq(billing_entity.legal_number)
     expect(billing_entity_serialized.fetch("timezone")).to eq(billing_entity.timezone)
     expect(billing_entity_serialized.fetch("net_payment_term")).to eq(billing_entity.net_payment_term)
+    expect(billing_entity_serialized.fetch("payment_term")).to eq(billing_entity.payment_term)
     expect(billing_entity_serialized.fetch("email_settings")).to eq(billing_entity.email_settings)
     expect(billing_entity_serialized.fetch("document_numbering")).to eq(billing_entity.document_numbering)
     expect(billing_entity_serialized.fetch("document_number_prefix")).to eq(billing_entity.document_number_prefix)

@@ -44,6 +44,10 @@ module Customers
         )
       end
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term], net_payment_term: params[:net_payment_term]).valid?
+        return result
+      end
+
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
@@ -71,7 +75,6 @@ module Customers
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
-        customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
         customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
         customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] || "inherit" if params.key?(:finalize_zero_amount_invoice)
         customer.firstname = params[:firstname] if params.key?(:firstname)

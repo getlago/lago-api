@@ -49,8 +49,14 @@ module PaymentTerms
       valid_month_offset?
     end
 
+    # Normalized to an indifferent-access Hash so API input arrives the same
+    # whether it comes as ActionController::Parameters or a plain hash.
     def payment_term
-      args[:payment_term]
+      return @payment_term if defined?(@payment_term)
+
+      raw = args[:payment_term]
+      raw = raw.to_unsafe_h if raw.is_a?(ActionController::Parameters)
+      @payment_term = raw.is_a?(Hash) ? raw.with_indifferent_access : raw
     end
 
     def term_type
