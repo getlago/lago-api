@@ -62,6 +62,9 @@ RSpec.describe Api::V1::WalletsController do
     it_behaves_like "a wallet terminate endpoint" do
       subject { delete_with_token(organization, "/api/v1/wallets/#{id}") }
 
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+
       let(:id) { wallet.id }
     end
   end
@@ -71,6 +74,9 @@ RSpec.describe Api::V1::WalletsController do
       subject do
         get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}", params)
       end
+
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
 
       context "when external_customer_id does not belong to the current organization" do
         let(:other_org_customer) { create(:customer) }
