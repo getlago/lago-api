@@ -5,19 +5,21 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Aggregations::CountService do
   subject(:count_service) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       charge:,
       subscription:,
-      boundaries: {
-        from_datetime:,
-        to_datetime:
-      },
+      boundaries:,
       filters:,
       bypass_aggregation:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:deduplicate) { false }
+  let(:boundaries) { {from_datetime:, to_datetime:} }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
+  end
   let(:bypass_aggregation) { false }
   let(:filters) do
     {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:}
@@ -305,12 +307,12 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
       let(:bypass_aggregation) { true }
 
       it "returns an empty aggregation without querying the event store" do
-        allow(Events::Stores::PostgresStore).to receive(:new).and_call_original
+        allow(event_store).to receive(:count).and_call_original
 
         result = count_service.per_event_aggregation
 
         expect(result.event_aggregation).to eq([])
-        expect(Events::Stores::PostgresStore).not_to have_received(:new)
+        expect(event_store).not_to have_received(:count)
       end
     end
   end
@@ -427,6 +429,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
 
     context "with deduplication" do
       let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
+      let(:deduplicate) { true }
 
       let(:event_list) do
         create_list(

@@ -5,19 +5,19 @@ require "rails_helper"
 RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: false do
   subject(:sum_service) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       charge:,
       subscription:,
-      boundaries: {
-        from_datetime:,
-        to_datetime:,
-        charges_duration: 31
-      },
+      boundaries:,
       filters:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:boundaries) { {from_datetime:, to_datetime:, charges_duration: 31} }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, subscription:, boundaries:, filters:)
+  end
   let(:filters) { {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription, started_at: Time.zone.parse("2022-12-01 00:00:00")) }
@@ -829,14 +829,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     context "when aggregation is bypassed" do
       subject(:sum_service) do
         described_class.new(
-          event_store_class:,
+          event_store:,
           charge:,
           subscription:,
-          boundaries: {
-            from_datetime:,
-            to_datetime:,
-            charges_duration: 31
-          },
+          boundaries:,
           filters:,
           bypass_aggregation: true
         )
@@ -869,14 +865,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     context "when aggregation is bypassed and metric is recurring" do
       subject(:sum_service) do
         described_class.new(
-          event_store_class:,
+          event_store:,
           charge:,
           subscription:,
-          boundaries: {
-            from_datetime:,
-            to_datetime:,
-            charges_duration: 31
-          },
+          boundaries:,
           filters:,
           bypass_aggregation: true
         )
