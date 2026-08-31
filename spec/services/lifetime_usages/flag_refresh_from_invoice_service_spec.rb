@@ -8,8 +8,12 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, :premium do
   let(:invoice) { create(:invoice, :subscription, subscriptions:, organization: customer.organization) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription: invoice.subscriptions.first) }
 
-  let(:customer) { create(:customer) }
-  let(:plan) { create(:plan, organization: customer.organization) }
+before_all do
+  create_default(:organization)
+end
+
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan, organization: customer.organization) }
   let(:subscriptions) { create_list(:subscription, 1, plan:) }
 
   let(:usage_threshold) { create(:usage_threshold, plan:) }

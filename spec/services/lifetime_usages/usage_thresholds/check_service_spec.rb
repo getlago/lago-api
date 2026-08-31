@@ -10,8 +10,13 @@ RSpec.describe LifetimeUsages::UsageThresholds::CheckService do
   let(:recalculate_current_usage) { true }
   let(:recalculate_invoiced_usage) { true }
   let(:subscription) { create(:subscription, customer_id: customer.id) }
-  let(:organization) { subscription.organization }
-  let(:customer) { create(:customer) }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:customer) { create_default(:customer) }
+
+before_all do
+  create_default(:plan)
+end
+
   let(:historical_usage_amount_cents) { 0 }
 
   def create_thresholds(subscription, amounts:, attach_to:, recurring: nil)
