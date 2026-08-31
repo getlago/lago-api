@@ -48,6 +48,26 @@ RSpec.describe Invoices::SubscriptionService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
+    context "when a resolved payment term is given" do
+      subject(:invoice_service) do
+        described_class.new(
+          subscriptions:,
+          timestamp: timestamp.to_i,
+          invoicing_reason:,
+          payment_term: PaymentTerm.from_h({"term_type" => "end_of_month"}),
+          payment_term_source: "mixed"
+        )
+      end
+
+      it "snapshots the given term instead of re-resolving" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.payment_term).to eq({"term_type" => "end_of_month"})
+        expect(invoice.payment_term_source).to eq("mixed")
+        expect(invoice.net_payment_term).to be_nil
+      end
+    end
+
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
