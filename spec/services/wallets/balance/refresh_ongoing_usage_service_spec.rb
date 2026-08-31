@@ -21,8 +21,8 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
 
   let(:depleted_ongoing_balance) { false }
   let(:skip_single_wallet_update) { false }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:ongoing_usage_amount_cents) { 1100 }
 
   describe ".call" do

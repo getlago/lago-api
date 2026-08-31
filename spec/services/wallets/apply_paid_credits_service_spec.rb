@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Wallets::ApplyPaidCreditsService do
   subject(:service) { described_class.new(wallet_transaction:) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   describe ".call" do
     let(:wallet) { create(:wallet, balance_cents: 1000, credits_balance: 10.0) }
     let(:wallet_transaction) do

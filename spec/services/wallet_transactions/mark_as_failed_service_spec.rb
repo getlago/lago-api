@@ -7,6 +7,11 @@ RSpec.describe WalletTransactions::MarkAsFailedService do
 
   let(:wallet_transaction) { create(:wallet_transaction, status: "pending") }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   describe ".call" do
     context "when wallet_transaction is nil" do
       let(:wallet_transaction) { nil }

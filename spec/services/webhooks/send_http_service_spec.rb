@@ -6,6 +6,11 @@ require "aws-sdk-s3"
 RSpec.describe Webhooks::SendHttpService do
   subject(:service) { described_class.new(webhook:) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "https://wh.test.com") }
   let(:webhook) { create(:webhook, webhook_endpoint:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }

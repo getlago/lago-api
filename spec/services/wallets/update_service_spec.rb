@@ -5,13 +5,17 @@ require "rails_helper"
 RSpec.describe Wallets::UpdateService do
   subject(:result) { described_class.call(wallet:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:subscription) { create_default(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, allowed_fee_types: []) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:priority) { 5 }
+
+before_all do
+  create_default(:plan)
+end
 
   describe "#call" do
     before do

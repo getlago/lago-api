@@ -5,9 +5,13 @@ require "rails_helper"
 RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
   subject(:create_interval_transactions_service) { described_class.new }
 
+before_all do
+  create_default(:organization)
+end
+
   describe ".call" do
     let(:created_at) { DateTime.parse("20 Feb 2021") }
-    let(:customer) { create(:customer) }
+    let_it_be(:customer) { create(:customer) }
     let(:started_at) { nil }
 
     let(:wallet) do
@@ -354,7 +358,6 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
       end
 
       context "with customer timezone" do
-        let(:customer) { create(:customer, timezone:) }
         let(:timezone) { "Pacific/Noumea" }
 
         it "does not enqueue a job" do
