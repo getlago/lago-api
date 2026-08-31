@@ -62,6 +62,23 @@ RSpec.describe Customers::CreateService do
     expect(customer.shipping_country).to eq(shipping_address[:country])
   end
 
+  context "when net_payment_term is provided" do
+    before { create_args[:net_payment_term] = 30 }
+
+    it "writes the structured payment term alias" do
+      expect(result.customer.reload).to have_attributes(
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+  end
+
+  context "when net_payment_term is not provided" do
+    it "leaves both the alias and the structured payment term unset" do
+      expect(result.customer.reload).to have_attributes(net_payment_term: nil, payment_term: nil)
+    end
+  end
+
   it "calls SendWebhookJob with customer.created" do
     result
 

@@ -96,6 +96,8 @@ module Customers
         Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
       end
 
+      PaymentTerms::AssignService.call(record: customer, params: args)
+
       # NOTE: Some fields are not editable if customer is attached to subscriptions:
       #       external_id, account_type
       billing_entity_changed = false
