@@ -6,12 +6,17 @@ RSpec.describe UsageMonitoring::CreateAlertService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, alertable: subscription, params:) }
 
-    let(:organization) { create(:organization, premium_integrations:) }
+    let(:organization) { create_default(:organization, premium_integrations:) }
     let(:premium_integrations) { [] }
     let(:thresholds) { [{code: "warning", value: 80}, {code: "critical", value: 120}] }
     let(:params) { {alert_type: "current_usage_amount", name: "Main", thresholds:, code: "first", billable_metric_id: billable_metric&.id} }
     let(:subscription) { create(:subscription, organization:) }
     let(:billable_metric) { nil }
+
+before do
+  create_default(:customer)
+create_default(:plan)
+end
 
     it "creates a new alert" do
       expect(result).to be_success

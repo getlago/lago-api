@@ -5,10 +5,14 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
   subject { described_class.new(organization:, subscription:, date:) }
 
-  let(:organization) { create(:organization, premium_integrations: %w[lifetime_usage]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, premium_integrations: %w[lifetime_usage]) }
+    let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:date) { Date.new(2025, 1, 15) }
+
+before_all do
+  create_default(:plan)
+end
 
   context "when the plan has usage_thresholds" do
     it "tracks activity" do

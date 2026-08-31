@@ -6,8 +6,13 @@ RSpec.describe UsageMonitoring::Alerts::DestroyAllService do
   describe ".call" do
     subject(:result) { described_class.call(alertable: alertable) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let(:alertable) { create(:subscription, organization:) }
+
+before_all do
+  create_default(:customer)
+create_default(:plan)
+end
 
     context "when alertable is a subscription" do
       let!(:alert1) do

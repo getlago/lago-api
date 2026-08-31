@@ -4,8 +4,8 @@ require "rails_helper"
 
 RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
   let(:invoice) { create(:invoice) }
-  let(:organization) { invoice.organization }
-  let(:customer) { invoice.customer }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:customer) { create_default(:customer)}
 
   let(:message) do
     instance_double(
