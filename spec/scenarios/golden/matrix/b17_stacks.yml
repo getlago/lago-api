@@ -1,0 +1,2691 @@
+# B17 — three or more reducers on one invoice.
+#
+# B15 asks which of two stages runs first. These rows ask a different question: after progressive
+# billing, a coupon, tax, a credit note and a wallet have each moved the figure, is every stage still
+# operating on the base it is supposed to see? A pair row cannot tell, because with only two stages
+# there is no "already moved" to get wrong.
+#
+# Cells are derived — subsets of GoldenLegality::BILLING_FEATURE_REDUCERS of size >= 3, named in
+# pipeline order — so this block grows by itself if the pipeline gains a stage.
+---
+- __matrix:
+    defaults:
+      provenance: coverage-gap
+      runners: [rspec]
+      dimensions: {interval: monthly, billing_time: calendar}
+      setup:
+        organization: {premium_integrations: [progressive_billing]}
+        taxes: [{code: "%{m}_vat", name: VAT, rate: 20}]
+        metrics: [{code: "%{m}_sum", aggregation_type: sum_agg, field_name: amount}]
+        plan: {code: "golden_%{key}", interval: monthly, amount_cents: 5000, usage_thresholds: [{amount_cents: 5000}]}
+        charges: [{billable_metric_code: "%{m}_sum", charge_model: standard, properties: {amount: "1"}}]
+        customer: {external_id: "golden_%{key}_cust", currency: EUR}
+        subscription: {external_id: "golden_%{key}_sub", billing_time: calendar}
+        coupons: [{name: "b17 %{cn} coupon", code: "%{m}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+        wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "%{gc}"}]
+    groups:
+      g1: {dimensions: {tax_rate: 20}, runners: [rspec, live], setup: {organization: ~, plan: {amount_cents: 0, usage_thresholds: ~}, wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "50", applies_to: {billable_metric_codes: ["%{m}_late"]}}]}}
+      g2: {dimensions: {threshold_amount_cents: 5000, taxes: none}, setup: {taxes: ~, wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30", applies_to: {fee_types: [subscription]}}]}}
+      g3: {dimensions: {tax_rate: 20, threshold_amount_cents: 5000}, provenance: characterization, setup: {wallets: ~}}
+      g4: {dimensions: {tax_rate: 20, threshold_amount_cents: 5000}, provenance: characterization, setup: {organization: {premium_integrations: [progressive_billing, preview]}, wallets: ~}}
+      g5: {dimensions: {tax_rate: 20}, setup: {organization: {premium_integrations: [preview]}, plan: {amount_cents: 0, usage_thresholds: ~}}}
+      g6: {dimensions: {tax_rate: 20, threshold_amount_cents: 5000}, provenance: characterization, setup: {organization: {premium_integrations: [progressive_billing, preview]}, wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30", applies_to: {fee_types: [subscription]}}]}}
+      g7: {dimensions: {threshold_amount_cents: 5000, taxes: none}, provenance: characterization, setup: {organization: {premium_integrations: [progressive_billing, preview]}, taxes: ~, wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30", applies_to: {fee_types: [subscription]}}]}}
+      g8: {dimensions: {tax_rate: 20, threshold_amount_cents: 5000}, provenance: characterization, setup: {organization: {premium_integrations: [progressive_billing, preview]}}}
+      g9: {dimensions: {tax_rate: 20, threshold_amount_cents: 5000}, setup: {wallets: ~}}
+      g10: {dimensions: {tax_rate: 20, threshold_amount_cents: 5000}, provenance: characterization, setup: {wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30", applies_to: {fee_types: [subscription]}}]}}
+      g11: {dimensions: {tax_rate: 20}, setup: {organization: {premium_integrations: [preview]}, plan: {usage_thresholds: ~}}}
+      g12: {dimensions: {taxes: none}, runners: [rspec, live], setup: {organization: ~, taxes: ~, plan: {amount_cents: 0, usage_thresholds: ~}, wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "50", applies_to: {billable_metric_codes: ["%{m}_late"]}}]}}
+      g13: {dimensions: {threshold_amount_cents: 5000, taxes: none}, setup: {taxes: ~}}
+
+- id: b17/full-stack/invoice
+  block: B17
+  group: g10
+  key: b17_full
+  vars: {m: b17_full, cn: recurring}
+  axes:
+    stack: progressive_billing+coupon+tax+credit_note+prepaid_credit
+    observed_via: invoice
+  characterization: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_full_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        total_amount_cents: 9600
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 3200
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9800
+        taxes_amount_cents: 831
+        credit_notes_amount_cents: 4800
+        prepaid_credit_amount_cents: 2733
+        total_amount_cents: 3098
+        fees:
+          - {fee_type: charge, amount_cents: 10000, taxes_amount_cents: 0}
+          - {fee_type: subscription, amount_cents: 5000, taxes_amount_cents: 831}
+    wallet:
+      balance_cents: 267
+  math: >-
+    Every stage of the pipeline on one invoice, and each one asserted separately so a divergence names
+    the stage that produced it rather than just a wrong total.
+    Threshold invoice (5 March): 100 units × 1.00 = 10_000¢ of charge, the recurring coupon takes
+    2_000¢ before tax → 8_000¢ base, 20% = 1_600¢, total 9_600¢. A credit note is then raised on it
+    for 5_000¢ of fee, which returns its share of the coupon (5_000/10_000 × 2_000 = 1_000¢) and its
+    tax: (5_000 − 1_000) × 1.2 = 4_800¢ of spendable balance.
+    Period invoice (1 April), stage by stage:
+    fees 5_000¢ subscription + 10_000¢ charge = 15_000¢;
+    progressive billing credits what was actually collected, not what was billed —
+    `to_credit_amount = fees − coupons − pb_credits − credit_notes` = 10_000 − 2_000 − 4_800 =
+    3_200¢, under the 10_000¢ charge cap;
+    the coupon takes another 2_000¢ (it is `recurring` over 3 periods, so unlike a `once` coupon it
+    survives the threshold invoice — see b15/coupon/progressive_billing);
+    base 15_000 − 3_200 − 2_000 = 9_800¢, tax 1_960¢;
+    the credit note is spent after tax, all 4_800¢ of it → 5_831¢ left;
+    the wallet is spent last and is limited to `subscription` fees, and a limited wallet is capped per
+    fee at `sub_total_excluding_taxes + taxes - precise_credit_notes`
+    (allocate_prepaid_credits_by_wallets_service.rb:74-77). The credit note had already absorbed
+    2_253¢ of the subscription fee, so only 2_733¢ of the wallet's 3_000¢ is usable → 3_098¢ due and
+    267¢ left on the wallet. The charge fee is skipped outright by that service because its base is
+    0 — a consequence of the tax defect below, not a separate rule.
+    CHARACTERIZATION — the tax figure is wrong and this row records what Lago does, not what it
+    should do. Derivation says 20% of the 9_800¢ base = 1_960¢; Lago charges 831¢, under-collecting
+    1_129¢ of VAT.
+    Cause, from `Credits::ProgressiveBillingService#apply_credit_to_fees`:
+    `fee.precise_coupons_amount_cents += progressive_fee.amount_cents`, clamped to the fee amount.
+    It adds the amount the threshold invoice BILLED (10_000¢), not the amount actually credited
+    (3_200¢), so the charge fee's taxable base clamps to 0 and the fee is taxed at 0 — visible in the
+    fee assertions above. The invoice-level `sub_total_excluding_taxes_amount_cents` is meanwhile
+    reduced by only 3_200¢, so the invoice's own base (9_800¢) and the sum of its fees' bases no
+    longer agree, and tax follows the fees.
+    The two coincide whenever `to_credit_amount` equals the billed amount, which is every case B5 and
+    B15 cover. They diverge exactly when something already reduced the threshold invoice — a coupon or
+    a credit note — which is why it took a three-deep stack to surface. Correct behaviour would
+    distribute the CAPPED credit across the fees.
+    What the stack tests that the pairs cannot: the credit note reduces the progressive-billing credit
+    (3_200¢ rather than 8_000¢) while ALSO being spent in full on the same invoice — counted once on
+    each side of tax, for two different purposes. That is the interaction that exposed the tax defect.
+
+- id: b17/coupon-tax-wallet/preview
+  block: B17
+  group: g11
+  key: b17_preview
+  vars: {m: b17_pv, gc: "30"}
+  axes: {stack: coupon+tax+prepaid_credit, observed_via: preview}
+  setup:
+    coupons: [{name: "b17 preview coupon", code: b17_preview_coupon, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  calendar_sensitive: true
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pv_sum, properties: {amount: 100}}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 13000
+      taxes_amount_cents: 2600
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 12600
+    preview:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 13000
+      taxes_amount_cents: 2600
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 12600
+  math: >-
+    Three reducers, asserted twice with identical numbers — once on the invoice and once on the
+    preview that predicts it. A preview is worth nothing except insofar as it equals the invoice, and
+    a stack is where it stops doing so: preview reimplements the pipeline in
+    Invoices::PreviewService#compute_tax_and_totals rather than sharing it, so every stage is a place
+    the two can drift.
+    5_000¢ subscription + 100 units × 1.00 = 15_000¢ of fees; the coupon takes 2_000¢ before tax →
+    13_000¢ base; 20% = 2_600¢ → 15_600¢; the wallet's 30 credits are spent last, after tax, →
+    12_600¢ due.
+    The preview is taken on 25 March, when usage is already final and the wallet still holds its
+    3_000¢, so it must produce the same six numbers. Each is asserted on both sides rather than just
+    the total, because a stage-by-stage divergence that happens to cancel out in the total is the
+    failure mode preview actually has — b04/preview/with-progressive-billing is the case where it did.
+    No progressive billing here on purpose: that stack is b17/full-stack/invoice, and it carries a
+    known tax defect which would make an equality row assert the bug on both sides.
+
+- id: b17/pb-coupon-tax/invoice
+  block: B17
+  group: g3
+  key: b17_pb_coupon_tax
+  vars: {m: b17_pct, cn: pct}
+  axes: {stack: progressive_billing+coupon+tax, observed_via: invoice}
+  setup:
+    customer: {external_id: "golden_%{m}_cust"}
+    subscription: {external_id: "golden_%{m}_sub"}
+  characterization: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pct_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        taxes_amount_cents: 1600
+        total_amount_cents: 9600
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 714
+        total_amount_cents: 5714
+        fees:
+          - {fee_type: charge, amount_cents: 10000, taxes_amount_cents: 0}
+          - {fee_type: subscription, amount_cents: 5000, taxes_amount_cents: 714}
+  math: >-
+    CHARACTERIZATION — the minimal reproduction of the tax defect recorded by b17/full-stack/invoice — three stages, not
+    five, and no credit note.
+    Threshold invoice: 100 units = 10_000¢ of charge, coupon 2_000¢ → 8_000¢ base, 20% = 1_600¢,
+    total 9_600¢.
+    Period invoice: 5_000¢ subscription + 10_000¢ charge = 15_000¢ of fees. The credit is what was
+    collected, `fees - coupons` = 8_000¢, not the 10_000¢ billed. The coupon takes 2_000¢ more, so
+    the invoice's own base is 15_000 - 8_000 - 2_000 = 5_000¢ and tax should be 1_000¢.
+    Lago charges 714¢, under-collecting 286¢ of VAT.
+    The trigger is now exact, and narrower than the five-stack row suggested: `to_credit_amount`
+    (8_000¢) is less than the amount the threshold invoice BILLED (10_000¢), and
+    `apply_credit_to_fees` writes the billed figure into `fee.precise_coupons_amount_cents`, clamped
+    to the fee. The charge fee's base clamps to 0 and it is taxed at 0 — asserted above. The invoice's
+    own base is still 5_000¢, so the invoice and the sum of its fees disagree and tax follows the
+    fees. A coupon on the threshold invoice is enough; no credit note and no third reducer are needed.
+    b17/pb-tax-wallet/invoice is the control: prepaid credit is the one reducer `to_credit_amount`
+    does not subtract, so there the two figures agree and the tax is right at 1_000¢. Together the two
+    rows say the defect is not "progressive billing plus tax" but "progressive billing plus tax plus
+    anything that reduced what the threshold invoice collected".
+
+- id: b17/pb-tax-wallet/invoice
+  block: B17
+  key: b17_pb_tax_wallet
+  vars: {m: b17_ptw, gc: "50"}
+  axes: {stack: progressive_billing+tax+prepaid_credit, observed_via: invoice}
+  dimensions: {tax_rate: 20, threshold_amount_cents: 5000}
+  setup:
+    customer: {external_id: "golden_%{m}_cust"}
+    subscription: {external_id: "golden_%{m}_sub"}
+    coupons: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_ptw_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        taxes_amount_cents: 2000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 7000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 1000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 6000
+    wallet:
+      balance_cents: 0
+  math: >-
+    The control for b17/pb-coupon-tax/invoice, and the row that pins down what actually triggers the
+    tax defect.
+    Prepaid credit is the one reducer `to_credit_amount` does NOT subtract, so here the credit equals
+    the amount billed — 10_000¢ — and the figure `apply_credit_to_fees` writes into the charge fee is
+    the same 10_000¢. Fee bases and invoice base therefore agree: subscription 5_000¢ + charge 0¢ =
+    5_000¢, tax 1_000¢, exactly 20% of the invoice's own 5_000¢ base. Correct.
+    Threshold invoice: 10_000¢ of charge, 2_000¢ tax, the wallet's 5_000¢ spent on it → 7_000¢ cash.
+    Period invoice: 15_000¢ of fees, 10_000¢ credited, 5_000¢ base, 1_000¢ tax → 6_000¢, and the
+    wallet is already empty so it contributes nothing.
+    Cash total 13_000¢ = 18_000¢ gross less the 5_000¢ of credits. The defect needs something that
+    reduces to_credit — a coupon or a credit note on the threshold invoice — and prepaid credit is
+    not it.
+
+- id: b17/coupon-tax-credit-note/invoice
+  block: B17
+  key: b17_ctc
+  vars: {m: b17_ctc, cn: ctc}
+  axes: {stack: coupon+tax+credit_note, observed_via: invoice}
+  runners: [rspec, live]
+  dimensions: {tax_rate: 20}
+  setup:
+    plan: {usage_thresholds: ~}
+    organization: ~
+    wallets: ~
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_ctc_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 5200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_ctc_sum, properties: {amount: 50}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 15000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 13000
+        taxes_amount_cents: 2600
+        total_amount_cents: 15600
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        credit_notes_amount_cents: 5200
+        total_amount_cents: 4400
+  math: >-
+    Three reducers straddling tax: the coupon lowers the base, the credit note only the total, and tax
+    sits between them. The stack is what makes the credit note's own value depend on the coupon.
+    April invoice: 5_000¢ subscription + 100 units = 15_000¢ of fees, coupon 2_000¢ → 13_000¢ base,
+    20% = 2_600¢, total 15_600¢.
+    Crediting 5_000¢ of the charge fee returns a proportional slice of the coupon and its tax: the
+    charge fee carried 10_000/15_000 × 2_000 = 1_333.33¢ of coupon, of which half belongs to the
+    5_000¢ credited → 4_333.33¢ pre-tax, ×1.2 = 5_200¢ of spendable balance. Neither the coupon nor
+    the tax alone predicts that figure.
+    May invoice: 5_000¢ subscription + 50 units = 10_000¢, coupon 2_000¢ again → 8_000¢ base,
+    1_600¢ tax → 9_600¢, less the whole 5_200¢ credit note = 4_400¢.
+    Applying the credit note before tax would give 8_000 - 5_200 = 2_800¢ of base, 560¢ of tax and a
+    3_360¢ total, so the intermediate fields are asserted rather than the total alone.
+
+- id: b17/tax-credit-note-wallet/invoice
+  block: B17
+  group: g1
+  key: b17_tcw
+  vars: {m: b17_tcw}
+  axes: {stack: tax+credit_note+prepaid_credit, observed_via: invoice}
+  setup:
+    metrics: [{code: "%{m}_early", aggregation_type: sum_agg, field_name: amount}, {code: "%{m}_late", aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: "%{m}_early", charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: "%{m}_late", charge_model: standard, properties: {amount: "1"}}]
+    coupons: ~
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_tcw_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_tcw_late, properties: {amount: 80}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        taxes_amount_cents: 2000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 12000
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        taxes_amount_cents: 1600
+        credit_notes_amount_cents: 7200
+        prepaid_credit_amount_cents: 2400
+        total_amount_cents: 0
+    wallet:
+      balance_cents: 2600
+  math: >-
+    The two post-tax reducers plus the tax they both sit behind, and the row where the credit note
+    determines how much of the wallet is even usable.
+    April invoice: 100 units of `early` = 10_000¢, tax 2_000¢ → 12_000¢. The wallet is limited to
+    `late`, so it cannot touch this invoice — without that it would drain here and the stack would
+    never form. Crediting 6_000¢ of the charge returns its tax too → 7_200¢ of balance.
+    May invoice: 80 units of `late` = 8_000¢, tax 1_600¢ → 9_600¢. The credit note is spent first and
+    in full: 9_600 - 7_200 = 2_400¢. The wallet is then capped per fee at
+    `sub_total_excluding_taxes + taxes - precise_credit_notes`
+    (allocate_prepaid_credits_by_wallets_service.rb:74-77) = 9_600 - 7_200 = 2_400¢, so despite
+    holding 5_000¢ it may contribute only 2_400¢ — exactly what is left — and 2_600¢ stays on it.
+    Reverse the last two stages and the wallet would spend 5_000¢ first, leaving 4_600¢ for a credit
+    note that would then keep 2_600¢ of unusable balance instead. Same 0¢ total, different customer
+    assets, which is why the wallet balance is asserted.
+
+- id: b17/pb-coupon-credit-note/invoice
+  block: B17
+  key: b17_pcc
+  vars: {m: b17_pcc, cn: pcc}
+  axes: {stack: progressive_billing+coupon+credit_note, observed_via: invoice}
+  dimensions: {threshold_amount_cents: 5000, taxes: none}
+  setup:
+    taxes: ~
+    wallets: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pcc_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        total_amount_cents: 8000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9000
+        credit_notes_amount_cents: 4000
+        total_amount_cents: 5000
+  math: >-
+    A credit note raised against a threshold invoice is counted TWICE by the period invoice, on
+    opposite sides of the ledger, and this is the smallest stack where that is visible.
+    Threshold invoice: 10_000¢ of charge less the 2_000¢ recurring coupon = 8_000¢. Crediting 5_000¢
+    of the fee returns its half of the coupon (1_000¢) → a 4_000¢ balance.
+    Period invoice, 15_000¢ of fees:
+    `to_credit_amount` = 10_000 − 2_000 coupons − 4_000 credit notes = 4_000¢, so the progressive
+    credit is what the customer is still out of pocket for, not what was billed;
+    the coupon takes 2_000¢ again → base 15_000 − 4_000 − 2_000 = 9_000¢;
+    then the SAME 4_000¢ credit note is spent as credit → 5_000¢ due.
+    Subtracting it once and forgetting the other use is the obvious bug in either direction: skip it in
+    `to_credit_amount` and the credit becomes 8_000¢ (invoice 1_000¢), skip it as a credit and the
+    invoice is 9_000¢. Both are one line away and both are wrong, which is why the two fields are
+    asserted separately rather than through the total.
+
+- id: b17/pb-coupon-wallet/invoice
+  block: B17
+  group: g13
+  key: b17_pcw
+  vars: {m: b17_pcw, cn: pcw, gc: "50"}
+  axes: {stack: progressive_billing+coupon+prepaid_credit, observed_via: invoice}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pcw_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 3000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+    wallet:
+      balance_cents: 0
+  math: >-
+    Two reducers reduce what the threshold invoice COLLECTED, and only one of them reduces what the
+    period invoice credits back. That asymmetry is the whole content of this stack.
+    Threshold invoice: 10_000¢ of charge, coupon 2_000¢ → 8_000¢, and the wallet's 5_000¢ is spent
+    after that → 3_000¢ cash, wallet emptied.
+    Period invoice: `to_credit_amount` = fees − coupons − pb − credit_notes = 10_000 − 2_000 = 8_000¢.
+    The wallet's 5_000¢ is NOT subtracted, so the credit covers money the wallet paid as well as cash
+    the customer paid. Base 15_000 − 8_000 − 2_000 = 5_000¢; the wallet is already empty so the last
+    stage contributes nothing; 5_000¢ due.
+    Cash across the period: 3_000 + 5_000 = 8_000¢, against 15_000¢ of fees less 4_000¢ of coupon
+    (twice) and 5_000¢ of wallet — 6_000¢. The 2_000¢ difference is the coupon subtracted from
+    `to_credit_amount`, the same behaviour b15/coupon/progressive_billing reports as a finding,
+    surfacing here through a second reducer rather than in isolation.
+
+- id: b17/coupon-credit-note-wallet/invoice
+  block: B17
+  group: g12
+  key: b17_ccw
+  vars: {m: b17_ccw, cn: ccw}
+  axes: {stack: coupon+credit_note+prepaid_credit, observed_via: invoice}
+  setup:
+    metrics: [{code: "%{m}_early", aggregation_type: sum_agg, field_name: amount}, {code: "%{m}_late", aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: "%{m}_early", charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: "%{m}_late", charge_model: standard, properties: {amount: "1"}}]
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_ccw_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_ccw_late, properties: {amount: 80}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        total_amount_cents: 8000
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 6000
+        credit_notes_amount_cents: 4800
+        prepaid_credit_amount_cents: 1200
+        total_amount_cents: 0
+    wallet:
+      balance_cents: 3800
+  math: >-
+    The three reducers that all take from the customer's own money — a discount, a credit they are
+    owed, and credits they hold — with no tax between them, so the only question is how much of each
+    is consumed and in what order.
+    April invoice: 100 units of `early` = 10_000¢ less the 2_000¢ recurring coupon = 8_000¢. The
+    wallet is limited to `late` and cannot touch it. Crediting 6_000¢ of the charge returns its share
+    of the coupon (6_000/10_000 × 2_000 = 1_200¢) → a 4_800¢ balance.
+    May invoice: 80 units of `late` = 8_000¢, coupon 2_000¢ again → 6_000¢ base. The credit note goes
+    first and takes 4_800¢, leaving 1_200¢. The wallet is then capped per fee at
+    `sub_total_excluding_taxes + taxes - precise_credit_notes` = 6_000 - 4_800 = 1_200¢, so despite
+    holding 5_000¢ it contributes exactly the remainder and keeps 3_800¢.
+    Each earlier stage shrinks what the next one is allowed to spend, and the wallet balance is the
+    only field that records it: every ordering of these three ends at a 0¢ invoice, and they differ
+    only in how much of the customer's credit was burned to get there.
+
+- id: b17/coupon-tax-credit-note-wallet/invoice
+  block: B17
+  group: g1
+  key: b17_4s
+  vars: {m: b17_4s, cn: four-stack}
+  axes: {stack: coupon+tax+credit_note+prepaid_credit, observed_via: invoice}
+  setup:
+    metrics: [{code: "%{m}_early", aggregation_type: sum_agg, field_name: amount}, {code: "%{m}_late", aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: "%{m}_early", charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: "%{m}_late", charge_model: standard, properties: {amount: "1"}}]
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_4s_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 5760
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_4s_late, properties: {amount: 80}}]
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        total_amount_cents: 9600
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        credit_notes_amount_cents: 5760
+        prepaid_credit_amount_cents: 1440
+        total_amount_cents: 0
+    wallet:
+      balance_cents: 3560
+  math: >-
+    Four of the five reducers, and the only clean four-stack available: progressive billing is the
+    fifth and cannot join without dragging in the tax defect recorded by b17/pb-coupon-tax/invoice.
+    Everything here is derivable in one pass because each stage is on a known side of tax.
+    April: 100 units of `early` = 10_000¢, coupon 2_000¢ BEFORE tax → 8_000¢ base, 20% = 1_600¢ →
+    9_600¢. Crediting 6_000¢ of the fee returns its coupon share (1_200¢) and the tax on what remains:
+    (6_000 − 1_200) × 1.2 = 5_760¢.
+    May: 80 units of `late` = 8_000¢, coupon 2_000¢ → 6_000¢ base, 1_200¢ tax → 7_200¢ due. The credit
+    note is spent AFTER tax and covers 5_760¢ of it, leaving 1_440¢; the wallet, also after tax and
+    limited to `late`, is capped at 6_000 + 1_200 − 5_760 = 1_440¢ and contributes exactly that,
+    keeping 3_560¢.
+    Every stage lands on a different quantity — the coupon on the base, the tax on what the coupon
+    left, the credit note on the taxed total, the wallet on what the credit note left — so the eight
+    asserted numbers are eight independent statements rather than one restated four times.
+
+- id: b17/pb-tax-credit-note/invoice
+  block: B17
+  group: g3
+  key: b17_ptc
+  vars: {m: b17_ptc}
+  axes: {stack: progressive_billing+tax+credit_note, observed_via: invoice}
+  setup:
+    coupons: ~
+  characterization: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_ptc_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 7200
+        total_amount_cents: 6000
+        fees:
+          - {fee_type: charge, amount_cents: 10000, taxes_amount_cents: 0}
+          - {fee_type: subscription, amount_cents: 5000, taxes_amount_cents: 1000}
+  math: >-
+    CHARACTERIZATION, and the row that completes the trigger. b17/pb-coupon-tax/invoice showed a
+    COUPON on the threshold invoice corrupts the tax; b17/pb-tax-wallet/invoice showed prepaid credit
+    does not. This one predicts, from the mechanism rather than from observation, that a CREDIT NOTE
+    does — because `to_credit_amount` subtracts credit notes exactly as it subtracts coupons.
+    Threshold invoice: 10_000¢ of charge, 20% = 2_000¢ → 12_000¢. Crediting 6_000¢ of the fee returns
+    its tax too → 7_200¢.
+    Period invoice: `to_credit_amount` = 10_000 − 7_200 = 2_800¢, less than the 10_000¢ billed — so
+    `apply_credit_to_fees` writes the billed 10_000¢ into the charge fee, clamps its taxable base to
+    0, and the fee is taxed at 0. The invoice's own base is 15_000 − 2_800 = 12_200¢, which at 20%
+    should be 2_440¢; tax follows the fees instead and lands at 1_000¢, the subscription fee alone.
+    1_440¢ of VAT is not collected. The credit note is then spent in full after tax → 6_000¢ due.
+    Three rows now bracket the defect exactly: it fires when anything reduces what the threshold
+    invoice collected (coupon, credit note) and not when the reduction is prepaid credit, which
+    `to_credit_amount` ignores.
+
+- id: b17/pb-credit-note-wallet/invoice
+  block: B17
+  group: g2
+  key: b17_pcnw
+  vars: {m: b17_pcnw}
+  axes: {stack: progressive_billing+credit_note+prepaid_credit, observed_via: invoice}
+  setup:
+    coupons: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pcnw_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        credit_notes_amount_cents: 6000
+        prepaid_credit_amount_cents: 2273
+        total_amount_cents: 2727
+    wallet:
+      balance_cents: 727
+  math: >-
+    The three reducers that all descend from the same threshold invoice, with no tax to separate them,
+    so what is left is purely a question of how much each stage is permitted to spend.
+    Threshold invoice: 10_000¢ of charge. The wallet is limited to `subscription` fees and this
+    invoice has none, so it cannot be touched — without that it would empty here and the stack would
+    collapse to a pair.
+    Crediting 6_000¢ of the charge gives a 6_000¢ balance, which then does double duty on the period
+    invoice exactly as in b17/pb-coupon-credit-note/invoice: `to_credit_amount` = 10_000 − 6_000 =
+    4_000¢, base 15_000 − 4_000 = 11_000¢, and the same 6_000¢ is spent as credit → 5_000¢ left.
+    The wallet is capped per fee at `sub_total_excluding_taxes + taxes - precise_credit_notes`, and may
+    only look at the subscription fee, so what it may spend depends on how the credit note was split.
+    That split is `credit x (amount_cents - precise_coupons_amount_cents + taxes_amount_cents) /
+    invoice_total` (credit_note_service.rb#apply_credit_to_fees), and the charge fee weighs nothing in
+    it — the progressive stage set its `precise_coupons_amount_cents` to the full 10_000¢, so its
+    weight is 10_000 − 10_000 = 0. The whole 6_000¢ is therefore weighted onto the subscription fee:
+    6_000 × 5_000/11_000 = 2_727.27¢, leaving a ceiling of 2_272.73¢. The wallet spends 2_273¢ of its
+    3_000¢ and keeps 727¢; 2_727¢ remains due.
+    Spreading by gross fee amounts instead (5_000/15_000 × 6_000 = 2_000¢) would give a 3_000¢
+    ceiling, a drained wallet and a 2_000¢ invoice — which is what this row was first written to
+    expect, and it was wrong for a reason worth knowing rather than by a rounding.
+    The wallet balance is the assertion that matters: the limitation, the credit note's split and the
+    progressive credit all bear on it, and none of the three is visible in the total.
+
+- id: b17/pb-coupon-tax-credit-note/invoice
+  block: B17
+  group: g3
+  key: b17_4pc
+  vars: {m: b17_4pc, cn: "4pc"}
+  axes: {stack: progressive_billing+coupon+tax+credit_note, observed_via: invoice}
+  characterization: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_4pc_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        taxes_amount_cents: 1600
+        total_amount_cents: 9600
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 3200
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9800
+        taxes_amount_cents: 831
+        credit_notes_amount_cents: 4800
+        total_amount_cents: 5831
+  math: >-
+    CHARACTERIZATION — b17/full-stack/invoice with the wallet removed, which isolates the tax defect
+    from the wallet arithmetic layered on top of it there.
+    Identical up to the last stage: threshold invoice 10_000¢ less the 2_000¢ coupon = 8_000¢ base,
+    1_600¢ tax, 9_600¢. Credit note on 5_000¢ of fee returns 1_000¢ of coupon and 800¢ of tax → 4_800¢.
+    Period invoice: `to_credit_amount` = 10_000 − 2_000 − 4_800 = 3_200¢, base 15_000 − 3_200 − 2_000
+    = 9_800¢, and tax comes out 831¢ where 20% of the base is 1_960¢ — the charge fee's taxable base
+    is clamped to 0 by `apply_credit_to_fees`. The credit note is then spent in full → 5_831¢.
+    That 5_831¢ is exactly the figure b17/full-stack/invoice reaches before its wallet stage, so the
+    two rows agree on everything the wallet does not touch. Whoever fixes the clamp should expect both
+    to move together, and the 831¢ here to become 1_960¢.
+
+- id: b17/pb-coupon-tax-wallet/invoice
+  block: B17
+  key: b17_4pw
+  vars: {m: b17_4pw, cn: "4pw", gc: "50"}
+  axes: {stack: progressive_billing+coupon+tax+prepaid_credit, observed_via: invoice}
+  provenance: characterization
+  dimensions: {tax_rate: 20, threshold_amount_cents: 5000}
+  characterization: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_4pw_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        taxes_amount_cents: 1600
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 4600
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 714
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5714
+    wallet:
+      balance_cents: 0
+  math: >-
+    CHARACTERIZATION — the four-stack that proves the wallet changes nothing about the defect.
+    The threshold invoice is discounted, taxed and then paid down by the wallet: 10_000¢ less 2_000¢
+    coupon = 8_000¢, 1_600¢ tax, 9_600¢, of which the wallet covers 5_000¢ → 4_600¢ cash, wallet
+    emptied.
+    On the period invoice `to_credit_amount` subtracts the coupon but not the prepaid credit, so it is
+    10_000 − 2_000 = 8_000¢ — precisely the figure b17/pb-coupon-tax/invoice reaches without any
+    wallet, and the tax is the same wrong 714¢ against a 5_000¢ base. The wallet is empty by then and
+    contributes nothing.
+    Two rows, one with a wallet and one without, arriving at the same 5_714¢: the wallet is invisible
+    to the defect because `to_credit_amount` ignores it, which is the same reason
+    b17/pb-tax-wallet/invoice is the control that stays correct.
+
+- id: b17/pb-coupon-credit-note-wallet/invoice
+  block: B17
+  group: g2
+  key: b17_4pcw
+  vars: {m: b17_4pcw, cn: "4pcw"}
+  axes: {stack: progressive_billing+coupon+credit_note+prepaid_credit, observed_via: invoice}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_4pcw_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        total_amount_cents: 8000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9000
+        credit_notes_amount_cents: 4000
+        prepaid_credit_amount_cents: 2273
+        total_amount_cents: 2727
+    wallet:
+      balance_cents: 727
+  math: >-
+    Four reducers with no tax between them, so every stage acts on the same running figure and the
+    only question is how much each is allowed to take.
+    Threshold invoice: 10_000¢ less the 2_000¢ coupon = 8_000¢. Crediting 5_000¢ of the fee returns
+    half its coupon → 4_000¢ of balance.
+    Period invoice: `to_credit_amount` = 10_000 − 2_000 − 4_000 = 4_000¢; the coupon takes 2_000¢
+    again → base 15_000 − 4_000 − 2_000 = 9_000¢; the same 4_000¢ credit note is then spent →
+    5_000¢ left.
+    The wallet is limited to `subscription` fees, and its ceiling is that fee's share of what remains.
+    The credit note is weighted onto the fees by
+    `(amount_cents - precise_coupons_amount_cents + taxes_amount_cents) / invoice_total`, in which the
+    charge fee counts for nothing because the progressive stage already wrote the full 10_000¢ into its
+    `precise_coupons_amount_cents` — the same mechanism as b17/pb-credit-note-wallet/invoice. The
+    subscription fee therefore absorbs the credit note alone and is left 2_272.73¢ of room.
+    The wallet spends 2_273¢ of its 3_000¢ and keeps 727¢; 2_727¢ remains due.
+    Note what the wallet cannot reach: 5_000¢ is owed and it holds enough to cover 3_000¢ of it, but
+    the limitation plus two earlier reducers cap it at 2_273¢. A wallet that emptied here would mean
+    the limitation had been ignored.
+
+- id: b17/pb-tax-credit-note-wallet/invoice
+  block: B17
+  group: g10
+  key: b17_4ptw
+  vars: {m: b17_4ptw}
+  axes: {stack: progressive_billing+tax+credit_note+prepaid_credit, observed_via: invoice}
+  setup:
+    coupons: ~
+  characterization: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_4ptw_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 7200
+        prepaid_credit_amount_cents: 2727
+        total_amount_cents: 3273
+    wallet:
+      balance_cents: 273
+  math: >-
+    CHARACTERIZATION — b17/pb-tax-credit-note/invoice with a wallet on the end, and the one case where
+    the wallet is NOT the constrained party.
+    Everything up to the wallet is identical: `to_credit_amount` = 10_000 − 7_200 = 2_800¢, base
+    12_200¢, tax 1_000¢ instead of the 2_440¢ the base implies (the charge fee is clamped to 0), and
+    the 7_200¢ credit note spent after tax → 6_000¢ due.
+    The wallet is limited to `subscription` fees, so its ceiling is that fee's room after the credit
+    note, and the credit note's split across fees follows
+    `credit x (amount_cents - precise_coupons_amount_cents + taxes_amount_cents) / invoice_total`
+    (credit_note_service.rb#apply_credit_to_fees). The charge fee weighs NOTHING in that formula: the
+    progressive stage already set its `precise_coupons_amount_cents` to the full 10_000¢, so
+    10_000 − 10_000 + 0 = 0 and the entire credit note is weighted onto the subscription fee —
+    7_200 × 6_000/13_200 = 3_272.73¢, leaving it 5_000 + 1_000 − 3_272.73 = 2_727.27¢ of room.
+    The wallet holds 3_000¢, may spend only 2_727¢, and keeps 273¢; 3_273¢ remains due.
+    So the clamp that corrupts the tax also decides how a credit note is shared between fees, and
+    through that how much of a limited wallet may be spent. One line reaches three different totals,
+    which is the argument for stacks over pairs in a sentence.
+
+- id: b17/coupon-tax-credit-note/regenerated
+  block: B17
+  key: b17_rg1
+  vars: {m: b17_rg1, cn: rg1}
+  axes: {stack: coupon+tax+credit_note, observed_via: regenerated}
+  runners: [rspec, live]
+  dimensions: {tax_rate: 20, grace_period: 5}
+  setup:
+    plan: {usage_thresholds: ~}
+    organization: ~
+    wallets: ~
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rg1_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 5200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rg1_sum, properties: {amount: 50}}]
+    - at: "2024-04-25T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 12000
+  math: >-
+    THE SAME STACK AS b17/coupon-tax-credit-note/invoice, REGENERATED AS A DRAFT, AND IT SHOWS THE
+    CUSTOMER A COMPLETELY DIFFERENT NUMBER: 12_000¢ against the 4_400¢ they will actually be billed.
+    Not a defect — a consequence of where the reducers are gated. `should_create_coupon_credit?`,
+    `should_create_credit_note_credit?` and `should_create_applied_prepaid_credit?` all begin
+    `return false if not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a draft is
+    built from fee producers and tax alone. Coupons, credit notes and prepaid credit are allocated
+    only when the invoice finalizes, which is what stops a grace-period draft from consuming a
+    coupon or burning wallet credits that a later refresh would have to give back.
+    So the draft reads: 5_000¢ subscription + 50 units = 10_000¢ of fees, no coupon, tax on the FULL
+    10_000¢ = 2_000¢, no credit note → 12_000¢. Finalized, the same period is 10_000 − 2_000 coupon =
+    8_000¢ base, 1_600¢ tax, less the 5_200¢ credit note = 4_400¢.
+    Progressive billing is the exception that proves the rule: it runs at :53, before the
+    finalizing gate, so it IS present on drafts — which is why the pb regenerated rows in this block
+    still show their credit.
+    The refresh is what makes this a `regenerated` cell rather than a draft one: the draft is rebuilt
+    from scratch by `PUT /invoices/:id/refresh` and must land on the same 12_000¢ it was created with.
+
+- id: b17/pb-coupon-tax/regenerated
+  block: B17
+  key: b17_rg2
+  vars: {m: rg2, cn: rg2}
+  axes: {stack: progressive_billing+coupon+tax, observed_via: regenerated}
+  dimensions: {grace_period: 5, tax_rate: 20, threshold_amount_cents: 5000}
+  setup:
+    wallets: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: rg2_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 8000
+        sub_total_excluding_taxes_amount_cents: 7000
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 8000
+  math: >-
+    The draft of progressive_billing + coupon + tax, refreshed — and the coupon is gone but the progressive credit remains.
+    Progressive billing runs at calculate_fees_service.rb:53, ahead of the finalizing gate that
+    holds back coupons, credit notes and prepaid credit (:364-379), so it is the ONLY reducer a
+    draft carries. Here it credits 8000¢ of the 15000¢ of fees → a 7000¢ base.
+    Tax is 1000¢, not 20% of that base: `apply_credit_to_fees` has clamped the charge
+    fee's taxable amount to zero, so only the subscription fee is taxed — the same clamp
+    b17/pb-coupon-tax/invoice records as a defect, reaching the draft too.
+    The draft therefore asks 8000¢ where the finalized invoice asks 5_714¢. A customer
+    reading their draft mid-period sees a number they will not be billed, and the gap is every
+    discount they are entitled to.
+    The refresh is the assertion: `PUT /invoices/:id/refresh` rebuilds the draft from scratch and
+    it must land on the figure it was created with rather than drifting each time it is rerun.
+
+- id: b17/full-stack/regenerated
+  block: B17
+  key: b17_rg3
+  vars: {m: rg3, cn: rg3, gc: "30"}
+  axes: {stack: progressive_billing+coupon+tax+credit_note+prepaid_credit, observed_via: regenerated}
+  dimensions: {grace_period: 5, tax_rate: 20, threshold_amount_cents: 5000}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: rg3_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 3200
+        sub_total_excluding_taxes_amount_cents: 11800
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 12800
+  math: >-
+    The draft of progressive_billing + coupon + tax + credit_note + prepaid_credit, refreshed — and four of the five reducers vanish and only progressive billing survives.
+    Progressive billing runs at calculate_fees_service.rb:53, ahead of the finalizing gate that
+    holds back coupons, credit notes and prepaid credit (:364-379), so it is the ONLY reducer a
+    draft carries. Here it credits 3200¢ of the 15000¢ of fees → a 11800¢ base.
+    Tax is 1000¢, not 20% of that base: `apply_credit_to_fees` has clamped the charge
+    fee's taxable amount to zero, so only the subscription fee is taxed — the same clamp
+    b17/pb-coupon-tax/invoice records as a defect, reaching the draft too.
+    The draft therefore asks 12800¢ where the finalized invoice asks 3_098¢. A customer
+    reading their draft mid-period sees a number they will not be billed, and the gap is every
+    discount they are entitled to.
+    The refresh is the assertion: `PUT /invoices/:id/refresh` rebuilds the draft from scratch and
+    it must land on the figure it was created with rather than drifting each time it is rerun.
+
+- id: b17/pb-coupon-credit-note/regenerated
+  block: B17
+  key: b17_rg4
+  vars: {m: rg4, cn: rg4}
+  axes: {stack: progressive_billing+coupon+credit_note, observed_via: regenerated}
+  dimensions: {grace_period: 5, threshold_amount_cents: 5000}
+  setup:
+    taxes: ~
+    wallets: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: rg4_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 11000
+  math: >-
+    The draft of progressive_billing + coupon + credit_note, refreshed — and with no tax the draft is simply fees less the progressive credit.
+    Progressive billing runs at calculate_fees_service.rb:53, ahead of the finalizing gate that
+    holds back coupons, credit notes and prepaid credit (:364-379), so it is the ONLY reducer a
+    draft carries. Here it credits 4000¢ of the 15000¢ of fees → a 11000¢ base.
+    The draft therefore asks 11000¢ where the finalized invoice asks 5_000¢. A customer
+    reading their draft mid-period sees a number they will not be billed, and the gap is every
+    discount they are entitled to.
+    The refresh is the assertion: `PUT /invoices/:id/refresh` rebuilds the draft from scratch and
+    it must land on the figure it was created with rather than drifting each time it is rerun.
+
+- id: b17/pb-tax-wallet/regenerated
+  block: B17
+  key: b17_rg5
+  vars: {m: rg5, gc: "50"}
+  axes: {stack: progressive_billing+tax+prepaid_credit, observed_via: regenerated}
+  dimensions: {grace_period: 5, tax_rate: 20, threshold_amount_cents: 5000}
+  setup:
+    coupons: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: rg5_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 6000
+  math: >-
+    The draft of progressive_billing + tax + prepaid_credit, refreshed — and the one stack whose draft and final agree, because its only other reducer was already spent.
+    Progressive billing runs at calculate_fees_service.rb:53, ahead of the finalizing gate that
+    holds back coupons, credit notes and prepaid credit (:364-379), so it is the ONLY reducer a
+    draft carries. Here it credits 10000¢ of the 15000¢ of fees → a 5000¢ base.
+    Tax is 1000¢, not 20% of that base: `apply_credit_to_fees` has clamped the charge
+    fee's taxable amount to zero, so only the subscription fee is taxed — the same clamp
+    b17/pb-coupon-tax/invoice records as a defect, reaching the draft too.
+    The draft therefore asks 6000¢ where the finalized invoice asks 6_000¢. A customer
+    reading their draft mid-period sees a number they will not be billed, and the gap is every
+    discount they are entitled to.
+    The refresh is the assertion: `PUT /invoices/:id/refresh` rebuilds the draft from scratch and
+    it must land on the figure it was created with rather than drifting each time it is rerun.
+
+- id: b17/pb-coupon-wallet/regenerated
+  block: B17
+  group: g13
+  key: b17_rga
+  vars: {m: b17_rga, cn: pcw, gc: "50"}
+  axes: {stack: progressive_billing+coupon+prepaid_credit, observed_via: regenerated}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rga_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 8000
+        sub_total_excluding_taxes_amount_cents: 7000
+        taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 7000
+  math: >-
+    The draft of progressive_billing + coupon + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 8000¢
+    credit IS present, taking the 15000¢ of fees down to a 7000¢ base.
+    So the draft asks 7000¢ where the finalized invoice asks 5_000¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/pb-tax-credit-note/regenerated
+  block: B17
+  group: g9
+  key: b17_rgb
+  vars: {m: b17_rgb}
+  axes: {stack: progressive_billing+tax+credit_note, observed_via: regenerated}
+  setup:
+    coupons: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgb_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 13200
+  math: >-
+    The draft of progressive_billing + tax + credit_note, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 2800¢
+    credit IS present, taking the 15000¢ of fees down to a 12200¢ base.
+    Tax is 1000¢ rather than 20% of that base, because `apply_credit_to_fees` clamped the
+    charge fee's taxable amount to zero and only the subscription fee is left to tax — the
+    defect b17/pb-coupon-tax/invoice records, reaching drafts as well as finalized invoices.
+    So the draft asks 13200¢ where the finalized invoice asks 6_000¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/pb-credit-note-wallet/regenerated
+  block: B17
+  group: g2
+  key: b17_rgc
+  vars: {m: b17_rgc}
+  axes: {stack: progressive_billing+credit_note+prepaid_credit, observed_via: regenerated}
+  setup:
+    coupons: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgc_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 11000
+  math: >-
+    The draft of progressive_billing + credit_note + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 4000¢
+    credit IS present, taking the 15000¢ of fees down to a 11000¢ base.
+    So the draft asks 11000¢ where the finalized invoice asks 2_727¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/coupon-tax-wallet/regenerated
+  block: B17
+  group: g11
+  key: b17_preview
+  vars: {m: b17_rgd, gc: "30"}
+  axes: {stack: coupon+tax+prepaid_credit, observed_via: regenerated}
+  setup:
+    coupons: [{name: "b17 preview coupon", code: b17_preview_coupon, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  calendar_sensitive: true
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgd_sum, properties: {amount: 100}}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {index: -1}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 15000
+        taxes_amount_cents: 3000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 18000
+  math: >-
+    The draft of coupon + tax + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    With no progressive billing there is no reducer at all: the base is the full 15000¢ of fees.
+    Tax applies to the whole undiscounted base: 3000¢.
+    So the draft asks 18000¢ where the finalized invoice asks 12_600¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/coupon-credit-note-wallet/regenerated
+  block: B17
+  group: g12
+  key: b17_rge
+  vars: {m: b17_rge, cn: ccw}
+  axes: {stack: coupon+credit_note+prepaid_credit, observed_via: regenerated}
+  setup:
+    metrics: [{code: "%{m}_early", aggregation_type: sum_agg, field_name: amount}, {code: "%{m}_late", aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: "%{m}_early", charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: "%{m}_late", charge_model: standard, properties: {amount: "1"}}]
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rge_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rge_late, properties: {amount: 80}}]
+    - at: "2024-04-25T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {index: -1}
+        status: draft
+        fees_amount_cents: 8000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 8000
+  math: >-
+    The draft of coupon + credit_note + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    With no progressive billing there is no reducer at all: the base is the full 8000¢ of fees.
+    So the draft asks 8000¢ where the finalized invoice asks 0¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/tax-credit-note-wallet/regenerated
+  block: B17
+  group: g1
+  key: b17_rgf
+  vars: {m: b17_rgf}
+  axes: {stack: tax+credit_note+prepaid_credit, observed_via: regenerated}
+  setup:
+    metrics: [{code: "%{m}_early", aggregation_type: sum_agg, field_name: amount}, {code: "%{m}_late", aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: "%{m}_early", charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: "%{m}_late", charge_model: standard, properties: {amount: "1"}}]
+    coupons: ~
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgf_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgf_late, properties: {amount: 80}}]
+    - at: "2024-04-25T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {index: -1}
+        status: draft
+        fees_amount_cents: 8000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 9600
+  math: >-
+    The draft of tax + credit_note + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    With no progressive billing there is no reducer at all: the base is the full 8000¢ of fees.
+    Tax applies to the whole undiscounted base: 1600¢.
+    So the draft asks 9600¢ where the finalized invoice asks 0¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/pb-coupon-tax-credit-note/regenerated
+  block: B17
+  group: g9
+  key: b17_rgg
+  vars: {m: b17_rgg, cn: "4pc"}
+  axes: {stack: progressive_billing+coupon+tax+credit_note, observed_via: regenerated}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgg_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 3200
+        sub_total_excluding_taxes_amount_cents: 11800
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 12800
+  math: >-
+    The draft of progressive_billing + coupon + tax + credit_note, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 3200¢
+    credit IS present, taking the 15000¢ of fees down to a 11800¢ base.
+    Tax is 1000¢ rather than 20% of that base, because `apply_credit_to_fees` clamped the
+    charge fee's taxable amount to zero and only the subscription fee is left to tax — the
+    defect b17/pb-coupon-tax/invoice records, reaching drafts as well as finalized invoices.
+    So the draft asks 12800¢ where the finalized invoice asks 5_831¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/pb-coupon-tax-wallet/regenerated
+  block: B17
+  key: b17_rgh
+  vars: {m: b17_rgh, cn: "4pw", gc: "50"}
+  axes: {stack: progressive_billing+coupon+tax+prepaid_credit, observed_via: regenerated}
+  dimensions: {tax_rate: 20, threshold_amount_cents: 5000}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgh_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 8000
+        sub_total_excluding_taxes_amount_cents: 7000
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 8000
+  math: >-
+    The draft of progressive_billing + coupon + tax + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 8000¢
+    credit IS present, taking the 15000¢ of fees down to a 7000¢ base.
+    Tax is 1000¢ rather than 20% of that base, because `apply_credit_to_fees` clamped the
+    charge fee's taxable amount to zero and only the subscription fee is left to tax — the
+    defect b17/pb-coupon-tax/invoice records, reaching drafts as well as finalized invoices.
+    So the draft asks 8000¢ where the finalized invoice asks 5_714¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/pb-coupon-credit-note-wallet/regenerated
+  block: B17
+  group: g2
+  key: b17_rgi
+  vars: {m: b17_rgi, cn: "4pcw"}
+  axes: {stack: progressive_billing+coupon+credit_note+prepaid_credit, observed_via: regenerated}
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgi_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        taxes_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 11000
+  math: >-
+    The draft of progressive_billing + coupon + credit_note + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 4000¢
+    credit IS present, taking the 15000¢ of fees down to a 11000¢ base.
+    So the draft asks 11000¢ where the finalized invoice asks 2_727¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/pb-tax-credit-note-wallet/regenerated
+  block: B17
+  key: b17_rgj
+  vars: {m: b17_rgj}
+  axes: {stack: progressive_billing+tax+credit_note+prepaid_credit, observed_via: regenerated}
+  dimensions: {tax_rate: 20, threshold_amount_cents: 5000}
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30", applies_to: {fee_types: [subscription]}}]
+    coupons: ~
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgj_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-03-28T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 15000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 13200
+  math: >-
+    The draft of progressive_billing + tax + credit_note + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    Progressive billing is the exception — it runs at :53, ahead of that gate — so its 2800¢
+    credit IS present, taking the 15000¢ of fees down to a 12200¢ base.
+    Tax is 1000¢ rather than 20% of that base, because `apply_credit_to_fees` clamped the
+    charge fee's taxable amount to zero and only the subscription fee is left to tax — the
+    defect b17/pb-coupon-tax/invoice records, reaching drafts as well as finalized invoices.
+    So the draft asks 13200¢ where the finalized invoice asks 3_273¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/coupon-tax-credit-note-wallet/regenerated
+  block: B17
+  group: g1
+  key: b17_rgk
+  vars: {m: b17_rgk, cn: four-stack}
+  axes: {stack: coupon+tax+credit_note+prepaid_credit, observed_via: regenerated}
+  setup:
+    metrics: [{code: "%{m}_early", aggregation_type: sum_agg, field_name: amount}, {code: "%{m}_late", aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: "%{m}_early", charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: "%{m}_late", charge_model: standard, properties: {amount: "1"}}]
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgk_early, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 5760
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_rgk_late, properties: {amount: 80}}]
+    - at: "2024-04-25T10:00:00Z"
+      do: update_customer
+      params: {invoice_grace_period: 5}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoice:
+      - select: {index: -1}
+        status: draft
+        fees_amount_cents: 8000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 9600
+  math: >-
+    The draft of coupon + tax + credit_note + prepaid_credit, rebuilt by refresh. Coupons, credit notes and prepaid
+    credit are all gated on `not_in_finalizing_process?` (calculate_fees_service.rb:364-379), so a
+    draft carries none of them and shows a total the customer will not be billed.
+    With no progressive billing there is no reducer at all: the base is the full 8000¢ of fees.
+    Tax applies to the whole undiscounted base: 1600¢.
+    So the draft asks 9600¢ where the finalized invoice asks 0¢ — the gap is precisely the
+    discounts that have not been allocated yet.
+    The refresh is the assertion: a draft is recomputed from scratch every time it is refreshed, so
+    it must land on the same figure rather than drifting on each run.
+
+- id: b17/coupon-tax-credit-note/preview
+  block: B17
+  key: b17_pva
+  vars: {m: b17_pva, cn: ctc}
+  axes: {stack: coupon+tax+credit_note, observed_via: preview}
+  dimensions: {tax_rate: 20}
+  setup:
+    organization: {premium_integrations: [preview]}
+    plan: {usage_thresholds: ~}
+    wallets: ~
+  calendar_sensitive: true
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pva_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 5200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_pva_sum, properties: {amount: 50}}]
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        credit_notes_amount_cents: 5200
+        total_amount_cents: 4400
+    preview:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 8000
+      taxes_amount_cents: 1600
+      credit_notes_amount_cents: 5200
+      total_amount_cents: 4400
+  math: >-
+    coupon + tax + credit_note predicted before the fact. Every number is asserted twice —
+    once on the invoice and once on the preview taken while usage is already final — because a
+    preview is worth exactly as much as its agreement with the invoice it forecasts.
+    Unlike a draft, a preview DOES apply the reducers: Invoices::PreviewService reimplements the
+    whole pipeline (Coupons::PreviewService, Preview::CreditsService and
+    AllocatePrepaidCreditsByWalletsService) rather than sharing CalculateFeesService, so each stage
+    is a separate place the two can drift. Compare the regenerated sibling of this stack, where a
+    draft shows none of these reducers and a visibly larger total.
+    Reimplementation is the risk this row exists to catch: the arithmetic is derived in
+    b17/coupon-tax-credit-note/invoice and simply has to be reproduced by different code.
+
+- id: b17/pb-coupon-tax/preview
+  block: B17
+  group: g4
+  key: b17_pb_coupon_tax
+  vars: {m: b17_qva, cn: pct}
+  axes: {stack: progressive_billing+coupon+tax, observed_via: preview}
+  setup:
+    customer: {external_id: "golden_%{m}_cust"}
+    subscription: {external_id: "golden_%{m}_sub"}
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qva_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 714
+        total_amount_cents: 5714
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 2600
+        total_amount_cents: 7600
+  math: >-
+    progressive_billing + coupon + tax predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-coupon-tax/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/pb-tax-wallet/preview
+  block: B17
+  group: g8
+  key: b17_pb_tax_wallet
+  vars: {m: b17_qvb, gc: "50"}
+  axes: {stack: progressive_billing+tax+prepaid_credit, observed_via: preview}
+  setup:
+    customer: {external_id: "golden_%{m}_cust"}
+    subscription: {external_id: "golden_%{m}_sub"}
+    coupons: ~
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvb_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 1000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 6000
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 10000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 3000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 8000
+  math: >-
+    progressive_billing + tax + prepaid_credit predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-tax-wallet/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/pb-coupon-credit-note/preview
+  block: B17
+  key: b17_qvc
+  vars: {m: b17_qvc, cn: pcc}
+  axes: {stack: progressive_billing+coupon+credit_note, observed_via: preview}
+  dimensions: {threshold_amount_cents: 5000, taxes: none}
+  setup:
+    organization: {premium_integrations: [progressive_billing, preview]}
+    taxes: ~
+    wallets: ~
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvc_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9000
+        credit_notes_amount_cents: 4000
+        total_amount_cents: 5000
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9000
+        credit_notes_amount_cents: 4000
+        total_amount_cents: 5000
+  math: >-
+    progressive_billing + coupon + credit_note predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-coupon-credit-note/invoice; this row only asserts that
+    different code reaches the same answer.
+
+- id: b17/pb-coupon-wallet/preview
+  block: B17
+  key: b17_qvd
+  vars: {m: b17_qvd, cn: pcw, gc: "50"}
+  axes: {stack: progressive_billing+coupon+prepaid_credit, observed_via: preview}
+  dimensions: {threshold_amount_cents: 5000, taxes: none}
+  setup:
+    organization: {premium_integrations: [progressive_billing, preview]}
+    taxes: ~
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvd_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+  math: >-
+    progressive_billing + coupon + prepaid_credit predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-coupon-wallet/invoice; this row only asserts that
+    different code reaches the same answer.
+
+- id: b17/pb-tax-credit-note/preview
+  block: B17
+  group: g4
+  key: b17_qve
+  vars: {m: b17_qve}
+  axes: {stack: progressive_billing+tax+credit_note, observed_via: preview}
+  setup:
+    coupons: ~
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qve_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 7200
+        total_amount_cents: 6000
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 3000
+        credit_notes_amount_cents: 7200
+        total_amount_cents: 8000
+  math: >-
+    progressive_billing + tax + credit_note predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-tax-credit-note/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/pb-credit-note-wallet/preview
+  block: B17
+  group: g7
+  key: b17_qvf
+  vars: {m: b17_qvf}
+  axes: {stack: progressive_billing+credit_note+prepaid_credit, observed_via: preview}
+  setup:
+    coupons: ~
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvf_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 6000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        credit_notes_amount_cents: 6000
+        prepaid_credit_amount_cents: 2273
+        total_amount_cents: 2727
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        credit_notes_amount_cents: 6000
+        prepaid_credit_amount_cents: 3000
+        total_amount_cents: 2000
+  math: >-
+    progressive_billing + credit_note + prepaid_credit predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-credit-note-wallet/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/pb-coupon-tax-credit-note/preview
+  block: B17
+  group: g4
+  key: b17_qvg
+  vars: {m: b17_qvg, cn: "4pc"}
+  axes: {stack: progressive_billing+coupon+tax+credit_note, observed_via: preview}
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvg_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 3200
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9800
+        taxes_amount_cents: 831
+        credit_notes_amount_cents: 4800
+        total_amount_cents: 5831
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 3200
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9800
+        taxes_amount_cents: 2600
+        credit_notes_amount_cents: 4800
+        total_amount_cents: 7600
+  math: >-
+    progressive_billing + coupon + tax + credit_note predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-coupon-tax-credit-note/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/pb-coupon-tax-wallet/preview
+  block: B17
+  group: g8
+  key: b17_qvh
+  vars: {m: b17_qvh, cn: "4pw", gc: "50"}
+  axes: {stack: progressive_billing+coupon+tax+prepaid_credit, observed_via: preview}
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvh_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 714
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5714
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 5000
+        taxes_amount_cents: 2600
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 7600
+  math: >-
+    progressive_billing + coupon + tax + prepaid_credit predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-coupon-tax-wallet/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/pb-coupon-credit-note-wallet/preview
+  block: B17
+  group: g7
+  key: b17_qvi
+  vars: {m: b17_qvi, cn: "4pcw"}
+  axes: {stack: progressive_billing+coupon+credit_note+prepaid_credit, observed_via: preview}
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvi_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4000
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9000
+        credit_notes_amount_cents: 4000
+        prepaid_credit_amount_cents: 2273
+        total_amount_cents: 2727
+    preview:
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 4000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9000
+        credit_notes_amount_cents: 4000
+        prepaid_credit_amount_cents: 3000
+        total_amount_cents: 2000
+  math: >-
+    progressive_billing + coupon + credit_note + prepaid_credit predicted before the period closes. The same numbers are asserted
+    on the invoice and on the preview, because a preview earns its keep only by agreeing with the
+    invoice it forecasts.
+    A preview is not a draft: Invoices::PreviewService applies the coupon, the credit note and the
+    wallet that a draft withholds, and since the fix in this session it also credits progressive
+    billing. But it REIMPLEMENTS the pipeline rather than sharing CalculateFeesService, so every
+    stage is a place the two can drift — including the fee-level clamp behind the tax defect,
+    which preview has no equivalent of.
+    All arithmetic is derived in b17/pb-coupon-credit-note-wallet/invoice; this row only asserts that
+    different code reaches the same answer.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    The invoice figures above are what the customer is billed; the preview figures are what they were
+    quoted. Preview credits progressive billing at invoice level — added in this session, without it
+    the quote was out by the whole progressively billed amount — but never at FEE level, so each fee
+    is still taxed on its undiscounted share. The invoice does the opposite and overcorrects:
+    `apply_credit_to_fees` writes the amount BILLED rather than the amount CREDITED into the fee and
+    clamps its taxable base to zero.
+    Neither is right. Both errors have the same origin — a credit that has to be shared across fees
+    and is not — and fixing `apply_credit_to_fees` to distribute the capped credit would settle both
+    at once, at which point this row and its /invoice sibling should agree.
+
+- id: b17/coupon-tax-wallet/invoice
+  block: B17
+  key: b17_preview
+  vars: {m: b17_iv, gc: "30"}
+  axes: {stack: coupon+tax+prepaid_credit, observed_via: invoice}
+  runners: [rspec, live]
+  dimensions: {tax_rate: 20}
+  setup:
+    plan: {usage_thresholds: ~}
+    coupons: [{name: "b17 preview coupon", code: b17_preview_coupon, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+    organization: ~
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_iv_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 13000
+      taxes_amount_cents: 2600
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 12600
+  math: >-
+    Three reducers on a single invoice with no progressive billing, which is what makes it the one
+    stack whose preview sibling agrees with it exactly.
+    5_000¢ subscription + 100 units = 15_000¢ of fees; the coupon takes 2_000¢ before tax → 13_000¢
+    base; 20% = 2_600¢ → 15_600¢; the wallet's 30 credits are spent last, after tax → 12_600¢ due.
+    Each stage acts on a different quantity, so the six numbers are six statements rather than one
+    restated. b17/coupon-tax-wallet/preview asserts the same six against the quote, and
+    b17/coupon-tax-wallet/regenerated shows the draft, which carries none of the reducers at all.
+
+- id: b17/full-stack/preview
+  block: B17
+  group: g6
+  key: b17_qvk
+  vars: {m: b17_qvk, cn: recurring}
+  axes:
+    stack: progressive_billing+coupon+tax+credit_note+prepaid_credit
+    observed_via: preview
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvk_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 5000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 3200
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 9800
+        taxes_amount_cents: 831
+        credit_notes_amount_cents: 4800
+        prepaid_credit_amount_cents: 2733
+        total_amount_cents: 3098
+    preview:
+      fees_amount_cents: 15000
+      progressive_billing_credit_amount_cents: 3200
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 9800
+      taxes_amount_cents: 2600
+      credit_notes_amount_cents: 4800
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 4600
+  math: >-
+    progressive_billing + coupon + tax + credit_note + prepaid_credit predicted before the period closes — the deepest stack in the
+    block, quoted rather than billed.
+    All invoice arithmetic is derived in b17/full-stack/invoice.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    Preview credits progressive billing at invoice level but never at fee level, so every fee is still
+    taxed on its undiscounted share and the wallet's per-fee ceiling is computed from bases the credit
+    never reached. The invoice makes the opposite error: `apply_credit_to_fees` writes the amount
+    BILLED rather than the amount CREDITED into the charge fee and clamps its taxable base to zero.
+    One missing distribution, two different wrong answers, and a quote the customer cannot rely on.
+    Fixing `apply_credit_to_fees` to spread the capped credit settles both, and this row should then
+    agree with its /invoice sibling.
+
+- id: b17/pb-tax-credit-note-wallet/preview
+  block: B17
+  group: g6
+  key: b17_qvj
+  vars: {m: b17_qvj}
+  axes: {stack: progressive_billing+tax+credit_note+prepaid_credit, observed_via: preview}
+  setup:
+    coupons: ~
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b17_qvj_sum, properties: {amount: 100}}]
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - at: "2024-03-06T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoice:
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 15000
+        progressive_billing_credit_amount_cents: 2800
+        sub_total_excluding_taxes_amount_cents: 12200
+        taxes_amount_cents: 1000
+        credit_notes_amount_cents: 7200
+        prepaid_credit_amount_cents: 2727
+        total_amount_cents: 3273
+    preview:
+      fees_amount_cents: 15000
+      progressive_billing_credit_amount_cents: 2800
+      sub_total_excluding_taxes_amount_cents: 12200
+      taxes_amount_cents: 3000
+      credit_notes_amount_cents: 7200
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 5000
+  math: >-
+    progressive_billing + tax + credit_note + prepaid_credit predicted before the period closes — the deepest stack in the
+    block, quoted rather than billed.
+    All invoice arithmetic is derived in b17/pb-tax-credit-note-wallet/invoice.
+    PREVIEW DIVERGES FROM THE INVOICE HERE, AND THIS ROW RECORDS BOTH SIDES.
+    Preview credits progressive billing at invoice level but never at fee level, so every fee is still
+    taxed on its undiscounted share and the wallet's per-fee ceiling is computed from bases the credit
+    never reached. The invoice makes the opposite error: `apply_credit_to_fees` writes the amount
+    BILLED rather than the amount CREDITED into the charge fee and clamps its taxable base to zero.
+    One missing distribution, two different wrong answers, and a quote the customer cannot rely on.
+    Fixing `apply_credit_to_fees` to spread the capped credit settles both, and this row should then
+    agree with its /invoice sibling.
+
+- id: b17/coupon-credit-note-wallet/preview
+  block: B17
+  key: b17_cnw2
+  vars: {m: cnw2, cn: cnw2, gc: "200"}
+  axes: {stack: coupon+credit_note+prepaid_credit, observed_via: preview}
+  setup:
+    organization: {premium_integrations: [preview]}
+    plan: {amount_cents: 0, usage_thresholds: ~}
+    taxes: ~
+  calendar_sensitive: true
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: cnw2_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 4800
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: cnw2_sum, properties: {amount: 80}}]
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 6000
+        credit_notes_amount_cents: 4800
+        prepaid_credit_amount_cents: 1200
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 8000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 6000
+      credit_notes_amount_cents: 4800
+      prepaid_credit_amount_cents: 1200
+      total_amount_cents: 0
+    wallet:
+      balance_cents: 10800
+  math: >-
+    coupon + credit_note + prepaid_credit quoted and then billed, asserted with identical numbers on both
+    sides. A preview is worth only its agreement with the invoice it forecasts, and
+    Invoices::PreviewService reimplements the pipeline rather than sharing CalculateFeesService,
+    so every stage is a place the two can drift.
+    April bills 100 units = 10_000¢ less the 2_000¢ coupon = 8_000¢, all of it covered by the wallet. Crediting 6_000¢ of the fee returns its coupon share (1_200¢) → 4_800¢ of balance. May bills 80 units = 8_000¢ less 2_000¢ = 6_000¢, the credit note takes 4_800¢ and the wallet the last 1_200¢.
+    The wallet holds 200 credits rather than being limited to a second metric, which is how the
+    other stacks in this block keep it out of the first invoice. That shape is unavailable here:
+    previewing a plan whose charge has no usage in the period is a 500 (see the preview nil
+    family reported alongside this suite), so a single metric with a wallet large enough to
+    survive both invoices is the only way to reach this cell today.
+
+- id: b17/tax-credit-note-wallet/preview
+  block: B17
+  group: g5
+  key: b17_tcw2
+  vars: {m: tcw2, gc: "200"}
+  axes: {stack: tax+credit_note+prepaid_credit, observed_via: preview}
+  setup:
+    coupons: ~
+  calendar_sensitive: true
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: tcw2_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 7200
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: tcw2_sum, properties: {amount: 80}}]
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        sub_total_excluding_taxes_amount_cents: 8000
+        taxes_amount_cents: 1600
+        credit_notes_amount_cents: 7200
+        prepaid_credit_amount_cents: 2400
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 8000
+      sub_total_excluding_taxes_amount_cents: 8000
+      taxes_amount_cents: 1600
+      credit_notes_amount_cents: 7200
+      prepaid_credit_amount_cents: 2400
+      total_amount_cents: 0
+    wallet:
+      balance_cents: 5600
+  math: >-
+    tax + credit_note + prepaid_credit quoted and then billed, asserted with identical numbers on both
+    sides. A preview is worth only its agreement with the invoice it forecasts, and
+    Invoices::PreviewService reimplements the pipeline rather than sharing CalculateFeesService,
+    so every stage is a place the two can drift.
+    April bills 10_000¢ + 2_000¢ tax = 12_000¢, covered by the wallet. Crediting 6_000¢ of the fee returns its tax too → 7_200¢. May bills 8_000¢ + 1_600¢ = 9_600¢, the credit note takes 7_200¢ after tax and the wallet the remaining 2_400¢.
+    The wallet holds 200 credits rather than being limited to a second metric, which is how the
+    other stacks in this block keep it out of the first invoice. That shape is unavailable here:
+    previewing a plan whose charge has no usage in the period is a 500 (see the preview nil
+    family reported alongside this suite), so a single metric with a wallet large enough to
+    survive both invoices is the only way to reach this cell today.
+
+- id: b17/coupon-tax-credit-note-wallet/preview
+  block: B17
+  group: g5
+  key: b17_4sw2
+  vars: {m: "4sw2", cn: "4sw2", gc: "200"}
+  axes: {stack: coupon+tax+credit_note+prepaid_credit, observed_via: preview}
+  calendar_sensitive: true
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: 4sw2_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - at: "2024-04-02T10:00:00Z"
+      do: create_credit_note
+      credit_note:
+        reason: other
+        credit_amount_cents: 5760
+        refund_amount_cents: 0
+        items: [{fee_type: charge, amount_cents: 6000}]
+    - at: "2024-04-10T10:00:00Z"
+      do: ingest_events
+      events: [{code: 4sw2_sum, properties: {amount: 80}}]
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        coupons_amount_cents: 2000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        credit_notes_amount_cents: 5760
+        prepaid_credit_amount_cents: 1440
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 8000
+      coupons_amount_cents: 2000
+      sub_total_excluding_taxes_amount_cents: 6000
+      taxes_amount_cents: 1200
+      credit_notes_amount_cents: 5760
+      prepaid_credit_amount_cents: 1440
+      total_amount_cents: 0
+    wallet:
+      balance_cents: 8960
+  math: >-
+    coupon + tax + credit_note + prepaid_credit quoted and then billed, asserted with identical numbers on both
+    sides. A preview is worth only its agreement with the invoice it forecasts, and
+    Invoices::PreviewService reimplements the pipeline rather than sharing CalculateFeesService,
+    so every stage is a place the two can drift.
+    April bills 10_000¢ less 2_000¢ coupon = 8_000¢, taxed 1_600¢ → 9_600¢, covered by the wallet. Crediting 6_000¢ returns 1_200¢ of coupon and the tax on the rest: (6_000-1_200) x 1.2 = 5_760¢. May bills 8_000¢ less 2_000¢ = 6_000¢, taxed 1_200¢ → 7_200¢, less the 5_760¢ credit note leaves 1_440¢ for the wallet.
+    The wallet holds 200 credits rather than being limited to a second metric, which is how the
+    other stacks in this block keep it out of the first invoice. That shape is unavailable here:
+    previewing a plan whose charge has no usage in the period is a 500 (see the preview nil
+    family reported alongside this suite), so a single metric with a wallet large enough to
+    survive both invoices is the only way to reach this cell today.

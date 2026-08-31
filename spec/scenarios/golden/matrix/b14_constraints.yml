@@ -1,0 +1,521 @@
+# B14 — Constraints & negative contract
+#
+# One row per rejection rule, asserting the HTTP status, the exact error code, and the field it is
+# reported on. These rows pin the API contract: they are the cheapest in the suite and they notice
+# immediately when a validation is loosened or an error code renamed.
+#
+# Two rows are characterization rather than rejection — Lago accepts the request and normalises the
+# input. They assert `resource` instead of `error` and say so.
+#
+# Every row is a create-and-reject: same runners, same one-step timeline, same customer stem. Those
+# three are the file defaults. Group `p` adds the boilerplate 1000-cent monthly plan that the 20
+# charge-level rows need; the metric-level rows and the row that pins a null interval stay outside
+# it. There is nothing else to share — each row's metric and charge ARE the constraint it pins.
+---
+- __matrix:
+    defaults:
+      runners: [rspec, live]
+      timeline: [{at: "2024-03-01T00:00:00Z", do: create_subscription}]
+      setup: {customer: {external_id: "golden_%{key}_cust"}}
+    groups:
+      p: {setup: {plan: {code: "golden_%{key}", interval: monthly, amount_cents: 1000}}}
+- id: b14/prorated/non-recurring-metric/rejected
+  block: B14
+  group: p
+  key: b14_prorated
+  axes: {rule: prorated_requires_recurring_metric}
+  dimensions: {charge_model: standard, aggregation: sum_agg, recurring: false, prorated: true}
+  provenance: app/models/charge.rb:178-189
+  setup:
+    metrics: [{code: b14_prorated_sum, aggregation_type: sum_agg, field_name: amount, recurring: false}]
+    charges:
+      - {billable_metric_code: b14_prorated_sum, charge_model: standard, prorated: true, properties: {amount: "1"}}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_billable_metric_or_charge_model, field: prorated}
+  note: >-
+    Charge#validate_prorated allows prorated only for a recurring, non-weighted_sum metric. A
+    non-recurring metric is rejected outright, so the plan create fails and no billing happens.
+- id: b14/prorated/weighted-sum/rejected
+  block: B14
+  group: p
+  key: b14_ws
+  axes: {rule: prorated_rejects_weighted_sum}
+  dimensions: {charge_model: standard, aggregation: weighted_sum_agg, recurring: true, prorated: true}
+  provenance: app/models/charge.rb:178-189
+  setup:
+    metrics:
+      - {code: b14_ws, aggregation_type: weighted_sum_agg, field_name: amount, recurring: true, weighted_interval: seconds}
+    plan: {code: golden_b14_ws_prorated}
+    charges:
+      - {billable_metric_code: b14_ws, charge_model: standard, prorated: true, properties: {amount: "1"}}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_billable_metric_or_charge_model, field: prorated}
+  note: weighted_sum_agg already prorates by time, so prorated is rejected even for a recurring metric.
+- id: b14/prorated/advance-non-standard/rejected
+  block: B14
+  group: p
+  key: b14_prorated_adv
+  axes: {rule: prorated_advance_standard_only}
+  dimensions: {charge_model: graduated, aggregation: sum_agg, recurring: true, prorated: true, pay_in_advance: true}
+  provenance: app/models/charge.rb:178-189
+  setup:
+    metrics: [{code: b14_rec_sum, aggregation_type: sum_agg, field_name: amount, recurring: true}]
+    charges:
+      - billable_metric_code: b14_rec_sum
+        charge_model: graduated
+        prorated: true
+        pay_in_advance: true
+        properties:
+          graduated_ranges:
+            - {from_value: 0, to_value: null, per_unit_amount: "1", flat_amount: "0"}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_billable_metric_or_charge_model, field: prorated}
+  note: >-
+    Paying in advance narrows prorated to `standard` only; graduated is allowed prorated only in
+    arrears. This is the row that distinguishes the two proration tables.
+- id: b14/pay-in-advance/volume/rejected
+  block: B14
+  group: p
+  key: b14_vol_adv
+  axes: {rule: pay_in_advance_rejects_volume}
+  dimensions: {charge_model: volume, aggregation: sum_agg, pay_in_advance: true}
+  provenance: app/models/charge.rb:154-160
+  setup:
+    metrics: [{code: b14_vol_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_vol_sum
+        charge_model: volume
+        pay_in_advance: true
+        properties:
+          volume_ranges:
+            - {from_value: 0, to_value: null, per_unit_amount: "1", flat_amount: "0"}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_aggregation_type_or_charge_model, field: pay_in_advance}
+  note: Every volume charge is rejected in advance — there is no in-advance volume charge model.
+- id: b14/pay-in-advance/max-agg/rejected
+  block: B14
+  group: p
+  key: b14_max_adv
+  axes: {rule: pay_in_advance_rejects_aggregation}
+  dimensions: {charge_model: standard, aggregation: max_agg, pay_in_advance: true}
+  provenance: app/models/billable_metric.rb:42
+  setup:
+    metrics: [{code: b14_max, aggregation_type: max_agg, field_name: amount}]
+    charges:
+      - {billable_metric_code: b14_max, charge_model: standard, pay_in_advance: true, properties: {amount: "1"}}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_aggregation_type_or_charge_model, field: pay_in_advance}
+  note: >-
+    Only AGGREGATION_TYPES_PAYABLE_IN_ADVANCE (count, sum, unique_count, custom) may be billed in
+    advance; max_agg, latest_agg and weighted_sum_agg cannot.
+- id: b14/dynamic/non-sum-agg/rejected
+  block: B14
+  group: p
+  key: b14_dynamic
+  axes: {rule: dynamic_requires_sum_agg}
+  dimensions: {charge_model: dynamic, aggregation: count_agg}
+  provenance: app/models/charge.rb:144-149
+  setup:
+    metrics: [{code: b14_count, aggregation_type: count_agg}]
+    charges: [{billable_metric_code: b14_count, charge_model: dynamic, properties: {}}]
+  expect:
+    error: {stage: charge, status: 422, code: invalid_aggregation_type_or_charge_model, field: charge_model}
+  note: The dynamic charge model takes its amount from the event, which only sum_agg supports.
+- id: b14/custom-charge-model/non-custom-agg/rejected
+  block: B14
+  group: p
+  key: b14_custom_model
+  axes: {rule: custom_requires_custom_agg}
+  dimensions: {charge_model: custom, aggregation: sum_agg}
+  provenance: app/models/charge.rb:191-196
+  setup:
+    metrics: [{code: b14_sum_for_custom, aggregation_type: sum_agg, field_name: amount}]
+    charges: [{billable_metric_code: b14_sum_for_custom, charge_model: custom, properties: {}}]
+  expect:
+    error: {stage: charge, status: 422, code: invalid_aggregation_type_or_charge_model, field: charge_model}
+  note: >-
+    The custom charge model requires a custom_agg metric. Note the reverse is NOT enforced — a
+    custom_agg metric with a standard charge is legal, which is why B1 has that cell.
+- id: b14/percentage/latest-agg/rejected
+  block: B14
+  group: p
+  key: b14_pct_latest
+  axes: {rule: percentage_rejects_latest_agg}
+  dimensions: {charge_model: percentage, aggregation: latest_agg}
+  provenance: app/services/charges/validators/percentage_service.rb:23-27
+  setup:
+    metrics: [{code: b14_latest, aggregation_type: latest_agg, field_name: amount}]
+    charges: [{billable_metric_code: b14_latest, charge_model: percentage, properties: {rate: "10"}}]
+  expect:
+    error: {stage: charge, status: 422, code: invalid_value, field: properties}
+  note: >-
+    Rejected by the charge-model properties validator rather than by Charge itself, so the error is
+    reported on `properties` — not on `billable_metric`, which is where the validator's own
+    add_error(field: :billable_metric) would suggest.
+- id: b14/graduated-percentage/latest-agg/rejected
+  block: B14
+  group: p
+  key: b14_gp_latest
+  axes: {rule: graduated_percentage_rejects_latest_agg}
+  dimensions: {charge_model: graduated_percentage, aggregation: latest_agg}
+  provenance: app/services/charges/validators/graduated_percentage_service.rb:32-36
+  premium: true
+  setup:
+    metrics: [{code: b14_latest_gp, aggregation_type: latest_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_latest_gp
+        charge_model: graduated_percentage
+        properties:
+          graduated_percentage_ranges:
+            - {from_value: 0, to_value: null, rate: "10", flat_amount: "0", fixed_amount: "0"}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_value, field: properties}
+  note: >-
+    Runs under a premium licence deliberately, so the failure is the latest_agg rejection and not the
+    licence gate — that gate has its own row below.
+- id: b14/graduated-percentage/no-premium/rejected
+  block: B14
+  group: p
+  key: b14_gp_free
+  axes: {rule: graduated_percentage_requires_premium}
+  dimensions: {charge_model: graduated_percentage, aggregation: sum_agg, premium: false}
+  provenance: app/models/charge.rb:184-188
+  setup:
+    metrics: [{code: b14_gp_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_gp_sum
+        charge_model: graduated_percentage
+        properties:
+          graduated_percentage_ranges:
+            - {from_value: 0, to_value: null, rate: "10", flat_amount: "0", fixed_amount: "0"}
+  expect:
+    error: {stage: charge, status: 422, code: graduated_percentage_requires_premium_license, field: charge_model}
+  note: >-
+    The only B1 cell that is legal but licence-gated. Deliberately has no `premium: true`, so the
+    licence is absent.
+- id: b14/recurring/count-agg/rejected
+  block: B14
+  key: b14_recurring_count
+  axes: {rule: recurring_rejects_aggregation}
+  dimensions: {aggregation: count_agg, recurring: true}
+  provenance: app/models/billable_metric.rb:108-113
+  setup:
+    metrics: [{code: b14_recurring_count, aggregation_type: count_agg, recurring: true}]
+  expect:
+    error: {stage: metric, status: 422, code: not_compatible_with_aggregation_type, field: recurring}
+  note: >-
+    count_agg, max_agg and latest_agg cannot be recurring. This is the rule that makes several
+    prorated cells unreachable — see the note in legality_spec.rb.
+- id: b14/field-name/missing/rejected
+  block: B14
+  key: b14_no_field
+  axes: {rule: field_name_required}
+  dimensions: {aggregation: sum_agg, field_name: null}
+  provenance: app/models/billable_metric.rb:57
+  setup:
+    metrics: [{code: b14_sum_no_field, aggregation_type: sum_agg}]
+  expect:
+    error: {stage: metric, status: 422, code: value_is_mandatory, field: field_name}
+  note: field_name is required for every aggregation except count_agg and custom_agg.
+- id: b14/field-name/ignored-for-count-agg/characterization
+  block: B14
+  key: b14_count_field
+  axes: {rule: field_name_ignored_for_count_agg}
+  dimensions: {aggregation: count_agg, field_name: supplied}
+  provenance: app/models/billable_metric.rb:100-102
+  characterization: true
+  setup:
+    metrics: [{code: b14_count_with_field, aggregation_type: count_agg, field_name: amount}]
+  timeline: ~
+  at: "2024-03-01T00:00:00Z"
+  expect:
+    resource:
+      kind: metric
+      code: b14_count_with_field
+      fields: {field_name: null, aggregation_type: count_agg}
+  note: >-
+    Not a rejection: a before_validation hook silently nils field_name for count_agg, so a POST that
+    supplies one gets back null. Recorded as characterization — this is what Lago does today, not
+    necessarily what it should do.
+- id: b14/invoiceable-false/without-advance/rejected
+  block: B14
+  group: p
+  key: b14_invoiceable
+  axes: {rule: invoiceable_requires_pay_in_advance}
+  dimensions: {invoiceable: false, pay_in_advance: false}
+  provenance: app/models/charge.rb:138-142
+  premium: true
+  setup:
+    metrics: [{code: b14_inv_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - {billable_metric_code: b14_inv_sum, charge_model: standard, invoiceable: false, pay_in_advance: false, properties: {amount: "1"}}
+  expect:
+    error: {stage: charge, status: 422, code: must_be_true_unless_pay_in_advance, field: invoiceable}
+  note: >-
+    A charge can only be non-invoiceable if it is paid in advance. Needs `premium: true`:
+    Charges::CreateService only assigns invoiceable under a licence, so without one the param is
+    dropped and the validation is never reached — see the characterization row below.
+- id: b14/regroup-paid-fees/invoiceable/rejected
+  block: B14
+  group: p
+  key: b14_regroup
+  axes: {rule: regroup_paid_fees_requires_non_invoiceable}
+  dimensions: {regroup_paid_fees: invoice, invoiceable: true, pay_in_advance: true}
+  provenance: app/models/charge.rb:164-169
+  premium: true
+  setup:
+    metrics: [{code: b14_regroup_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_regroup_sum
+        charge_model: standard
+        pay_in_advance: true
+        invoiceable: true
+        regroup_paid_fees: invoice
+        properties: {amount: "1"}
+  expect:
+    error:
+      stage: charge
+      status: 422
+      code: only_compatible_with_pay_in_advance_and_non_invoiceable
+      field: regroup_paid_fees
+  note: >-
+    regroup_paid_fees needs BOTH pay_in_advance and invoiceable false; this row satisfies only the
+    first. Needs `premium: true` for the same reason as the invoiceable row.
+- id: b14/min-amount-cents/with-advance/rejected
+  block: B14
+  group: p
+  key: b14_min_amount
+  axes: {rule: min_amount_cents_rejects_pay_in_advance}
+  dimensions: {min_amount_cents: 1000, pay_in_advance: true}
+  provenance: app/models/charge.rb:171-175
+  premium: true
+  setup:
+    metrics: [{code: b14_min_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_min_sum
+        charge_model: standard
+        pay_in_advance: true
+        min_amount_cents: 1000
+        properties: {amount: "1"}
+  expect:
+    error: {stage: charge, status: 422, code: not_compatible_with_pay_in_advance, field: min_amount_cents}
+  note: >-
+    A spending minimum produces a true-up at period end, which is incompatible with billing in
+    advance. Needs `premium: true`: min_amount_cents sits in the same licence-gated block as
+    invoiceable and regroup_paid_fees, so without one it is dropped to 0 and never validated.
+- id: b14/graduated-ranges/non-contiguous/rejected
+  block: B14
+  group: p
+  key: b14_grad_gap
+  axes: {rule: graduated_ranges_must_be_contiguous}
+  dimensions: {charge_model: graduated}
+  provenance: app/services/charges/validators/graduated_service.rb:17
+  setup:
+    metrics: [{code: b14_grad_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_grad_sum
+        charge_model: graduated
+        properties:
+          graduated_ranges:
+            - {from_value: 0, to_value: 10, per_unit_amount: "1", flat_amount: "0"}
+            - {from_value: 50, to_value: null, per_unit_amount: "2", flat_amount: "0"}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_graduated_ranges, field: properties}
+  note: >-
+    Graduated ranges must be contiguous — the next from_value must be the previous to_value + 1.
+    This row leaves a gap between 10 and 50.
+- id: b14/volume-ranges/non-contiguous/rejected
+  block: B14
+  group: p
+  key: b14_vol_gap
+  axes: {rule: volume_ranges_must_be_contiguous}
+  dimensions: {charge_model: volume}
+  provenance: app/services/charges/validators/volume_service.rb:16
+  setup:
+    metrics: [{code: b14_vol_sum2, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_vol_sum2
+        charge_model: volume
+        properties:
+          volume_ranges:
+            - {from_value: 0, to_value: 10, per_unit_amount: "1", flat_amount: "0"}
+            - {from_value: 50, to_value: null, per_unit_amount: "2", flat_amount: "0"}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_volume_ranges, field: properties}
+  note: Same contiguity rule as graduated, but a distinct error code — worth pinning both.
+- id: b14/package-size/zero/rejected
+  block: B14
+  group: p
+  key: b14_pkg
+  axes: {rule: package_size_must_be_positive}
+  dimensions: {charge_model: package}
+  provenance: app/services/charges/validators/package_service.rb:33
+  setup:
+    metrics: [{code: b14_pkg_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_pkg_sum
+        charge_model: package
+        properties: {amount: "10", free_units: 0, package_size: 0}
+  expect:
+    error: {stage: charge, status: 422, code: invalid_package_size, field: properties}
+  note: package_size must be a positive integer — a zero-sized package would divide by zero.
+- id: b14/percentage/max-below-min/rejected
+  block: B14
+  group: p
+  key: b14_pct_minmax
+  axes: {rule: percentage_max_above_min}
+  dimensions: {charge_model: percentage, premium: true}
+  provenance: app/services/charges/validators/percentage_service.rb:68-86
+  premium: true
+  setup:
+    metrics: [{code: b14_pct_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_pct_sum
+        charge_model: percentage
+        properties:
+          rate: "10"
+          per_transaction_min_amount: "100"
+          per_transaction_max_amount: "10"
+  expect:
+    error:
+      stage: charge
+      status: 422
+      code: per_transaction_max_lower_than_per_transaction_min
+      field: properties
+  note: >-
+    Needs `premium: true` — validate_per_transaction_min_max returns early without a licence, so
+    without it the charge would be accepted and this row would pass for the wrong reason.
+- id: b14/plan-interval/blank/rejected
+  block: B14
+  key: b14_no_interval
+  axes: {rule: interval_blank_is_value_is_invalid}
+  dimensions: {interval: null}
+  provenance: app/models/plan.rb:61-65
+  setup:
+    plan: {code: golden_b14_no_interval, interval: null, amount_cents: 1000}
+  expect:
+    error: {stage: plan, status: 422, code: value_is_invalid, field: interval}
+  note: >-
+    Deliberately `value_is_invalid` rather than `value_is_mandatory` — see the comment on
+    Plan's interval validation. Pinning it stops a well-meaning refactor from "fixing" the code.
+- id: b14/invoiceable/silently-ignored-without-premium/characterization
+  block: B14
+  group: p
+  key: b14_gate_invoiceable
+  axes: {rule: invoiceable_silently_ignored_without_premium}
+  dimensions: {invoiceable: false, pay_in_advance: true, premium: false}
+  provenance: app/services/charges/create_service.rb:46-48
+  characterization: true
+  setup:
+    metrics: [{code: b14_gate_sum, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - {billable_metric_code: b14_gate_sum, charge_model: standard, pay_in_advance: true, invoiceable: false, properties: {amount: "1"}}
+  expect:
+    resource:
+      kind: charge
+      code: b14_gate_sum
+      fields: {invoiceable: true, pay_in_advance: true}
+  note: >-
+    A legal request that is silently altered. Charges::CreateService only assigns invoiceable under a
+    premium licence, so a non-premium caller asking for a non-invoiceable charge gets an invoiceable
+    one back with HTTP 200 and no warning. Recorded as characterization, not endorsed: the caller
+    cannot tell its intent was dropped.
+- id: b14/regroup-paid-fees/silently-ignored-without-premium/characterization
+  block: B14
+  group: p
+  key: b14_gate_regroup
+  axes: {rule: regroup_paid_fees_silently_ignored_without_premium}
+  dimensions: {regroup_paid_fees: invoice, pay_in_advance: true, premium: false}
+  provenance: app/services/charges/create_service.rb:46-48
+  characterization: true
+  setup:
+    metrics: [{code: b14_gate_regroup, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - billable_metric_code: b14_gate_regroup
+        charge_model: standard
+        pay_in_advance: true
+        regroup_paid_fees: invoice
+        properties: {amount: "1"}
+  expect:
+    resource:
+      kind: charge
+      code: b14_gate_regroup
+      fields: {regroup_paid_fees: null}
+  note: >-
+    Same gate as the invoiceable row. Worth pinning separately because the consequence differs: a
+    dropped regroup_paid_fees means paid fees are never regrouped onto an advance_charges invoice,
+    which is a billing-output difference rather than a flag difference.
+- id: b14/min-amount-cents/silently-ignored-without-premium/characterization
+  block: B14
+  group: p
+  key: b14_gate_min
+  axes: {rule: min_amount_cents_silently_ignored_without_premium}
+  dimensions: {min_amount_cents: 1000, pay_in_advance: false, premium: false}
+  provenance: app/services/charges/create_service.rb:46-53
+  characterization: true
+  setup:
+    metrics: [{code: b14_gate_min, aggregation_type: sum_agg, field_name: amount}]
+    charges:
+      - {billable_metric_code: b14_gate_min, charge_model: standard, min_amount_cents: 1000, properties: {amount: "1"}}
+  expect:
+    resource:
+      kind: charge
+      code: b14_gate_min
+      fields: {min_amount_cents: 0}
+  note: >-
+    The third flag behind the same licence gate, and the one whose silent loss costs money: a
+    dropped min_amount_cents means the spending-minimum true-up fee is never created, so the
+    customer is under-billed with no error anywhere. (accepts_target_wallet is gated in the same
+    block; it additionally needs an organization feature flag, so it has no row here yet.)
+- id: b14/custom-agg/no-premium/rejected
+  block: B14
+  key: b14_custom_via_api
+  axes: {rule: custom_aggregator_not_settable_via_api}
+  dimensions: {aggregation: custom_agg, custom_aggregation: true}
+  provenance: coverage-gap
+  setup:
+    organization: {custom_aggregation: true}
+    metrics:
+      - code: b14_custom_via_api
+        aggregation_type: custom_agg
+        custom_aggregator: |
+          def aggregate(event, previous_state, aggregation_properties)
+            {total_units: previous_state[:total_units], amount: 0}
+          end
+  timeline: ~
+  at: "2024-03-01T00:00:00Z"
+  expect:
+    error: {stage: metric, status: 422, code: value_is_mandatory, field: custom_aggregator}
+  note: >-
+    Discovered while authoring B1, and the reason the whole custom_agg column of that grid has no
+    rows: `custom_aggregator` is absent from BillableMetricsController#input_params, so a REST caller
+    cannot create a custom_agg metric AT ALL. The row supplies a perfectly good aggregator and the
+    API still answers custom_aggregator/value_is_mandatory, because the parameter is filtered out
+    before it reaches the service — the request is refused for missing exactly what was sent.
+    organization.custom_aggregation is enabled here on purpose, so the failure is the parameter gap
+    and not the separate org feature gate (which answers 403 feature_unavailable instead).
+- id: b14/invoice-grace-period/silently-ignored-without-premium/characterization
+  block: B14
+  key: b14_grace
+  axes: {rule: invoice_grace_period_silently_ignored_without_premium}
+  dimensions: {invoice_grace_period: 3, premium: false}
+  provenance: app/services/customers/create_service.rb:145-150
+  characterization: true
+  setup:
+    customer: {currency: EUR, invoice_grace_period: 3}
+  timeline: ~
+  at: "2024-03-01T00:00:00Z"
+  expect:
+    resource:
+      kind: customer
+      fields: {"billing_configuration.invoice_grace_period": null}
+  note: >-
+    The fourth site of the same pattern, and the one that changes invoice STATE rather than a flag:
+    Customers::CreateService#assign_premium_attributes returns early without a licence, so
+    invoice_grace_period (and timezone alongside it) are dropped with HTTP 200 and no warning. The
+    consequence is not cosmetic — without the grace period every invoice is finalized on creation
+    instead of staying a draft, so late-arriving usage can no longer be picked up by a refresh.
+    Sits with the three charge-flag rows above; together they document a systemic behaviour rather
+    than four separate quirks. The assertion reads the NESTED path deliberately: the field lives
+    under billing_configuration in both request and response, so a row checking the top level would
+    see nil either way and pass for the wrong reason — proving nothing about the premium gate.
