@@ -7,17 +7,17 @@ RSpec.describe Subscriptions::BillingDateQuery do
 
   let(:subscriptions) { Subscription.where(id: subscription.id) }
 
-  let(:billing_entity_timezone) { "UTC" }
-  let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
-  let(:organization) { billing_entity.organization }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:billing_entity_timezone) { "UTC" }
+  let_it_be(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
 
-  let(:interval) { :monthly }
-  let(:bill_charges_monthly) { false }
-  let(:bill_fixed_charges_monthly) { false }
-  let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
+  let_it_be(:interval) { :monthly }
+  let_it_be(:bill_charges_monthly) { false }
+  let_it_be(:bill_fixed_charges_monthly) { false }
+  let_it_be(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
 
-  let(:customer_timezone) { nil }
-  let(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
+  let_it_be(:customer_timezone) { nil }
+        let_it_be(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
 
   let(:subscription_at) { DateTime.parse("20 Feb 2021") }
   let(:billing_time) { :calendar }
@@ -232,6 +232,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
         let(:interval) { case_interval }
         let(:billing_time) { case_billing_time }
         let(:bill_charges_monthly) { case_bcm }
+        let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
         let(:bill_fixed_charges_monthly) { case_bfcm }
         let(:subscription_at) { DateTime.parse(case_subscription_at) }
 
@@ -259,10 +260,12 @@ RSpec.describe Subscriptions::BillingDateQuery do
 
     describe "timezone handling" do
       # Monthly calendar plan bills on the 1st.
+        let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
       let(:interval) { :monthly }
       let(:billing_time) { :calendar }
 
       context "when it is not yet the billing day in the customer timezone" do
+        let(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
         let(:customer_timezone) { "America/Chicago" }
         let(:timestamp) { DateTime.parse("01 Jul 2022 00:30") } # still 30 Jun in Chicago
 
@@ -272,6 +275,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
       end
 
       context "when it is the billing day in the customer timezone" do
+        let(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
         let(:customer_timezone) { "America/Chicago" }
         let(:timestamp) { DateTime.parse("01 Jul 2022 12:00") } # 1 Jul in Chicago
 
@@ -281,6 +285,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
       end
 
       context "when it is already past the billing day in the customer timezone" do
+        let(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
         let(:customer_timezone) { "Pacific/Auckland" }
         let(:timestamp) { DateTime.parse("01 Jul 2022 18:00") } # 2 Jul in Auckland
 
@@ -291,6 +296,8 @@ RSpec.describe Subscriptions::BillingDateQuery do
 
       context "when the customer has no timezone" do
         let(:customer_timezone) { nil }
+        let(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
+  let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
         let(:billing_entity_timezone) { "America/Chicago" }
         let(:timestamp) { DateTime.parse("01 Jul 2022 00:30") } # still 30 Jun in the billing entity tz
 
@@ -301,6 +308,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
     end
 
     context "when the subscription does not bill on the given day" do
+        let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
       let(:interval) { :monthly }
       let(:billing_time) { :calendar }
       let(:timestamp) { DateTime.parse("15 Jul 2022 12:00") }

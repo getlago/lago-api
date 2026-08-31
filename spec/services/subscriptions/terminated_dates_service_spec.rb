@@ -5,8 +5,13 @@ require "rails_helper"
 RSpec.describe Subscriptions::TerminatedDatesService do
   subject(:terminated_date_service) { described_class.new(subscription:, invoice:, date_service:, match_invoice_subscription:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:, interval: :monthly) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:, interval: :monthly) }
+
+before_all do
+  create_default(:customer)
+end
+
   let(:subscription_at) { DateTime.parse("02 Feb 2021") }
   let(:started_at) { subscription_at }
   let(:billing_date) { DateTime.parse("2022-03-07 04:20:46.011") }

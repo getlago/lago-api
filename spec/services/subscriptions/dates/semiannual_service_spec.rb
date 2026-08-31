@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::Dates::SemiannualService do
   subject(:date_service) { described_class.new(subscription, billing_at, current_usage) }
 
+before_all do
+  create_default(:organization)
+end
+
   let(:subscription) do
     create(
       :subscription,
@@ -16,8 +20,8 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
     )
   end
 
-  let(:customer) { create(:customer, timezone:) }
-  let(:plan) { create(:plan, interval: :semiannual, pay_in_advance:) }
+  let(:customer) { create_default(:customer, timezone:) }
+  let(:plan) { create_default(:plan, interval: :semiannual, pay_in_advance:) }
   let(:pay_in_advance) { false }
   let(:current_usage) { false }
 

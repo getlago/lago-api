@@ -7,6 +7,13 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
     described_class.new(subscription:, charge:, to_datetime:, cache: cache_enabled, last_seen_at:)
   end
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+create_default(:plan)
+create_default(:billable_metric)
+end
+
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan) }
   let(:to_datetime) { Time.current + 1.day }

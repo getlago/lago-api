@@ -5,6 +5,13 @@ require "rails_helper"
 RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
   subject(:activate_service) { described_class.new(timestamp: timestamp.to_i) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+create_default(:plan)
+create_default(:add_on)
+end
+
   let(:timestamp) { Time.current }
 
   describe ".call" do
@@ -24,7 +31,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
     end
 
     context "when plan is pay in advance has fixed charges" do
-      let(:plan) { create(:plan, pay_in_advance: true) }
+      let_it_be(:plan) { create(:plan, pay_in_advance: true) }
       let(:fixed_charge_1) { create(:fixed_charge, plan:) }
       let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
 
@@ -64,7 +71,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
     end
 
     context "when plan is not pay in advance has fixed charges" do
-      let(:plan) { create(:plan) }
+      let_it_be(:plan) { create(:plan) }
       let(:fixed_charge_1) { create(:fixed_charge, plan:) }
       let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
 
@@ -105,7 +112,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
 
     context "with customer timezone" do
       let(:timestamp) { DateTime.parse("2023-08-24 00:07:00") }
-      let(:customer) { create(:customer, :with_hubspot_integration, timezone: "America/Bogota") }
+      let_it_be(:customer) { create(:customer, :with_hubspot_integration, timezone: "America/Bogota") }
       let!(:pending_subscription) do
         create(
           :subscription,
@@ -128,7 +135,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
     end
 
     context "with a subscription in trial" do
-      let(:plan_with_trial) { create(:plan, pay_in_advance: true, trial_period: 10) }
+      let_it_be(:plan_with_trial) { create(:plan, pay_in_advance: true, trial_period: 10) }
 
       before do
         create(:subscription, :pending, subscription_at: timestamp, plan: create(:plan, pay_in_advance: true))
