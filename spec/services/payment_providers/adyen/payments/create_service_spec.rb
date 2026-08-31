@@ -235,7 +235,6 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
         create(:subscription, organization:, customer:)
       end
 
-      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
       let(:organization) do
         create(:organization, webhook_url: "https://webhook.com")
       end
