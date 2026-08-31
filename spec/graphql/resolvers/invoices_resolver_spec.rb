@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe Resolvers::InvoicesResolver do
   let(:required_permission) { "invoices:view" }
+  let(:customer_first) { create(:customer, organization:) }
+  let(:customer_second) { create(:customer, organization:) }
   let(:organization) { membership.organization }
   let(:invoice_first) do
     create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized, organization:)
@@ -24,8 +26,6 @@ RSpec.describe Resolvers::InvoicesResolver do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
-  let(:customer_first) { create(:customer, organization:) }
-  let(:customer_second) { create(:customer, organization:) }
 
   before do
     invoice_first

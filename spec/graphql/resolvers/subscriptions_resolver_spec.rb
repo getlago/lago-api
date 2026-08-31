@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe Resolvers::SubscriptionsResolver do
   let(:required_permission) { "subscriptions:view" }
+  let(:plan) { create(:plan, organization:) }
+  let(:customer) { create(:customer, organization:) }
   let(:query) do
     <<~GQL
       query {
@@ -17,8 +19,6 @@ RSpec.describe Resolvers::SubscriptionsResolver do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
-  let(:plan) { create(:plan, organization:) }
-  let(:customer) { create(:customer, organization:) }
 
   before do
     customer
