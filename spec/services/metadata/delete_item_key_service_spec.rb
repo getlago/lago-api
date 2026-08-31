@@ -7,9 +7,9 @@ RSpec.describe Metadata::DeleteItemKeyService do
 
   let_it_be(:organization) { create_default(:organization) }
 
-before_all do
-  create_default(:customer)
-end
+  before_all do
+    create_default(:customer)
+  end
 
   let(:owner) { create(:credit_note, organization:) }
   let(:item) { create(:item_metadata, owner:, organization:, value:) }

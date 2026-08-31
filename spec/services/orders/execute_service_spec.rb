@@ -6,11 +6,11 @@ RSpec.describe Orders::ExecuteService do
   subject(:execute_service) { described_class.new(order:) }
 
   let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
-        let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
-before_all do
-  create_default(:plan)
-end
+  before_all do
+    create_default(:plan)
+  end
 
   let(:quote) { create(:quote, organization:, customer:, order_type:) }
   let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }

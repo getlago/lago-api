@@ -6,18 +6,18 @@ RSpec.describe LifetimeUsages::UsageThresholds::CheckService do
   subject(:service) { described_class.new(lifetime_usage:, progressive_billed_amount:) }
 
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, historical_usage_amount_cents:, recalculate_current_usage:, recalculate_invoiced_usage:) }
+  let(:historical_usage_amount_cents) { 0 }
   let(:progressive_billed_amount) { 0 }
   let(:recalculate_current_usage) { true }
   let(:recalculate_invoiced_usage) { true }
   let(:subscription) { create(:subscription, customer_id: customer.id) }
-  let_it_be(:organization) { create_default(:organization)}
+
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer) }
 
-before_all do
-  create_default(:plan)
-end
-
-  let(:historical_usage_amount_cents) { 0 }
+  before_all do
+    create_default(:plan)
+  end
 
   def create_thresholds(subscription, amounts:, attach_to:, recurring: nil)
     model = if attach_to == :subscription

@@ -6,17 +6,6 @@ RSpec.describe LifetimeUsages::CalculateService do
   subject(:service) { described_class.new(lifetime_usage: lifetime_usage) }
 
   let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
-  let(:recalculate_current_usage) { false }
-  let(:recalculate_invoiced_usage) { false }
-  let(:subscription) { create(:subscription, customer:, subscription_at:) }
-  let_it_be(:organization) { create_default(:organization)}
-  let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-  let_it_be(:customer) { create_default(:customer) }
-
-before_all do
-  create_default(:plan)
-end
-
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
   let(:subscription_at) { timestamp - 6.months }
@@ -32,7 +21,6 @@ end
       precise_coupons_amount_cents: 50
     )
   end
-
   let(:events) do
     create_list(
       :event,
@@ -43,6 +31,17 @@ end
       code: billable_metric.code,
       timestamp:
     )
+  end
+  let(:recalculate_current_usage) { false }
+  let(:recalculate_invoiced_usage) { false }
+  let(:subscription) { create(:subscription, customer:, subscription_at:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+  let_it_be(:customer) { create_default(:customer) }
+
+  before_all do
+    create_default(:plan)
   end
 
   describe "#recalculate_invoiced_usage" do

@@ -7,10 +7,10 @@ RSpec.describe OrderForms::CreateService do
 
   let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
 
-before_all do
-  create_default(:customer)
-create_default(:plan)
-end
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   let(:quote) { create(:quote, organization:) }
   let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }

@@ -6,12 +6,12 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService do
   subject(:lifetime_usage_result) { described_class.call(lifetime_usage:) }
 
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:, current_usage_amount_cents:) }
-  let(:current_usage_amount_cents) { 0 }
-
-  let_it_be(:organization) { create_default(:organization)}
   let(:plan) { create(:plan) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:) }
+  let(:current_usage_amount_cents) { 0 }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   it "computes the amounts" do
     expect(lifetime_usage_result.last_threshold_amount_cents).to be_nil
