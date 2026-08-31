@@ -1264,6 +1264,98 @@ RSpec.describe Plans::UpdateService do
       end
     end
 
+    context "when attached only to terminated and canceled subscriptions" do
+      let(:update_args) do
+        {
+          name: plan_name,
+          code: "new_plan",
+          interval: "yearly",
+          pay_in_advance: true,
+          amount_cents: 200,
+          amount_currency: "USD"
+        }
+      end
+
+      before do
+        create(:subscription, :terminated, plan:)
+        create(:subscription, :canceled, plan:)
+      end
+
+      it "updates the structural attributes" do
+        result = plans_service.call
+
+        expect(result.plan).to have_attributes(
+          code: "new_plan",
+          interval: "yearly",
+          pay_in_advance: true,
+          amount_currency: "USD"
+        )
+      end
+    end
+
+    context "when attached to a pending subscription" do
+      let(:update_args) do
+        {
+          name: plan_name,
+          code: "new_plan",
+          interval: "yearly",
+          pay_in_advance: true,
+          amount_cents: 200,
+          amount_currency: "USD"
+        }
+      end
+
+      before do
+        create(:subscription, :terminated, plan:)
+        create(:subscription, :pending, plan:)
+      end
+
+      it "keeps the structural attributes frozen" do
+        result = plans_service.call
+
+        expect(result.plan).to have_attributes(
+          code: plan.code,
+          interval: "monthly",
+          pay_in_advance: false,
+          amount_currency: "EUR"
+        )
+      end
+
+      it "still updates the editable attributes" do
+        result = plans_service.call
+
+        expect(result.plan).to have_attributes(name: plan_name, amount_cents: 200)
+      end
+    end
+
+    context "when attached to an incomplete subscription" do
+      let(:update_args) do
+        {
+          name: plan_name,
+          code: "new_plan",
+          interval: "yearly",
+          pay_in_advance: true,
+          amount_cents: 200,
+          amount_currency: "USD"
+        }
+      end
+
+      before do
+        create(:subscription, :incomplete, plan:)
+      end
+
+      it "keeps the structural attributes frozen" do
+        result = plans_service.call
+
+        expect(result.plan).to have_attributes(
+          code: plan.code,
+          interval: "monthly",
+          pay_in_advance: false,
+          amount_currency: "EUR"
+        )
+      end
+    end
+
     context "with bill_charges_monthly functionality" do
       context "when interval is yearly and bill_fixed_charges_monthly is sent" do
         let(:update_args) do

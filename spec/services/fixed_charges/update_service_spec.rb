@@ -102,6 +102,56 @@ RSpec.describe FixedCharges::UpdateService do
         end
       end
 
+      context "when plan is attached to a pending subscription" do
+        before do
+          create(:subscription, :pending, plan:)
+        end
+
+        it "does not update charge_model" do
+          original_charge_model = fixed_charge.charge_model
+          params[:charge_model] = "graduated"
+
+          expect(result).to be_success
+          expect(result.fixed_charge.charge_model).to eq(original_charge_model)
+        end
+
+        it "does not update code" do
+          params[:code] = "updated_code"
+
+          expect { result }.not_to change { fixed_charge.reload.code }
+        end
+      end
+
+      context "when plan is attached only to terminated and canceled subscriptions" do
+        before do
+          create(:subscription, :terminated, plan:)
+          create(:subscription, :canceled, plan:)
+        end
+
+        it "updates charge_model" do
+          params[:charge_model] = "graduated"
+          params[:properties] = {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                per_unit_amount: "10",
+                flat_amount: "0"
+              }
+            ]
+          }
+
+          expect(result).to be_success
+          expect(result.fixed_charge.charge_model).to eq("graduated")
+        end
+
+        it "updates code" do
+          params[:code] = "updated_code"
+
+          expect { result }.to change { fixed_charge.reload.code }.to("updated_code")
+        end
+      end
+
       context "when plan is not attached to subscriptions" do
         it "updates charge_model" do
           params[:charge_model] = "graduated"

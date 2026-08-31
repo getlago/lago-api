@@ -25,7 +25,7 @@ module Charges
       old_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes&.deep_dup
 
       ActiveRecord::Base.transaction do
-        charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
+        charge.charge_model = params[:charge_model] unless plan.attached_to_live_subscriptions?
         charge.invoice_display_name = params[:invoice_display_name] unless cascade
         charge.code = params[:code] if cascade && params[:code].present?
 
@@ -73,8 +73,8 @@ module Charges
             taxes_result.raise_if_error!
           end
 
-          # NOTE: charges cannot be edited if plan is attached to a subscription
-          unless plan.attached_to_subscriptions?
+          # NOTE: charges cannot be edited if plan is attached to a live subscription
+          unless plan.attached_to_live_subscriptions?
             invoiceable = params.delete(:invoiceable)
             min_amount_cents = params.delete(:min_amount_cents)
             code = params.delete(:code)
