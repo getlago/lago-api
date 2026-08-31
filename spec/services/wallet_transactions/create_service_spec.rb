@@ -186,10 +186,8 @@ RSpec.describe WalletTransactions::CreateService do
 
     context "with billing entity snapshotting" do
       let(:credit_amount) { 100 }
-      let_it_be(:wallet_billing_entity) { create(:billing_entity, organization:) }
       let(:explicit_billing_entity) { create(:billing_entity, organization:) }
       let(:wallet) { create(:wallet, customer:, currency:, billing_entity: wallet_billing_entity) }
-
       let(:transaction_params) do
         {
           status: :pending,
@@ -197,6 +195,8 @@ RSpec.describe WalletTransactions::CreateService do
           transaction_status: :purchased
         }
       end
+
+      let_it_be(:wallet_billing_entity) { create(:billing_entity, organization:) }
 
       it "snapshots the wallet's effective billing entity on the transaction" do
         wallet_transaction = result.wallet_transaction

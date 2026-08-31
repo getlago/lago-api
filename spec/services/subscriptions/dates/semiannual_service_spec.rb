@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Subscriptions::Dates::SemiannualService do
   subject(:date_service) { described_class.new(subscription, billing_at, current_usage) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let(:subscription) do
     create(

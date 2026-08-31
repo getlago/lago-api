@@ -9,10 +9,10 @@ RSpec.describe UsageMonitoring::Alerts::DestroyAllService do
     let_it_be(:organization) { create_default(:organization) }
     let(:alertable) { create(:subscription, organization:) }
 
-before_all do
-  create_default(:customer)
-create_default(:plan)
-end
+    before_all do
+      create_default(:customer)
+      create_default(:plan)
+    end
 
     context "when alertable is a subscription" do
       let!(:alert1) do

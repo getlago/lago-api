@@ -5,12 +5,12 @@ require "rails_helper"
 RSpec.describe Subscriptions::UpdateService do
   subject(:update_service) { described_class.new(subscription:, params:) }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-create_default(:plan)
-create_default(:add_on)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+    create_default(:add_on)
+  end
 
   let_it_be(:membership) { create(:membership) }
   let(:subscription) { create(:subscription) }
@@ -910,8 +910,6 @@ end
         let_it_be(:organization) { membership.organization }
         let_it_be(:plan) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
-        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
-        let_it_be(:customer) { create(:customer, organization:) }
         let(:subscription) do
           create(
             :subscription,
@@ -924,7 +922,6 @@ end
         end
         let(:subscription_at) { Date.new(2023, 9, 2) }
         let(:started_at) { Date.new(2025, 5, 17) }
-
         let(:params) do
           {
             plan_overrides: {
@@ -938,6 +935,9 @@ end
             }
           }
         end
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+
+        let_it_be(:customer) { create(:customer, organization:) }
 
         before do
           fixed_charge1
@@ -989,8 +989,6 @@ end
         let_it_be(:organization) { membership.organization }
         let_it_be(:plan) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
-        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
-        let_it_be(:customer) { create(:customer, organization:) }
         let(:subscription) do
           create(
             :subscription,
@@ -1003,7 +1001,6 @@ end
         end
         let(:subscription_at) { Date.new(2023, 9, 2) }
         let(:started_at) { Date.new(2025, 5, 17) }
-
         let(:params) do
           {
             plan_overrides: {
@@ -1020,6 +1017,9 @@ end
             }
           }
         end
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+
+        let_it_be(:customer) { create(:customer, organization:) }
 
         before do
           fixed_charge1
@@ -1073,10 +1073,7 @@ end
         let_it_be(:organization) { membership.organization }
         let_it_be(:plan) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
-        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
-        let_it_be(:customer) { create(:customer, organization:) }
         let(:subscription_at) { 7.days.from_now }
-
         let(:subscription) do
           create(
             :subscription,
@@ -1087,7 +1084,6 @@ end
             status: :pending
           )
         end
-
         let(:params) do
           {
             plan_overrides: {
@@ -1106,6 +1102,9 @@ end
             }
           }
         end
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+
+        let_it_be(:customer) { create(:customer, organization:) }
 
         before do
           fixed_charge1
@@ -1166,11 +1165,12 @@ end
         let_it_be(:organization) { membership.organization }
         let_it_be(:plan) { create(:plan, organization:) }
         let(:fixed_charge) { create(:fixed_charge, plan:, units: 5, pay_in_advance: true) }
-        let_it_be(:customer) { create(:customer, organization:) }
         let(:subscription) { create(:subscription, plan:, customer:) }
         let(:params) do
           {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25, apply_units_immediately: true}]}}
         end
+
+        let_it_be(:customer) { create(:customer, organization:) }
 
         before do
           fixed_charge
@@ -1507,6 +1507,7 @@ end
       let_it_be(:customer) { create(:customer, organization:) }
       let_it_be(:plan) { create(:plan, organization:) }
       let(:subscription) { create(:subscription, customer:, plan:, organization:) }
+
       let_it_be(:new_billing_entity) { create(:billing_entity, organization:) }
 
       context "with multi_entity_billing feature flag enabled" do

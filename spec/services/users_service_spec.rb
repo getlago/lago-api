@@ -159,9 +159,9 @@ RSpec.describe UsersService do
   describe ".call(:login)" do
     subject(:result) { described_class.call(:login, email, password) }
 
-before_all do
-  create_default(:organization)
-end
+    before_all do
+      create_default(:organization)
+    end
 
     let_it_be(:membership) { create(:membership, :revoked) }
     let_it_be(:user) { membership.user }

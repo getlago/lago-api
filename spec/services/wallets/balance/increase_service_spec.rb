@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Wallets::Balance::IncreaseService do
   subject(:create_service) { described_class.new(wallet:, wallet_transaction:) }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
 
   let(:credits_amount) { BigDecimal("4.5") }
   let(:wallet) do

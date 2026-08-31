@@ -6,13 +6,11 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }
-  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create_default(:customer, organization:) }
   let(:plan) { create_default(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization:) }
   let(:rule) { {type: "payment", timeout_hours: 48} }
   let(:payment_method_params) { nil }
-
   let(:args) do
     {
       rule:,
@@ -21,6 +19,8 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ValidateService do
       customer:
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   describe "#valid?" do
     context "with valid payment rule" do

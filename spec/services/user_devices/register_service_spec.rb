@@ -8,8 +8,6 @@ RSpec.describe UserDevices::RegisterService do
   include_context "with mocked security logger"
 
   let(:user) { membership.user }
-  let_it_be(:organization) { create_default(:organization)}
-  let_it_be(:membership) { create(:membership) }
   let(:skip_log) { false }
   let(:device_info) do
     {
@@ -20,6 +18,9 @@ RSpec.describe UserDevices::RegisterService do
       device_type: "desktop"
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   before do
     membership

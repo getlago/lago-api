@@ -9,9 +9,9 @@ RSpec.describe Subscriptions::CreateService do
   let_it_be(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR") }
   let_it_be(:customer) { create_default(:customer, organization:, currency: "EUR") }
 
-before_all do
-  create_default(:add_on)
-end
+  before_all do
+    create_default(:add_on)
+  end
 
   let(:external_id) { SecureRandom.uuid }
   let(:billing_time) { "anniversary" }

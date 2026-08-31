@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::DatesService do
   subject(:date_service) { described_class.new(subscription, billing_date, false) }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
 
   let(:subscription) do
     create(

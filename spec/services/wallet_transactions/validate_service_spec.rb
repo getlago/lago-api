@@ -6,14 +6,6 @@ RSpec.describe WalletTransactions::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseResult[:current_wallet, :payment_method, :voided_wallet_transaction].new }
-  let_it_be(:organization) { create_default(:organization)}
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:customer) { create_default(:customer, organization:) }
-
-before_all do
-  create_default(:plan)
-end
-
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:) }
   let(:wallet_id) { wallet.id }
@@ -32,6 +24,14 @@ end
     }
   end
   let(:name) { :undefined }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  before_all do
+    create_default(:plan)
+  end
 
   before { subscription }
 

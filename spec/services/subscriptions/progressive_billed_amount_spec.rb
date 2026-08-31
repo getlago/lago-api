@@ -5,20 +5,20 @@ require "rails_helper"
 RSpec.describe Subscriptions::ProgressiveBilledAmount do
   subject(:service) { described_class.new(subscription:, timestamp:) }
 
-before_all do
-  create_default(:organization)
-create_default(:plan)
-create_default(:billable_metric)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
 
   let(:timestamp) { Time.current }
-  let(:subscription) { create(:subscription, customer_id: customer.id) }
-  let(:organization) { subscription.organization }
-  let_it_be(:customer) { create_default(:customer) }
-
   let(:charges_to_datetime) { timestamp + 1.week }
   let(:charges_from_datetime) { timestamp - 1.week }
   let(:invoice_type) { :progressive_billing }
+  let(:subscription) { create(:subscription, customer_id: customer.id) }
+  let(:organization) { subscription.organization }
+
+  let_it_be(:customer) { create_default(:customer) }
 
   context "without previous progressive billing invoices" do
     it "returns 0" do

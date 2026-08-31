@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe WebhookEndpoints::DestroyService do
   subject(:destroy_service) { described_class.new(webhook_endpoint:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   include_context "with mocked security logger"
 

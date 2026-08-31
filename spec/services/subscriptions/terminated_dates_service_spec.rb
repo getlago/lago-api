@@ -8,9 +8,9 @@ RSpec.describe Subscriptions::TerminatedDatesService do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:plan) { create(:plan, organization:, interval: :monthly) }
 
-before_all do
-  create_default(:customer)
-end
+  before_all do
+    create_default(:customer)
+  end
 
   let(:subscription_at) { DateTime.parse("02 Feb 2021") }
   let(:started_at) { subscription_at }

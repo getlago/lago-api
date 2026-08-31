@@ -6,14 +6,10 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:, payment_provider: "stripe") }
-  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { nil }
   let(:subscription_type) { "create" }
   let(:activation_rules) { nil }
   let(:payment_method_params) { nil }
-
   let(:args) do
     {
       activation_rules:,
@@ -23,6 +19,10 @@ RSpec.describe Subscriptions::ActivationRules::ValidateService do
       customer:
     }
   end
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   before { create(:payment_method, customer:, organization:) }
 

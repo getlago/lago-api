@@ -10,10 +10,10 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator do
   let(:credits_amount) { "1.0" }
   let(:ignore_validation) { false }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-end
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
 
   describe "#raise_if_invalid!" do
     context "when invalid" do

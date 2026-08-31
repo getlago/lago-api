@@ -6,8 +6,14 @@ RSpec.describe Subscriptions::BillingDateQuery do
   subject(:result) { described_class.call(subscriptions:, timestamp:) }
 
   let(:subscriptions) { Subscription.where(id: subscription.id) }
+  let(:subscription_at) { DateTime.parse("20 Feb 2021") }
+  let(:billing_time) { :calendar }
+  let(:timestamp) { DateTime.parse("20 Jun 2022 12:00") }
+  let(:subscription) do
+    create(:subscription, customer:, plan:, subscription_at:, billing_time:, started_at: DateTime.parse("10 Jun 2022"))
+  end
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:billing_entity_timezone) { "UTC" }
   let_it_be(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
 
@@ -17,14 +23,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
   let_it_be(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
 
   let_it_be(:customer_timezone) { nil }
-        let_it_be(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
-
-  let(:subscription_at) { DateTime.parse("20 Feb 2021") }
-  let(:billing_time) { :calendar }
-  let(:timestamp) { DateTime.parse("20 Jun 2022 12:00") }
-  let(:subscription) do
-    create(:subscription, customer:, plan:, subscription_at:, billing_time:, started_at: DateTime.parse("10 Jun 2022"))
-  end
+  let_it_be(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
 
   before { subscription }
 
@@ -260,7 +259,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
 
     describe "timezone handling" do
       # Monthly calendar plan bills on the 1st.
-        let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
+      let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
       let(:interval) { :monthly }
       let(:billing_time) { :calendar }
 
@@ -297,7 +296,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
       context "when the customer has no timezone" do
         let(:customer_timezone) { nil }
         let(:customer) { create(:customer, organization:, billing_entity:, timezone: customer_timezone) }
-  let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
+        let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
         let(:billing_entity_timezone) { "America/Chicago" }
         let(:timestamp) { DateTime.parse("01 Jul 2022 00:30") } # still 30 Jun in the billing entity tz
 
@@ -308,7 +307,7 @@ RSpec.describe Subscriptions::BillingDateQuery do
     end
 
     context "when the subscription does not bill on the given day" do
-        let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
+      let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
       let(:interval) { :monthly }
       let(:billing_time) { :calendar }
       let(:timestamp) { DateTime.parse("15 Jul 2022 12:00") }

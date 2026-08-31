@@ -4,14 +4,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
   subject(:activity_log) { described_class }
 
   let(:api_key) { create(:api_key) }
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization:) }
-
-before_all do
-  create_default(:customer)
-end
-
   let(:serialized_coupon) do
     {
       topic: "activity_logs",
@@ -38,6 +31,13 @@ end
       external_customer_id: nil,
       external_subscription_id: nil
     }
+  end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+
+  before_all do
+    create_default(:customer)
   end
 
   before do
@@ -417,13 +417,13 @@ end
 
     context "when the object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
-      let_it_be(:plan) { create(:plan, organization:) }
-
       let(:serialized_object) do
         V1::SubscriptionSerializer.new(
           object, root_name: :invoice, includes: [{plan: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}]
         ).serialize
       end
+
+      let_it_be(:plan) { create(:plan, organization:) }
 
       context "with many charges" do
         before do
@@ -569,6 +569,7 @@ end
 
     context "when object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
+
       let_it_be(:plan) { create(:plan, organization:) }
 
       context "when subscription's plan has more charges than the limit" do

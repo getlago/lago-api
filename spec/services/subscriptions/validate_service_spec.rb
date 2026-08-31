@@ -6,13 +6,8 @@ RSpec.describe Subscriptions::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { Subscriptions::CreateService::Result.new }
-  let_it_be(:organization) { create_default(:organization)}
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription_at) { Time.current.iso8601 }
   let(:ending_at) { (Time.current + 1.year).iso8601 }
-
   let(:args) do
     {
       customer:,
@@ -25,11 +20,15 @@ RSpec.describe Subscriptions::ValidateService do
       subscription_type:
     }
   end
-
   let(:on_termination_credit_note) { nil }
   let(:on_termination_invoice) { nil }
   let(:subscription) { nil }
   let(:subscription_type) { "create" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   describe "#ending_at" do
     subject(:method_call) { validate_service.__send__(:ending_at) }

@@ -13,10 +13,10 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     let(:subscription) { create(:subscription, organization:) }
     let(:billable_metric) { nil }
 
-before do
-  create_default(:customer)
-create_default(:plan)
-end
+    before do
+      create_default(:customer)
+      create_default(:plan)
+    end
 
     it "creates a new alert" do
       expect(result).to be_success

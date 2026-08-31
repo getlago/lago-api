@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Subscriptions::FreeTrialBillingService do
   subject(:service) { described_class.new(timestamp:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let(:timestamp) { Time.zone.now }
 
