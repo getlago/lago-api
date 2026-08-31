@@ -867,11 +867,8 @@ RSpec.describe Resolvers::InvoicesResolver do
       )
     end
 
-    context "when the organization reads from search terms" do
-      before do
-        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
-        organization.enable_feature_flag!(:invoice_search_terms)
-      end
+    context "when the result set exceeds the cap" do
+      before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1) }
 
       it "caps the total and keeps advertising the next page" do
         expect(metadata).to eq(

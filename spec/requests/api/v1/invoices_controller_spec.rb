@@ -461,10 +461,9 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
-    context "when the organization reads from search terms" do
+    context "when the result set exceeds the graphql cap" do
       before do
         stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
-        organization.enable_feature_flag!(:invoice_search_terms)
         create(:invoice, customer:, organization:)
         create(:invoice, customer:, organization:)
       end
