@@ -159,8 +159,12 @@ RSpec.describe UsersService do
   describe ".call(:login)" do
     subject(:result) { described_class.call(:login, email, password) }
 
-    let!(:membership) { create(:membership, :revoked) }
-    let(:user) { membership.user }
+before_all do
+  create_default(:organization)
+end
+
+    let_it_be(:membership) { create(:membership, :revoked) }
+    let_it_be(:user) { membership.user }
 
     context "when user with given email exists" do
       let(:email) { user.email }
@@ -169,7 +173,7 @@ RSpec.describe UsersService do
         let(:password) { user.password }
 
         context "when user has active membership" do
-          let!(:active_membership) { create(:membership, user:, organization: membership.organization) }
+          let_it_be(:active_membership) { create(:membership, user:, organization: membership.organization) }
 
           before { allow(UserDevices::RegisterService).to receive(:call!) }
 

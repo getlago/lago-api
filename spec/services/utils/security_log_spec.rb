@@ -53,8 +53,8 @@ RSpec.describe Utils::SecurityLog do
       )
     end
 
-    let(:organization) { create(:organization, premium_integrations: ["security_logs"]) }
-    let(:membership) { create(:membership, organization:) }
+    let_it_be(:organization) { create(:organization, premium_integrations: ["security_logs"]) }
+      let_it_be(:membership) { create(:membership, organization:) }
     let(:user) { membership.user }
     let(:api_key) { create(:api_key, organization:) }
 
@@ -98,6 +98,7 @@ RSpec.describe Utils::SecurityLog do
     end
 
     context "when security_logs is not enabled for organization" do
+      let(:membership) { create(:membership, organization:) }
       let(:organization) { create(:organization, premium_integrations: []) }
 
       it "does not produce and returns false" do
@@ -119,6 +120,7 @@ RSpec.describe Utils::SecurityLog do
         )
       end
 
+      let(:membership) { create(:membership, organization:) }
       let(:organization) { create(:organization, premium_integrations: []) }
 
       it "produces the event on kafka" do

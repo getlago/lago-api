@@ -3,11 +3,14 @@
 RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
   subject(:activity_log) { described_class }
 
-  let(:membership) { create(:membership) }
   let(:api_key) { create(:api_key) }
-
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization:) }
+
+before_all do
+  create_default(:customer)
+end
 
   let(:serialized_coupon) do
     {
@@ -382,7 +385,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     end
 
     context "when the object is a plan" do
-      let(:object) { create(:plan, organization:) }
+      let_it_be(:object) { create(:plan, organization:) }
 
       let(:serialized_object) do
         V1::PlanSerializer.new(
@@ -427,7 +430,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
     context "when the object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:plan) { create(:plan, organization:) }
 
       let(:serialized_object) do
         V1::SubscriptionSerializer.new(
@@ -532,7 +535,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     end
 
     context "when object is a plan" do
-      let(:object) { create(:plan, organization:) }
+      let_it_be(:object) { create(:plan, organization:) }
 
       context "when plan has more charges than the limit" do
         let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges] }
@@ -587,7 +590,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
     context "when object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:plan) { create(:plan, organization:) }
 
       context "when subscription's plan has more charges than the limit" do
         let(:serializer_includes) { [{plan: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}] }
