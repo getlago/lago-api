@@ -37,6 +37,34 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     expect(fee2.taxes_amount_cents).to eq(84) # (379 - 100) * (10 + 20) / 100
   end
 
+  context "when the invoice contains a product fee" do
+    let(:plan) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+    let(:rate_card) { create(:rate_card, organization:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:fee1) do
+      create(
+        :product_fee,
+        invoice:,
+        subscription:,
+        rate_card_rate:,
+        amount_cents: 151,
+        precise_amount_cents: 151
+      )
+    end
+
+    before do
+      create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:)
+    end
+
+    it "applies the rate card taxes through the invoice calculation entry point" do
+      compute_amounts.call
+
+      expect(fee1.reload.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
+      expect(fee1).to have_attributes(taxes_rate: 10, taxes_amount_cents: 15)
+    end
+  end
+
   it "sets fees_amount_cents from the list of fees" do
     expect { compute_amounts.call }.to change(invoice, :fees_amount_cents).from(0).to(530)
   end
