@@ -32,13 +32,9 @@ class BillingSegment < ApplicationRecord
     rate_override || rate_card_rate
   end
 
-  # The cadence this segment was billed on. An override may replace the interval, but its
-  # two columns are independently nullable, so each falls back to the rate on its own.
+  # The cadence this segment was billed on.
   def billing_interval
-    Billing::Interval.new(
-      count: rate_override&.billing_interval_count || rate_card_rate.billing_interval_count,
-      unit: rate_override&.billing_interval_unit || rate_card_rate.billing_interval_unit
-    )
+    Billing::Interval.from(rate_card_rate, override: rate_override)
   end
 
   def currency

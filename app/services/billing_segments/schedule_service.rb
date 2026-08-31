@@ -56,23 +56,21 @@ module BillingSegments
 
     attr_reader :customer, :requested_range
 
-    def range
-      @range ||= requested_range || default_range
+    # The clock runs without a window: everything matured by now is due. Billing a chosen
+    # window passes one, and then the window decides — it may deliberately reach back past
+    # what the card's own clock says.
+    def billed_until
+      @billed_until ||= requested_range ? window.end : Time.current
     end
 
-    # Clock and activation jobs schedule without an explicit window. Start from the
-    # customer's earliest seeded item clock so backdated advance subscriptions bill the
-    # segment due at subscription start, not a one-day "today" window.
-    def default_range
-      billing_at = customer.subscription_rate_cards.minimum(:next_billing_at)
-      range_begin = [billing_at, Time.current].compact.min
-
-      range_begin..Time.current
+    def window
+      @window ||= requested_range.begin.to_date.beginning_of_day.utc...
+        requested_range.end.to_date.end_of_day.utc
     end
 
     def due_items
       customer.subscription_rate_cards
-        .due_for_range(range)
+        .due_for_range(billed_until..billed_until)
         .includes(:rate_phases, subscription: {plan: {applied_rate_cards: :rate_phases}})
     end
 
@@ -80,74 +78,71 @@ module BillingSegments
       rates = rates_for(subscription_rate_card)
       return if rates.empty?
 
-      dates = BillingPeriods::DatesService.from_subscription_rate_card(
-        subscription_rate_card,
-        rates:,
-        rate_phases: rate_phases_for(subscription_rate_card),
-        range:,
-        options: dates_options(subscription_rate_card)
-      )
-      return if dates.periods.empty?
-
-      # TODO: Consider moving this loop to import! or batch inserting BillingSegment rows.
-      dates.periods.each do |period|
-        result.billing_segments << BillingSegment.create!(
-          organization: subscription_rate_card.organization,
-          subscription: subscription_rate_card.subscription,
-          customer:,
-          subscription_rate_card:,
-          billing_at: period.billing_at,
-          period_from: period.period_from,
-          period_to: period.period_to,
-          rate_card_rate: period.rate,
-          rate_override: period.rate_override,
-          pricing_unit: pricing_unit_for(subscription_rate_card),
-          rate_properties: period.rate_properties,
-          proration_ratio: period.proration_ratio
-        )
-      end
-
-      advance_clock(subscription_rate_card, dates.next_billing_at)
-    end
-
-    def range_begin
-      @range_begin ||= range.begin.to_date.beginning_of_day.utc
-    end
-
-    def range_end
-      @range_end ||= range.end.to_date.end_of_day.utc
-    end
-
-    # TODO: Move this window query to a Scenic view if rate-range lookups become shared
-    def rates_for(subscription_rate_card)
-      ranked_rates = subscription_rate_card.rate_card.rates
-        .select(
-          "rate_card_rates.*, " \
-            "LEAD(rate_card_rates.effective_from) OVER " \
-            "(ORDER BY rate_card_rates.effective_from) AS next_effective_from"
-        )
-
-      RateCardRate
-        .from(ranked_rates, :rate_card_rates)
-        .where("effective_from <= ?", range_end)
-        .where("next_effective_from IS NULL OR next_effective_from >= ?", range_begin)
-        .order(:effective_from)
-    end
-
-    def dates_options(subscription_rate_card)
-      BillingPeriods::DatesService::Options.new(
-        timezone: subscription_rate_card.subscription.customer.applicable_timezone,
-        exclude_out_of_range: true,
-        realign_billing_anchor: true,
-        termination: false
-      )
-    end
-
-    def rate_phases_for(subscription_rate_card)
-      SubscriptionRateCards::ResolveRatePhasesService.call!(
+      build = ::Billing::Schedules::BuildService.call(
         subscription_rate_card:,
         plan_rate_cards: plan_rate_cards_for(subscription_rate_card.subscription)
-      ).rate_phases
+      )
+      return if build.failure?
+
+      cycles = due_cycles(build.schedule, subscription_rate_card)
+      # Nothing due means nothing to move the clock past: leaving it where it is keeps the
+      # card in the queue for the run that does find something.
+      return if cycles.empty?
+
+      cycles.each do |cycle|
+        ::Billing::Segments.within(cycle.from...cycle.to, rates:).each do |segment|
+          result.billing_segments << persist(subscription_rate_card, cycle, segment)
+        end
+      end
+
+      advance_clock(subscription_rate_card, build.schedule.next_due_at(billed_until))
+    end
+
+    # Two questions, and only one of them looks at the card's clock. Without a window the
+    # clock is the floor, so a run bills what has matured since the last one. With a window
+    # the caller chose the period on purpose and the floor would silently narrow it.
+    def due_cycles(schedule, subscription_rate_card)
+      return schedule.cycles_overlapping(window) if requested_range
+
+      schedule
+        .cycles_due_by(billed_until)
+        .select { |cycle| cycle.due_at >= subscription_rate_card.next_billing_at }
+    end
+
+    def persist(subscription_rate_card, cycle, segment)
+      BillingSegment.create!(
+        organization: subscription_rate_card.organization,
+        subscription: subscription_rate_card.subscription,
+        customer:,
+        subscription_rate_card:,
+        billing_at: [cycle.due_at, Time.current].max,
+        period_from: segment.from,
+        period_to: inclusive_end(segment.to),
+        rate_card_rate: segment.rate,
+        rate_override: cycle.phase.override,
+        pricing_unit: pricing_unit_for(subscription_rate_card),
+        rate_properties: (cycle.phase.override || segment.rate).properties,
+        proration_ratio: proration_ratio(subscription_rate_card, cycle, segment)
+      )
+    end
+
+    # Windows are half-open in the engine and stored inclusive, so the stored end is the
+    # last instant the segment actually covers — a microsecond before it closes.
+    def inclusive_end(instant)
+      instant - Rational(1, 1_000_000)
+    end
+
+    # 1 for a card that does not prorate: a partial window still owes the whole fee.
+    def proration_ratio(subscription_rate_card, cycle, segment)
+      return 1 unless subscription_rate_card.proration?
+
+      cycle.calendar.elapsed_ratio(segment.from, segment.to)
+    end
+
+    # Every rate the card has ever carried: which one prices a segment is decided by its
+    # effective date, so narrowing the set here would hide the one in force.
+    def rates_for(subscription_rate_card)
+      subscription_rate_card.rate_card.rates.order(:effective_from)
     end
 
     def plan_rate_cards_for(subscription)
@@ -168,7 +163,7 @@ module BillingSegments
 
     def advance_clock(subscription_rate_card, next_billing_at)
       return unless next_billing_at
-      return if subscription_rate_card.next_billing_at > range_end
+      return if subscription_rate_card.next_billing_at > billed_until
       return if next_billing_at <= subscription_rate_card.next_billing_at
 
       subscription_rate_card.update!(next_billing_at: next_billing_at)

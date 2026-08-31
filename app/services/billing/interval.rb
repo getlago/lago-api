@@ -5,6 +5,16 @@ module Billing
   class Interval < Data.define(:count, :unit)
     UNITS = %i[day week month year].freeze
 
+    # The cadence a rate is billed on, with an override taking precedence. The override's
+    # two columns are independently nullable, so each falls back to the rate on its own.
+    # Reads nothing but those two attributes, so anything carrying them will do.
+    def self.from(rate, override: nil)
+      new(
+        count: override&.billing_interval_count || rate.billing_interval_count,
+        unit: override&.billing_interval_unit || rate.billing_interval_unit
+      )
+    end
+
     def initialize(count:, unit:)
       unit = unit.to_sym
       count = count.to_i

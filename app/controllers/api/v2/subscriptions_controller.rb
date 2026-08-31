@@ -122,8 +122,8 @@ module Api
         end
       end
 
-      # Testing helper: returns the billing periods that would be generated for
-      # active product-catalog subscriptions without creating billing segments or invoices.
+      # Testing helper: returns the billing segments that would be generated for
+      # active product-catalog subscriptions without persisting or invoicing any of them.
       def segments
         subscriptions = segment_subscriptions
         return not_found_error(resource: "subscription") unless subscriptions
@@ -194,7 +194,7 @@ module Api
       end
 
       def segments_for(subscription)
-        segments = []
+        entries = []
         next_billing_ats = []
         plan_rate_cards = subscription.plan.applied_rate_cards.to_a
 
@@ -202,19 +202,27 @@ module Api
           rates = rates_for(subscription_rate_card)
           next if rates.empty?
 
-          dates = BillingPeriods::DatesService.from_subscription_rate_card(
-            subscription_rate_card,
-            rates:,
-            rate_phases: rate_phases_for(subscription_rate_card, plan_rate_cards:),
-            range: window_start_at(subscription_rate_card)..window_end_at,
-            options: segments_date_options(subscription)
-          )
+          build = ::Billing::Schedules::BuildService.call(subscription_rate_card:, plan_rate_cards:)
+          next if build.failure?
 
-          next_billing_ats << dates.next_billing_at
-          segments.concat(dates.periods.map { |period| serialize_segment(subscription_rate_card, period) })
+          next_billing_ats << build.schedule.next_due_at(window_end_at)
+          entries.concat(entries_for(subscription_rate_card, build.schedule, rates))
         end
 
-        [segments, next_billing_ats]
+        [entries, next_billing_ats]
+      end
+
+      # A cycle is one entry unless a rate changed inside it, in which case each priced
+      # window is its own entry — sharing the cycle's index, which is what makes the split
+      # visible in the response.
+      def entries_for(subscription_rate_card, schedule, rates)
+        schedule.cycles_due_by(window_end_at).flat_map do |cycle|
+          next [] if cycle.to <= window_start_at(subscription_rate_card)
+
+          ::Billing::Segments.within(cycle.from...cycle.to, rates:).map do |segment|
+            serialize_segment(subscription_rate_card, cycle, segment)
+          end
+        end
       end
 
       def rates_for(subscription_rate_card)
@@ -264,27 +272,40 @@ module Api
         )
       end
 
-      def serialize_segment(subscription_rate_card, period)
+      def serialize_segment(subscription_rate_card, cycle, segment)
         {
           subscription_external_id: subscription_rate_card.subscription.external_id,
           subscription_started_at: subscription_rate_card.subscription.started_at&.iso8601,
           applied_rate_card_id: subscription_rate_card.id,
           applied_rate_card_code: subscription_rate_card.rate_card.code,
-          cycle_index: period.cycle_index + 1, # Display one-based indexes to make QA easier.
-          period_from: period.period_from.iso8601,
-          period_to: period.period_to.iso8601,
-          billing_at: period.billing_at.iso8601,
-          rate_phase_code: period.rate_phase&.code,
-          rate_override: serialize_rate_override(period.rate_override),
-          rate: serialize_rate(period),
-          rate_code: period.rate.code
+          cycle_index: cycle.index + 1, # Display one-based indexes to make QA easier.
+          period_from: segment.from.iso8601,
+          period_to: inclusive_end(segment.to).iso8601,
+          billing_at: displayed_billing_at(cycle).iso8601,
+          rate_phase_code: cycle.phase.code,
+          rate_override: serialize_rate_override(cycle.phase.override),
+          rate: serialize_rate(segment.rate, cycle.phase.override),
+          rate_code: segment.rate.code
         }
       end
 
-      def serialize_rate(period)
-        return if period.rate_override
+      # Windows are half-open inside the engine and shown inclusive here, so a cycle closing
+      # on Aug 17 00:00 reads as ending Aug 16 23:59:59.
+      def inclusive_end(instant)
+        instant - 1.second
+      end
 
-        rate = period.rate
+      # An arrears cycle falls due on its closing boundary, shown inclusive like any end; an
+      # advance one falls due when it opens, which is a start and shown as it is. A cycle
+      # whose moment has passed would be billed on the next run, so it reads as now.
+      def displayed_billing_at(cycle)
+        due_at = (cycle.due_at == cycle.to) ? inclusive_end(cycle.due_at) : cycle.due_at
+
+        [due_at, Time.current].max
+      end
+
+      def serialize_rate(rate, override)
+        return if override
 
         {
           lago_id: rate.id,
