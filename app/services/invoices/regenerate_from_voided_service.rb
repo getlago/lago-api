@@ -67,16 +67,7 @@ module Invoices
     delegate :customer, to: :voided_invoice
 
     def issuing_date
-      @issuing_date ||= if issuing_date_keep_anchor?
-        regenerated_invoice.issuing_date
-      else
-        Time.current.in_time_zone(customer.applicable_timezone).to_date
-      end
-    end
-
-    def issuing_date_keep_anchor?
-      regenerated_invoice.invoice_subscriptions.first&.recurring? &&
-        customer.applicable_subscription_invoice_issuing_date_adjustment == "keep_anchor"
+      @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
     end
 
     def payment_due_date
