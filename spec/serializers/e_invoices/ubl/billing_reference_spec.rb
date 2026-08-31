@@ -14,6 +14,7 @@ RSpec.describe EInvoices::Ubl::BillingReference do
 
   let(:resource) { invoice }
   let(:root) { "//cac:BillingReference" }
+
   let_it_be(:issuing_date) { "2025-03-16".to_date }
   let_it_be(:invoice) { create_default(:invoice, issuing_date:) }
 

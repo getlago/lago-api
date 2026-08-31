@@ -10,11 +10,12 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
   end
 
   let(:options) { described_class::Options.new }
-  let(:root) { "//ram:ApplicableHeaderTradeAgreement" }
-  let(:membership) { create(:membership) }
-  let_it_be(:organization) { create_default(:organization) }
   let(:resource) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
   let(:invoice_type) { :subscription }
+  let(:root) { "//ram:ApplicableHeaderTradeAgreement" }
+  let(:membership) { create(:membership) }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   let_it_be(:customer) do
     create_default(:customer,

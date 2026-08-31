@@ -8,6 +8,7 @@ RSpec.describe ::V1::CustomerSerializer do
   end
 
   let(:result) { JSON.parse(serializer.to_json) }
+  let(:customer) { create(:customer, :with_salesforce_integration, shipping_city: "Paris", shipping_address_line1: "test1", shipping_zipcode: "002") }
   let(:metadata) { create(:customer_metadata, customer:) }
   let(:tax) { create(:tax, organization: customer.organization) }
   let(:customer_applied_tax) { create(:customer_applied_tax, customer:, tax:) }
@@ -17,7 +18,6 @@ RSpec.describe ::V1::CustomerSerializer do
   let(:billing_entity) { customer.billing_entity }
 
   let_it_be(:organization) { create_default(:organization) }
-  let(:customer) { create(:customer, :with_salesforce_integration, shipping_city: "Paris", shipping_address_line1: "test1", shipping_zipcode: "002") }
 
   before do
     metadata
