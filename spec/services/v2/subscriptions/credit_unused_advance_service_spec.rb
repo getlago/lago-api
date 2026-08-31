@@ -41,7 +41,7 @@ RSpec.describe V2::Subscriptions::CreditUnusedAdvanceService do
     before do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"))
       create(
-        :billing_cycle,
+        :billing_segment,
         organization:,
         subscription:,
         customer:,
@@ -64,6 +64,71 @@ RSpec.describe V2::Subscriptions::CreditUnusedAdvanceService do
       allow(CreditNotes::CreateService).to receive(:call).and_return(credit_result)
     end
 
+    it "credits the days of the billed period the customer never got" do
+      expect(result.credit_notes).to eq([credit_note])
+      expect(CreditNotes::CreateService).to have_received(:call).with(
+        invoice:,
+        credit_amount_cents: 452,
+        items: [{fee_id: Fee.sole.id, amount_cents: BigDecimal("451.61290")}],
+        reason: :order_cancellation,
+        automatic: true
+      )
+    end
+
+    # The termination day is billed in full either way, so the hour it happens at must not
+    # move the credit. QA plan X1 pins the day as inclusive (16 days, not 15).
+    context "when the termination lands exactly on midnight" do
+      let(:terminated_at) { Time.zone.parse("2026-08-17 00:00:00") }
+
+      it "credits the same as a termination later that day" do
+        expect(result.credit_notes).to eq([credit_note])
+        expect(CreditNotes::CreateService).to have_received(:call).with(
+          hash_including(items: [{fee_id: Fee.sole.id, amount_cents: BigDecimal("451.61290")}])
+        )
+      end
+    end
+
+    context "when the termination lands on the closing boundary" do
+      let(:terminated_at) { Time.zone.parse("2026-08-31 23:59:59") }
+
+      it "credits nothing, the period was fully consumed" do
+        expect(result.credit_notes).to be_empty
+        expect(CreditNotes::CreateService).not_to have_received(:call)
+      end
+    end
+
+    # QA plan v2, scenario X2: a 30-day advance period Sep 10 -> Oct 9 paid at 150.00,
+    # terminated on Sep 25. Expected credit is the 14 unused days, Sep 26 -> Oct 9, at
+    # 70.00. The termination day itself counts as consumed.
+    context "with the QA plan X2 scenario" do
+      let(:terminated_at) { Time.zone.parse("2026-09-25") }
+      let(:subscription_rate_card) do
+        create(
+          :subscription_rate_card,
+          organization:, subscription:, customer:, rate_card:,
+          billing_anchor_date: Date.parse("2026-08-10"),
+          started_at: Time.zone.parse("2026-08-10"),
+          next_billing_at: Time.zone.parse("2026-10-10")
+        )
+      end
+
+      before do
+        BillingSegment.sole.update!(
+          billing_at: Time.zone.parse("2026-09-10"),
+          period_from: Time.zone.parse("2026-09-10"),
+          period_to: Time.zone.parse("2026-10-09 23:59:59.999999")
+        )
+        Fee.sole.update!(amount_cents: 15_000)
+      end
+
+      it "credits the fourteen unused days" do
+        expect(result.credit_notes).to eq([credit_note])
+        expect(CreditNotes::CreateService).to have_received(:call).with(
+          hash_including(credit_amount_cents: 7_000)
+        )
+      end
+    end
+
     context "when the advance cycle contains two rate periods" do
       before do
         create(
@@ -75,15 +140,20 @@ RSpec.describe V2::Subscriptions::CreditUnusedAdvanceService do
         )
       end
 
-      it "credits the unused amount using the period ratio containing the termination" do
+      # The credit is measured against the period the cycle actually billed — Aug 1 to
+      # Aug 31 — not against the slice opened by the rate change on Aug 15. The customer
+      # paid 1000 up front for the whole month and used 17 of its 31 days, so 14/31 is
+      # refundable. Measuring from the rate change instead would refund 903 to someone
+      # who consumed more than half the period.
+      it "credits the unused share of the period the cycle billed" do
         expect(result.credit_notes).to eq([credit_note])
         expect(CreditNotes::CreateService).to have_received(:call).with(
           invoice:,
-          credit_amount_cents: 903,
+          credit_amount_cents: 452,
           items: [
             {
               fee_id: Fee.sole.id,
-              amount_cents: BigDecimal("903.22580")
+              amount_cents: BigDecimal("451.61290")
             }
           ],
           reason: :order_cancellation,

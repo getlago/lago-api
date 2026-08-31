@@ -40,6 +40,49 @@ RSpec.describe Subscriptions::ProductCatalog::MaterializeService do
     end
   end
 
+  # next_billing_at is the clock's queue key: the instant this card should next be looked
+  # at. Every case below fixes when the first cycle becomes billable.
+  describe "next_billing_at" do
+    subject(:next_billing_at) { result.subscription_rate_cards.sole.next_billing_at }
+
+    let(:subscription) do
+      create(:subscription, customer:, plan:, started_at:, billing_anchor_date: Date.new(2026, 1, 1))
+    end
+    let(:started_at) { Time.utc(2026, 1, 15, 14, 30) }
+    let(:now) { Time.utc(2026, 1, 15, 14, 30) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2025, 1, 1))
+    end
+
+    around { |example| travel_to(now) { example.run } }
+
+    it "waits for the first period to close in arrears" do
+      expect(next_billing_at).to eq(Time.utc(2026, 2, 1))
+    end
+
+    context "when the rate card bills in advance" do
+      let(:rate_card) { create(:rate_card, :advance, organization:) }
+
+      # Billable as soon as the cycle opens, and the cycle opens at the start of the
+      # signing day rather than at 14:30.
+      it "bills from the start of the day the card was signed" do
+        expect(next_billing_at).to eq(Time.utc(2026, 1, 15))
+      end
+    end
+
+    # The subscription is backdated by nearly three months. Those periods are not billed:
+    # the card joins the calendar at the period it lands in today.
+    context "when the subscription is backdated" do
+      let(:started_at) { Time.utc(2025, 12, 15) }
+      let(:now) { Time.utc(2026, 3, 10, 12, 0) }
+
+      it "starts from the current period rather than back-billing the gap" do
+        expect(next_billing_at).to eq(Time.utc(2026, 4, 1))
+      end
+    end
+  end
+
   it "does not copy the plan entry's phases: pricing resolves by reference" do
     plan_rate_card = plan.applied_rate_cards.sole
     create(:rate_phase, organization:, plan_rate_card:, position: 1)

@@ -22,7 +22,7 @@ class Subscription < ApplicationRecord
   has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :fees
   has_many :applied_rate_cards, class_name: "SubscriptionRateCard"
-  has_many :billing_cycles
+  has_many :billing_segments
   has_many :daily_usages
   has_many :usage_thresholds
   has_many :entitlements, class_name: "Entitlement::Entitlement"
@@ -234,7 +234,7 @@ class Subscription < ApplicationRecord
     return unless next_subscription
     # Downgrades compare plan-level amounts and land at the end of the current
     # period, neither of which product-catalog plans have: their price and their
-    # billing cycles live on the rate cards.
+    # billing segments live on the rate cards.
     return if plan.product_catalog?
 
     if next_subscription.active? && downgraded?

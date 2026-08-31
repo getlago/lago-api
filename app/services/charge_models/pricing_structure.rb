@@ -34,17 +34,17 @@ module ChargeModels
       )
     end
 
-    def self.from_billing_cycle(billing_cycle)
-      unless billing_cycle.is_a?(BillingCycle)
-        raise NotImplementedError, "Chargeable: #{billing_cycle.class.name} is not implemented"
+    def self.from_billing_segment(billing_segment)
+      unless billing_segment.is_a?(BillingSegment)
+        raise NotImplementedError, "Chargeable: #{billing_segment.class.name} is not implemented"
       end
 
       new(
-        charge_model: billing_cycle.rate.rate_model,
-        properties: billing_cycle.rate_properties,
-        prorated: billing_cycle.subscription_rate_card.proration?,
+        charge_model: billing_segment.rate.rate_model,
+        properties: billing_segment.rate_properties,
+        prorated: billing_segment.subscription_rate_card.proration?,
         accepts_target_wallet: false,
-        currency: Money::Currency.new(billing_cycle.currency)
+        currency: Money::Currency.new(billing_segment.currency)
       )
     end
 
@@ -62,17 +62,17 @@ module ChargeModels
       )
     end
 
-    def self.from_billing_cycle(billing_cycle)
-      unless billing_cycle.is_a?(BillingCycle)
-        raise NotImplementedError, "Chargeable: #{billing_cycle.class.name} is not implemented"
+    def self.from_billing_segment(billing_segment)
+      unless billing_segment.is_a?(BillingSegment)
+        raise NotImplementedError, "Chargeable: #{billing_segment.class.name} is not implemented"
       end
 
       new(
-        charge_model: billing_cycle.rate.rate_model,
-        properties: billing_cycle.rate_properties,
-        prorated: billing_cycle.subscription_rate_card.proration?,
+        charge_model: billing_segment.rate.rate_model,
+        properties: billing_segment.rate_properties,
+        prorated: billing_segment.subscription_rate_card.proration?,
         accepts_target_wallet: false,
-        currency: Money::Currency.new(billing_cycle.currency)
+        currency: Money::Currency.new(billing_segment.currency)
       )
     end
   end

@@ -207,14 +207,14 @@ RSpec.describe Api::V2::SubscriptionsController do
           )
         end
 
-        it "creates the final pending billing cycle clamped to the termination time" do
-          expect { subject }.to change(BillingCycle, :count).by(1)
+        it "creates the final pending billing segment clamped to the termination time" do
+          expect { subject }.to change(BillingSegment, :count).by(1)
 
           expect(response).to have_http_status(:success)
           expect(json[:credit_notes]).to eq([])
 
-          billing_cycle = BillingCycle.sole
-          expect(billing_cycle).to have_attributes(
+          billing_segment = BillingSegment.sole
+          expect(billing_segment).to have_attributes(
             subscription:,
             subscription_rate_card:,
             rate_card_rate: rate,
@@ -331,20 +331,20 @@ RSpec.describe Api::V2::SubscriptionsController do
           )
         end
 
-        it "creates the pending billing cycle overlapping the termination time" do
-          expect { subject }.to change(BillingCycle, :count).by(1)
+        it "creates the pending billing segment overlapping the termination time" do
+          expect { subject }.to change(BillingSegment, :count).by(1)
 
           expect(response).to have_http_status(:success)
 
-          billing_cycles = BillingCycle.order(:period_from, :period_to).to_a
-          expect(billing_cycles.map { [it.period_from, it.period_to, it.rate_card_rate, it.rate_override] }).to eq(
+          billing_segments = BillingSegment.order(:period_from, :period_to).to_a
+          expect(billing_segments.map { [it.period_from, it.period_to, it.rate_card_rate, it.rate_override] }).to eq(
             [
               [Time.zone.parse("2026-08-17"), Time.zone.parse(terminated_at), initial_rate, intro_override]
             ]
           )
 
-          final_billing_cycle = billing_cycles.last
-          expect(final_billing_cycle).to have_attributes(
+          final_billing_segment = billing_segments.last
+          expect(final_billing_segment).to have_attributes(
             rate_card_rate: initial_rate,
             rate_override: intro_override,
             rate_properties: intro_override.rate_properties,
@@ -353,7 +353,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             billing_at: Time.zone.parse(terminated_at)
           )
           expect(json[:applied_rate_cards].sole[:lago_id]).to eq(subscription_rate_card.id)
-          expect(billing_cycles.map(&:rate_card_rate)).not_to include(active_rate, future_rate)
+          expect(billing_segments.map(&:rate_card_rate)).not_to include(active_rate, future_rate)
           expect([intro_phase, standard_phase].map(&:code)).to eq(%w[weekly_intro monthly_standard])
         end
       end
@@ -411,9 +411,9 @@ RSpec.describe Api::V2::SubscriptionsController do
             total_amount_cents: 3_100
           )
         end
-        let!(:billing_cycle) do
+        let!(:billing_segment) do
           create(
-            :billing_cycle,
+            :billing_segment,
             organization:,
             subscription:,
             customer:,
@@ -454,11 +454,11 @@ RSpec.describe Api::V2::SubscriptionsController do
           allow(CreditNotes::ApplyTaxesService).to receive(:call).and_return(taxes_result)
         end
 
-        it "does not create a final billing cycle and credits the unused period" do
+        it "does not create a final billing segment and credits the unused period" do
           expect { subject }
             .to change(CreditNote, :count).by(1)
             .and change(CreditNoteItem, :count).by(1)
-            .and not_change(BillingCycle, :count)
+            .and not_change(BillingSegment, :count)
 
           expect(response).to have_http_status(:success)
 
@@ -479,7 +479,7 @@ RSpec.describe Api::V2::SubscriptionsController do
             ended_at: Time.zone.parse(terminated_at),
             next_billing_at: Time.zone.parse("2026-09-01")
           )
-          expect(billing_cycle.reload).to be_done
+          expect(billing_segment.reload).to be_done
         end
       end
     end
@@ -641,15 +641,15 @@ RSpec.describe Api::V2::SubscriptionsController do
         )
       end
 
-      it "creates one billing cycle for the latest period using the active rate" do
-        expect { subject }.to change(BillingCycle, :count).by(1)
+      it "creates one billing segment for the latest period using the active rate" do
+        expect { subject }.to change(BillingSegment, :count).by(1)
 
         expect(response).to have_http_status(:success)
 
-        billing_cycle = BillingCycle.sole
+        billing_segment = BillingSegment.sole
         fee = Fee.sole
-        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
-        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
+        expect(billing_segment.period_from).to eq(Time.zone.parse("2026-08-10"))
+        expect(billing_segment.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
         expect(fee.rate_card_rate).to eq(rate)
         expect(fee.amount_cents).to eq(15_000)
         expect(json[:invoices].sole[:fees].sole[:lago_id]).to eq(fee.id)
@@ -662,7 +662,7 @@ RSpec.describe Api::V2::SubscriptionsController do
 
         # Put back the clock to the already-billed period, as if the item were due
         # for it again (e.g. a clock re-run), so the second attempt collides with
-        # the billing cycle created above instead of scheduling the next period.
+        # the billing segment created above instead of scheduling the next period.
         subscription_rate_card.reload.update!(next_billing_at: Time.zone.parse("2026-08-10"))
 
         expect do
@@ -674,20 +674,20 @@ RSpec.describe Api::V2::SubscriptionsController do
               end_on: "2026-09-10"
             }
           )
-        end.not_to change(BillingCycle, :count)
+        end.not_to change(BillingSegment, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(billing_cycle: ["overlapping_periods"])
+        expect(json[:error_details]).to eq(billing_segment: ["overlapping_periods"])
       end
     end
   end
 
-  describe "GET /api/v2/subscriptions/:external_id/cycles" do
+  describe "GET /api/v2/subscriptions/:external_id/segments" do
     subject do
       travel_to(Time.zone.parse("2026-09-15")) do
         get_with_token(
           organization,
-          "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+          "/api/v2/subscriptions/#{subscription.external_id}/segments",
           {end_on: "2026-10-09"}
         )
       end
@@ -761,7 +761,7 @@ RSpec.describe Api::V2::SubscriptionsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:next_billing_at]).to eq(Time.zone.parse("2026-10-10").iso8601)
-      expect(json[:cycles]).to eq(
+      expect(json[:segments]).to eq(
         [
           {
             subscription_external_id: subscription.external_id,
@@ -813,7 +813,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-09-15")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/cycles",
+            "/api/v2/subscriptions/segments",
             {subscription_external_ids: [subscription.external_id], end_on: "2026-10-09"}
           )
         end
@@ -823,7 +823,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:subscription_external_id] })
+        expect(json[:segments].map { |segment| segment[:subscription_external_id] })
           .to eq([subscription.external_id] * 2)
       end
     end
@@ -833,7 +833,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-08-10")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/cycles",
+            "/api/v2/subscriptions/segments",
             {
               subscription_external_ids: [subscription.external_id],
               start_on: "2026-08-10",
@@ -850,7 +850,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles]).to eq([])
+        expect(json[:segments]).to eq([])
         expect(json).not_to have_key(:next_billing_at)
       end
     end
@@ -860,7 +860,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-08-11")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/cycles",
+            "/api/v2/subscriptions/segments",
             {
               subscription_external_ids: subscription.external_id,
               start_on: "2026-08-01",
@@ -898,15 +898,15 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].first[:subscription_started_at]).to be_nil
-        expect(json[:cycles].first[:period_from]).to eq(Time.zone.parse("2026-09-01").iso8601)
+        expect(json[:segments].first[:subscription_started_at]).to be_nil
+        expect(json[:segments].first[:period_from]).to eq(Time.zone.parse("2026-09-01").iso8601)
       end
     end
 
     context "without end_on" do
       subject do
         travel_to(Time.zone.parse("2026-09-15")) do
-          get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/cycles")
+          get_with_token(organization, "/api/v2/subscriptions/#{subscription.external_id}/segments")
         end
       end
 
@@ -914,8 +914,8 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([1, 2])
-        expect(json[:cycles].last[:period_to]).to eq(Time.zone.parse("2026-10-09 23:59:59").iso8601)
+        expect(json[:segments].map { |segment| segment[:cycle_index] }).to eq([1, 2])
+        expect(json[:segments].last[:period_to]).to eq(Time.zone.parse("2026-10-09 23:59:59").iso8601)
       end
     end
 
@@ -924,7 +924,7 @@ RSpec.describe Api::V2::SubscriptionsController do
         travel_to(Time.zone.parse("2026-08-11")) do
           get_with_token(
             organization,
-            "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+            "/api/v2/subscriptions/#{subscription.external_id}/segments",
             {end_on: "2026-08-11"}
           )
         end
@@ -934,9 +934,9 @@ RSpec.describe Api::V2::SubscriptionsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:cycles].map { |cycle| cycle[:cycle_index] }).to eq([1])
-        expect(json[:cycles].sole[:period_from]).to eq(Time.zone.parse("2026-08-10").iso8601)
-        expect(json[:cycles].sole[:period_to]).to eq(Time.zone.parse("2026-09-09 23:59:59").iso8601)
+        expect(json[:segments].map { |segment| segment[:cycle_index] }).to eq([1])
+        expect(json[:segments].sole[:period_from]).to eq(Time.zone.parse("2026-08-10").iso8601)
+        expect(json[:segments].sole[:period_to]).to eq(Time.zone.parse("2026-09-09 23:59:59").iso8601)
       end
     end
 
@@ -944,7 +944,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       subject do
         get_with_token(
           organization,
-          "/api/v2/subscriptions/#{subscription.external_id}/cycles",
+          "/api/v2/subscriptions/#{subscription.external_id}/segments",
           {end_on: "2026-10-31"}
         )
       end
@@ -965,7 +965,7 @@ RSpec.describe Api::V2::SubscriptionsController do
       it "continues the base interval from the weekly override end" do
         subject
 
-        period = json[:cycles].find { |cycle| cycle[:cycle_index] == 7 }
+        period = json[:segments].find { |segment| segment[:cycle_index] == 7 }
         expect(period[:period_from]).to eq(Time.zone.parse("2026-09-21").iso8601)
         expect(period[:period_to]).to eq(Time.zone.parse("2026-10-20").end_of_day.iso8601)
       end

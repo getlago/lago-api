@@ -3,7 +3,7 @@
 module V2
   # The v2 shape drops the plan-interval fields (amounts, billing periods,
   # trial): a product-catalog subscription prices through its rate card
-  # entries, each carrying its own billing cycle.
+  # entries, each carrying its own billing segment.
   class SubscriptionSerializer < ModelSerializer
     def serialize
       payload = {

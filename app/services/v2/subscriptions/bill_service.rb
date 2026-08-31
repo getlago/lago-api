@@ -47,7 +47,7 @@ module V2
       # follow-up passes that would find nothing left to bill.
       def bill_all
         subscriptions.uniq(&:customer_id).each do |subscription|
-          billing = BillingCycles::BillSubscriptionService.call(subscription:, range: billing_range)
+          billing = BillingSegments::BillSubscriptionService.call(subscription:, range: billing_range)
           return result.fail_with_error!(billing.error) unless billing.success?
 
           result.invoices.concat(billing.invoices)

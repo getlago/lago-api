@@ -1195,7 +1195,7 @@ describe "Invoice Numbering Scenario", transaction: false do
           .to match_array(%w[BENT-1-001-001 BENT-2-001-001])
       end
 
-      # NOTE: August 19th: second billing cycle
+      # NOTE: August 19th: second billing segment
       travel_to(DateTime.new(2023, 8, 19, 12, 12)) do
         perform_billing
 
@@ -1216,7 +1216,7 @@ describe "Invoice Numbering Scenario", transaction: false do
           )
       end
 
-      # NOTE: September 19th: third billing cycle — sequences stay gapless and independent per entity
+      # NOTE: September 19th: third billing segment — sequences stay gapless and independent per entity
       travel_to(DateTime.new(2023, 9, 19, 12, 12)) do
         perform_billing
 

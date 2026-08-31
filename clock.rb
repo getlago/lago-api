@@ -30,15 +30,15 @@ module Clockwork
       .perform_later
   end
 
-  every(5.minutes, "schedule:create_billing_cycles") do
-    Clock::CreateBillingCyclesJob
-      .set(sentry: {"slug" => "lago_create_billing_cycles", "cron" => "*/5 * * * *"})
+  every(5.minutes, "schedule:create_billing_segments") do
+    Clock::CreateBillingSegmentsJob
+      .set(sentry: {"slug" => "lago_create_billing_segments", "cron" => "*/5 * * * *"})
       .perform_later
   end
 
-  every(5.minutes, "schedule:process_billing_cycles") do
-    Clock::ProcessBillingCyclesJob
-      .set(sentry: {"slug" => "lago_process_billing_cycles", "cron" => "*/5 * * * *"})
+  every(5.minutes, "schedule:process_billing_segments") do
+    Clock::ProcessBillingSegmentsJob
+      .set(sentry: {"slug" => "lago_process_billing_segments", "cron" => "*/5 * * * *"})
       .perform_later
   end
 

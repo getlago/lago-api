@@ -67,7 +67,7 @@ class Customer < ApplicationRecord
 
   has_many :subscriptions
   has_many :subscription_rate_cards
-  has_many :billing_cycles
+  has_many :billing_segments
   has_many :events
   has_many :invoices
   has_many :applied_coupons

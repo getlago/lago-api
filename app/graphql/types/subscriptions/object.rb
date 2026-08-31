@@ -128,7 +128,7 @@ module Types
       end
 
       # Billing periods derive from the plan interval, which product-catalog
-      # plans don't have: their rate cards each carry their own billing cycle.
+      # plans don't have: their rate cards each carry their own billing segment.
       def dates_service
         return if object.plan.product_catalog?
 

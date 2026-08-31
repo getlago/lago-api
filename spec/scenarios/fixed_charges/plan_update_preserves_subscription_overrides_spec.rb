@@ -65,7 +65,7 @@ describe "Plan-level fixed_charge update preserves per-subscription unit overrid
     end
   end
 
-  it "delivers the plan-level update to sub A only; sub B keeps its override on both the mid-period invoice and the next billing cycle" do
+  it "delivers the plan-level update to sub A only; sub B keeps its override on both the mid-period invoice and the next billing segment" do
     # Initial invoices reflect each subscription's own units
     expect(subscription_a.invoices.sole.fees.fixed_charge.sole.amount_cents).to eq(10_000) # 10 * $10
     expect(subscription_b.invoices.sole.fees.fixed_charge.sole.amount_cents).to eq(15_000) # 15 * $10
@@ -100,7 +100,7 @@ describe "Plan-level fixed_charge update preserves per-subscription unit overrid
     expect(subscription_b.reload.invoices.count).to eq(1)
     expect(subscription_b.fixed_charge_units_overrides.sole.units).to eq(15)
 
-    # Next billing cycle — sub A bills at 7, sub B bills at 15
+    # Next billing segment — sub A bills at 7, sub B bills at 15
     travel_to subscription_date.next_month do
       BillSubscriptionJob.perform_now([subscription_a], Time.current, invoicing_reason: :subscription_periodic)
       BillSubscriptionJob.perform_now([subscription_b], Time.current, invoicing_reason: :subscription_periodic)
