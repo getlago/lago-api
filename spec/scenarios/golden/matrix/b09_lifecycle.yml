@@ -1,0 +1,2324 @@
+# B9 — Subscription lifecycle
+#
+# Subscriptions::CreateService 10 fixes, TerminateService 9, ActivateService 6.
+#
+# Every row here uses a plan whose amount divides evenly by the length of the month it is billed
+# in — 3_100¢ over a 31-day March, 3_000¢ or 9_000¢ over a 30-day April — so a day of subscription
+# costs exactly 100¢ (or 300¢) and every prorated figure is a clean multiple. That is deliberate:
+# proration bugs are off-by-one-day bugs, and a rate that divides evenly makes the day count
+# readable straight off the expected amount. It also keeps
+# CreditNotes::AdjustAmountsWithRoundingService out of the arithmetic.
+#
+# `on_termination_credit_note` is `none` on every ARREARS row, and it has to be: an arrears plan may
+# not carry the field at all (Subscription validates its absence, subscription.rb:80), so `none` is
+# the only legal value on that side of the axis. The advance rows below cover all five values — see
+# the block comment before b09/create-mid-period/advance/none for why `none` there is NOT "no credit
+# note" and why the `refund` and `offset` rows differ in whether they pay the invoice first.
+---
+- __matrix:
+    defaults:
+      provenance: coverage-gap
+      runners: [rspec]
+      dimensions: {interval: monthly, billing_time: calendar}
+      setup: {customer: {external_id: "golden_%{key}_cust", currency: EUR}, subscription: {external_id: "golden_%{key}_sub", billing_time: calendar}}
+    groups:
+      cmp:
+        dimensions: {taxes: none, created_day: 16, terminated_day: 25}
+        setup:
+          plan: {code: "golden_%{key}", interval: monthly, amount_cents: 3000, pay_in_advance: true}
+          subscription: {on_termination_credit_note: "%{cn}"}
+        timeline: [{at: "2024-04-16T00:00:00Z", do: create_subscription}, {at: "2024-04-25T10:00:00Z", do: terminate_subscription}]
+      tra:
+        dimensions: {taxes: none, trial_period: 10, terminated_day: 20}
+        setup:
+          plan: {code: "golden_%{key}", interval: monthly, amount_cents: 3000, pay_in_advance: true, trial_period: 10}
+          subscription: {on_termination_credit_note: "%{cn}"}
+        timeline:
+        - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-04-11T01:00:00Z", do: perform_billing}
+        - {at: "2024-04-20T10:00:00Z", do: terminate_subscription}
+      dna:
+        dimensions: {taxes: none, downgrade_day: 16}
+        setup:
+          plan: {code: "golden_%{key}_a", interval: monthly, amount_cents: 3000, pay_in_advance: true}
+          plans: [{code: "golden_%{key}_b", interval: monthly, amount_cents: 900, pay_in_advance: true}]
+          subscription: {on_termination_credit_note: "%{cn}"}
+        timeline:
+        - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-04-16T10:00:00Z", do: create_subscription, params: {plan_code: "golden_%{key}_b"}}
+        - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+      tma:
+        dimensions: {taxes: none, terminated_day: 16, on_termination_invoice: generate}
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount}]
+          plan: {code: "golden_%{key}", interval: monthly, amount_cents: 3000, pay_in_advance: true}
+          charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}}]
+          subscription: {on_termination_credit_note: "%{cn}"}
+        timeline:
+        - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-04-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 10}, count: 2}]}
+        - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+      rca:
+        dimensions: {taxes: none, terminated_day: 16, recreated_day: 20}
+        setup:
+          plan: {code: "golden_%{key}", interval: monthly, amount_cents: 3000, pay_in_advance: true}
+          subscription: {on_termination_credit_note: "%{cn}"}
+        timeline:
+        - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+        - {at: "2024-04-20T10:00:00Z", do: create_subscription}
+      ea:
+        dimensions: {taxes: none, created_day: 11, ending_day: 21}
+        setup:
+          plan: {code: "golden_%{key}", interval: monthly, amount_cents: 3000, pay_in_advance: true}
+          subscription: {ending_at: "2024-04-21T10:00:00Z", on_termination_credit_note: "%{cn}"}
+        timeline: [{at: "2024-04-11T00:00:00Z", do: create_subscription}, {at: "2024-04-21T10:15:00Z", do: perform_ended_subscriptions_termination}]
+      ga:
+        dimensions: {taxes: none, subscription_at: "2024-04-11T00:00:00Z", terminated_day: 21}
+        setup:
+          plan: {code: "golden_%{key}", interval: monthly, amount_cents: 9000, pay_in_advance: true}
+          subscription: {subscription_at: "2024-04-11T00:00:00Z", on_termination_credit_note: "%{cn}"}
+        timeline:
+        - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-04-11T01:00:00Z", do: perform_subscriptions_activation}
+        - {at: "2024-04-21T10:00:00Z", do: terminate_subscription}
+      upg:
+        dimensions: {taxes: none, upgrade_day: 16}
+        setup:
+          plan: {code: "golden_%{pa}", interval: monthly, amount_cents: 3000, pay_in_advance: true}
+          plans: [{code: "golden_%{pb}", interval: monthly, amount_cents: 9000, pay_in_advance: true}]
+          subscription: {on_termination_credit_note: "%{cn}"}
+        timeline:
+        - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-04-16T10:00:00Z", do: create_subscription, params: {plan_code: "golden_%{pb}"}}
+        - {at: "2024-04-16T10:01:00Z", do: perform_billing}
+- id: b09/create-mid-period/arrears/none
+  block: B9
+  key: b09_mid
+  setup: {plan: {code: golden_b09_mid, interval: monthly, amount_cents: 3100, pay_in_advance: false}}
+  timeline: [{at: "2024-03-16T00:00:00Z", do: create_subscription}, {at: "2024-04-01T01:00:00Z", do: perform_billing}]
+  axes: {transition: create-mid-period, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-16T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    A calendar subscription starting mid-period is billed only for the part of the period it existed:
+    16 March through 31 March inclusive is 16 days, and at 3_100¢ / 31 days = 100¢ per day that is
+    1_600¢. The from_date is asserted as the 16th rather than the 1st, because a proration bug that
+    charged the right amount for the wrong window would otherwise pass.
+
+- id: b09/terminate/arrears/none
+  block: B9
+  key: b09_term
+  setup: {plan: {code: golden_b09_term, interval: monthly, amount_cents: 3100, pay_in_advance: false}}
+  timeline: [{at: "2024-03-01T00:00:00Z", do: create_subscription}, {at: "2024-03-16T10:00:00Z", do: terminate_subscription}]
+  dimensions: {on_termination_invoice: generate}
+  axes: {transition: terminate, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-01T00:00:00Z"}
+  math: >-
+    Terminating mid-period bills immediately for the part consumed rather than waiting for the period
+    to end: 1 March through 16 March is 16 days × 100¢ = 1_600¢. The mirror image of the row above —
+    the same 1_600¢ from the opposite end of the month — which is what makes an off-by-one in either
+    direction visible as an asymmetry between the two.
+
+- id: b09/trial-end/arrears/none
+  block: B9
+  key: b09_trial
+  setup: {plan: {code: golden_b09_trial, interval: monthly, amount_cents: 3100, pay_in_advance: false, trial_period: 10}}
+  timeline: [{at: "2024-03-01T00:00:00Z", do: create_subscription}, {at: "2024-04-01T01:00:00Z", do: perform_billing}]
+  dimensions: {trial_period: 10}
+  axes: {transition: trial-end, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 2100
+      total_amount_cents: 2100
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 2100}
+  math: >-
+    A 10-day trial from 1 March covers 1–10 March free, so the first invoice charges only 11 March
+    through 31 March: 21 days × 100¢ = 2_100¢. The trial is subtracted from the period, not appended
+    to it — the subscription is not billed 3_100¢ and then credited, which would show the same total
+    but a different fee.
+
+- id: b09/upgrade/advance/credit
+  block: B9
+  group: upg
+  key: b09_up
+  vars: {cn: credit, pa: b09_up_a, pb: b09_up_b}
+  axes: {transition: upgrade, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 4500
+        credit_notes_amount_cents: 1500
+        total_amount_cents: 3000
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 1500
+      refund_amount_cents: 0
+  math: >-
+    The most entangled path in the product: one API call terminates a subscription, issues a credit
+    note for money already taken, starts a different subscription and bills it — and the credit note
+    has to land on the invoice the same call produces.
+    April has 30 days, so plan A is 100¢/day and plan B is 300¢/day, chosen so nothing rounds.
+    1 April: plan A is pay-in-advance, so the whole month is billed up front — 3_000¢.
+    16 April, `POST /subscriptions` with the same external_id and plan B: PlanUpgradeService creates
+    the new subscription and ActivateService#activate_for_upgrade terminates the old one, then bills
+    BOTH in one rotation.
+    Terminating a pay-in-advance subscription with `on_termination_credit_note: credit` returns the
+    unused part as spendable credit: 16–30 April is 15 days × 100¢ = 1_500¢.
+    The rotation invoice carries plan B's advance fee for the same 16–30 April, 15 days × 300¢ =
+    4_500¢. Plan A contributes nothing to it — no charges, and its subscription fee was taken up front
+    — so the credit note is spent in full against it, leaving 3_000¢.
+    Net for April: 3_000 paid up front − 1_500 credited + 4_500 for B = 6_000¢, i.e. 15 days of A at
+    100¢ plus 15 days of B at 300¢. Thirty days billed once each, no overlap and no gap.
+    THE BOUNDARY DAY IS NOT TREATED THE SAME WAY BY BOTH TERMINATION PATHS, and this row is where that
+    shows. Terminating an ARREARS subscription on the 16th bills through the 16th —
+    b09/terminate/arrears/none charges 16 days of a 31-day March. Terminating an ADVANCE subscription
+    on the 16th credits from the 16th, treating it as unused, which is what makes the upgrade add up:
+    the new subscription also starts on the 16th, so crediting 14 days instead would have charged the
+    customer for the 16th twice. Neither convention is wrong, but they are opposites, and a row that
+    assumes the arrears rule applies here is off by exactly one day — as this one was when first
+    written.
+    Were the credit note NOT spent on this invoice it would sit as a balance while the customer paid
+    4_500¢. The total alone would look plausible, so credit_notes_amount_cents is what separates them.
+
+- id: b09/downgrade/arrears/none
+  block: B9
+  key: b09_dn
+  setup:
+    plan: {code: golden_b09_dn_a, interval: monthly, amount_cents: 9000}
+    plans: [{code: golden_b09_dn_b, interval: monthly, amount_cents: 3000}]
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-16T10:00:00Z", do: create_subscription, params: {plan_code: golden_b09_dn_b}}
+  - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  - {at: "2024-06-01T01:00:00Z", do: perform_billing}
+  dimensions: {taxes: none}
+  axes: {transition: downgrade, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 9000
+        total_amount_cents: 9000
+      - select: {index: 1}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+  math: >-
+    A downgrade is the opposite of an upgrade in the one way that matters: it does not happen now.
+    Asking for the cheaper plan on 16 April leaves the customer on plan A for the rest of the period —
+    PlanDowngradeService creates a PENDING subscription instead of terminating anything, and the
+    switch happens at the period boundary. So April bills the full 9_000¢ with no proration and no
+    credit note, and May is the first period billed at plan B's 3_000¢.
+    Contrast b09/upgrade/advance/credit, where the same API call on the same day terminates
+    immediately, credits the unused 15 days and bills the new plan from the 16th. Same endpoint, same
+    customer, opposite behaviour — decided only by whether the target plan costs more.
+    Two invoices and nothing else is the assertion: a proration on the April invoice would mean the
+    downgrade took effect early and the customer was refunded for a plan they still had, and a third
+    invoice around 16 April would mean it was treated as an upgrade.
+
+- id: b09/upgrade/arrears/none
+  block: B9
+  key: b09_upa
+  setup:
+    organization: {premium_integrations: [progressive_billing]}
+    metrics: [{code: b09_upa_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b09_upa_a, interval: monthly, amount_cents: 0, usage_thresholds: [{amount_cents: 5000}]}
+    plans:
+    - code: golden_b09_upa_b
+      interval: monthly
+      amount_cents: 0
+      charges: [{billable_metric_code: b09_upa_sum, charge_model: standard, properties: {amount: "2"}}]
+    charges: [{billable_metric_code: b09_upa_sum, charge_model: standard, properties: {amount: "1"}}]
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-05T10:00:00Z", do: ingest_events, events: [{code: b09_upa_sum, properties: {amount: 100}}]}
+  - {at: "2024-04-05T11:00:00Z", do: perform_usage_update}
+  - {at: "2024-04-16T10:00:00Z", do: create_subscription, params: {plan_code: golden_b09_upa_b}}
+  - {at: "2024-04-16T10:01:00Z", do: perform_billing}
+  dimensions: {threshold_amount_cents: 5000, taxes: none}
+  axes: {transition: upgrade, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  premium: true
+  no_transaction: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {invoice_type: progressive_billing}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 10000
+        progressive_billing_credit_amount_cents: 10000
+        total_amount_cents: 0
+  math: >-
+    An upgrade with money already collected against a threshold — the same settlement as
+    b05/fixed/single/terminated-mid-period, but reached through a plan change rather than a
+    termination, which is the path a growing customer actually takes.
+    100 units on 5 April bill 10_000¢ at plan A's 1.00 per unit. Upgrading on 16 April terminates A
+    and bills it in arrears for the usage consumed — the same 100 units, still priced at A's rate
+    because they were metered while A was in force — and credits the 10_000¢ already taken. Total 0.
+    Plan B prices the same metric at 2.00, and B bills in arrears with no advance fee, so it
+    contributes nothing here and is not on either invoice: usage after the switch is B's to bill at
+    the end of April. If the final invoice ever re-prices A's usage at B's 2.00 it would read
+    20_000¢ of fees against a 10_000¢ credit and charge the customer 10_000¢ for usage already paid.
+    That is what the fees assertion pins, and why the two plans deliberately disagree on price.
+
+# ---------------------------------------------------------------------------------------------
+# Coverage-gap rows for the remaining 23 cells of B5.
+#
+# Three axis readings, made explicit because the arithmetic depends on them:
+#   threshold: `fixed` = non-recurring threshold(s); `recurring` = the one recurring threshold a
+#     plan may hold (UsageThreshold:20-21 makes it at most one); `multiple` = both kinds on one
+#     plan, which is the only shape that exercises the hand-off from the fixed ladder to the
+#     recurring re-arm (check_service.rb:36 vs :47).
+#   crossing: how many times a threshold invoice is DEMANDED inside one period.
+#   settlement: how the period closes — credited on the period invoice, refunded as a credit note
+#     because the period turned out to be worth less than was collected, or cut short by a
+#     termination.
+#
+# Every row asserts every invoice, threshold invoices included: the threshold invoice is finalized
+# before the period invoice exists, so asserting only the final invoice lets a reducer that moved
+# the money elsewhere pass for correct.
+#
+# No taxes anywhere in this block, deliberately. The progressive clamp in
+# credits/progressive_billing_service.rb:79-81 adds the amount the threshold invoice BILLED to the
+# period fee's precise_coupons_amount_cents rather than the amount actually credited, which
+# corrupts the taxable base — see b17/full-stack/invoice. With a 0% rate that defect cannot move
+# a number here, so these rows measure the credit arithmetic and nothing else. Adding a tax to any
+# `excess-to-credit-note` row below would turn it red for that reason, not for this one.
+
+# ---------------------------------------------------------------------------------------------
+# PAY-IN-ADVANCE SIDE OF THE BLOCK
+#
+# Everything below is `plan_pay_in_advance: "true"`, which is the only side where
+# `on_termination_credit_note` is legal at all (Subscription validates its absence in arrears,
+# subscription.rb:80). Two facts decide every number in this half:
+#
+# 1. THE COLUMN HAS NO DEFAULT (db/structure.sql:3703, nullable) but TerminateService coerces a
+#    blank value to `:credit` (terminate_service.rb:11). So the `none` cell of an advance
+#    subscription is NOT "no credit note" — it is the same behaviour as `credit`, and
+#    update_on_termination_actions! (:190) then writes `credit` onto the record. Every
+#    advance/none row below is paired with its advance/credit sibling and asserts the same
+#    numbers deliberately: that pairing IS the assertion.
+#
+# 2. `refund` AND `offset` ONLY DIVERGE FROM `credit` ACCORDING TO WHAT WAS PAID.
+#    calculate_refund (create_from_termination.rb:161-169) computes
+#    `paid_amount_prorated_to_subscription − creditable_used_amount`, and on an unpaid invoice
+#    total_paid_amount_cents is 0, so the potential refund is negative and clamps to 0. The
+#    consequence is that the axis is only observable in two different worlds:
+#      * on a PAID invoice, `refund` moves the money out (refund_amount_cents) while `credit`
+#        leaves it spendable — but `offset` collapses onto `refund`, because
+#        calculate_amounts (:139-146) hands offset only `total_creditable − refund`, which is 0.
+#      * on an UNPAID invoice, `offset` settles the open invoice (offset_amount_cents plus an
+#        InvoiceSettlement, create_service.rb:82-89) while `credit` leaves it due — but `refund`
+#        collapses onto `credit`.
+#    So the `refund` rows pay the invoice first and the `offset` rows deliberately do not. A row
+#    that got this backwards would assert a number identical to the `credit` sibling and prove
+#    nothing.
+#
+# Amounts are chosen so a day divides evenly: April 2024 has 30 days and the plans are 3_000¢
+# (100¢/day), 9_000¢ (300¢/day) and 900¢. No taxes, so the credit note's tax-inclusive totals and
+# its pre-tax sub_total coincide and CreditNotes::AdjustAmountsWithRoundingService has nothing to
+# nudge — B8 owns the with-tax arithmetic.
+
+- id: b09/create-mid-period/advance/none
+  block: B9
+  group: cmp
+  key: b09_cmpa_n
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: create-mid-period, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 1500
+        total_amount_cents: 1500
+        total_due_amount_cents: 1500
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1500, from_date: "2024-04-16T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      reason: order_cancellation
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 500
+      taxes_amount_cents: 0
+      credit_amount_cents: 500
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 500
+      balance_amount_cents: 500
+      items_count: 1
+  math: >-
+    A pay-in-advance subscription created on 16 April collects the REST OF THE PERIOD up front, not
+    a full month: Fees::SubscriptionService#first_subscription_amount (:157-177) bills
+    date_diff(16 Apr, 30 Apr) = 15 days at single_day_price = 3_000¢ / 30 = 100¢, so 1_500¢. The
+    fee window is asserted as 16–30 April because DatesService#from_datetime clamps the computed
+    1 April to started_at (dates_service.rb:73-75); an implementation that charged 1_500¢ for
+    1–30 April would otherwise pass.
+    Terminating on 25 April then credits the unused tail. remaining_duration
+    (create_from_termination.rb:114-129) is next_end_of_period (30 April) minus
+    terminated_at.end_of_day.to_date (25 April) = 5 days. THE DAY PRICE IS THE PLAN'S, NOT THE
+    PRORATED FEE'S: plan_amount_cents reads last_subscription_fee.amount_details["plan_amount_cents"],
+    which Fees::SubscriptionService#initialize_fee (:60) always sets to plan.amount_cents = 3_000¢,
+    so day_price stays 100¢ and the credit is 5 × 100 = 500¢. Deriving it from the fee instead
+    (1_500¢ / 30 = 50¢/day) would give 250¢ — half — which is why the mid-period cell is worth a
+    row of its own rather than being read off the full-period terminate row.
+    `none` and `credit` are the SAME behaviour here, and that is the point of this row.
+    on_termination_credit_note is nullable with no column default (db/structure.sql:3703) but
+    TerminateService coerces blank to `:credit` (terminate_service.rb:11), so an advance
+    subscription that never mentions the field still issues a spendable credit note — and
+    update_on_termination_actions! (:190) writes `credit` onto the record afterwards. The
+    alternative reading of `none` — "no credit note at all" — would give no credit note; that is
+    what b09/create-mid-period/advance/skip asserts instead.
+    credit_amount_cents 500 with refund_amount_cents 0 and total_due_amount_cents still 1_500 on
+    the first invoice is what separates this from the refund and offset siblings: a credit note
+    issued AGAINST an invoice does not reduce that invoice's due (invoice.rb:407), it only becomes
+    balance the customer can spend later. The second invoice is the termination invoice
+    (`on_termination_invoice: generate`, bill_in_arrears_fees?, terminate_service.rb:184-186) and
+    it is empty because the plan has no charges and no subscription fee is due — see
+    b09/terminate/advance/credit for the charge-bearing version.
+
+- id: b09/create-mid-period/advance/credit
+  block: B9
+  group: cmp
+  key: b09_cmpa_c
+  vars: {cn: credit}
+  axes: {transition: create-mid-period, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 1500
+        total_amount_cents: 1500
+        total_due_amount_cents: 1500
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      credit_amount_cents: 500
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 500
+      balance_amount_cents: 500
+      items_count: 1
+  math: >-
+    The explicit sibling of b09/create-mid-period/advance/none, and it must produce identical
+    numbers: 1_500¢ billed up front for 16–30 April, 5 unused days credited at the plan's 100¢/day
+    = 500¢, spendable (balance 500) rather than refunded. Writing `credit` where the record was
+    already going to be coerced to `credit` (terminate_service.rb:11) has to be a no-op, and the
+    pair is the only way to prove the coercion rather than assume it — if these two rows ever
+    disagree, the default moved.
+    Were the same dates handled as an ARREARS plan instead, nothing would be collected on 16 April
+    and the termination on the 25th would BILL 10 days (16–25 inclusive, 1_000¢) rather than credit
+    5 — the two modes are not mirror images, because the arrears path bills THROUGH the boundary day
+    (b09/terminate/arrears/none charges the 16th) while the advance path treats the termination day
+    as still consumed and credits only from the following day.
+
+- id: b09/create-mid-period/advance/skip
+  block: B9
+  group: cmp
+  key: b09_cmpa_s
+  vars: {cn: skip}
+  axes: {transition: create-mid-period, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 1500
+        total_amount_cents: 1500
+        total_due_amount_cents: 1500
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1500, from_date: "2024-04-16T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+  math: >-
+    `skip` is the only value that produces NO credit note:
+    generate_credit_note_for_unconsumed_subscription? (terminate_service.rb:170-174) requires
+    on_termination_credit_note to be one of credit/refund/offset, so CreateFromTermination is never
+    reached. The customer keeps having paid 1_500¢ for 16–30 April and walks away on the 25th with
+    the 5 unused days (500¢ at the plan's 100¢/day) forfeited — exactly the amount the `none`,
+    `credit`, `refund` and `offset` siblings each return by a different route.
+    There is no `credit_notes: 0` expectation to write, so the guard is the pair of amounts:
+    total_due_amount_cents 1_500 on the first invoice (unchanged, so nothing was offset) together
+    with an empty termination invoice (so nothing was spent). A credit note appearing here would
+    not move either number by itself, which is why the sibling rows assert the note directly and
+    this one asserts that the invoices stayed exactly as billed.
+
+- id: b09/create-mid-period/advance/refund
+  block: B9
+  group: cmp
+  key: b09_cmpa_r
+  vars: {cn: refund}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-16T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-16T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-25T10:00:00Z", do: terminate_subscription}
+  dimensions: {invoice_paid: true}
+  axes: {transition: create-mid-period, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 1500
+        total_amount_cents: 1500
+        payment_status: succeeded
+        total_due_amount_cents: 0
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      refund_status: pending
+      sub_total_excluding_taxes_amount_cents: 500
+      credit_amount_cents: 0
+      refund_amount_cents: 500
+      offset_amount_cents: 0
+      total_amount_cents: 500
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    Same 1_500¢ collected on 16 April and same 500¢ of unused days on the 25th, but this time the
+    money LEAVES instead of becoming spendable, and only because the invoice was paid first.
+    calculate_refund (create_from_termination.rb:161-169) takes
+    paid_amount_prorated_to_subscription − creditable_used_amount. paid_amount_prorated is
+    fee_amount / invoice.sub_total_including_taxes × total_paid = 1_500/1_500 × 1_500 = 1_500¢.
+    creditable_used_amount is day_price × used_duration, and used_duration (:195-211) runs from
+    date_service.from_datetime.to_date — 16 April, because from_datetime is clamped to started_at —
+    through 25 April inclusive = 10 days, so 1_000¢. potential_refund = 1_500 − 1_000 = 500, capped
+    at the total creditable 500 → refund 500, credit 500 − 500 = 0 (calculate_amounts :143).
+    WITHOUT THE pay_invoice STEP THIS ROW WOULD BE INDISTINGUISHABLE FROM ITS `credit` SIBLING:
+    total_paid_amount_cents would be 0, potential_refund would be −1_000, calculate_refund would
+    return 0 and the whole 500¢ would come back as credit_amount_cents. That is why the
+    distinguishing assertions here are credit_amount_cents 0 / refund_amount_cents 500 /
+    balance_amount_cents 0 rather than total_amount_cents, which is 500 under both.
+    refund_status stays `pending`: should_handle_refund? (create_service.rb:243-248) needs a
+    payment with a provider, and a manual payment has none, so no provider refund job is enqueued.
+    credit_status reads `available` even though nothing is spendable — CreateService sets it at
+    build time (:45) and only the consumption path (credit_note_service.rb:101) ever moves it — so
+    balance_amount_cents, not credit_status, is what says the money is gone.
+
+- id: b09/create-mid-period/advance/offset
+  block: B9
+  group: cmp
+  key: b09_cmpa_o
+  vars: {cn: offset}
+  dimensions: {invoice_paid: false}
+  axes: {transition: create-mid-period, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 1500
+        total_amount_cents: 1500
+        total_due_amount_cents: 1000
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 500
+      credit_amount_cents: 0
+      refund_amount_cents: 0
+      offset_amount_cents: 500
+      total_amount_cents: 500
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The mirror of the refund row: the invoice is deliberately LEFT UNPAID, so there is nothing to
+    refund and the whole 500¢ of unused days is written off against the open invoice instead.
+    calculate_amounts (create_from_termination.rb:145) gives offset
+    `total_creditable − refund`, and refund is 0 here because
+    paid_amount_prorated_to_subscription is 0 on an unpaid invoice — so offset_amount_cents is the
+    full 500.
+    THE OBSERVABLE THAT SEPARATES THIS FROM EVERY OTHER VALUE IS ON THE INVOICE, NOT THE NOTE.
+    CreditNotes::CreateService (:82-89) raises an InvoiceSettlement for a positive offset, and
+    Invoice#total_due_amount_cents (invoice.rb:407) is total − paid − offset, so the first invoice
+    now owes 1_500 − 0 − 500 = 1_000¢ where the credit, none and skip siblings all still owe 1_500.
+    total_amount_cents stays 1_500 in every case, which is exactly why the row asserts the due.
+    Note the asymmetry this creates with the refund cell: PAY the invoice and `offset` collapses
+    onto `refund` (creditable − refund = 0, so offset_amount_cents would be 0 and
+    refund_amount_cents 500); leave it unpaid and `refund` collapses onto `credit`. Neither payment
+    state distinguishes all five values, so the five rows of this family are split across both.
+
+- id: b09/trial-end/advance/none
+  block: B9
+  group: tra
+  key: b09_tra_n
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: trial-end, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      reason: order_cancellation
+      credit_amount_cents: 1000
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 1000
+      balance_amount_cents: 1000
+      items_count: 1
+  math: >-
+    A trial on a PAY-IN-ADVANCE plan produces no invoice at all on creation:
+    ActivateService#bill_subscription (activate_service.rb:188) enqueues BillSubscriptionJob only
+    `if plan.pay_in_advance? && !subscription.in_trial_period?`, and the 10-day trial from 1 April
+    is still running. The clock has to move for the invoice to exist — hence needs_forward_time and
+    the perform_billing step on 11 April, which is Clock::FreeTrialSubscriptionsBillerJob →
+    Subscriptions::FreeTrialBillingService (:18-25) billing the subscription with
+    invoicing_reason :subscription_starting and skip_charges.
+    The amount is 2_000¢: first_subscription_amount (fees/subscription_service.rb:157-177) moves
+    from_datetime to initial_started_at + 10 days = 11 April, leaving date_diff(11 Apr, 30 Apr) =
+    20 days at 3_000¢ / 30 = 100¢. THE FEE WINDOW IS STILL THE WHOLE PERIOD — 1–30 April — because
+    the trial shift is local to the amount computation while properties come from the boundaries
+    (:56); a row asserting a 11 April from_date would be asserting a window Lago does not record.
+    Terminating on 20 April credits 30 − 20 = 10 days = 1_000¢. The trial branch of
+    remaining_duration (create_from_termination.rb:118-124) does NOT fire: it needs
+    trial_end_date >= billed_from, and 11 April is before 20 April. It matters that the credit base
+    is capped at last_subscription_fee.amount_cents (:73) — 2_000¢ here, not the plan's 3_000¢ — so
+    a longer trial plus an earlier termination is where that clamp becomes visible.
+    `none` behaves as `credit` for the same reason as the create-mid-period family:
+    terminate_service.rb:11 coerces the blank column to :credit. Read as "no credit note", this
+    cell would show no note and the customer would forfeit 1_000¢.
+
+- id: b09/trial-end/advance/credit
+  block: B9
+  group: tra
+  key: b09_tra_c
+  vars: {cn: credit}
+  axes: {transition: trial-end, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 2000
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      credit_amount_cents: 1000
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      balance_amount_cents: 1000
+      items_count: 1
+  math: >-
+    Explicit `credit` against the same trial-end shape, and it must match
+    b09/trial-end/advance/none exactly: 2_000¢ billed at trial end for 11–30 April (20 days at
+    100¢), 1_000¢ credited for the 10 unused days after the 20th, balance spendable.
+    Two candidate derivations this row rules out. The first: crediting from the TRIAL END rather
+    than from the termination day would give 30 − 11 = 19 days = 1_900¢ — remaining_duration
+    (create_from_termination.rb:114-129) measures from terminated_at, and its trial branch only
+    intervenes when the trial has NOT yet ended by the termination day. The second: taking the day
+    price from the invoiced fee (2_000¢ / 20 trial-free days = 100¢, coincidentally the same here)
+    rather than from amount_details["plan_amount_cents"] / 30 — which is why the create-mid-period
+    family, where those two differ by a factor of two, carries that assertion instead.
+
+- id: b09/trial-end/advance/skip
+  block: B9
+  group: tra
+  key: b09_tra_s
+  vars: {cn: skip}
+  axes: {transition: trial-end, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+  math: >-
+    The trial-end invoice is identical to its siblings — 2_000¢ for 11–30 April, 20 days at the
+    3_000¢/30 = 100¢ day price, billed by Subscriptions::FreeTrialBillingService when the clock
+    reaches the trial end — and the termination on 20 April issues nothing, because
+    generate_credit_note_for_unconsumed_subscription? (terminate_service.rb:170-174) excludes
+    `skip`. The 1_000¢ covering 21–30 April is forfeited.
+    The guard is that both invoices stay exactly as billed: total_due_amount_cents 2_000 on the
+    trial-end invoice (nothing offset) and an empty termination invoice (nothing spent). Note that
+    `skip` still runs update_on_termination_actions! (:188-195) and persists `skip` on the record,
+    so this is a deliberate choice recorded on the subscription rather than an absence.
+
+- id: b09/trial-end/advance/refund
+  block: B9
+  group: tra
+  key: b09_tra_r
+  vars: {cn: refund}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-11T01:00:00Z", do: perform_billing}
+  - {at: "2024-04-11T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-20T10:00:00Z", do: terminate_subscription}
+  dimensions: {invoice_paid: true}
+  axes: {transition: trial-end, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  needs_forward_time: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        payment_status: succeeded
+        total_due_amount_cents: 0
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      refund_status: pending
+      sub_total_excluding_taxes_amount_cents: 1000
+      credit_amount_cents: 0
+      refund_amount_cents: 1000
+      offset_amount_cents: 0
+      total_amount_cents: 1000
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The trial makes the refund split turn on a number that only exists after the trial ended.
+    used_duration (create_from_termination.rb:195-211) starts at date_service.from_datetime — 1
+    April — but its trial branch (:199-202) pushes billed_from to trial_end_date = 11 April, so the
+    used window is 11–20 April inclusive = 10 days = 1_000¢. paid_amount_prorated_to_subscription
+    is 2_000/2_000 × 2_000 = 2_000¢, so potential_refund = 2_000 − 1_000 = 1_000, capped at the
+    1_000¢ total creditable → refund 1_000, credit 0.
+    That the two halves come out equal is a property of terminating exactly one trial-length after
+    the trial ended, and it is why the assertion is credit_amount_cents 0 versus
+    refund_amount_cents 1_000 rather than the total: total_amount_cents is 1_000 for `credit`,
+    `refund` and `offset` alike here.
+    HAD THE TRIAL BRANCH OF used_duration NOT FIRED, billed_from would be 1 April, the used window
+    would be 20 days = 2_000¢, potential_refund would be 0 and this row would silently degrade into
+    the `credit` sibling — 1_000¢ of credit, no cash. So the pair
+    (b09/trial-end/advance/credit, this row) is what proves the trial is excluded from "used".
+    The pay_invoice step needs the premium licence plus the manual_payments integration; without a
+    payment no refund is possible at all (a manual POST /credit_notes would be rejected with
+    refund_amount_cents/cannot_refund_unpaid_invoice, validate_service.rb:100-103, while the
+    automatic path silently returns credit instead).
+
+- id: b09/trial-end/advance/offset
+  block: B9
+  group: tra
+  key: b09_tra_o
+  vars: {cn: offset}
+  dimensions: {invoice_paid: false}
+  axes: {transition: trial-end, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 1000
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      sub_total_excluding_taxes_amount_cents: 1000
+      credit_amount_cents: 0
+      refund_amount_cents: 0
+      offset_amount_cents: 1000
+      total_amount_cents: 1000
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The unpaid counterpart of b09/trial-end/advance/refund. Same 2_000¢ trial-end invoice, same
+    1_000¢ of unused days after the 20th, but with total_paid_amount_cents at 0 the refund clamps
+    to 0 (create_from_termination.rb:164) and calculate_amounts (:145) routes the whole creditable
+    amount to offset instead.
+    The distinguishing number is again on the invoice: an InvoiceSettlement for 1_000¢
+    (create_service.rb:82-89) drops total_due_amount_cents from 2_000 to 1_000 (invoice.rb:407),
+    where the credit, none and skip siblings all still owe the full 2_000. The customer never paid
+    the trial-end invoice and now owes only the ten days actually used — which is the same
+    settlement the refund row reaches by taking cash in and handing cash back.
+    Note that a `credit` note of 1_000¢ would NOT settle this invoice: Credits::CreditNoteService
+    excludes notes issued against the invoice being billed
+    (credit_note_service.rb:73-81, `where.not(invoice_id: invoice.id)`), so credit is only
+    spendable on a LATER invoice. That is what b09/recreate-same-external-id/advance/credit asserts.
+
+- id: b09/upgrade/advance/none
+  block: B9
+  group: upg
+  key: b09_upn
+  vars: {pa: b09_upna, pb: b09_upnb}
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: upgrade, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 4500
+        credit_notes_amount_cents: 1500
+        total_amount_cents: 3000
+    credit_note:
+      select: {index: -1}
+      credit_status: consumed
+      credit_amount_cents: 1500
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The upgrade path with the field left unset, and it is NOT a no-credit-note path:
+    TerminateService is called from ActivateService#activate_for_upgrade (:65-68) with
+    on_termination_credit_note defaulting to the subscription's value, which is nil, which
+    terminate_service.rb:11 coerces to :credit. So the numbers must equal
+    b09/upgrade/advance/credit exactly — 3_000¢ collected on 1 April, a 1_500¢ credit note for
+    16–30 April, and a rotation invoice of 15 days of plan B at 9_000¢/30 = 300¢ = 4_500¢ against
+    which the credit is spent in full, leaving 3_000¢.
+    Note the extra day the upgrade path takes: remaining_duration subtracts one
+    (create_from_termination.rb:116, `billed_from -= 1.day if upgrade`), so 16–30 April is credited
+    as 15 days rather than the 14 a plain termination on the 16th credits
+    (b09/terminate/advance/credit). Both are coherent — the new subscription also starts on the
+    16th, so crediting 14 would charge the customer for that day twice — but they are opposite
+    conventions and assuming either one in the other row is off by exactly 100¢ here.
+    This row adds two assertions the covered `credit` sibling does not make:
+    balance_amount_cents 0 and credit_status `consumed`. Those are what prove the credit was
+    actually SPENT on the rotation invoice rather than merely netted in a total —
+    Credits::CreditNoteService#update_remaining_credit (credit_note_service.rb:96-102) is the only
+    thing that moves either field, and it runs only when a positive credit is applied.
+
+- id: b09/upgrade/advance/skip
+  block: B9
+  group: upg
+  key: b09_ups
+  vars: {cn: skip, pa: b09_upsa, pb: b09_upsb}
+  axes: {transition: upgrade, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 4500
+        credit_notes_amount_cents: 0
+        total_amount_cents: 4500
+  math: >-
+    The most expensive cell in the block for a customer, and the one worth guarding hardest:
+    upgrading a pay-in-advance subscription whose on_termination_credit_note is `skip` bills the
+    new plan pro rata WITHOUT returning the unused part of the old one. April: 3_000¢ taken up
+    front on the 1st, then 15 days of plan B at 300¢ = 4_500¢ on the 16th, with no credit note —
+    generate_credit_note_for_unconsumed_subscription? (terminate_service.rb:170-174) excludes
+    `skip` before CreateFromTermination is ever reached. The customer pays 7_500¢ for a month in
+    which 1_500¢ of plan A (16–30 April) was never used.
+    Against b09/upgrade/advance/none and /credit, which both settle at 3_000¢ on the second
+    invoice, the whole 1_500¢ is the difference, and credit_notes_amount_cents 0 versus 1_500 is
+    where it shows. total_amount_cents alone would not localise it: a rotation invoice that priced
+    plan B wrongly could also read 4_500.
+    Plan A contributes nothing to the rotation invoice — its subscription fee was collected in
+    advance and should_create_subscription_fee? (calculate_fees_service.rb:270-293) refuses another
+    one for a terminated advance subscription — so the 4_500¢ is plan B alone, computed by
+    upgraded_amount (fees/subscription_service.rb:225-245) as date_diff(16 Apr, 30 Apr) × 9_000/30.
+
+- id: b09/downgrade/advance/none
+  block: B9
+  group: dna
+  key: b09_dna_n
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: downgrade, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        credit_notes_amount_cents: 0
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 3000, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 900
+        total_amount_cents: 900
+        credit_notes_amount_cents: 0
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 900, from_date: "2024-05-01T00:00:00Z", to_date: "2024-05-31T23:59:59Z"}
+  math: >-
+    THE on_termination_credit_note AXIS IS INERT ON THE DOWNGRADE PATH, AND THAT IS THIS ROW'S
+    FINDING. A downgrade does not terminate anything now: PlanDowngradeService creates a PENDING
+    next_subscription (plan_downgrade_service.rb:33-47) and April is billed in full. At the
+    boundary Subscriptions::OrganizationBillingService (:20) enqueues TerminateJob, which calls
+    TerminateService#terminate_and_start_next → ActivateService#activate_for_downgrade — and that
+    method calls `previous_subscription.mark_as_terminated!` DIRECTLY (activate_service.rb:98).
+    TerminateService#call, the only place generate_credit_note_for_unconsumed_subscription? and
+    CreateFromTermination are reached, never runs. So no credit note is issued whatever the field
+    says, and the field is not even copied onto the new subscription (:33-47 omits it).
+    The numbers that guard this are not the 3_000¢ and 900¢ — they are credit_notes_amount_cents 0
+    on both invoices together with the May invoice reading its full 900¢. HAD TerminateService BEEN
+    USED, the credit would have been large: terminated_at is 1 May, so day_price would be
+    3_000 / 31 = 96.77¢, next_end_of_period 31 May and remaining_duration 31 − 1 = 30 days →
+    2_903¢, capped at the 3_000¢ April fee, and the 900¢ May invoice would have settled at 0. A
+    row asserting only "two invoices" would not see the difference.
+    Two invoices rather than three is itself the upgrade/downgrade asymmetry: the same endpoint on
+    the same day with a DEARER plan produces a rotation invoice on 16 April
+    (b09/upgrade/advance/none), and April is prorated. Here 16 April produces nothing at all, and
+    the May invoice is a full period — first_subscription_amount over 1–31 May at 900/31 per day —
+    not a prorated one.
+
+- id: b09/downgrade/advance/credit
+  block: B9
+  group: dna
+  key: b09_dna_c
+  vars: {cn: credit}
+  axes: {transition: downgrade, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        credit_notes_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 900
+        total_amount_cents: 900
+        credit_notes_amount_cents: 0
+  math: >-
+    `credit` set explicitly, and asserted to change nothing. This is the control row for
+    b09/downgrade/advance/none: the field is honoured on the terminate and upgrade paths, so if it
+    were read here too the May invoice would be settled by a 2_903¢ credit note (day_price
+    3_000/31 = 96.77¢ over the 30 remaining days of May, capped at the 3_000¢ April fee) and read
+    total_amount_cents 0 with credit_notes_amount_cents 900. It reads 900 and 0 because
+    ActivateService#activate_for_downgrade terminates the old subscription with
+    `mark_as_terminated!` (activate_service.rb:98) instead of going through TerminateService, so
+    CreateFromTermination is unreachable on this path.
+    Nothing about that is wrong for the money: the switch lands exactly on the period boundary, so
+    there are no unused days to return. What the row pins is that the mechanism is ABSENT rather
+    than merely computing zero — the two give the same total but a different number of credit
+    notes, and only asserting both invoices' credit_notes_amount_cents tells them apart.
+
+- id: b09/downgrade/advance/skip
+  block: B9
+  group: dna
+  key: b09_dna_s
+  vars: {cn: skip}
+  axes: {transition: downgrade, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        credit_notes_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 900
+        total_amount_cents: 900
+        credit_notes_amount_cents: 0
+  math: >-
+    `skip` is the one value whose intended behaviour — issue nothing — coincides with what the
+    downgrade path does anyway, which is exactly why it is worth writing down: it is the cell where
+    a reader would wrongly conclude the axis is honoured. April 3_000¢ in advance, May 900¢ in
+    advance, no credit note, no proration. Identical to b09/downgrade/advance/none and /credit, and
+    reached by a completely different route: those two are coerced-to-credit and explicit-credit
+    that never get read, while this one would have produced nothing even on the terminate path
+    (generate_credit_note_for_unconsumed_subscription?, terminate_service.rb:170-174).
+    The five downgrade rows are therefore a single assertion made five times: on this transition
+    on_termination_credit_note never reaches CreditNotes::CreateFromTermination, because
+    ActivateService#activate_for_downgrade bypasses TerminateService#call (activate_service.rb:98).
+    Any of the five turning red while the others stay green would mean the field started being read
+    on this path.
+
+- id: b09/downgrade/advance/refund
+  block: B9
+  group: dna
+  key: b09_dna_r
+  vars: {cn: refund}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-02T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-16T10:00:00Z", do: create_subscription, params: {plan_code: golden_b09_dna_r_b}}
+  - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  dimensions: {invoice_paid: true}
+  axes: {transition: downgrade, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  needs_forward_time: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        payment_status: succeeded
+        total_due_amount_cents: 0
+        credit_notes_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 900
+        total_amount_cents: 900
+        credit_notes_amount_cents: 0
+  math: >-
+    The row is built so that a refund WOULD have been possible and still does not happen. April's
+    3_000¢ advance invoice is paid in full on 2 April, so total_paid_amount_cents is 3_000 and
+    calculate_refund (create_from_termination.rb:161-169) would have had real cash to hand back —
+    on the terminate path that is exactly what b09/terminate/advance/refund shows. Here the
+    downgrade reaches ActivateService#activate_for_downgrade, which terminates the previous
+    subscription with `mark_as_terminated!` (activate_service.rb:98) and never enters
+    TerminateService#call, so CreateFromTermination is not invoked and no cash moves.
+    Assertions: total_due_amount_cents 0 on the April invoice proves the payment really landed (so
+    the row is not passing because there was nothing to refund), and credit_notes_amount_cents 0 on
+    both invoices plus a full 900¢ May invoice prove nothing was returned. Had TerminateService run
+    with `refund`, the note would have been 2_903¢ of unused May (3_000/31 per day × 30 days,
+    capped at the April fee), and with 3_000¢ paid against 96.77¢ of used May the entire amount
+    would have gone out as refund_amount_cents rather than credit.
+
+- id: b09/downgrade/advance/offset
+  block: B9
+  group: dna
+  key: b09_dna_o
+  vars: {cn: offset}
+  dimensions: {invoice_paid: false}
+  axes: {transition: downgrade, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+        credit_notes_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 900
+        total_amount_cents: 900
+        credit_notes_amount_cents: 0
+  math: >-
+    `offset` is the value with the loudest invoice-level side effect — an InvoiceSettlement that
+    reduces Invoice#total_due_amount_cents (create_service.rb:82-89, invoice.rb:407) — which makes
+    it the sharpest probe for whether the downgrade path reads the field at all. It does not:
+    total_due_amount_cents on the unpaid April invoice is still the full 3_000¢, so no settlement
+    was raised, because ActivateService#activate_for_downgrade never calls TerminateService#call
+    (activate_service.rb:98).
+    Had it been read, the April invoice would now owe 3_000 − 2_903 = 97¢: unpaid means
+    paid_amount_prorated_to_subscription is 0, refund clamps to 0, and calculate_amounts (:145)
+    routes the entire 2_903¢ of unused May to offset. 97¢ versus 3_000¢ is not a number any other
+    defect produces, which is what makes this the best of the five downgrade rows at localising the
+    behaviour.
+    Compare b09/create-mid-period/advance/offset and b09/terminate/advance/offset, where the same
+    field on the same kind of plan does drop the due — one endpoint, two paths, opposite outcomes,
+    decided only by whether the target plan is cheaper.
+
+- id: b09/terminate/advance/none
+  block: B9
+  group: tma
+  key: b09_tma_n
+  vars: {m: b09_tmn_units}
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: terminate, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 3000, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 1400
+        total_amount_cents: 600
+        fees_count: 1
+        fees:
+          - {fee_type: charge, amount_cents: 2000, units: 20, events_count: 2, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-16T10:00:00Z"}
+    credit_note:
+      select: {index: -1}
+      reason: order_cancellation
+      credit_status: consumed
+      sub_total_excluding_taxes_amount_cents: 1400
+      taxes_amount_cents: 0
+      credit_amount_cents: 1400
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 1400
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The plainest shape in the block and the one the whole advance half is calibrated against: full
+    month collected up front, terminated on the 16th, unused tail returned as spendable credit and
+    immediately spent on the invoice the termination itself raises.
+    1 April, pay-in-advance: the whole period is billed, 3_000¢ for 1–30 April. The charge is
+    arrears and skip_charges is set on the creation invoice
+    (activate_service.rb:188-194), so it carries the subscription fee only.
+    16 April 10:00, DELETE /subscriptions: mark_as_terminated!, then a credit note, then
+    bill_subscription (terminate_service.rb:32-61) — in that order, which is why the credit exists
+    before the termination invoice is computed.
+    THE CREDIT IS 14 DAYS, NOT 15. remaining_duration (create_from_termination.rb:114-129) is
+    next_end_of_period (30 April) minus terminated_at.end_of_day.to_date (16 April) = 14, at
+    3_000/30 = 100¢ → 1_400¢. The `-= 1.day if upgrade` clause does not apply to a plain
+    termination, so the 16th itself stays consumed. b09/upgrade/advance/none credits 15 days for
+    the same calendar day precisely because that clause does apply there, and the difference is
+    exactly this 100¢.
+    The termination invoice bills 1–16 April of usage: charges_to_datetime is clamped to
+    terminated_at (dates_service.rb:122), the two events of 10 units are inside it, and the
+    standard charge at 1.00 gives 20 × 100¢ = 2_000¢. There is no second SUBSCRIPTION fee —
+    should_create_subscription_fee? (calculate_fees_service.rb:270-293) ends at
+    `terminated_at > invoice.created_at`, which is false when both land on the same frozen instant,
+    while should_create_charge_fees? (:344-353) is unconditional. That `>` versus unconditional
+    asymmetry is the whole reason the invoice has one fee and not two.
+    The 1_400¢ credit then lands on that 2_000¢ invoice: Credits::CreditNoteService takes
+    min(balance, remaining) (credit_note_service.rb:88-94), leaving total 600¢ and a consumed note
+    with balance 0. Only one fee carries it, so the weighted split in apply_credit_to_fees
+    (:104-115) is trivial here — with a second fee the credit would divide by
+    (amount − precise_coupons + taxes) / invoice_total rather than by gross amount.
+    `none` is the same behaviour as `credit`: the column is nullable with no default
+    (db/structure.sql:3703) and terminate_service.rb:11 coerces blank to :credit. Read as "issue
+    nothing", this cell would leave the termination invoice at 2_000¢ — which is what
+    b09/terminate/advance/skip asserts.
+
+- id: b09/terminate/advance/credit
+  block: B9
+  group: tma
+  key: b09_tma_c
+  vars: {cn: credit, m: b09_tmc_units}
+  axes: {transition: terminate, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 1400
+        total_amount_cents: 600
+        fees_count: 1
+    credit_note:
+      select: {index: -1}
+      credit_status: consumed
+      credit_amount_cents: 1400
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 1400
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    Explicit `credit` on the calibration shape, and it must equal b09/terminate/advance/none to the
+    cent: 3_000¢ up front for April, 14 unused days from the 16th at 100¢ = 1_400¢ credited, spent
+    in full against the 2_000¢ of usage the termination invoice bills, leaving 600¢.
+    `credit` means the money stays inside Lago as balance rather than going back to the customer,
+    and here it is consumed the same instant it is created — the termination invoice exists
+    precisely because on_termination_invoice is `generate` (terminate_service.rb:184-186), and
+    Credits::CreditNoteService excludes only notes issued AGAINST the invoice being billed
+    (credit_note_service.rb:73-81), which this one is not. With `on_termination_invoice: skip`
+    there would be one invoice and a 1_400¢ balance left standing.
+    The two candidates this row separates from `credit` are its siblings: `refund` on the same
+    dates and a paid invoice sends the same 1_400¢ out as cash and leaves the termination invoice
+    at its full 2_000¢, and `offset` on an unpaid invoice drops the FIRST invoice's due to 1_600¢
+    and also leaves the termination invoice at 2_000¢. All three notes total 1_400¢, so
+    credit_notes_amount_cents on the second invoice plus credit_amount_cents on the note are what
+    tell them apart.
+
+- id: b09/terminate/advance/skip
+  block: B9
+  group: tma
+  key: b09_tma_s
+  vars: {cn: skip, m: b09_tms_units}
+  axes: {transition: terminate, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: charge, amount_cents: 2000, units: 20, events_count: 2, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-16T10:00:00Z"}
+  math: >-
+    The forfeiting cell. Same 3_000¢ collected for April on the 1st and same 2_000¢ of usage billed
+    on termination, but generate_credit_note_for_unconsumed_subscription?
+    (terminate_service.rb:170-174) refuses to reach CreateFromTermination for `skip`, so the 1_400¢
+    covering 17–30 April is simply kept. The customer pays 5_000¢ for half a month of plan plus its
+    usage, where `credit` and `none` settle at 3_600¢.
+    credit_notes_amount_cents 0 with total_amount_cents 2_000 on the termination invoice is the
+    assertion, and it is exactly 1_400¢ away from the `credit` sibling's 600¢ — the gap is the
+    entire behaviour of the axis. total_due_amount_cents 3_000 on the first invoice rules out the
+    other way of not-crediting: an offset, which would have dropped it to 1_600¢.
+    Note that the usage side is untouched: on_termination_credit_note controls only the credit
+    note, while on_termination_invoice controls whether the usage invoice is raised at all
+    (bill_in_arrears_fees?, :184-186). Setting `skip` on the wrong one of those two fields loses
+    2_000¢ of revenue instead of returning 1_400¢ to the customer, which is why both are asserted
+    here rather than only the total.
+
+- id: b09/terminate/advance/refund
+  block: B9
+  group: tma
+  key: b09_tma_r
+  vars: {cn: refund, m: b09_tmr_units}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-01T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-05T10:00:00Z", do: ingest_events, events: [{code: b09_tmr_units, properties: {amount: 10}, count: 2}]}
+  - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  dimensions: {on_termination_invoice: ~, invoice_paid: true}
+  axes: {transition: terminate, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        payment_status: succeeded
+        total_due_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 2000
+        fees_count: 1
+    credit_note:
+      select: {index: -1}
+      refund_status: pending
+      sub_total_excluding_taxes_amount_cents: 1400
+      credit_amount_cents: 0
+      refund_amount_cents: 1400
+      offset_amount_cents: 0
+      total_amount_cents: 1400
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The paid version of the calibration shape, and the only one where money actually leaves.
+    calculate_refund (create_from_termination.rb:161-169): paid_amount_prorated_to_subscription is
+    fee_amount / invoice.sub_total_including_taxes × total_paid = 3_000/3_000 × 3_000 = 3_000¢;
+    creditable_used_amount is day_price × used_duration where used_duration (:195-211) runs from
+    date_service.from_datetime (1 April) through terminated_at (16 April) inclusive = 16 days →
+    1_600¢. potential_refund = 3_000 − 1_600 = 1_400, and the cap is the 1_400¢ total creditable,
+    so the refund takes the whole note: refund 1_400, credit 1_400 − 1_400 = 0
+    (calculate_amounts :143).
+    Two things make this row hard to fake. First, WITHOUT the pay_invoice step it would be
+    indistinguishable from b09/terminate/advance/credit — total_paid would be 0, potential_refund
+    −1_600, refund 0, and the 1_400¢ would come back as credit. Second, because the credit side is
+    0 there is nothing left to spend, so the termination invoice bills its full 2_000¢ of usage
+    where the `credit` sibling settles at 600¢. credit_amount_cents 0 / refund_amount_cents 1_400
+    on the note and credit_notes_amount_cents 0 on the second invoice are therefore two independent
+    witnesses to the same split.
+    That used and unused happen to sum to the paid amount is not a coincidence to lean on: 16 used
+    days plus 14 unused is the whole 30-day period, so the refund is the full unused tail. Had the
+    customer paid only part of the invoice, potential_refund would have been smaller than the
+    creditable amount and the note would have carried BOTH a refund and a credit — the arrangement
+    spec/scenarios/subscriptions/terminate_manually_spec.rb:144 exercises with a 75/90 payment.
+    refund_status stays `pending` because should_handle_refund? (create_service.rb:243-248)
+    requires a payment with a provider and a manual payment has none.
+
+- id: b09/terminate/advance/offset
+  block: B9
+  group: tma
+  key: b09_tma_o
+  vars: {cn: offset, m: b09_tmo_units}
+  dimensions: {on_termination_invoice: ~, invoice_paid: false}
+  axes: {transition: terminate, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 1600
+      - select: {index: 1}
+        fees_amount_cents: 2000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 2000
+        fees_count: 1
+    credit_note:
+      select: {index: -1}
+      sub_total_excluding_taxes_amount_cents: 1400
+      credit_amount_cents: 0
+      refund_amount_cents: 0
+      offset_amount_cents: 1400
+      total_amount_cents: 1400
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The unpaid version: the April invoice was never settled, so there is no cash to refund and the
+    1_400¢ of unused days is written off against what is still owed. calculate_refund returns 0
+    because paid_amount_prorated_to_subscription is 0 on an unpaid invoice, and calculate_amounts
+    (create_from_termination.rb:145) then hands the entire creditable amount to offset.
+    total_due_amount_cents 1_600 on the first invoice is the number nothing else produces: an
+    InvoiceSettlement of 1_400¢ (create_service.rb:82-89) enters Invoice#total_due_amount_cents as
+    total − paid − offset = 3_000 − 0 − 1_400 (invoice.rb:407). `credit`, `none` and `skip` all
+    leave that at 3_000, and `refund` on a paid invoice leaves it at 0 by a different mechanism
+    (paid, not offset). The invoice's own total_amount_cents stays 3_000 throughout, so asserting
+    the total would have proved nothing.
+    The offset does NOT reach the termination invoice: offset settles the invoice the note was
+    issued against, and only credit_amount_cents becomes spendable balance elsewhere, so the 2_000¢
+    of usage is billed in full where the `credit` sibling settles at 600¢.
+    Two things worth pinning here. `credit_notes_amount_cents` on the first invoice is not asserted
+    because it never reflects notes issued AGAINST that invoice — only
+    CreateFromProgressiveBillingInvoice's sibling sets the invoice-side offset field — so the due is
+    the honest observable. And with 3_000¢ owed and 1_400¢ offset the invoice is not fully settled,
+    so InvoiceSettlements::CreateService#mark_invoice_as_paid! (:34) does not fire and
+    payment_status stays pending; had the offset covered the whole invoice it would have been
+    marked succeeded.
+
+- id: b09/recreate-same-external-id/advance/none
+  block: B9
+  group: rca
+  key: b09_rca_n
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: recreate-same-external-id, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+      - select: {index: 1}
+        fees_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 0
+      - select: {index: 2}
+        fees_amount_cents: 1100
+        credit_notes_amount_cents: 1100
+        total_amount_cents: 0
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1100, from_date: "2024-04-20T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+    credit_note:
+      select: {index: -1}
+      reason: order_cancellation
+      credit_status: available
+      credit_amount_cents: 1400
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 1400
+      balance_amount_cents: 300
+      items_count: 1
+  math: >-
+    Reusing an external_id after a termination is the one transition where the credit note has a
+    LATER invoice to land on, so it is where `credit` and `refund` finally diverge on the invoice
+    rather than only on the note.
+    1 April: 3_000¢ billed in advance for the whole month. 16 April: terminated, credit note for
+    30 − 16 = 14 unused days at 3_000/30 = 100¢ → 1_400¢, plus an empty termination invoice (no
+    charges on the plan, and no second subscription fee — should_create_subscription_fee?,
+    calculate_fees_service.rb:270-293).
+    20 April, POST /subscriptions with the SAME external_id: CreateService finds no editable
+    subscription (the old one is terminated, so it is neither active nor starting_in_the_future,
+    create_service.rb:253-259) and no active conflict on the external_id (:66-70), so it builds a
+    brand-new Subscription rather than upgrading — previous_subscription stays nil, which is what
+    separates this transition from `upgrade`. Being pay-in-advance and starting today it bills at
+    once: from_datetime is clamped to started_at (dates_service.rb:73-75) so
+    first_subscription_amount covers 20–30 April = 11 days at 100¢ = 1_100¢.
+    THEN THE 1_400¢ CREDIT IS SPENT ON IT. Credits::CreditNoteService takes the customer's
+    available notes excluding those issued against the invoice being billed
+    (credit_note_service.rb:73-81) and applies min(balance, remaining) = min(1_400, 1_100) = 1_100
+    (:88-94), so the third invoice settles at 0 and the note retains
+    balance_amount_cents 300 with credit_status still `available` — consumed! only fires when the
+    balance reaches zero (:101).
+    That 300¢ is the row's sharpest number. A credit note that spread by GROSS fee amount, or one
+    that was consumed in full, or one that was never applied, all give a different pair of
+    (invoice total, remaining balance): 1_100/1_400 if unapplied, 0/0 if over-consumed. And `none`
+    behaving as `credit` is again terminate_service.rb:11 coercing the nil column.
+
+- id: b09/recreate-same-external-id/advance/credit
+  block: B9
+  group: rca
+  key: b09_rca_c
+  vars: {cn: credit}
+  axes: {transition: recreate-same-external-id, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+      - select: {index: 2}
+        fees_amount_cents: 1100
+        credit_notes_amount_cents: 1100
+        total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      credit_amount_cents: 1400
+      refund_amount_cents: 0
+      balance_amount_cents: 300
+      items_count: 1
+  math: >-
+    Explicit `credit` on the recreate shape, asserted to match b09/recreate-same-external-id/
+    advance/none: 3_000¢ for April, 1_400¢ credited for the 14 days after the 16th, 1_100¢ billed
+    for 20–30 April on the new subscription and 1_100¢ of the credit spent against it, leaving 300¢
+    of balance.
+    What makes `credit` distinguishable HERE and nowhere else in the block is the third invoice.
+    On the terminate and create-mid-period families the credit either has nothing to land on or
+    lands on a termination invoice, so the only witness is the note's own fields. Here the money
+    visibly moves: credit_notes_amount_cents 1_100 and total_amount_cents 0 on the recreated
+    subscription's first invoice. Its siblings all read 1_100 for that total —
+    `skip` because no note exists, `refund` because the note's credit side is 0, `offset` because an
+    offset settles the note's own invoice and never becomes spendable balance.
+    The residual 300¢ also pins the DIRECTION of the clamp: min(balance, remaining), not
+    min(balance, fee), and not the whole balance.
+
+- id: b09/recreate-same-external-id/advance/skip
+  block: B9
+  group: rca
+  key: b09_rca_s
+  vars: {cn: skip}
+  axes: {transition: recreate-same-external-id, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 3000
+        total_amount_cents: 3000
+        total_due_amount_cents: 3000
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+      - select: {index: 2}
+        fees_amount_cents: 1100
+        credit_notes_amount_cents: 0
+        total_amount_cents: 1100
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1100, from_date: "2024-04-20T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+  math: >-
+    The double-charge cell, and the reason this transition is worth five rows. April is collected
+    twice over the overlap: 3_000¢ on the 1st for 1–30 April, then 1_100¢ on the 20th for 20–30
+    April, with the 1_400¢ covering 17–30 April of the first subscription forfeited because
+    generate_credit_note_for_unconsumed_subscription? (terminate_service.rb:170-174) excludes
+    `skip`. The customer pays 4_100¢ for one calendar month of a 3_000¢ plan.
+    credit_notes_amount_cents 0 with total_amount_cents 1_100 on the third invoice is what
+    separates it from `none` and `credit`, which settle that invoice at 0 by spending the note. The
+    gap is 1_100¢ of cash — larger than the 300¢ of residual balance those rows keep, because the
+    forfeited amount exceeds what the new invoice could absorb.
+    The recreated subscription's own arithmetic is asserted independently of the credit: 11 days
+    (20–30 April) at the plan's 3_000/30 = 100¢, with from_date pinned to the 20th because
+    DatesService#from_datetime clamps the computed 1 April to started_at (dates_service.rb:73-75).
+    Note that the previous subscription having terminated on the 16th does NOT shift that window:
+    started_at_for's clamp to last_invoiced_termination_time (create_service.rb:209-221) applies
+    only to a BACKDATED subscription_at, and this one starts today.
+
+- id: b09/recreate-same-external-id/advance/refund
+  block: B9
+  group: rca
+  key: b09_rca_r
+  vars: {cn: refund}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-01T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-16T10:00:00Z", do: terminate_subscription}
+  - {at: "2024-04-20T10:00:00Z", do: create_subscription}
+  dimensions: {invoice_paid: true}
+  axes: {transition: recreate-same-external-id, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  premium: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        total_amount_cents: 3000
+        payment_status: succeeded
+        total_due_amount_cents: 0
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+      - select: {index: 2}
+        fees_amount_cents: 1100
+        credit_notes_amount_cents: 0
+        total_amount_cents: 1100
+    credit_note:
+      select: {index: -1}
+      refund_status: pending
+      credit_amount_cents: 0
+      refund_amount_cents: 1400
+      offset_amount_cents: 0
+      total_amount_cents: 1400
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    `refund` and `credit` produce the same 1_400¢ note and diverge entirely in where it goes, and
+    this is the row where that has a cash consequence rather than only a field difference.
+    The April invoice is paid in full on the 1st, so calculate_refund
+    (create_from_termination.rb:161-169) has 3_000¢ of paid_amount_prorated against 16 used days
+    (1 April through 16 April inclusive, 1_600¢) and refunds potential 3_000 − 1_600 = 1_400,
+    capped at the 1_400¢ creditable — the whole note. credit_amount_cents is therefore 0 and
+    balance_amount_cents 0, so when the recreated subscription is billed on the 20th there is no
+    available credit for Credits::CreditNoteService to find (its scope is
+    `.available` with a positive balance, credit_note_service.rb:73-94) and the third invoice bills
+    its 1_100¢ in full.
+    So the same customer, the same dates and the same 1_400¢: with `credit` they pay 3_000 and owe
+    nothing more (1_100 settled from balance, 300 left over); with `refund` they pay 3_000, get
+    1_400 back and then owe 1_100. Net identical, cash flow completely different — and
+    total_amount_cents on the third invoice (0 versus 1_100) is the single field that says which
+    happened.
+    total_due_amount_cents 0 on the first invoice is asserted to prove the payment landed: without
+    it, refund would clamp to 0 and this row would silently become the `credit` row.
+
+- id: b09/recreate-same-external-id/advance/offset
+  block: B9
+  group: rca
+  key: b09_rca_o
+  vars: {cn: offset}
+  dimensions: {invoice_paid: false}
+  axes: {transition: recreate-same-external-id, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        total_amount_cents: 3000
+        total_due_amount_cents: 1600
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+      - select: {index: 2}
+        fees_amount_cents: 1100
+        credit_notes_amount_cents: 0
+        total_amount_cents: 1100
+    credit_note:
+      select: {index: -1}
+      credit_amount_cents: 0
+      refund_amount_cents: 0
+      offset_amount_cents: 1400
+      total_amount_cents: 1400
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The third destination for the same 1_400¢: not spendable balance, not cash out, but a write-off
+    against the invoice that collected it. With the April invoice unpaid, refund clamps to 0
+    (paid_amount_prorated_to_subscription is 0) and calculate_amounts
+    (create_from_termination.rb:145) routes everything to offset, raising an InvoiceSettlement
+    (create_service.rb:82-89) that takes the first invoice's total_due_amount_cents from 3_000 to
+    1_600 (invoice.rb:407).
+    An offset never becomes balance, so the recreated subscription on the 20th is billed its full
+    1_100¢ — credit_notes_amount_cents 0, total 1_100 — exactly like the `skip` and `refund`
+    siblings, and unlike `credit`/`none` which settle it at 0. Between offset and skip the
+    difference is the first invoice's due, 1_600 versus 3_000; between offset and refund it is
+    which invoice was reduced and whether cash moved. Three assertions across two invoices and one
+    note are the minimum that tells all five values apart, which is why none of these rows asserts
+    a total on its own.
+    Net position: the customer owes 1_600¢ for 1–16 April plus 1_100¢ for 20–30 April, and the
+    three days between the termination and the new subscription are billed to nobody. That gap is
+    real and intended — this transition is not an upgrade, so nothing bridges the two periods.
+
+- id: b09/recreate-same-external-id/arrears/none
+  block: B9
+  key: b09_rcar
+  setup: {plan: {code: golden_b09_rcar, interval: monthly, amount_cents: 3100, pay_in_advance: false}}
+  timeline:
+  - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-03-16T10:00:00Z", do: terminate_subscription}
+  - {at: "2024-03-20T10:00:00Z", do: create_subscription}
+  - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  dimensions: {taxes: none, terminated_day: 16, recreated_day: 20}
+  axes: {transition: recreate-same-external-id, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  needs_forward_time: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 1600
+        total_amount_cents: 1600
+        credit_notes_amount_cents: 0
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-01T00:00:00Z"}
+      - select: {index: 1}
+        fees_amount_cents: 1200
+        total_amount_cents: 1200
+        credit_notes_amount_cents: 0
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1200, from_date: "2024-03-20T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+  math: >-
+    The arrears half of the recreate transition, and the one place where reusing an external_id
+    produces NO overlap at all: nothing was collected in advance, so the two subscriptions bill
+    only the days they each existed and the gap between them is billed to nobody.
+    March 2024 has 31 days and the plan is 3_100¢, so a day is exactly 100¢. Terminating on the
+    16th bills 1–16 March = 16 days = 1_600¢ immediately — terminated_pay_in_arrears?
+    (dates_service.rb:273-277) takes from_date to the beginning of the period and to_datetime is
+    clamped to terminated_at (:87-89) — which is the same 1_600¢ b09/terminate/arrears/none
+    asserts.
+    Recreating on 20 March produces no invoice at once: ActivateService#bill_subscription
+    (activate_service.rb:188-200) enqueues nothing for an arrears plan with no pay-in-advance fixed
+    charges, which is why the clock has to reach the period boundary. On 1 April the new
+    subscription is billed first_subscription_amount over its own window — from_datetime clamped to
+    started_at gives 20–31 March = 12 days at 100¢ = 1_200¢.
+    Total for March: 1_600 + 1_200 = 2_800¢ for 28 of the month's 31 days, the missing 300¢ being
+    17, 18 and 19 March when the customer had no subscription. THAT is the arrears/advance contrast
+    in one number: on the advance side the same three-day gap still leaves 3_000¢ collected for the
+    whole month (b09/recreate-same-external-id/advance/skip pays 4_100¢ in total), which is why
+    on_termination_credit_note only exists on that side — there is nothing unconsumed to return
+    here, and Subscription validates the field's absence for an arrears plan (subscription.rb:80).
+    credit_notes_amount_cents 0 on both invoices is asserted rather than assumed: a credit note on
+    this path would mean the arrears termination had refunded days it never charged for.
+
+- id: b09/hns/ending-at/arrears/none
+  block: B9
+  key: b09_hns_end
+  setup:
+    plan: {code: golden_b09_hns_end, interval: monthly, amount_cents: 3100, pay_in_advance: false}
+    subscription: {ending_at: "2024-03-16T10:00:00Z"}
+  timeline: [{at: "2024-03-01T00:00:00Z", do: create_subscription}, {at: "2024-03-16T10:15:00Z", do: perform_ended_subscriptions_termination}]
+  dimensions: {ending_at: "2024-03-16T10:00:00Z"}
+  axes: {transition: ending-at, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 1600
+      total_amount_cents: 1600
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-01T00:00:00Z"}
+  math: >-
+    `ending_at` schedules a termination it does not perform. Only Clock::TerminateEndedSubscriptionsJob
+    flips the subscription (terminate_ended_subscriptions_job.rb:19-29, whose DATE(ending_at) = DATE(now)
+    filter is why the verb runs on the 16th and not the 17th) and it hands the subscription to the same
+    Subscriptions::TerminateService as an explicit DELETE, so the arithmetic must match
+    b09/terminate/arrears/none exactly: 1 March through 16 March is 16 days at 3_100¢ / 31 = 100¢ per
+    day = 1_600¢. That equality is the point of the row — an `ending_at` termination that billed a
+    different window from a manual one would be a second, unspecified convention. perform_billing cannot
+    substitute: organization_billing_service.rb:117-120 EXCLUDES subscriptions whose ending_at is today,
+    so a row built on it would find the subscription still active and no invoice at all.
+
+- id: b09/hns/gated-activation/advance/none
+  block: B9
+  key: b09_hns_gate
+  setup:
+    plan: {code: golden_b09_hns_gate, interval: monthly, amount_cents: 3100, pay_in_advance: true}
+    subscription: {subscription_at: "2024-03-16T00:00:00Z"}
+  timeline:
+  - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-03-16T01:00:00Z", do: perform_subscriptions_activation}
+  - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  dimensions: {subscription_at: "2024-03-16T00:00:00Z"}
+  axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        total_amount_cents: 1600
+        fees_amount_cents: 1600
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 1600, from_date: "2024-03-16T00:00:00Z", to_date: "2024-03-31T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 3100
+        fees_amount_cents: 3100
+        fees:
+          - {fee_type: subscription, amount_cents: 3100, from_date: "2024-04-01T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+  math: >-
+    A subscription dated in the future is created PENDING and stays there: create_service.rb:198-201
+    (handle_future_subscription) only calls `pending!`, and the sole caller of ActivateService for such
+    a row is Subscriptions::ActivateAllPendingService via Clock::ActivateSubscriptionsJob
+    (activate_all_pending_service.rb:14-25). That is the gate — activation is withheld until the date
+    arrives, and a pending subscription is invisible to billing because OrganizationBillingService
+    scopes to `.active`. So the row asserts the two invoices from the two sides of the gate. Activation
+    on the 16th runs activate_standalone -> bill_subscription(skip_charges: true)
+    (activate_service.rb:124-140), which on a pay_in_advance calendar plan bills only the remainder of
+    the period the subscription is entering: 16 through 31 March is 16 days at 3_100¢ / 31 = 100¢ per
+    day = 1_600¢, from_date the 16th and not the 1st. April is then a full advance period, 3_100¢,
+    which is what proves the subscription really became ACTIVE rather than merely being billed once —
+    a gate that opened the invoice but not the status would show 1_600¢ and then nothing. Without the
+    activation verb the count is 0, not 1: perform_billing raises no invoice for either month.
+
+# ---------------------------------------------------------------------------------------------
+# The two clock-driven transitions, across the whole on_termination_credit_note axis.
+#
+# Both families below are ADVANCE rows plus one arrears row, because `on_termination_credit_note`
+# is refused outright on an arrears plan (Subscription validates its absence, subscription.rb:80)
+# and the block's constraint already encodes that — arrears has exactly one legal cell, `none`.
+#
+# THE AXIS IS ONLY OBSERVABLE THROUGH A TERMINATION, and each of the five values is separated by a
+# different field. The reasoning is the same as the create-mid-period family above and is not
+# repeated per row; what IS stated per row is the counterfactual number, because until recently
+# `on_termination_credit_note` never reached the column at all (golden_runner.rb:348-361: the
+# runner sent it on create, Subscriptions::CreateService dropped it, and terminate_service.rb:11
+# coerced nil to `:credit`) so all five values measured ONE behaviour. A row here that would
+# assert the same numbers if its axis value were ignored is a label, not a test.
+#
+#   none    -> nil coerced to :credit (terminate_service.rb:11); must equal its `credit` sibling
+#   credit  -> credit_amount_cents = whole unused tail, balance spendable, invoice due unchanged
+#   skip    -> NO credit note at all (generate_credit_note_for_unconsumed_subscription?,
+#              terminate_service.rb:170-174 requires credit/refund/offset)
+#   refund  -> only distinguishable on a PAID invoice; on an unpaid one calculate_refund
+#              (create_from_termination.rb:161-169) returns 0 and it collapses onto `credit`
+#   offset  -> only distinguishable on an UNPAID invoice; on a paid one calculate_amounts (:145)
+#              hands offset `creditable - refund` = 0 and it collapses onto `refund`
+#
+# So the `refund` rows pay the invoice first (premium: true, manual_payments) and the `offset` rows
+# deliberately do not.
+#
+# Only ONE fee ever exists on the credited invoice (a subscription fee; these plans have no
+# charges) and CreateFromTermination credits only `last_subscription_fee`, so
+# apply_credit_to_fees' by-weight spreading (credit_note_service.rb) has a single fee at weight 1
+# and the split is trivial. It is named here rather than left implied — B8 owns the multi-fee
+# weighting.
+#
+# Dates are chosen so a day divides evenly and no figure of one family can be pasted into the
+# other: April 2024 has 30 days, the ending-at family runs on 3_000c (100c/day) and the
+# gated-activation family on 9_000c (300c/day), both over an 11 April -> 21 April window
+# (20 days billed = 11 used + 9 unused). No taxes, so the credit note's tax-inclusive total and
+# its pre-tax sub_total coincide and CreditNotes::AdjustAmountsWithRoundingService has nothing to
+# nudge.
+
+- id: b09/ending-at/advance/none
+  block: B9
+  group: ea
+  key: b09_w2_ea_n
+  setup: {subscription: {on_termination_credit_note: ~}}
+  axes: {transition: ending-at, plan_pay_in_advance: "true", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-11T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        fees_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      reason: order_cancellation
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 900
+      taxes_amount_cents: 0
+      credit_amount_cents: 900
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 900
+      balance_amount_cents: 900
+      items_count: 1
+  math: >-
+    Creation on 11 April on a pay-in-advance calendar plan collects the rest of the period up front:
+    Fees::SubscriptionService#first_subscription_amount (:158-179) bills
+    date_diff(11 Apr 00:00, 30 Apr 23:59) = 20 days at single_day_price = 3_000c / 30 = 100c, so
+    2_000c. from_date is asserted as the 11th, not the 1st, because DatesService#from_datetime
+    clamps the computed 1 April up to started_at.beginning_of_day (dates_service.rb:73-75) — an
+    implementation that charged 2_000c for 1-30 April would otherwise pass.
+    `ending_at` then schedules a termination it does not perform. Only
+    Clock::TerminateEndedSubscriptionsJob flips the subscription
+    (terminate_ended_subscriptions_job.rb:19-29, whose DATE(ending_at) = DATE(now) filter is why the
+    verb runs on the 21st and not the 22nd), it hands the subscription to
+    Subscriptions::TerminateEndedSubscriptionJob -> the same Subscriptions::TerminateService as an
+    explicit DELETE, and TerminateService gets its policy from the record
+    (terminate_service.rb:7-14). perform_billing cannot substitute:
+    organization_billing_service.rb:117-120 EXCLUDES subscriptions whose ending_at is today, so a
+    row built on it would find the subscription still active and neither invoice would exist.
+    pay_in_advance_invoice_issued? (terminate_service.rb:133-155) returns true on the short path —
+    previous_beginning_of_period (1 April) is before started_at (11 April), so this is the first
+    period and the advance invoice was issued with the subscription — which is what lets the credit
+    note be raised at all; a termination in a LATER period would have to match an InvoiceSubscription
+    instead. remaining_duration (create_from_termination.rb:114-128) is next_end_of_period (30 April)
+    minus terminated_at.end_of_day.to_date (21 April) = 9 days. THE DAY PRICE IS THE PLAN'S, NOT THE
+    PRORATED FEE'S: plan_amount_cents reads last_subscription_fee.amount_details["plan_amount_cents"],
+    which Fees::SubscriptionService#initialize_fee (:60) always sets to plan.amount_cents = 3_000c, so
+    day_price stays 100c and the credit is 9 x 100 = 900c. Deriving it from the fee instead
+    (2_000c / 30 = 66.66c/day) would give 600c.
+    WHAT `none` ASSERTS DIFFERENTLY: nothing, and that is the point — it must equal its `credit`
+    sibling to the cent. on_termination_credit_note is nullable with no column default, and
+    terminate_service.rb:11 coerces blank to `:credit`, so an ending_at subscription that never
+    mentions the field still issues a spendable 900c note; update_on_termination_actions! (:188-192)
+    then writes `credit` onto the record. The alternative reading of `none` — "no credit note at
+    all" — is what b09/ending-at/advance/skip asserts, and it produces no note and no 900c anywhere.
+    Only ONE fee exists on invoice 0, so the note's by-weight spreading across fees
+    (credit_note_service.rb#apply_credit_to_fees) is a single fee at weight 1 and cannot be wrong here.
+    credit_amount_cents 900 with total_due_amount_cents still 2_000 on invoice 0 is what separates
+    this from the refund and offset siblings: a credit note issued against an invoice does not reduce
+    that invoice's due (invoice.rb:407), it only becomes spendable balance. Invoice 1 is the
+    termination invoice (on_termination_invoice defaults to generate, bill_in_arrears_fees?,
+    terminate_service.rb:105-127) and it is empty because the plan has no charges and the subscription
+    fee was already collected in advance.
+
+- id: b09/ending-at/advance/credit
+  block: B9
+  group: ea
+  key: b09_w2_ea_c
+  vars: {cn: credit}
+  axes: {transition: ending-at, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 2000
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 900
+      credit_amount_cents: 900
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 900
+      balance_amount_cents: 900
+      items_count: 1
+  math: >-
+    The explicit sibling of b09/ending-at/advance/none, and it must produce identical numbers:
+    2_000c collected on 11 April for 11-30 April, 9 unused days credited at the plan's 100c/day
+    = 900c, spendable (balance 900) rather than refunded or written off. Writing `credit` where the
+    record was going to be coerced to `credit` anyway (terminate_service.rb:11) has to be a no-op,
+    and the pair is the only way to PROVE the coercion instead of assuming it — if these two rows
+    ever disagree, the default moved.
+    WHAT THIS ROW ASSERTS DIFFERENTLY FROM THE OTHER FOUR VALUES, with numbers: `skip` produces no
+    credit note at all and forfeits the 900c; `refund` on the same dates with the invoice paid would
+    report credit_amount_cents 0 / refund_amount_cents 900 / balance 0; `offset` with the invoice
+    unpaid would report offset_amount_cents 900 and drop invoice 0's total_due from 2_000c to
+    1_100c. Only `credit` (and `none`) leaves total_due at 2_000c while handing the customer a 900c
+    spendable balance, so the trio credit_amount_cents / balance_amount_cents / total_due_amount_cents
+    is what pins this cell rather than total_amount_cents, which is 900 under three of the five.
+    The credited invoice carries a single fee, so apply_credit_to_fees has nothing to distribute.
+    Note that the transition axis is doing real work here even though the arithmetic equals
+    b09/create-mid-period/advance/credit's shape: nothing but Clock::TerminateEndedSubscriptionsJob
+    reaches this state, and an ending_at termination that billed a different window from a manual one
+    would be a second, unspecified convention.
+
+- id: b09/ending-at/advance/skip
+  block: B9
+  group: ea
+  key: b09_w2_ea_s
+  vars: {cn: skip}
+  axes: {transition: ending-at, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 2000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-11T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+  math: >-
+    `skip` is the only value that produces NO credit note:
+    generate_credit_note_for_unconsumed_subscription? (terminate_service.rb:170-174) requires
+    on_termination_credit_note to be one of credit/refund/offset, so CreditNotes::CreateFromTermination
+    is never reached — and it is reached on this path, because the clock job routes through the same
+    TerminateService as a manual DELETE. The customer keeps having paid 2_000c for 11-30 April and
+    the subscription ends on the 21st with the 9 unused days (900c at the plan's 100c/day) forfeited
+    — exactly the amount the `none`, `credit`, `refund` and `offset` siblings each return by a
+    different route.
+    WHAT THIS ROW ASSERTS DIFFERENTLY: there is no `credit_notes: 0` expectation to write, so the
+    guard is the pair of invoice amounts. total_due_amount_cents 2_000 on invoice 0 says nothing was
+    offset (`offset` would show 1_100) and the empty termination invoice says nothing was spent or
+    re-billed; together with the absent credit_note block, a note appearing here would have to be a
+    900c note that moved neither number, which is precisely the shape the sibling rows assert
+    directly. The fee window 11-30 April is re-asserted here rather than only on the `none` row
+    because this is the row with no credit note to cross-check the day price against.
+
+- id: b09/ending-at/advance/refund
+  block: B9
+  group: ea
+  key: b09_w2_ea_r
+  vars: {cn: refund}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-11T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-11T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-21T10:15:00Z", do: perform_ended_subscriptions_termination}
+  dimensions: {invoice_paid: true}
+  axes: {transition: ending-at, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        payment_status: succeeded
+        total_due_amount_cents: 0
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      refund_status: pending
+      sub_total_excluding_taxes_amount_cents: 900
+      credit_amount_cents: 0
+      refund_amount_cents: 900
+      offset_amount_cents: 0
+      total_amount_cents: 900
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    Same 2_000c collected on 11 April and same 900c of unused days when the clock job terminates on
+    the 21st, but this time the money LEAVES instead of becoming spendable — and only because the
+    invoice was paid first. calculate_refund (create_from_termination.rb:161-169) takes
+    paid_amount_prorated_to_subscription - creditable_used_amount. paid_amount_prorated (:179-190) is
+    fee_amount / invoice.sub_total_including_taxes x total_paid = 2_000/2_000 x 2_000 = 2_000c.
+    creditable_used_amount is day_price x used_duration, and used_duration (:195-211) runs from
+    date_service.from_datetime.to_date — 11 April, because from_datetime is clamped to
+    started_at.beginning_of_day — through terminated_at 21 April inclusive = 11 days, so 1_100c.
+    potential_refund = 2_000 - 1_100 = 900, capped at the total creditable 900 -> refund 900, and
+    credit = 900 - 900 = 0 (calculate_amounts :143).
+    WHAT THIS ROW ASSERTS DIFFERENTLY, and why the pay_invoice step is load-bearing: WITHOUT IT THIS
+    ROW WOULD BE INDISTINGUISHABLE FROM ITS `credit` SIBLING. total_paid_amount_cents would be 0,
+    paid_amount_prorated 0, potential_refund -1_100, calculate_refund would return 0 and the whole
+    900c would come back as credit_amount_cents 900 / balance 900 — the exact numbers of
+    b09/ending-at/advance/credit. So the distinguishing assertions are credit_amount_cents 0 /
+    refund_amount_cents 900 / balance_amount_cents 0, not total_amount_cents, which is 900 here and
+    on the credit, none and offset siblings alike. `skip` would produce no note at all and leave the
+    customer 900c out of pocket; `offset` on a PAID invoice collapses onto exactly these numbers
+    (calculate_amounts :145 gives offset creditable - refund = 0), which is why the offset cell is
+    written on an unpaid invoice instead.
+    refund_status stays `pending`: should_handle_refund? (create_service.rb:243-248) needs a payment
+    with a provider, and a manual payment has none, so no provider refund job is enqueued.
+    credit_status reads `available` even though nothing is spendable — CreateService sets it at build
+    time and only the consumption path (credit_note_service.rb:96-102) ever moves it — so
+    balance_amount_cents, not credit_status, is what says the money is gone. total_due_amount_cents 0
+    on invoice 0 is the payment, not the note: a credit note never reduces an invoice's due
+    (invoice.rb:407).
+
+- id: b09/ending-at/advance/offset
+  block: B9
+  group: ea
+  key: b09_w2_ea_o
+  vars: {cn: offset}
+  dimensions: {invoice_paid: false}
+  axes: {transition: ending-at, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 2000
+        total_amount_cents: 2000
+        total_due_amount_cents: 1100
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 900
+      credit_amount_cents: 0
+      refund_amount_cents: 0
+      offset_amount_cents: 900
+      total_amount_cents: 900
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The mirror of the refund row on the same dates: invoice 0 is deliberately LEFT UNPAID, so there
+    is nothing to refund and the whole 900c of unused days is written off against the open invoice
+    instead. calculate_amounts (create_from_termination.rb:145) gives offset
+    `total_creditable - refund`, and refund is 0 here because paid_amount_prorated_to_subscription
+    is 0 on an unpaid invoice (:182) — so offset_amount_cents is the full 900.
+    WHAT THIS ROW ASSERTS DIFFERENTLY, and it is ON THE INVOICE, NOT THE NOTE:
+    CreditNotes::CreateService (:83-89) raises an InvoiceSettlement for a positive offset, and
+    Invoice#total_due_amount_cents (invoice.rb:407) is total - paid - offset, so invoice 0 now owes
+    2_000 - 0 - 900 = 1_100c where the `none`, `credit` and `skip` siblings all still owe 2_000c and
+    the `refund` sibling owes 0 because it was PAID. total_amount_cents stays 2_000 in every case,
+    which is exactly why the row asserts the due. On the note side, offset_amount_cents 900 with
+    credit_amount_cents 0 and refund_amount_cents 0 is unique to this value: `credit` would report
+    900/0/0 and `refund` 0/900/0.
+    The asymmetry this creates with the refund cell is why the five rows of this family are split
+    across two payment states: PAY the invoice and `offset` collapses onto `refund` (creditable -
+    refund = 0, so offset would be 0 and refund 900); leave it unpaid and `refund` collapses onto
+    `credit`. No single payment state distinguishes all five values.
+    The single subscription fee on invoice 0 also means the offset lands entirely on it —
+    apply_credit_to_fees has one fee at weight 1 — so no per-fee split is asserted here.
+
+# ---------------------------------------------------------------------------------------------
+# gated-activation: a future-dated subscription is created PENDING (create_service.rb:198-201,
+# handle_future_subscription, which only calls `pending!`) and nothing but
+# Clock::ActivateSubscriptionsJob -> Subscriptions::ActivateAllPendingService (:14-25) ever moves
+# it. A pending subscription is invisible to billing — OrganizationBillingService scopes to
+# `.active` — so without perform_subscriptions_activation these rows produce ZERO invoices.
+#
+# The gate is also what makes the credit-note axis assertable at all here, and in a second way:
+# TerminateService's FIRST branch (:26-34) CANCELS a subscription that is still `pending` —
+# mark_as_canceled!, not mark_as_terminated! — and that branch never reaches
+# generate_credit_note_for_unconsumed_subscription?. So on every advance row below, the mere
+# EXISTENCE of a credit note proves the subscription really became ACTIVE — a gate that opened the
+# invoice but not the status would leave the note absent and the 2_700c unaccounted for.
+
+- id: b09/gated-activation/advance/credit
+  block: B9
+  group: ga
+  key: b09_w2_ga_c
+  vars: {cn: credit}
+  axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: credit}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        total_amount_cents: 6000
+        total_due_amount_cents: 6000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 6000, from_date: "2024-04-11T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      reason: order_cancellation
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 2700
+      taxes_amount_cents: 0
+      credit_amount_cents: 2700
+      refund_amount_cents: 0
+      offset_amount_cents: 0
+      total_amount_cents: 2700
+      balance_amount_cents: 2700
+      items_count: 1
+  math: >-
+    Created on 1 April with subscription_at 11 April, so handle_future_subscription
+    (create_service.rb:198-201) calls `pending!` and stops — no invoice on the 1st. The clock verb on
+    the 11th runs ActivateAllPendingService -> ActivateService -> activate_standalone
+    (activate_service.rb:125-140), which calls mark_as_active!(timestamp) — started_at is nil until
+    then and is set to 11 April 01:00 (subscription.rb:124-126) — and then
+    bill_subscription(skip_charges: true). On a pay_in_advance calendar plan that bills only the
+    remainder of the period being entered: date_diff(11 Apr, 30 Apr) = 20 days at
+    single_day_price = 9_000c / 30 = 300c, so 6_000c. from_date is 11 April 00:00 and not 01:00
+    because DatesService#from_datetime clamps to started_at.beginning_of_day
+    (dates_service.rb:73-75); an implementation billing 1-30 April would show 9_000c instead.
+    Terminating on the 21st then credits the unused tail through the same arithmetic as the
+    ending-at family. remaining_duration (create_from_termination.rb:114-128) = next_end_of_period
+    (30 April) - terminated_at.end_of_day.to_date (21 April) = 9 days; day_price is the PLAN's, read
+    off last_subscription_fee.amount_details["plan_amount_cents"] = 9_000c, so 9 x 300 = 2_700c.
+    Deriving the day price from the prorated fee instead (6_000 / 30 = 200c) would give 1_800c.
+    pay_in_advance_invoice_issued? (terminate_service.rb:133-155) is true on the short path because
+    previous_beginning_of_period (1 April) precedes started_at (11 April).
+    WHAT THIS ROW ASSERTS DIFFERENTLY FROM THE OTHER AXIS VALUES, with numbers: `skip` produces no
+    credit note and forfeits the 2_700c; `refund` (invoice paid first) reports credit 0 / refund
+    2_700 / balance 0; `offset` (invoice unpaid) reports offset 2_700 and drops invoice 0's
+    total_due from 6_000c to 3_300c. `credit` is the only value that leaves total_due at 6_000c
+    while handing over a 2_700c spendable balance. b09/hns/gated-activation/advance/none is the
+    `none` cell of this axis and asserts no termination at all, so the coercion of nil to `:credit`
+    (terminate_service.rb:11) is cross-checked by the ending-at none/credit pair above rather than
+    here.
+    The credit note also PROVES ACTIVATION rather than mere billing: had the gate raised the invoice
+    without flipping the status, terminate_subscription would take TerminateService's `pending?`
+    branch (:26-34), mark_as_canceled!, and never reach
+    generate_credit_note_for_unconsumed_subscription? — no note, no 2_700c.
+    Invoice 0 carries one fee, so the note's by-weight spreading over fees
+    (credit_note_service.rb#apply_credit_to_fees) is a single fee at weight 1. Invoice 1 is the
+    termination invoice and is empty: no charges, and the subscription fee was collected in advance.
+
+- id: b09/gated-activation/advance/skip
+  block: B9
+  group: ga
+  key: b09_w2_ga_s
+  vars: {cn: skip}
+  axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: skip}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        total_amount_cents: 6000
+        total_due_amount_cents: 6000
+        fees_count: 1
+        fees:
+          - {fee_type: subscription, amount_cents: 6000, from_date: "2024-04-11T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+  math: >-
+    The gate opens exactly as in b09/gated-activation/advance/credit — nothing on 1 April, 6_000c
+    for 11-30 April when the clock job activates on the 11th (20 days at 9_000c / 30 = 300c) — and
+    then `skip` is the only axis value that produces NO credit note:
+    generate_credit_note_for_unconsumed_subscription? (terminate_service.rb:170-174) requires
+    on_termination_credit_note to be one of credit/refund/offset, so
+    CreditNotes::CreateFromTermination is never reached. The customer has paid 6_000c for 11-30
+    April and leaves on the 21st with the 9 unused days (2_700c at the plan's 300c/day) forfeited.
+    WHAT THIS ROW ASSERTS DIFFERENTLY: with no note to read, the guard is the pair of invoice
+    amounts. total_due_amount_cents 6_000 on invoice 0 says nothing was offset — `offset` on the
+    same dates would show 3_300 — and the empty termination invoice says nothing was re-billed or
+    spent. A 2_700c note appearing here would move neither number by itself, which is why the
+    sibling rows assert the note directly and this one asserts that the invoices stayed exactly as
+    billed. The fee window 11-30 April at 6_000c is re-asserted here because this is the row with no
+    credit note to cross-check the 300c day price against.
+    Note the one thing `skip` does NOT skip: the termination invoice. on_termination_invoice is a
+    separate field defaulting to `generate` (bill_in_arrears_fees?, terminate_service.rb:184-186), so
+    invoice 1 exists and is empty — asserting invoices: 2 rather than 1 is what keeps the two
+    termination policies from being conflated.
+
+- id: b09/gated-activation/advance/refund
+  block: B9
+  group: ga
+  key: b09_w2_ga_r
+  vars: {cn: refund}
+  setup: {organization: {premium_integrations: [manual_payments]}}
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-11T01:00:00Z", do: perform_subscriptions_activation}
+  - {at: "2024-04-11T12:00:00Z", do: pay_invoice, invoice_type: subscription}
+  - {at: "2024-04-21T10:00:00Z", do: terminate_subscription}
+  dimensions: {invoice_paid: true}
+  axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: refund}
+  calendar_sensitive: true
+  premium: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        total_amount_cents: 6000
+        payment_status: succeeded
+        total_due_amount_cents: 0
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      refund_status: pending
+      sub_total_excluding_taxes_amount_cents: 2700
+      credit_amount_cents: 0
+      refund_amount_cents: 2700
+      offset_amount_cents: 0
+      total_amount_cents: 2700
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    Same gate and same 6_000c raised by the activation on 11 April (20 days at 9_000c / 30 = 300c),
+    same 2_700c of unused days on the 21st, but the money LEAVES instead of becoming spendable — and
+    only because the activation invoice was paid first. The pay_invoice step has to sit AFTER the
+    activation verb: before it the subscription is pending and no invoice exists to pay.
+    calculate_refund (create_from_termination.rb:161-169) takes
+    paid_amount_prorated_to_subscription - creditable_used_amount. paid_amount_prorated (:179-190) is
+    fee_amount / invoice.sub_total_including_taxes x total_paid = 6_000/6_000 x 6_000 = 6_000c.
+    creditable_used_amount is day_price x used_duration, and used_duration (:195-211) runs from
+    date_service.from_datetime.to_date — 11 April, clamped to started_at.beginning_of_day — through
+    terminated_at 21 April inclusive = 11 days, so 3_300c. potential_refund = 6_000 - 3_300 = 2_700,
+    capped at the total creditable 2_700 -> refund 2_700, credit = 2_700 - 2_700 = 0
+    (calculate_amounts :143). 20 days billed = 11 used + 9 credited, which is the arithmetic
+    cross-check.
+    WHAT THIS ROW ASSERTS DIFFERENTLY, and why pay_invoice is load-bearing: WITHOUT IT THIS ROW
+    WOULD BE INDISTINGUISHABLE FROM ITS `credit` SIBLING. total_paid_amount_cents would be 0,
+    paid_amount_prorated 0, potential_refund -3_300, calculate_refund would return 0 and the whole
+    2_700c would come back as credit_amount_cents 2_700 / balance 2_700 — the exact numbers of
+    b09/gated-activation/advance/credit. So the distinguishing assertions are credit_amount_cents 0 /
+    refund_amount_cents 2_700 / balance_amount_cents 0, not total_amount_cents, which is 2_700 under
+    credit, refund and offset alike. `skip` would produce no note; `offset` on a PAID invoice
+    collapses onto exactly these numbers (calculate_amounts :145 gives offset creditable - refund =
+    0), which is why the offset cell is written unpaid instead.
+    refund_status stays `pending`: should_handle_refund? (create_service.rb:243-248) needs a payment
+    with a provider and a manual payment has none. credit_status reads `available` even though
+    nothing is spendable, so balance_amount_cents is what says the money is gone.
+    total_due_amount_cents 0 on invoice 0 is the payment, not the note — a credit note never reduces
+    an invoice's due (invoice.rb:407).
+
+- id: b09/gated-activation/advance/offset
+  block: B9
+  group: ga
+  key: b09_w2_ga_o
+  vars: {cn: offset}
+  dimensions: {invoice_paid: false}
+  axes: {transition: gated-activation, plan_pay_in_advance: "true", on_termination_credit_note: offset}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        total_amount_cents: 6000
+        total_due_amount_cents: 3300
+        fees_count: 1
+      - select: {index: 1}
+        total_amount_cents: 0
+        fees_count: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      sub_total_excluding_taxes_amount_cents: 2700
+      credit_amount_cents: 0
+      refund_amount_cents: 0
+      offset_amount_cents: 2700
+      total_amount_cents: 2700
+      balance_amount_cents: 0
+      items_count: 1
+  math: >-
+    The mirror of the refund row on the same gate and the same dates: the activation invoice is
+    deliberately LEFT UNPAID, so there is nothing to refund and the whole 2_700c of unused days is
+    written off against the open invoice instead. calculate_amounts
+    (create_from_termination.rb:145) gives offset `total_creditable - refund`, and refund is 0 here
+    because paid_amount_prorated_to_subscription is 0 on an unpaid invoice (:182) — so
+    offset_amount_cents is the full 2_700.
+    WHAT THIS ROW ASSERTS DIFFERENTLY, and it is ON THE INVOICE, NOT THE NOTE:
+    CreditNotes::CreateService (:83-89) raises an InvoiceSettlement for a positive offset, and
+    Invoice#total_due_amount_cents (invoice.rb:407) is total - paid - offset, so invoice 0 now owes
+    6_000 - 0 - 2_700 = 3_300c — which is exactly the 11 used days at 300c/day — where the `credit`
+    and `skip` siblings still owe 6_000c and the `refund` sibling owes 0 because it was PAID.
+    total_amount_cents stays 6_000 in every case, which is why the row asserts the due. On the note
+    side, offset 2_700 with credit 0 and refund 0 is unique to this value: `credit` reports 2_700/0/0
+    and `refund` 0/2_700/0.
+    Neither payment state distinguishes all five values — pay and `offset` collapses onto `refund`,
+    leave it unpaid and `refund` collapses onto `credit` — so this family is split across both, and
+    this row is the unpaid half.
+    The single subscription fee on invoice 0 means the offset lands entirely on it,
+    apply_credit_to_fees having one fee at weight 1, so no per-fee split is asserted.
+
+- id: b09/gated-activation/arrears/none
+  block: B9
+  key: b09_w2_ga_arr
+  setup:
+    plan: {code: golden_b09_w2_ga_arr, interval: monthly, amount_cents: 3000, pay_in_advance: false}
+    subscription: {subscription_at: "2024-04-11T00:00:00Z"}
+  timeline:
+  - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+  - {at: "2024-04-11T01:00:00Z", do: perform_subscriptions_activation}
+  - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  dimensions: {taxes: none, subscription_at: "2024-04-11T00:00:00Z"}
+  axes: {transition: gated-activation, plan_pay_in_advance: "false", on_termination_credit_note: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 2000
+      total_amount_cents: 2000
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 2000, from_date: "2024-04-11T00:00:00Z", to_date: "2024-04-30T23:59:59Z"}
+  math: >-
+    The arrears half of the gate, and the only legal arrears cell of this axis:
+    `on_termination_credit_note` is refused outright on an arrears plan (Subscription validates its
+    absence, subscription.rb:80), which the block's `subscription_lifecycle` constraint encodes, so
+    the field is left off the subscription entirely and the runner's termination-policy PUT
+    (golden_runner.rb:364-373) sends nothing.
+    Nothing happens on 1 April: handle_future_subscription (create_service.rb:198-201) calls
+    `pending!` and returns. Activation on the 11th runs activate_standalone ->
+    bill_subscription(skip_charges: true), which on an ARREARS plan with no pay-in-advance fixed
+    charges enqueues NOTHING (activate_service.rb:181-196 bills only if plan.pay_in_advance? or
+    fixed_charges.pay_in_advance.any?) — so unlike its advance sibling
+    b09/hns/gated-activation/advance/none, which raises a 1_600c invoice at the moment of activation,
+    this row's activation raises no invoice at all. The first and only invoice arrives when the
+    period closes: 20 days from 11 April through 30 April inclusive at 3_000c / 30 = 100c per day =
+    2_000c, with from_date the 11th rather than the 1st because DatesService#from_datetime clamps
+    the computed 1 April up to started_at.beginning_of_day (dates_service.rb:73-75) and started_at
+    was set by mark_as_active! at activation, not at creation.
+    WHAT THE AXIS VALUE ASSERTS HERE: `none` on the arrears side is the ABSENCE of the column, not a
+    coerced default. TerminateService would still coerce blank to `:credit` (terminate_service.rb:11)
+    but generate_credit_note_for_unconsumed_subscription? (:170-174) gates on pay_in_advance? first,
+    so no arrears subscription can ever produce a termination credit note whatever the field said —
+    which is why the other four values are illegal rather than merely untested here.
+    `invoices: 1` is the load-bearing count. Without perform_subscriptions_activation it would be 0,
+    not 1: the subscription stays pending for the whole timeline and OrganizationBillingService
+    scopes to `.active`, so the 1 May run would find nothing to bill. And an implementation that
+    activated but billed the full month would show 3_000c for 1-30 April.
