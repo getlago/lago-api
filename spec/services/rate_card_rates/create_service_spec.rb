@@ -7,11 +7,6 @@ RSpec.describe RateCardRates::CreateService do
 
   let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
-
-before_all do
-  create_default(:billable_metric)
-end
-
   let(:params) do
     {
       code: "standard_price",
@@ -21,6 +16,10 @@ end
       billing_interval_count: 1,
       billing_interval_unit: "month"
     }
+  end
+
+  before_all do
+    create_default(:billable_metric)
   end
 
   it "creates an active rate when effective now" do

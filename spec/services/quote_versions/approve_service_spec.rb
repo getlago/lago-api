@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe QuoteVersions::ApproveService do
-before_all do
-  create_default(:customer)
-create_default(:plan)
-end
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   subject(:approve_service) { described_class.new(quote_version:) }
 

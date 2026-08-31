@@ -7,9 +7,9 @@ RSpec.describe Products::UpdateService do
 
   let_it_be(:organization) { create(:organization) }
 
-before_all do
-  create_default(:billable_metric)
-end
+  before_all do
+    create_default(:billable_metric)
+  end
 
   let(:product) { create(:product, organization:, name: "Before", code: "before") }
   let(:params) { {name: "After", description: "new", invoice_display_name: "Display"} }

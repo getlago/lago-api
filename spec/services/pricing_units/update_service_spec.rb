@@ -6,9 +6,9 @@ RSpec.describe PricingUnits::UpdateService do
   describe "#call" do
     subject(:result) { described_class.call(pricing_unit:, params:) }
 
-before_all do
-  create_default(:organization)
-end
+    before_all do
+      create_default(:organization)
+    end
 
     let(:name) { "Cloud tokens" }
     let(:short_name) { "CT" }

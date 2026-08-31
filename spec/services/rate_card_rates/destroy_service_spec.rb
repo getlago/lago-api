@@ -8,9 +8,9 @@ RSpec.describe RateCardRates::DestroyService do
   let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
 
-before_all do
-  create_default(:billable_metric)
-end
+  before_all do
+    create_default(:billable_metric)
+  end
 
   context "with a pending rate" do
     let(:rate_card_rate) do

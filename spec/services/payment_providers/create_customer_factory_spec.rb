@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe PaymentProviders::CreateCustomerFactory do
   subject(:new_instance) { described_class.new_instance(provider:, customer:, payment_provider_id:, params:, async:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let_it_be(:customer) { create(:customer) }
   let(:payment_provider_id) { create(:stripe_provider, organization: customer.organization).id }

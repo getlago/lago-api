@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe PaymentMethods::UpdateDetailsService do
   subject(:create_service) { described_class.new(payment_method:, insert:, delete:) }
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let_it_be(:customer) { create_default(:customer) }
   let(:payment_method) { create(:payment_method, customer:) }

@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::AdyenService do
 
   include_context "with mocked security logger"
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let(:api_key) { "test_api_key_1" }
   let(:code) { "code_1" }

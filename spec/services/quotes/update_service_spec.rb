@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Quotes::UpdateService do
-before_all do
-  create_default(:customer)
-end
+  before_all do
+    create_default(:customer)
+  end
 
   subject(:update_service) { described_class.new(quote:, params: update_params) }
 

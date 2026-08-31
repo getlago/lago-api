@@ -7,7 +7,6 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCancelledService d
 
   let_it_be(:organization) { create(:organization) }
   let(:payment_provider) { create(:gocardless_provider, organization:) }
-  let_it_be(:customer) { create(:customer, organization:) }
   let(:gocardless_customer) do
     create(
       :gocardless_customer,
@@ -26,9 +25,10 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCancelledService d
       payment_provider:
     )
   end
-
   let(:mandate_id) { "index_ID_123" }
   let(:provider_customer_id) { "CU123456" }
+
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#call" do
     before do

@@ -7,13 +7,12 @@ RSpec.describe Quotes::AddImageService do
 
   let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
   let(:quote) { create(:quote, organization:) }
-
-before_all do
-  create_default(:customer)
-end
-
   let(:png_bytes) { "\x89PNG\r\n\x1A\n".b }
   let(:image) { "data:image/png;base64,#{Base64.strict_encode64(png_bytes)}" }
+
+  before_all do
+    create_default(:customer)
+  end
 
   describe ".call" do
     let(:result) { service.call }

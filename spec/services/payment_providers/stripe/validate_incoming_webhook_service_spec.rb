@@ -7,9 +7,9 @@ RSpec.describe PaymentProviders::Stripe::ValidateIncomingWebhookService do
     described_class.call(payload:, signature:, payment_provider:)
   end
 
-before_all do
-  create_default(:organization)
-end
+  before_all do
+    create_default(:organization)
+  end
 
   let(:payload) { "webhook_payload" }
   let(:signature) { "signature" }
