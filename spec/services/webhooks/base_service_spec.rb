@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Webhooks::BaseService do
   subject(:webhook_service) { WebhooksSpec::DummyClass.new(object:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:object) { invoice }
@@ -57,6 +57,7 @@ RSpec.describe Webhooks::BaseService do
     end
 
     context "without webhook endpoint" do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization) }
 
       before do

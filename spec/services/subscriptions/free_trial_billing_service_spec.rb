@@ -5,10 +5,14 @@ require "rails_helper"
 RSpec.describe Subscriptions::FreeTrialBillingService do
   subject(:service) { described_class.new(timestamp:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:timestamp) { Time.zone.now }
 
   describe "#call" do
-    let(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
+    let_it_be(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
 
     context "with a plan witout trial period" do
       it "does not set trial_ended_at" do
@@ -74,7 +78,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
     end
 
     context "with plan pay in arrears" do
-      let(:plan) { create(:plan, trial_period: 10, pay_in_advance: false) }
+      let_it_be(:plan) { create(:plan, trial_period: 10, pay_in_advance: false) }
 
       context "when plan has fixed charges" do
         context "when fixed_charges are not pay in advance" do
