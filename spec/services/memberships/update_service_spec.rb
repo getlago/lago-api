@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Memberships::UpdateService do
   include_context "with mocked security logger"
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:acting_user) { create(:membership, organization:).user }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:acting_user) { create(:membership, organization:).user }
   let(:admin_role) { create(:role, :admin) }
   let!(:manager_role) { create(:role, :manager) }
   let(:params) { {roles: %w[manager]} }
@@ -33,7 +33,7 @@ RSpec.describe Memberships::UpdateService do
     end
 
     context "when admin grants admin role to another member" do
-      let(:acting_membership) { create(:membership, organization:) }
+      let_it_be(:acting_membership) { create(:membership, organization:) }
       let(:acting_user) { acting_membership.user }
       let(:params) { {roles: %w[admin]} }
 

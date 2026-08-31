@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe Metadata::UpdateItemService do
   subject(:service) { described_class.new(owner:, value:, partial:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+
+before_all do
+  create_default(:customer)
+end
+
   let(:owner) { create(:credit_note, organization:) }
   let(:value) { nil }
   let(:partial) { false }
