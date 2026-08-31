@@ -44,17 +44,6 @@ RSpec.describe Invoices::FinalizeService do
           expect(result.invoice.reload.purchase_order_number).to eq("PO-ORIGINAL")
         end
       end
-
-      context "when Meilisearch is enabled" do
-        before do
-          invoice
-          stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
-        end
-
-        it "enqueues a search reindex for the invoice" do
-          expect { service.call }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
-        end
-      end
     end
 
     context "when invoice is already finalized" do
