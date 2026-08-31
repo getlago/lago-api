@@ -54,6 +54,19 @@ RSpec.describe Fees::CreateTrueUpService do
       end
     end
 
+    context "when charge has no minimum and the used amount is negative" do
+      let(:charge) { create(:standard_charge, plan:, min_amount_cents: 0) }
+      let(:used_amount_cents) { -500 }
+      let(:used_precise_amount_cents) { -500.0 }
+
+      let(:fee) { create(:charge_fee, amount_cents: 0, precise_amount_cents: 0.0, customer:, charge:) }
+
+      it "does not instantiate a true-up fee" do
+        expect(result).to be_success
+        expect(result.true_up_fee).to be_nil
+      end
+    end
+
     it "instantiates a true-up fee" do
       travel_to(DateTime.new(2023, 4, 1)) do
         expect(result).to be_success

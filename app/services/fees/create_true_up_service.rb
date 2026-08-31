@@ -15,6 +15,7 @@ module Fees
 
     def call
       return result unless fee
+      return result if charge.min_amount_cents.to_i.zero?
       return result if used_amount_cents >= prorated_min_amount_cents
 
       if charge.applied_pricing_unit
