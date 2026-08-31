@@ -7,9 +7,9 @@ RSpec.describe Metadata::UpdateItemService do
 
   let_it_be(:organization) { create_default(:organization) }
 
-before_all do
-  create_default(:customer)
-end
+  before_all do
+    create_default(:customer)
+  end
 
   let(:owner) { create(:credit_note, organization:) }
   let(:value) { nil }

@@ -6,7 +6,7 @@ RSpec.describe Orders::UpdateService do
   subject(:service) { described_class.new(order:, params:) }
 
   let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-        let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:order) { create(:order, organization:, customer:) }
   let(:params) { {execution_mode: "execute_in_lago", execute_at: 1.month.from_now.iso8601} }
 

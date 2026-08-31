@@ -6,7 +6,7 @@ RSpec.describe OrderForms::MarkAsSignedService do
   subject(:service) { described_class.new(order_form:, signed_document:, execution_mode:, execute_at:) }
 
   let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-        let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, customer:, organization:, order_type: :subscription_creation) }
   let(:order_form) { create(:order_form, customer:, organization:, quote:) }
   let(:signed_document) { nil }

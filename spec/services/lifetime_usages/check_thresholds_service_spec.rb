@@ -8,7 +8,7 @@ RSpec.describe LifetimeUsages::CheckThresholdsService, transaction: false do
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, recalculate_current_usage: true, recalculate_invoiced_usage: true, current_usage_amount_cents:) }
   let(:current_usage_amount_cents) { 0 }
   let(:subscription) { create(:subscription, customer_id: customer.id) }
-  let(:organization) { create_default(:organization)}
+  let(:organization) { create_default(:organization) }
   let(:customer) { create_default(:customer) }
   let(:billable_metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
 

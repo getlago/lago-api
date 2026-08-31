@@ -8,10 +8,10 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
   subject(:execute_service) { described_class.new(order:) }
 
   let_it_be(:organization) { create(:organization) }
-        let_it_be(:billing_entity) { create(:billing_entity, organization:) }
-        let_it_be(:customer) { create(:customer, organization:, billing_entity:, currency: "EUR") }
+  let_it_be(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:customer) { create(:customer, organization:, billing_entity:, currency: "EUR") }
 
-        let_it_be(:target_plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 50_000) }
+  let_it_be(:target_plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 50_000) }
   let(:target_subscription) do
     create(
       :subscription,
@@ -26,11 +26,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
       ending_at: 5.months.from_now
     )
   end
-
-        let_it_be(:plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
-        let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "50"}) }
-
   let(:plan_item) do
     {
       "id" => plan.id,
@@ -66,7 +62,6 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
       ]
     }
   end
-
   let(:billing_items) { {"plans" => [plan_item]} }
   let(:quote) do
     create(
@@ -90,6 +85,9 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
   let(:order) { create(:order, organization:, customer:, order_form:, execution_mode:) }
   let(:execution_mode) { :execute_in_lago }
+
+  let_it_be(:plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
 
   # Records are resolved by id only outside api context, and CurrentContext leaks across spec
   # files (no global reset), so pin it. The order is built up front so the target subscription
