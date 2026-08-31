@@ -1,0 +1,143 @@
+name: Golden suite daily
+
+# Grows and checks spec/scenarios/golden. Opens a PR; never merges.
+# Design: docs/superpowers/specs/2026-08-26-golden-daily-runner-design.md
+#
+# The environment below mirrors spec.yml, which is how this repo actually runs rspec: ruby native on
+# the runner, postgres and redis as service containers, clickhouse as a plain `docker run`. There is
+# no api container on CI, which is why every suite command goes through dev/golden/run.sh.
+
+on:
+  schedule:
+    - cron: "0 4 * * 1-5"   # weekday mornings, before anyone reads Slack
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "How many cells to attempt"
+        default: "8"
+      lead:
+        description: "Work a single leads.yml entry instead of a daily run (e.g. BIL-537)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  run:
+    name: Golden suite daily
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: getlago/postgres-partman:15.0-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: lago
+          POSTGRES_USER: lago
+          POSTGRES_PASSWORD: lago
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
+      LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
+      LAGO_REDIS_STORE_URL: "localhost:6379"
+      RAILS_MASTER_KEY: N+XcWoGDzKjuoxrU8BIPN5D0/GSuqx9s
+      SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
+      LAGO_API_URL: https://api.lago.dev
+      LAGO_PDF_URL: https://pdf.lago.dev
+      LAGO_DATA_API_URL: http://data_api
+      LAGO_FROM_EMAIL: noreply@getlago.com
+      LAGO_CLICKHOUSE_ENABLED: true
+      LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
+      LAGO_CLICKHOUSE_HOST: localhost
+      LAGO_CLICKHOUSE_DATABASE: default
+      LAGO_CLICKHOUSE_USERNAME: ""
+      LAGO_CLICKHOUSE_PASSWORD: "password"
+      LAGO_KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      LAGO_KAFKA_ACTIVITY_LOGS_TOPIC: activity_logs
+      LAGO_KAFKA_API_LOGS_TOPIC: api_logs
+      LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
+      LAGO_KAFKA_SECURITY_LOGS_TOPIC: security_logs
+      MISTRAL_API_KEY: ""
+      MISTRAL_AGENT_ID: ""
+      # dev/golden/run.sh would infer this from $CI; pinning it keeps the choice visible here.
+      GOLDEN_EXEC: native
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the surveyor diffs against the baseline SHA
+
+      - name: Install Ruby and gems
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Start Clickhouse database
+        run: |
+          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server:25.12-alpine
+        shell: bash
+
+      - name: Generate RSA keys
+        run: ./scripts/generate.rsa.sh
+
+      - name: Set up Postgres database schema
+        run: bin/rails db:schema:load:primary
+
+      - name: Set up Clickhouse database schema
+        run: bin/rails db:migrate:clickhouse
+
+      - name: Run the pipeline
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: "/golden-run --extend --budget ${{ inputs.budget || 8 }} ${{ inputs.lead && format('--lead {0}', inputs.lead) || '' }}"
+          # Deliberately NOT --bare: bare mode skips .claude/agents/, and the pipeline is five agents.
+          claude_args: |
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob,Agent"
+            --permission-mode dontAsk
+            --output-format json
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.GOLDEN_SLACK_WEBHOOK }}
+          # The derivers fan out as background agents; the default ten-minute ceiling would reap them
+          # mid-run and the report would read as "cells not attempted".
+          CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "0"
+
+      # Guard the whole point of the runner: it may not touch application code. This runs AFTER the
+      # pipeline — before it, the tree is unchanged and the check passes without checking anything.
+      # The reporter checks the same thing before opening the PR; this is the backstop.
+      - name: Assert write scope
+        if: always()
+        run: |
+          changed=$(git status --porcelain | cut -c4- \
+            | grep -vE '^spec/scenarios/golden/' || true)
+          if [ -n "$changed" ]; then
+            echo "This workflow may only change spec/scenarios/golden. Aborting."
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-report
+          path: |
+            report.md
+            spec/scenarios/golden/COVERAGE.md
+
+      # No merge step, by design. The PR is the deliverable and a human is the gate.
