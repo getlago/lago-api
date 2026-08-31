@@ -5,15 +5,13 @@ require "rails_helper"
 RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonService do
   subject(:service) { described_class.new(subscription:, deduplicate:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls", aggregation_type: "count_agg") }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:deduplicate) { false }
-
-  let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls", aggregation_type: "count_agg") }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:) }
-
   let(:fee_attributes) do
     {
       charge:,
@@ -22,6 +20,7 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
       properties: {"charges_from_datetime" => "2026-04-01T00:00:00Z", "charges_to_datetime" => "2026-04-30T23:59:59Z"}
     }
   end
+
 
   describe "#call" do
     let(:legacy_fee) do

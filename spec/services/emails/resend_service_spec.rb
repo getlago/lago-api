@@ -8,7 +8,7 @@ RSpec.describe Emails::ResendService do
   let(:to) { nil }
   let(:cc) { nil }
   let(:bcc) { nil }
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, organization:, email: "customer@example.com") }
   let(:billing_entity) { customer.billing_entity }
 

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Entitlement::PlanEntitlementDestroyService do
   subject(:result) { described_class.call(entitlement:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege) { create(:privilege, organization:, feature:) }
   let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }

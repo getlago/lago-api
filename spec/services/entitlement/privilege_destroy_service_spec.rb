@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Entitlement::PrivilegeDestroyService do
   subject { described_class.call(privilege:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege) { create(:privilege, feature:, code: "max_admins", value_type: "integer") }
 
