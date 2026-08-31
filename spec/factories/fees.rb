@@ -158,6 +158,29 @@ FactoryBot.define do
     end
   end
 
+  factory :product_fee, parent: :fee do
+    fee_type { "product" }
+    subscription do
+      association(
+        :subscription,
+        organization: invoice.organization,
+        customer: invoice.customer,
+        plan: association(:plan, organization: invoice.organization)
+      )
+    end
+    rate_card_rate do
+      association(
+        :rate_card_rate,
+        organization: invoice.organization,
+        rate_card: association(:rate_card, organization: invoice.organization)
+      )
+    end
+    invoiceable { rate_card_rate.rate_card.product }
+    billing_entity { invoice.billing_entity }
+    taxes_amount_cents { 0 }
+    taxes_precise_amount_cents { 0 }
+  end
+
   factory :credit_fee, parent: :fee do
     transient do
       wallet_transaction { association(:wallet_transaction, organization:) }
