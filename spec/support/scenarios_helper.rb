@@ -9,7 +9,7 @@ module ScenariosHelper
       message_parts = ["API call failed:",
         "- Method: #{request.method}",
         "- Path: #{request.path}",
-        "- Request body: #{request.body.read}",
+        "- Request body: #{request.body&.read}",
         "- HTTP status: #{response.status}",
         "- Response body: #{response.body}"]
       message = message_parts.join("\n")
@@ -51,6 +51,12 @@ module ScenariosHelper
   def update_metric(metric, params, **kwargs)
     api_call(**kwargs) do
       put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", {billable_metric: params})
+    end
+  end
+
+  def delete_metric(metric_code, **kwargs)
+    api_call(**kwargs) do
+      delete_with_token(organization, "/api/v1/billable_metrics/#{metric_code}")
     end
   end
 
@@ -280,6 +286,30 @@ module ScenariosHelper
     end
   end
 
+  ### Add-ons
+
+  def create_add_on(params, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/add_ons", {add_on: params})
+    end
+  end
+
+  ### Plan fixed charges
+
+  # NOTE: inlining fixed_charges in the plan create payload returns 500, so they are posted to the
+  # plan after it exists.
+  def create_plan_fixed_charge(plan, params, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges", {fixed_charge: params})
+    end
+  end
+
+  def update_plan_fixed_charge(plan, fixed_charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges/#{fixed_charge_code}", {fixed_charge: params})
+    end
+  end
+
   ### Coupons
 
   def create_coupon(params, **kwargs)
@@ -441,6 +471,28 @@ module ScenariosHelper
   def perform_wallet_refresh
     clock_job do
       Clock::RefreshWalletsOngoingBalanceJob.perform_later
+    end
+  end
+
+  # Silently skips wallets created today: the service's SQL requires the anniversary to match and
+  # `DATE(wallets.created_at) != DATE(:today)`.
+  def perform_interval_wallet_top_ups
+    clock_job do
+      Clock::CreateIntervalWalletTransactionsJob.perform_later
+    end
+  end
+
+  # Filters on `DATE(ending_at) = DATE(now)` in the customer's timezone, so it only does anything on
+  # the ending day itself.
+  def perform_ended_subscriptions_termination
+    clock_job do
+      Clock::TerminateEndedSubscriptionsJob.perform_later
+    end
+  end
+
+  def perform_subscriptions_activation
+    clock_job do
+      Clock::ActivateSubscriptionsJob.perform_later
     end
   end
 

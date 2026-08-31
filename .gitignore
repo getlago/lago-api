@@ -46,3 +46,10 @@ LAGO_VERSION
 .idea
 
 /vendor/bundle
+
+# Golden suite build products (rake golden:docs) and local agent settings
+spec/scenarios/golden/scenarios.json
+spec/scenarios/golden/SCENARIOS.md
+spec/scenarios/golden/FINDINGS.md
+spec/scenarios/golden/COVERAGE.md
+.claude/settings.local.json

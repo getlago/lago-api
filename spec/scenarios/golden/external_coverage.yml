@@ -1,0 +1,110 @@
+# Cells already guarded by specs OUTSIDE the golden suite.
+#
+# Many of the hand-written specs under `spec/scenarios/` assert exactly what a golden cell would.
+# Marking those cells `~` rather than blank stops the map reporting a gap somebody is already
+# watching, and stops anyone writing a duplicate row.
+#
+# Each cell names its OWN spec, so a cell and its reference cannot be mispaired — over-claiming is a
+# lie the map would then repeat forever.
+#
+# Rules for an entry:
+#   * point at a file AND line holding the actual assertion, not a file that "covers the area"
+#   * claim only what the spec really exercises; under-claiming is free
+#   * harness_spec.rb checks every referenced file exists and the line is inside it
+#
+# An external mark is WEAKER than a golden row: no derived `math`, no exact-value discipline, and it
+# never counts toward the ledger's covered total. It means "somebody is watching this", not "this is
+# pinned to the penny".
+---
+# by_aggregation_type/*: a STANDARD charge, varying the aggregation, asserted on current usage.
+- block: B1
+  cell: {charge_model: standard, aggregation: count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_aggregation_type/count_agg_spec.rb:47
+- block: B1
+  cell: {charge_model: standard, aggregation: sum_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_aggregation_type/sum_agg_spec.rb:65
+- block: B1
+  cell: {charge_model: standard, aggregation: max_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_aggregation_type/max_agg_spec.rb:43
+- block: B1
+  cell: {charge_model: standard, aggregation: unique_count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_aggregation_type/unique_count_agg_spec.rb:233
+- block: B1
+  cell: {charge_model: standard, aggregation: weighted_sum_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_aggregation_type/weighted_sum_agg_spec.rb:48
+- block: B1
+  cell: {charge_model: standard, aggregation: latest_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_aggregation_type/latest_agg_spec.rb:43
+
+# by_charge_model/*: a COUNT_AGG metric, varying the charge model, asserted on current usage.
+- block: B1
+  cell: {charge_model: graduated, aggregation: count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_charge_model/graduated_spec.rb:46
+- block: B1
+  cell: {charge_model: package, aggregation: count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_charge_model/package_spec.rb:40
+- block: B1
+  cell: {charge_model: percentage, aggregation: count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_charge_model/percentage_spec.rb:50
+- block: B1
+  cell: {charge_model: volume, aggregation: count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_charge_model/volume_spec.rb:50
+- block: B1
+  cell: {charge_model: graduated_percentage, aggregation: count_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_charge_model/graduated_percentage_spec.rb:49
+
+# dynamic prices from the event, so its spec necessarily uses sum_agg rather than count_agg.
+- block: B1
+  cell: {charge_model: dynamic, aggregation: sum_agg, observed_via: current-usage, events: many}
+  covered_by: spec/scenarios/current_usage/by_charge_model/dynamic_spec.rb:54
+
+# commitments/minimum/ is a deliberate 16-file grid over mode × billing_time × interval.
+# semiannual is absent from it — which is how the four missing cells were found.
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: calendar, interval: weekly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/calendar/weekly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: calendar, interval: monthly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/calendar/monthly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: calendar, interval: quarterly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/calendar/quarterly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: calendar, interval: yearly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/calendar/yearly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: anniversary, interval: weekly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/anniversary/weekly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: anniversary, interval: monthly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/anniversary/monthly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: anniversary, interval: quarterly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/anniversary/quarterly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-advance, billing_time: anniversary, interval: yearly}
+  covered_by: spec/scenarios/commitments/minimum/in_advance/anniversary/yearly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: calendar, interval: weekly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/calendar/weekly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: calendar, interval: monthly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/calendar/monthly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: calendar, interval: quarterly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/calendar/quarterly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: calendar, interval: yearly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/calendar/yearly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: anniversary, interval: weekly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/anniversary/weekly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: anniversary, interval: monthly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/anniversary/monthly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: anniversary, interval: quarterly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/anniversary/quarterly_spec.rb:1
+- block: B12
+  cell: {commitment_mode: in-arrears, billing_time: anniversary, interval: yearly}
+  covered_by: spec/scenarios/commitments/minimum/in_arrears/anniversary/yearly_spec.rb:1
