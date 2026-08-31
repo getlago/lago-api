@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Credit do
   subject(:credit) { create(:credit) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "associations" do
     it { is_expected.to belong_to(:invoice) }
     it { is_expected.to belong_to(:applied_coupon).optional }

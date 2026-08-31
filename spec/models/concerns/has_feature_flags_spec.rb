@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe HasFeatureFlags do
-  subject(:organization) { create(:organization, feature_flags: []) }
+  subject(:organization) { create_default(:organization, feature_flags: []) }
 
   let(:valid_flag) { FeatureFlag::DEFINITION.keys.first }
 

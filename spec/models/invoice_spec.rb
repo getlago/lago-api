@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Invoice do
   subject(:invoice) { create(:invoice, organization:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
 
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"

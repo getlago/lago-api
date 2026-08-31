@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Subscription::ActivationRule do
   subject(:activation_rule) { create(:subscription_activation_rule) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:status)

@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe ChargeFilter do
   subject(:charge_filter) { build(:charge_filter) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
+
   it_behaves_like "paper_trail traceable"
 
   describe "associations" do

@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe RecurringTransactionRule do
   it_behaves_like "a model with a purchase order number"
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }
     it { is_expected.to belong_to(:organization) }
