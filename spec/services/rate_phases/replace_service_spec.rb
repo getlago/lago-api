@@ -5,10 +5,14 @@ require "rails_helper"
 RSpec.describe RatePhases::ReplaceService do
   subject(:result) { described_class.call(plan_rate_card:, phases_params:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, rate_card:) }
+
+before_all do
+  create_default(:billable_metric)
+end
 
   let(:phases_params) do
     [

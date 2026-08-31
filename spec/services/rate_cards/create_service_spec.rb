@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe RateCards::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   # The shared params set proration: true, which requires a recurring metric.
-  let(:metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount") }
+  let_it_be(:metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount") }
   let(:product) { create(:product, organization:, billable_metric: metric) }
 
   let(:params) do
@@ -75,7 +75,7 @@ RSpec.describe RateCards::CreateService do
 
   context "with nested rates" do
     # A prorated card requires a recurring metric for its rates to be valid.
-    let(:product) do
+    let_it_be(:product) do
       metric = create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
       create(:product, organization:, billable_metric: metric)
     end
