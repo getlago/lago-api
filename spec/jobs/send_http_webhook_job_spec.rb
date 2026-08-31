@@ -4,6 +4,12 @@ require "rails_helper"
 require "aws-sdk-s3"
 
 RSpec.describe SendHttpWebhookJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:invoice)
+  end
+
   subject(:send_http_webhook_job) { described_class }
 
   let(:webhook) { create(:webhook) }

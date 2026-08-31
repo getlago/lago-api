@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillMoneyhashPaymentMethodsJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
   let(:moneyhash_customer) do
     create(:moneyhash_customer, customer:, payment_provider: moneyhash_provider).tap do |c|

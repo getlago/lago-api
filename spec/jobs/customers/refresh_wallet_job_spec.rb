@@ -3,8 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Customers::RefreshWalletJob do
+  before_all do
+    create_default(:organization)
+  end
+
   describe "queue routing" do
-    let(:customer) { create(:customer) }
+    let_it_be(:customer) { create(:customer) }
 
     context "when the customer's organization is in the dedicated list" do
       before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [customer.organization_id]) }
@@ -38,7 +42,6 @@ RSpec.describe Customers::RefreshWalletJob do
   describe "#perform" do
     subject { described_class.perform_now(customer, wallet_ids:) }
 
-    let(:customer) { create(:customer, awaiting_wallet_refresh:) }
     let(:organization) { customer.organization }
     let(:result) { Customers::RefreshWalletsService::Result.new }
     let(:wallet_ids) { nil }
@@ -48,7 +51,8 @@ RSpec.describe Customers::RefreshWalletJob do
     end
 
     context "when customer is not awaiting wallet refresh" do
-      let(:awaiting_wallet_refresh) { false }
+      let_it_be(:awaiting_wallet_refresh) { false }
+      let_it_be(:customer) { create(:customer, awaiting_wallet_refresh:) }
 
       it "does not call the Customers::RefreshWalletsService service" do
         subject
@@ -66,7 +70,8 @@ RSpec.describe Customers::RefreshWalletJob do
     end
 
     context "when customer is awaiting wallet refresh" do
-      let(:awaiting_wallet_refresh) { true }
+      let_it_be(:awaiting_wallet_refresh) { true }
+      let_it_be(:customer) { create(:customer, awaiting_wallet_refresh:) }
 
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do

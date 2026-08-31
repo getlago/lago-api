@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::WaitForEnrichmentJob, type: :job do
-  let(:organization) { create(:organization) }
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
+
+  let_it_be(:organization) { create_default(:organization) }
   let(:migration) { create(:enriched_store_migration, :processing, organization:) }
   let(:subscription) { create(:subscription, organization:) }
   let(:subscription_migration) do

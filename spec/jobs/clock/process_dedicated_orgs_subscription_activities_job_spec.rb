@@ -6,7 +6,7 @@ RSpec.describe Clock::ProcessDedicatedOrgsSubscriptionActivitiesJob, job: true d
   describe "#perform" do
     subject { described_class.perform_now }
 
-    let(:target_organization) { create(:organization) }
+    let_it_be(:target_organization) { create(:organization) }
     let(:other_organization) { create(:organization) }
 
     context "when the dedicated org list is empty" do

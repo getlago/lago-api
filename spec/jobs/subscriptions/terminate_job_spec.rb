@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::TerminateJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:subscription) { create(:subscription) }
   let(:timestamp) { Time.zone.now.to_i }
 

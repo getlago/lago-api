@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillAdyenPaymentMethodsJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:adyen_provider) { create(:adyen_provider, organization:) }
   let(:adyen_customer) do
     create(:adyen_customer, customer:, payment_provider: adyen_provider).tap do |c|
