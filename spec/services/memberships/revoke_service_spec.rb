@@ -7,12 +7,12 @@ RSpec.describe Memberships::RevokeService do
 
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:admin_role) { create(:role, :admin) }
   let(:finance_role) { create(:role, :finance) }
 
-  let(:user) { create(:user) }
-  let(:membership) { create(:membership, organization:) }
+  let_it_be(:user) { create(:user) }
+  let_it_be(:membership) { create(:membership, organization:) }
   let(:other_membership) { create(:membership, user:, organization:) }
 
   describe "#call" do

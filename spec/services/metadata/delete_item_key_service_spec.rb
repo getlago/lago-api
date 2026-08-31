@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe Metadata::DeleteItemKeyService do
   subject(:service) { described_class.new(item:, key:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+
+before_all do
+  create_default(:customer)
+end
+
   let(:owner) { create(:credit_note, organization:) }
   let(:item) { create(:item_metadata, owner:, organization:, value:) }
   let(:value) { {"foo" => "bar", "baz" => "qux"} }

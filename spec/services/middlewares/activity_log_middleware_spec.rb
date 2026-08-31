@@ -27,6 +27,13 @@ RSpec.describe Middlewares::ActivityLogMiddleware do
     end
   end
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+create_default(:plan)
+end
+
+
   let(:subscription) { create(:subscription, name: "My Subscription") }
   let(:activity_loggable_after_commit) { false }
 
