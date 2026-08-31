@@ -64,8 +64,7 @@ module BillingSegments
     end
 
     def window
-      @window ||= requested_range.begin.to_date.beginning_of_day.utc...
-        requested_range.end.to_date.end_of_day.utc
+      @window ||= requested_range.begin.to_date.beginning_of_day.utc...requested_range.end.to_date.end_of_day.utc
     end
 
     def due_items

@@ -27,7 +27,7 @@ module SubscriptionRateCards
       return result if subscription_rate_card.ended_at.present?
 
       ActiveRecord::Base.transaction do
-        result.billing_segments = final_cycles
+        result.billing_segments = final_segments
         subscription_rate_card.update!(termination_attributes)
       end
 
@@ -48,81 +48,74 @@ module SubscriptionRateCards
       attributes.merge(next_billing_at: terminated_at)
     end
 
-    def final_cycles
+    # Every unbilled period up to the termination, the last one clamped to it. Advance
+    # cards are absent by design: their period was paid up front, and what is owed back is
+    # a credit note rather than a segment.
+    def final_segments
       return [] unless arrears?
 
-      dates.periods.filter_map { |period| billing_segment_for(period) }
-    end
-
-    # Termination emits every period overlapping the termination window instead of
-    # waiting for the regular arrears/advance billing boundary.
-    def dates
-      @dates ||= BillingPeriods::DatesService.from_subscription_rate_card(
-        subscription_rate_card,
-        rates:,
-        rate_phases:,
-        range: termination_range,
-        options: dates_options
+      build = ::Billing::Schedules::BuildService.call(
+        subscription_rate_card:,
+        plan_rate_cards:,
+        ends_at: terminated_at
       )
-    end
+      return [] if build.failure?
 
-    def termination_range
-      if terminated_at.future?
-        Time.current..terminated_at
-      else
-        terminated_at..terminated_at
+      build.schedule.cycles_overlapping(termination_window).flat_map do |cycle|
+        ::Billing::Segments.within(cycle.from...cycle.to, rates:).map do |segment|
+          persist(cycle, segment)
+        end
       end
     end
 
-    def billing_segment_for(period)
+    # A cancellation booked for later closes the periods from today onward; one taking
+    # effect now closes only the period it lands in.
+    def termination_window
+      @termination_window ||= if terminated_at.future?
+        Time.current...terminated_at
+      else
+        terminated_at.beginning_of_day...terminated_at
+      end
+    end
+
+    def persist(cycle, segment)
       BillingSegment.create!(
         organization:,
         subscription:,
         customer:,
         subscription_rate_card:,
         billing_at: terminated_at,
-        period_from: period.period_from,
-        period_to: period.period_to,
-        rate_card_rate: period.rate,
-        rate_override: period.rate_override,
-        rate_properties: period.rate_properties,
-        proration_ratio: period.proration_ratio
+        period_from: segment.from,
+        period_to: covered_until(segment),
+        rate_card_rate: segment.rate,
+        rate_override: cycle.phase.override,
+        rate_properties: (cycle.phase.override || segment.rate).properties,
+        proration_ratio: proration_ratio(cycle, segment)
       )
     end
 
-    def rates
-      ranked_rates = subscription_rate_card.rate_card.rates
-        .select(
-          "rate_card_rates.*, " \
-            "LEAD(rate_card_rates.effective_from) OVER " \
-            "(ORDER BY rate_card_rates.effective_from) AS next_effective_from"
-        )
+    # Cycle ends are exclusive boundaries, so the last instant they cover is a moment
+    # before. The termination is not a boundary — it is already the last instant of service.
+    def covered_until(segment)
+      return terminated_at if segment.to == terminated_at
 
-      RateCardRate
-        .from(ranked_rates, :rate_card_rates)
-        .where("effective_from <= ?", termination_range.end.end_of_day)
-        .where("next_effective_from IS NULL OR next_effective_from >= ?", termination_range.begin.beginning_of_day)
-        .order(:effective_from)
+      segment.to - Rational(1, 1_000_000)
     end
 
-    def rate_phases
-      SubscriptionRateCards::ResolveRatePhasesService.call!(
-        subscription_rate_card:,
-        plan_rate_cards:
-      ).rate_phases
+    def proration_ratio(cycle, segment)
+      return 1 unless subscription_rate_card.proration?
+
+      cycle.calendar.elapsed_ratio(segment.from, segment.to)
+    end
+
+    # Every rate the card has carried: which one prices a segment is decided by its
+    # effective date, so narrowing the set here would hide the one in force.
+    def rates
+      subscription_rate_card.rate_card.rates.order(:effective_from)
     end
 
     def plan_rate_cards
       subscription.plan.applied_rate_cards.to_a
-    end
-
-    def dates_options
-      BillingPeriods::DatesService::Options.new(
-        timezone: subscription.customer.applicable_timezone,
-        exclude_out_of_range: true,
-        realign_billing_anchor: true,
-        termination: true
-      )
     end
 
     def arrears?

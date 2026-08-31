@@ -13,9 +13,13 @@ module Billing
     class BuildService < BaseService
       Result = BaseResult[:schedule]
 
-      def initialize(subscription_rate_card:, plan_rate_cards: [])
+      # `ends_at` overrides the card's own end, for the moment before a termination is
+      # written: the final segments have to be built against the end that is about to
+      # apply, not the one still on the row.
+      def initialize(subscription_rate_card:, plan_rate_cards: [], ends_at: nil)
         @subscription_rate_card = subscription_rate_card
         @plan_rate_cards = plan_rate_cards
+        @ends_at = ends_at
         super
       end
 
@@ -26,7 +30,7 @@ module Billing
           anchor_date: subscription_rate_card.billing_anchor_date,
           timezone:,
           starts_at:,
-          ends_at: subscription_rate_card.ended_at,
+          ends_at: ends_at || subscription_rate_card.ended_at,
           timing: subscription_rate_card.rate_card.billing_timing,
           phases:
         )
@@ -35,7 +39,7 @@ module Billing
 
       private
 
-      attr_reader :subscription_rate_card, :plan_rate_cards
+      attr_reader :subscription_rate_card, :plan_rate_cards, :ends_at
 
       def timezone
         @timezone ||= subscription_rate_card.subscription.customer.applicable_timezone

@@ -263,15 +263,6 @@ module Api
         end
       end
 
-      def segments_date_options(subscription)
-        BillingPeriods::DatesService::Options.new(
-          timezone: subscription.customer.applicable_timezone,
-          exclude_out_of_range: false,
-          realign_billing_anchor: true,
-          termination: false
-        )
-      end
-
       def serialize_segment(subscription_rate_card, cycle, segment)
         {
           subscription_external_id: subscription_rate_card.subscription.external_id,
