@@ -8,17 +8,18 @@ RSpec.describe PaymentsQuery do
   end
 
   let(:returned_ids) { result.payments.pluck(:id) }
-  let(:pagination) { nil }
-  let(:filters) { nil }
-  let(:search_term) { nil }
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:organization) { create_default(:organization) }
   let(:invoice) { create(:invoice, organization:) }
   let(:invoice2) { create(:invoice, organization:) }
   let(:payment_request) { create(:payment_request, organization:) }
   let(:payment_one) { create(:payment, payable: invoice) }
   let(:payment_two) { create(:payment, payable: invoice2) }
   let(:payment_three) { create(:payment, payable: payment_request) }
+  let(:pagination) { nil }
+  let(:filters) { nil }
+  let(:search_term) { nil }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     payment_one

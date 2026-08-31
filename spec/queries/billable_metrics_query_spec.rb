@@ -8,16 +8,16 @@ RSpec.describe BillableMetricsQuery do
   end
 
   let(:returned_ids) { result.billable_metrics.map(&:id) }
+  let(:billable_metric_first) { create(:billable_metric, organization:, name: "defgh", code: "11") }
+  let(:billable_metric_second) { create(:billable_metric, organization:, name: "abcde", code: "22") }
+  let(:billable_metric_third) { create(:billable_metric, organization:, name: "presuv", code: "33") }
+  let(:billable_metric_fourth) { create(:unique_count_billable_metric, organization:, name: "qwerty", code: "44") }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
 
   let_it_be(:membership) { create(:membership) }
   let_it_be(:organization) { create_default(:organization) }
-  let(:billable_metric_first) { create(:billable_metric, organization:, name: "defgh", code: "11") }
-  let(:billable_metric_second) { create(:billable_metric, organization:, name: "abcde", code: "22") }
-  let(:billable_metric_third) { create(:billable_metric, organization:, name: "presuv", code: "33") }
-  let(:billable_metric_fourth) { create(:unique_count_billable_metric, organization:, name: "qwerty", code: "44") }
 
   before do
     billable_metric_first
