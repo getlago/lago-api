@@ -62,6 +62,18 @@ module GoldenFindings
     YAML.safe_load_file(ledger_path, permitted_classes: [], aliases: true) || []
   end
 
+  # Rows a finding declares DELIBERATELY red: they assert the correct behaviour and stay failing
+  # until the defect is fixed. Green pins are derived from rows' `pins:`; red pins must be declared
+  # in the ledger, because a failing row carries nothing that distinguishes "pinned red" from
+  # "broken". CI compares a run's failures against this list and objects to any difference — in
+  # either direction, since an expected-red row going green means behaviour changed and the ledger
+  # entry is due an update.
+  def expected_reds
+    acknowledged.reject { |entry| entry["status"] == "withdrawn" }
+      .flat_map { |entry| Array(entry["red_pins"]) }
+      .sort
+  end
+
   SEVERITY_ORDER = %w[MONEY BROKEN API HARNESS-CRITICAL HARNESS DOC PROCESS UNRESOLVED].freeze
 
   # The dated markdown log, regenerated from the ledger rather than appended to by hand — which is how

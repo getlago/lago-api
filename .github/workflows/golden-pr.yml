@@ -1,15 +1,24 @@
-name: Run Spec
+name: Golden Suite
+# Runs the golden billing matrix on PRs that touch it. The default suite excludes
+# spec/scenarios/golden (the whole matrix lives in ONE spec file, which file-based splitting would
+# hand to a single node), so this workflow shards it with GOLDEN_SHARD instead — and judges the
+# outcome with dev/golden/gate.rb, because the findings ledger deliberately keeps some rows red.
 on:
-  push:
-    branches:
-      - "main"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - "spec/scenarios/golden/**"
+      - "spec/support/golden_*.rb"
+      - "spec/support/scenarios_helper.rb"
+      - "dev/golden/**"
+      - "lib/tasks/golden.rake"
+      - ".github/workflows/golden-pr.yml"
 permissions: {}
 jobs:
-  run-spec:
-    name: Run Spec
+  golden:
+    name: Golden shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       postgres:
         image: getlago/postgres-partman:15.0-alpine
@@ -31,11 +40,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ci_node_total: [10]
-        ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        shard: [1, 2, 3, 4]
 
     env:
       RAILS_ENV: test
+      GOLDEN_EXEC: native
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
       LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
       LAGO_REDIS_STORE_URL: "localhost:6379"
@@ -56,14 +65,6 @@ jobs:
       LAGO_KAFKA_API_LOGS_TOPIC: api_logs
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
       LAGO_KAFKA_SECURITY_LOGS_TOPIC: security_logs
-      KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC: ${{ secrets.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
-      KNAPSACK_PRO_CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
-      KNAPSACK_PRO_CI_NODE_INDEX: ${{ matrix.ci_node_index }}
-      KNAPSACK_PRO_FIXED_QUEUE_SPLIT: true
-      KNAPSACK_PRO_LOG_LEVEL: info
-      # The golden matrix lives in ONE spec file, so file-based splitting would hand all of it to a
-      # single node; golden-pr.yml runs it sharded, and only when golden files change.
-      KNAPSACK_PRO_TEST_FILE_EXCLUDE_PATTERN: "spec/scenarios/golden/**/*_spec.rb"
       MISTRAL_API_KEY: ""
       MISTRAL_AGENT_ID: ""
 
@@ -73,7 +74,6 @@ jobs:
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "4.0.2"
           bundler-cache: true
       - name: Start Clickhouse database
         run: |
@@ -86,14 +86,10 @@ jobs:
         run: bin/rails db:schema:load:primary
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
-      - name: Run tests
+      - name: Run golden shard
         run: |
-          if [[ -z "$KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC" ]]; then
-            echo "::warning::This is a community PR. We'll default to running the test using 'parallel_tests'."
-            bundle exec parallel_rspec --only-group "${KNAPSACK_PRO_CI_NODE_INDEX}" -n "${KNAPSACK_PRO_CI_NODE_TOTAL}" --exclude-pattern "spec/integration/.*_integration_spec.rb|spec/scenarios/golden/.*"
-          else
-            bundle exec rake knapsack_pro:queue:rspec
-          fi
-        continue-on-error: true
-      - name: retry failed tests
-        run: bundle exec rspec --only-failures
+          mkdir -p tmp
+          GOLDEN_SHARD="${{ matrix.shard }}/4" bundle exec rspec spec/scenarios/golden \
+            --format progress --format json --out tmp/golden_result.json || true
+      - name: Gate on declared reds
+        run: ruby dev/golden/gate.rb tmp/golden_result.json

@@ -18,6 +18,10 @@
   ticket:
   noted: '2026-08-26'
   digest: ff45ecd6638d
+  red_pins:
+    - b05/fixed/multiple-in-period/excess-to-credit-note
+    - b05/multiple/multiple-in-period/excess-to-credit-note
+    - b05/recurring/multiple-in-period/excess-to-credit-note
   body: |-
     credits/progressive_billing_service.rb:79 books a progressive credit as
     `precise_coupons_amount_cents` — a phantom coupon on invoices that have none. Then
@@ -133,6 +137,26 @@
   ticket:
   noted: '2026-08-26'
   digest: b1d820020f5f
+  red_pins:
+    - b12/in-advance/anniversary/monthly
+    - b12/in-advance/anniversary/quarterly
+    - b12/in-advance/anniversary/semiannual
+    - b12/in-advance/anniversary/weekly
+    - b12/in-advance/anniversary/yearly
+    - b12/in-advance/calendar/monthly
+    - b12/in-advance/calendar/quarterly
+    - b12/in-advance/calendar/semiannual
+    - b12/in-advance/calendar/weekly
+    - b12/in-advance/calendar/yearly
+    - b12/in-arrears/anniversary/monthly
+    - b12/in-arrears/anniversary/quarterly
+    - b12/in-arrears/anniversary/semiannual
+    - b12/in-arrears/anniversary/weekly
+    - b12/in-arrears/anniversary/yearly
+    - b12/in-arrears/calendar/quarterly
+    - b12/in-arrears/calendar/semiannual
+    - b12/in-arrears/calendar/weekly
+    - b12/in-arrears/calendar/yearly
   body: |-
     fee_serializer.rb:63 merges date_boundaries only for charge/subscription/add_on/fixed_charge.
     `commitment` is absent, so from_date/to_date are missing from the payload though correct in
@@ -1242,6 +1266,28 @@
   ticket:
   noted: '2026-08-31'
   digest:
+  red_pins:
+    - b04/preview/with-progressive-billing
+    - b17/full-stack/preview
+    - b17/pb-coupon-credit-note-wallet/preview
+    - b17/pb-coupon-credit-note/preview
+    - b17/pb-coupon-tax-credit-note/preview
+    - b17/pb-coupon-tax-wallet/preview
+    - b17/pb-coupon-tax/preview
+    - b17/pb-coupon-wallet/preview
+    - b17/pb-credit-note-wallet/preview
+    - b17/pb-tax-credit-note-wallet/preview
+    - b17/pb-tax-credit-note/preview
+    - b17/pb-tax-wallet/preview
+    - b18/charge_amount/between-progressive-invoices/preview
+    - b18/coupon/between-progressive-invoices/preview
+    - b18/grace_period/between-progressive-invoices/preview
+    - b18/plan_amount/between-progressive-invoices/preview
+    - b18/tax_rate/between-progressive-invoices/preview
+    - b18/wallet_balance/between-progressive-invoices/preview
+    - b20/filter-changed/progressive_billing_credit/preview
+    - b20/plan-upgrade/progressive_billing_credit/preview
+    - b21/b5/preview
   body: |-
     Invoices::PreviewService subtracts only coupons from the sub-total; unlike the finalize
     pipeline (Credits::ProgressiveBillingService via calculate_fees_service.rb) it never applies

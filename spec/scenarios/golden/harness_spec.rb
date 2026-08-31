@@ -243,6 +243,24 @@ describe "Golden harness" do
           "\n\nEither it was partly fixed or it got worse. Re-read it and update the digest; accepting " \
           "new numbers silently is how a characterization row becomes a rubber stamp."
     end
+
+    # Red pins are CI's allowlist of deliberate failures, so a typo here silently excuses a real
+    # red. Rows may land in a later PR than the ledger, so absence from disk is legal — but a row
+    # that IS on disk must look like a matrix row id, appear once, and not also claim to be a
+    # passing characterization of the same defect.
+    it "declares well-formed red pins" do
+      reds = GoldenFindings.acknowledged.flat_map { |entry| Array(entry["red_pins"]) }
+      on_disk = GoldenMatrix.rows.index_by { |row| row["id"] }
+
+      problems = reds.tally.select { |_, count| count > 1 }.keys.map { |id| "#{id}: declared red by more than one finding" }
+      problems += reds.reject { |id| id.match?(%r{\Ab\d+/\S+\z}) }.map { |id| "#{id.inspect}: not a row id" }
+      problems += reds.filter_map do |id|
+        "#{id}: is characterization: true — a row cannot be both pinned green and expected red" if on_disk[id]&.fetch("characterization", false)
+      end
+
+      expect(problems).to be_empty,
+        "red_pins in #{GoldenFindings::LEDGER} have problems:\n  #{problems.join("\n  ")}"
+    end
   end
 
   describe "canaries" do
