@@ -1,0 +1,2339 @@
+# B19 — two of the same feature on one invoice.
+#
+# B17 asks what happens when different reducers meet. These rows ask what happens when the same one
+# appears twice. Two instances either add, or they compete for the same money — and when they compete
+# something decides which goes first, and therefore which one survives to the next period. Those
+# orderings all exist in the code and none of them was asserted anywhere.
+---
+- __matrix:
+    defaults:
+      provenance: "coverage-gap"
+      runners: [rspec, live]
+      dimensions: {interval: monthly, billing_time: calendar, taxes: none}
+      setup:
+        plan: {code: "golden_%{key}", interval: monthly, amount_cents: "%{plan_cents}"}
+        customer: {external_id: "golden_%{key}_cust", currency: EUR}
+        subscription: {external_id: "golden_%{key}_sub", billing_time: calendar}
+    groups:
+      ev:
+        setup:
+          metrics: [{code: "%{key}_sum", aggregation_type: sum_agg, field_name: amount}]
+          charges: [{billable_metric_code: "%{key}_sum", charge_model: standard, properties: {amount: "1"}}]
+      iv:
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      ivm:
+        setup:
+          metrics: [{code: "%{key}_sum", aggregation_type: sum_agg, field_name: amount}]
+          charges: [{billable_metric_code: "%{key}_sum", charge_model: standard, properties: {amount: "1"}}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", timestamp: "2024-03-05T10:00:00Z", properties: {amount: "%{e1}"}}, {code: "%{key}_sum", timestamp: "2024-03-05T11:00:00Z", properties: {amount: "%{e2}"}}, {code: "%{key}_sum", timestamp: "2024-03-05T12:00:00Z", properties: {amount: "%{e3}"}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      pv:
+        runners: [rspec]
+        setup:
+          organization: {premium_integrations: [preview]}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      pvm:
+        runners: [rspec]
+        setup:
+          organization: {premium_integrations: [preview]}
+          metrics: [{code: "%{key}_sum", aggregation_type: sum_agg, field_name: amount}]
+          charges: [{billable_metric_code: "%{key}_sum", charge_model: standard, properties: {amount: "1"}}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", timestamp: "2024-03-05T10:00:00Z", properties: {amount: "%{e1}"}}, {code: "%{key}_sum", timestamp: "2024-03-05T11:00:00Z", properties: {amount: "%{e2}"}}, {code: "%{key}_sum", timestamp: "2024-03-05T12:00:00Z", properties: {amount: "%{e3}"}}]}
+          - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      rg:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+      rgm:
+        setup:
+          customer: {invoice_grace_period: 5}
+          metrics: [{code: "%{key}_sum", aggregation_type: sum_agg, field_name: amount}]
+          charges: [{billable_metric_code: "%{key}_sum", charge_model: standard, properties: {amount: "1"}}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", timestamp: "2024-03-05T10:00:00Z", properties: {amount: "%{e1}"}}, {code: "%{key}_sum", timestamp: "2024-03-05T11:00:00Z", properties: {amount: "%{e2}"}}, {code: "%{key}_sum", timestamp: "2024-03-05T12:00:00Z", properties: {amount: "%{e3}"}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+      rg2:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+          - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+          - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+
+- id: "b19/coupon/unequal/invoice"
+  block: B19
+  group: ev
+  key: b19_uneq
+  vars: {plan_cents: 8000}
+  axes: {feature: coupon, arrangement: unequal, observed_via: invoice}
+  setup:
+    coupons: [{name: "b19 unlimited coupon", code: b19_uneq_open, coupon_type: fixed_amount, frequency: once, amount_cents: 5000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 metric-limited coupon", code: b19_uneq_limited, coupon_type: fixed_amount, frequency: once, amount_cents: 5000, amount_currency: EUR, expiration: no_expiration, applies_to: {billable_metric_codes: [b19_uneq_sum]}}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_uneq_sum, properties: {amount: 20}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 7000
+      sub_total_excluding_taxes_amount_cents: 3000
+      total_amount_cents: 3000
+  math: >-
+    Two coupons of the SAME size, 5_000¢ each, and the invoice discounts 7_000¢ rather than 10_000¢ —
+    because the order they are applied in decides how much of the limited one can be used at all.
+    `Credits::AppliedCouponsService#applied_coupons` sorts metric-limited first, then plan-limited,
+    then oldest first (applied_coupons_service.rb:50-53). So the metric-limited coupon goes first even
+    though it was declared second, and it may only reduce the fee for its metric: 20 units × 1.00 =
+    2_000¢. It contributes 2_000¢ of its 5_000¢ and, because 2_000 < 5_000, is NOT terminated —
+    `should_terminate_applied_coupon?` requires `credit_amount >= remaining_amount`
+    (applied_coupon_service.rb:78-85).
+    The unlimited coupon then takes 5_000¢ of the remaining 8_000¢, leaving 3_000¢ due.
+    Reverse the order and the invoice is different: the unlimited coupon would take 5_000¢ of the
+    10_000¢ first, spreading pro rata so only 1_000¢ of the 2_000¢ charge fee survives for the limited
+    coupon to reduce — 6_000¢ of discount and 4_000¢ due. The plan fee is deliberately four times the
+    charge fee so that the limitation binds; with two unlimited coupons the totals commute and the row
+    would prove nothing.
+
+- id: "b19/coupon/capped/invoice"
+  block: B19
+  key: b19_cap
+  vars: {plan_cents: 10000}
+  axes: {feature: coupon, arrangement: capped, observed_via: invoice}
+  setup:
+    coupons: [{name: "b19 large coupon", code: b19_cap_large, coupon_type: fixed_amount, frequency: once, amount_cents: 12000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 small coupon", code: b19_cap_small, coupon_type: fixed_amount, frequency: once, amount_cents: 4000, amount_currency: EUR, expiration: no_expiration}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 10000
+        total_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 6000
+        total_amount_cents: 4000
+  math: >-
+    Two coupons worth 16_000¢ against a 10_000¢ invoice. The interesting part is not that the discount
+    is capped at 10_000¢ — it is that the second coupon is never looked at, and therefore survives.
+    March: the 12_000¢ coupon is older so it goes first and takes the whole 10_000¢. The loop then
+    stops — `break unless invoice.sub_total_excluding_taxes_amount_cents&.positive?`
+    (applied_coupons_service.rb:28) — so the 4_000¢ coupon is not evaluated, not partially consumed,
+    and not terminated. The large one is not terminated either: it gave 10_000¢ of its 12_000¢ and
+    keeps 2_000¢.
+    April proves both of those claims at once. The large coupon returns with exactly its 2_000¢
+    remainder and is terminated on using it; the small coupon then contributes its untouched 4_000¢ —
+    6_000¢ of discount and 4_000¢ due.
+    Had the second coupon been consumed to its cap in March, April would carry no discount at all and
+    read 10_000¢. Had it been partially consumed, April would be somewhere between. The two invoices
+    together are what pin it; neither alone can.
+
+- id: "b19/coupon/equal/invoice"
+  block: B19
+  group: ev
+  key: b19_eq
+  vars: {plan_cents: 5000}
+  axes: {feature: coupon, arrangement: equal, observed_via: invoice}
+  setup:
+    coupons: [{name: "b19 first coupon", code: b19_eq_one, coupon_type: fixed_amount, frequency: once, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 second coupon", code: b19_eq_two, coupon_type: fixed_amount, frequency: once, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_eq_sum, properties: {amount: 100}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 15000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        total_amount_cents: 11000
+      - select: {index: 1}
+        fees_amount_cents: 5000
+        coupons_amount_cents: 0
+        total_amount_cents: 5000
+  math: >-
+    The base case the other two arrangements are measured against: two coupons small enough that
+    neither constrains the other simply add. 15_000¢ of fees less 2_000¢ less 2_000¢ = 11_000¢.
+    The second invoice is what makes this more than arithmetic. Both coupons gave their full amount,
+    so both satisfy `credit_amount >= remaining_amount` and both are terminated — April carries no
+    discount and bills the bare 5_000¢ subscription fee.
+    That is the distinction from b19/coupon/capped/invoice, where the same `once` frequency leaves one
+    coupon alive with a remainder and the other untouched entirely. `once` does not mean "one invoice";
+    it means "until exhausted", and only asserting a second period tells the two apart.
+
+- id: "b19/prepaid_credit/unequal/invoice"
+  block: B19
+  group: iv
+  key: b19_wal
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: unequal, observed_via: invoice}
+  setup:
+    wallets: [{name: second, code: b19_wal_second, rate_amount: "1", currency: EUR, granted_credits: "100", priority: 2}, {name: first, code: b19_wal_first, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    wallet:
+      code: b19_wal_second
+      balance_cents: 8000
+  math: >-
+    Two wallets holding 13_000¢ between them against a 5_000¢ invoice, so the invoice settles either
+    way and the only question is whose credits were spent.
+    `Wallet.in_application_order` sorts by ascending priority, not by creation, so the 30-credit wallet
+    at priority 1 goes first despite being declared second. It contributes its whole 3_000¢ and the
+    priority-2 wallet covers the remaining 2_000¢, ending at 8_000¢.
+    That 8_000¢ is the entire assertion. Had priority been ignored and the larger wallet gone first it
+    would have paid the whole 5_000¢ and ended at 5_000¢, with the small wallet untouched — same
+    invoice, same prepaid_credit_amount_cents, same zero due. Only the balance of the wallet that did
+    NOT go first distinguishes the two, which is why the row selects it by code rather than asserting
+    the invoice alone.
+
+# ---------------------------------------------------------------------------------------------
+# b19_w1 — the remaining cells of the block.
+#
+# Shared conventions, so every number below is comparable:
+#   * monthly / calendar, EUR, no taxes unless the feature under test IS tax
+#   * `invoice` rows read a finalized invoice; `preview` rows assert the SAME numbers twice, once
+#     on POST /invoices/preview and once on the invoice it forecasts; `regenerated` rows hold a
+#     draft open under a grace period and rebuild it with PUT /invoices/:id/refresh
+#   * every regenerated row needs `premium: true` (invoice_grace_period is dropped without a
+#     licence), every preview row needs `premium: true` AND
+#     organization.premium_integrations: [preview], every credit-note row needs `premium: true`
+#   * `equal` asks whether BOTH instances take effect at all, so the amounts are chosen so that
+#     "one applied" and "both applied" differ loudly; `unequal` and `capped` assert WHICH instance
+#     was consumed and which survived, because two instances summing to the same discount look
+#     identical on one invoice.
+# ---------------------------------------------------------------------------------------------
+
+- id: "b19/coupon/equal/preview"
+  block: B19
+  group: pvm
+  key: b19_w1_ceqp
+  vars: {plan_cents: 5000, e1: 50, e2: 30, e3: 20}
+  axes: {feature: coupon, arrangement: equal, observed_via: preview}
+  premium: true
+  dimensions: {coupon_frequency: once}
+  setup:
+    coupons: [{name: "b19 w1 ceqp first", code: b19_w1_ceqp_a, coupon_type: fixed_amount, frequency: once, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 w1 ceqp second", code: b19_w1_ceqp_b, coupon_type: fixed_amount, frequency: once, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 11000
+      total_amount_cents: 11000
+    preview:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 4000
+      sub_total_excluding_taxes_amount_cents: 11000
+      total_amount_cents: 11000
+  math: >-
+    The `equal` question — do both instances take effect at all — asked of the surface that
+    reimplements the pipeline. 5_000¢ plan + 100 units × 1.00 = 15_000¢ of fees, and two 2_000¢
+    coupons neither of which constrains the other.
+    Preview walks the same sort as the real invoice (`Invoices::PreviewContextService:98-103` uses
+    the identical `limited_billable_metrics DESC, limited_plans DESC, created_at ASC` order as
+    `Credits::AppliedCouponsService#applied_coupons`, applied_coupons_service.rb:50-53) and the
+    same per-coupon arithmetic (`Coupons::PreviewService` calls the very same
+    `AppliedCoupons::AmountService`). Neither coupon is limited, so each takes its base from the
+    running `sub_total`: 15_000 → credit 2_000 → 13_000 → credit 2_000 → 11_000. The invoice then
+    recomputes `sub_total = fees − coupons` = 15_000 − 4_000 = 11_000
+    (preview_service.rb:305-308), which is what makes the two surfaces comparable at all.
+    A wrong implementation that applies one applied_coupon and silently ignores the second — the
+    plausible failure here, because `Coupons::PreviewService` iterates and `next`s in four places —
+    reads 2_000¢ of discount and 13_000¢ due on ONE of the two surfaces, which is exactly the
+    divergence this row exists to catch. The three events (50/30/20) are deliberately not one
+    event: one event cannot tell sum_agg from max_agg or latest_agg, and this row would then also
+    pass with the charge misconfigured.
+
+- id: "b19/coupon/unequal/preview"
+  block: B19
+  group: pvm
+  key: b19_w1_cunp
+  vars: {plan_cents: 8000, e1: 10, e2: 6, e3: 4}
+  axes: {feature: coupon, arrangement: unequal, observed_via: preview}
+  premium: true
+  characterization: true
+  pins: [F99]
+  dimensions: {coupon_frequency: once}
+  setup:
+    coupons: [{name: "b19 w1 cunp unlimited", code: b19_w1_cunp_open, coupon_type: fixed_amount, frequency: once, amount_cents: 5000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 w1 cunp metric-limited", code: b19_w1_cunp_limited, coupon_type: fixed_amount, frequency: once, amount_cents: 5000, amount_currency: EUR, expiration: no_expiration, applies_to: {billable_metric_codes: [b19_w1_cunp_sum]}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 7000
+      sub_total_excluding_taxes_amount_cents: 3000
+      total_amount_cents: 3000
+    preview:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 5000
+      sub_total_excluding_taxes_amount_cents: 5000
+      total_amount_cents: 5000
+  math: >-
+    CHARACTERIZATION — the preview and the invoice it forecasts disagree, and the row records what
+    Lago does rather than what it should do. Same configuration as
+    b19/coupon/unequal/invoice: 8_000¢ plan + 20 units × 1.00 = 10_000¢ of fees, one unlimited
+    5_000¢ coupon and one 5_000¢ coupon limited to the metric.
+    THE INVOICE (derived in b19/coupon/unequal/invoice): the metric-limited coupon sorts first
+    (applied_coupons_service.rb:50-53), may only reduce its own metric's fee, so it contributes
+    2_000¢ of its 5_000¢ and is not terminated; the unlimited coupon then takes 5_000¢ of the
+    remaining 8_000¢ → 7_000¢ of discount, 3_000¢ due.
+    THE PREVIEW: `Coupons::PreviewService#fees` returns `Fee.none` for any coupon with
+    `limited_billable_metrics?`, and the loop then `next`s on `fees.none?`
+    (coupons/preview_service.rb:22-27, :78-86) — so the metric-limited coupon is not merely
+    mis-based, it is skipped entirely. Only the unlimited coupon runs, taking 5_000¢ of the
+    10_000¢ sub_total → 5_000¢ of discount, 5_000¢ due. The preview overstates the invoice by
+    2_000¢, i.e. by the whole contribution of the limited instance.
+    The `Fee.none` carries `# TODO: update later when charges will be added to the preview`, which
+    is stale: `PreviewService#add_charge_fees` (preview_service.rb:173-230) builds charge fees, and
+    this row's preview contains the 2_000¢ charge fee the coupon was supposed to reduce.
+    Correct behaviour would be 7_000¢ / 3_000¢ on both surfaces; a fix must move BOTH the fee scope
+    and the base (`base_amount_cents` uses gross `fees.sum(&:amount_cents)` here where
+    applied_coupon_service.rb:96-105 nets out `precise_coupons_amount_cents`).
+
+- id: "b19/coupon/capped/preview"
+  block: B19
+  group: pv
+  key: b19_w1_ccpp
+  vars: {plan_cents: 10000}
+  axes: {feature: coupon, arrangement: capped, observed_via: preview}
+  premium: true
+  pins: [F03]
+  dimensions: {coupon_frequency: once}
+  setup:
+    coupons: [{name: "b19 w1 ccpp large", code: b19_w1_ccpp_large, coupon_type: fixed_amount, frequency: once, amount_cents: 12000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 w1 ccpp small", code: b19_w1_ccpp_small, coupon_type: fixed_amount, frequency: once, amount_cents: 4000, amount_currency: EUR, expiration: no_expiration}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 10000
+        total_amount_cents: 0
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 6000
+        sub_total_excluding_taxes_amount_cents: 4000
+        total_amount_cents: 4000
+    preview:
+      fees_amount_cents: 10000
+      coupons_amount_cents: 6000
+      sub_total_excluding_taxes_amount_cents: 4000
+      total_amount_cents: 4000
+  math: >-
+    PINS F03. 16_000¢ of `once` coupons against a 10_000¢ invoice, previewed in the period AFTER
+    the cap bit — which is the only place the surviving remainder is visible.
+    March (invoice 0): the 12_000¢ coupon is older so it goes first and, because
+    `AppliedCoupons::AmountService` returns the whole base when `remaining_amount > base`
+    (amount_service.rb:34-38), takes all 10_000¢. The loop then stops on
+    `break unless sub_total_excluding_taxes_amount_cents&.positive?`
+    (applied_coupons_service.rb:28), so the 4_000¢ coupon is never evaluated. Neither is
+    terminated: `should_terminate_applied_coupon?` needs `credit_amount >= remaining_amount`
+    (applied_coupon_service.rb:78-85) and 10_000 < 12_000.
+    That is F03 — a "one-time" coupon larger than the invoice keeps discounting later periods —
+    and April is where it is collected: the large coupon returns with exactly its 2_000¢ remainder
+    (terminated on using it), the small coupon contributes its untouched 4_000¢, so 6_000¢ of
+    discount and 4_000¢ due.
+    The preview taken on 20 April must reach the same 6_000¢ from the same two applied_coupons:
+    `PreviewContextService` reads `customer.applied_coupons.active`, which still contains both, and
+    `Coupons::PreviewService` calls the same `AmountService`, so remaining_amount 2_000 (< the
+    10_000¢ base) yields 2_000 and then 4_000 against the 8_000¢ that is left.
+    Had March consumed the second coupon to the cap, both surfaces would read 10_000¢ due in April;
+    had the remainder been forfeited on termination, they would read 6_000¢ due. Neither the
+    invoice nor the preview alone separates those; the pair of periods does.
+
+- id: "b19/coupon/equal/regenerated"
+  block: B19
+  group: rgm
+  key: b19_w1_ceqr
+  vars: {plan_cents: 5000}
+  axes: {feature: coupon, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {coupon_frequency: recurring, grace_period: 5}
+  setup:
+    coupons: [{name: "b19 w1 ceqr first", code: b19_w1_ceqr_a, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 w1 ceqr second", code: b19_w1_ceqr_b, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_ceqr_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}, {code: b19_w1_ceqr_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}, {code: b19_w1_ceqr_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 15000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 11000
+        total_amount_cents: 11000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 5000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 5000
+        total_amount_cents: 5000
+  math: >-
+    Two identically configured coupons, one period finalized and the next rebuilt as a draft, so the
+    row asserts the multiplicity AND what a regeneration makes of it.
+    March, finalized by hand out of its grace period: 5_000¢ plan + 100 units = 15_000¢, each
+    coupon takes its 2_000¢ from the running sub_total → 11_000¢ due. Both are `recurring` over 3
+    periods, so `decrement_frequency_duration_remaining` leaves each with 2 and NEITHER is
+    terminated (applied_coupon_service.rb:49-53, :86-88) — this is the deliberate difference from
+    b19/coupon/equal/invoice, where the same pair is `once` and both die on the first invoice.
+    April therefore has two live coupons worth 4_000¢, and the draft shows none of them: 5_000¢ of
+    fees and 5_000¢ due. `should_create_coupon_credit?` begins
+    `return false if not_in_finalizing_process?` (calculate_fees_service.rb:368-373), so a draft is
+    fee producers and tax alone — which is what stops a grace-period draft from consuming a
+    coupon that a refresh would have to give back. `PUT /invoices/:id/refresh` rebuilds the draft
+    from scratch and must land on the same 5_000¢, not on the 1_000¢ the customer will eventually
+    be billed.
+    Two wrong implementations are excluded at once: one that applied a single coupon in March
+    (12_000¢ instead of 11_000¢) and one whose refresh allocated the April coupons (1_000¢ instead
+    of 5_000¢, and two coupons burned a month early).
+
+- id: "b19/coupon/unequal/regenerated"
+  block: B19
+  group: rgm
+  key: b19_w1_cunr
+  vars: {plan_cents: 8000}
+  axes: {feature: coupon, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {coupon_frequency: recurring, grace_period: 5}
+  setup:
+    coupons: [{name: "b19 w1 cunr unlimited", code: b19_w1_cunr_open, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 5000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 w1 cunr metric-limited", code: b19_w1_cunr_limited, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 5000, amount_currency: EUR, expiration: no_expiration, applies_to: {billable_metric_codes: [b19_w1_cunr_sum]}}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cunr_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 10}}, {code: b19_w1_cunr_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 6}}, {code: b19_w1_cunr_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 4}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - {at: "2024-04-10T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cunr_sum, timestamp: "2024-04-10T10:00:00Z", properties: {amount: 10}}, {code: b19_w1_cunr_sum, timestamp: "2024-04-10T11:00:00Z", properties: {amount: 6}}, {code: b19_w1_cunr_sum, timestamp: "2024-04-10T12:00:00Z", properties: {amount: 4}}]}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 10000
+        coupons_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 3000
+        total_amount_cents: 3000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        total_amount_cents: 10000
+  math: >-
+    The metric-limited-first sort, finalized once and then regenerated on an identical period.
+    March, finalized out of grace: 8_000¢ plan + 20 units × 1.00 = 10_000¢. The metric-limited
+    coupon sorts ahead of the unlimited one (`limited_billable_metrics DESC`,
+    applied_coupons_service.rb:50-53) even though it was declared second, and its base is only the
+    fee for its own metric — 2_000¢ (applied_coupon_service.rb:96-105) — so it contributes 2_000¢
+    of its 5_000¢. The unlimited coupon then takes 5_000¢ of the remaining 8_000¢: 7_000¢ of
+    discount, 3_000¢ due. Reverse the order and the invoice reads 6_000¢ / 4_000¢, because the
+    unlimited coupon would have spread pro rata and left only 1_000¢ of the charge fee for the
+    limited one to reduce.
+    April is deliberately given the same 20 units, so the period is arithmetically identical and
+    the ONLY difference is the surface. Both coupons are `recurring` and still live with 2 periods
+    each, yet the draft shows 10_000¢ of fees, zero coupon and 10_000¢ due — the finalizing gate at
+    calculate_fees_service.rb:368-373 — and the refresh must reproduce that rather than drifting to
+    the 3_000¢ the finalized twin carries.
+    Asserting only the draft would leave the sort unasserted; asserting only the finalized invoice
+    would leave the gate unasserted. The two selectors are what make the cell mean something.
+
+- id: "b19/coupon/capped/regenerated"
+  block: B19
+  group: rg2
+  key: b19_w1_ccpr
+  vars: {plan_cents: 10000}
+  axes: {feature: coupon, arrangement: capped, observed_via: regenerated}
+  premium: true
+  dimensions: {coupon_frequency: once, grace_period: 5}
+  setup:
+    coupons: [{name: "b19 w1 ccpr large", code: b19_w1_ccpr_large, coupon_type: fixed_amount, frequency: once, amount_cents: 12000, amount_currency: EUR, expiration: no_expiration}, {name: "b19 w1 ccpr small", code: b19_w1_ccpr_small, coupon_type: fixed_amount, frequency: once, amount_cents: 4000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 10000
+        coupons_amount_cents: 10000
+        total_amount_cents: 0
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        total_amount_cents: 10000
+  math: >-
+    The capped pair, with the surviving remainder held on a draft instead of being spent.
+    March, finalized out of its grace period: the older 12_000¢ coupon takes the whole 10_000¢ and
+    the loop breaks before the 4_000¢ coupon is looked at (applied_coupons_service.rb:28), so the
+    large one keeps 2_000¢ and the small one is untouched — 6_000¢ of live coupon going into April.
+    That is the whole point of asserting the draft here: it reads 10_000¢ due while 6_000¢ of
+    allocatable coupon exists, because `should_create_coupon_credit?` refuses to run outside the
+    finalizing process (calculate_fees_service.rb:368-373). The refresh rebuilds it and must land
+    on the same 10_000¢.
+    The counterfactuals are all visible in that one number. Had the draft applied the coupons it
+    would read 4_000¢ — and would have consumed a `once` coupon that a later refresh could not
+    give back, which is precisely what the gate is for. Had March consumed both coupons to the cap
+    there would be nothing left to withhold and the distinction would be invisible; the finalized
+    invoice above is what rules that out, by showing the discount stopping at 10_000¢ of 16_000¢.
+    b19/coupon/capped/preview is the same configuration on the surface that DOES apply the
+    remainder, and reads 6_000¢ of discount in April — the two rows bracket the gate.
+
+- id: "b19/credit_note/equal/invoice"
+  block: B19
+  key: b19_w1_cnei
+  vars: {plan_cents: 10000}
+  axes: {feature: credit_note, arrangement: equal, observed_via: invoice}
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 3500, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 3500}]}}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 3500, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 3500}]}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 10000
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        credit_notes_amount_cents: 7000
+        sub_total_excluding_taxes_amount_cents: 10000
+        total_amount_cents: 3000
+    credit_note:
+      select: {index: -1}
+      credit_status: consumed
+      balance_amount_cents: 0
+  math: >-
+    Two credit notes of the SAME size on one invoice: do both get drawn on, or does the second
+    silently go unspent?
+    March bills the bare 10_000¢ plan and carries no credit note of its own — the notes are raised
+    AGAINST it, and `Credits::CreditNoteService#credit_notes` excludes
+    `where.not(invoice_id: invoice.id)` (credit_note_service.rb:70-78), so a note can never reduce
+    the invoice it was issued from. Both notes credit 3_500¢ of the 10_000¢ subscription fee, which
+    fits: the second is validated against `creditable_amount_cents`, already reduced to 6_500¢ by
+    the first.
+    April (invoice 1) is where both are consumed. `apply_credits` starts from
+    `remaining_invoice_amount = invoice.total_amount_cents` = 10_000¢ and walks the notes oldest
+    first: 3_500 then 3_500, neither capped, 7_000¢ of credit and 3_000¢ due. Because both notes
+    are fully drawn, `update_remaining_credit` zeroes each balance and flips each to `consumed`
+    (credit_note_service.rb:88-96) — which is why the newest note is asserted at balance 0 rather
+    than the invoice alone.
+    One-applied is the failure this row exists to exclude, and it is loud: 6_500¢ due instead of
+    3_000¢, with a note still sitting at 3_500¢ available. The notes are also each smaller than
+    the invoice, so no cap is involved and the arrangement really is `equal` — the capped variant is
+    b19/credit_note/capped/invoice.
+
+- id: "b19/credit_note/unequal/invoice"
+  block: B19
+  group: ev
+  key: b19_w1_cnui
+  vars: {plan_cents: 5000}
+  axes: {feature: credit_note, arrangement: unequal, observed_via: invoice}
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cnui_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 70}}, {code: b19_w1_cnui_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 50}}, {code: b19_w1_cnui_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 30}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 4000, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 4000}]}}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 11000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 11000}]}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 20000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 20000
+      - select: {index: 1}
+        fees_amount_cents: 5000
+        credit_notes_amount_cents: 5000
+        total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 10000
+  math: >-
+    Two notes of DIFFERENT sizes drawn on the same invoice, sized so the invoice runs out inside the
+    second one — which is the only arrangement in which the consumption order of credit notes is
+    observable at all.
+    March: 5_000¢ plan + 150 units × 1.00 = 20_000¢. Two notes are raised against it: 4_000¢ off
+    the subscription fee (2 April) and 11_000¢ off the charge fee (3 April). April has no usage, so
+    invoice 1 is the bare 5_000¢ plan.
+    `apply_credits` walks `order(created_at: :asc)` (credit_note_service.rb:70-78) with
+    `remaining_invoice_amount` = 5_000¢. The OLDER note is consumed whole (4_000¢, remaining 1_000¢)
+    and the newer one is then capped by `compute_credit_amount` at that 1_000¢
+    (credit_note_service.rb:80-86), leaving it 10_000¢ of its 11_000¢ and still `available`.
+    5_000¢ of credit, nothing due.
+    The invoice cannot tell the two orders apart — either way 5_000¢ of credit clears a 5_000¢
+    invoice — so the ONLY load-bearing assertion is the surviving balance. Newest-first would have
+    spent 5_000¢ of the big note (balance 6_000¢) and left the 4_000¢ note untouched; pro-rata
+    sharing would leave 7_333¢. 10_000¢ is oldest-first, and nothing else.
+
+- id: "b19/credit_note/capped/invoice"
+  block: B19
+  group: ev
+  key: b19_w1_cnci
+  vars: {plan_cents: 5000}
+  axes: {feature: credit_note, arrangement: capped, observed_via: invoice}
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cnci_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 70}}, {code: b19_w1_cnci_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 50}}, {code: b19_w1_cnci_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 30}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 8000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 8000}]}}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 6000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 6000}]}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-06-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 20000
+        credit_notes_amount_cents: 0
+        total_amount_cents: 20000
+      - select: {index: 1}
+        fees_amount_cents: 5000
+        credit_notes_amount_cents: 5000
+        total_amount_cents: 0
+      - select: {index: 2}
+        fees_amount_cents: 5000
+        credit_notes_amount_cents: 5000
+        total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 4000
+  math: >-
+    14_000¢ of credit notes against a 5_000¢ invoice, so the interesting fact is not that the credit
+    is capped — it is that the SECOND note is never looked at, and therefore survives whole.
+    March: 5_000¢ plan + 150 units = 20_000¢, and two notes are raised off its charge fee — 8_000¢
+    on 2 April, 6_000¢ on 3 April (14_000¢ of a 15_000¢ fee, so both are creditable).
+    April (invoice 1): `remaining_invoice_amount` = 5_000¢. The older note's 8_000¢ balance exceeds
+    it, so `compute_credit_amount` returns 5_000¢, the balance drops to 3_000¢, and
+    `break if remaining_invoice_amount.zero?` (credit_note_service.rb:66) ends the loop — the
+    6_000¢ note is not evaluated, not partially consumed, not flipped to consumed.
+    May (invoice 2) proves both halves of that at once: the first note returns with exactly its
+    3_000¢ remainder and is exhausted, and only then does the second contribute — 2_000¢ of its
+    6_000¢, leaving 4_000¢ available. Both invoices settle at 0, so neither of them alone says
+    anything; the second note's final balance is the assertion.
+    Newest-first would leave it at 0 (6_000¢ spent in April, then 1_000¢ from the other note in
+    May); sharing the 5_000¢ pro rata by balance would leave 3_857¢. 4_000¢ is oldest-first with a
+    hard break, and only that.
+
+- id: "b19/credit_note/equal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_cnep
+  vars: {plan_cents: 10000}
+  axes: {feature: credit_note, arrangement: equal, observed_via: preview}
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 3500, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 3500}]}}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 3500, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 3500}]}}
+    - {at: "2024-04-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        credit_notes_amount_cents: 7000
+        total_amount_cents: 3000
+    preview:
+      fees_amount_cents: 10000
+      credit_notes_amount_cents: 7000
+      total_amount_cents: 3000
+  math: >-
+    Two equal notes, forecast before they are spent. The arithmetic is the one derived in
+    b19/credit_note/equal/invoice — 10_000¢ of fees, two 3_500¢ notes raised against March, 7_000¢
+    of credit and 3_000¢ due in April.
+    What the row adds is that the preview reaches it through the SAME service and must therefore
+    agree exactly: `Invoices::Preview::CreditsService#persisted_credits` calls
+    `Credits::CreditNoteService` with `context: :preview` (credits_service.rb:22-26), so the
+    ordering, the `compute_credit_amount` cap and the `break` on a fully covered invoice are shared
+    code rather than a reimplementation. What `context: :preview` skips is the writes — no `Credit`
+    row, no `update_remaining_credit`, and no `apply_credit_to_fees` — so a preview is repeatable
+    and the two notes are still `available` at 20 April even though the preview has "spent" them.
+    That skipped `apply_credit_to_fees` is why this cell is worth asserting on its own rather than
+    assumed from the invoice: it is the one place the two paths differ, and it is invisible until a
+    fee-level consumer (a limited wallet, whose ceiling is
+    `sub_total + taxes - precise_credit_notes`) is present. This row deliberately has none, so the
+    two surfaces must match to the cent, and any difference is a defect rather than a known gap.
+    A preview that applied only one note would read 6_500¢ due against the invoice's 3_000¢.
+
+- id: "b19/credit_note/unequal/preview"
+  block: B19
+  group: pvm
+  key: b19_w1_cnup
+  vars: {plan_cents: 5000}
+  axes: {feature: credit_note, arrangement: unequal, observed_via: preview}
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cnup_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 70}}, {code: b19_w1_cnup_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 50}}, {code: b19_w1_cnup_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 30}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 4000, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 4000}]}}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 11000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 11000}]}}
+    - {at: "2024-04-10T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cnup_sum, timestamp: "2024-04-10T10:00:00Z", properties: {amount: 15}}, {code: b19_w1_cnup_sum, timestamp: "2024-04-10T11:00:00Z", properties: {amount: 10}}, {code: b19_w1_cnup_sum, timestamp: "2024-04-10T12:00:00Z", properties: {amount: 5}}]}
+    - {at: "2024-04-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 20000
+        total_amount_cents: 20000
+      - select: {index: 1}
+        fees_amount_cents: 8000
+        credit_notes_amount_cents: 8000
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 8000
+      credit_notes_amount_cents: 8000
+      total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 7000
+  math: >-
+    Two notes of different sizes, forecast in a period that can absorb the first whole and only part
+    of the second — so the preview has to reproduce not just the total but the split.
+    March: 5_000¢ plan + 150 units = 20_000¢. Notes of 4_000¢ (subscription fee, 2 April) and
+    11_000¢ (charge fee, 3 April). April carries 30 units of its own, deliberately: a preview over a
+    charge with NO usage in the period dies on nil associations, so the period is given usage and
+    invoice 1 is 5_000 + 3_000 = 8_000¢.
+    Preview and invoice both walk oldest-first: 4_000¢ from the older note, then the newer note
+    capped at the remaining 4_000¢ → 8_000¢ of credit, nothing due. Only the invoice writes it back,
+    so the big note ends at 11_000 − 4_000 = 7_000¢ and stays `available`.
+    Newest-first would give the big note the whole 8_000¢ (balance 3_000¢) and leave the small one
+    untouched — the same 8_000¢ of credit and the same zero due on BOTH surfaces. The forecast total
+    is therefore not the assertion; the surviving balance is, and it is only readable after the real
+    invoice has run.
+
+- id: "b19/credit_note/capped/preview"
+  block: B19
+  group: pvm
+  key: b19_w1_cncp
+  vars: {plan_cents: 5000}
+  axes: {feature: credit_note, arrangement: capped, observed_via: preview}
+  premium: true
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cncp_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 70}}, {code: b19_w1_cncp_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 50}}, {code: b19_w1_cncp_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 30}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 8000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 8000}]}}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 6000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 6000}]}}
+    - {at: "2024-04-10T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cncp_sum, timestamp: "2024-04-10T10:00:00Z", properties: {amount: 10}}, {code: b19_w1_cncp_sum, timestamp: "2024-04-10T11:00:00Z", properties: {amount: 6}}, {code: b19_w1_cncp_sum, timestamp: "2024-04-10T12:00:00Z", properties: {amount: 4}}]}
+    - {at: "2024-04-20T10:00:00Z", do: preview_invoice}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 20000
+        total_amount_cents: 20000
+      - select: {index: 1}
+        fees_amount_cents: 7000
+        credit_notes_amount_cents: 7000
+        total_amount_cents: 0
+    preview:
+      fees_amount_cents: 7000
+      credit_notes_amount_cents: 7000
+      total_amount_cents: 0
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 6000
+  math: >-
+    The capped pair forecast: the older note alone exceeds the invoice, so the second must be left
+    entirely alone — on the preview as well as on the invoice.
+    March: 5_000¢ plan + 150 units = 20_000¢, credited 8_000¢ (2 April) and 6_000¢ (3 April) off the
+    charge fee. April carries 20 units so the preview has usage to price, giving 5_000 + 2_000 =
+    7_000¢.
+    Both surfaces: `remaining_invoice_amount` = 7_000¢, the 8_000¢ note is capped to it by
+    `compute_credit_amount` (credit_note_service.rb:80-86), and
+    `break if remaining_invoice_amount.zero?` (:66) ends the walk before the 6_000¢ note is even
+    read. 7_000¢ of credit, nothing due.
+    The invoice writes that back — first note down to 1_000¢, second untouched at 6_000¢ and still
+    `available` — while the preview writes nothing (`context: :preview` skips
+    `update_remaining_credit`, credit_note_service.rb:57-62), which is what makes the balance
+    assertion below a statement about the INVOICE having consumed in that order and about the
+    preview not having consumed at all.
+    Had either surface shared the 7_000¢ across both notes, the second would read 3_000¢; had the
+    preview persisted its consumption, it would read 6_000¢ but the invoice would then find only
+    1_000¢ of the first note and bill 1_000¢ instead of 0.
+
+- id: "b19/credit_note/equal/regenerated"
+  block: B19
+  group: rg
+  key: b19_w1_cner
+  vars: {plan_cents: 10000}
+  axes: {feature: credit_note, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {grace_period: 5}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 3500, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 3500}]}}
+    - {at: "2024-04-04T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 3500, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 3500}]}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 10000
+        total_amount_cents: 10000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 10000
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 3500
+  math: >-
+    Two equal notes, and a draft that must not touch either of them.
+    March is finalized by hand out of its 5-day grace period at the bare 10_000¢ plan; the two
+    3_500¢ notes are then raised against it. April's invoice is generated as a DRAFT and rebuilt by
+    `PUT /invoices/:id/refresh`, and it reads 10_000¢ of fees with 0¢ of credit note —
+    `should_create_credit_note_credit?` is `!not_in_finalizing_process?`
+    (calculate_fees_service.rb:364-366), so a draft carries no credit note at all. Asserting that
+    0 rather than omitting it is the point: an omitted field would let a draft that HAD consumed
+    the notes pass.
+    The other half of the assertion is the notes themselves. Both are still `available` with their
+    full 3_500¢ after the refresh, because nothing was allocated and so nothing had to be given
+    back. A draft that allocated them would show 3_000¢ due, a consumed note at balance 0, and a
+    refresh would then have to un-consume it — which is exactly the state the gate exists to
+    prevent.
+    Finalized, the same period reads 3_000¢ (derived in b19/credit_note/equal/invoice), so the
+    draft is 7_000¢ higher than what the customer will owe. That is expected behaviour, not a
+    defect, and this row is what stops it from being "fixed" by accident.
+
+- id: "b19/credit_note/unequal/regenerated"
+  block: B19
+  group: rgm
+  key: b19_w1_cnur
+  vars: {plan_cents: 5000}
+  axes: {feature: credit_note, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {grace_period: 5}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cnur_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 70}}, {code: b19_w1_cnur_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 50}}, {code: b19_w1_cnur_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 30}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 4000, refund_amount_cents: 0, items: [{fee_type: subscription, amount_cents: 4000}]}}
+    - {at: "2024-04-04T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 11000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 11000}]}}
+    - {at: "2024-04-10T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cnur_sum, timestamp: "2024-04-10T10:00:00Z", properties: {amount: 15}}, {code: b19_w1_cnur_sum, timestamp: "2024-04-10T11:00:00Z", properties: {amount: 10}}, {code: b19_w1_cnur_sum, timestamp: "2024-04-10T12:00:00Z", properties: {amount: 5}}]}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 20000
+        total_amount_cents: 20000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 8000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 8000
+    credit_note:
+      select: {index: -1}
+      credit_status: available
+      balance_amount_cents: 11000
+  math: >-
+    The unequal pair on a regenerated draft, where the assertion is that the ORDER never got a
+    chance to run.
+    March, finalized out of grace: 5_000¢ plan + 150 units = 20_000¢. Notes of 4_000¢ and 11_000¢
+    are raised against it. April carries 30 units, so the period is 5_000 + 3_000 = 8_000¢ — the
+    identical period b19/credit_note/unequal/preview forecasts at 0¢ due.
+    The draft reads 8_000¢ with zero credit note (calculate_fees_service.rb:364-366), and the
+    refresh must reproduce that. The newer note is still at its full 11_000¢: had the draft
+    allocated in the documented oldest-first order it would sit at 7_000¢ (the older note absorbing
+    4_000¢ and this one the remaining 4_000¢), and had it allocated newest-first it would sit at
+    3_000¢. 11_000¢ says neither happened.
+    That is a stronger statement than the draft total alone. `credit_notes_amount_cents: 0` says
+    the invoice did not SHOW a credit; the untouched balance says no credit note was consumed and
+    silently lost, which is the failure mode a refresh cycle would make permanent.
+
+- id: "b19/credit_note/capped/regenerated"
+  block: B19
+  group: rgm
+  key: b19_w1_cncr
+  vars: {plan_cents: 5000}
+  axes: {feature: credit_note, arrangement: capped, observed_via: regenerated}
+  premium: true
+  dimensions: {grace_period: 5}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cncr_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 70}}, {code: b19_w1_cncr_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 50}}, {code: b19_w1_cncr_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 30}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-02T10:00:00Z", do: finalize_invoice}
+    - {at: "2024-04-03T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 8000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 8000}]}}
+    - {at: "2024-04-04T10:00:00Z", do: create_credit_note, credit_note: {reason: other, credit_amount_cents: 6000, refund_amount_cents: 0, items: [{fee_type: charge, amount_cents: 6000}]}}
+    - {at: "2024-04-10T10:00:00Z", do: ingest_events, events: [{code: b19_w1_cncr_sum, timestamp: "2024-04-10T10:00:00Z", properties: {amount: 10}}, {code: b19_w1_cncr_sum, timestamp: "2024-04-10T11:00:00Z", properties: {amount: 6}}, {code: b19_w1_cncr_sum, timestamp: "2024-04-10T12:00:00Z", properties: {amount: 4}}]}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-05-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 20000
+        total_amount_cents: 20000
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 7000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 7000
+    credit_note:
+      select: {index: 0}
+      credit_status: available
+      balance_amount_cents: 8000
+  math: >-
+    The capped pair on a draft: 14_000¢ of notes, a 7_000¢ period, and nothing consumed.
+    March, finalized out of grace: 5_000¢ plan + 150 units = 20_000¢, credited 8_000¢ (3 April) and
+    6_000¢ (4 April) off its charge fee. April carries 20 units → 5_000 + 2_000 = 7_000¢.
+    The draft withholds the credit entirely (calculate_fees_service.rb:364-366) and the refresh
+    reproduces it: 7_000¢ of fees, 7_000¢ due.
+    The assertion that carries the weight is on the OLDER note — `select: {index: 0}` — at its full
+    8_000¢. Had the draft allocated, that note would be the one capped to the period and would read
+    1_000¢, while the newer note stayed at 6_000¢ either way; asserting the newer one would
+    therefore prove nothing here, which is the difference from the unequal sibling above.
+    Finalized, this period reads 0¢ due with the older note down to 1_000¢
+    (b19/credit_note/capped/preview forecasts exactly that). The draft is 7_000¢ higher and both
+    notes are intact — the gate holding a `once`-like resource unspent while the invoice is still
+    editable.
+
+- id: "b19/prepaid_credit/equal/invoice"
+  block: B19
+  group: iv
+  key: b19_w1_pcei
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: equal, observed_via: invoice}
+  dimensions: {wallet_priority: equal}
+  setup:
+    wallets: [{name: first, code: b19_w1_pcei_a, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}, {name: second, code: b19_w1_pcei_b, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      prepaid_granted_credit_amount_cents: 5000
+      total_amount_cents: 0
+  math: >-
+    Two identically configured wallets, neither of which can settle the invoice alone: 3_000¢ each
+    against 5_000¢ due. The question is whether the allocator moves on to the SECOND wallet once the
+    first is empty, or stops.
+    `Credits::AllocatePrepaidCreditsByWalletsService` walks `Wallet.in_application_order` and, per
+    wallet, tries each fee bucket with `transaction_amount = [remaining_amount,
+    remaining_wallet_balance, remaining_invoice_amount].min`
+    (allocate_prepaid_credits_by_wallets_service.rb:40-66). The single `["subscription", nil]`
+    bucket starts at 5_000¢: the first wallet is bounded by its own 3_000¢ balance, the second by
+    the 2_000¢ of invoice that is left — 5_000¢ of prepaid credit and nothing due. Both wallets hold
+    granted credits, so all 5_000¢ lands in `prepaid_granted_credit_amount_cents` and none in the
+    purchased column, which is the second half of the assertion: it says the credits were sourced
+    from wallets and not from a mis-classified top-up.
+    A one-wallet implementation reads 3_000¢ of prepaid credit and 2_000¢ still due — the loud
+    difference this row is sized for.
+    Deliberately NO `expect.wallet`: both wallets share priority 1 and are created inside the same
+    frozen `travel_to`, so `order(:priority, :created_at)` (wallet.rb:69-71) has nothing left to
+    break the tie and which of the two ends at 1_000¢ is not determined. The invoice-level totals
+    are order-independent, which is exactly why they are the whole assertion here; the ordered cases
+    are b19/prepaid_credit/unequal/invoice and .../capped/invoice.
+
+- id: "b19/prepaid_credit/capped/invoice"
+  block: B19
+  group: iv
+  key: b19_w1_pcci
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: capped, observed_via: invoice}
+  dimensions: {wallet_priority: distinct}
+  setup:
+    wallets: [{name: "high priority", code: b19_w1_pcci_a, rate_amount: "1", currency: EUR, granted_credits: "80", priority: 1}, {name: "low priority", code: b19_w1_pcci_b, rate_amount: "1", currency: EUR, granted_credits: "40", priority: 2}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    wallet:
+      code: b19_w1_pcci_b
+      balance_cents: 4000
+  math: >-
+    12_000¢ of wallet balance against a 5_000¢ invoice: the pool of invoice runs out inside the
+    first wallet, so allocation decides not how much each pays but whether the second is touched at
+    all.
+    The priority-1 wallet is taken first (`Wallet.in_application_order` is
+    `order(:priority, :created_at)`, wallet.rb:69-71) and covers the whole 5_000¢, which drives
+    `remaining_invoice_amount` and the bucket's `ordered_remaining_amounts` entry to zero. The
+    priority-2 wallet then hits `next if remaining_amount <= 0`
+    (allocate_prepaid_credits_by_wallets_service.rb:44) on the only bucket there is, accumulates no
+    transactions, and is dropped by `next if total_amount_cents <= 0` (:68) — no wallet transaction,
+    no partial consumption, balance untouched at 4_000¢.
+    That 4_000¢ is the entire assertion, because the invoice is identical under every allocation:
+    5_000¢ of prepaid credit and nothing due whichever wallet paid. Reverse the order and the
+    low-priority wallet would be drained to 0¢ and the other left at 7_000¢. Split the invoice pro
+    rata by balance and it would read 1_667¢. Only the untouched 4_000¢ is priority-ordered
+    consumption with a hard stop.
+
+- id: "b19/prepaid_credit/equal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_pcep
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: equal, observed_via: preview}
+  premium: true
+  dimensions: {wallet_priority: equal}
+  setup:
+    wallets: [{name: first, code: b19_w1_pcep_a, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}, {name: second, code: b19_w1_pcep_b, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    preview:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+  math: >-
+    Two 3_000¢ wallets and a 5_000¢ invoice, forecast before either is spent. The arithmetic is the
+    one derived in b19/prepaid_credit/equal/invoice: the first wallet is bounded by its balance, the
+    second by the remaining invoice, 5_000¢ of prepaid credit and nothing due.
+    The preview is not a reimplementation here — `PreviewService#create_applied_prepaid_credits`
+    calls the very same `Credits::AllocatePrepaidCreditsByWalletsService`
+    (preview_service.rb:368-377) — but it feeds it an UNSAVED invoice, so the service takes the
+    `invoice.persisted? ? invoice.fees.includes(:charge) : invoice.fees` branch
+    (allocate_prepaid_credits_by_wallets_service.rb:73) and reads `sub_total_excluding_taxes` and
+    `taxes_precise_amount_cents` off in-memory fees. That is the divergence risk this cell exists
+    to close: same allocator, different input, and a preview that quoted 3_000¢ of credit against
+    an invoice that applies 5_000¢ would be a forecast the customer could not reconcile.
+    No wallet is spent by the preview — it returns the transactions rather than creating them — so
+    the subsequent real billing starts from full balances and lands on the same numbers. And no
+    `expect.wallet`, for the same reason as the invoice sibling: at equal priority and identical
+    creation instants the tie-break in `order(:priority, :created_at)` is undetermined, so which
+    wallet keeps the last 1_000¢ is not a fact this row may assert.
+
+- id: "b19/prepaid_credit/unequal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_pcup
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: unequal, observed_via: preview}
+  premium: true
+  dimensions: {wallet_priority: distinct}
+  setup:
+    wallets: [{name: second, code: b19_w1_pcup_second, rate_amount: "1", currency: EUR, granted_credits: "100", priority: 2}, {name: first, code: b19_w1_pcup_first, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    preview:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    wallet:
+      code: b19_w1_pcup_second
+      balance_cents: 8000
+  math: >-
+    The priority-ordered pair of b19/prepaid_credit/unequal/invoice, forecast: 3_000¢ at priority 1
+    and 10_000¢ at priority 2 against a 5_000¢ invoice. The priority-1 wallet contributes its whole
+    3_000¢ and the priority-2 wallet the remaining 2_000¢, ending at 8_000¢.
+    The row makes two separate claims, because the surface can only carry one of them.
+    (1) The preview total: 5_000¢ of prepaid credit, nothing due. This is what the customer is shown
+    and it must match the invoice to the cent — same allocator
+    (preview_service.rb:368-377 → `Credits::AllocatePrepaidCreditsByWalletsService`), unsaved fees.
+    (2) WHICH wallet paid is NOT visible on a preview at all: the service returns a
+    wallet → amount hash and the preview keeps only `sum { |_k, v| v }`, creating no wallet
+    transaction and moving no balance. So the aggregate is order-blind — 5_000¢ whether priority is
+    honoured or ignored — and the ordering claim can only be made against the real wallet after the
+    real billing. Hence the `expect.wallet` on the priority-2 wallet: 8_000¢ if priority decided the
+    order, 5_000¢ if the larger wallet had gone first and paid the whole invoice.
+    Recording that blind spot is part of the cell's value: a preview cannot be used to check wallet
+    ordering, and a row that asserted only the preview would look like it covered this and cover
+    nothing.
+
+- id: "b19/prepaid_credit/capped/preview"
+  block: B19
+  group: pv
+  key: b19_w1_pccp
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: capped, observed_via: preview}
+  premium: true
+  dimensions: {wallet_priority: distinct}
+  setup:
+    wallets: [{name: "high priority", code: b19_w1_pccp_a, rate_amount: "1", currency: EUR, granted_credits: "80", priority: 1}, {name: "low priority", code: b19_w1_pccp_b, rate_amount: "1", currency: EUR, granted_credits: "40", priority: 2}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    preview:
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    wallet:
+      code: b19_w1_pccp_b
+      balance_cents: 4000
+  math: >-
+    The capped pair forecast: 12_000¢ of wallet against a 5_000¢ invoice, where the first wallet
+    alone covers everything and the second must not be touched.
+    Both surfaces run the same allocator on the same balances: priority-1 pays 5_000¢, the bucket
+    and `remaining_invoice_amount` fall to zero, and the priority-2 wallet is skipped at
+    `next if remaining_amount <= 0` (allocate_prepaid_credits_by_wallets_service.rb:44). Preview:
+    5_000¢ of prepaid credit, nothing due — identical to the invoice, which is the parity claim.
+    The failure this specifically excludes is a preview that clamps to the WALLET total rather than
+    to the invoice. `transaction_amount` takes the min of three quantities and the invoice is the
+    binding one here; a preview that dropped `remaining_invoice_amount` from that min would quote
+    12_000¢ of credit against a 5_000¢ invoice and a negative total. `total_amount_cents: 0` on the
+    preview is what rules that out.
+    The `expect.wallet` is again the only order-bearing assertion, and it reads the state after the
+    real billing: 4_000¢ untouched. A preview that had actually created wallet transactions would
+    leave it at 4_000¢ too but the priority-1 wallet at −2_000¢ worth of double spending, which is
+    why the invoice's own `prepaid_credit_amount_cents` is asserted alongside: 5_000¢, spent once.
+
+- id: "b19/prepaid_credit/equal/regenerated"
+  block: B19
+  group: rg2
+  key: b19_w1_pcer
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {wallet_priority: equal, grace_period: 5}
+  setup:
+    wallets: [{name: first, code: b19_w1_pcer_a, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}, {name: second, code: b19_w1_pcer_b, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 5000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 0
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 5000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+  math: >-
+    Two equal wallets, one period settled and the next held open as a draft.
+    March, finalized by hand out of its grace period: 3_000¢ + 2_000¢ from the two wallets settles
+    the 5_000¢ plan, leaving 1_000¢ of credit between them (which of the two holds it is
+    undetermined — equal priority, identical creation instant — so no wallet is asserted).
+    April is the cell. The draft reads 5_000¢ of fees and 0¢ of prepaid credit:
+    `should_create_applied_prepaid_credit?` begins
+    `return false if not_in_finalizing_process?` (calculate_fees_service.rb:375-379), and the
+    refresh must reproduce it rather than allocating. That gate is not cosmetic here — it is the
+    only thing stopping a draft from burning the surviving 1_000¢ of wallet credit that a later
+    refresh, or a plan change, would have to hand back. `Invoices::VoidService` does recredit
+    outbound wallet transactions, but a REFRESH does not, so credit spent on a draft would simply
+    be gone.
+    A refresh that allocated would show 4_000¢ due and both wallets at zero. 5_000¢ due with 0¢ of
+    prepaid credit is the correct, deliberate answer, and asserting the field as 0 rather than
+    omitting it is what makes the row able to say so.
+
+- id: "b19/prepaid_credit/unequal/regenerated"
+  block: B19
+  group: rg2
+  key: b19_w1_pcur
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {wallet_priority: distinct, grace_period: 5}
+  setup:
+    wallets: [{name: second, code: b19_w1_pcur_second, rate_amount: "1", currency: EUR, granted_credits: "100", priority: 2}, {name: first, code: b19_w1_pcur_first, rate_amount: "1", currency: EUR, granted_credits: "30", priority: 1}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 5000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 0
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 5000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+    wallet:
+      code: b19_w1_pcur_second
+      balance_cents: 8000
+  math: >-
+    The priority-ordered pair, with the surviving wallet asserted after a regeneration.
+    March, finalized out of grace: priority 1 gives its whole 3_000¢, priority 2 the remaining
+    2_000¢ → 8_000¢ left on the priority-2 wallet (wallet.rb:69-71; reversed, it would read 5_000¢
+    and the small wallet would still be full).
+    April's invoice is a draft and stays one through the refresh: 5_000¢ of fees, 0¢ of prepaid
+    credit (calculate_fees_service.rb:375-379), 5_000¢ due.
+    The wallet assertion is doing double duty and that is why this row is the strongest of the three
+    prepaid regenerated cells. 8_000¢ says (a) March consumed in priority order, and (b) the April
+    draft consumed nothing at all — had the refresh allocated, the priority-1 wallet is already
+    empty so the whole 5_000¢ would have come off this wallet and it would read 3_000¢. One number
+    separates three behaviours: correct, ignored-priority, and a draft that spends.
+
+- id: "b19/prepaid_credit/capped/regenerated"
+  block: B19
+  group: rg2
+  key: b19_w1_pccr
+  vars: {plan_cents: 5000}
+  axes: {feature: prepaid_credit, arrangement: capped, observed_via: regenerated}
+  premium: true
+  dimensions: {wallet_priority: distinct, grace_period: 5}
+  setup:
+    wallets: [{name: "high priority", code: b19_w1_pccr_a, rate_amount: "1", currency: EUR, granted_credits: "80", priority: 1}, {name: "low priority", code: b19_w1_pccr_b, rate_amount: "1", currency: EUR, granted_credits: "40", priority: 2}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        status: finalized
+        fees_amount_cents: 5000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 0
+      - select: {index: 1}
+        status: draft
+        fees_amount_cents: 5000
+        coupons_amount_cents: 0
+        credit_notes_amount_cents: 0
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+    wallet:
+      code: b19_w1_pccr_b
+      balance_cents: 4000
+  math: >-
+    The capped pair: the priority-1 wallet alone covers every invoice in sight, so the priority-2
+    wallet is the control — it must be untouched by the finalized period AND by the regenerated
+    draft.
+    March, finalized out of grace: priority 1 pays the whole 5_000¢ and the low-priority wallet is
+    skipped before any transaction is built (`next if remaining_amount <= 0` and
+    `next if total_amount_cents <= 0`, allocate_prepaid_credits_by_wallets_service.rb:44, :68),
+    leaving 3_000¢ on the first wallet and 4_000¢ on the second.
+    April is generated as a draft and rebuilt by refresh: 5_000¢ of fees, 0¢ of prepaid credit,
+    5_000¢ due — the finalizing gate (calculate_fees_service.rb:375-379).
+    4_000¢ on the low-priority wallet at the end of all that excludes three separate wrong
+    behaviours: consumption in reverse priority order in March (it would read 0¢), pro-rata sharing
+    (1_667¢), and a refresh that allocated April (the first wallet's 3_000¢ would go, then 2_000¢
+    off this one → 2_000¢). The finalized invoice's own 5_000¢ of prepaid credit is asserted
+    alongside so a total that never moved cannot be mistaken for a wallet that was correctly
+    spared.
+
+- id: "b19/tax/equal/invoice"
+  block: B19
+  group: iv
+  key: b19_w1_txei
+  vars: {plan_cents: 10000}
+  axes: {feature: tax, arrangement: equal, observed_via: invoice}
+  dimensions: {taxes: ~, tax_rate: 20}
+  setup:
+    taxes: [{code: b19_w1_txei_a, name: "VAT A", rate: 10}, {code: b19_w1_txei_b, name: "VAT B", rate: 10}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 10000, taxes_amount_cents: 2000, taxes_rate: 20.0}
+  math: >-
+    Two taxes at the same rate, both applied at the same level: do the rates ADD, or does one
+    overwrite the other?
+    They add, and the mechanism is a loop rather than a lookup. `Fees::ApplyTaxesService` iterates
+    `applicable_taxes`, builds one `Fee::AppliedTax` per tax, and accumulates
+    `applied_taxes_amount_cents += tax_amount_cents` and `applied_taxes_rate += tax.rate`
+    (apply_taxes_service.rb:24-52). Both taxes here are created with `applied_to_organization: true`,
+    so both become billing-entity taxes and both fall out of the final branch of `applicable_taxes`
+    (:81-82) — the only branch that can return more than one tax from more than one source.
+    10_000¢ of subscription fee, 10% + 10% = 20% → 2_000¢ of tax, 12_000¢ due, and the fee's own
+    `taxes_rate` reads 20.0 because that column is the SUM of the applied rates, not a single tax's.
+    The failure this row is sized to catch is a last-one-wins implementation: 1_000¢ of tax,
+    11_000¢ due, `taxes_rate` 10.0 — half the VAT collected, on an invoice that still looks
+    internally consistent. Asserting the fee's `taxes_rate` as well as the amount is what separates
+    "one tax at 20%" from "two taxes at 10%", which the amounts alone cannot.
+    Note the rounding is sum-then-round (`fee.taxes_amount_cents = applied_taxes_amount_cents.round`
+    at :46-48, over unrounded per-tax floats), so on a base with a fractional half-cent per tax the
+    two orders would differ by 1¢; 10_000¢ at 10% is exact in both, which keeps this row about
+    additivity alone.
+
+- id: "b19/tax/unequal/invoice"
+  block: B19
+  group: iv
+  key: b19_w1_txui
+  vars: {plan_cents: 10000}
+  axes: {feature: tax, arrangement: unequal, observed_via: invoice}
+  dimensions: {taxes: ~, tax_rate: 20}
+  setup:
+    taxes: [{code: b19_w1_txui_plan, name: "Plan VAT", rate: 20, applied_to_organization: false}, {code: b19_w1_txui_cust, name: "Customer VAT", rate: 5, applied_to_organization: false}]
+    plan: {tax_codes: [b19_w1_txui_plan]}
+    customer: {tax_codes: [b19_w1_txui_cust]}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 10000, taxes_amount_cents: 2000, taxes_rate: 20.0}
+  math: >-
+    Two taxes that do NOT add, because they are attached at different levels and the levels are
+    ordered. This is the tax feature's version of "something decides which one goes first": for
+    coupons it is a sort, for wallets a priority, and for taxes it is the guard chain in
+    `Fees::ApplyTaxesService#applicable_taxes` (apply_taxes_service.rb:64-83), where the FIRST level
+    that has any tax returns and every level below it is never consulted.
+    A subscription fee reaches `if (fee.charge? || fee.subscription? || ...) && plan.taxes.any? →
+    return plan.taxes` (:77-79) before `return customer.taxes if customer.taxes.any?` (:80). So the
+    plan's 20% applies alone: 10_000¢ × 20% = 2_000¢, 12_000¢ due, fee `taxes_rate` 20.0. Both taxes
+    are created with `applied_to_organization: false` so the billing-entity fallback at :81-82
+    cannot smuggle either of them back in.
+    Three counterfactuals, all distinguishable on these numbers. Additive (the naive reading of
+    "the customer has two taxes"): 25% → 2_500¢ and 12_500¢. Customer-wins: 5% → 500¢ and 10_500¢.
+    Both levels merged and de-duplicated: still 25%. The rates are deliberately 20 and 5 rather than
+    two equal rates, because with equal rates the precedence and the additive answers would differ
+    only by a factor of two and a plan-vs-customer mix-up would be invisible.
+    b19/tax/equal/invoice is the control: at the SAME level two taxes really do add, so this row
+    records precedence, not a refusal to stack.
+
+- id: "b19/tax/equal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_txep
+  vars: {plan_cents: 10000}
+  axes: {feature: tax, arrangement: equal, observed_via: preview}
+  premium: true
+  dimensions: {taxes: ~, tax_rate: 20}
+  setup:
+    taxes: [{code: b19_w1_txep_a, name: "VAT A", rate: 10}, {code: b19_w1_txep_b, name: "VAT B", rate: 10}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+    preview:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      sub_total_including_taxes_amount_cents: 12000
+      total_amount_cents: 12000
+  math: >-
+    Two 10% taxes at the same level, forecast. The invoice arithmetic is derived in
+    b19/tax/equal/invoice: the rates add to 20%, so 10_000¢ of fee carries 2_000¢ of tax.
+    The preview must reach it through `PreviewService#apply_taxes`, which calls the same
+    `Fees::ApplyTaxesService` per fee and then `Invoices::ApplyTaxesService` on the invoice
+    (preview_service.rb:379-388) — so the per-tax loop and the `applied_taxes_rate +=` accumulation
+    are shared, and what is NOT shared is the surrounding total arithmetic:
+    `sub_total_including_taxes = sub_total_excluding_taxes + taxes` and
+    `total = sub_total_including_taxes − credit_notes` are recomputed inline at
+    preview_service.rb:310-316 rather than by `Invoices::ComputeTaxesAndTotalsService`.
+    That is why all four totals are asserted on the preview and not just the tax: the risk is not
+    that the two taxes fail to add on this surface but that the second one adds into the fee and
+    then fails to reach the invoice header, which shows up as a 12_000¢ fee-level total under an
+    11_000¢ invoice-level one. A single-tax implementation reads 1_000¢ / 11_000¢ on both lines.
+
+- id: "b19/tax/unequal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_txup
+  vars: {plan_cents: 10000}
+  axes: {feature: tax, arrangement: unequal, observed_via: preview}
+  premium: true
+  dimensions: {taxes: ~, tax_rate: 20}
+  setup:
+    taxes: [{code: b19_w1_txup_plan, name: "Plan VAT", rate: 20, applied_to_organization: false}, {code: b19_w1_txup_cust, name: "Customer VAT", rate: 5, applied_to_organization: false}]
+    plan: {tax_codes: [b19_w1_txup_plan]}
+    customer: {tax_codes: [b19_w1_txup_cust]}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+    preview:
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+  math: >-
+    Precedence, forecast. A plan tax of 20% and a customer tax of 5%, and the plan's wins outright:
+    `applicable_taxes` returns `plan.taxes` and never reaches `customer.taxes`
+    (apply_taxes_service.rb:77-80), so 10_000¢ carries 2_000¢ and not 2_500¢.
+    The reason this cell is worth a row of its own rather than being assumed from
+    b19/tax/unequal/invoice is that a preview resolves the fee's associations differently. Its
+    subscription fee is built by `Fees::SubscriptionService` with `context: :preview` and is never
+    saved, and `Fees::ApplyTaxesService` is then called as `call(fee:)` with no `plan:` argument —
+    so `plan` falls back to `fee.subscription&.plan` (apply_taxes_service.rb:11) rather than being
+    handed down as it is from `CalculateFeesService`. If that fallback resolved to nil the guard
+    `plan.taxes.any?` would raise, and if it resolved to an override plan without the tax the chain
+    would fall through to the CUSTOMER's 5% and the preview would quote 10_500¢ against a 12_000¢
+    invoice. Asserting 2_000¢ on both surfaces is what pins the fallback to the same plan the
+    invoice used.
+    Counterfactuals on the preview line: additive 2_500¢ / 12_500¢, customer-wins 500¢ / 10_500¢,
+    no tax at all 0¢ / 10_000¢ (the shape `apply_zero_tax` produces when provider taxation is
+    misdetected, preview_service.rb:410-413).
+
+- id: "b19/tax/equal/regenerated"
+  block: B19
+  group: rg
+  key: b19_w1_txer
+  vars: {plan_cents: 10000}
+  axes: {feature: tax, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {taxes: ~, tax_rate: 20, grace_period: 5}
+  setup:
+    taxes: [{code: b19_w1_txer_a, name: "VAT A", rate: 10}, {code: b19_w1_txer_b, name: "VAT B", rate: 10}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 10000, taxes_amount_cents: 2000, taxes_rate: 20.0}
+  math: >-
+    Tax is the one reducer a draft DOES carry, so this is the cell where a regeneration has to
+    reproduce a non-zero amount rather than a zero.
+    `Invoices::RefreshDraftService` rebuilds the draft by destroying its fees and re-running
+    `CalculateFeesService`, and only the three finalizing-gated reducers drop out
+    (calculate_fees_service.rb:364-379); `Invoices::ComputeTaxesAndTotalsService` runs
+    unconditionally at :57. So both 10% taxes are re-resolved from the billing entity, re-summed by
+    `Fees::ApplyTaxesService` (apply_taxes_service.rb:24-52) and the draft reads 2_000¢ of tax on
+    10_000¢ of fee — 20.0 on the fee's `taxes_rate` — exactly what the finalized twin
+    b19/tax/equal/invoice reads.
+    The two failure modes a refresh could introduce are both excluded here. One is a re-run that
+    resolves only one of the two taxes (1_000¢, `taxes_rate` 10.0). The other is a re-run that
+    re-applies taxes onto fees that already carry them — `Fees::ApplyTaxesService` opens with
+    `return result if fee.applied_taxes.any?` (:18), which is a no-op on a REBUILT fee but a
+    double-taxation guard on a reused one; had the refresh kept the fees and re-applied, the row
+    would read 4_000¢ and 40.0.
+    The three withheld reducers are asserted as 0 rather than omitted, so this row cannot pass by
+    finding a draft that quietly allocated something.
+
+- id: "b19/tax/unequal/regenerated"
+  block: B19
+  group: rg
+  key: b19_w1_txur
+  vars: {plan_cents: 10000}
+  axes: {feature: tax, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {taxes: ~, tax_rate: 20, grace_period: 5}
+  setup:
+    taxes: [{code: b19_w1_txur_plan, name: "Plan VAT", rate: 20, applied_to_organization: false}, {code: b19_w1_txur_cust, name: "Customer VAT", rate: 5, applied_to_organization: false}]
+    plan: {tax_codes: [b19_w1_txur_plan]}
+    customer: {tax_codes: [b19_w1_txur_cust]}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 1
+      fees:
+        - {fee_type: subscription, amount_cents: 10000, taxes_amount_cents: 2000, taxes_rate: 20.0}
+  math: >-
+    Precedence, re-resolved from scratch. The plan's 20% wins over the customer's 5% because
+    `applicable_taxes` returns at the plan level and never reads the customer's
+    (apply_taxes_service.rb:77-80), so the draft reads 2_000¢ of tax and 12_000¢ due.
+    This is the cell where a refresh is genuinely at risk rather than merely re-derived, because the
+    refresh path is the one thing that RE-RUNS the precedence chain against whatever the records say
+    now. `Customers::ApplyTaxesService` and `Taxes::UpdateService`/`DestroyService` are among the
+    services that flag drafts `ready_to_be_refreshed` precisely so that a tax change is picked up,
+    and `Invoices::RefreshDraftService` destroys the fees and rebuilds them — new `Fee` records with
+    empty `applied_taxes`, so the chain is walked again from the top rather than reusing the
+    resolution the original build made.
+    A rebuild that lost the plan level would fall through to the customer's 5% and read 500¢ /
+    10_500¢; one that merged both levels would read 2_500¢ / 12_500¢ with `taxes_rate` 25.0. The
+    fee's `taxes_rate` is asserted alongside the amount because the amounts alone cannot separate
+    "one tax at 20%" from any other combination summing to 20.
+    b19/tax/unequal/preview forecasts the same 2_000¢ and b19/tax/unequal/invoice finalizes it, so
+    the three surfaces of this cell are pinned to one number.
+
+- id: "b19/charge/equal/invoice"
+  block: B19
+  group: ivm
+  key: b19_w1_chei
+  vars: {plan_cents: 5000, e1: 50, e2: 30, e3: 20}
+  axes: {feature: charge, arrangement: equal, observed_via: invoice}
+  dimensions: {charge_model: standard}
+  setup:
+    charges: [{billable_metric_code: b19_w1_chei_sum, charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: b19_w1_chei_sum, charge_model: standard, properties: {amount: "1"}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 25000
+      sub_total_excluding_taxes_amount_cents: 25000
+      total_amount_cents: 25000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, item_code: b19_w1_chei_sum, units: 100, amount_cents: 10000}
+        - {fee_type: charge, item_code: b19_w1_chei_sum, units: 100, amount_cents: 10000}
+  math: >-
+    TWO charges on ONE billable metric, priced identically: the same 100 units are aggregated twice
+    and billed twice. 5_000¢ plan + 10_000¢ + 10_000¢ = 25_000¢.
+    That this is even expressible is the first half of the row. `Charge#validate_code_unique`
+    (charge.rb:182-188) makes a charge's CODE unique within a plan, not its billable metric, and
+    `Plans::CreateService#charge_params_with_code` (:143-148) fills the code in from
+    `Charges::GenerateCodeService`, which auto-suffixes on collision — the second charge is created
+    as `b19_w1_chei_sum_2`. `Plans::ChargeablesValidationService` only checks that the metrics
+    exist. Nothing anywhere de-duplicates by metric.
+    The second half is that both are then billed. `CalculateFeesService#create_charges_fees`
+    iterates `subscription.plan.charges.where(invoiceable: true)` and calls `Fees::ChargeService`
+    per charge (calculate_fees_service.rb:117-147), each with its own aggregation and its own
+    `ChargeCacheMiddleware` key — so the units are not shared or netted, they are re-aggregated. Two
+    fees of 100 units at 1.00.
+    A wrong implementation that de-duplicated by billable metric, or that let the second charge's
+    cache entry collide with the first's, reads 15_000¢ — the loud difference this row is sized for.
+    The two charge-fee expectations are deliberately IDENTICAL: `Fee#item_code` is the billable
+    metric's code for a charge fee (fee.rb:117-118), so the two fees share every one of
+    `GoldenRunner::FEE_MATCH_KEYS` and could not be told apart if their amounts differed (F67). Equal
+    amounts make the match unambiguous, which is another reason this arrangement is the one that gets
+    a per-fee assertion.
+
+- id: "b19/charge/unequal/invoice"
+  block: B19
+  group: ivm
+  key: b19_w1_chui
+  vars: {plan_cents: 5000, e1: 50, e2: 30, e3: 20}
+  axes: {feature: charge, arrangement: unequal, observed_via: invoice}
+  dimensions: {charge_model: package}
+  setup:
+    charges: [{billable_metric_code: b19_w1_chui_sum, charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: b19_w1_chui_sum, charge_model: package, properties: {amount: "50", free_units: 0, package_size: 30}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 35000
+      sub_total_excluding_taxes_amount_cents: 35000
+      total_amount_cents: 35000
+      fees_count: 3
+  math: >-
+    Two charges on ONE metric with DIFFERENT models, so the same 100 units are priced twice by two
+    different formulas and the invoice carries both answers.
+    Standard leg: 100 × 1.00 = 10_000¢. Package leg:
+    `paid_units = 100 − free_units(0)`, `package_count = 100.fdiv(30).ceil = 4`, and
+    `4 × per_package_unit_amount(50) = 200.00` → 20_000¢ (package_service.rb:7-13, :60-70; the same
+    "amount is per PACKAGE, rounded up" convention b03/package/sum_agg pins).
+    Plus the 5_000¢ plan: 35_000¢.
+    The point of mixing the models is that the two legs cannot be confused for one another, and
+    neither can be confused for a doubled copy of the other: 10_000 + 20_000 is distinguishable from
+    two standard legs (20_000), two package legs (40_000), and a single surviving charge of either
+    kind (15_000 or 25_000). Each aggregation is run independently —
+    `CalculateFeesService#create_charges_fees` calls `Fees::ChargeService` per charge with its own
+    `Subscriptions::ChargeCacheMiddleware` key (calculate_fees_service.rb:133-146) — so a cache
+    keyed on the metric rather than the charge would show up here as the same amount twice.
+    NO per-fee assertion, deliberately. `Fee#item_code` is the billable metric's code for both fees
+    (fee.rb:117-118) and the two share `fee_type`, `item_type`, `from_date` and `to_date` as well, so
+    every key in `GoldenRunner::FEE_MATCH_KEYS` collides and `assert_golden_fees` would match the
+    10_000¢ expectation against whichever fee `has_many :fees` returned first — a coin flip, not an
+    assertion (F67). `fees_count` plus the invoice total is what is honestly assertable here; the
+    equal sibling above can assert the split only because its two fees are interchangeable.
+
+- id: "b19/charge/equal/preview"
+  block: B19
+  group: pvm
+  key: b19_w1_chep
+  vars: {plan_cents: 5000}
+  axes: {feature: charge, arrangement: equal, observed_via: preview}
+  premium: true
+  dimensions: {taxes: "charge-level", tax_rate: 20, charge_model: standard}
+  setup:
+    taxes: [{code: b19_w1_chep_vat, name: VAT, rate: 20, applied_to_organization: false}]
+    charges: [{billable_metric_code: b19_w1_chep_sum, charge_model: standard, properties: {amount: "1"}, tax_codes: [b19_w1_chep_vat]}, {billable_metric_code: b19_w1_chep_sum, charge_model: standard, properties: {amount: "1"}, tax_codes: [b19_w1_chep_vat]}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b19_w1_chep_sum, timestamp: "2024-03-05T10:00:00Z", properties: {amount: 50}}, {code: b19_w1_chep_sum, timestamp: "2024-03-05T11:00:00Z", properties: {amount: 30}}, {code: b19_w1_chep_sum, timestamp: "2024-03-05T12:00:00Z", properties: {amount: 20}}]}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice}
+  expect:
+    preview:
+      fees_amount_cents: 25000
+      sub_total_excluding_taxes_amount_cents: 25000
+      taxes_amount_cents: 4000
+      sub_total_including_taxes_amount_cents: 29000
+      total_amount_cents: 29000
+      fees_count: 3
+  math: >-
+    Two identically priced charges on one metric, forecast: 5_000¢ plan + 100 units × 1.00, twice =
+    25_000¢ of fees (the arithmetic derived and finalized in b19/charge/equal/invoice). Tax is 20% on
+    the two CHARGE fees only — 2_000¢ + 2_000¢ = 4_000¢ — because it is attached to the charges
+    rather than to the plan or the organization, so the subscription fee falls through
+    `applicable_taxes` to a billing entity with no default tax and is untaxed. 29_000¢ forecast, and
+    29_000¢ returned: this row previously characterized 25_000¢/taxes-0 as "what Lago returns", but
+    that measurement — with its two companion defects F72 and F73, both since withdrawn — was the
+    :transaction connection lottery (F101), not Lago. On committed data (`no_transaction`, which
+    GoldenMatrix forces onto every previewing row) the multi-charge preview is deterministic and
+    matches the forecast.
+    `fees_count: 3` is load-bearing: it distinguishes two charge fees from one at twice the price,
+    which the totals cannot. Per-fee amounts are unassertable because both charge fees carry the
+    metric's code as `item_code` (fee.rb:117-118, F67). Agreement with the finalized invoice is
+    carried by b19/charge/equal/invoice, which bills the same fees over the same period.
+
+- id: "b19/charge/equal/regenerated"
+  block: B19
+  group: rgm
+  key: b19_w1_cher
+  vars: {plan_cents: 5000, e1: 50, e2: 30, e3: 20}
+  axes: {feature: charge, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {charge_model: standard, grace_period: 5}
+  setup:
+    charges: [{billable_metric_code: b19_w1_cher_sum, charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: b19_w1_cher_sum, charge_model: standard, properties: {amount: "1"}}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 25000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 25000
+      total_amount_cents: 25000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, item_code: b19_w1_cher_sum, units: 100, amount_cents: 10000}
+        - {fee_type: charge, item_code: b19_w1_cher_sum, units: 100, amount_cents: 10000}
+  math: >-
+    Two identical charges on one metric, rebuilt. Producers are not gated on finalization — only
+    coupons, credit notes and prepaid credit are (calculate_fees_service.rb:364-379) — so the draft
+    carries the full 25_000¢ that b19/charge/equal/invoice finalizes: 5_000¢ plan + 100 units × 1.00,
+    twice.
+    A refresh is a destroy-and-rebuild, and that is precisely why duplicate charges are worth
+    asserting on this surface. `Invoices::RefreshDraftService` drops the draft's fees and re-runs
+    `CalculateFeesService`, so the second charge has to be re-discovered from
+    `subscription.plan.charges` and re-aggregated with its own cache key. Two failure modes are
+    excluded by the numbers below: a rebuild that emitted one charge fee (15_000¢, `fees_count` 2)
+    and a rebuild that ADDED to the existing fees instead of replacing them (45_000¢, `fees_count`
+    5) — the second being a real hazard, because the two charge fees are indistinguishable by
+    content and a duplicate would not look out of place.
+    `fees_count: 3` is what turns that into an assertion. The two charge-fee expectations are
+    identical, which is what makes them matchable at all given that both fees carry the metric's
+    code as `item_code` (fee.rb:117-118, F67). The three withheld reducers are asserted as 0 so a
+    draft that quietly allocated one cannot pass.
+
+- id: "b19/charge/unequal/regenerated"
+  block: B19
+  group: rgm
+  key: b19_w1_chur
+  vars: {plan_cents: 5000, e1: 50, e2: 30, e3: 20}
+  axes: {feature: charge, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {charge_model: package, grace_period: 5}
+  setup:
+    charges: [{billable_metric_code: b19_w1_chur_sum, charge_model: standard, properties: {amount: "1"}}, {billable_metric_code: b19_w1_chur_sum, charge_model: package, properties: {amount: "50", free_units: 0, package_size: 30}}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 35000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 35000
+      total_amount_cents: 35000
+      fees_count: 3
+  math: >-
+    The same metric priced by two models, rebuilt: 5_000¢ plan + 10_000¢ standard + 20_000¢ package
+    (ceil(100/30) = 4 × 50.00) = 35_000¢, the arithmetic derived in b19/charge/unequal/invoice and
+    unaffected by the surface because producers run before the finalizing gate
+    (calculate_fees_service.rb:42-47 vs :364-379).
+    What the regeneration adds is that the rebuild has to re-resolve WHICH charge is which. The two
+    charges differ only in `charge_model` and `properties` and share a billable metric, so a
+    rebuild that re-read the plan's charges in a different order, or that carried one charge's
+    properties onto the other, would still produce two fees over the same 100 units — and 35_000¢ is
+    the only total that comes out of pricing them once each with their own model. Both-standard is
+    25_000¢, both-package 45_000¢, and either charge lost is 15_000¢ or 25_000¢.
+    `fees_count: 3` guards the shape (subscription + two charge fees) and the three finalizing-gated
+    reducers are asserted as 0 so the draft cannot pass by having allocated something it should be
+    withholding. Per-fee amounts stay unassertable: both charge fees carry the metric's code as
+    `item_code` and collide on every `FEE_MATCH_KEYS` field (F67).
+
+- id: "b19/fixed_charge/equal/invoice"
+  block: B19
+  group: iv
+  key: b19_w1_fcei
+  vars: {plan_cents: 0}
+  axes: {feature: fixed_charge, arrangement: equal, observed_via: invoice}
+  dimensions: {charge_model: standard}
+  setup:
+    add_ons: [{code: b19_w1_fcei_a, name: "Seat A", amount_cents: 10000}, {code: b19_w1_fcei_b, name: "Seat B", amount_cents: 10000}]
+    fixed_charges: [{add_on_code: b19_w1_fcei_a, charge_model: standard, units: 4, properties: {amount: "100"}}, {add_on_code: b19_w1_fcei_b, charge_model: standard, units: 4, properties: {amount: "100"}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 80000
+      sub_total_excluding_taxes_amount_cents: 80000
+      total_amount_cents: 80000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcei_a, units: 4, amount_cents: 40000}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcei_b, units: 4, amount_cents: 40000}
+  math: >-
+    Two identically configured fixed charges on one plan: 4 units at 100.00 each, twice.
+    40_000¢ + 40_000¢ = 80_000¢, with the plan at 0¢ so the fixed charges ARE the invoice and the
+    subscription fee is a 0¢ period marker (the convention B13 uses).
+    A fixed charge prices an ADD-ON, and each needs its own add-on here — `FixedCharge`'s code is
+    defaulted from the add-on's code by `Plans::CreateService#fixed_charge_params_with_code`
+    (:150-157), so two charges over one add-on would be a code collision rather than a duplicate.
+    Two add-ons at the same price with the same units is the honest reading of `equal` for this
+    feature, and it is also what makes the two fees separable: `Fee#item_code` is
+    `fixed_charge_add_on.code` for a fixed-charge fee (fee.rb:121), so unlike the two charge fees in
+    b19/charge/equal/invoice these two are distinguishable by content and the per-fee split really
+    can be asserted.
+    `CalculateFeesService#create_fixed_charge_fees` runs as its own producer at :44, independent of
+    `create_charges_fees`, and iterates the plan's fixed charges — so the failure this excludes is
+    one fixed charge being billed and the other silently dropped: 40_000¢ and `fees_count` 2. The
+    add-ons' own `amount_cents` (10_000¢) is deliberately NOT the price: the fixed charge's
+    `properties.amount` is, which is why the fees read 40_000¢ rather than 10_000¢ and why this row
+    would be unchanged if the add-ons were priced differently.
+
+- id: "b19/fixed_charge/unequal/invoice"
+  block: B19
+  group: iv
+  key: b19_w1_fcui
+  vars: {plan_cents: 0}
+  axes: {feature: fixed_charge, arrangement: unequal, observed_via: invoice}
+  dimensions: {charge_model: standard}
+  setup:
+    add_ons: [{code: b19_w1_fcui_a, name: "Seat A", amount_cents: 10000}, {code: b19_w1_fcui_b, name: "Seat B", amount_cents: 10000}]
+    fixed_charges: [{add_on_code: b19_w1_fcui_a, charge_model: standard, units: 4, properties: {amount: "100"}}, {add_on_code: b19_w1_fcui_b, charge_model: standard, units: 2, properties: {amount: "300"}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 100000
+      sub_total_excluding_taxes_amount_cents: 100000
+      total_amount_cents: 100000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcui_a, units: 4, amount_cents: 40000}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcui_b, units: 2, amount_cents: 60000}
+  math: >-
+    Two fixed charges that differ on BOTH axes a fixed charge has — 4 units at 100.00 = 40_000¢ and
+    2 units at 300.00 = 60_000¢ — so neither the units nor the unit price of one can be substituted
+    for the other's without changing the answer. 100_000¢ in total, on a 0¢ plan.
+    The numbers are chosen so that every plausible cross-wiring is a different total: swapping the
+    units between the charges gives 20_000 + 120_000 = 140_000¢; applying one charge's price to both
+    gives 80_000¢ or 180_000¢; billing either charge alone gives 40_000¢ or 60_000¢. That matters
+    because a fixed charge's units live on a `FixedChargeEvent` emitted at creation rather than in
+    the charge row that prices them (`FixedCharges::EmitEventsService`), so units and price are read
+    from two different places and a duplicate is the case where they can be paired up wrongly.
+    Per-fee assertion is available here — `Fee#item_code` is the add-on's code for a fixed-charge fee
+    (fee.rb:121) and the two add-ons differ — so the split is asserted rather than just the total,
+    which is what makes the cross-wiring counterfactuals above detectable at all rather than only
+    the "one charge lost" one.
+    Both charges are arrears and not prorated, and the subscription runs a whole calendar month, so
+    no proration coefficient enters and the row is not calendar-sensitive.
+
+- id: "b19/fixed_charge/equal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_fcep
+  vars: {plan_cents: 0}
+  axes: {feature: fixed_charge, arrangement: equal, observed_via: preview}
+  premium: true
+  dimensions: {charge_model: standard}
+  setup:
+    add_ons: [{code: b19_w1_fcep_a, name: "Seat A", amount_cents: 10000}, {code: b19_w1_fcep_b, name: "Seat B", amount_cents: 10000}]
+    fixed_charges: [{add_on_code: b19_w1_fcep_a, charge_model: standard, units: 4, properties: {amount: "100"}}, {add_on_code: b19_w1_fcep_b, charge_model: standard, units: 4, properties: {amount: "100"}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 80000
+      total_amount_cents: 80000
+    preview:
+      fees_amount_cents: 80000
+      sub_total_excluding_taxes_amount_cents: 80000
+      total_amount_cents: 80000
+  math: >-
+    Two equal fixed charges, forecast: 4 × 100.00 twice = 80_000¢, the arithmetic derived in
+    b19/fixed_charge/equal/invoice.
+    The preview builds fixed-charge fees in its own loop, `add_fixed_charge_fees`
+    (preview_service.rb:232-257), which iterates `subscription.fixed_charges` and calls
+    `Fees::FixedChargeService` with `context: :invoice_preview`. The preview is deliberately taken
+    on 20 MARCH, inside the first period: `should_create_fixed_charge_fee?` refuses an arrears fixed
+    charge when `is_starting_subscription?` is true, and that predicate is
+    `invoice_subscriptions.count == 1 && the last one is subscription_starting?`
+    (preview_service.rb:319-330, :447-452). Before the first invoice exists the count is 0, so both
+    fees are built; in the SECOND period the count is exactly 1 and both would be suppressed —
+    a preview of 0¢ against an invoice of 80_000¢, which is a trap and not this cell's subject.
+    `fees_amount_cents` rather than a `fees:` list, on purpose: whether the preview emits the plan's
+    0¢ subscription fee alongside the two fixed-charge fees is not something this cell should pin
+    (a 0¢ fee changes `fees_count` without changing a cent), and 80_000¢ is the same number either
+    way. One fixed charge lost gives 40_000¢; both charges built from the same add-on's units gives
+    80_000¢ but is excluded by the invoice sibling's per-fee assertion.
+
+- id: "b19/fixed_charge/unequal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_fcup
+  vars: {plan_cents: 0}
+  axes: {feature: fixed_charge, arrangement: unequal, observed_via: preview}
+  premium: true
+  dimensions: {charge_model: standard}
+  setup:
+    add_ons: [{code: b19_w1_fcup_a, name: "Seat A", amount_cents: 10000}, {code: b19_w1_fcup_b, name: "Seat B", amount_cents: 10000}]
+    fixed_charges: [{add_on_code: b19_w1_fcup_a, charge_model: standard, units: 4, properties: {amount: "100"}}, {add_on_code: b19_w1_fcup_b, charge_model: standard, units: 2, properties: {amount: "300"}}]
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 100000
+      total_amount_cents: 100000
+    preview:
+      fees_amount_cents: 100000
+      sub_total_excluding_taxes_amount_cents: 100000
+      total_amount_cents: 100000
+  math: >-
+    Two fixed charges differing in units AND price, forecast: 4 × 100.00 = 40_000¢ plus
+    2 × 300.00 = 60_000¢ = 100_000¢ (derived in b19/fixed_charge/unequal/invoice).
+    100_000¢ is not reachable by any pairing mistake the preview's separate loop could make —
+    swapped units give 140_000¢, one charge's price applied to both gives 80_000¢ or 180_000¢, either
+    charge alone gives 40_000¢ or 60_000¢ — so the total alone carries the assertion even though the
+    per-fee split is not asserted on this surface.
+    As in the equal sibling, the preview is taken inside the FIRST period on purpose:
+    `should_create_fixed_charge_fee?` suppresses an arrears fixed charge while
+    `is_starting_subscription?` holds, which is true only once one invoice_subscription exists
+    (preview_service.rb:319-330, :447-452), so a preview taken in April would quote 0¢ against a
+    100_000¢ invoice. Both fixed charges reach `Fees::FixedChargeService` with
+    `context: :invoice_preview` and each reads its own units from its own `FixedChargeEvent`, which
+    is the pairing this row exists to check.
+    `fees_amount_cents` rather than `fees_count`: whether the 0¢ subscription fee of a 0¢ plan
+    appears in a preview payload is not this cell's subject, and it moves the count without moving
+    a cent.
+
+- id: "b19/fixed_charge/equal/regenerated"
+  block: B19
+  group: rg
+  key: b19_w1_fcer
+  vars: {plan_cents: 0}
+  axes: {feature: fixed_charge, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {charge_model: standard, grace_period: 5}
+  setup:
+    add_ons: [{code: b19_w1_fcer_a, name: "Seat A", amount_cents: 10000}, {code: b19_w1_fcer_b, name: "Seat B", amount_cents: 10000}]
+    fixed_charges: [{add_on_code: b19_w1_fcer_a, charge_model: standard, units: 4, properties: {amount: "100"}}, {add_on_code: b19_w1_fcer_b, charge_model: standard, units: 4, properties: {amount: "100"}}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 80000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 80000
+      total_amount_cents: 80000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcer_a, units: 4, amount_cents: 40000}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcer_b, units: 4, amount_cents: 40000}
+  math: >-
+    Two equal fixed charges on a draft that is rebuilt: 4 × 100.00 twice = 80_000¢, unchanged from
+    the finalized b19/fixed_charge/equal/invoice because fixed charges are producers and only the
+    three reducers are gated on finalization (calculate_fees_service.rb:44 vs :364-379).
+    This is the surface where BIL-537 lived — a fixed-charge units change that thirty-six B13 rows
+    could not see because none of them held an invoice open long enough to refresh it — so a
+    duplicate fixed charge on a refreshed draft is worth pinning per fee rather than in aggregate.
+    `Invoices::RefreshDraftService` destroys the fees and re-runs the producers, so both fixed
+    charges must be re-found on the plan and each must re-read its OWN units from its own
+    `FixedChargeEvent`. `fees_count: 3` plus the two per-fee lines exclude a rebuild that emitted
+    one fee (40_000¢), one that duplicated a single charge (80_000¢ but with the same `item_code`
+    twice, which the per-fee expectations reject because they name different add-ons), and one that
+    appended to the existing fees rather than replacing them (160_000¢).
+    The three withheld reducers are asserted as 0, per the rule that any row asserting a draft must
+    say so explicitly rather than omit them.
+
+- id: "b19/fixed_charge/unequal/regenerated"
+  block: B19
+  group: rg
+  key: b19_w1_fcur
+  vars: {plan_cents: 0}
+  axes: {feature: fixed_charge, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {charge_model: standard, grace_period: 5}
+  setup:
+    add_ons: [{code: b19_w1_fcur_a, name: "Seat A", amount_cents: 10000}, {code: b19_w1_fcur_b, name: "Seat B", amount_cents: 10000}]
+    fixed_charges: [{add_on_code: b19_w1_fcur_a, charge_model: standard, units: 4, properties: {amount: "100"}}, {add_on_code: b19_w1_fcur_b, charge_model: standard, units: 2, properties: {amount: "300"}}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 100000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 100000
+      total_amount_cents: 100000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcur_a, units: 4, amount_cents: 40000}
+        - {fee_type: fixed_charge, item_code: b19_w1_fcur_b, units: 2, amount_cents: 60000}
+  math: >-
+    Two fixed charges differing in units and price, rebuilt: 40_000¢ + 60_000¢ = 100_000¢, the same
+    as the finalized b19/fixed_charge/unequal/invoice, because a refresh re-runs the producers and
+    nothing about a fixed charge is gated on finalization
+    (calculate_fees_service.rb:44 vs :364-379).
+    The per-fee assertion is the whole row. A rebuild reads each charge's units from its own
+    `FixedChargeEvent` and its price from the charge's `properties`, i.e. from two records that a
+    destroy-and-rebuild must re-pair correctly; with two charges present the pairing can go wrong
+    without changing the fee COUNT. Units swapped reads 20_000¢ / 120_000¢ (total 140_000¢), one
+    charge's properties applied to both reads 80_000¢ or 180_000¢, and either charge lost reads
+    40_000¢ or 60_000¢ with `fees_count` 2. Only 4 units at 40_000¢ against add-on A and 2 units at
+    60_000¢ against add-on B is the correct rebuild, and `Fee#item_code` being the add-on's code
+    (fee.rb:121) is what lets the row say which is which.
+    The three finalizing-gated reducers are asserted as 0 so the draft cannot pass having allocated
+    one.
+
+- id: "b19/subscription_fee/equal/invoice"
+  block: B19
+  key: b19_w1_sfei
+  vars: {plan_cents: 6000}
+  axes: {feature: subscription_fee, arrangement: equal, observed_via: invoice}
+  dimensions: {subscriptions: 2}
+  setup:
+    subscription: {external_id: golden_b19_w1_sfei_sub_a}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-01T00:10:00Z", do: create_subscription, params: {external_id: golden_b19_w1_sfei_sub_b}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      total_amount_cents: 12000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, item_code: golden_b19_w1_sfei, amount_cents: 6000}
+        - {fee_type: subscription, item_code: golden_b19_w1_sfei, amount_cents: 6000}
+  math: >-
+    Two subscriptions on the SAME plan for the same customer, landing on ONE invoice with two
+    subscription fees: 6_000¢ + 6_000¢ = 12_000¢.
+    That they consolidate is the structural claim, and it comes from
+    `Subscriptions::OrganizationBillingService#call`, which groups billable subscriptions
+    `group_by(&:customer_id)` and then splits only by payment method, currency, billing entity,
+    `consolidate_invoice` and purchase order number before handing the whole group to ONE
+    `BillSubscriptionJob` (:15-44, :532-560). Both subscriptions here are calendar/monthly/EUR on
+    the same billing entity with `consolidate_invoice` at its default, so nothing splits them and
+    `invoices: 1` is an assertion in its own right — two invoices of 6_000¢ would be a different
+    behaviour with the same total.
+    `CalculateFeesService` then loops over the invoice's `invoice_subscriptions`
+    (calculate_fees_service.rb:20-47) and calls `create_subscription_fee` once per subscription, so
+    the count of fees is the count of subscriptions. A wrong implementation that billed the customer
+    once — deduplicating by plan, or keying the fee on the plan rather than the subscription — reads
+    6_000¢ and `fees_count` 1.
+    The two fee expectations are identical because they must be: `Fee#item_code` for a subscription
+    fee is `subscription.plan.code` (fee.rb:123) and both fees share the plan, the period and the
+    type, so they collide on every `FEE_MATCH_KEYS` field (F67) and are only assertable while
+    interchangeable. The unequal sibling puts them on different plans, which is what makes the split
+    nameable there.
+
+- id: "b19/subscription_fee/unequal/invoice"
+  block: B19
+  key: b19_w1_sfui
+  vars: {plan_cents: 6000}
+  axes: {feature: subscription_fee, arrangement: unequal, observed_via: invoice}
+  dimensions: {subscriptions: 2}
+  setup:
+    plan: {code: golden_b19_w1_sfui_a}
+    plans: [{code: golden_b19_w1_sfui_b, interval: monthly, amount_cents: 15000}]
+    subscription: {external_id: golden_b19_w1_sfui_sub_a}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-01T00:10:00Z", do: create_subscription, params: {external_id: golden_b19_w1_sfui_sub_b, plan_code: golden_b19_w1_sfui_b}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 21000
+      sub_total_excluding_taxes_amount_cents: 21000
+      total_amount_cents: 21000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, item_code: golden_b19_w1_sfui_a, amount_cents: 6000}
+        - {fee_type: subscription, item_code: golden_b19_w1_sfui_b, amount_cents: 15000}
+  math: >-
+    Two subscriptions on DIFFERENT plans, consolidated onto one invoice: 6_000¢ + 15_000¢ = 21_000¢.
+    Different plans is what makes the per-fee split assertable — `Fee#item_code` for a subscription
+    fee is `subscription.plan.code` (fee.rb:123), so the two fees differ on a
+    `GoldenRunner::FEE_MATCH_KEYS` field and each expectation matches exactly one fee (unlike the
+    equal sibling, F67). And the amounts are deliberately far apart, so a fee built against the
+    wrong subscription's plan reads 12_000¢ or 30_000¢ rather than the correct 21_000¢.
+    They still share one invoice because `Subscriptions::OrganizationBillingService` groups by
+    customer and then splits only on payment method, currency, billing entity, `consolidate_invoice`
+    and purchase order number (:15-44, :532-560) — the PLAN is not a splitting criterion, only the
+    plan's currency is, and both are EUR. Both are calendar/monthly so both are billable on
+    1 April. `invoices: 1` therefore asserts the consolidation and `fees_count: 2` asserts that
+    consolidation did not collapse the two subscriptions into one line.
+    The failure this excludes is the invoice-level one that a same-plan row cannot see: a fee keyed
+    on the invoice's first subscription would bill 6_000¢ twice (12_000¢) and look perfectly
+    consistent doing it.
+
+- id: "b19/subscription_fee/equal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_sfep
+  vars: {plan_cents: 6000}
+  axes: {feature: subscription_fee, arrangement: equal, observed_via: preview}
+  premium: true
+  dimensions: {subscriptions: 2}
+  setup:
+    subscription: {external_id: golden_b19_w1_sfep_sub_a}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-01T00:10:00Z", do: create_subscription, params: {external_id: golden_b19_w1_sfep_sub_b}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice, params: {subscriptions: {external_ids: [golden_b19_w1_sfep_sub_a, golden_b19_w1_sfep_sub_b]}}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 12000
+      total_amount_cents: 12000
+      fees_count: 2
+    preview:
+      fees_amount_cents: 12000
+      sub_total_excluding_taxes_amount_cents: 12000
+      total_amount_cents: 12000
+      fees_count: 2
+  math: >-
+    Two subscriptions on one plan, previewed together: 6_000¢ + 6_000¢ = 12_000¢, the same invoice
+    b19/subscription_fee/equal/invoice finalizes.
+    The preview has to be ASKED for both, which is why the step carries an explicit
+    `subscriptions.external_ids` — the runner otherwise previews only the last subscription it
+    created, and a one-subscription preview would quote 6_000¢ against a 12_000¢ invoice while
+    looking correct in isolation. With both named,
+    `Invoices::PreviewService` loops `subscriptions.each { add_subscription_fee ... }`
+    (preview_service.rb:43-49) and builds one fee per subscription.
+    Two guards have to pass for that to be reachable at all, and they are the reason this cell is
+    not simply implied by the invoice: `currencies_aligned?` (:84-93) rejects a mixed-currency set
+    and `billing_times_aligned?` (:95-103) rejects subscriptions whose `end_of_period` differ. Both
+    subscriptions here are calendar/monthly/EUR started on the same day, so both guards pass; a
+    preview that refused the pair would fail the row rather than silently forecasting half of it.
+    `fees_count: 2` on both surfaces is what says the two fees stayed two — the totals alone cannot
+    distinguish two 6_000¢ fees from one 12_000¢ fee, and `Fee#item_code` is the plan's code for
+    both so the per-fee amounts are not separately matchable (F67).
+
+- id: "b19/subscription_fee/unequal/preview"
+  block: B19
+  group: pv
+  key: b19_w1_sfup
+  vars: {plan_cents: 6000}
+  axes: {feature: subscription_fee, arrangement: unequal, observed_via: preview}
+  premium: true
+  dimensions: {subscriptions: 2}
+  setup:
+    plan: {code: golden_b19_w1_sfup_a}
+    plans: [{code: golden_b19_w1_sfup_b, interval: monthly, amount_cents: 15000}]
+    subscription: {external_id: golden_b19_w1_sfup_sub_a}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-01T00:10:00Z", do: create_subscription, params: {external_id: golden_b19_w1_sfup_sub_b, plan_code: golden_b19_w1_sfup_b}}
+    - {at: "2024-03-20T10:00:00Z", do: preview_invoice, params: {subscriptions: {external_ids: [golden_b19_w1_sfup_sub_a, golden_b19_w1_sfup_sub_b]}}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 21000
+      total_amount_cents: 21000
+      fees_count: 2
+    preview:
+      fees_amount_cents: 21000
+      sub_total_excluding_taxes_amount_cents: 21000
+      total_amount_cents: 21000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, item_code: golden_b19_w1_sfup_a, amount_cents: 6000}
+        - {fee_type: subscription, item_code: golden_b19_w1_sfup_b, amount_cents: 15000}
+  math: >-
+    Two subscriptions on different plans, previewed together: 6_000¢ + 15_000¢ = 21_000¢, matching
+    b19/subscription_fee/unequal/invoice.
+    This is the one preview cell in the block where the per-fee split IS assertable, because the two
+    fees carry different plan codes as `item_code` (fee.rb:123) and so are separable by
+    `GoldenRunner::FEE_MATCH_KEYS`. That makes the row able to say more than the total: it pins each
+    fee to its own subscription's plan, which is exactly the pairing
+    `PreviewService#add_subscription_fee` could get wrong while still summing to a plausible number
+    — building both fees from `first_subscription` reads 12_000¢, from the last 30_000¢, and mixing
+    the plan of one with the boundaries of the other would show up as a wrong per-fee amount rather
+    than a wrong total.
+    Both subscriptions must be named in the step, or the runner previews only the last one created
+    (15_000¢ against a 21_000¢ invoice). With both named, `currencies_aligned?` passes because both
+    plans are EUR and `billing_times_aligned?` passes because both are calendar/monthly with the
+    same `end_of_period` (preview_service.rb:84-103) — a mixed pair would be refused outright, and
+    a preview refusing the multiplicity is a different finding from one mis-summing it.
+
+- id: "b19/subscription_fee/equal/regenerated"
+  block: B19
+  key: b19_w1_sfer
+  vars: {plan_cents: 6000}
+  axes: {feature: subscription_fee, arrangement: equal, observed_via: regenerated}
+  premium: true
+  dimensions: {subscriptions: 2, grace_period: 5}
+  setup:
+    customer: {invoice_grace_period: 5}
+    subscription: {external_id: golden_b19_w1_sfer_sub_a}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-01T00:10:00Z", do: create_subscription, params: {external_id: golden_b19_w1_sfer_sub_b}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 12000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 12000
+      total_amount_cents: 12000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, item_code: golden_b19_w1_sfer, amount_cents: 6000}
+        - {fee_type: subscription, item_code: golden_b19_w1_sfer, amount_cents: 6000}
+  math: >-
+    Two subscriptions on one plan, consolidated onto one draft and rebuilt: 6_000¢ + 6_000¢ =
+    12_000¢, unchanged from the finalized b19/subscription_fee/equal/invoice because subscription
+    fees are producers (calculate_fees_service.rb:42) and only the three reducers are gated on
+    finalization (:364-379).
+    A refresh is where a consolidated invoice is most exposed, and that is the point of the cell.
+    `Invoices::RefreshDraftService` destroys the draft's fees and re-runs `CalculateFeesService`,
+    which rebuilds one subscription fee per `invoice_subscription` — so the rebuild depends on the
+    invoice still carrying BOTH `invoice_subscriptions`, a join a refresh does not recreate. A
+    rebuild that saw one of them reads 6_000¢ with `fees_count` 1; one that appended rather than
+    replaced reads 24_000¢ with `fees_count` 4. Both are excluded by the count together with the
+    total.
+    The two fee expectations are identical, which is what makes them matchable: `Fee#item_code` is
+    the plan's code for a subscription fee (fee.rb:123) and both fees share plan, type and period,
+    so they collide on every `FEE_MATCH_KEYS` field (F67). The three withheld reducers are asserted
+    as 0 rather than omitted, so a draft that allocated one cannot slip through.
+
+- id: "b19/subscription_fee/unequal/regenerated"
+  block: B19
+  key: b19_w1_sfur
+  vars: {plan_cents: 6000}
+  axes: {feature: subscription_fee, arrangement: unequal, observed_via: regenerated}
+  premium: true
+  dimensions: {subscriptions: 2, grace_period: 5}
+  setup:
+    plan: {code: golden_b19_w1_sfur_a}
+    plans: [{code: golden_b19_w1_sfur_b, interval: monthly, amount_cents: 15000}]
+    customer: {invoice_grace_period: 5}
+    subscription: {external_id: golden_b19_w1_sfur_sub_a}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-01T00:10:00Z", do: create_subscription, params: {external_id: golden_b19_w1_sfur_sub_b, plan_code: golden_b19_w1_sfur_b}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 21000
+      coupons_amount_cents: 0
+      credit_notes_amount_cents: 0
+      prepaid_credit_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 21000
+      total_amount_cents: 21000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, item_code: golden_b19_w1_sfur_a, amount_cents: 6000}
+        - {fee_type: subscription, item_code: golden_b19_w1_sfur_b, amount_cents: 15000}
+  math: >-
+    Two subscriptions on different plans, consolidated onto one draft and rebuilt: 6_000¢ + 15_000¢
+    = 21_000¢, the same as the finalized b19/subscription_fee/unequal/invoice — producers are not
+    gated on finalization (calculate_fees_service.rb:42 vs :364-379).
+    Because the plans differ, `Fee#item_code` differs (fee.rb:123) and the rebuild's PAIRING is
+    assertable, not just its total. `CalculateFeesService` walks the invoice's
+    `invoice_subscriptions` and builds a subscription fee from each one's own subscription and
+    boundaries (:20-47), so a refresh that re-resolved both fees from the same invoice_subscription
+    would read 12_000¢ or 30_000¢, and one that kept the fees rather than replacing them would read
+    42_000¢ with `fees_count` 4. 6_000¢ against plan A and 15_000¢ against plan B is the only
+    correct rebuild, and the amounts are far enough apart that no swap lands on 21_000¢.
+    `invoices: 1` still asserts the consolidation itself, which the grace period does not change:
+    `Subscriptions::OrganizationBillingService` groups by customer and never splits on plan
+    (:15-44, :532-560). The three finalizing-gated reducers are asserted as 0 per the draft rule.
+
+- id: "b19/add_on/equal/invoice"
+  block: B19
+  key: b19_hns_aoei
+  axes: {feature: add_on, arrangement: equal, observed_via: invoice}
+  dimensions: {interval: ~, billing_time: ~, taxes: ~, tax_rate: 20, invoice_type: one_off}
+  setup:
+    plan: ~
+    subscription: ~
+    taxes: [{code: b19_hns_aoei_vat, name: VAT, rate: 20}]
+    add_ons: [{code: b19_hns_aoei_a, name: "Onboarding A", amount_cents: 5000}, {code: b19_hns_aoei_b, name: "Onboarding B", amount_cents: 5000}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_one_off_invoice, one_off: {add_ons: [b19_hns_aoei_a, b19_hns_aoei_b]}}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: one_off
+      status: finalized
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 2000
+      total_amount_cents: 12000
+      fees_count: 2
+      fees:
+        - {fee_type: add_on, item_code: b19_hns_aoei_a, amount_cents: 5000, units: 1, taxes_amount_cents: 1000}
+        - {fee_type: add_on, item_code: b19_hns_aoei_b, amount_cents: 5000, units: 1, taxes_amount_cents: 1000}
+  math: >-
+    Two add-on fees on one invoice: do both take effect, and do their amounts add?
+    They do, and the mechanism is a loop over the payload rather than a lookup keyed by add-on.
+    `Fees::OneOffService#call` iterates `fees.each` and builds one `Fee.new(..., fee_type: :add_on,
+    invoiceable: add_on)` per ENTRY (one_off_service.rb:19-68), with nothing de-duplicating by add-on
+    and no upsert; `Invoices::CreateOneOffService` then sums them wholesale —
+    `invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)` and
+    `sub_total_excluding_taxes_amount_cents = fees_amount_cents` (create_one_off_service.rb:51-52).
+    Each fee's `amount_cents` is `(unit_amount_cents * units).round` (:37) where `unit_amount_cents`
+    comes from the payload, and ScenariosHelper#create_one_off_invoice sends each add-on's own
+    `amount_cents` — 5_000¢ x 1 unit, twice, so 10_000¢ of fees.
+    Neither add-on carries taxes of its own and the call sends no `tax_codes`, so
+    `Fees::ApplyTaxesService#applicable_taxes` falls past the explicit-codes rung and past
+    `return fee.add_on.taxes if fee.add_on? && fee.add_on.taxes.any?` (apply_taxes_service.rb:64-66)
+    to the billing-entity default at :81-82, which is where `applied_to_organization: true` put the
+    single 20% VAT. 20% of 5_000¢ is 1_000¢ per fee, 2_000¢ in total, 12_000¢ due.
+    The failure this row is sized to catch is a one-fee-per-add-on-type collapse — a
+    `find_or_initialize_by` or an upsert keyed on `invoiceable`, which reads as a reasonable thing to
+    write and would produce `fees_count` 1, 5_000¢ of fees, 1_000¢ of tax and 6_000¢ due on an
+    invoice that still looks internally consistent. Asserting `fees_count` AND both fees by
+    `item_code` is what separates "two fees" from "one fee that happens to total right", which the
+    invoice totals alone cannot.
+    b19/add_on/unequal/invoice is the companion: there the two add-ons carry DIFFERENT add-on-level
+    taxes, which proves the ladder is walked per fee rather than once per invoice.
+
+- id: "b19/add_on/unequal/invoice"
+  block: B19
+  key: b19_hns_aoui
+  axes: {feature: add_on, arrangement: unequal, observed_via: invoice}
+  dimensions: {interval: ~, billing_time: ~, taxes: ~, tax_rate: 20, invoice_type: one_off}
+  setup:
+    plan: ~
+    subscription: ~
+    taxes: [{code: b19_hns_aoui_hi, name: "High VAT", rate: 20, applied_to_organization: false}, {code: b19_hns_aoui_lo, name: "Low VAT", rate: 5, applied_to_organization: false}]
+    add_ons: [{code: b19_hns_aoui_a, name: "Onboarding A", amount_cents: 8000, tax_codes: [b19_hns_aoui_hi]}, {code: b19_hns_aoui_b, name: "Onboarding B", amount_cents: 2000, tax_codes: [b19_hns_aoui_lo]}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_one_off_invoice, one_off: {add_ons: [b19_hns_aoui_a, b19_hns_aoui_b]}}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: one_off
+      status: finalized
+      coupons_amount_cents: 0
+      fees_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 10000
+      taxes_amount_cents: 1700
+      total_amount_cents: 11700
+      fees_count: 2
+      fees:
+        - {fee_type: add_on, item_code: b19_hns_aoui_a, amount_cents: 8000, units: 1, taxes_amount_cents: 1600, taxes_rate: 20.0}
+        - {fee_type: add_on, item_code: b19_hns_aoui_b, amount_cents: 2000, units: 1, taxes_amount_cents: 100, taxes_rate: 5.0}
+  math: >-
+    Two add-on fees that must be taxed DIFFERENTLY on the same invoice, which is the add-on feature's
+    version of "two instances that differ in a way the order exposes": the tax ladder is not walked
+    once per invoice, it is walked once per fee.
+    `Fees::ApplyTaxesService` is constructed with `fee:` and resolves `applicable_taxes` from that
+    fee alone; the add-on rung is `return fee.add_on.taxes if fee.add_on? && fee.add_on.taxes.any?`
+    (apply_taxes_service.rb:64-66), reached because `Fees::OneOffService` sends no `tax_codes` and so
+    the explicit-codes rung above it does not fire. `Invoices::ComputeTaxesAndTotalsService` calls it
+    per fee, and the invoice's `taxes_amount_cents` is the SUM of what each fee resolved, never a
+    single rate applied to the sub-total.
+    8_000¢ at its own 20% = 1_600¢; 2_000¢ at its own 5% = 100¢; 1_700¢ of tax on 10_000¢ of fees,
+    11_700¢ due. Both taxes are created `applied_to_organization: false` and the customer carries
+    none, so the billing-entity fallback at :81-82 cannot smuggle either of them onto the other fee.
+    Four counterfactuals, all separated by these amounts. First-fee-wins (the ladder resolved once
+    and reused): 20% on 10_000¢ = 2_000¢, 12_000¢. Last-fee-wins: 5% → 500¢, 10_500¢. Both taxes on
+    both fees (a resolution that unions rather than selects, i.e. the additive answer): 25% on
+    10_000¢ = 2_500¢, 12_500¢, and each fee's `taxes_rate` would read 25.0. A blended average rate
+    applied to the sub-total: 12.5% → 1_250¢. The amounts are deliberately 8_000/2_000 rather than
+    two equal ones, because with equal amounts first-wins, last-wins and blended all land on
+    1_250¢ and the row would prove nothing.
+    Asserting each fee's own `taxes_rate` as well as its `taxes_amount_cents` is what pins the
+    per-fee resolution itself rather than an invoice total that several wrong implementations share.
+    b19/add_on/equal/invoice is the control: with no add-on-level taxes anywhere, both fees fall to
+    the same billing-entity default and the rates really are identical.

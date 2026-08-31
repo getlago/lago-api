@@ -68,3 +68,15 @@ but never executed, and its first-ever execution (2026-08-31) failed only on the
 subscription fee that Lago persists for a plan with `amount_cents: 0`. Every other assertion —
 including the credit note's pre-tax-measured/post-tax-issued gross-up that is the row's point — was
 probe-verified correct before this change.
+
+## b19/charge/equal/preview — F101, F72/F73 withdrawn
+
+`taxes_amount_cents` 0 → 4000, `sub_total_including_taxes_amount_cents` and `total_amount_cents`
+25000 → 29000; `characterization` and `pins: [F72, F73]` removed.
+
+The row characterized a harness artifact as Lago behaviour. The preview prices charges in parallel
+worker threads, and under the :transaction cleaning strategy only one pool connection could see the
+example's data — so the multi-charge preview's output was a per-thread draw (F101), and F72/F73 were
+measurements of that draw. On committed data the preview is deterministic and equals the row's own
+29_000¢ forecast, so the expectations now assert the forecast. GoldenMatrix forces `no_transaction`
+onto every previewing row for the same reason.

@@ -1,0 +1,2675 @@
+# B18 — the configuration changes while an invoice is in flight.
+#
+# Every other block configures, then bills. These rows change the configuration in between and ask
+# which surfaces re-read it. The answer is not uniform and is not documented anywhere: a draft
+# re-reads on refresh, a finalized invoice must not, an applied coupon snapshots its terms and so
+# ignores edits to the coupon entirely.
+---
+- __matrix:
+    defaults:
+      provenance: coverage-gap
+      runners: [rspec]
+      dimensions: {interval: monthly, billing_time: calendar}
+      setup:
+        metrics: [{code: "%{key}_sum", aggregation_type: sum_agg, field_name: amount}]
+        plan: {code: "golden_b18_%{key}", interval: monthly, amount_cents: 5000}
+        charges: [{billable_metric_code: "%{key}_sum", charge_model: standard, properties: {amount: "1"}}]
+        customer: {external_id: "golden_b18_%{key}_cust", currency: EUR}
+        subscription: {external_id: "golden_b18_%{key}_sub", billing_time: calendar}
+    groups:
+      b-inv:
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - "%{mut}"
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+        dimensions: {taxes: none}
+      p-inv:
+        setup:
+          organization: {premium_integrations: [progressive_billing]}
+          plan: {amount_cents: 0, usage_thresholds: [{amount_cents: 5000}, {amount_cents: 12000}]}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+          - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+          - "%{mut}"
+          - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+          - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+        dimensions: {threshold_amount_cents: "5000+12000", taxes: none}
+      o-reg:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+          - {at: "2024-04-03T10:00:00Z", do: refresh_invoice}
+        dimensions: {grace_period: 5, taxes: none}
+      o-reg2:
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+          - {at: "2024-04-02T11:00:00Z", do: perform_invoices_refresh}
+        dimensions: {grace_period: 5}
+        runners: [rspec, live]
+      f-inv:
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+          - {at: "2024-04-03T11:00:00Z", do: refresh_invoice}
+        dimensions: {taxes: none}
+      o-inv:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+          - {at: "2024-04-03T10:00:00Z", do: finalize_invoice}
+        dimensions: {grace_period: 5, taxes: none}
+      b-pre:
+        setup:
+          organization: {premium_integrations: [preview]}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - "%{mut}"
+          - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+        dimensions: {taxes: none}
+      b-dra:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - "%{mut}"
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+        dimensions: {taxes: none}
+      b-reg:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - "%{mut}"
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+        dimensions: {taxes: none}
+      f-pre:
+        setup:
+          organization: {premium_integrations: [preview]}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+          - {at: "2024-04-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+        dimensions: {taxes: none}
+      o-dra:
+        setup:
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+        dimensions: {grace_period: 5, taxes: none}
+      o-pre:
+        setup:
+          organization: {premium_integrations: [preview]}
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - "%{mut}"
+          - {at: "2024-04-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+          - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+        dimensions: {grace_period: 5, taxes: none}
+      p-dra:
+        setup:
+          organization: {premium_integrations: [progressive_billing]}
+          plan: {amount_cents: 0, usage_thresholds: [{amount_cents: 5000}, {amount_cents: 12000}]}
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+          - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+          - "%{mut}"
+          - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+          - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+        dimensions: {taxes: none, threshold_amount_cents: "5000+12000"}
+      p-reg:
+        setup:
+          organization: {premium_integrations: [progressive_billing]}
+          plan: {amount_cents: 0, usage_thresholds: [{amount_cents: 5000}, {amount_cents: 12000}]}
+          customer: {invoice_grace_period: 5}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+          - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+          - "%{mut}"
+          - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+          - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+          - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+        dimensions: {taxes: none, threshold_amount_cents: "5000+12000"}
+      p-pre:
+        setup:
+          organization: {premium_integrations: [progressive_billing, preview]}
+          plan: {amount_cents: 0, usage_thresholds: [{amount_cents: 5000}, {amount_cents: 12000}]}
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+          - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+          - "%{mut}"
+          - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+          - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+          - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+        dimensions: {taxes: none, threshold_amount_cents: "5000+12000"}
+
+- id: b18/tax_rate/before-first-invoice/final
+  block: B18
+  group: b-inv
+  key: b18_tax
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: before-first-invoice, observed_via: invoice}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  runners: [rspec, live]
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+    plan: {code: golden_b18_tax, amount_cents: 0}
+    customer: {external_id: golden_b18_tax_cust}
+    subscription: {external_id: golden_b18_tax_sub}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      taxes_amount_cents: 1000
+      total_amount_cents: 11000
+  math: >-
+    A tax rate is read when the invoice is built, not when the usage happened. The rate is cut from
+    20% to 10% on 20 March, after all the usage was ingested but before the period closes, and the
+    1 April invoice taxes the full 10_000¢ at the NEW rate: 1_000¢, total 11_000¢.
+    Had the rate been read per event, or snapshotted at subscription time, this would be 2_000¢ and
+    12_000¢. fees_amount_cents is asserted with it: all 10_000¢ of usage is on the invoice, so
+    1_000¢ of tax can only be 10% of the whole base and not 20% of some part of it.
+
+- id: b18/coupon/between-progressive-invoices/final
+  block: B18
+  group: p-inv
+  key: b18_cpn
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: between-progressive-invoices, observed_via: invoice}
+  dimensions: {threshold_amount_cents: 5000}
+  premium: true
+  no_transaction: true
+  setup:
+    plan: {code: golden_b18_coupon}
+    customer: {external_id: golden_b18_coupon_cust}
+    subscription: {external_id: golden_b18_coupon_sub}
+    coupons: [{name: "b18 coupon", code: b18_coupon, coupon_type: fixed_amount, frequency: recurring, frequency_duration: 5, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 2000
+        total_amount_cents: 4000
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 13000
+        coupons_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 4000
+        total_amount_cents: 7000
+      - select: {invoice_type: subscription}
+        fees_amount_cents: 13000
+        coupons_amount_cents: 2000
+        progressive_billing_credit_amount_cents: 11000
+        total_amount_cents: 0
+  math: >-
+    The coupon is edited between two threshold invoices, from 2_000¢ to 9_000¢, and NOTHING changes:
+    all three invoices still discount 2_000¢.
+    AppliedCoupon copies amount_cents, percentage_rate, frequency and frequency_duration at
+    application time (visible in PreviewContextService#find_or_build_applied_coupons, which
+    reconstructs one the same way), so a customer's discount is fixed when the coupon is applied to
+    them. Editing the coupon changes what FUTURE applications get, not this one. A read-through would
+    make the second threshold invoice discount 9_000¢ and the period invoice do the same.
+    The rest is the two-threshold shape: 60 units crosses 5_000¢ → first threshold invoice bills
+    6_000¢, less 2_000¢ coupon = 4_000¢ paid. 70 more units takes cumulative usage to 13_000¢, past
+    the 12_000¢ threshold → second threshold invoice bills the cumulative 13_000¢, credits the 4_000¢
+    collected (`fees - coupons` = 6_000 - 2_000) and applies the coupon again (it is `recurring` over
+    5 periods) → 7_000¢. The period invoice bills 13_000¢, credits 4_000 + 7_000 = 11_000¢ already
+    collected and discounts 2_000¢ once more, settling at 0.
+
+- id: b18/tax_rate/on-draft/regenerated
+  block: B18
+  group: o-reg2
+  key: b18_draft
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: on-draft, observed_via: regenerated}
+  dimensions: {tax_rate: "20 -> 10"}
+  premium: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+    plan: {code: golden_b18_draft, amount_cents: 0}
+    customer: {external_id: golden_b18_draft_cust, invoice_grace_period: 5}
+    subscription: {external_id: golden_b18_draft_sub}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      taxes_amount_cents: 1000
+      total_amount_cents: 11000
+  math: >-
+    The regenerate path, end to end: a draft is not a snapshot but a recomputation, which is the whole
+    reason a grace period exists.
+    Under a 5-day grace period the 1 April invoice stays `draft`, taxed at 20% → 2_000¢, total
+    12_000¢. The rate is then cut to 10%. Taxes::UpdateService flags the customer's draft invoices
+    `ready_to_be_refreshed`, Clock::RefreshDraftInvoicesJob picks them up, and the draft is rebuilt at
+    the new rate: 1_000¢ of tax, 11_000¢ total. Fees are asserted unchanged at 10_000¢ so the row
+    distinguishes "re-taxed" from "re-billed".
+    Without the flag the refresh job would never see the invoice — see
+    b18/charge_amount/on-draft/regenerated, where exactly that happens.
+
+- id: b18/charge_amount/after-finalize/final
+  block: B18
+  group: f-inv
+  key: b18_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: b18_fin_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: after-finalize, observed_via: invoice}
+  dimensions: {grace_period: none}
+  runners: [rspec, live]
+  setup:
+    plan: {code: golden_b18_final, amount_cents: 0}
+    customer: {external_id: golden_b18_final_cust}
+    subscription: {external_id: golden_b18_final_sub}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 100}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-02T11:00:00Z", do: perform_invoices_refresh}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+  math: >-
+    The negative control for b18/charge_amount/on-draft/regenerated, and the more important of the
+    two: an issued invoice must not move when the price list changes.
+    With no grace period the 1 April invoice is `finalized` immediately. The same repricing to 3.00
+    per unit is applied and the refresh clock job run — Invoices::RefreshDraftService operates on
+    drafts only, so the invoice keeps its 10_000¢. If this row ever reads 30_000¢, Lago is retroacting
+    a price change onto money already invoiced.
+
+- id: b18/grace_period/on-draft/final
+  block: B18
+  group: o-inv
+  key: grace
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_customer, params: {invoice_grace_period: 0}}}
+  axes: {mutation: grace_period, stage: on-draft, observed_via: invoice}
+  dimensions: {grace_period: "5 -> 0"}
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: [{code: b18_gp_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {amount_cents: 0}
+    charges: [{billable_metric_code: b18_gp_sum, charge_model: standard, properties: {amount: "1"}}]
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: b18_gp_sum, properties: {amount: 100}}]}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-02T11:00:00Z", do: perform_finalize_refresh}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+  math: >-
+    Shortening the grace period is what closes a draft, so this row proves the setting is acted upon
+    rather than merely stored. The 1 April invoice sits in `draft` under a 5-day grace period; the
+    period is then set to 0 and the finalize-refresh clock run, and the invoice becomes `finalized`
+    with its amounts unchanged at 10_000¢.
+    Rows write `invoice_grace_period` flat and the runner nests it under `billing_configuration`,
+    which the API requires in both directions. Sent at the top level it is dropped by strong params
+    with an HTTP 200, and the failure mode is the nastiest kind: the customer gets NO grace period,
+    the invoice is finalized immediately, and a row asserting `finalized` passes while never having
+    tested anything. That is exactly how the first draft of this row passed —
+    b18/charge_amount/on-draft/regenerated, which needs a real draft, is what caught it.
+    `premium: true` for the same reason: the field is discarded without a licence.
+
+- id: b18/charge_amount/on-draft/regenerated
+  block: B18
+  group: o-reg2
+  key: b18_amt
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: b18_amt_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: on-draft, observed_via: regenerated}
+  dimensions: {taxes: none}
+  provenance: characterization
+  premium: true
+  characterization: true
+  setup:
+    plan: {code: golden_b18_amount, amount_cents: 0}
+    customer: {external_id: golden_b18_amount_cust, invoice_grace_period: 5}
+    subscription: {external_id: golden_b18_amount_sub}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+  math: >-
+    CHARACTERIZATION — repricing a charge does not reach a draft that is already open, and this row
+    records that rather than endorsing it.
+    Same shape as b18/tax_rate/on-draft/regenerated: a draft held by a 5-day grace period, the
+    configuration corrected, the refresh clock run. Changing the TAX rate rebuilds the draft.
+    Changing the CHARGE price does not: the draft still reads 10_000¢ at the old 1.00 per unit,
+    though a refresh would produce 30_000¢.
+    Cause: `Invoice.ready_to_be_refreshed` is a flag, and only some writers set it.
+    Plans::UpdateService (update_service.rb:82), Taxes::UpdateService (:30), Taxes::DestroyService,
+    BillableMetrics::DestroyService and Customers::ApplyTaxesService all flag the customer's drafts.
+    Charges::UpdateService does not — so Clock::RefreshDraftInvoicesJob never sees the invoice.
+    The asymmetry is the finding: the same repricing reaches the draft through
+    `PUT /plans/:code` (Plans::UpdateService, which flags) and does not through
+    `PUT /plans/:code/charges/:code`. Two endpoints for one intent, two outcomes, and the grace period
+    silently stops being a correction window for the one people reach for.
+
+- id: b18/plan_amount/on-draft/regenerated
+  block: B18
+  group: o-reg
+  key: plan
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: on-draft, observed_via: regenerated}
+  runners: [rspec, live]
+  premium: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-02T11:00:00Z", do: perform_invoices_refresh}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    The positive half of the draft-refresh asymmetry, and the direct comparison that makes
+    b18/charge_amount/on-draft/regenerated a finding rather than a design choice.
+    A 5_000¢ monthly plan bills 5_000¢ into a draft held by a 5-day grace period. The plan price is
+    raised to 9_000¢ through `PUT /plans/:code`, and because Plans::UpdateService flags the plan's
+    draft invoices `ready_to_be_refreshed` (update_service.rb:82) the refresh job rebuilds the draft
+    at 9_000¢.
+    The identical intent expressed through `PUT /plans/:code/charges/:code` does not reach the draft
+    at all, because Charges::UpdateService sets no such flag. Same grace period, same refresh, two
+    endpoints, two answers.
+    The plan carries no charges on purpose: `PUT /plans/:code` replaces the plan wholesale, so a
+    charge-bearing plan would have its charges deleted by this call and the row would be measuring
+    that instead.
+
+- id: b18/plan_amount/after-finalize/final
+  block: B18
+  group: f-inv
+  key: plan_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: after-finalize, observed_via: invoice}
+  dimensions: {grace_period: none}
+  runners: [rspec, live]
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-02T11:00:00Z", do: perform_invoices_refresh}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+  math: >-
+    The control for the row above, and the one that would matter most if it broke. With no grace
+    period the invoice is finalized on 1 April at 5_000¢. Plans::UpdateService then flags draft
+    invoices — this one is not a draft, so the flag cannot reach it, and Invoices::RefreshDraftService
+    operates on drafts regardless. The invoice stays at 5_000¢.
+    A failure here means a price change retroacting onto money already invoiced, which is worse than
+    any amount the suite gets wrong in the other direction.
+
+- id: b18/tax_rate/before-first-invoice/preview
+  block: B18
+  group: b-pre
+  key: b18_pv
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: before-first-invoice, observed_via: preview}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+    plan: {code: golden_b18_preview, amount_cents: 0}
+    customer: {external_id: golden_b18_preview_cust}
+    subscription: {external_id: golden_b18_preview_sub}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      taxes_amount_cents: 1000
+      total_amount_cents: 11000
+    preview:
+      fees_amount_cents: 10000
+      taxes_amount_cents: 1000
+      total_amount_cents: 11000
+  math: >-
+    A preview is a quote, so it is the surface a customer sees BEFORE the invoice exists, and a rate
+    change between quote and invoice is the obvious way for the two to disagree.
+    The rate is cut from 20% to 10% on 20 March, after all the usage and before the period closes. The
+    preview on 25 March and the invoice on 1 April must both read the new rate: 10_000¢ of usage,
+    1_000¢ of tax, 11_000¢ total. Asserted on both sides with identical numbers, so a preview that
+    kept the old 20% shows up as 2_000¢ against 1_000¢ rather than as a plausible-looking quote.
+    Pairs with b18/tax_rate/before-first-invoice/final, which asserts the invoice alone: that row says
+    the rate is read at build time, this one says the quote is built the same way.
+
+- id: b18/tax_rate/before-first-invoice/draft
+  block: B18
+  group: b-dra
+  key: btr_dra
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: before-first-invoice, observed_via: draft}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      taxes_amount_cents: 1500
+      total_amount_cents: 16500
+  math: >-
+    A rate cut from 20% to 10% lands before anything is billed, so there is nothing yet for it to
+    disagree with — every surface must show the new rate.
+    5_000¢ subscription + 100 units = 15000¢ of fees, taxed at 10% = 1_500¢ → 16_500¢.
+    Tax is the one thing a draft computes exactly as a finalized invoice does: it is applied by
+    ComputeTaxesAndTotalsService before the finalizing gate that withholds coupons, credit notes and
+    prepaid credit, which is why this family reads the same on all four surfaces while the coupon and
+    wallet families below do not.
+
+- id: b18/tax_rate/before-first-invoice/regenerated
+  block: B18
+  group: b-reg
+  key: btr_reg
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: before-first-invoice, observed_via: regenerated}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      taxes_amount_cents: 1500
+      total_amount_cents: 16500
+  math: >-
+    A rate cut from 20% to 10% lands before anything is billed, so there is nothing yet for it to
+    disagree with — every surface must show the new rate.
+    5_000¢ subscription + 100 units = 15000¢ of fees, taxed at 10% = 1_500¢ → 16_500¢.
+    Tax is the one thing a draft computes exactly as a finalized invoice does: it is applied by
+    ComputeTaxesAndTotalsService before the finalizing gate that withholds coupons, credit notes and
+    prepaid credit, which is why this family reads the same on all four surfaces while the coupon and
+    wallet families below do not.
+
+- id: b18/charge_amount/before-first-invoice/final
+  block: B18
+  group: b-inv
+  key: bca_fin
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: bca_fin_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: before-first-invoice, observed_via: invoice}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    Repricing a charge before the period is billed reaches every surface, because none of them
+    existed yet to be left stale.
+    100 units re-rated from 1.00 to 3.00 = 30_000¢, plus the 5_000¢ subscription fee = 35_000¢.
+    Contrast b18/charge_amount/on-draft/regenerated, where the identical edit AFTER the draft exists
+    never reaches it: Charges::UpdateService sets no `ready_to_be_refreshed` flag, so the refresh job
+    never picks the invoice up. Timing, not the edit, is what decides.
+
+- id: b18/charge_amount/before-first-invoice/draft
+  block: B18
+  group: b-dra
+  key: bca_dra
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: bca_dra_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: before-first-invoice, observed_via: draft}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    Repricing a charge before the period is billed reaches every surface, because none of them
+    existed yet to be left stale.
+    100 units re-rated from 1.00 to 3.00 = 30_000¢, plus the 5_000¢ subscription fee = 35_000¢.
+    Contrast b18/charge_amount/on-draft/regenerated, where the identical edit AFTER the draft exists
+    never reaches it: Charges::UpdateService sets no `ready_to_be_refreshed` flag, so the refresh job
+    never picks the invoice up. Timing, not the edit, is what decides.
+
+- id: b18/charge_amount/before-first-invoice/regenerated
+  block: B18
+  group: b-reg
+  key: bca_reg
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: bca_reg_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: before-first-invoice, observed_via: regenerated}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    Repricing a charge before the period is billed reaches every surface, because none of them
+    existed yet to be left stale.
+    100 units re-rated from 1.00 to 3.00 = 30_000¢, plus the 5_000¢ subscription fee = 35_000¢.
+    Contrast b18/charge_amount/on-draft/regenerated, where the identical edit AFTER the draft exists
+    never reaches it: Charges::UpdateService sets no `ready_to_be_refreshed` flag, so the refresh job
+    never picks the invoice up. Timing, not the edit, is what decides.
+
+- id: b18/charge_amount/before-first-invoice/preview
+  block: B18
+  group: b-pre
+  key: bca_pre
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: bca_pre_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: before-first-invoice, observed_via: preview}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    preview:
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    Repricing a charge before the period is billed reaches every surface, because none of them
+    existed yet to be left stale.
+    100 units re-rated from 1.00 to 3.00 = 30_000¢, plus the 5_000¢ subscription fee = 35_000¢.
+    Contrast b18/charge_amount/on-draft/regenerated, where the identical edit AFTER the draft exists
+    never reaches it: Charges::UpdateService sets no `ready_to_be_refreshed` flag, so the refresh job
+    never picks the invoice up. Timing, not the edit, is what decides.
+
+- id: b18/plan_amount/before-first-invoice/final
+  block: B18
+  group: b-inv
+  key: bpa_fin
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: before-first-invoice, observed_via: invoice}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - "%{mut}"
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    The plan is repriced before the first invoice exists, so the subscription fee is simply built at
+    the new price: 9_000¢ rather than 5_000¢, on every surface.
+    The plan carries no charges deliberately — `PUT /plans/:code` replaces the plan wholesale and
+    would delete them, leaving the row measuring that instead of the reprice.
+    Its pair is b18/plan_amount/after-finalize/final, where the same edit must NOT move an invoice
+    that has already been issued.
+
+- id: b18/plan_amount/before-first-invoice/draft
+  block: B18
+  group: b-dra
+  key: bpa_dra
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: before-first-invoice, observed_via: draft}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - "%{mut}"
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    The plan is repriced before the first invoice exists, so the subscription fee is simply built at
+    the new price: 9_000¢ rather than 5_000¢, on every surface.
+    The plan carries no charges deliberately — `PUT /plans/:code` replaces the plan wholesale and
+    would delete them, leaving the row measuring that instead of the reprice.
+    Its pair is b18/plan_amount/after-finalize/final, where the same edit must NOT move an invoice
+    that has already been issued.
+
+- id: b18/plan_amount/before-first-invoice/regenerated
+  block: B18
+  group: b-reg
+  key: bpa_reg
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: before-first-invoice, observed_via: regenerated}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - "%{mut}"
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    The plan is repriced before the first invoice exists, so the subscription fee is simply built at
+    the new price: 9_000¢ rather than 5_000¢, on every surface.
+    The plan carries no charges deliberately — `PUT /plans/:code` replaces the plan wholesale and
+    would delete them, leaving the row measuring that instead of the reprice.
+    Its pair is b18/plan_amount/after-finalize/final, where the same edit must NOT move an invoice
+    that has already been issued.
+
+- id: b18/plan_amount/before-first-invoice/preview
+  block: B18
+  group: b-pre
+  key: bpa_pre
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: before-first-invoice, observed_via: preview}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - "%{mut}"
+    - {at: "2024-03-25T10:00:00Z", do: preview_invoice}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    preview:
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    The plan is repriced before the first invoice exists, so the subscription fee is simply built at
+    the new price: 9_000¢ rather than 5_000¢, on every surface.
+    The plan carries no charges deliberately — `PUT /plans/:code` replaces the plan wholesale and
+    would delete them, leaving the row measuring that instead of the reprice.
+    Its pair is b18/plan_amount/after-finalize/final, where the same edit must NOT move an invoice
+    that has already been issued.
+
+- id: b18/coupon/before-first-invoice/final
+  block: B18
+  group: b-inv
+  key: bcp_fin
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: before-first-invoice, observed_via: invoice}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      total_amount_cents: 13000
+  math: >-
+    Raising the coupon from 2_000¢ to 9_000¢ before the first invoice changes NOTHING: the
+    customer still gets 2_000¢ off.
+    AppliedCoupon copies amount, percentage, frequency and duration when the coupon is applied to
+    the customer, so an edit reaches only future applications. 15_000¢ of fees less 2_000¢ = 13_000¢.
+    b18/coupon/between-progressive-invoices/final asserts the same snapshot across two threshold
+    invoices; this row establishes it at the simplest possible moment.
+
+- id: b18/coupon/before-first-invoice/draft
+  block: B18
+  group: b-dra
+  key: bcp_dra
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: before-first-invoice, observed_via: draft}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      coupons_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    The draft shows NO discount at all — 15_000¢ where the customer will be billed 13_000¢.
+    `should_create_coupon_credit?` returns false unless the invoice is finalizing
+    (calculate_fees_service.rb:368), so coupons are allocated only at finalization. That is what
+    stops a grace-period draft from consuming a `once` coupon that a later refresh would have to
+    give back, and it is why coupons_amount_cents is asserted as 0 rather than omitted.
+
+- id: b18/coupon/before-first-invoice/regenerated
+  block: B18
+  group: b-reg
+  key: bcp_reg
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: before-first-invoice, observed_via: regenerated}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      coupons_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    Refreshing the draft does not change it: still 15_000¢, still no coupon.
+    A refresh rebuilds the invoice from current configuration, but it rebuilds it as a DRAFT, so
+    the finalizing gate still withholds the coupon. Only finalization applies it — which is what
+    b18/coupon/before-first-invoice/final shows at 13_000¢.
+
+- id: b18/coupon/before-first-invoice/preview
+  block: B18
+  group: b-pre
+  key: bcp_pre
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: before-first-invoice, observed_via: preview}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    preview:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      total_amount_cents: 13000
+  math: >-
+    The quote agrees with the invoice: 2_000¢ off, not the 9_000¢ the coupon now says.
+    PreviewContextService#find_or_build_applied_coupons reads the customer's ALREADY APPLIED
+    coupons and only falls back to constructing one from the coupon definition when there are
+    none — so a preview reproduces the snapshot rather than the current terms.
+
+- id: b18/wallet_balance/before-first-invoice/final
+  block: B18
+  group: b-inv
+  key: bwb_fin
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: before-first-invoice, observed_via: invoice}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 8000
+      total_amount_cents: 7000
+  math: >-
+    A wallet topped up mid-period pays with everything it holds at billing time, not with what
+    it held when the subscription started: 30 granted credits plus 50 more = 8_000¢ against
+    15_000¢ of fees, leaving 7_000¢.
+    Granted credits are spendable immediately. Purchased ones are not until the top-up invoice is
+    settled, which is the distinction B6 covers and the reason this row grants rather than sells.
+
+- id: b18/wallet_balance/before-first-invoice/draft
+  block: B18
+  group: b-dra
+  key: bwb_dra
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: before-first-invoice, observed_via: draft}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    The draft spends NOTHING from the wallet — 15_000¢ due where the customer will be billed
+    7_000¢. `should_create_applied_prepaid_credit?` is gated on finalization
+    (calculate_fees_service.rb:375), which is what stops a draft from burning credits that a
+    later refresh would have to return.
+
+- id: b18/wallet_balance/before-first-invoice/regenerated
+  block: B18
+  group: b-reg
+  key: bwb_reg
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: before-first-invoice, observed_via: regenerated}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    Refreshing changes nothing: a refreshed draft is still a draft, so the wallet stays
+    untouched at 15_000¢ due. The credits are spent only when the invoice finalizes.
+
+- id: b18/wallet_balance/before-first-invoice/preview
+  block: B18
+  group: b-pre
+  key: bwb_pre
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: before-first-invoice, observed_via: preview}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    preview:
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 8000
+      total_amount_cents: 7000
+  math: >-
+    The quote reflects the top-up too: 8_000¢ of cover, 7_000¢ due.
+    Preview allocates prepaid credit through the same AllocatePrepaidCreditsByWalletsService the
+    invoice uses, reading the wallet's balance at quote time.
+
+- id: b18/grace_period/before-first-invoice/final
+  block: B18
+  group: b-inv
+  key: bgp_fin
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: before-first-invoice, observed_via: invoice}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    The same edit read from the other end: with the grace period granted the invoice is NOT
+    finalized on 1 April, so a row asserting `finalized` here would be asserting that the
+    mutation failed. It asserts the amounts instead, unchanged at 15_000¢ — a grace period moves
+    WHEN an invoice is issued and never WHAT it says.
+    b18/grace_period/on-draft/final is the closing half: grace set back to 0 and the draft finalized.
+
+- id: b18/grace_period/before-first-invoice/draft
+  block: B18
+  group: b-dra
+  key: bgp_dra
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: before-first-invoice, observed_via: draft}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    Granting a grace period before the period closes is what makes the invoice a draft at all.
+    The customer starts on 0 days and is moved to 5 on 20 March, so the 1 April invoice is held
+    open instead of being issued: same 15_000¢, different status, and the status is the assertion.
+    invoice_grace_period is written flat by rows and nested under billing_configuration by the
+    runner; sent top-level to the API it is dropped silently with a 200, and the invoice would
+    finalize while the row still claimed to be testing a draft.
+
+- id: b18/grace_period/before-first-invoice/regenerated
+  block: B18
+  group: b-reg
+  key: bgp_reg
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: before-first-invoice, observed_via: regenerated}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    The draft the grace period created, rebuilt by refresh: still open, still 15_000¢.
+    A refresh recomputes an invoice from current configuration but cannot close it — only
+    finalization does that — so the grace period survives the round trip.
+
+- id: b18/grace_period/before-first-invoice/preview
+  block: B18
+  group: b-pre
+  key: bgp_pre
+  vars: {mut: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: before-first-invoice, observed_via: preview}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  expect:
+    invoices: 1
+    preview:
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    A preview ignores the grace period entirely: it forecasts the period's amounts, and the
+    grace period governs only when the resulting invoice is issued. 15_000¢ either way.
+    This is the cell that says the two settings are orthogonal, which is easy to assume and
+    nowhere else asserted.
+
+- id: b18/tax_rate/after-finalize/final
+  block: B18
+  group: f-inv
+  key: ftr_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: after-finalize, observed_via: invoice}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      taxes_amount_cents: 3000
+      total_amount_cents: 18000
+  math: >-
+    A rate cut after the invoice is issued must not reach it. March was taxed at 20% —
+    15_000¢ of fees, 3_000¢ of tax, 18_000¢ — and stays there even after the rate drops to 10%
+    and a refresh is attempted: Invoices::RefreshDraftService operates on drafts only.
+    Taxes::UpdateService does flag draft invoices for refresh, so this row is the proof that the
+    flag cannot reach a finalized one. A failure here is retroactive re-taxation of money
+    already invoiced.
+
+- id: b18/tax_rate/after-finalize/preview
+  block: B18
+  group: f-pre
+  key: ftr_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: after-finalize, observed_via: preview}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      taxes_amount_cents: 1500
+      total_amount_cents: 16500
+  math: >-
+    The same edit seen from the next period: the quote for April uses the NEW 10% rate,
+    1_500¢ on 15_000¢ of fees.
+    So one rate change produces two correct answers at once — March keeps 3_000¢ because it was
+    already issued, April is quoted 1_500¢ because it has not been. The pairing is the point:
+    neither number alone shows that the boundary is drawn at issuance.
+
+- id: b18/charge_amount/after-finalize/preview
+  block: B18
+  group: f-pre
+  key: fca_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: fca_pre_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: after-finalize, observed_via: preview}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    preview:
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    April, still open, is quoted at the new price: 100 units at 3.00 = 30_000¢ plus the
+    5_000¢ subscription fee = 35_000¢.
+    Preview reads the charge as it stands rather than as it stood, which is what makes it a
+    forecast rather than a copy of the last invoice.
+
+- id: b18/plan_amount/after-finalize/preview
+  block: B18
+  group: f-pre
+  key: fpa_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: after-finalize, observed_via: preview}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+  expect:
+    preview:
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    April is quoted at 9_000¢, the current plan price.
+    The plan carries no charges deliberately: `PUT /plans/:code` replaces the plan wholesale and
+    would delete them, and the row would be measuring that instead.
+
+- id: b18/coupon/after-finalize/final
+  block: B18
+  group: f-inv
+  key: fcp_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: after-finalize, observed_via: invoice}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      total_amount_cents: 13000
+  math: >-
+    March keeps its 2_000¢ discount, which is unsurprising, and April is quoted the same
+    2_000¢, which is the actual content: the edit reaches neither.
+    AppliedCoupon snapshots amount, percentage, frequency and duration at application time, so
+    raising the coupon to 9_000¢ changes only what a NEW application would receive. A customer
+    already holding the coupon is unaffected for its whole remaining life.
+
+- id: b18/coupon/after-finalize/preview
+  block: B18
+  group: f-pre
+  key: fcp_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: after-finalize, observed_via: preview}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      total_amount_cents: 13000
+  math: >-
+    April is quoted with the snapshotted 2_000¢, not the coupon's current 9_000¢.
+    This is the cell that separates 'the invoice was already built' from 'the terms are fixed'.
+    The tax and plan families both change the next period's quote; the coupon does not, because
+    what is fixed is the customer's application rather than the issued invoice.
+
+- id: b18/wallet_balance/after-finalize/final
+  block: B18
+  group: f-inv
+  key: fwb_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: after-finalize, observed_via: invoice}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 12000
+  math: >-
+    March spent the 3_000¢ the wallet held at the time and is not revisited when 50 more
+    credits arrive: 15_000¢ of fees less 3_000¢ = 12_000¢.
+    Prepaid credit is consumed at finalization, and consumption is a transaction against the
+    wallet rather than a figure recomputed from it. A failure here would mean topping up a
+    wallet retroactively altered invoices already paid.
+
+- id: b18/wallet_balance/after-finalize/preview
+  block: B18
+  group: f-pre
+  key: fwb_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: after-finalize, observed_via: preview}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 10000
+  math: >-
+    April is quoted against the wallet as it now stands. March emptied the original 30
+    credits, the top-up added 50, so 5_000¢ of cover remains and 10_000¢ is due.
+    Together the two rows show the wallet has a history rather than a balance: the invoice
+    records what was spent, the quote reads what is left.
+
+- id: b18/grace_period/after-finalize/final
+  block: B18
+  group: f-inv
+  key: fgp_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: after-finalize, observed_via: invoice}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    Granting a grace period after an invoice is issued cannot reopen it. March was finalized
+    on 1 April with no grace, and setting 5 days on 2 April leaves it finalized at 15_000¢.
+    The setting governs future issuance only — there is no path back from finalized to draft
+    short of voiding, which is B4's territory.
+
+- id: b18/grace_period/after-finalize/preview
+  block: B18
+  group: f-pre
+  key: fgp_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: after-finalize, observed_via: preview}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    A quote is indifferent to the grace period in both directions: it forecasts amounts, and
+    the grace period decides only when the resulting invoice is issued. 15_000¢ either way.
+    Paired with b18/grace_period/before-first-invoice/preview, which asserts the same
+    independence from the other side of the boundary.
+
+- id: b18/tax_rate/on-draft/draft
+  block: B18
+  group: o-dra
+  key: dtr
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: on-draft, observed_via: draft}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      taxes_amount_cents: 3000
+      total_amount_cents: 18000
+  math: >-
+    An open draft is not recomputed when the world changes — only when something refreshes it.
+    The draft is cut on 1 April at the then-current 20%: 15_000¢ of fees, 3_000¢ of tax, 18_000¢.
+    The rate drops to 10% the next day and the draft still reads 3_000¢, because nothing has asked
+    it to rebuild. Taxes::UpdateService flags it `ready_to_be_refreshed`, but a flag is an intention
+    rather than an act: b18/tax_rate/on-draft/regenerated runs the refresh job and gets 1_500¢.
+    The pair is what separates 'stale' from 'wrong'. A customer reading this draft between the two
+    moments sees a number that is real but superseded.
+
+- id: b18/charge_amount/on-draft/draft
+  block: B18
+  group: o-dra
+  key: dca
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: dca_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: on-draft, observed_via: draft}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    The draft holds its 15_000¢ after the charge is repriced to 3.00, and unlike the tax family it
+    will go on holding it: Charges::UpdateService sets no `ready_to_be_refreshed` flag, so the
+    refresh job never selects this invoice and b18/charge_amount/on-draft/regenerated reads the same
+    15_000¢.
+    Two rows, same number, different reasons — here nothing has refreshed it yet, there nothing ever
+    will. That is why both cells are worth holding rather than collapsing into one.
+
+- id: b18/plan_amount/on-draft/draft
+  block: B18
+  group: o-dra
+  key: dpa
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: on-draft, observed_via: draft}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+  math: >-
+    The draft was cut at 5_000¢ and still reads 5_000¢ the day after the plan is repriced to 9_000¢.
+    Plans::UpdateService flags this invoice for refresh immediately, so the draft is already known to
+    be stale — but it is not rebuilt until the refresh job runs, which is
+    b18/plan_amount/on-draft/regenerated at 9_000¢.
+    The flag and the rebuild are separate events, and a customer can read the invoice in between.
+
+- id: b18/coupon/on-draft/draft
+  block: B18
+  group: o-dra
+  key: dcp
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: on-draft, observed_via: draft}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      coupons_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    Two independent reasons for the same 0, which is why the row asserts coupons_amount_cents
+    explicitly rather than leaving it out.
+    First, a draft never carries a coupon at all: `should_create_coupon_credit?` is gated on
+    finalization, so the discount is allocated only when the invoice is issued.
+    Second, even once it is issued the edit would not apply — AppliedCoupon snapshotted 2_000¢ when
+    the coupon was applied to this customer.
+    So the draft shows 15_000¢, the eventual invoice will show 13_000¢, and neither number ever
+    reflects the 9_000¢ the coupon now claims.
+
+- id: b18/wallet_balance/on-draft/draft
+  block: B18
+  group: o-dra
+  key: dwb
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: on-draft, observed_via: draft}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    The wallet is topped up while the draft is open and the draft does not move — not because the
+    top-up was missed, but because a draft never spends prepaid credit in the first place
+    (`should_create_applied_prepaid_credit?` is gated on finalization).
+    That gating is what makes the top-up safe: had the draft already consumed the original 30
+    credits, they would have to be returned when it was refreshed. Instead nothing is spent until
+    the invoice is issued, at which point the wallet holds 8_000¢ — see
+    b18/wallet_balance/before-first-invoice/final.
+
+- id: b18/grace_period/on-draft/draft
+  block: B18
+  group: o-dra
+  key: dgp
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_customer, params: {invoice_grace_period: 10}}}
+  axes: {mutation: grace_period, stage: on-draft, observed_via: draft}
+  dimensions: {grace_period: "5 -> 10"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    Extending the grace period from 5 days to 10 leaves the draft open and unchanged at 15_000¢: the
+    setting moves the issuing date, never the amounts.
+    The direction matters, and not symmetrically. SHORTENING the grace period does not merely change
+    a date — Customers::UpdateInvoiceIssuingDateSettingsService walks the customer's draft invoices
+    and enqueues Invoices::FinalizeJob for each one (update_invoice_issuing_date_settings_service.rb:
+    24-32), so the drafts are issued there and then rather than waiting for
+    Clock::FinalizeInvoicesJob. That is why this cell is reached by extending: a row that shortened
+    the period would find a finalized invoice and could not observe a draft at all.
+
+- id: b18/tax_rate/on-draft/final
+  block: B18
+  group: o-inv
+  key: otr_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: on-draft, observed_via: invoice}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      taxes_amount_cents: 1500
+      total_amount_cents: 16500
+  math: >-
+    Finalizing an open draft rebuilds it, so the rate cut DOES reach it: 1_500¢ of tax on
+    15_000¢ of fees, 16_500¢ issued, where the draft had read 3_000¢ and 18_000¢.
+    Invoices::RefreshDraftAndFinalizeService calls RefreshDraftService with `context: :finalize`
+    unconditionally — it does not consult `ready_to_be_refreshed`. Finalization is therefore the
+    moment a draft stops being stale, whatever did or did not flag it.
+
+- id: b18/charge_amount/on-draft/final
+  block: B18
+  group: o-inv
+  key: oca_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: oca_fin_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: on-draft, observed_via: invoice}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    The row that resolves the draft-refresh asymmetry rather than just recording it.
+    Charges::UpdateService never flags drafts, so b18/charge_amount/on-draft/regenerated shows the
+    repricing failing to reach the invoice through the refresh job — but finalization recomputes
+    unconditionally, so the same edit lands here: 100 units at 3.00 plus the 5_000¢ subscription fee =
+    35_000¢.
+    The customer is therefore billed at the NEW price even though every intermediate view showed the
+    old one. The missing flag delays the correction; it does not lose it.
+
+- id: b18/plan_amount/on-draft/final
+  block: B18
+  group: o-inv
+  key: opa_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: on-draft, observed_via: invoice}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-03T10:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    The plan reprice reaches the issued invoice: 9_000¢ rather than the 5_000¢ the draft carried.
+    Here the flag and the finalization agree — Plans::UpdateService marks the draft and finalization
+    would have rebuilt it anyway — which is what makes the charge_amount sibling above worth having as
+    the case where they disagree.
+
+- id: b18/coupon/on-draft/final
+  block: B18
+  group: o-inv
+  key: ocp_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: on-draft, observed_via: invoice}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      total_amount_cents: 13000
+  math: >-
+    Finalizing is when the coupon is allocated at all: the draft showed 15_000¢ with no discount
+    and the issued invoice shows 13_000¢.
+    The amount is the snapshotted 2_000¢, not the 9_000¢ the coupon was raised to while the draft was
+    open — AppliedCoupon fixed the terms when it was applied to this customer. So finalization changes
+    WHETHER the coupon applies, never HOW MUCH.
+
+- id: b18/wallet_balance/on-draft/final
+  block: B18
+  group: o-inv
+  key: owb_fin
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: on-draft, observed_via: invoice}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: finalized
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 8000
+      total_amount_cents: 7000
+  math: >-
+    The wallet is spent for the first time at finalization, and it spends the topped-up balance:
+    the original 30 credits were never touched by the draft, 50 more arrived while it was open, so
+    8_000¢ of cover meets 15_000¢ of fees and 7_000¢ is due.
+    This is the payoff of the gate that keeps drafts from consuming credit. Had the draft spent 3_000¢
+    on 1 April, the top-up would have had to be reconciled against an invoice that already claimed
+    part of it.
+
+- id: b18/coupon/on-draft/regenerated
+  block: B18
+  group: o-reg
+  key: ocp_reg
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: on-draft, observed_via: regenerated}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      coupons_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    Refreshing the draft leaves it without a coupon, because a refreshed draft is still a draft.
+    15_000¢ before, 15_000¢ after, coupons_amount_cents 0 throughout — asserted rather than omitted,
+    since 'no coupon field' and 'a coupon of zero' would look identical in a total.
+    b18/coupon/on-draft/final is the same scenario carried one step further, where finalization
+    allocates the discount and the invoice drops to 13_000¢.
+
+- id: b18/wallet_balance/on-draft/regenerated
+  block: B18
+  group: o-reg
+  key: owb_reg
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: on-draft, observed_via: regenerated}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 15000
+  math: >-
+    A refreshed draft still spends nothing from the wallet, even though it now holds 8_000¢.
+    Prepaid credit is allocated at finalization only, so the refresh recomputes fees and tax and
+    leaves the wallet untouched at 15_000¢ due.
+    The wallet's balance is not asserted here on purpose: the claim is that the INVOICE did not draw
+    on it, and prepaid_credit_amount_cents 0 states exactly that.
+
+- id: b18/grace_period/on-draft/regenerated
+  block: B18
+  group: o-reg
+  key: ogp_reg
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_customer, params: {invoice_grace_period: 10}}}
+  axes: {mutation: grace_period, stage: on-draft, observed_via: regenerated}
+  dimensions: {grace_period: "5 -> 10"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      status: draft
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    Extending the grace period and refreshing changes nothing: the invoice is rebuilt, stays open,
+    and stays at 15_000¢.
+    A refresh cannot close an invoice and the grace period cannot alter its amounts, so this cell is
+    the intersection of two independent no-ops — worth pinning precisely because it is the kind of
+    combination that would be assumed rather than checked.
+
+- id: b18/tax_rate/on-draft/preview
+  block: B18
+  group: o-pre
+  key: otr_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: on-draft, observed_via: preview}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      taxes_amount_cents: 1500
+      total_amount_cents: 16500
+  math: >-
+    A quote taken while a stale draft sits open reads the CURRENT rate, not the draft's.
+    April is previewed at 10% — 1_500¢ on 15_000¢ — while the March draft still shows 3_000¢ at the old
+    20%. Two views of the same customer, minutes apart, disagreeing correctly: one is a period already
+    computed, the other a period not yet computed.
+
+- id: b18/charge_amount/on-draft/preview
+  block: B18
+  group: o-pre
+  key: oca_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: oca_pre_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: on-draft, observed_via: preview}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    preview:
+      fees_amount_cents: 35000
+      total_amount_cents: 35000
+  math: >-
+    April is quoted at the new 3.00 per unit (35_000¢) while the March draft remains at the old
+    price it was cut with.
+    Preview reads configuration live and has no notion of staleness, which is precisely why it cannot
+    be used to check what an open draft will finalize to — b18/charge_amount/on-draft/final is the row
+    that answers that.
+
+- id: b18/plan_amount/on-draft/preview
+  block: B18
+  group: o-pre
+  key: opa_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: on-draft, observed_via: preview}
+  dimensions: {plan_amount: "5000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    metrics: ~
+    charges: ~
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - "%{mut}"
+    - {at: "2024-04-25T10:00:00Z", do: preview_invoice}
+  expect:
+    preview:
+      fees_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    April is quoted at the new 9_000¢ plan price. The plan carries no charges deliberately:
+    `PUT /plans/:code` replaces the plan wholesale and would delete them.
+
+- id: b18/coupon/on-draft/preview
+  block: B18
+  group: o-pre
+  key: ocp_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: on-draft, observed_via: preview}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 3, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      coupons_amount_cents: 2000
+      total_amount_cents: 13000
+  math: >-
+    The quote applies the snapshotted 2_000¢, so April is 13_000¢.
+    Note what this row shows against its regenerated sibling: the preview applies the coupon and the
+    draft does not, for the same customer at the same moment. The difference is not the coupon's terms
+    but which surface is allowed to allocate it.
+
+- id: b18/wallet_balance/on-draft/preview
+  block: B18
+  group: o-pre
+  key: owb_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: on-draft, observed_via: preview}
+  dimensions: {wallet_credits: "30 -> 80"}
+  premium: true
+  calendar_sensitive: true
+  setup:
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "30"}]
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      prepaid_credit_amount_cents: 8000
+      total_amount_cents: 7000
+  math: >-
+    The quote sees the whole topped-up wallet — 8_000¢ against 15_000¢, so 7_000¢ due — because the
+    open March draft has not spent any of it.
+    Had drafts consumed credit, this quote and the March draft would each be claiming the same 3_000¢,
+    and the customer would be shown cover that does not exist twice over.
+
+- id: b18/grace_period/on-draft/preview
+  block: B18
+  group: o-pre
+  key: ogp_pre
+  vars: {mut: {at: "2024-04-02T10:00:00Z", do: update_customer, params: {invoice_grace_period: 10}}}
+  axes: {mutation: grace_period, stage: on-draft, observed_via: preview}
+  dimensions: {grace_period: "5 -> 10"}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    preview:
+      fees_amount_cents: 15000
+      total_amount_cents: 15000
+  math: >-
+    Extending the grace period does not move a quote: 15_000¢ before and after.
+    The setting governs when an invoice is issued, and a preview has nothing to issue. Together with
+    b18/grace_period/before-first-invoice/preview and .../after-finalize/preview, the three cells say
+    the independence holds at every stage rather than coincidentally at one.
+
+- id: b18/charge_amount/between-progressive-invoices/final
+  block: B18
+  group: p-inv
+  key: pca_fin
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: pca_fin_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: between-progressive-invoices, observed_via: invoice}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: finalized
+        fees_amount_cents: 39000
+        progressive_billing_credit_amount_cents: 39000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Repricing to 3.00 between the two demands re-rates the cumulative usage rather than only the
+    new part: the second demand bills 130 units x 3.00 = 39_000¢, credits the 6_000¢ the first
+    collected at the old price, and the period invoice credits the full 39_000¢ back.
+    Nothing is owed at the end, but the customer has paid 6_000 + 33_000 = 39_000¢ — the whole
+    period at the new price, including the 60 units metered while the old price was in force.
+    Observed as the issued period invoice, which is where the arithmetic above is settled.
+
+- id: b18/charge_amount/between-progressive-invoices/draft
+  block: B18
+  group: p-dra
+  key: pca_dra
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: pca_dra_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: between-progressive-invoices, observed_via: draft}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 39000
+        progressive_billing_credit_amount_cents: 39000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Repricing to 3.00 between the two demands re-rates the cumulative usage rather than only the
+    new part: the second demand bills 130 units x 3.00 = 39_000¢, credits the 6_000¢ the first
+    collected at the old price, and the period invoice credits the full 39_000¢ back.
+    Nothing is owed at the end, but the customer has paid 6_000 + 33_000 = 39_000¢ — the whole
+    period at the new price, including the 60 units metered while the old price was in force.
+    Observed as an open draft, so coupons, credit notes and prepaid credit are all withheld
+    (`not_in_finalizing_process?`, calculate_fees_service.rb:364-379) while the progressive credit,
+    which runs ahead of that gate, is present. The draft therefore shows the credit but not the
+    discount.
+
+- id: b18/charge_amount/between-progressive-invoices/regenerated
+  block: B18
+  group: p-reg
+  key: pca_reg
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: pca_reg_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: between-progressive-invoices, observed_via: regenerated}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 39000
+        progressive_billing_credit_amount_cents: 39000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Repricing to 3.00 between the two demands re-rates the cumulative usage rather than only the
+    new part: the second demand bills 130 units x 3.00 = 39_000¢, credits the 6_000¢ the first
+    collected at the old price, and the period invoice credits the full 39_000¢ back.
+    Nothing is owed at the end, but the customer has paid 6_000 + 33_000 = 39_000¢ — the whole
+    period at the new price, including the 60 units metered while the old price was in force.
+    Observed after `PUT /invoices/:id/refresh`, which rebuilds the draft from current
+    configuration. It must land on the same figures it was created with rather than drifting, and it
+    is still a draft afterwards, so the withheld reducers stay withheld.
+
+- id: b18/charge_amount/between-progressive-invoices/preview
+  block: B18
+  group: p-pre
+  key: pca_pre
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: pca_pre_sum, charge_model: standard, properties: {amount: "3"}}}}
+  axes: {mutation: charge_amount, stage: between-progressive-invoices, observed_via: preview}
+  dimensions: {charge_amount: "1 -> 3"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    preview:
+      fees_amount_cents: 39000
+      progressive_billing_credit_amount_cents: 39000
+      sub_total_excluding_taxes_amount_cents: 0
+      total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Repricing to 3.00 between the two demands re-rates the cumulative usage rather than only the
+    new part: the second demand bills 130 units x 3.00 = 39_000¢, credits the 6_000¢ the first
+    collected at the old price, and the period invoice credits the full 39_000¢ back.
+    Nothing is owed at the end, but the customer has paid 6_000 + 33_000 = 39_000¢ — the whole
+    period at the new price, including the 60 units metered while the old price was in force.
+    Observed as a quote taken before the period closes. Preview reimplements the pipeline in
+    Invoices::PreviewService, so it credits progressive billing at invoice level — added in this
+    session — and applies the reducers a draft withholds.
+
+- id: b18/plan_amount/between-progressive-invoices/final
+  block: B18
+  group: p-inv
+  key: ppa_fin
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: between-progressive-invoices, observed_via: invoice}
+  dimensions: {plan_amount: "0 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: finalized
+        fees_amount_cents: 22000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 9000
+        total_amount_cents: 9000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Giving the plan a 9_000¢ subscription fee between the demands does not touch either of them —
+    threshold invoices carry usage charges only — but it appears on the period invoice, which is the
+    first thing to bill a subscription fee at all.
+    So the period invoice is 9_000¢ of subscription plus 13_000¢ of usage, credits the 13_000¢ of
+    usage already collected, and bills the subscription fee alone. The progressive credit is capped
+    at the charges it relates to and cannot spill onto the new fee.
+    Observed as the issued period invoice, which is where the arithmetic above is settled.
+
+- id: b18/plan_amount/between-progressive-invoices/draft
+  block: B18
+  group: p-dra
+  key: ppa_dra
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: between-progressive-invoices, observed_via: draft}
+  dimensions: {plan_amount: "0 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 22000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 9000
+        total_amount_cents: 9000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Giving the plan a 9_000¢ subscription fee between the demands does not touch either of them —
+    threshold invoices carry usage charges only — but it appears on the period invoice, which is the
+    first thing to bill a subscription fee at all.
+    So the period invoice is 9_000¢ of subscription plus 13_000¢ of usage, credits the 13_000¢ of
+    usage already collected, and bills the subscription fee alone. The progressive credit is capped
+    at the charges it relates to and cannot spill onto the new fee.
+    Observed as an open draft, so coupons, credit notes and prepaid credit are all withheld
+    (`not_in_finalizing_process?`, calculate_fees_service.rb:364-379) while the progressive credit,
+    which runs ahead of that gate, is present. The draft therefore shows the credit but not the
+    discount.
+
+- id: b18/plan_amount/between-progressive-invoices/regenerated
+  block: B18
+  group: p-reg
+  key: ppa_reg
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: between-progressive-invoices, observed_via: regenerated}
+  dimensions: {plan_amount: "0 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 22000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 9000
+        total_amount_cents: 9000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Giving the plan a 9_000¢ subscription fee between the demands does not touch either of them —
+    threshold invoices carry usage charges only — but it appears on the period invoice, which is the
+    first thing to bill a subscription fee at all.
+    So the period invoice is 9_000¢ of subscription plus 13_000¢ of usage, credits the 13_000¢ of
+    usage already collected, and bills the subscription fee alone. The progressive credit is capped
+    at the charges it relates to and cannot spill onto the new fee.
+    Observed after `PUT /invoices/:id/refresh`, which rebuilds the draft from current
+    configuration. It must land on the same figures it was created with rather than drifting, and it
+    is still a draft afterwards, so the withheld reducers stay withheld.
+
+- id: b18/plan_amount/between-progressive-invoices/preview
+  block: B18
+  group: p-pre
+  key: ppa_pre
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_plan, params: {amount_cents: 9000}}}
+  axes: {mutation: plan_amount, stage: between-progressive-invoices, observed_via: preview}
+  dimensions: {plan_amount: "0 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    preview:
+      fees_amount_cents: 22000
+      progressive_billing_credit_amount_cents: 13000
+      sub_total_excluding_taxes_amount_cents: 9000
+      total_amount_cents: 9000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Giving the plan a 9_000¢ subscription fee between the demands does not touch either of them —
+    threshold invoices carry usage charges only — but it appears on the period invoice, which is the
+    first thing to bill a subscription fee at all.
+    So the period invoice is 9_000¢ of subscription plus 13_000¢ of usage, credits the 13_000¢ of
+    usage already collected, and bills the subscription fee alone. The progressive credit is capped
+    at the charges it relates to and cannot spill onto the new fee.
+    Observed as a quote taken before the period closes. Preview reimplements the pipeline in
+    Invoices::PreviewService, so it credits progressive billing at invoice level — added in this
+    session — and applies the reducers a draft withholds.
+
+- id: b18/wallet_balance/between-progressive-invoices/final
+  block: B18
+  group: p-inv
+  key: pwb_fin
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: between-progressive-invoices, observed_via: invoice}
+  dimensions: {wallet_credits: "200 -> 250"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    plan: {amount_cents: 5000}
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "200"}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: finalized
+        fees_amount_cents: 18000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 5000
+        prepaid_credit_amount_cents: 5000
+        total_amount_cents: 0
+    wallet:
+      balance_cents: 7000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    The wallet pays each demand as it arrives and the top-up joins in for the second: 6_000¢ spent
+    on the first, leaving 14_000¢; 50 more credits arrive; the second demand's 7_000¢ net is covered,
+    leaving 12_000¢; the period invoice's remaining 5_000¢ subscription fee is covered too, leaving
+    7_000¢.
+    Three invoices drawn from one balance in sequence, and the balance is the only field that records
+    the order. The draft sibling of this row shows 5_000¢ still due and 12_000¢ still on the wallet,
+    because a draft spends nothing.
+    Observed as the issued period invoice, which is where the arithmetic above is settled.
+
+- id: b18/wallet_balance/between-progressive-invoices/draft
+  block: B18
+  group: p-dra
+  key: pwb_dra
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: between-progressive-invoices, observed_via: draft}
+  dimensions: {wallet_credits: "200 -> 250"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    plan: {amount_cents: 5000}
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "200"}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 18000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 5000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+    wallet:
+      balance_cents: 12000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    The wallet pays each demand as it arrives and the top-up joins in for the second: 6_000¢ spent
+    on the first, leaving 14_000¢; 50 more credits arrive; the second demand's 7_000¢ net is covered,
+    leaving 12_000¢; the period invoice's remaining 5_000¢ subscription fee is covered too, leaving
+    7_000¢.
+    Three invoices drawn from one balance in sequence, and the balance is the only field that records
+    the order. The draft sibling of this row shows 5_000¢ still due and 12_000¢ still on the wallet,
+    because a draft spends nothing.
+    Observed as an open draft, so coupons, credit notes and prepaid credit are all withheld
+    (`not_in_finalizing_process?`, calculate_fees_service.rb:364-379) while the progressive credit,
+    which runs ahead of that gate, is present. The draft therefore shows the credit but not the
+    discount.
+
+- id: b18/wallet_balance/between-progressive-invoices/regenerated
+  block: B18
+  group: p-reg
+  key: pwb_reg
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: between-progressive-invoices, observed_via: regenerated}
+  dimensions: {wallet_credits: "200 -> 250"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    plan: {amount_cents: 5000}
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "200"}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 18000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 5000
+        prepaid_credit_amount_cents: 0
+        total_amount_cents: 5000
+    wallet:
+      balance_cents: 12000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    The wallet pays each demand as it arrives and the top-up joins in for the second: 6_000¢ spent
+    on the first, leaving 14_000¢; 50 more credits arrive; the second demand's 7_000¢ net is covered,
+    leaving 12_000¢; the period invoice's remaining 5_000¢ subscription fee is covered too, leaving
+    7_000¢.
+    Three invoices drawn from one balance in sequence, and the balance is the only field that records
+    the order. The draft sibling of this row shows 5_000¢ still due and 12_000¢ still on the wallet,
+    because a draft spends nothing.
+    Observed after `PUT /invoices/:id/refresh`, which rebuilds the draft from current
+    configuration. It must land on the same figures it was created with rather than drifting, and it
+    is still a draft afterwards, so the withheld reducers stay withheld.
+
+- id: b18/wallet_balance/between-progressive-invoices/preview
+  block: B18
+  group: p-pre
+  key: pwb_pre
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: top_up_wallet, params: {granted_credits: "50"}}}
+  axes: {mutation: wallet_balance, stage: between-progressive-invoices, observed_via: preview}
+  dimensions: {wallet_credits: "200 -> 250"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    plan: {amount_cents: 5000}
+    wallets: [{name: granted, rate_amount: "1", currency: EUR, granted_credits: "200"}]
+  expect:
+    invoices: 3
+    preview:
+      fees_amount_cents: 18000
+      progressive_billing_credit_amount_cents: 13000
+      sub_total_excluding_taxes_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    The wallet pays each demand as it arrives and the top-up joins in for the second: 6_000¢ spent
+    on the first, leaving 14_000¢; 50 more credits arrive; the second demand's 7_000¢ net is covered,
+    leaving 12_000¢; the period invoice's remaining 5_000¢ subscription fee is covered too, leaving
+    7_000¢.
+    Three invoices drawn from one balance in sequence, and the balance is the only field that records
+    the order. The draft sibling of this row shows 5_000¢ still due and 12_000¢ still on the wallet,
+    because a draft spends nothing.
+    Observed as a quote taken before the period closes. Preview reimplements the pipeline in
+    Invoices::PreviewService, so it credits progressive billing at invoice level — added in this
+    session — and applies the reducers a draft withholds.
+
+- id: b18/grace_period/between-progressive-invoices/final
+  block: B18
+  group: p-inv
+  key: pgp_fin
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}, mut2: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: between-progressive-invoices, observed_via: invoice}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - "%{mut}"
+    - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - "%{mut2}"
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: finalize_invoice}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: finalized
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Granting a grace period between the two demands has no effect on either — both are already
+    issued, and a threshold invoice is a payment demand rather than a draft — but it holds the period
+    invoice open.
+    The amounts are identical on every surface here: 13_000¢ billed, 13_000¢ credited, nothing owed.
+    What the four cells separate is whether that invoice is open or issued, which is the only thing
+    the mutation touches.
+    Observed as the issued period invoice, which is where the arithmetic above is settled.
+
+- id: b18/grace_period/between-progressive-invoices/draft
+  block: B18
+  group: p-dra
+  key: pgp_dra
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}, mut2: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: between-progressive-invoices, observed_via: draft}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - "%{mut}"
+    - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - "%{mut2}"
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Granting a grace period between the two demands has no effect on either — both are already
+    issued, and a threshold invoice is a payment demand rather than a draft — but it holds the period
+    invoice open.
+    The amounts are identical on every surface here: 13_000¢ billed, 13_000¢ credited, nothing owed.
+    What the four cells separate is whether that invoice is open or issued, which is the only thing
+    the mutation touches.
+    Observed as an open draft, so coupons, credit notes and prepaid credit are all withheld
+    (`not_in_finalizing_process?`, calculate_fees_service.rb:364-379) while the progressive credit,
+    which runs ahead of that gate, is present. The draft therefore shows the credit but not the
+    discount.
+
+- id: b18/grace_period/between-progressive-invoices/regenerated
+  block: B18
+  group: p-reg
+  key: pgp_reg
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}, mut2: {at: "2024-03-20T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: between-progressive-invoices, observed_via: regenerated}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    customer: {invoice_grace_period: 0}
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 60}}]}
+    - {at: "2024-03-05T11:00:00Z", do: perform_usage_update}
+    - "%{mut}"
+    - {at: "2024-03-15T10:00:00Z", do: ingest_events, events: [{code: "%{key}_sum", properties: {amount: 70}}]}
+    - {at: "2024-03-15T11:00:00Z", do: perform_usage_update}
+    - "%{mut2}"
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    - {at: "2024-04-01T02:00:00Z", do: refresh_invoice}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Granting a grace period between the two demands has no effect on either — both are already
+    issued, and a threshold invoice is a payment demand rather than a draft — but it holds the period
+    invoice open.
+    The amounts are identical on every surface here: 13_000¢ billed, 13_000¢ credited, nothing owed.
+    What the four cells separate is whether that invoice is open or issued, which is the only thing
+    the mutation touches.
+    Observed after `PUT /invoices/:id/refresh`, which rebuilds the draft from current
+    configuration. It must land on the same figures it was created with rather than drifting, and it
+    is still a draft afterwards, so the withheld reducers stay withheld.
+
+- id: b18/grace_period/between-progressive-invoices/preview
+  block: B18
+  group: p-pre
+  key: pgp_pre
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_customer, params: {invoice_grace_period: 5}}}
+  axes: {mutation: grace_period, stage: between-progressive-invoices, observed_via: preview}
+  dimensions: {grace_period: "0 -> 5"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  expect:
+    invoices: 3
+    preview:
+      fees_amount_cents: 13000
+      progressive_billing_credit_amount_cents: 13000
+      sub_total_excluding_taxes_amount_cents: 0
+      total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Granting a grace period between the two demands has no effect on either — both are already
+    issued, and a threshold invoice is a payment demand rather than a draft — but it holds the period
+    invoice open.
+    The amounts are identical on every surface here: 13_000¢ billed, 13_000¢ credited, nothing owed.
+    What the four cells separate is whether that invoice is open or issued, which is the only thing
+    the mutation touches.
+    Observed as a quote taken before the period closes. Preview reimplements the pipeline in
+    Invoices::PreviewService, so it credits progressive billing at invoice level — added in this
+    session — and applies the reducers a draft withholds.
+
+- id: b18/coupon/between-progressive-invoices/draft
+  block: B18
+  group: p-dra
+  key: pcp_dra
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: between-progressive-invoices, observed_via: draft}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 5, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 13000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 11000
+        sub_total_excluding_taxes_amount_cents: 2000
+        total_amount_cents: 2000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Raising the coupon between the demands changes nothing: 2_000¢ comes off each of the three
+    invoices, never 9_000¢, because AppliedCoupon fixed the terms when it was applied.
+    The coupon also shrinks what carries forward. `to_credit_amount` subtracts the second demand's
+    coupon, so the period invoice credits 13_000 - 2_000 = 11_000¢ rather than the full 13_000¢ —
+    the discount is deducted from the credit as well as from the bill, which b15/coupon/
+    progressive_billing reports as a finding in its own right.
+    Observed as an open draft, so coupons, credit notes and prepaid credit are all withheld
+    (`not_in_finalizing_process?`, calculate_fees_service.rb:364-379) while the progressive credit,
+    which runs ahead of that gate, is present. The draft therefore shows the credit but not the
+    discount.
+
+- id: b18/coupon/between-progressive-invoices/regenerated
+  block: B18
+  group: p-reg
+  key: pcp_reg
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: between-progressive-invoices, observed_via: regenerated}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 5, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 13000
+        coupons_amount_cents: 0
+        progressive_billing_credit_amount_cents: 11000
+        sub_total_excluding_taxes_amount_cents: 2000
+        total_amount_cents: 2000
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Raising the coupon between the demands changes nothing: 2_000¢ comes off each of the three
+    invoices, never 9_000¢, because AppliedCoupon fixed the terms when it was applied.
+    The coupon also shrinks what carries forward. `to_credit_amount` subtracts the second demand's
+    coupon, so the period invoice credits 13_000 - 2_000 = 11_000¢ rather than the full 13_000¢ —
+    the discount is deducted from the credit as well as from the bill, which b15/coupon/
+    progressive_billing reports as a finding in its own right.
+    Observed after `PUT /invoices/:id/refresh`, which rebuilds the draft from current
+    configuration. It must land on the same figures it was created with rather than drifting, and it
+    is still a draft afterwards, so the withheld reducers stay withheld.
+
+- id: b18/coupon/between-progressive-invoices/preview
+  block: B18
+  group: p-pre
+  key: pcp_pre
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_coupon, params: {name: "b18 coupon raised", amount_cents: 9000}}}
+  axes: {mutation: coupon, stage: between-progressive-invoices, observed_via: preview}
+  dimensions: {coupon: "2000 -> 9000"}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    coupons: [{name: "b18 coupon", code: "%{key}_coupon", coupon_type: fixed_amount, frequency: recurring, frequency_duration: 5, amount_cents: 2000, amount_currency: EUR, expiration: no_expiration}]
+  expect:
+    invoices: 3
+    preview:
+      fees_amount_cents: 13000
+      coupons_amount_cents: 2000
+      progressive_billing_credit_amount_cents: 11000
+      sub_total_excluding_taxes_amount_cents: 0
+      total_amount_cents: 0
+  math: >-
+    Two threshold invoices with the edit landing between them, so the question is not just whether the
+    mutation applies but which of the two already-issued demands it can still reach.
+    60 units on 5 March cross the 5_000¢ threshold and are billed at once; 70 more on 15 March take
+    cumulative usage to 13_000¢, past the 12_000¢ threshold, and the second demand credits what the
+    first collected. The period invoice on 1 April then credits what the SECOND collected —
+    `to_credit_amount` reads the most recent threshold invoice, net of its own coupons and credit notes
+    but not of credits granted against it, which is why it is 13_000¢ and not 7_000¢.
+    Raising the coupon between the demands changes nothing: 2_000¢ comes off each of the three
+    invoices, never 9_000¢, because AppliedCoupon fixed the terms when it was applied.
+    The coupon also shrinks what carries forward. `to_credit_amount` subtracts the second demand's
+    coupon, so the period invoice credits 13_000 - 2_000 = 11_000¢ rather than the full 13_000¢ —
+    the discount is deducted from the credit as well as from the bill, which b15/coupon/
+    progressive_billing reports as a finding in its own right.
+    Observed as a quote taken before the period closes. Preview reimplements the pipeline in
+    Invoices::PreviewService, so it credits progressive billing at invoice level — added in this
+    session — and applies the reducers a draft withholds.
+
+- id: b18/tax_rate/between-progressive-invoices/final
+  block: B18
+  group: p-inv
+  key: ptr_fin
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: between-progressive-invoices, observed_via: invoice}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: progressive_billing, index: 0}
+        fees_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+      - select: {invoice_type: progressive_billing, index: 1}
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 6000
+        sub_total_excluding_taxes_amount_cents: 7000
+        taxes_amount_cents: 700
+        total_amount_cents: 7700
+      - select: {invoice_type: subscription}
+        status: finalized
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    A rate cut landing between two threshold invoices, which is the only stage where the same period
+    carries two different tax rates.
+    The first demand is cut on 5 March at 20%: 60 units = 6_000¢ plus 1_200¢ of tax = 7_200¢. The rate
+    drops to 10% on 10 March. The second demand on 15 March bills the cumulative 13_000¢, credits the
+    6_000¢ the first collected, and taxes the 7_000¢ that remains at the NEW rate = 700¢ → 7_700¢.
+    Tax is read when each invoice is built, so a single period is legitimately taxed at two rates,
+    each correct for the moment its demand was issued.
+    The period invoice then credits the 13_000¢ the second demand collected, leaving a 0¢ base
+    and 0¢ of tax — nothing further is owed and nothing further is taxed. All three invoices are
+    asserted because the story is the sequence: 1_200¢ at the old rate, 700¢ at the new one, and
+    nothing left to tax.
+    Note the fee-level clamp does no harm here. `apply_credit_to_fees` writes the second demand's
+    13_000¢ into the period invoice's charge fee, zeroing its taxable base — and the invoice's own
+    base is 0 too, so the two agree. The clamp only misprices when a coupon or credit note has made
+    `to_credit_amount` smaller than the amount billed, which is b17/pb-coupon-tax/invoice.
+
+- id: b18/tax_rate/between-progressive-invoices/draft
+  block: B18
+  group: p-dra
+  key: ptr_dra
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: between-progressive-invoices, observed_via: draft}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    A rate cut landing between two threshold invoices, which is the only stage where the same period
+    carries two different tax rates.
+    The first demand is cut on 5 March at 20%: 60 units = 6_000¢ plus 1_200¢ of tax = 7_200¢. The rate
+    drops to 10% on 10 March. The second demand on 15 March bills the cumulative 13_000¢, credits the
+    6_000¢ the first collected, and taxes the 7_000¢ that remains at the NEW rate = 700¢ → 7_700¢.
+    Tax is read when each invoice is built, so a single period is legitimately taxed at two rates,
+    each correct for the moment its demand was issued.
+    Observed as an open draft, and it reads exactly as the issued invoice does: 13_000¢ billed,
+    13_000¢ credited, 0¢ of tax.
+    This is the one family where a draft and a finalized invoice agree completely, because the only
+    reducers in play are progressive billing and tax — both computed ahead of the finalizing gate that
+    withholds coupons, credit notes and prepaid credit. Every other mutation in this block has a draft
+    that differs from its final.
+
+- id: b18/tax_rate/between-progressive-invoices/regenerated
+  block: B18
+  group: p-reg
+  key: ptr_reg
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: between-progressive-invoices, observed_via: regenerated}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 3
+    invoice:
+      - select: {invoice_type: subscription}
+        status: draft
+        fees_amount_cents: 13000
+        progressive_billing_credit_amount_cents: 13000
+        sub_total_excluding_taxes_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+  math: >-
+    A rate cut landing between two threshold invoices, which is the only stage where the same period
+    carries two different tax rates.
+    The first demand is cut on 5 March at 20%: 60 units = 6_000¢ plus 1_200¢ of tax = 7_200¢. The rate
+    drops to 10% on 10 March. The second demand on 15 March bills the cumulative 13_000¢, credits the
+    6_000¢ the first collected, and taxes the 7_000¢ that remains at the NEW rate = 700¢ → 7_700¢.
+    Tax is read when each invoice is built, so a single period is legitimately taxed at two rates,
+    each correct for the moment its demand was issued.
+    Observed after `PUT /invoices/:id/refresh`. The draft is rebuilt from current
+    configuration — the 10% rate, the same two threshold invoices — and lands on the same 0¢.
+    A refresh recomputing the progressive credit from scratch is the risk here: were it to credit the
+    6_000¢ of the FIRST demand instead of the 13_000¢ of the second, the invoice would show 7_000¢ due
+    on a period already paid in full.
+
+- id: b18/tax_rate/between-progressive-invoices/preview
+  block: B18
+  group: p-pre
+  key: ptr_pre
+  vars: {mut: {at: "2024-03-10T10:00:00Z", do: update_tax, params: {rate: 10}}}
+  axes: {mutation: tax_rate, stage: between-progressive-invoices, observed_via: preview}
+  dimensions: {tax_rate: "20 -> 10", taxes: ~}
+  provenance: characterization
+  premium: true
+  calendar_sensitive: true
+  no_transaction: true
+  setup:
+    taxes: [{code: "%{key}_vat", name: VAT, rate: 20}]
+  expect:
+    invoices: 3
+    preview:
+      fees_amount_cents: 13000
+      progressive_billing_credit_amount_cents: 13000
+      sub_total_excluding_taxes_amount_cents: 0
+      taxes_amount_cents: 1300
+      total_amount_cents: 1300
+  math: >-
+    A rate cut landing between two threshold invoices, which is the only stage where the same period
+    carries two different tax rates.
+    The first demand is cut on 5 March at 20%: 60 units = 6_000¢ plus 1_200¢ of tax = 7_200¢. The rate
+    drops to 10% on 10 March. The second demand on 15 March bills the cumulative 13_000¢, credits the
+    6_000¢ the first collected, and taxes the 7_000¢ that remains at the NEW rate = 700¢ → 7_700¢.
+    Tax is read when each invoice is built, so a single period is legitimately taxed at two rates,
+    each correct for the moment its demand was issued.
+    CHARACTERIZATION — the quote disagrees with the invoice, and the disagreement is the whole
+    value of the cell: preview says 1_300¢ is owed where the invoice says 0¢.
+    Preview credits progressive billing at invoice level, so its base is correctly 0. But it never
+    applies the credit at FEE level, so each fee is still taxed on its full 13_000¢ at 10% = 1_300¢ —
+    tax on money the customer has already paid, against a base of zero.
+    The invoice reaches 0 through the opposite error: `apply_credit_to_fees` clamps the charge fee's
+    taxable amount to zero by writing the amount billed into it. Here that lands on the right answer
+    by luck, because the base is zero anyway. Fixing the fee-level distribution settles both, and this
+    row and its /final sibling should then agree.
