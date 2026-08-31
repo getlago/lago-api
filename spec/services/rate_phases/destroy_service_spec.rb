@@ -7,15 +7,14 @@ RSpec.describe RatePhases::DestroyService do
 
   let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
-
-before_all do
-  create_default(:plan)
-create_default(:billable_metric)
-end
-
   let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
   let!(:ramp) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: 6) }
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 3, billing_interval_cycle_count: nil) }
+
+  before_all do
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
 
   context "when deleting a middle phase" do
     let(:rate_phase) { ramp }

@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::DestroyService do
 
   include_context "with mocked security logger"
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
 
   let(:payment_provider) { create(:stripe_provider, organization:) }

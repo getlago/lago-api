@@ -4,10 +4,10 @@ RSpec.describe PaymentIntents::ExpireService do
   describe ".call" do
     subject(:result) { described_class.call(invoice:) }
 
-before_all do
-  create_default(:organization)
-create_default(:customer)
-end
+    before_all do
+      create_default(:organization)
+      create_default(:customer)
+    end
 
     let(:invoice) { create(:invoice) }
     let(:payment_provider_service) { class_double(Invoices::Payments::StripeService) }

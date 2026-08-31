@@ -7,9 +7,9 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
   let_it_be(:organization) { create_default(:organization) }
 
-before_all do
-  create_default(:customer)
-end
+  before_all do
+    create_default(:customer)
+  end
 
   let(:invoice) { create(:invoice, organization:) }
   let(:payment_request) { create(:payment_request, organization:) }

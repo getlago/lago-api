@@ -7,14 +7,13 @@ RSpec.describe RatePhases::UpdateService do
 
   let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
+  let(:params) { {name: "After", billing_interval_cycle_count: 6} }
   let(:rate_phase) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, name: "Before") }
 
-before_all do
-  create_default(:plan)
-create_default(:billable_metric)
-end
-
-  let(:params) { {name: "After", billing_interval_cycle_count: 6} }
+  before_all do
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
 
   it "updates the phase" do
     expect(result).to be_success

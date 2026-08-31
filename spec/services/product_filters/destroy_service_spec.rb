@@ -7,9 +7,9 @@ RSpec.describe ProductFilters::DestroyService do
 
   let_it_be(:organization) { create(:organization) }
 
-before_all do
-  create_default(:billable_metric)
-end
+  before_all do
+    create_default(:billable_metric)
+  end
 
   let(:product_filter) { create(:product_filter, :with_values, organization:) }
 

@@ -7,9 +7,9 @@ RSpec.describe PlanRateCards::DestroyService do
 
   let_it_be(:organization) { create(:organization) }
 
-before_all do
-  create_default(:billable_metric)
-end
+  before_all do
+    create_default(:billable_metric)
+  end
 
   let_it_be(:plan) { create(:plan, organization:) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }

@@ -8,7 +8,7 @@ RSpec.describe QuoteVersions::CreateService do
   end
 
   let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-      let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:create_params) do
     {

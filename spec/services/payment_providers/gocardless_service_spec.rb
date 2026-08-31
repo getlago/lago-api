@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::GocardlessService do
 
   include_context "with mocked security logger"
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let(:access_code) { "1234567!abc" }
   let(:code) { "code_1" }

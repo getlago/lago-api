@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentRequests::CreateService, :premium do
   subject(:create_service) { described_class.new(organization:, params:) }
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:customer) { create(:customer, organization:) }
 

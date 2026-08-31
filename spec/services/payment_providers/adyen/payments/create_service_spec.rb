@@ -5,13 +5,13 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:code) { "adyen_1" }
   let_it_be(:customer) { create(:customer, payment_provider_code: code) }
 
-before_all do
-  create_default(:plan)
-end
+  before_all do
+    create_default(:plan)
+  end
 
   let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
   let(:adyen_customer) { create(:adyen_customer, customer:, payment_provider: adyen_payment_provider) }

@@ -7,9 +7,9 @@ RSpec.describe PlanRateCards::CreateService do
 
   let_it_be(:organization) { create(:organization) }
 
-before_all do
-  create_default(:billable_metric)
-end
+  before_all do
+    create_default(:billable_metric)
+  end
 
   let_it_be(:plan) { create(:plan, :product_catalog, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentMethods::CreateFromProviderService do
   subject(:create_service) { described_class.new(customer:, params:, provider_method_id:, payment_provider_id:, payment_provider_customer:) }
 
-  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let_it_be(:customer) { create(:customer, organization:) }
 

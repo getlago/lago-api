@@ -68,9 +68,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
     end
 
     context "when payment intent event for a payment request" do
-before_all do
-  create_default(:customer)
-end
+      before_all do
+        create_default(:customer)
+      end
 
       let(:event_json) do
         get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
