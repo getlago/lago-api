@@ -28,6 +28,12 @@ RSpec.describe Charge do
     end
   end
 
+  describe "#target_key" do
+    it "returns the charge event-filter target key" do
+      expect(charge.target_key).to eq("charge-#{charge.id}")
+    end
+  end
+
   describe "#validate_graduated" do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)
