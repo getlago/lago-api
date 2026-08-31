@@ -9,9 +9,9 @@ RSpec.describe FixedCharges::EmitEventsService do
 
   let(:subscription) { nil }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
 
   let(:customer_1) { create(:customer, organization:) }

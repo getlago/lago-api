@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
   subject { described_class.new(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: "0.1", fixed_amount: "0"}) }
 
   let(:customer) { create(:customer, organization:) }

@@ -5,12 +5,12 @@ require "rails_helper"
 RSpec.describe FixedCharges::DestroyChildrenService do
   subject(:destroy_service) { described_class.new(fixed_charge) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, :deleted, plan:, add_on:) }
 
-  let(:child_plan) { create(:plan, organization:, parent: plan) }
+  let_it_be(:child_plan) { create(:plan, organization:, parent: plan) }
   let(:subscription) { create(:subscription, plan: child_plan) }
   let(:child_fixed_charge) do
     create(
