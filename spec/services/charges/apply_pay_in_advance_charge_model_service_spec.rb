@@ -492,9 +492,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
 
     describe "when dynamic charge model" do
       let(:charge) { create(:dynamic_charge, :pay_in_advance, plan:) }
-      let(:charge_model_class) { ChargeModels::DynamicService }
-      let_it_be(:subscription) { create(:subscription, organization:, plan:) }
-
       let(:aggregator) do
         BillableMetrics::Aggregations::SumService.new(
           event_store: Events::Stores::PostgresStore.new(billing_context:, boundaries: nil),
@@ -503,6 +500,9 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           boundaries: nil
         )
       end
+      let(:charge_model_class) { ChargeModels::DynamicService }
+
+      let_it_be(:subscription) { create(:subscription, organization:, plan:) }
 
       it_behaves_like "a charge model"
     end

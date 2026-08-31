@@ -6,6 +6,8 @@ RSpec.describe DailyUsages::ComputeAllService do
   subject(:compute_service) { described_class.new(timestamp:) }
 
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
+  let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date - 1.day) }
 
   let_it_be(:premium_integrations) { ["revenue_analytics"] }
   let_it_be(:organization) { create_default(:organization, premium_integrations:) }
@@ -14,9 +16,6 @@ RSpec.describe DailyUsages::ComputeAllService do
   before_all do
     create_default(:plan)
   end
-
-  let(:customer) { create(:customer, organization:, billing_entity:) }
-  let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date - 1.day) }
 
   before { subscriptions }
 

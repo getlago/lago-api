@@ -17,15 +17,14 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
   let_it_be(:customer) { create_default(:customer, organization:) }
   let_it_be(:plan) { create_default(:plan, organization:) }
   let(:subscription) { create(:subscription, status:, organization:, customer:, plan:, started_at: 1.month.ago, terminated_at:) }
-  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
   let(:codes) { [] }
   let(:reprocess) { true }
   let(:batch_size) { 1000 }
-
   let(:kafka_producer) { instance_double(WaterDrop::Producer) }
-
   let(:status) { :active }
   let(:terminated_at) { nil }
+
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
 
   before do
     allow(Karafka).to receive(:producer).and_return(kafka_producer)

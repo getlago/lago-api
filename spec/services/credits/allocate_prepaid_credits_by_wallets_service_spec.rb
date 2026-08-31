@@ -17,6 +17,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       total_amount_cents: amount_cents
     )
   end
+  let(:subscription) { create(:subscription, customer:) }
   let(:fee) {
     create(:charge_fee, invoice:, subscription:,
       amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
@@ -59,8 +60,8 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       priority_limited_subscription_wallet
     ]
   end
+
   let_it_be(:customer) { create_default(:customer) }
-  let(:subscription) { create(:subscription, customer:) }
 
   before do
     wallets

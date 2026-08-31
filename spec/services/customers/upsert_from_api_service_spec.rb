@@ -7,9 +7,7 @@ RSpec.describe Customers::UpsertFromApiService do
 
   let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
-  let_it_be(:membership) { create_default(:membership, organization:) }
   let(:external_id) { SecureRandom.uuid }
-
   let(:create_args) do
     {
       external_id:,
@@ -33,6 +31,8 @@ RSpec.describe Customers::UpsertFromApiService do
       }
     }
   end
+
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   before do
     allow(CurrentContext).to receive(:source).and_return("api")

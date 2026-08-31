@@ -8,6 +8,7 @@ RSpec.describe Events::ReEnrichAllService do
   end
 
   let(:re_enrich_service) { described_class.new(subscription:) }
+  let(:subscription) { create(:subscription, organization:) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:event) do
@@ -25,7 +26,6 @@ RSpec.describe Events::ReEnrichAllService do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:plan) { create_default(:plan) }
-  let(:subscription) { create(:subscription, organization:) }
 
   before do
     event

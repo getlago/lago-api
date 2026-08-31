@@ -4,12 +4,12 @@ require "rails_helper"
 
 RSpec.describe Commitments::DatesService do
   let(:commitment) { create(:commitment) }
+  let(:plan) { create(:plan, organization:, pay_in_advance:) }
   let(:invoice_subscription) { create(:invoice_subscription, subscription:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, pay_in_advance:) }
 
   describe ".new_instance" do
     subject(:new_instance_call) { described_class.new_instance(commitment:, invoice_subscription:) }
