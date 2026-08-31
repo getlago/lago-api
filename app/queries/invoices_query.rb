@@ -28,7 +28,7 @@ class InvoicesQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
-    result.invoices = postgres_invoices
+    result.invoices = invoices
     result
   rescue BaseService::FailedResult
     result
@@ -36,7 +36,7 @@ class InvoicesQuery < BaseQuery
 
   private
 
-  def postgres_invoices
+  def invoices
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
