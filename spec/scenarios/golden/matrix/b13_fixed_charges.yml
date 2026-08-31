@@ -1,0 +1,2489 @@
+# B13 — Fixed charges
+#
+# A fixed charge prices an ADD-ON on a plan: recurring units billed independently of metered usage,
+# with period boundaries computed separately from charge boundaries.
+#
+# Note the creation order the API forces: inlining fixed_charges in POST /plans returns 500, so the
+# runner posts them to /plans/:code/fixed_charges after the plan exists.
+---
+- __matrix:
+    defaults:
+      provenance: coverage-gap
+      runners: [rspec]
+      dimensions: {interval: monthly, billing_time: calendar, plan_pay_in_advance: false}
+      setup:
+        add_ons: [{code: "%{key}", name: Seat, amount_cents: 20000}]
+        plan: {code: "golden_%{key}", interval: monthly, amount_cents: 0, pay_in_advance: false}
+        fixed_charges: ~
+        customer: {external_id: "golden_%{key}_cust", currency: EUR}
+        subscription: {external_id: "golden_%{key}_sub", billing_time: calendar}
+    groups:
+      nc-std:
+        dimensions: &ncdim {period_days: 30, days_billed: 15, units: 40}
+        setup:
+          add_ons: &seat [{code: "%{key}_seat", name: Seat, amount_cents: 20000}]
+          fixed_charges: [{add_on_code: "%{key}_seat", charge_model: standard, units: 40, pay_in_advance: "%{pia}", prorated: "%{pro}", properties: {amount: "100"}}]
+        timeline: &nctl [{at: "2024-04-16T00:00:00Z", do: create_subscription}, {at: "2024-05-01T01:00:00Z", do: perform_billing}]
+      nc-grad:
+        dimensions: *ncdim
+        setup:
+          add_ons: *seat
+          fixed_charges:
+            - add_on_code: "%{key}_seat"
+              charge_model: graduated
+              units: 40
+              pay_in_advance: "%{pia}"
+              prorated: "%{pro}"
+              properties:
+                graduated_ranges: &grad
+                  - {from_value: 0, to_value: 30, per_unit_amount: "10", flat_amount: "100"}
+                  - {from_value: 31, to_value: null, per_unit_amount: "5", flat_amount: "50"}
+        timeline: *nctl
+      nc-vol:
+        dimensions: *ncdim
+        setup:
+          add_ons: *seat
+          fixed_charges:
+            - add_on_code: "%{key}_seat"
+              charge_model: volume
+              units: 40
+              pay_in_advance: false
+              prorated: "%{pro}"
+              properties:
+                volume_ranges: &vol
+                  - {from_value: 0, to_value: 30, per_unit_amount: "10", flat_amount: "100"}
+                  - {from_value: 31, to_value: null, per_unit_amount: "6", flat_amount: "200"}
+        timeline: *nctl
+      chg-seat:
+        dimensions: {units_before: "%{ub}", units_after: "%{ua}", apply_units_immediately: true}
+        setup:
+          add_ons: *seat
+          fixed_charges: [{add_on_code: "%{key}_seat", charge_model: standard, units: "%{ub}", pay_in_advance: false, prorated: false, properties: {amount: "100"}}]
+        timeline:
+          - &mk {at: "2024-04-01T00:00:00Z", do: create_subscription}
+          - at: "2024-04-16T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}_seat", charge_model: standard, units: "%{ua}", apply_units_immediately: true, properties: {amount: "100"}}
+          - &mb {at: "2024-05-01T01:00:00Z", do: perform_billing}
+      chg-std:
+        dimensions: &chgdim {period_days: 30, units_before: "%{ub}", units_after: "%{ua}", apply_units_immediately: true}
+        setup:
+          fixed_charges: [{add_on_code: "%{key}", charge_model: standard, units: "%{ub}", pay_in_advance: "%{pia}", prorated: "%{pro}", properties: {amount: "100"}}]
+        timeline:
+          - *mk
+          - at: "2024-04-16T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", charge_model: standard, units: "%{ua}", apply_units_immediately: true, properties: {amount: "100"}}
+          - *mb
+      chg-grad:
+        dimensions: *chgdim
+        setup:
+          fixed_charges: [{add_on_code: "%{key}", charge_model: graduated, units: "%{ub}", pay_in_advance: "%{pia}", prorated: "%{pro}", properties: {graduated_ranges: *grad}}]
+        timeline:
+          - *mk
+          - at: "2024-04-16T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", charge_model: graduated, units: "%{ua}", apply_units_immediately: true, properties: {graduated_ranges: *grad}}
+          - *mb
+      chg-vol:
+        dimensions: *chgdim
+        setup:
+          fixed_charges: [{add_on_code: "%{key}", charge_model: volume, units: "%{ub}", pay_in_advance: false, prorated: "%{pro}", properties: {volume_ranges: *vol}}]
+        timeline:
+          - *mk
+          - at: "2024-04-16T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", charge_model: volume, units: "%{ua}", apply_units_immediately: true, properties: {volume_ranges: *vol}}
+          - *mb
+      ovr-std:
+        dimensions: &ovrdim {period_days: 30, plan_units: "%{pu}", override_units: "%{ou}", later_plan_units: "%{lu}", apply_units_immediately: true}
+        setup:
+          fixed_charges: [{add_on_code: "%{key}", charge_model: standard, units: "%{pu}", pay_in_advance: "%{pia}", prorated: "%{pro}", properties: {amount: "100"}}]
+        timeline:
+          - *mk
+          - &movr
+            at: "2024-04-16T00:00:00Z"
+            do: update_subscription_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", units: "%{ou}", apply_units_immediately: true}
+          - at: "2024-04-20T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", charge_model: standard, units: "%{lu}", apply_units_immediately: true, properties: {amount: "100"}}
+          - *mb
+      ovr-grad:
+        dimensions: *ovrdim
+        setup:
+          fixed_charges: [{add_on_code: "%{key}", charge_model: graduated, units: "%{pu}", pay_in_advance: "%{pia}", prorated: "%{pro}", properties: {graduated_ranges: *grad}}]
+        timeline:
+          - *mk
+          - *movr
+          - at: "2024-04-20T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", charge_model: graduated, units: "%{lu}", apply_units_immediately: true, properties: {graduated_ranges: *grad}}
+          - *mb
+      ovr-vol:
+        dimensions: *ovrdim
+        setup:
+          fixed_charges: [{add_on_code: "%{key}", charge_model: volume, units: "%{pu}", pay_in_advance: false, prorated: "%{pro}", properties: {volume_ranges: *vol}}]
+        timeline:
+          - *mk
+          - *movr
+          - at: "2024-04-20T00:00:00Z"
+            do: update_plan_fixed_charge
+            fixed_charge: {add_on_code: "%{key}", charge_model: volume, units: "%{lu}", apply_units_immediately: true, properties: {volume_ranges: *vol}}
+          - *mb
+
+- id: b13/standard/arrears/not-prorated/no-change
+  block: B13
+  key: b13_standard
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "false", units_change: none}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 100000
+      total_amount_cents: 100000
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: fixed_charge, units: "5.0", amount_cents: 100000}
+  math: >-
+    5 units at 200.00 each = 1_000.00 → 100_000¢, billed for the whole period because the charge is
+    neither prorated nor paid in advance and the units never changed. The fee carries fee_type
+    `fixed_charge`, distinct from `charge` and `subscription`, which is what makes it visible as a
+    third kind of line on the invoice.
+    The add-on carries its own amount_cents (which must be positive — 0 is rejected with
+    amount_cents/value_is_out_of_range), but the FIXED CHARGE prices it: properties.amount is what
+    the fee uses, so the two numbers are independent and this row would still read 100_000¢ if the
+    add-on were priced differently.
+  dimensions: {plan_pay_in_advance: ~}
+  runners: [rspec, live]
+  setup:
+    add_ons: [{code: b13_seat, name: Seat, amount_cents: 20000}]
+    plan: {pay_in_advance: ~}
+    fixed_charges: [{add_on_code: b13_seat, charge_model: standard, units: 5, properties: {amount: "200"}}]
+  timeline: [{at: "2024-03-01T00:00:00Z", do: create_subscription}, {at: "2024-04-01T01:00:00Z", do: perform_billing}]
+
+# ---------------------------------------------------------------------------------------------
+# Shared conventions for the `units_change: none` rows below, so every number is comparable.
+#
+# Legality (FixedCharge#validate_pay_in_advance / #validate_prorated, fixed_charge.rb:79-96):
+# volume rejects pay_in_advance outright, and graduated rejects prorated + pay_in_advance. That is
+# what removes 12 of the 48 axis combinations and leaves 36.
+#
+#   * April 2024, monthly / calendar, plan pay_in_arrears with amount_cents 0 and no taxes — so the
+#     `pay_in_advance` axis is the FIXED CHARGE's flag alone, and the fixed-charge fee is the whole
+#     invoice while the subscription fee stays a 0¢ marker for the period boundary.
+#   * the subscription starts on 2024-04-16, mid-period, so proration bites without any units
+#     change: 30 - 16 + 1 = 15 days of a 30-day period. 15/30 is exactly 1/2, which matters —
+#     BuildPayInAdvanceFixedChargeService's coefficient is a FLOAT
+#     (build_pay_in_advance_fixed_charge_service.rb:120-122), so a ratio like 21/31 would make the
+#     expectation depend on double rounding. 1/2 is exact in both the SQL numeric path and the float
+#     path, so the two halves of the block are compared on equal terms.
+#   * 40 units everywhere → 20 prorated units. FixedChargeEvent units never change: the single event
+#     is the one EmitFixedChargeEventsService writes at activation, at
+#     `started_at + 1.second` = 2024-04-16T00:00:01Z (activate_service.rb:174-179).
+#   * billing at 2024-05-01T01:00Z.
+#
+# Why proration is visible at all with `units_change: none`: ProratedAggregationService weights each
+# event by (next event or period end + 1 day) - (event timestamp clamped to period start), over
+# `fixed_charges_duration` (prorated_aggregation_service.rb:130-160). With one event on the 16th of a
+# 30-day period whose from_datetime is clamped to started_at, that ratio is 15/30. An event at the
+# START of the period would give 30/30 = 1 and prorated would equal un-prorated — which is why none
+# of these rows starts on the 1st.
+#
+# The period-boundary assertions are the point of the block. `fixed_charges_*` boundaries are
+# computed separately from `charges_*` and from the subscription's own `from/to_datetime`
+# (calculate_fees_service.rb:30-39), and Fees::FixedChargeService#readjust_boundaries
+# (fixed_charge_service.rb:238-252) OVERWRITES them for a pay-in-advance fixed charge with
+# Subscriptions::DatesService.fixed_charge_pay_in_advance_interval — evaluated with
+# `current_usage: true` at the invoice's timestamp, i.e. the period that is only just STARTING. So on
+# the periodic invoice the subscription fee carries April and the fixed-charge fee carries May, on
+# one invoice. Every advance row asserts both, because a right amount under the wrong label is the
+# defect shape here.
+# ---------------------------------------------------------------------------------------------
+
+- id: b13/standard/advance/prorated/no-change
+  block: B13
+  group: nc-std
+  key: b13_adv_pro
+  vars: {pia: true, pro: true}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "true", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 200000
+        taxes_amount_cents: 0
+        total_amount_cents: 200000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_adv_pro_seat
+            item_type: AddOn
+            units: "40.0"
+            amount_cents: 200000
+            precise_unit_amount: 50.0
+            from_date: "2024-04-16T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 400000
+        taxes_amount_cents: 0
+        total_amount_cents: 400000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-16T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_adv_pro_seat
+            units: "40.0"
+            amount_cents: 400000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    Two invoices, and they are produced by two DIFFERENT services — that is the first thing this row
+    pins.
+    Invoice 1 is raised at activation, because Subscriptions::ActivateService bills a plan that pays
+    in arrears as soon as any fixed charge pays in advance
+    (activate_service.rb:195-199 → Invoices::CreatePayInAdvanceFixedChargesJob at
+    `started_at + 1.second`). Its fee comes from Fees::BuildPayInAdvanceFixedChargeService, not from
+    Fees::FixedChargeService, and it prorates by a formula of its own
+    (build_pay_in_advance_fixed_charge_service.rb:118-126):
+    `days = (fixed_charges_to_datetime.to_date - timestamp.to_date + 1)` = 30 - 16 + 1 = 15, over
+    `fixed_charges_duration` = 30 → coefficient 0.5. `delta_units` is the event's 40 units minus the
+    0 already billed for this period (:64-84), so the charge model is applied to 40 × 0.5 = 20 units:
+    StandardService#compute_amount = `units × amount` = 20 × 100.00 = 2_000.00 → 200_000¢.
+    The `units` field is NOT the prorated number — :131-132 stores `units: delta_units` = 40 — while
+    `precise_unit_amount` is `amount / delta_units` = 2_000/40 = 50.00, i.e. half the 100.00 in
+    properties. Both are asserted, because the amount alone cannot tell 20 units at 100.00 from
+    40 units at 50.00, and the fields disagree about which happened.
+    Invoice 2 is the ordinary periodic invoice for the April period, and its fixed-charge fee covers
+    MAY. Fees::FixedChargeService#readjust_boundaries (fixed_charge_service.rb:238-252) throws away
+    the invoice_subscription's April `fixed_charges_*` boundaries and replaces them with
+    `fixed_charge_pay_in_advance_interval(boundaries.timestamp, subscription)`, evaluated with
+    `current_usage: true` (dates_service.rb:40-52), so at a timestamp of 2024-05-01T01:00Z it returns
+    2024-05-01 → 2024-05-31, duration 31. ProratedAggregationService then finds no event inside May
+    and falls back to the last event before it (base_service.rb:41-49), whose effective span runs from
+    the period start to `to_datetime + 1.day` → ratio 31/31 = 1 → 40 units × 100.00 = 4_000.00 →
+    400_000¢, at a `precise_unit_amount` of 100.00. So one invoice carries a subscription fee for
+    2024-04-16..2024-04-30 and a fixed-charge fee for 2024-05-01..2024-05-31, which is exactly the
+    separate-boundary computation this block exists to pin.
+    Candidate behaviours that this row rules out. If the advance fee ignored proration it would be
+    400_000¢ on invoice 1 instead of 200_000¢. If it prorated by days ELAPSED rather than remaining
+    it would use 16/30 → 40 × 0.5333 × 100 = 213_333¢. If the periodic invoice's fixed-charge fee
+    took the invoice's own April boundaries instead of readjusting, it would either be suppressed by
+    `already_billed?` (fixed_charge_service.rb:53-72 matches on the stored from/to pair, and April is
+    already billed) or land on 200_000¢ with April dates — so the 400_000¢ May fee is the assertion
+    that the readjustment happened.
+
+- id: b13/standard/advance/not-prorated/no-change
+  block: B13
+  group: nc-std
+  key: b13_adv_flat
+  vars: {pia: true, pro: false}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "false", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 400000
+        taxes_amount_cents: 0
+        total_amount_cents: 400000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_adv_flat_seat
+            item_type: AddOn
+            units: "40.0"
+            amount_cents: 400000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-16T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 400000
+        taxes_amount_cents: 0
+        total_amount_cents: 400000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-16T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_adv_flat_seat
+            units: "40.0"
+            amount_cents: 400000
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    The control for b13/standard/advance/prorated/no-change: same 15-of-30 days, same 40 units, same
+    100.00 per unit, `prorated` flipped off. Fees::BuildPayInAdvanceFixedChargeService sets
+    `proration_coefficient = 1` when the charge is not prorated
+    (build_pay_in_advance_fixed_charge_service.rb:118-123), so the charge model is applied to the raw
+    delta of 40 units: 40 × 100.00 = 4_000.00 → 400_000¢ for a period that is only half over. The
+    customer pays the full month on the 16th, and `precise_unit_amount` stays at the properties'
+    100.00 rather than dropping to 50.00 as the prorated row's does.
+    The two rows therefore differ by exactly 200_000¢ on invoice 1 while agreeing on invoice 2 —
+    440_000¢ of April-and-May under proration against 800_000¢ without it — which is what makes the
+    pair worth having: the difference is the `prorated` flag and nothing else.
+    The May fee is unchanged from the prorated row, because SimpleAggregationService returns the last
+    event's units flat (simple_aggregation_service.rb:6-9) and the prorated aggregator happens to
+    return a ratio of 1 for a full period. Its boundaries are still the readjusted MAY window
+    (fixed_charge_service.rb:238-252) rather than the April period the subscription fee beside it
+    reports, so both dates are asserted here too: with the amounts identical, the boundary is the
+    only thing distinguishing "billed May in advance" from "billed April twice".
+
+- id: b13/standard/arrears/prorated/no-change
+  block: B13
+  group: nc-std
+  key: b13_arr_pro
+  vars: {pia: false, pro: true}
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "true", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 200000
+      taxes_amount_cents: 0
+      total_amount_cents: 200000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_arr_pro_seat
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 200000
+          precise_unit_amount: 50.0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    In arrears there is no activation invoice — Subscriptions::ActivateService only bills at the start
+    when the plan pays in advance or a fixed charge does (activate_service.rb:190-199) — so the whole
+    period is measured after the fact on one invoice, and `readjust_boundaries` leaves the
+    invoice_subscription's own `fixed_charges_*` window alone (fixed_charge_service.rb:243). The
+    fixed-charge fee and the subscription fee therefore share 2024-04-16..2024-04-30, and both are
+    asserted: this is the row that says the two boundary computations AGREE when the charge is in
+    arrears, which is what makes the advance rows' disagreement a finding rather than noise.
+    The amount goes through FixedChargeEvents::Aggregations::ProratedAggregationService, whose SQL
+    weights each event by `(period_end - period_start) / fixed_charges_duration`
+    (prorated_aggregation_service.rb:130-160). The single event sits at 2024-04-16T00:00:01Z;
+    `period_start` is its own timestamp (already inside the window, which itself was clamped up to
+    `started_at` by dates_service.rb:124-143) and `period_end` is `to_datetime + 1.day` → 2024-05-01.
+    (2024-05-01 - 2024-04-16) / 30 = 15/30 = 0.5 exactly, in Postgres numeric, so
+    `aggregation` = 40 × 0.5 = 20.000000 while `full_units_number` stays at the event's 40
+    (:20-24). There is no ProratedStandardService — ChargeModels::Factory:38-39 returns the plain
+    StandardService — and its `compute_amount` is `units × amount` where `units` is the PRORATED
+    aggregation (base_service.rb:34): 20 × 100.00 = 2_000.00 → 200_000¢.
+    The fee reports the other number: Fees::FixedChargeService:112 stores
+    `units: amount_result.full_units_number` = 40, and StandardService#unit_amount divides by that
+    same 40 → `precise_unit_amount` 50.00. So 40 units are shown and 20 unit-months are billed.
+    Un-prorated would be 40 × 100.00 = 400_000¢ (the value the sibling
+    b13/graduated/arrears/... rows show for their own flag flip); prorating by days elapsed instead of
+    remaining would give 16/30 → 213_333¢; prorating the SUBSCRIPTION fee's way, off `from_datetime`
+    rather than the event timestamp, would also give 15/30 here and is deliberately not
+    distinguishable in this row — b13/graduated/arrears/prorated/no-change separates them, because
+    there the event-level split into tiers has no subscription-level equivalent.
+
+- id: b13/graduated/advance/not-prorated/no-change
+  block: B13
+  group: nc-grad
+  key: b13_grad_adv
+  vars: {pia: true, pro: false}
+  axes: {charge_model: graduated, pay_in_advance: "true", prorated: "false", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 50000
+        taxes_amount_cents: 0
+        total_amount_cents: 50000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_grad_adv_seat
+            item_type: AddOn
+            units: "40.0"
+            amount_cents: 50000
+            precise_unit_amount: 12.5
+            from_date: "2024-04-16T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 50000
+        taxes_amount_cents: 0
+        total_amount_cents: 50000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-16T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_grad_adv_seat
+            units: "40.0"
+            amount_cents: 50000
+            precise_unit_amount: 12.5
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    `graduated` + `pay_in_advance` + `prorated` is rejected outright
+    (FixedCharge#validate_prorated, fixed_charge.rb:88-96), so this is the only advance cell graduated
+    has, and it is un-prorated by construction.
+    Both fees price 40 raw units through ChargeModels::GraduatedService. The ranges are NOT adjacent —
+    31 is 30 + 1, so `adjacent_ranges?` is false (graduated_service.rb:22-28) and
+    RangeGraduatedService bills `to_value - from_value + 1` in every range after the first
+    (range_graduated_service.rb:53-63). Tier 1: units capped at its `to_value` 30 → 30 × 10.00 = 300.00
+    plus 100.00 flat = 400.00. Tier 2: `to_value` is null so the effective total is 40 → 40 - 31 + 1 =
+    10 units → 10 × 5.00 = 50.00 plus 50.00 flat = 100.00. Total 500.00 → 50_000¢, and
+    `precise_unit_amount` = 500.00 / 40 = 12.50 (unit_amount divides by `full_units_number`,
+    graduated_service.rb:76-81). The two flat amounts are what make the tiering visible: pricing all
+    40 units at tier 1 would give 40 × 10.00 + 100.00 = 500.00 too, but with only ONE flat fee, so the
+    150.00 of flats asserted here is what says the second range was entered.
+    Invoice 1 comes from Fees::BuildPayInAdvanceFixedChargeService, which builds a synthetic
+    aggregation result of `delta_units` and hands it to the same ChargeModels::Factory
+    (build_pay_in_advance_fixed_charge_service.rb:146-165), so a full month is billed on the 16th:
+    50_000¢ for 15 days of service. Invoice 2 bills MAY, again through the readjusted advance window
+    (fixed_charge_service.rb:238-252), so the invoice carries an April subscription fee beside a May
+    fixed-charge fee and both dates are asserted.
+    What this rules out: proration was not silently applied anywhere — half of 500.00 would be
+    25_000¢ on invoice 1, and the prorated-graduated split that
+    b13/graduated/arrears/prorated/no-change measures would be 32_500¢. An implementation that
+    dropped the two flat amounts would give 300.00 + 50.00 = 350.00 → 35_000¢, and one that used
+    adjacent-range arithmetic (no `+ 1` on the second range) would give
+    300.00 + 9 × 5.00 + 150.00 = 495.00 → 49_500¢.
+
+- id: b13/graduated/arrears/prorated/no-change
+  block: B13
+  group: nc-grad
+  key: b13_grad_pro
+  vars: {pia: false, pro: true}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "true", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 32500
+      taxes_amount_cents: 0
+      total_amount_cents: 32500
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_grad_pro_seat
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 32500
+          precise_unit_amount: 8.125
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The one cell in the block where the charge model itself changes: `graduated` + `prorated` is the
+    only combination for which ChargeModels::Factory swaps in a different class
+    (ProratedGraduatedService, factory.rb:40-45). It is handed TWO parallel arrays by
+    ProratedAggregationService#per_event_aggregation (prorated_aggregation_service.rb:27-37):
+    `event_aggregation` = [40] (the full units) and `event_prorated_aggregation` = [20] (40 × 15/30,
+    derived as in b13/standard/arrears/prorated/no-change).
+    The tier is chosen by the FULL number and the price is paid on the PRORATED one
+    (prorated_graduated_service.rb:31-92). With one event: `full_sum` becomes 40 and `prorated_sum`
+    20; tier 1's `to_value` is 30, so `overflow` = 40 - 30 = 10 full units spill into tier 2, and the
+    prorated sum is split by `prorated_coefficient` = 20 / 40 = 0.5 → 10 × 0.5 = 5 prorated units
+    moved out of tier 1. Tier 1 bills 15 × 10.00 = 150.00; tier 2 bills 5 × 5.00 = 25.00; and
+    `result_with_flat_amount` (:110-122) then adds every flat amount up to the highest range REACHED
+    by the full units, in full and un-prorated: 100.00 + 50.00 = 150.00. Total 325.00 → 32_500¢, with
+    `precise_unit_amount` = 325.00 / 40 = 8.125 (:104-107 divides by the full-units sum).
+    Three candidate behaviours, all excluded by that number. Prorating FIRST and then tiering would
+    put all 20 units in tier 1 → 20 × 10.00 + 100.00 = 300.00 → 30_000¢. Ignoring proration is the
+    sibling row's 500.00 → 50_000¢. Prorating the flat amounts too would give 150.00 + 25.00 + 75.00 =
+    250.00 → 25_000¢. That the flats are NOT prorated while the per-unit amounts are is the
+    substantive finding in this row, and it is only visible because the ranges carry flat fees.
+    Boundaries: in arrears nothing is readjusted, so the fixed-charge fee and the subscription fee
+    both report 2024-04-16..2024-04-30, and both are asserted.
+
+- id: b13/graduated/arrears/not-prorated/no-change
+  block: B13
+  group: nc-grad
+  key: b13_grad_flat
+  vars: {pia: false, pro: false}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "false", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 50000
+      taxes_amount_cents: 0
+      total_amount_cents: 50000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_grad_flat_seat
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 50000
+          precise_unit_amount: 12.5
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The control for b13/graduated/arrears/prorated/no-change: identical ranges, identical 40 units,
+    identical 15-of-30-day period, `prorated` off. SimpleAggregationService returns the last event's
+    units unchanged (simple_aggregation_service.rb:6-9), so both `aggregation` and
+    `full_units_number` are 40 and the ordinary ChargeModels::GraduatedService prices them:
+    tier 1 caps at its `to_value` 30 → 30 × 10.00 + 100.00 flat = 400.00; tier 2 takes
+    40 - 31 + 1 = 10 units (the ranges are not adjacent, range_graduated_service.rb:53-63) →
+    10 × 5.00 + 50.00 flat = 100.00. Total 500.00 → 50_000¢, `precise_unit_amount` 500.00 / 40 = 12.50.
+    The pair is therefore 50_000¢ against 32_500¢ for the same units over the same half-period, and
+    the 17_500¢ gap decomposes as exactly the per-unit half of the bill (350.00 → 175.00) with the
+    150.00 of flat amounts untouched on both sides. Reading either row alone cannot see that; the two
+    together locate the proration precisely in the per-unit component.
+    This row also pins that a mid-period start costs nothing when the charge is not prorated: 15 days
+    of service are billed at a full month's 500.00, with a period boundary that openly says
+    2024-04-16..2024-04-30.
+
+- id: b13/volume/arrears/prorated/no-change
+  block: B13
+  group: nc-vol
+  key: b13_vol_pro
+  vars: {pro: true}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "true", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 32000
+      taxes_amount_cents: 0
+      total_amount_cents: 32000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_vol_pro_seat
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 32000
+          precise_unit_amount: 8.0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    `volume` cannot pay in advance at all (FixedCharge#validate_pay_in_advance, fixed_charge.rb:79-85
+    rejects it), so volume has only the two arrears cells, and this is the prorated one.
+    There is no ProratedVolumeService — ChargeModels::Factory:56-57 returns the ordinary
+    VolumeService — but VolumeService is prorated-aware in one specific place: `number_of_units`,
+    which selects the RANGE, is `full_units_number` when the charge is prorated and the aggregation
+    otherwise (volume_service.rb:63-65). So the tier is chosen by 40 units → the second range
+    (31..∞, 6.00/unit, 200.00 flat) — while `per_unit_total_amount` multiplies the PRORATED
+    aggregation (:52-54): 20 × 6.00 = 120.00. `flat_unit_amount` is added whole (:44-46), so the fee
+    is 120.00 + 200.00 = 320.00 → 32_000¢, and `unit_amount` divides by the full 40 → 8.00. The
+    reported `units` is `full_units_number` = 40 (Fees::FixedChargeService:112).
+    Four candidate behaviours, all distinct here, which is why these particular ranges were chosen.
+    Actual: tier by 40, price 20, flat in full = 32_000¢. Prorate first and then tier: 20 units falls
+    in the FIRST range → 20 × 10.00 + 100.00 = 300.00 → 30_000¢. Ignore proration entirely:
+    40 × 6.00 + 200.00 = 440.00 → 44_000¢ (the sibling row). Prorate the flat amount too:
+    120.00 + 100.00 = 220.00 → 22_000¢. The 32_000¢ asserted here is the only one of the four that
+    both crosses into the dearer per-unit rate and pays the whole flat fee for half a month.
+    Boundaries are the un-readjusted arrears window, shared with the subscription fee, and both are
+    asserted.
+
+- id: b13/volume/arrears/not-prorated/no-change
+  block: B13
+  group: nc-vol
+  key: b13_vol_flat
+  vars: {pro: false}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "false", units_change: none}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 44000
+      taxes_amount_cents: 0
+      total_amount_cents: 44000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_vol_flat_seat
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 44000
+          precise_unit_amount: 11.0
+          from_date: "2024-04-16T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The control for b13/volume/arrears/prorated/no-change. SimpleAggregationService gives
+    `aggregation` = `full_units_number` = 40, so VolumeService's `number_of_units` is 40 either way
+    (volume_service.rb:63-65) and the second range applies: every unit is priced at that range's rate
+    rather than tier by tier, which is what separates `volume` from `graduated` —
+    40 × 6.00 = 240.00, plus the 200.00 flat = 440.00 → 44_000¢, `unit_amount` = 440.00 / 40 = 11.00.
+    Graduated arithmetic on the same shape of ranges would bill the first 30 units at the first
+    range's rate, so the b13/graduated rows sit at 50_000¢ where volume sits at 44_000¢ despite both
+    reaching the same tier with the same 40 units — that difference is the charge_model axis doing its
+    job.
+    Against the prorated sibling: 44_000¢ against 32_000¢, a gap of 12_000¢ that is exactly half the
+    240.00 of per-unit charge and none of the 200.00 flat. And as in every not-prorated row here, 15
+    days of service cost a full month, on a fee that reports 2024-04-16..2024-04-30 as its period.
+
+# ---------------------------------------------------------------------------------------------
+# `units_change` — the axis that needed two new timeline verbs.
+#
+# A fixed charge's units are a MUTABLE quantity, and the whole point of the axis is that changing
+# them mid-period is not the same operation as declaring them at creation. Two endpoints do it and
+# they are not interchangeable:
+#
+#   PUT /plans/:plan_code/fixed_charges/:code        FixedCharges::UpdateService
+#   PUT /subscriptions/:external_id/fixed_charges/:code  Subscriptions::UpdateOrOverrideFixedChargeService
+#
+# Both write `units` and then hand `apply_units_immediately` to FixedCharges::EmitEventsService,
+# which is where the axis actually lives: the new FixedChargeEvent is stamped at `Time.current` when
+# the flag is true and at `fixed_charges_period_to_datetime + 1.second` when it is false
+# (emit_events_service.rb:22). For a NOT-prorated charge the aggregation reads
+# `events_in_range.last.try(:units)` ordered by created_at
+# (simple_aggregation_service.rb:6, base_service.rb:37-47), so an event stamped into the next period
+# is not in range at all and the period bills the OLD units. The two settings therefore give two
+# different invoices from the same request body, which is why the flag is forwarded rather than
+# assumed — and why canary/fixed-charge-apply-units-immediately watches it.
+#
+# Shared conventions for the three rows below, so their numbers are comparable:
+#   * April 2024, monthly / calendar, plan pay_in_arrears with amount_cents 0 and no taxes, so the
+#     fixed-charge fee is the whole invoice and the subscription fee is a 0¢ period marker.
+#   * subscription starts 2024-04-01T00:00:00Z — the START of the period on purpose. These rows vary
+#     units, not dates, and a mid-period start would put proration into a number that is meant to
+#     isolate the units change. The activation event is written at started_at + 1.second =
+#     2024-04-01T00:00:01Z (activate_service.rb:174-179).
+#   * the fixed charge is standard / arrears / not-prorated at 100.00 per unit, so the invoice reads
+#     directly as units × 100.00 and any disagreement is a units disagreement.
+#   * the change lands 2024-04-16T00:00:00Z, billing at 2024-05-01T01:00:00Z.
+# ---------------------------------------------------------------------------------------------
+
+- id: b13/standard/arrears/not-prorated/increase-mid-period
+  block: B13
+  group: chg-seat
+  key: b13_inc
+  vars: {ub: 10, ua: 25}
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "false", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 250000
+      taxes_amount_cents: 0
+      total_amount_cents: 250000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_inc_seat
+          item_type: AddOn
+          units: "25.0"
+          amount_cents: 250000
+          precise_unit_amount: 100.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    A NOT-prorated fixed charge does not blend the two halves of the period: SimpleAggregationService
+    returns `events_in_range.last.try(:units)` (simple_aggregation_service.rb:6), and `events_in_range`
+    orders by created_at (base_service.rb:44-46). Two events are in April — the activation event
+    (10 units, 2024-04-01T00:00:01Z) and the update event (25 units, 2024-04-16T00:00:00Z, stamped at
+    Time.current because apply_units_immediately is true, emit_events_service.rb:22). The later one
+    wins outright, so the WHOLE period bills at 25 units: 25 × 100.00 = 2_500.00 → 250_000¢, with
+    precise_unit_amount 100.00 and units "25.0" (Fee#units is amount_result.full_units_number,
+    fixed_charge_service.rb:100).
+    Three other answers are all plausible and all wrong, which is what this row is for. A per-day
+    blend would give 10 × 15/30 + 25 × 15/30 = 17.5 units → 175_000¢ (that is what the PRORATED
+    sibling will read). Keeping the units the charge was created with would give 100_000¢ — and
+    100_000¢ is also exactly what `apply_units_immediately: false` produces, because the event would
+    then be stamped at fixed_charges_period_to_datetime + 1.second = 2024-05-01T00:00:00Z, outside
+    April's range entirely. Charging both quantities in full would give 350_000¢.
+    FixedCharges::UpdateService does not move `charge_model` here — `plan.attached_to_subscriptions?`
+    is true by this point (update_service.rb:31) — so the charge_model axis is fixed at creation and
+    only units move. `properties` is resent because the endpoint replaces them: omitted, they fall
+    back to ChargeModels::BuildDefaultPropertiesService, i.e. amount "0" (update_service.rb:36-38),
+    and the invoice would read 0¢.
+
+- id: b13/standard/arrears/not-prorated/decrease-mid-period
+  block: B13
+  group: chg-seat
+  key: b13_dec
+  vars: {ub: 10, ua: 4}
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "false", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 40000
+      taxes_amount_cents: 0
+      total_amount_cents: 40000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_dec_seat
+          item_type: AddOn
+          units: "4.0"
+          amount_cents: 40000
+          precise_unit_amount: 100.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The mirror of the increase row, and it is the direction worth asserting: last-event-wins is not a
+    high-water mark. The same two events are in range, the 2024-04-16 one carries 4 units, and it wins
+    on created_at, so the customer is billed 4 × 100.00 = 400.00 → 40_000¢ for a period in which they
+    held 10 units for the first fifteen days. Lago does not bill the maximum (100_000¢), does not
+    blend to 10 × 15/30 + 4 × 15/30 = 7 units (70_000¢), and does not floor the decrease at the period
+    boundary. Asserted deliberately as a pair with the increase: one row alone cannot distinguish
+    "the last event wins" from "the largest event wins", and the two directions together can.
+
+- id: b13/standard/arrears/not-prorated/subscription-override
+  block: B13
+  key: b13_ovr
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "false", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 250000
+      taxes_amount_cents: 0
+      total_amount_cents: 250000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_ovr_seat
+          item_type: AddOn
+          units: "25.0"
+          amount_cents: 250000
+          precise_unit_amount: 100.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    A subscription-level units change is NOT a plan-level one, and the plan-level update on the 20th
+    is in this row to prove it rather than as scenery.
+    The override request carries only `units` and `apply_units_immediately`, so
+    Subscriptions::UpdateOrOverrideFixedChargeService takes the cheap path — `units_only_change?` is
+    true (fixed_charge_units_override_detection_concern.rb:26-31) — and writes a
+    Subscription::FixedChargeUnitsOverride row of 25 units instead of cloning the plan
+    (update_or_override_fixed_charge_service.rb:47-58). It then emits ONE FixedChargeEvent for this
+    subscription alone, at 25 units because `units_for` reads
+    `fixed_charge.effective_units_for(subscription)` (emit_events_service.rb:62-66,
+    fixed_charge.rb:54-58), stamped 2024-04-16T00:00:00Z.
+    Four days later the plan-level fixed charge is moved to 40 units. That request succeeds and the
+    plan really does now say 40 — but FixedCharges::EmitEventsService's bulk path scopes to
+    `.without_fixed_charge_units_override_for(fixed_charge)` (emit_events_service.rb:52), so this
+    subscription receives NO event from it. Its last event in April is still the 25-unit override, and
+    the invoice is 25 × 100.00 = 2_500.00 → 250_000¢.
+    That is the discriminating number. If the override were merely a plan-level write under another
+    URL, the 40-unit event would be the last in range and the invoice would read 400_000¢; if the
+    override row existed but the plan update still emitted over it, likewise 400_000¢. 250_000¢ is
+    reachable only if the per-subscription override both took effect and then survived a later
+    plan-level change. `premium: true` because the endpoint is licence-gated outright —
+    `return result.forbidden_failure! unless License.premium?`
+    (update_or_override_fixed_charge_service.rb:22).
+  dimensions: {plan_units: 10, override_units: 25, later_plan_units: 40, apply_units_immediately: true}
+  setup:
+    add_ons: [{code: "%{key}_seat", name: Seat, amount_cents: 20000}]
+    fixed_charges: [{add_on_code: "%{key}_seat", charge_model: standard, units: 10, pay_in_advance: false, prorated: false, properties: {amount: "100"}}]
+  timeline:
+    - {at: "2024-04-01T00:00:00Z", do: create_subscription}
+    - at: "2024-04-16T00:00:00Z"
+      do: update_subscription_fixed_charge
+      fixed_charge: {add_on_code: "%{key}_seat", units: 25, apply_units_immediately: true}
+    - at: "2024-04-20T00:00:00Z"
+      do: update_plan_fixed_charge
+      fixed_charge: {add_on_code: "%{key}_seat", charge_model: standard, units: 40, apply_units_immediately: true, properties: {amount: "100"}}
+    - {at: "2024-05-01T01:00:00Z", do: perform_billing}
+
+# ---------------------------------------------------------------------------------------------
+# `units_change` × the rest of the grid — the remaining 24 cells.
+#
+# Shared conventions for EVERY row below, so their numbers are comparable with each other and with
+# the three `standard/arrears/not-prorated` units_change rows above:
+#
+#   * April 2024, monthly / calendar, plan pay_in_arrears with amount_cents 0 and no taxes, so the
+#     `pay_in_advance` axis is the FIXED CHARGE's own flag and the fixed-charge fee is the whole
+#     invoice while the subscription fee stays a 0¢ period marker.
+#   * subscription starts 2024-04-01T00:00:00Z — the START of the period, deliberately. With no
+#     units change a period-start subscription makes proration invisible (ratio 30/30 = 1), which is
+#     exactly what these rows want: the ONLY thing proration can bite on here is the units change
+#     itself, so `prorated` measures the change rather than the join date. The activation event is
+#     written at started_at + 1.second = 2024-04-01T00:00:01Z
+#     (activate_service.rb:174-179 → EmitFixedChargeEventsService).
+#   * the units change lands 2024-04-16T00:00:00Z, i.e. 15 days into a 30-day period. 15/30 is
+#     exactly 1/2 in both the Postgres-numeric arrears path (prorated_aggregation_service.rb:119-133)
+#     and the Ruby-Float advance path (build_pay_in_advance_fixed_charge_service.rb:108-113), so the
+#     two halves of the block are measured, not compared against float noise.
+#   * `subscription-override` rows do it in two steps on purpose: PUT the SUBSCRIPTION's units on
+#     2024-04-16, then PUT the PLAN's units on 2024-04-20. The second request succeeds and the plan
+#     really does change; the assertion is that this subscription never sees it, because
+#     FixedCharges::EmitEventsService's bulk scope is
+#     `.without_fixed_charge_units_override_for(fixed_charge)` (emit_events_service.rb:52) and
+#     Invoices::CreateAllPayInAdvanceFixedChargesJob filters the same way. Every such row names the
+#     number the plan-level value WOULD have produced.
+#   * billing at 2024-05-01T01:00:00Z.
+#
+# `apply_units_immediately: true` on every change, always sent explicitly. With it false the new
+# FixedChargeEvent is stamped at `fixed_charges_period_to_datetime + 1.second` = 2024-05-01T00:00:00Z
+# (emit_events_service.rb:22), outside April's aggregation range entirely, and every row below would
+# read its pre-change units instead. The flag IS the mid-period half of the axis.
+#
+# Two structural facts these rows keep re-asserting, because they are the block's bug shape:
+#
+#   1. ARREARS blends, ADVANCE deltas. In arrears the whole period is aggregated after the fact from
+#      the FixedChargeEvent stream, so one invoice carries one blended figure. In advance each
+#      change raises its OWN invoice immediately (update_service.rb:51-53 for the plan endpoint,
+#      write_service.rb:34-38 for the subscription one) priced on `new_units - already_paid_units`
+#      (build_pay_in_advance_fixed_charge_service.rb:23-38), and the periodic invoice then bills the
+#      NEXT period. So an advance row asserts three invoices and an arrears row asserts one.
+#   2. On an advance invoice the fixed-charge fee's period is the READJUSTED window
+#      (fixed_charge_service.rb:236-250), which on the periodic invoice is MAY while the subscription
+#      fee beside it is APRIL. Both dates are asserted on every advance row: with the amounts often
+#      equal, the boundary is the only thing separating "billed May in advance" from "billed April
+#      twice".
+# ---------------------------------------------------------------------------------------------
+
+- id: b13/standard/arrears/prorated/increase-mid-period
+  block: B13
+  group: chg-std
+  key: b13_r2_std_arr_pro_inc
+  vars: {pia: false, pro: true, ub: 10, ua: 25}
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "true", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 175000
+      taxes_amount_cents: 0
+      total_amount_cents: 175000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_std_arr_pro_inc
+          item_type: AddOn
+          units: "25.0"
+          amount_cents: 175000
+          precise_unit_amount: 70.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    This is the row the not-prorated increase above names as its counterfactual, and it is the one
+    cell where a fixed charge actually BLENDS two quantities inside one period.
+    ProratedAggregationService weights each event by the days it was in force
+    (prorated_aggregation_service.rb:119-154). Two events are in April: 10 units at
+    2024-04-01T00:00:01Z and 25 units at 2024-04-16T00:00:00Z (stamped at Time.current because
+    apply_units_immediately is true). For the first, `period_start` is its own timestamp's DATE
+    (2024-04-01) and `period_end` is the LEAD timestamp's DATE (2024-04-16) → 15/30. For the second,
+    LEAD falls back to `to_datetime + 1.day` → DATE 2024-05-01 → (2024-05-01 - 2024-04-16)/30 = 15/30.
+    So `aggregation` = 10 × 0.5 + 25 × 0.5 = 17.500000 in Postgres numeric, while
+    `full_units_number` is the LAST event's units, 25 (:22).
+    There is no ProratedStandardService (ChargeModels::Factory:38-39), so the plain StandardService
+    prices the prorated aggregation: 17.5 × 100.00 = 1_750.00 → 175_000¢. The fee reports the other
+    number — `units` is `full_units_number` = 25 (fixed_charge_service.rb:100) and
+    `precise_unit_amount` is `compute_amount / full_units_number` = 1_750/25 = 70.00, which is
+    NOT the 100.00 in properties. Both are asserted, because 175_000¢ alone cannot tell 17.5 units at
+    100.00 from 25 units at 70.00 and the two fields disagree about which happened.
+    Three candidate behaviours, each with its own number. Last-event-wins without proration is the
+    sibling row's 25 × 100.00 = 250_000¢. Keeping the created units is 10 × 100.00 = 100_000¢ — which
+    is also what `apply_units_immediately: false` would produce, since the event would then be stamped
+    2024-05-01T00:00:00Z and fall outside April's range. Prorating only the INCREMENT and billing the
+    base for the whole month would be 10 + 15 × 0.5 = 17.5 units too and is deliberately not
+    separable here; b13/graduated/arrears/prorated/increase-mid-period separates them, because there
+    the tier is chosen by the full units and the increment story would choose a different one.
+    Boundaries: in arrears `readjust_boundaries` returns the invoice_subscription's own window
+    untouched (fixed_charge_service.rb:242), so the fixed-charge fee and the subscription fee both
+    report 2024-04-01..2024-04-30 and both are asserted — the arrears control for the advance rows'
+    disagreement.
+
+- id: b13/standard/arrears/prorated/decrease-mid-period
+  block: B13
+  group: chg-std
+  key: b13_r2_std_arr_pro_dec
+  vars: {pia: false, pro: true, ub: 10, ua: 4}
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "true", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 70000
+      taxes_amount_cents: 0
+      total_amount_cents: 70000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_std_arr_pro_dec
+          item_type: AddOn
+          units: "4.0"
+          amount_cents: 70000
+          precise_unit_amount: 175.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The mirror of the prorated increase, and the reason the pair exists: proration is symmetric where
+    last-event-wins is not. Same two events, same 15/30 weights, units going DOWN:
+    `aggregation` = 10 × 0.5 + 4 × 0.5 = 7.000000, `full_units_number` = 4. StandardService prices
+    the aggregation: 7 × 100.00 = 700.00 → 70_000¢.
+    The reported fields invert in a way worth pinning: `units` is 4 and `precise_unit_amount` is
+    700/4 = 175.00, which is 1.75× the 100.00 in properties, because the fee divides a ten-unit
+    fortnight by a four-unit headline. This is the same
+    units-and-unit-amount disagreement the advance rows show at half rate, in the opposite direction,
+    and it is asserted rather than left implicit.
+    Candidates: last-event-wins un-prorated is the b13/standard/arrears/not-prorated sibling's
+    4 × 100.00 = 40_000¢. A high-water mark — weighting both halves at the OPENING 10 units — would be
+    10 × 100.00 = 100_000¢; that Lago does not floor a decrease at the period's opening value is the
+    substantive claim here. Applying the decrease retroactively from the start of the period would be
+    4 × 100.00 = 40_000¢ again.
+    Boundaries are the un-readjusted arrears window shared with the subscription fee, and both are
+    asserted.
+
+- id: b13/standard/arrears/prorated/subscription-override
+  block: B13
+  group: ovr-std
+  key: b13_r2_std_arr_pro_ovr
+  vars: {pia: false, pro: true, pu: 10, ou: 25, lu: 40}
+  axes: {charge_model: standard, pay_in_advance: "false", prorated: "true", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 175000
+      taxes_amount_cents: 0
+      total_amount_cents: 175000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_std_arr_pro_ovr
+          item_type: AddOn
+          units: "25.0"
+          amount_cents: 175000
+          precise_unit_amount: 70.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The prorated counterpart of b13/standard/arrears/not-prorated/subscription-override, and the
+    proration is what makes the assertion sharp: a blended figure records not just WHICH units won
+    but WHEN they started, so an event the row claims was never emitted cannot hide inside a
+    last-event-wins answer.
+    The 2024-04-16 request carries only `units` and `apply_units_immediately`, so
+    Subscriptions::UpdateOrOverrideFixedChargeService takes the units-only path
+    (fixed_charge_units_override_detection_concern.rb:26-31), writes a
+    Subscription::FixedChargeUnitsOverride of 25 and emits ONE event for this subscription at
+    2024-04-16T00:00:00Z (write_service.rb:19-32, units from
+    `fixed_charge.effective_units_for(subscription)`). The 2024-04-20 plan-level move to 40 units
+    really does change the plan, but EmitEventsService's bulk path scopes to
+    `.without_fixed_charge_units_override_for(fixed_charge)` (emit_events_service.rb:52) and this
+    subscription is excluded, so it receives NO third event.
+    April therefore holds exactly two events, 10 at 2024-04-01T00:00:01Z and 25 at 2024-04-16, and the
+    prorated aggregation is 10 × 15/30 + 25 × 15/30 = 17.500000 with `full_units_number` 25 →
+    17.5 × 100.00 = 1_750.00 → 175_000¢ at a `precise_unit_amount` of 1_750/25 = 70.00, identical to
+    b13/standard/arrears/prorated/increase-mid-period. That the two agree is the point: the override
+    behaves exactly like a plan-level increase FOR THIS SUBSCRIPTION and then stops tracking the plan.
+    Had the plan-level update reached it, the blend would be three-termed and visibly different:
+    10 × 15/30 + 25 × 4/30 + 40 × 11/30 = 5 + 3.333333 + 14.666667 = 23.000000 → 2_300.00 →
+    230_000¢ at `full_units_number` 40. Had the override never taken effect at all, the plan's own
+    stream would give 10 × 19/30 + 40 × 11/30 = 6.333333 + 14.666667 = 21.000000 → 210_000¢. Neither
+    is 175_000¢, so this number is reachable only if the override both applied and then survived.
+    `premium: true` because the endpoint is licence-gated outright
+    (update_or_override_fixed_charge_service.rb:21).
+
+- id: b13/standard/advance/prorated/increase-mid-period
+  block: B13
+  group: chg-std
+  key: b13_r2_std_adv_pro_inc
+  vars: {pia: true, pro: true, ub: 10, ua: 25}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "true", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 100000
+        taxes_amount_cents: 0
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_inc
+            item_type: AddOn
+            units: "10.0"
+            amount_cents: 100000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 75000
+        taxes_amount_cents: 0
+        total_amount_cents: 75000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_inc
+            units: "15.0"
+            amount_cents: 75000
+            precise_unit_amount: 50.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 250000
+        taxes_amount_cents: 0
+        total_amount_cents: 250000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_inc
+            units: "25.0"
+            amount_cents: 250000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    THREE invoices, from three different code paths, and the row exists to say that a mid-period
+    increase on a pay-in-advance fixed charge is billed as an incremental DELTA rather than
+    re-billed in full.
+    Invoice 0 is the activation invoice: the plan pays in arrears but a fixed charge pays in advance,
+    so Subscriptions::ActivateService enqueues Invoices::CreatePayInAdvanceFixedChargesJob at
+    `started_at + 1.second` (activate_service.rb:195-199). Its boundaries come from
+    `fixed_charge_pay_in_advance_interval(2024-04-01T00:00:01)` = 2024-04-01..2024-04-30, duration 30,
+    and because the subscription starts ON the period boundary the proration coefficient is
+    `days / duration` = (2024-04-30 - 2024-04-01 + 1) / 30 = 30/30 = 1.0
+    (build_pay_in_advance_fixed_charge_service.rb:108-113). `already_paid_units` is 0, so delta = 10
+    and the fee is 10 × 100.00 = 1_000.00 → 100_000¢ at a `precise_unit_amount` of 100.00. Starting at
+    the period start is what makes the prorated and not-prorated siblings AGREE on this invoice, which
+    isolates the `prorated` axis onto the change itself.
+    Invoice 1 is raised by the change. FixedCharges::UpdateService emits the new 25-unit event at
+    Time.current and then enqueues Invoices::CreateAllPayInAdvanceFixedChargesJob because
+    `apply_units_immediately && fixed_charge.pay_in_advance?` (update_service.rb:44-53).
+    Fees::BuildPayInAdvanceFixedChargeService recomputes the SAME April window,
+    finds the activation fee by exact string match on the stored
+    `properties->>'fixed_charges_from_datetime'/'…to_datetime'` and sums its units (:63-86) →
+    `already_paid_units` = 10, so `delta_units` = 25 - 10 = 15. The coefficient is now
+    (2024-04-30 - 2024-04-16 + 1) / 30 = 15/30 = 0.5, and the charge model is applied to
+    15 × 0.5 = 7.5 units: 7.5 × 100.00 = 750.00 → 75_000¢. As with every advance fee, `units` stores
+    the UN-prorated delta (:135) while `precise_unit_amount` is `amount / delta_units` = 750/15 =
+    50.00 — both asserted, since 75_000¢ alone cannot tell 7.5 units at 100.00 from 15 at 50.00. Its
+    period is APRIL: the delta tops up the period already paid for, it does not open a new one.
+    Invoice 2 is the ordinary periodic invoice for April, whose fixed-charge fee covers MAY because
+    `readjust_boundaries` replaces the April window with
+    `fixed_charge_pay_in_advance_interval(2024-05-01T01:00Z)` = 2024-05-01..2024-05-31, duration 31
+    (fixed_charge_service.rb:236-250). ProratedAggregationService finds no event inside May and falls
+    back to the last event before it (base_service.rb:39-47), the 25-unit one, whose effective span is
+    clamped to the period start and runs to `to_datetime + 1.day` → 31/31 = 1 → 25 × 100.00 =
+    2_500.00 → 250_000¢ at 100.00 per unit. April's `already_billed?` guard does not fire because it
+    is evaluated against the readjusted MAY dates (:57-74).
+    What this rules out, with numbers. Re-billing the full new quantity for April instead of the delta
+    would make invoice 1 read 25 × 0.5 × 100.00 = 125_000¢. Ignoring proration on the delta is the
+    sibling b13/standard/advance/not-prorated/increase-mid-period's 150_000¢. Prorating by days
+    ELAPSED rather than remaining would be 16/30 → 15 × 0.5333 × 100.00 = 80_000¢. And with
+    `apply_units_immediately: false` there would be only TWO invoices, the event landing at
+    2024-05-01T00:00:00Z instead — so `invoices: 3` is itself an assertion.
+
+- id: b13/standard/advance/prorated/decrease-mid-period
+  block: B13
+  group: chg-std
+  key: b13_r2_std_adv_pro_dec
+  vars: {pia: true, pro: true, ub: 10, ua: 4}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "true", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_dec
+            item_type: AddOn
+            units: "10.0"
+            amount_cents: 100000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_dec
+            units: "0.0"
+            amount_cents: 0
+            precise_unit_amount: 0.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 40000
+        taxes_amount_cents: 0
+        total_amount_cents: 40000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_dec
+            units: "4.0"
+            amount_cents: 40000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    A pay-in-advance decrease is NOT refunded, and it still raises an invoice. That is the whole row,
+    and the deliberately odd middle invoice is the assertion.
+    Invoice 0 is the activation invoice, 10 units at a coefficient of 30/30 = 1 → 100_000¢ for April,
+    as in the increase sibling.
+    Invoice 1 is raised by the change, because the trigger in FixedCharges::UpdateService is
+    `apply_units_immediately && pay_in_advance?` with no sign test (update_service.rb:51-53). Inside,
+    `delta_units` = 4 - 10 = -6, so `build_zero_amount_fee` runs instead of `build_delta_fee`
+    (build_pay_in_advance_fixed_charge_service.rb:29-35): a fee of 0¢ and 0 units carrying the April
+    boundaries, whose stated purpose in the source is "we still generate an invoice to document the
+    change". Invoices::CreatePayInAdvanceFixedChargesService saves it unconditionally
+    (create_pay_in_advance_fixed_charges_service.rb:30-33) and the zero-total invoice is FINALIZED
+    rather than closed, because `finalize_zero_amount_invoice` defaults to true on the billing entity
+    while the customer inherits it (transition_to_final_status_service.rb:31-37). All three of those —
+    invoice exists, fee exists, status finalized — are asserted, because each is a place where a
+    plausible implementation would produce nothing at all and the row would read `invoices: 2`.
+    Invoice 2 is the periodic April invoice whose fixed-charge fee covers MAY (readjusted window,
+    fixed_charge_service.rb:236-250). The last event before May is the 4-unit one, at a prorated ratio
+    of 31/31 = 1 → 4 × 100.00 = 400.00 → 40_000¢. So the customer paid for 10 units all April, gave 6
+    back on the 16th, got nothing for them, and starts paying for 4 in May.
+    Note what is NOT distinguishable here and why that is itself worth recording: this row's numbers
+    are IDENTICAL to b13/standard/advance/not-prorated/decrease-mid-period. A decrease never reaches
+    `build_delta_fee`, so the proration coefficient is never computed, and May is a full period either
+    way — proration is structurally invisible on an advance decrease. The pair is kept because the
+    axis cell is legal and the equality is the finding; b13/standard/advance/*/increase-mid-period is
+    where the flag separates them (75_000¢ against 150_000¢).
+    Candidates excluded: a pro-rata credit for the 6 released units would be -6 × 0.5 × 100.00 =
+    -30_000¢, a full credit -60_000¢, and re-billing the reduced quantity for April would be
+    4 × 0.5 × 100.00 = 20_000¢. All three would show on invoice 1 instead of 0¢.
+
+- id: b13/standard/advance/prorated/subscription-override
+  block: B13
+  group: ovr-std
+  key: b13_r2_std_adv_pro_ovr
+  vars: {pia: true, pro: true, pu: 10, ou: 25, lu: 40}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "true", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_ovr
+            item_type: AddOn
+            units: "10.0"
+            amount_cents: 100000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 75000
+        total_amount_cents: 75000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_ovr
+            units: "15.0"
+            amount_cents: 75000
+            precise_unit_amount: 50.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 250000
+        taxes_amount_cents: 0
+        total_amount_cents: 250000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_pro_ovr
+            units: "25.0"
+            amount_cents: 250000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    The override cell where the override has to survive TWICE — once against the plan-level event
+    stream and once against the plan-level INVOICE trigger, which are two separate filters in two
+    separate files.
+    Invoices 0 and 1 are the activation invoice (10 units, coefficient 30/30 = 1 → 100_000¢) and the
+    override invoice. For the second, Subscriptions::FixedChargeUnitsOverrides::WriteService writes
+    the 25-unit override row, emits one event for this subscription, and — because
+    `apply_units_immediately && fixed_charge.pay_in_advance? && subscription.active?` —
+    enqueues Invoices::CreatePayInAdvanceFixedChargesJob itself (write_service.rb:27-38). The delta is
+    25 - 10 = 15 against the April fee already on the books, at a coefficient of 15/30, so
+    15 × 0.5 × 100.00 = 750.00 → 75_000¢ with `units` 15 and `precise_unit_amount` 50.00: byte for
+    byte the same fee b13/standard/advance/prorated/increase-mid-period gets from the PLAN endpoint.
+    That equality is deliberate — the override is a units change like any other for the subscription
+    it names.
+    The 2024-04-20 plan-level move to 40 units is where the row earns its keep. It succeeds, and the
+    plan is genuinely at 40 afterwards, but this subscription gets neither an event nor an invoice:
+    EmitEventsService's bulk scope excludes it
+    (`.without_fixed_charge_units_override_for`, emit_events_service.rb:52) and
+    Invoices::CreateAllPayInAdvanceFixedChargesJob applies the same scope before enqueuing per
+    subscription (create_all_pay_in_advance_fixed_charges_job.rb:19-25). So `invoices: 3`, not 4.
+    Invoice 2 is the periodic invoice; the last event before the readjusted MAY window is still the
+    25-unit override → 25 × 100.00 = 250_000¢ for 2024-05-01..2024-05-31, beside an APRIL subscription
+    fee.
+    Two counterfactuals, both reachable by a one-line change. If only the event filter existed and not
+    the job filter, there would be a FOURTH invoice for delta 40 - 25 = 15 at (2024-04-30 -
+    2024-04-20 + 1)/30 = 11/30 → 15 × 0.366667 × 100.00 = 55_000¢. If neither filter existed, that
+    fourth invoice would appear AND May would bill 40 × 100.00 = 400_000¢ instead of 250_000¢.
+    `premium: true`: the subscription endpoint is licence-gated
+    (update_or_override_fixed_charge_service.rb:21).
+
+- id: b13/standard/advance/not-prorated/increase-mid-period
+  block: B13
+  group: chg-std
+  key: b13_r2_std_adv_flat_inc
+  vars: {pia: true, pro: false, ub: 10, ua: 25}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "false", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_inc
+            item_type: AddOn
+            units: "10.0"
+            amount_cents: 100000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 150000
+        total_amount_cents: 150000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_inc
+            units: "15.0"
+            amount_cents: 150000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 250000
+        taxes_amount_cents: 0
+        total_amount_cents: 250000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_inc
+            units: "25.0"
+            amount_cents: 250000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    The control for b13/standard/advance/prorated/increase-mid-period: same units, same dates, same
+    100.00 per unit, `prorated` flipped off, and the pair differs on EXACTLY ONE of the three
+    invoices — which is what makes the difference attributable to the flag.
+    Invoice 0, activation: `proration_coefficient` is hard-coded to 1 when the charge is not prorated
+    (build_pay_in_advance_fixed_charge_service.rb:108-113), so delta 10 → 10 × 100.00 = 1_000.00 →
+    100_000¢. The prorated sibling reads the same, because its own coefficient is 30/30 = 1 for a
+    period-start subscription. Identical by construction.
+    Invoice 1, the change: `already_paid_units` = 10 from the activation fee's stored April boundaries
+    (:63-86) → `delta_units` = 15, coefficient 1 → 15 × 100.00 = 1_500.00 → 150_000¢ at a
+    `precise_unit_amount` of 100.00. This is the axis: the customer is charged fifteen whole
+    unit-months on the 16th for fifteen days of them. The prorated sibling charges 75_000¢ here, so
+    the pair brackets the behaviour at 350_000¢ against 425_000¢ of April-and-May in total.
+    Invoice 2, periodic: SimpleAggregationService returns `events_in_range.last.units`
+    (simple_aggregation_service.rb:6-9) over the READJUSTED May window
+    (fixed_charge_service.rb:236-250). No event falls inside May, so `events_in_range` is the
+    last-before-range fallback (base_service.rb:39-47), the 25-unit event → 25 × 100.00 = 2_500.00 →
+    250_000¢ dated 2024-05-01..2024-05-31, beside an APRIL subscription fee on the same invoice. Also
+    identical to the prorated sibling, since a full period prorates to 1.
+    Excluded, with numbers: re-billing the whole new quantity for April would make invoice 1 read
+    250_000¢, not 150_000¢ — and would double-bill the original ten units. Billing nothing until the
+    next period would make it 0¢ and is what `apply_units_immediately: false` does, with `invoices: 2`
+    and a May fee of 250_000¢ instead. Treating the delta as prorated is the sibling's 75_000¢.
+
+- id: b13/standard/advance/not-prorated/decrease-mid-period
+  block: B13
+  group: chg-std
+  key: b13_r2_std_adv_flat_dec
+  vars: {pia: true, pro: false, ub: 10, ua: 4}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "false", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_dec
+            item_type: AddOn
+            units: "10.0"
+            amount_cents: 100000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_dec
+            units: "0.0"
+            amount_cents: 0
+            precise_unit_amount: 0.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 40000
+        taxes_amount_cents: 0
+        total_amount_cents: 40000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_dec
+            units: "4.0"
+            amount_cents: 40000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    Deliberately identical, invoice for invoice, to b13/standard/advance/prorated/decrease-mid-period,
+    and the equality is the finding rather than a duplicated row.
+    A negative `delta_units` short-circuits at
+    build_pay_in_advance_fixed_charge_service.rb:29-35 — `build_zero_amount_fee` — BEFORE
+    `build_delta_fee` ever computes `proration_coefficient` (:108-113). So the `prorated` flag is
+    unreachable on a decrease: there is no code path on which it could change the answer. The pair of
+    cells is written out because both are legal and a reader comparing them would otherwise assume the
+    suite had simply not exercised one; the assertion is that the two agree at every field.
+    Invoice 0: activation, 10 units, coefficient 1 → 100_000¢ for 2024-04-01..2024-04-30.
+    Invoice 1: the change. delta = 4 - 10 = -6 → a 0¢, 0-unit fee documenting the change on the April
+    boundaries, on a zero-total invoice that is FINALIZED (billing entity's
+    `finalize_zero_amount_invoice` defaults to true and the customer inherits it,
+    transition_to_final_status_service.rb:31-37). No credit note, no refund, no negative fee: Lago's
+    comment at :29-30 says as much, and this is where the suite records it.
+    Invoice 2: the periodic April invoice, whose fixed-charge fee covers the readjusted MAY window.
+    SimpleAggregationService's last event before May is the 4-unit one → 4 × 100.00 = 400.00 →
+    40_000¢, dated 2024-05-01..2024-05-31, next to an April subscription fee. That the subscription
+    fee and the fixed-charge fee on ONE invoice name different months is asserted here as everywhere
+    in the advance half of the block.
+    Excluded: a credit for the six released units would be -6 × 100.00 = -60_000¢ on invoice 1; a
+    prorated credit -30_000¢; re-billing the remaining four for April 40_000¢; and suppressing the
+    invoice entirely would give `invoices: 2`.
+
+- id: b13/standard/advance/not-prorated/subscription-override
+  block: B13
+  group: ovr-std
+  key: b13_r2_std_adv_flat_ovr
+  vars: {pia: true, pro: false, pu: 10, ou: 25, lu: 40}
+  axes: {charge_model: standard, pay_in_advance: "true", prorated: "false", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 100000
+        total_amount_cents: 100000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_ovr
+            item_type: AddOn
+            units: "10.0"
+            amount_cents: 100000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 150000
+        total_amount_cents: 150000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_ovr
+            units: "15.0"
+            amount_cents: 150000
+            precise_unit_amount: 100.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 250000
+        taxes_amount_cents: 0
+        total_amount_cents: 250000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_std_adv_flat_ovr
+            units: "25.0"
+            amount_cents: 250000
+            precise_unit_amount: 100.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    The un-prorated advance override, and the row that shows the override's protection is not a
+    proration artefact: with the coefficient pinned at 1 the numbers are round, so the only thing
+    left to explain them is WHICH events reached this subscription.
+    Invoice 0: activation, delta 10, coefficient 1 (not prorated,
+    build_pay_in_advance_fixed_charge_service.rb:108-113) → 10 × 100.00 = 100_000¢, April.
+    Invoice 1: the 2024-04-16 subscription-level override to 25 units. The body carries only `units`
+    and `apply_units_immediately`, so Subscriptions::UpdateOrOverrideFixedChargeService takes the
+    units-only path (fixed_charge_units_override_detection_concern.rb:26-31) and
+    FixedChargeUnitsOverrides::WriteService emits one event for this subscription and enqueues the
+    pay-in-advance invoice job itself (write_service.rb:27-38). `already_paid_units` = 10 → delta 15
+    → 15 × 100.00 = 150_000¢, `precise_unit_amount` 100.00, April boundaries. Same fee the PLAN
+    endpoint produces in b13/standard/advance/not-prorated/increase-mid-period.
+    The 2024-04-20 plan-level move to 40 units then does nothing to this subscription — no event
+    (emit_events_service.rb:52) and no invoice
+    (create_all_pay_in_advance_fixed_charges_job.rb:19-25) — so the count stays at 3.
+    Invoice 2: periodic. The last event before the readjusted MAY window is the 25-unit override →
+    25 × 100.00 = 250_000¢ for 2024-05-01..2024-05-31, beside an April subscription fee.
+    The discriminating numbers. Had the plan-level update reached this subscription there would be a
+    FOURTH invoice at delta 40 - 25 = 15 → 150_000¢, and May would read 40 × 100.00 = 400_000¢. Had
+    the override been rejected or silently promoted to a plan-level write, invoice 1 would still be
+    150_000¢ (25 - 10 = 15 either way, which is why the plan-level event matters more than the
+    override event here) but May would again be 400_000¢ — so the May figure, not the April delta, is
+    what proves the override row exists and is still winning.
+    `premium: true`: `forbidden_failure! unless License.premium?`
+    (update_or_override_fixed_charge_service.rb:21).
+
+# The graduated rows below reuse the ranges of the `units_change: none` graduated rows verbatim —
+# 0..30 at 10.00/unit + 100.00 flat, then 31..∞ at 5.00/unit + 50.00 flat — so their numbers are
+# directly comparable with them. The ranges are NOT adjacent (31 = 30 + 1), so `adjacent_ranges?` is
+# false and RangeGraduatedService bills `to_value - from_value + 1` in the upper range
+# (amount_details/range_graduated_service.rb:53-65). The flat amounts are what make the tiering
+# visible at all: they are what a "priced everything at tier 1" implementation would omit.
+
+- id: b13/graduated/arrears/not-prorated/increase-mid-period
+  block: B13
+  group: chg-grad
+  key: b13_r2_grad_arr_flat_inc
+  vars: {pia: false, pro: false, ub: 10, ua: 40}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "false", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 50000
+      taxes_amount_cents: 0
+      total_amount_cents: 50000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_grad_arr_flat_inc
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 50000
+          precise_unit_amount: 12.5
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    A not-prorated graduated fixed charge does not blend and does not accumulate: the last event's
+    units are re-tiered from zero for the whole period. SimpleAggregationService returns
+    `events_in_range.last.units` (simple_aggregation_service.rb:6-9) over the two April events
+    (10 at 2024-04-01T00:00:01Z, 40 at 2024-04-16T00:00:00Z, ordered by created_at,
+    base_service.rb:39-47) → both `aggregation` and `full_units_number` are 40, and the ordinary
+    ChargeModels::GraduatedService prices them. Tier 1 caps at its `to_value` 30 → 30 × 10.00 = 300.00
+    plus 100.00 flat = 400.00. Tier 2's `to_value` is null so the effective total is 40 →
+    40 - 31 + 1 = 10 units → 10 × 5.00 = 50.00 plus 50.00 flat = 100.00. Total 500.00 → 50_000¢,
+    `precise_unit_amount` = 500.00 / 40 = 12.50 (graduated_service.rb:63-68 divides by
+    `full_units_number`).
+    The units change is what makes the tier boundary do work here: the pre-change quantity, 10 units,
+    sits entirely inside tier 1 and would bill 10 × 10.00 + 100.00 = 200.00 → 20_000¢, with ONE flat
+    amount instead of two. So the number separates four behaviours. 50_000¢: last event wins, tiered
+    from zero. 20_000¢: created units kept — and 20_000¢ is equally what
+    `apply_units_immediately: false` yields, the event landing at 2024-05-01T00:00:00Z outside April's
+    range. 70_000¢: both quantities tiered independently and summed (200.00 + 500.00). 30_000¢:
+    only the INCREMENT tiered, 40 - 10 = 30 units → 300.00 + 100.00 flat, which is what an
+    advance-style delta would compute — and is exactly what
+    b13/graduated/advance/not-prorated/increase-mid-period does bill on its own middle invoice.
+    Boundaries: arrears, so `readjust_boundaries` leaves the invoice's own window alone
+    (fixed_charge_service.rb:242) and the fixed-charge fee shares 2024-04-01..2024-04-30 with the
+    subscription fee. Both asserted.
+
+- id: b13/graduated/arrears/not-prorated/decrease-mid-period
+  block: B13
+  group: chg-grad
+  key: b13_r2_grad_arr_flat_dec
+  vars: {pia: false, pro: false, ub: 40, ua: 10}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "false", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 20000
+      taxes_amount_cents: 0
+      total_amount_cents: 20000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_grad_arr_flat_dec
+          item_type: AddOn
+          units: "10.0"
+          amount_cents: 20000
+          precise_unit_amount: 20.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The mirror of the graduated increase, and the direction that proves the aggregation is
+    last-event-wins rather than a high-water mark — a distinction that costs a whole TIER here, not
+    just some units.
+    The same two events are in range, the later one carries 10 units, and SimpleAggregationService
+    takes it (simple_aggregation_service.rb:6). GraduatedService then tiers 10 from zero: tier 1's
+    `to_value` 30 exceeds 10, so `effective_total` is 10 → 10 × 10.00 = 100.00 plus 100.00 flat =
+    200.00, and `amount_details` breaks out of the range loop because `range[:to_value] >= units`
+    (graduated_service.rb:11-18) — tier 2 is never entered and its 50.00 flat is never charged. Total
+    200.00 → 20_000¢, `precise_unit_amount` = 200.00 / 10 = 20.00.
+    That the SECOND flat amount disappears is the sharp part. A high-water-mark aggregation would keep
+    40 units, re-enter tier 2 and bill 50_000¢ — 30_000¢ more, of which 50.00 is pure flat fee that no
+    unit justifies. Blending the period (which the prorated sibling does) gives
+    40 × 0.5 + 10 × 0.5 = 25 units, still inside tier 1, at 35_000¢. Crediting the released units
+    would give a negative fee, which fixed_charge_service.rb:87-90 clamps to 0 in any case.
+    Read with b13/graduated/arrears/not-prorated/increase-mid-period, the pair pins the aggregation
+    exactly: 10 → 40 bills 50_000¢ and 40 → 10 bills 20_000¢, so neither the maximum nor the sum nor
+    the opening value is what Lago uses. One row alone cannot say that.
+    Boundaries are the un-readjusted arrears window shared with the subscription fee; both asserted.
+
+- id: b13/graduated/arrears/not-prorated/subscription-override
+  block: B13
+  group: ovr-grad
+  key: b13_r2_grad_arr_flat_ovr
+  vars: {pia: false, pro: false, pu: 10, ou: 40, lu: 25}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "false", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 50000
+      taxes_amount_cents: 0
+      total_amount_cents: 50000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_grad_arr_flat_ovr
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 50000
+          precise_unit_amount: 12.5
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The override cell chosen so that the plan's later value lands in a DIFFERENT TIER from the
+    override's — 25 units is inside tier 1, 40 crosses into tier 2 — so the assertion is not a units
+    comparison but a price-structure one, and a leak would move the flat-fee count as well as the
+    amount.
+    The 2024-04-16 request is units-only, so Subscriptions::UpdateOrOverrideFixedChargeService writes
+    a Subscription::FixedChargeUnitsOverride of 40 and emits one event for this subscription
+    (update_or_override_fixed_charge_service.rb:41-58 → write_service.rb:19-32). The 2024-04-20
+    plan-level move to 25 units succeeds, the plan really is at 25 afterwards, and this subscription is
+    skipped: EmitEventsService's bulk scope is `.without_fixed_charge_units_override_for(fixed_charge)`
+    (emit_events_service.rb:52).
+    So the last April event is the 40-unit override, SimpleAggregationService returns 40, and
+    GraduatedService bills both tiers: 30 × 10.00 + 100.00 = 400.00, then 40 - 31 + 1 = 10 units at
+    5.00 + 50.00 flat = 100.00. Total 500.00 → 50_000¢, `precise_unit_amount` 500.00 / 40 = 12.50, and
+    150.00 of that is flat fees — the second of which exists only because tier 2 was reached.
+    Had the plan-level update reached this subscription, its 25 units would be the last event and the
+    fee would be 25 × 10.00 + 100.00 = 350.00 → 35_000¢ with a SINGLE flat amount. Had the override
+    never applied, the stream would be 10 then 25 and the answer would be 35_000¢ too — so 50_000¢ is
+    reachable only if the override took effect AND survived the later plan change, and the 15_000¢ gap
+    is not a rounding-sized difference that a wrong derivation could land on by accident.
+    `premium: true`: the endpoint is licence-gated (update_or_override_fixed_charge_service.rb:21).
+
+- id: b13/graduated/arrears/prorated/increase-mid-period
+  block: B13
+  group: chg-grad
+  key: b13_r2_grad_arr_pro_inc
+  vars: {pia: false, pro: true, ub: 10, ua: 40}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "true", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 36875
+      taxes_amount_cents: 0
+      total_amount_cents: 36875
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_grad_arr_pro_inc
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 36875
+          precise_unit_amount: 9.21875
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The only cell in the block where a units change and a tier boundary and proration all bear on one
+    number, and it is the one place the charge model itself is different: `graduated` + `prorated` is
+    the sole combination for which ChargeModels::Factory swaps in ProratedGraduatedService
+    (factory.rb:40-45).
+    Step 1, the aggregation. ProratedAggregationService weights the two April events by days in force
+    (prorated_aggregation_service.rb:119-154): 10 units for 2024-04-01..2024-04-16 → 10 × 15/30 = 5,
+    then 40 units for 2024-04-16..2024-05-01 → 40 × 15/30 = 20. `aggregation` = 25.000000, while
+    `full_units_number` is the LAST event's units, 40 (:22).
+    Step 2, and this is the part worth pinning: the fixed-charge aggregator's `per_event_aggregation`
+    does NOT return one entry per event. It returns two one-element arrays,
+    `event_aggregation = [full_units_number]` = [40] and
+    `event_prorated_aggregation = [aggregation]` = [25] (:27-34) — the whole period collapsed into a
+    single synthetic "event". So ProratedGraduatedService sees one 40-unit event whose prorated value
+    is 25, and the per-event structure the class was written for (charges, where each event is a
+    separate row) is absent here. The consequence is that the tiering is driven by the period TOTAL,
+    not by the order the units arrived in.
+    Step 3, the pricing (prorated_graduated_service.rb:34-93). `full_sum` becomes 40, `prorated_sum`
+    25; tier 1's `to_value` is 30, so `overflow` = 40 - 30 = 10 full units spill upward and the
+    prorated sum is split by `prorated_coefficient` = 25.fdiv(40) = 0.625: tier 1 keeps
+    30 × 0.625 = 18.75 prorated units at 10.00 = 187.50, tier 2 takes 10 × 0.625 = 6.25 at 5.00 =
+    31.25. `result_with_flat_amount` (:112-123) then adds every flat amount up to the highest range
+    REACHED by the FULL units, in full and un-prorated: 100.00 + 50.00 = 150.00. Total 368.75 →
+    36_875¢, `precise_unit_amount` = 368.75 / 40 = 9.21875 (:103-108 divides by the full-units sum).
+    Four candidates, all separated by these numbers. Prorating first and tiering the result would put
+    25 units wholly in tier 1 → 25 × 10.00 + 100.00 = 350.00 → 35_000¢ (and lose the second flat fee).
+    Ignoring proration is the sibling b13/graduated/arrears/not-prorated/increase-mid-period's
+    500.00 → 50_000¢. Prorating the flat amounts too would give 187.50 + 31.25 + 93.75 = 312.50 →
+    31_250¢. And a high-water aggregation, weighting both halves of April at 40 units, would give a
+    coefficient of 1 and reproduce the un-prorated 50_000¢ — so the 36_875¢ here also says the earlier
+    ten units were not silently promoted.
+    Boundaries: arrears, so nothing is readjusted and both fees report 2024-04-01..2024-04-30.
+
+- id: b13/graduated/arrears/prorated/decrease-mid-period
+  block: B13
+  group: chg-grad
+  key: b13_r2_grad_arr_pro_dec
+  vars: {pia: false, pro: true, ub: 40, ua: 10}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "true", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 35000
+      taxes_amount_cents: 0
+      total_amount_cents: 35000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_grad_arr_pro_dec
+          item_type: AddOn
+          units: "10.0"
+          amount_cents: 35000
+          precise_unit_amount: 35.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The row that shows the prorated-graduated coefficient can exceed 1, and that the tier is chosen by
+    the LAST event's units rather than by the period's unit-months or by the maximum held.
+    The aggregation is 40 × 15/30 + 10 × 15/30 = 30.000000 unit-months, `full_units_number` = 10.
+    So `per_event_aggregation` hands ProratedGraduatedService `event_aggregation = [10]` and
+    `event_prorated_aggregation = [30]` (prorated_aggregation_service.rb:27-34) — a "prorated" figure
+    THREE TIMES the full one, because half a month at 40 units outweighs the closing 10.
+    In ProratedGraduatedService (:34-93), `full_sum` becomes 10 and `prorated_sum` 30. Tier selection
+    runs off `full_sum`: 10 < tier 1's `to_value` of 30, so `skip_overflow_calculation?` is true
+    (:163-167), no overflow is computed and the loop exits with everything in tier 1. The whole
+    prorated sum is then priced at tier 1's rate: 30 × 10.00 = 300.00, and
+    `result_with_flat_amount` adds only tier 1's flat amount because `max_full_units` (10) is inside
+    it (:112-123). Total 350.00 → 35_000¢. `precise_unit_amount` = 350.00 / 10 = 35.00 — three and a
+    half times the 10.00 tier rate — and `units` is 10, so the fee openly reports ten units at a
+    price that thirty unit-months earned. Both fields are asserted; the amount alone cannot show it.
+    That combination is the substantive claim, and it is a deliberate asymmetry with the increase
+    sibling: 30 prorated unit-months are billed at TIER 1 here while 25 prorated unit-months are split
+    across tiers there, purely because the closing quantity differs.
+    Candidates. Ignoring proration is 10 × 10.00 + 100.00 = 200.00 → 20_000¢, the
+    b13/graduated/arrears/not-prorated/decrease-mid-period sibling. A high-water aggregation —
+    weighting both halves at the OPENING 40 units — gives prorated 40 and full 40, coefficient 1, and
+    crosses into tier 2: 30 × 10.00 + 10 × 5.00 + 150.00 of flats = 500.00 → 50_000¢. Prorating first
+    and then tiering gives 30 units, which lands exactly on tier 1's boundary and so reproduces
+    350.00 — indistinguishable here by construction, and separated by the increase sibling where the
+    same alternative reads 35_000¢ against 36_875¢. Prorating the flat amount too would be
+    300.00 + 50.00 = 350.00, likewise indistinguishable here and separated by the increase sibling
+    (150.00 of flats against a prorated 93.75).
+    Boundaries: arrears, un-readjusted, shared with the subscription fee; both asserted.
+
+- id: b13/graduated/arrears/prorated/subscription-override
+  block: B13
+  group: ovr-grad
+  key: b13_r2_grad_arr_pro_ovr
+  vars: {pia: false, pro: true, pu: 10, ou: 40, lu: 25}
+  axes: {charge_model: graduated, pay_in_advance: "false", prorated: "true", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 36875
+      taxes_amount_cents: 0
+      total_amount_cents: 36875
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_grad_arr_pro_ovr
+          item_type: AddOn
+          units: "40.0"
+          amount_cents: 36875
+          precise_unit_amount: 9.21875
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The strictest override assertion in the block, because both of the numbers that describe the
+    period — the prorated total AND the tier-selecting full units — change if a single unwanted event
+    reaches this subscription, and they change in different directions.
+    The units-only PUT on 2024-04-16 writes a Subscription::FixedChargeUnitsOverride of 40 and emits
+    one event for this subscription (update_or_override_fixed_charge_service.rb:41-58 →
+    write_service.rb:19-32). The plan-level PUT on 2024-04-20 moves the plan to 25 units and skips this
+    subscription (`.without_fixed_charge_units_override_for`, emit_events_service.rb:52).
+    So April holds two events, 10 at 2024-04-01T00:00:01Z and 40 at 2024-04-16, giving
+    `aggregation` = 10 × 15/30 + 40 × 15/30 = 25.000000 and `full_units_number` = 40 — identical to
+    b13/graduated/arrears/prorated/increase-mid-period, so the fee is identical too:
+    coefficient 25.fdiv(40) = 0.625, tier 1 30 × 0.625 × 10.00 = 187.50, tier 2
+    10 × 0.625 × 5.00 = 31.25, flats 100.00 + 50.00 un-prorated = 150.00 → 368.75 → 36_875¢ at
+    `precise_unit_amount` 368.75 / 40 = 9.21875.
+    Had the plan-level event reached this subscription, April would hold THREE events and both inputs
+    would move: `aggregation` = 10 × 15/30 + 40 × 4/30 + 25 × 11/30 = 5 + 5.333333 + 9.166667 =
+    19.500000 and `full_units_number` = 25, which no longer reaches tier 2 at all — coefficient
+    19.5/25 = 0.78, 25 × 0.78 × 10.00 = 195.00 plus tier 1's flat 100.00 only = 295.00 → 29_500¢.
+    Had the override never applied, the stream would be 10 then 25 →
+    aggregation 10 × 19/30 + 25 × 11/30 = 6.333333 + 9.166667 = 15.500000, full 25, coefficient 0.62 →
+    25 × 0.62 × 10.00 = 155.00 + 100.00 = 255.00 → 25_500¢. Three distinct amounts and two distinct
+    flat-fee counts, so 36_875¢ is reachable only if the override applied and then survived.
+    `premium: true`: licence-gated endpoint (update_or_override_fixed_charge_service.rb:21).
+
+# `graduated` + `pay_in_advance` + `prorated` is rejected outright (FixedCharge#validate_prorated,
+# fixed_charge.rb:88-96), so the three rows below are graduated's only advance cells and they are
+# un-prorated by construction. They use 20 units as the starting quantity rather than 10, so every
+# delta divides its amount exactly and no expectation depends on BigDecimal division precision.
+
+- id: b13/graduated/advance/not-prorated/increase-mid-period
+  block: B13
+  group: chg-grad
+  key: b13_r2_grad_adv_inc
+  vars: {pia: true, pro: false, ub: 20, ua: 40}
+  axes: {charge_model: graduated, pay_in_advance: "true", prorated: "false", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 30000
+        total_amount_cents: 30000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_inc
+            item_type: AddOn
+            units: "20.0"
+            amount_cents: 30000
+            precise_unit_amount: 15.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 30000
+        total_amount_cents: 30000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_inc
+            units: "20.0"
+            amount_cents: 30000
+            precise_unit_amount: 15.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 50000
+        taxes_amount_cents: 0
+        total_amount_cents: 50000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_inc
+            units: "40.0"
+            amount_cents: 50000
+            precise_unit_amount: 12.5
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    The row where the advance delta and a tiered charge model meet, and the answer is the one a
+    reviewer is least likely to guess: the DELTA is priced as if it were a fresh subscription, from
+    tier 1 upward, INCLUDING tier 1's flat amount a second time.
+    Invoice 0, activation: `already_paid_units` = 0, delta = 20, coefficient 1 (not prorated). The
+    delta is handed to ChargeModels::Factory through a synthetic aggregation result whose
+    `aggregation` and `full_units_number` are both 20
+    (build_pay_in_advance_fixed_charge_service.rb:148-164) → GraduatedService tiers 20: tier 1's
+    `to_value` 30 exceeds 20 so `effective_total` is 20 → 20 × 10.00 = 200.00 plus 100.00 flat =
+    300.00, and the range loop breaks (graduated_service.rb:11-18). 300.00 → 30_000¢,
+    `precise_unit_amount` = 300/20 = 15.00.
+    Invoice 1, the change: `already_paid_units` = 20 read off invoice 0's fee by exact April-boundary
+    match (:63-86) → delta = 20 again, and the SAME calculation runs on it → another 300.00 →
+    30_000¢, `precise_unit_amount` 15.00. So the customer pays 100.00 of tier-1 flat fee TWICE inside
+    one April, and both 20-unit blocks are priced at tier 1's 10.00 even though the account is now at
+    40 units and its 31st..40th units are contractually worth 5.00.
+    The incremental price a reader would expect is `cost(40) - cost(20)`, i.e.
+    (30 × 10.00 + 100.00 + 10 × 5.00 + 50.00) - 300.00 = 500.00 - 300.00 = 200.00 → 20_000¢. Lago
+    bills 30_000¢, 50% more, and the whole 100.00 excess is the re-charged flat amount. April therefore
+    costs 60_000¢ in advance for a position that the ARREARS graduated rows bill at 50_000¢ for the
+    same 40 closing units — the pay_in_advance axis is worth 10_000¢ here, all of it flat fee.
+    Invoice 2, periodic: SimpleAggregationService over the readjusted MAY window
+    (fixed_charge_service.rb:236-250) takes the last event's 40 units and tiers them ONCE:
+    30 × 10.00 + 100.00 = 400.00, then 40 - 31 + 1 = 10 units × 5.00 + 50.00 = 100.00 → 500.00 →
+    50_000¢ at 12.50 per unit, dated 2024-05-01..2024-05-31 beside an APRIL subscription fee. So the
+    same 40 units cost 60_000¢ in the month they were acquired and 50_000¢ in the next one, which is
+    the clearest statement of the delta-pricing behaviour the block can make.
+    Also excluded, on invoice 1: 20_000¢ (`cost(40) - cost(20)`, the incremental price), 50_000¢ (the
+    full new quantity re-billed for April, which would double-charge the first twenty units), 10_000¢
+    (the delta priced entirely at the marginal tier the account now sits in, 20 × 5.00 with no flat),
+    and `invoices: 2` — which is what `apply_units_immediately: false` gives, the event landing at
+    2024-05-01T00:00:00Z instead.
+
+- id: b13/graduated/advance/not-prorated/decrease-mid-period
+  block: B13
+  group: chg-grad
+  key: b13_r2_grad_adv_dec
+  vars: {pia: true, pro: false, ub: 40, ua: 20}
+  axes: {charge_model: graduated, pay_in_advance: "true", prorated: "false", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 50000
+        total_amount_cents: 50000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_dec
+            item_type: AddOn
+            units: "40.0"
+            amount_cents: 50000
+            precise_unit_amount: 12.5
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 0
+        taxes_amount_cents: 0
+        total_amount_cents: 0
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_dec
+            units: "0.0"
+            amount_cents: 0
+            precise_unit_amount: 0.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 30000
+        taxes_amount_cents: 0
+        total_amount_cents: 30000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_dec
+            units: "20.0"
+            amount_cents: 30000
+            precise_unit_amount: 15.0
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    The graduated mirror of the standard advance decrease, and the tiering makes the "no refund" rule
+    cost visibly more: the units given back are the ones in the CHEAP tier, but nothing is credited at
+    all.
+    Invoice 0, activation: delta 40, coefficient 1 → GraduatedService tiers 40 →
+    30 × 10.00 + 100.00 = 400.00 and 40 - 31 + 1 = 10 units × 5.00 + 50.00 = 100.00 → 500.00 →
+    50_000¢ at 12.50 per unit, for 2024-04-01..2024-04-30.
+    Invoice 1, the change: `delta_units` = 20 - 40 = -20, so `build_zero_amount_fee` runs before the
+    charge model is ever consulted (build_pay_in_advance_fixed_charge_service.rb:29-35) — a 0¢,
+    0-unit fee on April's boundaries, on an invoice that is finalized rather than closed
+    (transition_to_final_status_service.rb:31-37). The charge model is irrelevant on a decrease, which
+    is why this fee is byte-identical to the standard rows' middle invoice.
+    Invoice 2, periodic: the last event before the readjusted MAY window carries 20 units →
+    20 × 10.00 + 100.00 = 300.00 → 30_000¢ at 15.00 per unit, dated 2024-05-01..2024-05-31, and tier 2
+    is never entered so its 50.00 flat disappears. So April was paid at 50_000¢ and May costs 30_000¢
+    for a position reduced on the 16th of April: 20_000¢ of tier-2-and-flat pricing the customer keeps
+    paying for a fortnight after giving the units up.
+    Excluded: a credit for the released units at their marginal price would be
+    -(10 × 5.00 + 50.00 + 10 × 10.00) = -20_000¢ on invoice 1; a full credit of the difference
+    500.00 - 300.00 = -20_000¢ likewise; re-billing the reduced quantity for April 30_000¢; and
+    suppressing the invoice would give `invoices: 2`.
+
+- id: b13/graduated/advance/not-prorated/subscription-override
+  block: B13
+  group: ovr-grad
+  key: b13_r2_grad_adv_ovr
+  vars: {pia: true, pro: false, pu: 20, ou: 40, lu: 60}
+  axes: {charge_model: graduated, pay_in_advance: "true", prorated: "false", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        invoice_type: subscription
+        fees_amount_cents: 30000
+        total_amount_cents: 30000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_ovr
+            item_type: AddOn
+            units: "20.0"
+            amount_cents: 30000
+            precise_unit_amount: 15.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 1}
+        invoice_type: subscription
+        fees_amount_cents: 30000
+        total_amount_cents: 30000
+        fees_count: 1
+        fees:
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_ovr
+            units: "20.0"
+            amount_cents: 30000
+            precise_unit_amount: 15.0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+      - select: {index: 2}
+        invoice_type: subscription
+        status: finalized
+        fees_amount_cents: 50000
+        taxes_amount_cents: 0
+        total_amount_cents: 50000
+        fees_count: 2
+        fees:
+          - fee_type: subscription
+            amount_cents: 0
+            from_date: "2024-04-01T00:00:00Z"
+            to_date: "2024-04-30T23:59:59Z"
+          - fee_type: fixed_charge
+            item_code: b13_r2_grad_adv_ovr
+            units: "40.0"
+            amount_cents: 50000
+            precise_unit_amount: 12.5
+            from_date: "2024-05-01T00:00:00Z"
+            to_date: "2024-05-31T23:59:59Z"
+  math: >-
+    Graduated's only advance override cell, and it asserts the override against BOTH plan-level
+    mechanisms at once: the event stream and the bulk invoice trigger.
+    Invoice 0, activation: delta 20 at coefficient 1 → tier 1 only → 20 × 10.00 + 100.00 = 300.00 →
+    30_000¢ at 15.00 per unit.
+    Invoice 1, the 2024-04-16 units-only override to 40. WriteService writes the
+    Subscription::FixedChargeUnitsOverride, emits ONE event for this subscription, and enqueues
+    Invoices::CreatePayInAdvanceFixedChargesJob itself (write_service.rb:27-38). `already_paid_units`
+    = 20 → delta 20 → the delta is tiered from zero again → 300.00 → 30_000¢, `precise_unit_amount`
+    15.00, April boundaries. Identical to the plan-endpoint fee in
+    b13/graduated/advance/not-prorated/increase-mid-period, including the re-charged 100.00 flat.
+    The 2024-04-20 plan-level move to 60 units changes the plan and does nothing here: no event
+    (`.without_fixed_charge_units_override_for`, emit_events_service.rb:52) and no invoice
+    (create_all_pay_in_advance_fixed_charges_job.rb:19-25 applies the same scope before enqueuing per
+    subscription). Hence `invoices: 3`.
+    Invoice 2, periodic: the last event before the readjusted MAY window is the 40-unit override →
+    30 × 10.00 + 100.00 + 10 × 5.00 + 50.00 = 500.00 → 50_000¢ at 12.50, dated
+    2024-05-01..2024-05-31 beside an April subscription fee.
+    The counterfactuals are far apart here. If the plan-level update had reached this subscription
+    there would be a FOURTH invoice for delta 60 - 40 = 20 → tier 1 from zero again → 30_000¢, and May
+    would bill 60 units: 30 × 10.00 + 100.00 + (60 - 31 + 1) × 5.00 + 50.00 = 400.00 + 200.00 =
+    600.00 → 60_000¢. If the override had never applied, April would hold 20 then 60 and May would
+    read 60_000¢ as well. Only 50_000¢ in May with three invoices says the override applied and held.
+    `premium: true`: licence-gated (update_or_override_fixed_charge_service.rb:21).
+
+# `volume` rejects pay_in_advance outright (FixedCharge#validate_pay_in_advance, fixed_charge.rb:79-85),
+# so volume has only arrears cells. The six rows below reuse the volume ranges of the
+# `units_change: none` volume rows verbatim — 0..30 at 10.00/unit + 100.00 flat, then 31..∞ at
+# 6.00/unit + 200.00 flat — where the UPPER range is cheaper per unit but carries the dearer flat fee.
+# That shape is what makes a tier crossing visible in both directions, and the quantities below (10,
+# 50, 60) are chosen so the prorated total and the tier-selecting full units land in DIFFERENT ranges;
+# with 40 units they would coincide and the row would prove nothing.
+
+- id: b13/volume/arrears/not-prorated/increase-mid-period
+  block: B13
+  group: chg-vol
+  key: b13_r2_vol_arr_flat_inc
+  vars: {pro: false, ub: 10, ua: 50}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "false", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 50000
+      taxes_amount_cents: 0
+      total_amount_cents: 50000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_vol_arr_flat_inc
+          item_type: AddOn
+          units: "50.0"
+          amount_cents: 50000
+          precise_unit_amount: 10.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    Volume is the charge model where a units change can move EVERY unit's price, not just the marginal
+    ones, and this row measures that on an increase that crosses the range boundary.
+    SimpleAggregationService returns the last April event's units (simple_aggregation_service.rb:6-9),
+    so both `aggregation` and `full_units_number` are 50 and VolumeService's `number_of_units` is 50
+    either way (volume_service.rb:62-64, the `prorated?` branch being irrelevant here). `matching_range`
+    is therefore the second range, 31..∞ (:56-60), and every unit is priced at ITS rate rather than
+    tier by tier: 50 × 6.00 = 300.00, plus that range's 200.00 flat = 500.00 → 50_000¢,
+    `unit_amount` = 500.00 / 50 = 10.00.
+    The pre-change quantity would have billed in the FIRST range: 10 × 10.00 + 100.00 = 200.00 →
+    20_000¢, which is also what `apply_units_immediately: false` produces (the event landing at
+    2024-05-01T00:00:00Z, outside April's range). Graduated arithmetic on the same shape of ranges
+    would keep the first thirty units at 10.00: 30 × 10.00 + 100.00 + 20 × 6.00 + 200.00 = 720.00 →
+    72_000¢, so the 50_000¢ here is the charge_model axis doing its job — volume RE-PRICES rather than
+    stacks. A blend, which the prorated sibling performs, gives 10 × 0.5 + 50 × 0.5 = 30 unit-months
+    and a different answer again (38_000¢ there, for reasons the sibling's math sets out).
+    Note the direction of the effect: crossing into a range whose per-unit price is LOWER still raises
+    the bill, because the flat amount doubles from 100.00 to 200.00. That is why these ranges were
+    chosen with a cheaper upper rate.
+    Boundaries: arrears, so `readjust_boundaries` leaves the invoice's own window alone
+    (fixed_charge_service.rb:242) and the fixed-charge fee shares 2024-04-01..2024-04-30 with the
+    subscription fee. Both asserted.
+
+- id: b13/volume/arrears/not-prorated/decrease-mid-period
+  block: B13
+  group: chg-vol
+  key: b13_r2_vol_arr_flat_dec
+  vars: {pro: false, ub: 60, ua: 10}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "false", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 20000
+      taxes_amount_cents: 0
+      total_amount_cents: 20000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_vol_arr_flat_dec
+          item_type: AddOn
+          units: "10.0"
+          amount_cents: 20000
+          precise_unit_amount: 20.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The mirror of the volume increase, and the row that shows a decrease can DROP a range: the account
+    held 60 units for the first half of April and 10 for the second, and it is billed entirely in the
+    first range.
+    SimpleAggregationService takes the last event's 10 units, so `number_of_units` is 10 and
+    `matching_range` is 0..30 (volume_service.rb:56-64): 10 × 10.00 = 100.00 plus that range's 100.00
+    flat = 200.00 → 20_000¢, `unit_amount` = 200.00 / 10 = 20.00. The upper range's 200.00 flat is not
+    charged at all.
+    That is the whole span of the volume decrease: 20_000¢, against 56_000¢ (60 × 6.00 + 200.00) had a
+    high-water mark been used, and against 45_000¢ for the prorated sibling — a factor of nearly three
+    between the cheapest and dearest defensible reading of the same April. Read with
+    b13/volume/arrears/not-prorated/increase-mid-period, the pair pins last-event-wins: 10 → 50 bills
+    50_000¢ and 60 → 10 bills 20_000¢, so it is neither the maximum, nor the opening value, nor any
+    blend.
+    Boundaries: the un-readjusted arrears window, shared with the subscription fee; both asserted.
+
+- id: b13/volume/arrears/not-prorated/subscription-override
+  block: B13
+  group: ovr-vol
+  key: b13_r2_vol_arr_flat_ovr
+  vars: {pro: false, pu: 10, ou: 50, lu: 25}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "false", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 50000
+      taxes_amount_cents: 0
+      total_amount_cents: 50000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_vol_arr_flat_ovr
+          item_type: AddOn
+          units: "50.0"
+          amount_cents: 50000
+          precise_unit_amount: 10.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The volume override, set up so the plan's later value (25 units) sits in the FIRST range while the
+    override's (50) sits in the second — a leak would therefore change the flat amount and the per-unit
+    rate together, not just the quantity.
+    The 2024-04-16 request is units-only, so Subscriptions::UpdateOrOverrideFixedChargeService writes a
+    Subscription::FixedChargeUnitsOverride of 50 and emits one event for this subscription
+    (update_or_override_fixed_charge_service.rb:41-58 → write_service.rb:19-32). The 2024-04-20
+    plan-level move to 25 units succeeds against the plan and skips this subscription, because
+    EmitEventsService's bulk scope is `.without_fixed_charge_units_override_for(fixed_charge)`
+    (emit_events_service.rb:52).
+    The last April event is therefore the 50-unit override. SimpleAggregationService returns 50,
+    `number_of_units` is 50, `matching_range` is 31..∞ and every unit is priced at 6.00:
+    50 × 6.00 = 300.00 plus the 200.00 flat = 500.00 → 50_000¢, `unit_amount` 500.00 / 50 = 10.00.
+    Had the plan-level update reached this subscription, 25 units would be the last event, the FIRST
+    range would apply and the fee would be 25 × 10.00 + 100.00 = 350.00 → 35_000¢ — a lower amount at a
+    HIGHER unit price of 14.00, which is the signature of dropping a range. Had the override never
+    applied at all the answer would be 35_000¢ too. So 50_000¢ says the override applied and survived,
+    and 10.00 per unit says which range it landed in.
+    `premium: true`: licence-gated endpoint (update_or_override_fixed_charge_service.rb:21).
+
+- id: b13/volume/arrears/prorated/increase-mid-period
+  block: B13
+  group: chg-vol
+  key: b13_r2_vol_arr_pro_inc
+  vars: {pro: true, ub: 10, ua: 50}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "true", units_change: increase-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 38000
+      taxes_amount_cents: 0
+      total_amount_cents: 38000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_vol_arr_pro_inc
+          item_type: AddOn
+          units: "50.0"
+          amount_cents: 38000
+          precise_unit_amount: 7.6
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    Volume prorated is the one charge model that uses the full units and the prorated units for two
+    DIFFERENT jobs in the same computation, and a mid-period increase is what makes the two disagree.
+    There is no ProratedVolumeService — ChargeModels::Factory:56-57 returns the ordinary VolumeService —
+    but VolumeService is prorated-aware in exactly one place: `number_of_units`, which selects the
+    RANGE, is `full_units_number` when the charge is prorated and the aggregation otherwise
+    (volume_service.rb:62-64).
+    ProratedAggregationService weights the two April events by days in force
+    (prorated_aggregation_service.rb:119-154): 10 × 15/30 = 5 then 50 × 15/30 = 25, so
+    `aggregation` = 30.000000, while `full_units_number` is the LAST event's units, 50 (:22).
+    So the range is chosen by 50 → the second range, 31..∞ at 6.00/unit with a 200.00 flat — while
+    `per_unit_total_amount` multiplies the PRORATED aggregation (:52-54): 30 × 6.00 = 180.00.
+    `flat_unit_amount` is added whole (:44-46). Fee = 180.00 + 200.00 = 380.00 → 38_000¢, and
+    `unit_amount` divides by the FULL 50 → 7.60 (:30-33). The reported `units` is `full_units_number`
+    = 50 (fixed_charge_service.rb:100), so the fee says 50 units at 7.60 while 30 unit-months at 6.00
+    were actually priced — both asserted, because the amount alone cannot separate them.
+    The quantities were chosen so all four candidate behaviours differ, which 40 units would not have
+    achieved. Actual: range by 50, price 30, flat in full = 38_000¢. Prorate first and then choose the
+    range: 30 unit-months lands in the FIRST range (30 ≤ 30) → 30 × 10.00 + 100.00 = 400.00 →
+    40_000¢ — dearer than the actual, despite pricing the same 30 unit-months, because the cheap upper
+    rate is lost. Ignore proration entirely: the sibling's 50 × 6.00 + 200.00 = 500.00 → 50_000¢.
+    Prorate the flat amount too: 180.00 + 200.00 × 0.6 = 300.00 → 30_000¢. That the flat is NOT
+    prorated while the per-unit amount is is the substantive claim, and it is only visible because the
+    ranges carry flat fees.
+    Boundaries: arrears, un-readjusted, shared with the subscription fee; both asserted.
+
+- id: b13/volume/arrears/prorated/decrease-mid-period
+  block: B13
+  group: chg-vol
+  key: b13_r2_vol_arr_pro_dec
+  vars: {pro: true, ub: 60, ua: 10}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "true", units_change: decrease-mid-period}
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 45000
+      taxes_amount_cents: 0
+      total_amount_cents: 45000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_vol_arr_pro_dec
+          item_type: AddOn
+          units: "10.0"
+          amount_cents: 45000
+          precise_unit_amount: 45.0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The cell where volume's split of duties produces its most counter-intuitive bill: the range is
+    chosen by the CLOSING 10 units, so the account is priced in the FIRST range, but the quantity
+    priced is 35 unit-months — three and a half times the closing headcount, at the dearer rate.
+    ProratedAggregationService gives 60 × 15/30 + 10 × 15/30 = 35.000000
+    (prorated_aggregation_service.rb:119-154) and `full_units_number` = 10 (:22).
+    VolumeService's `number_of_units` is the FULL units when prorated (volume_service.rb:62-64), i.e.
+    10, so `matching_range` is 0..30 (:56-60) — the range the closing position sits in, not the one the
+    period's volume would suggest. `per_unit_total_amount` then multiplies the prorated aggregation by
+    THAT range's rate (:52-54): 35 × 10.00 = 350.00, and the 100.00 flat is added whole (:44-46) →
+    450.00 → 45_000¢. `unit_amount` divides by the full 10 → 45.00 (:30-33), four and a half times the
+    range's own 10.00, and the fee reports `units` 10 beside it. Both are asserted: this pair of fields
+    is the only place the discrepancy is visible.
+    This is deliberately DEARER than the un-prorated sibling's 20_000¢ — proration here more than
+    doubles the bill, because the units held for the first fortnight are re-priced at the closing
+    range's higher per-unit rate instead of the 6.00 they were contracted at.
+    Candidates, all distinct with these quantities. Actual: range by full 10, price 35 unit-months at
+    10.00, flat in full = 45_000¢. Choosing the range by the PRORATED 35 instead lands in the second
+    range → 35 × 6.00 + 200.00 = 410.00 → 41_000¢. Ignoring proration is the sibling's
+    10 × 10.00 + 100.00 = 200.00 → 20_000¢. A high-water mark on 60 units would be
+    60 × 6.00 + 200.00 = 560.00 → 56_000¢. And prorating the flat amount by the period share the
+    aggregation implies (35/10 is above 1, so the honest reading of that alternative is the un-scaled
+    flat) is excluded by the total: 45_000¢ contains exactly 100.00 of flat and 350.00 of per-unit
+    charge, and no other split of 450.00 matches both this row and its un-prorated sibling.
+    Boundaries: arrears, un-readjusted, shared with the subscription fee; both asserted.
+
+- id: b13/volume/arrears/prorated/subscription-override
+  block: B13
+  group: ovr-vol
+  key: b13_r2_vol_arr_pro_ovr
+  vars: {pro: true, pu: 10, ou: 50, lu: 25}
+  axes: {charge_model: volume, pay_in_advance: "false", prorated: "true", units_change: subscription-override}
+  premium: true
+  calendar_sensitive: true
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 38000
+      taxes_amount_cents: 0
+      total_amount_cents: 38000
+      fees_count: 2
+      fees:
+        - fee_type: subscription
+          amount_cents: 0
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+        - fee_type: fixed_charge
+          item_code: b13_r2_vol_arr_pro_ovr
+          item_type: AddOn
+          units: "50.0"
+          amount_cents: 38000
+          precise_unit_amount: 7.6
+          from_date: "2024-04-01T00:00:00Z"
+          to_date: "2024-04-30T23:59:59Z"
+  math: >-
+    The last of the 36 cells, and the one with the most inputs riding on a single filter: a stray
+    plan-level event would move the prorated aggregation, the full units, the chosen RANGE and the flat
+    amount, all at once.
+    The 2024-04-16 units-only PUT writes a Subscription::FixedChargeUnitsOverride of 50 and emits one
+    event for this subscription (update_or_override_fixed_charge_service.rb:41-58 →
+    write_service.rb:19-32). The 2024-04-20 plan-level PUT moves the plan to 25 and skips this
+    subscription (`.without_fixed_charge_units_override_for`, emit_events_service.rb:52).
+    April therefore holds two events, 10 at 2024-04-01T00:00:01Z and 50 at 2024-04-16, so
+    `aggregation` = 10 × 15/30 + 50 × 15/30 = 30.000000 and `full_units_number` = 50 — identical to
+    b13/volume/arrears/prorated/increase-mid-period, and so is the fee: range chosen by 50 → 31..∞,
+    30 unit-months × 6.00 = 180.00, plus the 200.00 flat in full = 380.00 → 38_000¢, `unit_amount`
+    380.00 / 50 = 7.60 (volume_service.rb:30-33, 52-64).
+    Had the plan-level event reached this subscription, all four inputs would change together:
+    `aggregation` = 10 × 15/30 + 50 × 4/30 + 25 × 11/30 = 5 + 6.666667 + 9.166667 = 20.833334,
+    `full_units_number` = 25, which selects the FIRST range → 20.833334 × 10.00 + 100.00 = 308.33334 →
+    30_833¢ at a unit amount of 12.33. Had the override never applied, the stream would be 10 then 25 →
+    `aggregation` = 10 × 19/30 + 25 × 11/30 = 6.333333 + 9.166667 = 15.500000, full 25, first range →
+    15.5 × 10.00 + 100.00 = 255.00 → 25_500¢. Three distinct amounts, two distinct ranges and two
+    distinct flat fees, so 38_000¢ with a 7.60 unit amount is reachable only if the override applied
+    and then survived the plan change.
+    `premium: true`: licence-gated endpoint (update_or_override_fixed_charge_service.rb:21).

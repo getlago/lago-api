@@ -1,0 +1,811 @@
+# B11 — Plan & charge overrides / cascade
+#
+# The worst bug-rate-to-coverage ratio measured anywhere in spec/scenarios: 64 fix commits across
+# Charges::{Update,Create,Destroy}ChildrenService and Plans::UpdateService, against roughly four
+# scenario specs.
+#
+# A subscription-level `plan_overrides` creates a CHILD plan belonging to that subscription alone.
+# From then on the parent and the child can diverge, and `cascade_updates` decides whether an edit to
+# the parent reaches the child. Getting that wrong silently reprices — or fails to reprice — every
+# customer on an overridden plan, which is exactly the kind of change nobody notices until invoicing.
+#
+# All rows need `premium: true`: Plans::OverrideService refuses without a licence.
+#
+# Note that PUT /plans/:code/charges/:code is a full REPLACEMENT, not a patch: charge_model has to be
+# resent even when only the properties change, or the request fails with charge_model/value_is_mandatory.
+#
+# Shared conventions: monthly / calendar, three events summing to 30 units, standard charge at 1.00
+# per unit on the parent → 3_000¢ unless a cascade changes the price.
+---
+- __matrix:
+    defaults:
+      provenance: coverage-gap
+      runners: [rspec, live]
+      dimensions: {interval: monthly, billing_time: calendar}
+      setup:
+        metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount}]
+        plan: {code: "golden_%{key}", interval: monthly, amount_cents: 1000}
+        charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}}]
+        customer: {external_id: "golden_%{key}_cust", currency: EUR}
+        subscription: {external_id: "golden_%{key}_sub", billing_time: calendar, plan_overrides: {amount_cents: 5000}}
+      timeline:
+        - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+        - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30}}]}
+        - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+    groups:
+      t2:
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "2"}, cascade_updates: "%{cs}"}}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      t3:
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-02T10:00:00Z", do: update_plan, params: "%{pp}"}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      t4:
+        provenance: characterization
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30}}]}
+          - {at: "2024-03-10T10:00:00Z", do: update_plan, params: "%{pp}"}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      f:
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount, filters: [{key: region, values: [eu, us]}]}]
+          charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}, filters: [{invoice_display_name: EU region, properties: {amount: "3"}, values: {region: [eu]}}]}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30, region: eu}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      f-t2:
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount, filters: [{key: region, values: [eu, us]}]}]
+          charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}, filters: [{invoice_display_name: EU region, properties: {amount: "3"}, values: {region: [eu]}}]}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "9"}, cascade_updates: "%{cs}"}}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30, region: "%{rg}"}}]}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      f-t4:
+        provenance: characterization
+        dimensions: {cascade_updates: true}
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount, filters: [{key: region, values: [eu, us]}]}]
+          charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}, filters: [{invoice_display_name: EU region, properties: {amount: "3"}, values: {region: [eu]}}]}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: [{code: "%{m}", properties: {amount: 30, region: eu}}]}
+          - {at: "2024-03-10T10:00:00Z", do: update_plan, params: "%{pp}"}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      mf-t2f:
+        dimensions: {cascade_updates: true}
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount, filters: [{key: region, values: [eu, us]}]}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "%{ca}"}, cascade_updates: true, filters: [{invoice_display_name: EU region, properties: {amount: "3"}, values: {region: [eu]}}]}}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: "%{ev}"}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      f-t2f:
+        dimensions: {cascade_updates: true}
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount, filters: [{key: region, values: [eu, us]}]}]
+          charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}, filters: [{invoice_display_name: EU region, properties: {amount: "3"}, values: {region: [eu]}}]}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "%{ca}"}, cascade_updates: true, filters: [{invoice_display_name: EU region, properties: {amount: "5"}, values: {region: [eu]}}]}}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: "%{ev}"}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+      f-t2f0:
+        dimensions: {cascade_updates: true}
+        setup:
+          metrics: [{code: "%{m}", aggregation_type: sum_agg, field_name: amount, filters: [{key: region, values: [eu, us]}]}]
+          charges: [{billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "1"}, filters: [{invoice_display_name: EU region, properties: {amount: "3"}, values: {region: [eu]}}]}]
+        timeline:
+          - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+          - {at: "2024-03-02T10:00:00Z", do: update_plan_charge, charge: {billable_metric_code: "%{m}", charge_model: standard, properties: {amount: "%{ca}"}, cascade_updates: true, filters: []}}
+          - {at: "2024-03-05T10:00:00Z", do: ingest_events, events: "%{ev}"}
+          - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+
+- id: b11/create-child/plan-override
+  block: B11
+  key: b11_child
+  vars: {m: b11_child_sum}
+  axes: {operation: create-child, target: plan-override}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    The override raises the subscription price from the parent's 1_000¢ to 5_000¢ for this
+    subscription only, while the charge is inherited untouched: 30 units × 1.00 = 3_000¢. Total
+    5_000 + 3_000 = 8_000¢. Asserting BOTH fees is the point — an override that leaked into the
+    charge, or failed to reach the subscription fee, changes exactly one of these two numbers.
+
+- id: b11/update-parent-cascade/plan-override
+  block: B11
+  group: t2
+  key: b11_cascade
+  vars: {m: b11_casc_sum, cs: true}
+  axes: {operation: update-parent-cascade, target: plan-override}
+  dimensions: {cascade_updates: true}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 11000
+      total_amount_cents: 11000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 6000}
+  math: >-
+    The parent's charge is repriced from 1.00 to 2.00 WITH cascade_updates, so the child plan created
+    by the override receives the change: 30 units × 2.00 = 6_000¢. The overridden subscription fee is
+    untouched at 5_000¢ — cascading a charge must not undo an override of a different field — giving
+    5_000 + 6_000 = 11_000¢. Compare the no-cascade row below, which uses an identical setup and
+    yields 8_000¢.
+
+- id: b11/update-parent-no-cascade/plan-override
+  block: B11
+  group: t2
+  key: b11_no_cascade
+  vars: {m: b11_nocasc_sum, cs: false}
+  axes: {operation: update-parent-no-cascade, target: plan-override}
+  dimensions: {cascade_updates: false}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    Identical to the cascade row except cascade_updates is false, so the child plan keeps the price
+    it was created with: 30 units × 1.00 = 3_000¢, total 8_000¢ rather than 11_000¢. The 3_000¢
+    difference between these two rows is the entire behaviour of the flag, and it is invisible on the
+    parent plan — only a subscription billed against the child reveals which way it went.
+
+# ---------------------------------------------------------------------------------------------
+# Reading of the `target` axis, made explicit because the three values are otherwise labels.
+#
+# Lago has no single "override" object: an override is a CHILD PLAN, and the three targets are the
+# three services that decide what a child inherits.
+#
+#   plan-override        the charge configuration of the child plan — Charges::UpdateChildrenService
+#   subscription-override  the child plan's own amount_cents, i.e. the subscription FEE —
+#                        Plans::UpdateService#cascade_subscription_fee_update / Plans::UpdateAmountService
+#   charge-filter        pricing that reaches the fee through a ChargeFilter rather than the
+#                        charge's own properties — Charges::OverrideService's filter duplication
+#
+# The three existing rows above all sit on plan-override, which is why they all cascade a charge.
+#
+# Every row keeps exactly ONE charge fee on the invoice. A charge that has filters emits one fee per
+# filter plus one for the events matching none of them, and fees are matched by identity keys
+# (fee_type, item_code, item_type, from_date, to_date) which two fees of the same charge share — so
+# rows aim all their events at a single bucket and let Fees::ChargeService drop the empty one
+# (app/services/fees/charge_service.rb:68 rejecting via should_persist_fee?, :353). `fees_count` is
+# asserted alongside the amount so "the filter vanished" cannot hide as "the amount changed".
+
+- id: b11/create-child/subscription-override
+  block: B11
+  key: b11_sub_override
+  vars: {m: b11_subov_sum}
+  axes: {operation: create-child, target: subscription-override}
+  dimensions: {override_field: amount_cents}
+  premium: true
+  setup: {subscription: {plan_overrides: {amount_cents: 2500}}}
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 5500
+      total_amount_cents: 5500
+      fees:
+        - {fee_type: subscription, amount_cents: 2500}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+    resource:
+      kind: plan
+      fields: {amount_cents: 1000}
+  math: >-
+    Plans::OverrideService dups the plan and writes amount_cents onto the COPY, setting
+    parent_id to the original (app/services/plans/override_service.rb:19-29); the original row is
+    never touched. So this subscription bills 2_500¢ while GET /plans/golden_b11_sub_override — which
+    the controller scopes to `.parents` (app/controllers/api/v1/plans_controller.rb:52) — still
+    reports 1_000¢. The charge is inherited by Charges::OverrideService with empty params, so its
+    properties survive verbatim: 30 units × 1.00 = 3_000¢, total 5_500¢. Asserting the invoice AND
+    the parent plan in one row is the point: an override implemented as a plan edit (Plans::UpdateService
+    instead of OverrideService) would still bill 5_500¢ here while repricing every other subscription
+    on the plan — the invoice alone cannot tell the two apart. An override that never reached the
+    subscription fee would bill 1_000 + 3_000 = 4_000¢.
+
+- id: b11/create-child/charge-filter
+  block: B11
+  group: f
+  key: b11_child_filter
+  vars: {m: b11_cfchild_sum}
+  axes: {operation: create-child, target: charge-filter}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 14000
+      total_amount_cents: 14000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 9000}
+  math: >-
+    Charges::OverrideService duplicates the parent charge's filters AND each filter's values onto the
+    child charge (app/services/charges/override_service.rb:26-30), so the eu price of 3.00 follows the
+    override even though the row never mentions the child: 30 units × 3.00 = 9_000¢, plus the
+    overridden 5_000¢ subscription fee = 14_000¢. The un-filtered bucket receives no events, so its
+    zero fee is rejected before saving and only two fees remain. Two distinct failure modes both land
+    on 8_000¢ and are why fees_count is asserted with the amount: filters not duplicated at all, and
+    filters duplicated without their values — in either case the 30 units fall through to the charge's
+    own properties at 1.00 = 3_000¢.
+
+- id: b11/update-parent-cascade/subscription-override
+  block: B11
+  group: t3
+  key: b11_cascade_subfee
+  vars: {m: b11_cascsub_sum, pp: {amount_cents: 3000, cascade_updates: true}}
+  axes: {operation: update-parent-cascade, target: subscription-override}
+  dimensions: {cascade_updates: true, child_diverged: true}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    cascade_updates is TRUE and the child is still left alone. Plans::UpdateService only pushes a new
+    amount_cents to children that had not diverged: the query is
+    `plan.children.where(amount_cents: old_amount_cents)`
+    (app/services/plans/update_service.rb:131), and Plans::UpdateAmountService guards it a second
+    time with `return result if plan.amount_cents != expected_amount_cents`
+    (app/services/plans/update_amount_service.rb:19). This child was created at 5_000¢ against an old
+    parent amount of 1_000¢, so it matches neither guard and keeps 5_000¢ while the parent moves to
+    3_000¢. The charge is resent unchanged by the same call, so usage stays at 30 × 1.00 = 3_000¢ and
+    the total is 8_000¢. An implementation that cascaded to every child would bill 3_000 + 3_000 =
+    6_000¢ — silently discarding a negotiated price, which is the failure this row exists to catch.
+    Compare the create-child rows: the same 5_000¢ override, before anybody edits the parent.
+
+- id: b11/update-parent-no-cascade/subscription-override
+  block: B11
+  group: t3
+  key: b11_no_cascade_subfee
+  vars: {m: b11_nocascsub_sum, pp: {amount_cents: 3000}}
+  axes: {operation: update-parent-no-cascade, target: subscription-override}
+  dimensions: {cascade_updates: false, child_diverged: false}
+  premium: true
+  setup: {subscription: {plan_overrides: {amount_cents: ~, name: b11 no-cascade child}}}
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 4000
+      total_amount_cents: 4000
+      fees:
+        - {fee_type: subscription, amount_cents: 1000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    The mirror image of the cascade row, and deliberately NOT its A/B twin. Here the override renames
+    the plan and leaves amount_cents inherited, so the child sits at 1_000¢ — exactly the value
+    `where(amount_cents: old_amount_cents)` (app/services/plans/update_service.rb:131) selects. It is
+    spared anyway, because cascade_needed? is `cascade? && plan.children.present?`
+    (app/services/plans/update_service.rb:123-125) and no cascade_updates was sent, so
+    cascade_subscription_fee_update returns before enqueuing anything. The subscription therefore
+    bills the old 1_000¢ against a parent now priced at 3_000¢, plus 30 × 1.00 = 3_000¢ of usage =
+    4_000¢. Sending cascade_updates: true on this same setup would give 3_000 + 3_000 = 6_000¢ — and
+    that contrast is the reason the two subscription-override rows differ in their child rather than
+    only in the flag: a child that inherited the price moves, a child that negotiated one does not,
+    and only the pair shows both halves.
+
+- id: b11/update-parent-cascade/charge-filter
+  block: B11
+  group: f-t2
+  key: b11_cascade_filter
+  vars: {m: b11_cascfilt_sum, cs: true, rg: eu}
+  axes: {operation: update-parent-cascade, target: charge-filter}
+  dimensions: {cascade_updates: true, bucket: filtered}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 14000
+      total_amount_cents: 14000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 9000}
+  math: >-
+    A cascade that reaches the child and changes nothing the customer pays. The parent charge's own
+    properties go 1.00 → 9.00 and the change is pushed down: trigger_cascade enqueues
+    Charges::UpdateChildrenJob (app/services/charges/cascade_updatable.rb:9-20) and
+    Charges::UpdateChildrenService replaces the child's properties because
+    `equal_properties: old_parent.equal_properties?(child_charge)` holds — the child was still at 1.00
+    (app/services/charges/update_children_service.rb:37). The child's FILTER is untouched twice over:
+    Charges::UpdateService only rewrites filters when the payload carries a `filters` key and never in
+    cascade mode (`if filters && !cascade`, app/services/charges/update_service.rb:58-64), and
+    ChargeFilters::CascadeDispatcher sees before == after and enqueues nothing
+    (app/services/charge_filters/cascade_dispatcher.rb:18-20). All 30 units carry region=eu, so the
+    filter prices them: 30 × 3.00 = 9_000¢, plus the overridden 5_000¢ = 14_000¢. Note what this
+    means operationally — repricing the charge from 1.00 to 9.00 with cascade on moves nothing for
+    this customer, because every one of their events is filtered. A cascade that overwrote the child's
+    filter properties, or destroyed the filter and let the events fall to the new default, gives
+    30 × 9.00 = 27_000¢ and a 32_000¢ total either way.
+
+- id: b11/update-parent-no-cascade/charge-filter
+  block: B11
+  group: f-t2
+  key: b11_no_cascade_filter
+  vars: {m: b11_nocascfilt_sum, cs: false, rg: us}
+  axes: {operation: update-parent-no-cascade, target: charge-filter}
+  dimensions: {cascade_updates: false, bucket: unfiltered}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    Same repricing of the parent charge, 1.00 → 9.00, with cascade_updates false: trigger_cascade
+    returns on its first line (`return unless cascade_updates`,
+    app/services/charges/cascade_updatable.rb:10), so the child keeps both its 1.00 default AND the
+    eu filter it inherited. The events carry region=us, which the charge's only filter does not
+    cover, so Fees::ChargeService prices them from the child charge's own properties — the
+    "events not matching any filters" bucket at app/services/fees/charge_service.rb:107-109 —
+    giving 30 × 1.00 = 3_000¢ on top of the overridden 5_000¢ = 8_000¢. The eu bucket has no events,
+    its zero fee is dropped, and fees_count is 2. The same setup with cascade_updates: true bills
+    30 × 9.00 = 27_000¢, so the 24_000¢ gap between this row and that is the whole flag. A charge
+    filter that wrongly captured non-matching events would price these units at 3.00 = 9_000¢.
+
+- id: b11/delete-charge/plan-override
+  block: B11
+  pins: ["F05"]
+  group: t4
+  key: b11_delete_cascade
+  vars: {m: b11_delcasc_sum, pp: {charges: [], cascade_updates: true}}
+  axes: {operation: delete-charge, target: plan-override}
+  dimensions: {cascade_updates: true}
+  characterization: true
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 1
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+  math: >-
+    PUT /plans/:code is a full replacement, so an empty `charges` array IS the delete: sanitize_charges
+    takes plan.charges minus the payload and discards what is left
+    (app/services/plans/update_service.rb:241-248), and because cascade_updates was sent
+    cascade_charge_removal enqueues Charges::DestroyChildrenJob
+    (app/services/plans/update_service.rb:142-146), which discards the child's copy — the child plan
+    carries an active subscription, which is exactly the scope DestroyChildrenService selects
+    (app/services/charges/destroy_children_service.rb:19-21). Charge declares
+    `default_scope -> { kept }` (app/models/charge.rb:62), so Invoices::CalculateFeesService iterating
+    `subscription.plan.charges` sees nothing at all. The 30 units ingested on 5 March had already
+    accrued when the charge was deleted on the 10th and are dropped anyway — the April invoice is the
+    overridden subscription fee alone, 5_000¢, with a single fee. A deletion that failed to cascade
+    leaves the child billing 30 × 1.00 and the total is 8_000¢, which is what the
+    delete-charge/subscription-override row asserts; a deletion that also somehow spared the parent
+    would leave two charge fees.
+
+- id: b11/delete-charge/subscription-override
+  block: B11
+  pins: ["F06"]
+  group: t4
+  key: b11_delete_no_cascade
+  vars: {m: b11_delnocasc_sum, pp: {charges: []}}
+  axes: {operation: delete-charge, target: subscription-override}
+  dimensions: {cascade_updates: false}
+  characterization: true
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    The surprising half of the pair, and the one worth pinning: the charge is deleted from the plan and
+    the overridden customer keeps paying for it. Without cascade_updates, cascade_needed? is false
+    (app/services/plans/update_service.rb:123-125) so cascade_charge_removal never enqueues
+    Charges::DestroyChildrenJob and only the PARENT charge is discarded — Charges::DestroyService is
+    called on it directly with cascade_updates defaulting to false
+    (app/services/charges/destroy_service.rb:29-31). The child plan created for this subscription
+    still owns its own Charge row with properties {amount: "1"}, so April bills 30 × 1.00 = 3_000¢ on
+    top of the overridden 5_000¢ subscription fee = 8_000¢, for a charge that no longer appears on the
+    plan an operator reads. An implementation that destroyed children unconditionally would bill
+    5_000¢ and stop invoicing this customer's usage without anyone asking it to; the cascade row above
+    asserts exactly that 5_000¢, so the 3_000¢ between the two rows is the flag.
+
+- id: b11/delete-charge/charge-filter
+  block: B11
+  group: f-t4
+  key: b11_delete_filter
+  vars: {m: b11_delfilt_sum, pp: {charges: [], cascade_updates: true}}
+  axes: {operation: delete-charge, target: charge-filter}
+  dimensions: {filter_key: region}
+  characterization: true
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 1
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+  math: >-
+    Deleting a charge takes its filters with it, on the child as well as the parent.
+    Charges::DestroyService discards the charge and then stamps deleted_at on its filters and filter
+    values with update_all, bypassing callbacks entirely
+    (app/services/charges/destroy_service.rb:22-23); the cascade repeats the whole service on the
+    child (app/services/charges/destroy_children_service.rb:19-21). The 30 units carrying region=eu,
+    ingested five days before the deletion and priced at 3.00 by the inherited filter, therefore
+    produce no fee at all: the April invoice is the overridden subscription fee alone, 5_000¢, one
+    fee. fees_count is the load-bearing assertion here rather than the amount — a child filter that
+    outlived its parent charge, or filter rows left un-stamped so Fees::ChargeService still iterated
+    them, would add a 9_000¢ charge fee and a 14_000¢ total, and a filter surviving with its values
+    stripped would add a 3_000¢ one. The amount alone cannot distinguish "no charge" from "a charge
+    that aggregated nothing".
+
+# ---------------------------------------------------------------------------------------------
+# The three filter operations.
+#
+# Nothing above edits a charge FILTER after setup, which is why nine cells sat blocked. Filters are
+# addressed by UUID, and a YAML row cannot know a UUID — so these rows drive the filter set as a
+# REPLACEMENT ARRAY on PUT /plans/:code/charges/:code, resolving filters by their `values`. One verb
+# therefore expresses all three operations: a `values` combination the child has not seen is a
+# create, a known one with new `properties` is an update, and one absent from the array is a delete
+# (ChargeFilters::CreateOrUpdateBatchService:57-78, and :227-234 for the empty-array case).
+#
+# Reading of the `target` axis for these three operations — it names WHICH part of the override the
+# filter edit has to respect, because the edit itself is the same call in all three. All nine send
+# cascade_updates: true, since a filter edit that is NOT cascaded cannot reach the child plan the
+# subscription bills against and so cannot be observed on an invoice at all — the no-cascade half of
+# that question is already pinned by b11/update-parent-no-cascade/charge-filter.
+#
+#   charge-filter        the child's own FILTER SET, in isolation. The charge's own properties are
+#                        resent UNCHANGED, and every unit lands in the bucket the edit touches, so
+#                        nothing but the filter can account for the number.
+#   plan-override        the child's inherited CHARGE, edited in the SAME call. Properties go
+#                        1.00 -> 7.00 alongside the filter edit and the units are split 20 eu / 10 us,
+#                        so both halves of the cascade are on one invoice: Charges::UpdateChildrenService
+#                        writes the child's charge properties and ChargeFilters::CascadeService writes
+#                        its filter, and neither may overwrite the other's work.
+#   subscription-override  the child plan's own amount_cents. The row re-reads GET /plans/:code to
+#                        prove the edit went to a CHILD and left the parent's price alone.
+#
+# The charge-filter and subscription-override rows keep exactly ONE charge fee: all 30 units carry
+# region=eu and the empty bucket has its zero fee rejected by should_persist_fee?
+# (app/services/fees/charge_service.rb:68, :353). The plan-override rows deliberately keep TWO, which
+# is why they assert fees_count and the totals rather than a `fees:` list — two fees of one charge
+# share every identity key in FEE_MATCH_KEYS, so a per-fee list could not tell them apart.
+
+- id: b11/filter-create/charge-filter
+  block: B11
+  group: mf-t2f
+  key: b11_fcre_cf
+  vars: {m: b11_fcre_cf_sum, ca: "1", ev: [{code: b11_fcre_cf_sum, properties: {amount: 30, region: eu}}]}
+  axes: {operation: filter-create, target: charge-filter}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 14000
+      total_amount_cents: 14000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 9000}
+  math: >-
+    The parent charge had no filters when the override duplicated it, so the child has none either.
+    Sending a one-element `filters` array creates the eu filter on the parent
+    (ChargeFilters::CreateOrUpdateBatchService:74, accumulate_new_filter), and because
+    cascade_updates was sent, cascade_filter_changes diffs before=[] against after=[eu] and
+    CascadeDispatcher enqueues a "create" job (app/services/charge_filters/cascade_dispatcher.rb:22-30),
+    which ChargeFilters::CascadeService#create_child_filter runs against every child charge whose plan
+    carries an active subscription (app/services/charge_filters/cascade_service.rb:99-125). The child
+    therefore gains an eu filter priced at 3.00 that it never had, and the 30 units carrying region=eu
+    are priced by it: 30 x 3.00 = 9_000¢ on top of the overridden 5_000¢ subscription fee = 14_000¢.
+    A create that never reached the child leaves it filterless and the 30 units fall to the child
+    charge's own 1.00 = 3_000¢ for an 8_000¢ total. The parent charge's own properties are resent
+    UNCHANGED at 1.00 so that this row moves only if the FILTER moved — a charge-level cascade cannot
+    account for the difference, which is what separates this row from
+    b11/filter-create/plan-override, where the same call reprices the charge as well.
+
+- id: b11/filter-create/plan-override
+  block: B11
+  group: mf-t2f
+  key: b11_fcre_po
+  vars: {m: b11_fcre_po_sum, ca: "7", ev: [{code: b11_fcre_po_sum, properties: {amount: 20, region: eu}}, {code: b11_fcre_po_sum, properties: {amount: 10, region: us}}]}
+  axes: {operation: filter-create, target: plan-override}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 3
+      fees_amount_cents: 18000
+      total_amount_cents: 18000
+  math: >-
+    One call creates a filter AND reprices the charge underneath it, and both halves of the cascade
+    have to land on the same child. Charges::UpdateService captures the parent's old attributes before
+    mutating it (app/services/charges/update_service.rb:22-24), so trigger_cascade enqueues
+    Charges::UpdateChildrenJob with the NEW properties and the OLD parent for comparison; the child
+    was still at 1.00, so `equal_properties: old_parent.equal_properties?(child_charge)` holds and
+    Charges::UpdateChildrenService replaces its properties with 7.00
+    (app/services/charges/update_children_service.rb:37, app/models/charge.rb:90-92). Separately,
+    cascade_filter_changes diffs before=[] against after=[eu] and CascadeDispatcher enqueues a
+    "create" (app/services/charge_filters/cascade_dispatcher.rb:22-30), which
+    ChargeFilters::CascadeService#create_child_filter runs against the child
+    (app/services/charge_filters/cascade_service.rb:99-125). The 20 eu units are therefore priced by
+    the brand-new filter at 3.00 = 6_000¢ and the 10 us units by the newly-cascaded charge default at
+    7.00 = 7_000¢ (the "events not matching any filters" bucket,
+    app/services/fees/charge_service.rb:107-109), plus the overridden 5_000¢ subscription fee =
+    18_000¢ across three fees. Every partial outcome is a different number: the filter not created
+    prices all 30 units at 7.00 for 21_000¢ and a 26_000¢ total over two fees; the charge properties
+    not cascaded gives 6_000 + 10 x 1.00 = 7_000¢ and 16_000¢; the filter created but swallowing the
+    us traffic gives 30 x 3.00 = 9_000¢ and 14_000¢ over two fees. fees_count is asserted rather than
+    a `fees:` list because the two charge fees share every FEE_MATCH_KEYS identity field.
+
+- id: b11/filter-create/subscription-override
+  block: B11
+  group: mf-t2f
+  key: b11_fcre_so
+  vars: {m: b11_fcre_so_sum, ca: "1", ev: [{code: b11_fcre_so_sum, properties: {amount: 30, region: eu}}]}
+  axes: {operation: filter-create, target: subscription-override}
+  dimensions: {override_field: amount_cents}
+  premium: true
+  setup: {subscription: {plan_overrides: {amount_cents: 2500}}}
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 11500
+      total_amount_cents: 11500
+      fees:
+        - {fee_type: subscription, amount_cents: 2500}
+        - {fee_type: charge, units: "30.0", amount_cents: 9000}
+    resource:
+      kind: plan
+      fields: {amount_cents: 1000}
+  math: >-
+    A cascading filter creation must not disturb the plan-level override, and must not be applied to
+    the parent's own subscribers by accident. The filter cascade only ever touches ChargeFilter rows
+    (app/services/charge_filters/cascade_service.rb:83-125) — it never loads a Plan — so the child
+    plan keeps the 2_500¢ Plans::OverrideService wrote onto the copy
+    (app/services/plans/override_service.rb:19-29) and GET /plans/golden_b11_fcre_so, which the
+    controller scopes to `.parents` (app/controllers/api/v1/plans_controller.rb:52), still reports
+    1_000¢. The eu filter reaches the child as in the charge-filter row, so usage is 30 x 3.00 =
+    9_000¢ and the total is 2_500 + 9_000 = 11_500¢. The resource assertion is the load-bearing half:
+    an implementation that reached the child by repricing the PARENT plan's charge and letting every
+    subscriber inherit it would still bill 11_500¢ here while moving every other customer on the
+    plan. An override lost to the cascade would bill 1_000 + 9_000 = 10_000¢.
+
+- id: b11/filter-update/charge-filter
+  block: B11
+  group: f-t2f
+  key: b11_fupd_cf
+  vars: {m: b11_fupd_cf_sum, ca: "1", ev: [{code: b11_fupd_cf_sum, properties: {amount: 30, region: eu}}]}
+  axes: {operation: filter-update, target: charge-filter}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 20000
+      total_amount_cents: 20000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 15000}
+  math: >-
+    Repricing an EXISTING filter, as opposed to the charge's own properties, which is what
+    b11/update-parent-cascade/charge-filter already covers and which moved nothing. The replacement
+    array names the same `values` as the filter already on the charge, so CreateOrUpdateBatchService
+    resolves it through filters_by_values_key and UPDATES it rather than creating a second one
+    (app/services/charge_filters/create_or_update_batch_service.rb:63-71). CascadeDispatcher sees the
+    same values with different properties and enqueues "update" carrying both the old and the new
+    properties (app/services/charge_filters/cascade_dispatcher.rb:18-30).
+    ChargeFilters::CascadeService#update_child_filter then checks whether the child had DIVERGED —
+    `filter_customized?` compares old_properties against the child's
+    (app/services/charge_filters/cascade_service.rb:148-152) — and this child's filter is the verbatim
+    duplicate Charges::OverrideService made of the parent's, still at 3.00, so it is overwritten to
+    5.00. 30 units of eu traffic x 5.00 = 15_000¢ plus the overridden 5_000¢ = 20_000¢. A cascade
+    that wrongly judged the child customized would leave it at 3.00: 9_000¢ and a 14_000¢ total, and
+    an "update" that created a SECOND filter instead of resolving the existing one by its values would
+    double the eu bucket. The charge's own properties are resent unchanged at 1.00, so only the filter
+    can account for this row's amount.
+
+- id: b11/filter-update/plan-override
+  block: B11
+  group: f-t2f
+  key: b11_fupd_po
+  vars: {m: b11_fupd_po_sum, ca: "7", ev: [{code: b11_fupd_po_sum, properties: {amount: 20, region: eu}}, {code: b11_fupd_po_sum, properties: {amount: 10, region: us}}]}
+  axes: {operation: filter-update, target: plan-override}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 3
+      fees_amount_cents: 22000
+      total_amount_cents: 22000
+  math: >-
+    The filter is repriced 3.00 -> 5.00 and the charge under it 1.00 -> 7.00 in one call, and the two
+    cascades write different rows on the same child: Charges::UpdateChildrenService the charge's
+    properties, ChargeFilters::CascadeService the filter's. The "update" job carries the parent's OLD
+    filter properties so the child can be checked for divergence
+    (app/services/charge_filters/cascade_dispatcher.rb:22-30); this child's filter is the verbatim
+    duplicate Charges::OverrideService made (app/services/charges/override_service.rb:26-30), still at
+    3.00, so filter_customized? is false and it is overwritten to 5.00
+    (app/services/charge_filters/cascade_service.rb:85-97, 148-152). 20 eu units x 5.00 = 10_000¢,
+    10 us units x 7.00 = 7_000¢, overridden subscription fee 5_000¢ = 22_000¢ over three fees. The
+    row separates four outcomes that a single-bucket row cannot: neither cascade landing gives
+    20 x 3 + 10 x 1 = 7_000¢ and 12_000¢; only the charge cascade landing gives 6_000 + 7_000 =
+    13_000¢ and 18_000¢; only the filter cascade landing gives 10_000 + 1_000 = 11_000¢ and 16_000¢;
+    and a filter wrongly judged customized would leave the eu units at 3.00 for 18_000¢ — the same
+    total as "the filter edit never happened", which is why the charge half is repriced too rather
+    than resent unchanged.
+
+- id: b11/filter-update/subscription-override
+  block: B11
+  group: f-t2f
+  key: b11_fupd_so
+  vars: {m: b11_fupd_so_sum, ca: "1", ev: [{code: b11_fupd_so_sum, properties: {amount: 30, region: eu}}]}
+  axes: {operation: filter-update, target: subscription-override}
+  dimensions: {override_field: amount_cents}
+  premium: true
+  setup: {subscription: {plan_overrides: {amount_cents: 2500}}}
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 17500
+      total_amount_cents: 17500
+      fees:
+        - {fee_type: subscription, amount_cents: 2500}
+        - {fee_type: charge, units: "30.0", amount_cents: 15000}
+    resource:
+      kind: plan
+      fields: {amount_cents: 1000}
+  math: >-
+    The filter reprice cascades to the child exactly as in the charge-filter row — 30 x 5.00 =
+    15_000¢ — while the negotiated 2_500¢ subscription fee is untouched, giving 17_500¢. The
+    subscription fee lives on the child PLAN's amount_cents and the filter cascade only ever writes
+    ChargeFilter rows (app/services/charge_filters/cascade_service.rb:83-125), so nothing in this path
+    can reach it; GET /plans/golden_b11_fupd_so is asserted at 1_000¢ to show the edit also stayed off
+    the parent, which the controller's `.parents` scope
+    (app/controllers/api/v1/plans_controller.rb:52) is what makes observable. Two failures this pins
+    that the invoice alone cannot: an override folded back into the parent plan reads 2_500¢ from GET
+    /plans while billing the same 17_500¢, and a cascade that reset the child plan's amount to the
+    parent's would bill 1_000 + 15_000 = 16_000¢.
+
+- id: b11/filter-delete/charge-filter
+  block: B11
+  group: f-t2f0
+  key: b11_fdel_cf
+  vars: {m: b11_fdel_cf_sum, ca: "1", ev: [{code: b11_fdel_cf_sum, properties: {amount: 30, region: eu}}]}
+  axes: {operation: filter-delete, target: charge-filter}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 8000
+      total_amount_cents: 8000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+  math: >-
+    An EMPTY replacement array is the delete: CreateOrUpdateBatchService short-circuits to remove_all,
+    which stamps deleted_at on every filter value and discards the filter
+    (app/services/charge_filters/create_or_update_batch_service.rb:24-28, 227-237). CascadeDispatcher
+    then finds an entry in `before` with no counterpart in `after` and enqueues "destroy"
+    (app/services/charge_filters/cascade_dispatcher.rb:33-43), which CascadeService#destroy_child_filter
+    applies to the child's copy (app/services/charge_filters/cascade_service.rb:139-144). The child
+    charge is left with no kept filters, so Fees::ChargeService takes its `unless charge.filters.any?`
+    branch (app/services/fees/charge_service.rb:97) and the 30 units of eu traffic, previously priced
+    at 3.00 by the inherited filter, fall to the charge's own 1.00: 3_000¢ plus the overridden
+    5_000¢ = 8_000¢. This is the operationally dangerous direction of the three — deleting a filter
+    makes usage CHEAPER rather than erroring — and it is why fees_count is asserted with the amount: a
+    child filter that survived un-stamped would still price 9_000¢ for a 14_000¢ total, and a filter
+    whose row survived with its values stripped would add a second, empty bucket.
+
+- id: b11/filter-delete/plan-override
+  block: B11
+  group: f-t2f0
+  key: b11_fdel_po
+  vars: {m: b11_fdel_po_sum, ca: "7", ev: [{code: b11_fdel_po_sum, properties: {amount: 20, region: eu}}, {code: b11_fdel_po_sum, properties: {amount: 10, region: us}}]}
+  axes: {operation: filter-delete, target: plan-override}
+  dimensions: {filter_key: region}
+  premium: true
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 26000
+      total_amount_cents: 26000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+        - {fee_type: charge, units: "30.0", amount_cents: 21000}
+  math: >-
+    Deleting the only filter COLLAPSES the two buckets into one, which is why this row asserts a fee
+    list where its two siblings cannot. The empty replacement array sends
+    CreateOrUpdateBatchService to remove_all on the parent
+    (app/services/charge_filters/create_or_update_batch_service.rb:24-28, 227-237), CascadeDispatcher
+    finds a `before` entry with no counterpart in `after` and enqueues "destroy"
+    (app/services/charge_filters/cascade_dispatcher.rb:33-43), and
+    CascadeService#destroy_child_filter discards the child's copy and stamps its values
+    (app/services/charge_filters/cascade_service.rb:139-144). The child charge is left with no kept
+    filters — Charge/ChargeFilter both carry a `kept` default scope — so Fees::ChargeService takes its
+    `unless charge.filters.any?` branch (app/services/fees/charge_service.rb:97) and prices ALL 30
+    units, eu and us alike, from the properties the same call cascaded down: 30 x 7.00 = 21_000¢ plus
+    the overridden 5_000¢ = 26_000¢ in two fees. The three failure modes are all distinguishable:
+    a filter surviving on the child gives 20 x 3 + 10 x 7 = 13_000¢ and 18_000¢ over THREE fees; the
+    charge properties not cascading gives 30 x 1.00 = 3_000¢ and 8_000¢; a filter whose row survived
+    with its values stripped adds a third, empty bucket. Note the direction, which is the reason the
+    cell is worth a row at all: deleting a filter here makes eu traffic MORE expensive, because the
+    default it falls back on is dearer than the filter was.
+
+- id: b11/filter-delete/subscription-override
+  block: B11
+  group: f-t2f0
+  key: b11_fdel_so
+  vars: {m: b11_fdel_so_sum, ca: "1", ev: [{code: b11_fdel_so_sum, properties: {amount: 30, region: eu}}]}
+  axes: {operation: filter-delete, target: subscription-override}
+  dimensions: {override_field: amount_cents}
+  premium: true
+  setup: {subscription: {plan_overrides: {amount_cents: 2500}}}
+  expect:
+    invoices: 1
+    invoice:
+      fees_count: 2
+      fees_amount_cents: 5500
+      total_amount_cents: 5500
+      fees:
+        - {fee_type: subscription, amount_cents: 2500}
+        - {fee_type: charge, units: "30.0", amount_cents: 3000}
+    resource:
+      kind: plan
+      fields: {amount_cents: 1000}
+  math: >-
+    The cascading delete reaches the child's filter, so its eu traffic falls to the charge's own 1.00
+    = 3_000¢, and the negotiated 2_500¢ subscription fee is untouched: 5_500¢. ChargeFilters::
+    CascadeService#destroy_child_filter discards a ChargeFilter and its values and nothing else
+    (app/services/charge_filters/cascade_service.rb:139-144), so neither the child plan's amount_cents
+    nor the parent plan can move — GET /plans/golden_b11_fdel_so is asserted at 1_000¢ to show the
+    whole operation stayed inside the child. The three numbers are separable on purpose: an override
+    lost to the cascade bills 1_000 + 3_000 = 4_000¢, a filter that survived the cascade bills
+    2_500 + 9_000 = 11_500¢, and both leave GET /plans reading 1_000¢ — only asserting the
+    subscription fee and the parent plan together tells the two apart.

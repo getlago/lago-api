@@ -1,0 +1,2464 @@
+# B10 — which tax applies, and what the coupon does to it.
+#
+# Fees::ApplyTaxesService#applicable_taxes is a ladder of eight rungs, first match wins
+# (apply_taxes_service.rb:64-78). Every rung had been exercised somewhere except as a LADDER: no test
+# put fees on one invoice that resolve to different rungs, which is the only way to prove a rung
+# shadows the ones beneath it rather than merely working when it is the only one configured.
+#
+# The other half of the block is the reducer ORDER: calculate_fees_service.rb:54 applies the coupon
+# and :56 computes the taxes. Every fixed_amount row names the total the reverse order would have
+# produced. A PERCENTAGE coupon commutes with a percentage tax, so those rows cannot pin the order
+# through the total at all — they assert coupons_amount_cents,
+# sub_total_excluding_taxes_amount_cents and taxes_amount_cents instead, each of which differs
+# between the two orders even when the total does not, and say so in `math`.
+#
+# Frequency is asserted across periods, never within one invoice: `once` rows run two billing
+# periods (discounted, then not), `recurring` rows run three with frequency_duration 2 (discounted,
+# discounted, then not) and `forever` rows run three, all discounted. Two periods cannot separate
+# `recurring` from `forever`, which is why the third exists.
+#
+# TWO RUNGS ARE UNREACHABLE THROUGH THIS HARNESS, so the block tops out at 36 of 48 cells:
+#   * rung 2, `fee.add_on.taxes` (:67) — only Fees::OneOffService creates an add_on fee
+#     (fees/one_off_service.rb:40), and that runs from POST /invoices, for which the interpreter has
+#     no timeline verb (schema.json step `do` enum). ScenariosHelper#create_one_off_invoice
+#     (spec/support/scenarios_helper.rb:240) already exists; a `create_one_off_invoice` verb would
+#     unblock the 6 add-on cells.
+#   * rung 1, explicit `tax_codes` (:66) — fees/one_off_service.rb:60 is the ONLY call site in the
+#     app that passes `tax_codes:` to Fees::ApplyTaxesService, so it needs the same verb; 6 cells.
+#     Note that Invoices::CreateOneOffService never calls Credits::AppliedCouponsService, so even
+#     with the verb a coupon does not participate in a one-off invoice — those 12 cells may turn out
+#     to be inexpressible rather than merely unimplemented.
+---
+- __matrix:
+    defaults:
+      provenance: coverage-gap
+      runners: [rspec, live]
+      dimensions: {interval: monthly, billing_time: calendar}
+    groups:
+      be:
+        setup:
+          taxes: [{"code":"b10_be_entity","name":"entity default","rate":20,"applied_to_organization":true},{"code":"b10_be_charge","name":"charge","rate":25,"applied_to_organization":false}]
+          metrics: [{"code":"b10_be_sum","aggregation_type":"sum_agg","field_name":"amount"}]
+          plan: {"code":"golden_%{key}","interval":"monthly","amount_cents":2000}
+          charges: [{"billable_metric_code":"b10_be_sum","charge_model":"standard","properties":{"amount":"1"},"tax_codes":["b10_be_charge"]}]
+          customer: {"external_id":"golden_%{key}_cust","currency":"EUR"}
+          subscription: {"external_id":"golden_%{key}_sub","billing_time":"calendar"}
+        dimensions: {periods: 3, winning_rung: 8}
+        timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-06-01T01:00:00Z","do":"perform_billing"}]
+      cu:
+        setup:
+          taxes: [{"code":"b10_cu_entity","name":"entity default","rate":5,"applied_to_organization":true},{"code":"b10_cu_customer","name":"customer","rate":20,"applied_to_organization":false}]
+          metrics: [{"code":"b10_cu_sum","aggregation_type":"sum_agg","field_name":"amount"}]
+          plan: {"code":"golden_%{key}","interval":"monthly","amount_cents":2000}
+          charges: [{"billable_metric_code":"b10_cu_sum","charge_model":"standard","properties":{"amount":"1"}}]
+          customer: {"external_id":"golden_%{key}_cust","currency":"EUR","tax_codes":["b10_cu_customer"]}
+          subscription: {"external_id":"golden_%{key}_sub","billing_time":"calendar"}
+        dimensions: {periods: 3, winning_rung: 7}
+        timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-06-01T01:00:00Z","do":"perform_billing"}]
+      pl:
+        setup:
+          taxes: [{"code":"b10_pl_entity","name":"entity default","rate":5,"applied_to_organization":true},{"code":"b10_pl_customer","name":"customer","rate":10,"applied_to_organization":false},{"code":"b10_pl_plan","name":"plan","rate":20,"applied_to_organization":false}]
+          metrics: [{"code":"b10_pl_sum","aggregation_type":"sum_agg","field_name":"amount"}]
+          plan: {"code":"golden_%{key}","interval":"monthly","amount_cents":2000,"tax_codes":["b10_pl_plan"]}
+          charges: [{"billable_metric_code":"b10_pl_sum","charge_model":"standard","properties":{"amount":"1"}}]
+          customer: {"external_id":"golden_%{key}_cust","currency":"EUR","tax_codes":["b10_pl_customer"]}
+          subscription: {"external_id":"golden_%{key}_sub","billing_time":"calendar"}
+        dimensions: {periods: 3, winning_rung: 6}
+        timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-06-01T01:00:00Z","do":"perform_billing"}]
+      fc:
+        setup:
+          taxes: [{"code":"b10_fc_entity","name":"entity default","rate":5,"applied_to_organization":true},{"code":"b10_fc_plan","name":"plan","rate":10,"applied_to_organization":false},{"code":"b10_fc_fixed","name":"fixed charge","rate":20,"applied_to_organization":false}]
+          add_ons: [{"code":"b10_fc_seat","name":"Seat","amount_cents":1000}]
+          plan: {"code":"golden_%{key}","interval":"monthly","amount_cents":2000,"tax_codes":["b10_fc_plan"]}
+          fixed_charges: [{"add_on_code":"b10_fc_seat","charge_model":"standard","units":4,"properties":{"amount":"10"},"tax_codes":["b10_fc_fixed"]}]
+          customer: {"external_id":"golden_%{key}_cust","currency":"EUR"}
+          subscription: {"external_id":"golden_%{key}_sub","billing_time":"calendar"}
+        dimensions: {periods: 3, winning_rung: 4}
+        timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"},{"at":"2024-06-01T01:00:00Z","do":"perform_billing"}]
+      cm:
+        setup:
+          taxes: [{"code":"b10_cm_entity","name":"entity default","rate":5,"applied_to_organization":true},{"code":"b10_cm_plan","name":"plan","rate":10,"applied_to_organization":false},{"code":"b10_cm_commit","name":"commitment","rate":20,"applied_to_organization":false}]
+          metrics: [{"code":"b10_cm_sum","aggregation_type":"sum_agg","field_name":"amount"}]
+          plan: {"code":"golden_%{key}","interval":"monthly","amount_cents":2000,"tax_codes":["b10_cm_plan"],"minimum_commitment":{"amount_cents":10000,"tax_codes":["b10_cm_commit"]}}
+          charges: [{"billable_metric_code":"b10_cm_sum","charge_model":"standard","properties":{"amount":"1"}}]
+          customer: {"external_id":"golden_%{key}_cust","currency":"EUR"}
+          subscription: {"external_id":"golden_%{key}_sub","billing_time":"calendar"}
+        dimensions: {periods: 3, winning_rung: 5}
+        timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-06-01T01:00:00Z","do":"perform_billing"}]
+      ch:
+        setup:
+          taxes: [{"code":"b10_ch_entity","name":"entity default","rate":5,"applied_to_organization":true},{"code":"b10_ch_plan","name":"plan","rate":10,"applied_to_organization":false},{"code":"b10_ch_charge","name":"charge","rate":20,"applied_to_organization":false}]
+          metrics: [{"code":"b10_ch_sum","aggregation_type":"sum_agg","field_name":"amount"}]
+          plan: {"code":"golden_%{key}","interval":"monthly","amount_cents":2000,"tax_codes":["b10_ch_plan"]}
+          charges: [{"billable_metric_code":"b10_ch_sum","charge_model":"standard","properties":{"amount":"1"},"tax_codes":["b10_ch_charge"]}]
+          customer: {"external_id":"golden_%{key}_cust","currency":"EUR"}
+          subscription: {"external_id":"golden_%{key}_sub","billing_time":"calendar"}
+        dimensions: {periods: 3, winning_rung: 3}
+        timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_ch_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_ch_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_ch_sum","properties":{"amount":80}}]},{"at":"2024-06-01T01:00:00Z","do":"perform_billing"}]
+
+- id: "b10/fixed_amount/once/charge"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"once","tax_level":"charge"}
+  setup:
+    taxes:
+      - {code: b10_entity_tax, name: entity default, rate: 5, applied_to_organization: true}
+      - {code: b10_customer_tax, name: customer, rate: 10, applied_to_organization: false}
+      - {code: b10_plan_tax, name: plan, rate: 15, applied_to_organization: false}
+      - {code: b10_charge_tax, name: charge, rate: 25, applied_to_organization: false}
+    metrics:
+      - {code: b10_taxed, aggregation_type: sum_agg, field_name: amount}
+      - {code: b10_untaxed, aggregation_type: sum_agg, field_name: amount}
+    plan:
+      code: golden_b10_ladder
+      interval: monthly
+      amount_cents: 1000
+      tax_codes: [b10_plan_tax]
+    charges:
+      - billable_metric_code: b10_taxed
+        charge_model: standard
+        properties: {amount: "1"}
+        tax_codes: [b10_charge_tax]
+      - {billable_metric_code: b10_untaxed, charge_model: standard, properties: {amount: "1"}}
+    customer:
+      external_id: golden_b10_ladder_cust
+      currency: EUR
+      tax_codes: [b10_customer_tax]
+    subscription: {external_id: golden_b10_ladder_sub, billing_time: calendar}
+    coupons:
+      - name: b10 ladder coupon
+        code: b10_ladder_coupon
+        coupon_type: fixed_amount
+        frequency: once
+        amount_cents: 1600
+        amount_currency: EUR
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events:
+        - {code: b10_taxed, properties: {amount: 100}}
+        - {code: b10_untaxed, properties: {amount: 50}}
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 16000
+      coupons_amount_cents: 1600
+      sub_total_excluding_taxes_amount_cents: 14400
+      taxes_amount_cents: 3060
+      total_amount_cents: 17460
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 1000, taxes_amount_cents: 135}
+        - {fee_type: charge, item_code: b10_taxed, amount_cents: 10000, taxes_amount_cents: 2250}
+        - {fee_type: charge, item_code: b10_untaxed, amount_cents: 5000, taxes_amount_cents: 675}
+  math: >-
+    Four tax rates are configured at four levels of the ladder and three fees resolve to three
+    different rungs on one invoice, which is what makes this a test of precedence rather than of
+    whether a tax can be attached at all.
+    `b10_taxed` carries its own 25% and takes rung 3, shadowing the plan, the customer and the entity
+    default. The subscription fee and `b10_untaxed` have no charge-level tax so they fall to the
+    plan's 15% (rung 6), which in turn shadows the customer's 10% and the entity's 5%. Neither of the
+    lower two rates appears anywhere on the invoice — that absence IS the assertion, and it is
+    checked per fee because the invoice total cannot distinguish 15% here and 10% there from a
+    uniform blend.
+    The coupon then makes the rates matter to each other. Fees are 1_000 + 10_000 + 5_000 = 16_000¢
+    and the 1_600¢ coupon is spread across them in proportion — 100¢, 1_000¢, 500¢ — before any tax
+    is computed, so each fee is taxed on what remains at ITS own rate:
+    900 × 15% = 135¢, 9_000 × 25% = 2_250¢, 4_500 × 15% = 675¢ → 3_060¢.
+    A flat 15% on the discounted 14_400¢ would give 2_160¢ and a flat 25% would give 3_600¢; both are
+    wrong, and only the per-fee figures say which rung each fee actually used.
+
+- id: "b10/percentage/recurring/customer"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"recurring","tax_level":"customer"}
+  setup:
+    taxes:
+      - {code: b10_pc_entity, name: entity default, rate: 5, applied_to_organization: true}
+      - {code: b10_pc_customer, name: customer, rate: 10, applied_to_organization: false}
+    metrics: [{code: b10_pc_sum, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: golden_b10_pc, interval: monthly, amount_cents: 1000}
+    charges: [{billable_metric_code: b10_pc_sum, charge_model: standard, properties: {amount: "1"}}]
+    customer:
+      external_id: golden_b10_pc_cust
+      currency: EUR
+      tax_codes: [b10_pc_customer]
+    subscription: {external_id: golden_b10_pc_sub, billing_time: calendar}
+    coupons:
+      - name: b10 percentage coupon
+        code: b10_pc_coupon
+        coupon_type: percentage
+        frequency: recurring
+        frequency_duration: 3
+        percentage_rate: 10
+        expiration: no_expiration
+  timeline:
+    - {at: "2024-03-01T00:00:00Z", do: create_subscription}
+    - at: "2024-03-05T10:00:00Z"
+      do: ingest_events
+      events: [{code: b10_pc_sum, properties: {amount: 100}}]
+    - {at: "2024-04-01T01:00:00Z", do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 11000
+      coupons_amount_cents: 1100
+      sub_total_excluding_taxes_amount_cents: 9900
+      taxes_amount_cents: 990
+      total_amount_cents: 10890
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 1000, taxes_amount_cents: 90}
+        - {fee_type: charge, amount_cents: 10000, taxes_amount_cents: 900}
+  math: >-
+    The bottom two rungs of the ladder, which b10/fixed_amount/once/charge could not reach because
+    anything configured above them shadows them.
+    Nothing here carries a charge- or plan-level tax, so every fee falls to the customer's 10% (rung
+    7) and the organization's 5% default (rung 8) never applies. Both fees are asserted individually:
+    an invoice-level 990¢ on a 9_900¢ base is also what a uniform 10% looks like, and the point is
+    that the 5% is absent rather than blended in.
+    The coupon is a percentage rather than a fixed amount, which changes the arithmetic rather than
+    just the number: 10% of the 11_000¢ of fees = 1_100¢, and because it is proportional by
+    definition it lands on each fee in the same ratio a fixed coupon would have to be spread into —
+    100¢ and 1_000¢. Each fee is then taxed on what remains, 900 and 9_000 at 10% → 90¢ and 900¢.
+    A percentage coupon commutes with a single tax rate, so this row deliberately does NOT claim to
+    prove the coupon runs before tax — b15/coupon/tax does that with a fixed coupon, where the two
+    orders differ. What this row proves is which rate was chosen.
+
+- id: "b10/fixed_amount/once/billing-entity"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"once","tax_level":"billing-entity"}
+  group: be
+  key: b10_fa_once_be
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 fa_once_be coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"once","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1440
+        total_amount_cents: 7440
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2400
+        total_amount_cents: 12400
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 2000}
+  math: >-
+    The billing entity default is the LAST rung (apply_taxes_service.rb:77) — nothing can shadow it, so
+    the only way to prove it is a rung rather than a global setting is to put a fee beside it that
+    resolves higher. `b10_be_charge` carries 25% on the charge and takes rung 3 (:68); the subscription
+    fee has no charge, no plan tax and no customer tax, so it falls all the way through :68-:74 and picks
+    up the entity's 20%. Two different rates on one invoice is the assertion: a uniform 20% would mean
+    rung 3 never fired, and a uniform 25% would mean the entity default is not a fallback at all. Which
+    level won: billing-entity (rung 8, apply_taxes_service.rb:77). Overridden: rung 3 (the charge's own
+    25%) shadows the entity default for the charge fee; the entity default is itself the bottom of the
+    ladder and shadows nothing. Had the shadowed rung won instead, the entity default's 20% applied to the
+    charge fee as well would have made the discounted invoice total 7_200¢ rather than 7_440¢. Order of
+    the reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that
+    order, so the coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a
+    4_000¢ fixed coupon, taxable base 6_000¢, taxes 1_440¢, total 7_440¢. Reverse the two lines and the
+    tax is computed on the undiscounted 10_000¢ (2_400¢ instead of 1_440¢) and the invoice totals 8_400¢.
+    A fixed coupon does not commute with a tax, so those two totals differ and the row can name which
+    order produced its number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where
+    they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the
+    subscription fee + 3_200¢ on the charge fee. Each fee is then taxed at ITS own rate on what remains
+    (apply_taxes_service.rb:37): 1_200 × 20% = 240¢; 4_800 × 25% = 1_200¢ — 1_440¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `once` is
+    asserted across TWO periods, not one, because a single invoice cannot tell the three frequencies
+    apart. On the first invoice the credit equals the whole applied amount, so
+    applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and terminates the applied
+    coupon; the second period's invoice therefore carries coupons_amount_cents: 0 and the undiscounted
+    tax. Had the coupon been `forever` the second invoice would repeat the first. The undiscounted invoice
+    in this row is 10_000¢ of fees, 2_400¢ of tax, 12_400¢ total.
+
+- id: "b10/fixed_amount/once/customer"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"once","tax_level":"customer"}
+  group: cu
+  key: b10_fa_once_cu
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 fa_once_cu coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"once","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Two rungs, and the lower one is configured so that its absence is visible. The customer carries 20%
+    (rung 7, :74) and the billing entity default carries 5% (rung 8, :77). Every fee here is a
+    subscription or a plain charge with no charge-, plan-, fixed-charge- or commitment-level tax, so
+    :68-:73 all fall through and rung 7 wins for both fees. The 5% is never applied to anything — that
+    absence is what the row pins. Which level won: customer (rung 7, apply_taxes_service.rb:74).
+    Overridden: the billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the entity
+    default's 5% would have made the discounted invoice total 6_300¢ rather than 7_200¢. Order of the
+    reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that order,
+    so the coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a 4_000¢ fixed
+    coupon, taxable base 6_000¢, taxes 1_200¢, total 7_200¢. Reverse the two lines and the tax is computed
+    on the undiscounted 10_000¢ (2_000¢ instead of 1_200¢) and the invoice totals 8_000¢. A fixed coupon
+    does not commute with a tax, so those two totals differ and the row can name which order produced its
+    number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because
+    the invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with
+    fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the subscription fee + 3_200¢ on the
+    charge fee. Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200
+    × 20% = 240¢; 4_800 × 20% = 960¢ — 1_200¢ in total. fees_amount_cents is 10_000¢ under either order
+    and is therefore not load-bearing here. `once` is asserted across TWO periods, not one, because a
+    single invoice cannot tell the three frequencies apart. On the first invoice the credit equals the
+    whole applied amount, so applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and
+    terminates the applied coupon; the second period's invoice therefore carries coupons_amount_cents: 0
+    and the undiscounted tax. Had the coupon been `forever` the second invoice would repeat the first. The
+    undiscounted invoice in this row is 10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/fixed_amount/once/plan"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"once","tax_level":"plan"}
+  group: pl
+  key: b10_fa_once_pl
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 fa_once_pl coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"once","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Three rungs stacked so that the winner is unambiguous. The plan carries 20% (rung 6, :71-73), the
+    customer 10% (rung 7, :74) and the billing entity 5% (rung 8, :77). Rung 6 is guarded by a fee-type
+    check — it only fires for charge, subscription, commitment and fixed_charge fees — and both fees here
+    qualify, so the plan's 20% is what lands. A 20% observed rate can come from nowhere else in this
+    setup, which is precisely why the customer was given 10% rather than the same 20%. Which level won:
+    plan (rung 6, apply_taxes_service.rb:71-73). Overridden: the customer (rung 7, 10%) and the
+    billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the customer's 10% would have
+    made the discounted invoice total 6_600¢ rather than 7_200¢. Order of the reducers.
+    calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that order, so the
+    coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a 4_000¢ fixed
+    coupon, taxable base 6_000¢, taxes 1_200¢, total 7_200¢. Reverse the two lines and the tax is computed
+    on the undiscounted 10_000¢ (2_000¢ instead of 1_200¢) and the invoice totals 8_000¢. A fixed coupon
+    does not commute with a tax, so those two totals differ and the row can name which order produced its
+    number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because
+    the invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with
+    fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the subscription fee + 3_200¢ on the
+    charge fee. Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200
+    × 20% = 240¢; 4_800 × 20% = 960¢ — 1_200¢ in total. fees_amount_cents is 10_000¢ under either order
+    and is therefore not load-bearing here. `once` is asserted across TWO periods, not one, because a
+    single invoice cannot tell the three frequencies apart. On the first invoice the credit equals the
+    whole applied amount, so applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and
+    terminates the applied coupon; the second period's invoice therefore carries coupons_amount_cents: 0
+    and the undiscounted tax. Had the coupon been `forever` the second invoice would repeat the first. The
+    undiscounted invoice in this row is 10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/fixed_amount/once/fixed-charge"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"once","tax_level":"fixed-charge"}
+  group: fc
+  key: b10_fa_once_fc
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 fa_once_fc coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"once","amount_cents":3000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        taxes_amount_cents: 500
+        total_amount_cents: 3500
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 100}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 400}
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1000
+        total_amount_cents: 7000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 800}
+  math: >-
+    The fixed-charge rung (4, :69) against the plan rung (6, :71-73). The fixed charge prices an add-on on
+    the plan and carries its own 20%, so `fee.fixed_charge? && fee.fixed_charge.taxes.any?` matches at :69
+    and short-circuits before the plan check. The subscription fee is not a fixed charge, so it falls to
+    the plan's 10%. The entity's 5% is configured and never used. Note the fee-type reach of rung 6: it
+    explicitly lists fixed_charge, so without the fixed charge's own tax BOTH fees would have taken 10%.
+    Which level won: fixed-charge (rung 4, apply_taxes_service.rb:69). Overridden: the plan (rung 6, 10%)
+    for the fixed-charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the shadowed
+    rung won instead, the plan's 10% on every fee would have made the discounted invoice total 3_300¢
+    rather than 3_500¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and :56
+    computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what is
+    left. 6_000¢ of fees, a 3_000¢ fixed coupon, taxable base 3_000¢, taxes 500¢, total 3_500¢. Reverse
+    the two lines and the tax is computed on the undiscounted 6_000¢ (1_000¢ instead of 500¢) and the
+    invoice totals 4_000¢. A fixed coupon does not commute with a tax, so those two totals differ and the
+    row can name which order produced its number. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 1_000¢ on
+    the subscription fee + 2_000¢ on the fixed_charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_000 × 10% = 100¢; 2_000 × 20% = 400¢ — 500¢ in total.
+    fees_amount_cents is 6_000¢ under either order and is therefore not load-bearing here. `once` is
+    asserted across TWO periods, not one, because a single invoice cannot tell the three frequencies
+    apart. On the first invoice the credit equals the whole applied amount, so
+    applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and terminates the applied
+    coupon; the second period's invoice therefore carries coupons_amount_cents: 0 and the undiscounted
+    tax. Had the coupon been `forever` the second invoice would repeat the first. The undiscounted invoice
+    in this row is 6_000¢ of fees, 1_000¢ of tax, 7_000¢ total.
+
+- id: "b10/fixed_amount/once/commitment"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"once","tax_level":"commitment"}
+  group: cm
+  key: b10_fa_once_cm
+  dimensions: {periods: 2}
+  premium: true
+  setup: {"coupons":[{"name":"b10 fa_once_cm coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"once","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 900
+        total_amount_cents: 6900
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 180}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 600}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1500
+        total_amount_cents: 11500
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 300}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 1000}
+  math: >-
+    The commitment rung (5, :70) against the plan rung (6, :71-73). `premium: true` is load-bearing:
+    plans/create_service.rb:67 drops `minimum_commitment` entirely without a licence and still answers
+    HTTP 200, so a non-premium row would have no commitment fee, no rung 5, and would pass while asserting
+    nothing about it. The true-up fee's `invoiceable` is the Commitment record and it carries 20%, so :70
+    matches; the subscription and charge fees are neither commitments nor charge-taxed, so they fall to
+    the plan's 10%. Which level won: commitment (rung 5, apply_taxes_service.rb:70). Overridden: the plan
+    (rung 6, 10%) for the true-up fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    6_600¢ rather than 6_900¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what
+    is left. 10_000¢ of fees, a 4_000¢ fixed coupon, taxable base 6_000¢, taxes 900¢, total 6_900¢.
+    Reverse the two lines and the tax is computed on the undiscounted 10_000¢ (1_500¢ instead of 900¢) and
+    the invoice totals 7_500¢. A fixed coupon does not commute with a tax, so those two totals differ and
+    the row can name which order produced its number. Per-fee arithmetic, and it is per-fee because the
+    rates differ (or, where they do not, because the invoice total would hide a wrong rung behind a
+    blend). applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢
+    on the subscription fee + 1_200¢ on the charge fee + 2_000¢ on the commitment fee. Each fee is then
+    taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200 × 10% = 120¢; 1_800 × 10% =
+    180¢; 3_000 × 20% = 600¢ — 900¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `once` is asserted across TWO periods, not one, because a single
+    invoice cannot tell the three frequencies apart. On the first invoice the credit equals the whole
+    applied amount, so applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and
+    terminates the applied coupon; the second period's invoice therefore carries coupons_amount_cents: 0
+    and the undiscounted tax. Had the coupon been `forever` the second invoice would repeat the first. The
+    undiscounted invoice in this row is 10_000¢ of fees, 1_500¢ of tax, 11_500¢ total. One more ordering
+    is baked into these numbers: the true-up is a PRODUCER, created at calculate_fees_service.rb:46 before
+    the coupon reducer at :54, and calculate_true_up_fee_service.rb:37-41 reads raw amount_cents. So it
+    tops the period up to the 10_000¢ floor from 5_000¢ of real fees, and the coupon then discounts the
+    floor itself rather than being absorbed by the headroom under it.
+
+- id: "b10/fixed_amount/recurring/billing-entity"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"recurring","tax_level":"billing-entity"}
+  group: be
+  key: b10_fa_rec_be
+  setup: {"coupons":[{"name":"b10 fa_rec_be coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"recurring","frequency_duration":2,"amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1440
+        total_amount_cents: 7440
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1440
+        total_amount_cents: 7440
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2400
+        total_amount_cents: 12400
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 2000}
+  math: >-
+    The billing entity default is the LAST rung (apply_taxes_service.rb:77) — nothing can shadow it, so
+    the only way to prove it is a rung rather than a global setting is to put a fee beside it that
+    resolves higher. `b10_be_charge` carries 25% on the charge and takes rung 3 (:68); the subscription
+    fee has no charge, no plan tax and no customer tax, so it falls all the way through :68-:74 and picks
+    up the entity's 20%. Two different rates on one invoice is the assertion: a uniform 20% would mean
+    rung 3 never fired, and a uniform 25% would mean the entity default is not a fallback at all. Which
+    level won: billing-entity (rung 8, apply_taxes_service.rb:77). Overridden: rung 3 (the charge's own
+    25%) shadows the entity default for the charge fee; the entity default is itself the bottom of the
+    ladder and shadows nothing. Had the shadowed rung won instead, the entity default's 20% applied to the
+    charge fee as well would have made the discounted invoice total 7_200¢ rather than 7_440¢. Order of
+    the reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that
+    order, so the coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a
+    4_000¢ fixed coupon, taxable base 6_000¢, taxes 1_440¢, total 7_440¢. Reverse the two lines and the
+    tax is computed on the undiscounted 10_000¢ (2_400¢ instead of 1_440¢) and the invoice totals 8_400¢.
+    A fixed coupon does not commute with a tax, so those two totals differ and the row can name which
+    order produced its number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where
+    they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the
+    subscription fee + 3_200¢ on the charge fee. Each fee is then taxed at ITS own rate on what remains
+    (apply_taxes_service.rb:37): 1_200 × 20% = 240¢; 4_800 × 25% = 1_200¢ — 1_440¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `recurring`
+    with frequency_duration 2 is asserted across THREE periods, which is the only window that separates it
+    from both neighbours. applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each
+    application and :84 terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 ->
+    0 after the second (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would
+    have discounted only the first; `forever` would have discounted all three. The undiscounted invoice in
+    this row is 10_000¢ of fees, 2_400¢ of tax, 12_400¢ total.
+
+- id: "b10/fixed_amount/recurring/customer"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"recurring","tax_level":"customer"}
+  group: cu
+  key: b10_fa_rec_cu
+  setup: {"coupons":[{"name":"b10 fa_rec_cu coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"recurring","frequency_duration":2,"amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Two rungs, and the lower one is configured so that its absence is visible. The customer carries 20%
+    (rung 7, :74) and the billing entity default carries 5% (rung 8, :77). Every fee here is a
+    subscription or a plain charge with no charge-, plan-, fixed-charge- or commitment-level tax, so
+    :68-:73 all fall through and rung 7 wins for both fees. The 5% is never applied to anything — that
+    absence is what the row pins. Which level won: customer (rung 7, apply_taxes_service.rb:74).
+    Overridden: the billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the entity
+    default's 5% would have made the discounted invoice total 6_300¢ rather than 7_200¢. Order of the
+    reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that order,
+    so the coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a 4_000¢ fixed
+    coupon, taxable base 6_000¢, taxes 1_200¢, total 7_200¢. Reverse the two lines and the tax is computed
+    on the undiscounted 10_000¢ (2_000¢ instead of 1_200¢) and the invoice totals 8_000¢. A fixed coupon
+    does not commute with a tax, so those two totals differ and the row can name which order produced its
+    number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because
+    the invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with
+    fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the subscription fee + 3_200¢ on the
+    charge fee. Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200
+    × 20% = 240¢; 4_800 × 20% = 960¢ — 1_200¢ in total. fees_amount_cents is 10_000¢ under either order
+    and is therefore not load-bearing here. `recurring` with frequency_duration 2 is asserted across THREE
+    periods, which is the only window that separates it from both neighbours.
+    applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each application and :84
+    terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 -> 0 after the second
+    (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would have discounted
+    only the first; `forever` would have discounted all three. The undiscounted invoice in this row is
+    10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/fixed_amount/recurring/plan"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"recurring","tax_level":"plan"}
+  group: pl
+  key: b10_fa_rec_pl
+  setup: {"coupons":[{"name":"b10 fa_rec_pl coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"recurring","frequency_duration":2,"amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Three rungs stacked so that the winner is unambiguous. The plan carries 20% (rung 6, :71-73), the
+    customer 10% (rung 7, :74) and the billing entity 5% (rung 8, :77). Rung 6 is guarded by a fee-type
+    check — it only fires for charge, subscription, commitment and fixed_charge fees — and both fees here
+    qualify, so the plan's 20% is what lands. A 20% observed rate can come from nowhere else in this
+    setup, which is precisely why the customer was given 10% rather than the same 20%. Which level won:
+    plan (rung 6, apply_taxes_service.rb:71-73). Overridden: the customer (rung 7, 10%) and the
+    billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the customer's 10% would have
+    made the discounted invoice total 6_600¢ rather than 7_200¢. Order of the reducers.
+    calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that order, so the
+    coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a 4_000¢ fixed
+    coupon, taxable base 6_000¢, taxes 1_200¢, total 7_200¢. Reverse the two lines and the tax is computed
+    on the undiscounted 10_000¢ (2_000¢ instead of 1_200¢) and the invoice totals 8_000¢. A fixed coupon
+    does not commute with a tax, so those two totals differ and the row can name which order produced its
+    number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because
+    the invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with
+    fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the subscription fee + 3_200¢ on the
+    charge fee. Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200
+    × 20% = 240¢; 4_800 × 20% = 960¢ — 1_200¢ in total. fees_amount_cents is 10_000¢ under either order
+    and is therefore not load-bearing here. `recurring` with frequency_duration 2 is asserted across THREE
+    periods, which is the only window that separates it from both neighbours.
+    applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each application and :84
+    terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 -> 0 after the second
+    (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would have discounted
+    only the first; `forever` would have discounted all three. The undiscounted invoice in this row is
+    10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/fixed_amount/recurring/charge"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"recurring","tax_level":"charge"}
+  group: ch
+  key: b10_fa_rec_ch
+  setup: {"coupons":[{"name":"b10 fa_rec_ch coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"recurring","frequency_duration":2,"amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1080
+        total_amount_cents: 7080
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1080
+        total_amount_cents: 7080
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1800
+        total_amount_cents: 11800
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    The charge rung (3, :68) against the plan rung (6, :71-73), with the entity default (8, :77)
+    underneath as a witness that never fires. The metered charge carries its own 20% and takes rung 3; the
+    subscription fee has no charge at all, so :68 cannot match and it drops to the plan's 10%. Two rates
+    on one invoice, asserted per fee, because the invoice total cannot tell 10%-here-20%-there from a
+    uniform blend. Which level won: charge (rung 3, apply_taxes_service.rb:68). Overridden: the plan (rung
+    6, 10%) for the charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    6_600¢ rather than 7_080¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what
+    is left. 10_000¢ of fees, a 4_000¢ fixed coupon, taxable base 6_000¢, taxes 1_080¢, total 7_080¢.
+    Reverse the two lines and the tax is computed on the undiscounted 10_000¢ (1_800¢ instead of 1_080¢)
+    and the invoice totals 7_800¢. A fixed coupon does not commute with a tax, so those two totals differ
+    and the row can name which order produced its number. Per-fee arithmetic, and it is per-fee because
+    the rates differ (or, where they do not, because the invoice total would hide a wrong rung behind a
+    blend). applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢
+    on the subscription fee + 3_200¢ on the charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_200 × 10% = 120¢; 4_800 × 20% = 960¢ — 1_080¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `recurring`
+    with frequency_duration 2 is asserted across THREE periods, which is the only window that separates it
+    from both neighbours. applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each
+    application and :84 terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 ->
+    0 after the second (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would
+    have discounted only the first; `forever` would have discounted all three. The undiscounted invoice in
+    this row is 10_000¢ of fees, 1_800¢ of tax, 11_800¢ total.
+
+- id: "b10/fixed_amount/recurring/fixed-charge"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"recurring","tax_level":"fixed-charge"}
+  group: fc
+  key: b10_fa_rec_fc
+  setup: {"coupons":[{"name":"b10 fa_rec_fc coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"recurring","frequency_duration":2,"amount_cents":3000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        taxes_amount_cents: 500
+        total_amount_cents: 3500
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 100}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 400}
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        taxes_amount_cents: 500
+        total_amount_cents: 3500
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 100}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 400}
+      - select: {index: 2}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1000
+        total_amount_cents: 7000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 800}
+  math: >-
+    The fixed-charge rung (4, :69) against the plan rung (6, :71-73). The fixed charge prices an add-on on
+    the plan and carries its own 20%, so `fee.fixed_charge? && fee.fixed_charge.taxes.any?` matches at :69
+    and short-circuits before the plan check. The subscription fee is not a fixed charge, so it falls to
+    the plan's 10%. The entity's 5% is configured and never used. Note the fee-type reach of rung 6: it
+    explicitly lists fixed_charge, so without the fixed charge's own tax BOTH fees would have taken 10%.
+    Which level won: fixed-charge (rung 4, apply_taxes_service.rb:69). Overridden: the plan (rung 6, 10%)
+    for the fixed-charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the shadowed
+    rung won instead, the plan's 10% on every fee would have made the discounted invoice total 3_300¢
+    rather than 3_500¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and :56
+    computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what is
+    left. 6_000¢ of fees, a 3_000¢ fixed coupon, taxable base 3_000¢, taxes 500¢, total 3_500¢. Reverse
+    the two lines and the tax is computed on the undiscounted 6_000¢ (1_000¢ instead of 500¢) and the
+    invoice totals 4_000¢. A fixed coupon does not commute with a tax, so those two totals differ and the
+    row can name which order produced its number. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 1_000¢ on
+    the subscription fee + 2_000¢ on the fixed_charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_000 × 10% = 100¢; 2_000 × 20% = 400¢ — 500¢ in total.
+    fees_amount_cents is 6_000¢ under either order and is therefore not load-bearing here. `recurring`
+    with frequency_duration 2 is asserted across THREE periods, which is the only window that separates it
+    from both neighbours. applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each
+    application and :84 terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 ->
+    0 after the second (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would
+    have discounted only the first; `forever` would have discounted all three. The undiscounted invoice in
+    this row is 6_000¢ of fees, 1_000¢ of tax, 7_000¢ total.
+
+- id: "b10/fixed_amount/recurring/commitment"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"recurring","tax_level":"commitment"}
+  group: cm
+  key: b10_fa_rec_cm
+  premium: true
+  setup: {"coupons":[{"name":"b10 fa_rec_cm coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"recurring","frequency_duration":2,"amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 900
+        total_amount_cents: 6900
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 180}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 600}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 900
+        total_amount_cents: 6900
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 180}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 600}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1500
+        total_amount_cents: 11500
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 300}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 1000}
+  math: >-
+    The commitment rung (5, :70) against the plan rung (6, :71-73). `premium: true` is load-bearing:
+    plans/create_service.rb:67 drops `minimum_commitment` entirely without a licence and still answers
+    HTTP 200, so a non-premium row would have no commitment fee, no rung 5, and would pass while asserting
+    nothing about it. The true-up fee's `invoiceable` is the Commitment record and it carries 20%, so :70
+    matches; the subscription and charge fees are neither commitments nor charge-taxed, so they fall to
+    the plan's 10%. Which level won: commitment (rung 5, apply_taxes_service.rb:70). Overridden: the plan
+    (rung 6, 10%) for the true-up fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    6_600¢ rather than 6_900¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what
+    is left. 10_000¢ of fees, a 4_000¢ fixed coupon, taxable base 6_000¢, taxes 900¢, total 6_900¢.
+    Reverse the two lines and the tax is computed on the undiscounted 10_000¢ (1_500¢ instead of 900¢) and
+    the invoice totals 7_500¢. A fixed coupon does not commute with a tax, so those two totals differ and
+    the row can name which order produced its number. Per-fee arithmetic, and it is per-fee because the
+    rates differ (or, where they do not, because the invoice total would hide a wrong rung behind a
+    blend). applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢
+    on the subscription fee + 1_200¢ on the charge fee + 2_000¢ on the commitment fee. Each fee is then
+    taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200 × 10% = 120¢; 1_800 × 10% =
+    180¢; 3_000 × 20% = 600¢ — 900¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `recurring` with frequency_duration 2 is asserted across THREE
+    periods, which is the only window that separates it from both neighbours.
+    applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each application and :84
+    terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 -> 0 after the second
+    (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would have discounted
+    only the first; `forever` would have discounted all three. The undiscounted invoice in this row is
+    10_000¢ of fees, 1_500¢ of tax, 11_500¢ total. One more ordering is baked into these numbers: the
+    true-up is a PRODUCER, created at calculate_fees_service.rb:46 before the coupon reducer at :54, and
+    calculate_true_up_fee_service.rb:37-41 reads raw amount_cents. So it tops the period up to the 10_000¢
+    floor from 5_000¢ of real fees, and the coupon then discounts the floor itself rather than being
+    absorbed by the headroom under it.
+
+- id: "b10/fixed_amount/forever/billing-entity"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"forever","tax_level":"billing-entity"}
+  group: be
+  key: b10_fa_fvr_be
+  setup: {"coupons":[{"name":"b10 fa_fvr_be coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"forever","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1440
+        total_amount_cents: 7440
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1440
+        total_amount_cents: 7440
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1440
+        total_amount_cents: 7440
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+  math: >-
+    The billing entity default is the LAST rung (apply_taxes_service.rb:77) — nothing can shadow it, so
+    the only way to prove it is a rung rather than a global setting is to put a fee beside it that
+    resolves higher. `b10_be_charge` carries 25% on the charge and takes rung 3 (:68); the subscription
+    fee has no charge, no plan tax and no customer tax, so it falls all the way through :68-:74 and picks
+    up the entity's 20%. Two different rates on one invoice is the assertion: a uniform 20% would mean
+    rung 3 never fired, and a uniform 25% would mean the entity default is not a fallback at all. Which
+    level won: billing-entity (rung 8, apply_taxes_service.rb:77). Overridden: rung 3 (the charge's own
+    25%) shadows the entity default for the charge fee; the entity default is itself the bottom of the
+    ladder and shadows nothing. Had the shadowed rung won instead, the entity default's 20% applied to the
+    charge fee as well would have made the discounted invoice total 7_200¢ rather than 7_440¢. Order of
+    the reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that
+    order, so the coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a
+    4_000¢ fixed coupon, taxable base 6_000¢, taxes 1_440¢, total 7_440¢. Reverse the two lines and the
+    tax is computed on the undiscounted 10_000¢ (2_400¢ instead of 1_440¢) and the invoice totals 8_400¢.
+    A fixed coupon does not commute with a tax, so those two totals differ and the row can name which
+    order produced its number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where
+    they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the
+    subscription fee + 3_200¢ on the charge fee. Each fee is then taxed at ITS own rate on what remains
+    (apply_taxes_service.rb:37): 1_200 × 20% = 240¢; 4_800 × 25% = 1_200¢ — 1_440¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `forever` is
+    asserted across THREE periods. applied_coupon_service.rb:79 returns false from
+    should_terminate_applied_coupon? unconditionally for a forever coupon, and amount_service.rb:32-35
+    re-reads the full amount rather than a dwindling remainder, so every invoice carries the same credit.
+    All three invoices are discounted identically — `once` would have discounted only the first and
+    `recurring` with duration 2 only the first two, which is exactly the contrast the third period buys.
+    The undiscounted invoice in this row is 10_000¢ of fees, 2_400¢ of tax, 12_400¢ total.
+
+- id: "b10/fixed_amount/forever/customer"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"forever","tax_level":"customer"}
+  group: cu
+  key: b10_fa_fvr_cu
+  setup: {"coupons":[{"name":"b10 fa_fvr_cu coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"forever","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+  math: >-
+    Two rungs, and the lower one is configured so that its absence is visible. The customer carries 20%
+    (rung 7, :74) and the billing entity default carries 5% (rung 8, :77). Every fee here is a
+    subscription or a plain charge with no charge-, plan-, fixed-charge- or commitment-level tax, so
+    :68-:73 all fall through and rung 7 wins for both fees. The 5% is never applied to anything — that
+    absence is what the row pins. Which level won: customer (rung 7, apply_taxes_service.rb:74).
+    Overridden: the billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the entity
+    default's 5% would have made the discounted invoice total 6_300¢ rather than 7_200¢. Order of the
+    reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that order,
+    so the coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a 4_000¢ fixed
+    coupon, taxable base 6_000¢, taxes 1_200¢, total 7_200¢. Reverse the two lines and the tax is computed
+    on the undiscounted 10_000¢ (2_000¢ instead of 1_200¢) and the invoice totals 8_000¢. A fixed coupon
+    does not commute with a tax, so those two totals differ and the row can name which order produced its
+    number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because
+    the invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with
+    fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the subscription fee + 3_200¢ on the
+    charge fee. Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200
+    × 20% = 240¢; 4_800 × 20% = 960¢ — 1_200¢ in total. fees_amount_cents is 10_000¢ under either order
+    and is therefore not load-bearing here. `forever` is asserted across THREE periods.
+    applied_coupon_service.rb:79 returns false from should_terminate_applied_coupon? unconditionally for a
+    forever coupon, and amount_service.rb:32-35 re-reads the full amount rather than a dwindling
+    remainder, so every invoice carries the same credit. All three invoices are discounted identically —
+    `once` would have discounted only the first and `recurring` with duration 2 only the first two, which
+    is exactly the contrast the third period buys. The undiscounted invoice in this row is 10_000¢ of
+    fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/fixed_amount/forever/plan"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"forever","tax_level":"plan"}
+  group: pl
+  key: b10_fa_fvr_pl
+  setup: {"coupons":[{"name":"b10 fa_fvr_pl coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"forever","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1200
+        total_amount_cents: 7200
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 240}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+  math: >-
+    Three rungs stacked so that the winner is unambiguous. The plan carries 20% (rung 6, :71-73), the
+    customer 10% (rung 7, :74) and the billing entity 5% (rung 8, :77). Rung 6 is guarded by a fee-type
+    check — it only fires for charge, subscription, commitment and fixed_charge fees — and both fees here
+    qualify, so the plan's 20% is what lands. A 20% observed rate can come from nowhere else in this
+    setup, which is precisely why the customer was given 10% rather than the same 20%. Which level won:
+    plan (rung 6, apply_taxes_service.rb:71-73). Overridden: the customer (rung 7, 10%) and the
+    billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the customer's 10% would have
+    made the discounted invoice total 6_600¢ rather than 7_200¢. Order of the reducers.
+    calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes, in that order, so the
+    coupon lands on the raw fees and the tax lands on what is left. 10_000¢ of fees, a 4_000¢ fixed
+    coupon, taxable base 6_000¢, taxes 1_200¢, total 7_200¢. Reverse the two lines and the tax is computed
+    on the undiscounted 10_000¢ (2_000¢ instead of 1_200¢) and the invoice totals 8_000¢. A fixed coupon
+    does not commute with a tax, so those two totals differ and the row can name which order produced its
+    number. Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because
+    the invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with
+    fee.rb:235 spreads the credit pro rata on amount_cents: 800¢ on the subscription fee + 3_200¢ on the
+    charge fee. Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200
+    × 20% = 240¢; 4_800 × 20% = 960¢ — 1_200¢ in total. fees_amount_cents is 10_000¢ under either order
+    and is therefore not load-bearing here. `forever` is asserted across THREE periods.
+    applied_coupon_service.rb:79 returns false from should_terminate_applied_coupon? unconditionally for a
+    forever coupon, and amount_service.rb:32-35 re-reads the full amount rather than a dwindling
+    remainder, so every invoice carries the same credit. All three invoices are discounted identically —
+    `once` would have discounted only the first and `recurring` with duration 2 only the first two, which
+    is exactly the contrast the third period buys. The undiscounted invoice in this row is 10_000¢ of
+    fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/fixed_amount/forever/charge"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"forever","tax_level":"charge"}
+  group: ch
+  key: b10_fa_fvr_ch
+  setup: {"coupons":[{"name":"b10 fa_fvr_ch coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"forever","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1080
+        total_amount_cents: 7080
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1080
+        total_amount_cents: 7080
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1080
+        total_amount_cents: 7080
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 960}
+  math: >-
+    The charge rung (3, :68) against the plan rung (6, :71-73), with the entity default (8, :77)
+    underneath as a witness that never fires. The metered charge carries its own 20% and takes rung 3; the
+    subscription fee has no charge at all, so :68 cannot match and it drops to the plan's 10%. Two rates
+    on one invoice, asserted per fee, because the invoice total cannot tell 10%-here-20%-there from a
+    uniform blend. Which level won: charge (rung 3, apply_taxes_service.rb:68). Overridden: the plan (rung
+    6, 10%) for the charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    6_600¢ rather than 7_080¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what
+    is left. 10_000¢ of fees, a 4_000¢ fixed coupon, taxable base 6_000¢, taxes 1_080¢, total 7_080¢.
+    Reverse the two lines and the tax is computed on the undiscounted 10_000¢ (1_800¢ instead of 1_080¢)
+    and the invoice totals 7_800¢. A fixed coupon does not commute with a tax, so those two totals differ
+    and the row can name which order produced its number. Per-fee arithmetic, and it is per-fee because
+    the rates differ (or, where they do not, because the invoice total would hide a wrong rung behind a
+    blend). applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢
+    on the subscription fee + 3_200¢ on the charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_200 × 10% = 120¢; 4_800 × 20% = 960¢ — 1_080¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `forever` is
+    asserted across THREE periods. applied_coupon_service.rb:79 returns false from
+    should_terminate_applied_coupon? unconditionally for a forever coupon, and amount_service.rb:32-35
+    re-reads the full amount rather than a dwindling remainder, so every invoice carries the same credit.
+    All three invoices are discounted identically — `once` would have discounted only the first and
+    `recurring` with duration 2 only the first two, which is exactly the contrast the third period buys.
+    The undiscounted invoice in this row is 10_000¢ of fees, 1_800¢ of tax, 11_800¢ total.
+
+- id: "b10/fixed_amount/forever/fixed-charge"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"forever","tax_level":"fixed-charge"}
+  group: fc
+  key: b10_fa_fvr_fc
+  setup: {"coupons":[{"name":"b10 fa_fvr_fc coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"forever","amount_cents":3000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        taxes_amount_cents: 500
+        total_amount_cents: 3500
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 100}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 400}
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        taxes_amount_cents: 500
+        total_amount_cents: 3500
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 100}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 400}
+      - select: {index: 2}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 3000
+        sub_total_excluding_taxes_amount_cents: 3000
+        taxes_amount_cents: 500
+        total_amount_cents: 3500
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 100}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 400}
+  math: >-
+    The fixed-charge rung (4, :69) against the plan rung (6, :71-73). The fixed charge prices an add-on on
+    the plan and carries its own 20%, so `fee.fixed_charge? && fee.fixed_charge.taxes.any?` matches at :69
+    and short-circuits before the plan check. The subscription fee is not a fixed charge, so it falls to
+    the plan's 10%. The entity's 5% is configured and never used. Note the fee-type reach of rung 6: it
+    explicitly lists fixed_charge, so without the fixed charge's own tax BOTH fees would have taken 10%.
+    Which level won: fixed-charge (rung 4, apply_taxes_service.rb:69). Overridden: the plan (rung 6, 10%)
+    for the fixed-charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the shadowed
+    rung won instead, the plan's 10% on every fee would have made the discounted invoice total 3_300¢
+    rather than 3_500¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and :56
+    computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what is
+    left. 6_000¢ of fees, a 3_000¢ fixed coupon, taxable base 3_000¢, taxes 500¢, total 3_500¢. Reverse
+    the two lines and the tax is computed on the undiscounted 6_000¢ (1_000¢ instead of 500¢) and the
+    invoice totals 4_000¢. A fixed coupon does not commute with a tax, so those two totals differ and the
+    row can name which order produced its number. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 1_000¢ on
+    the subscription fee + 2_000¢ on the fixed_charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_000 × 10% = 100¢; 2_000 × 20% = 400¢ — 500¢ in total.
+    fees_amount_cents is 6_000¢ under either order and is therefore not load-bearing here. `forever` is
+    asserted across THREE periods. applied_coupon_service.rb:79 returns false from
+    should_terminate_applied_coupon? unconditionally for a forever coupon, and amount_service.rb:32-35
+    re-reads the full amount rather than a dwindling remainder, so every invoice carries the same credit.
+    All three invoices are discounted identically — `once` would have discounted only the first and
+    `recurring` with duration 2 only the first two, which is exactly the contrast the third period buys.
+    The undiscounted invoice in this row is 6_000¢ of fees, 1_000¢ of tax, 7_000¢ total.
+
+- id: "b10/fixed_amount/forever/commitment"
+  block: B10
+  axes: {"coupon_type":"fixed_amount","coupon_frequency":"forever","tax_level":"commitment"}
+  group: cm
+  key: b10_fa_fvr_cm
+  premium: true
+  setup: {"coupons":[{"name":"b10 fa_fvr_cm coupon","code":"%{key}_coupon","coupon_type":"fixed_amount","frequency":"forever","amount_cents":4000,"amount_currency":"EUR","expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 900
+        total_amount_cents: 6900
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 180}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 600}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 900
+        total_amount_cents: 6900
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 180}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 600}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 4000
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 900
+        total_amount_cents: 6900
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 120}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 180}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 600}
+  math: >-
+    The commitment rung (5, :70) against the plan rung (6, :71-73). `premium: true` is load-bearing:
+    plans/create_service.rb:67 drops `minimum_commitment` entirely without a licence and still answers
+    HTTP 200, so a non-premium row would have no commitment fee, no rung 5, and would pass while asserting
+    nothing about it. The true-up fee's `invoiceable` is the Commitment record and it carries 20%, so :70
+    matches; the subscription and charge fees are neither commitments nor charge-taxed, so they fall to
+    the plan's 10%. Which level won: commitment (rung 5, apply_taxes_service.rb:70). Overridden: the plan
+    (rung 6, 10%) for the true-up fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    6_600¢ rather than 6_900¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes, in that order, so the coupon lands on the raw fees and the tax lands on what
+    is left. 10_000¢ of fees, a 4_000¢ fixed coupon, taxable base 6_000¢, taxes 900¢, total 6_900¢.
+    Reverse the two lines and the tax is computed on the undiscounted 10_000¢ (1_500¢ instead of 900¢) and
+    the invoice totals 7_500¢. A fixed coupon does not commute with a tax, so those two totals differ and
+    the row can name which order produced its number. Per-fee arithmetic, and it is per-fee because the
+    rates differ (or, where they do not, because the invoice total would hide a wrong rung behind a
+    blend). applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 800¢
+    on the subscription fee + 1_200¢ on the charge fee + 2_000¢ on the commitment fee. Each fee is then
+    taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_200 × 10% = 120¢; 1_800 × 10% =
+    180¢; 3_000 × 20% = 600¢ — 900¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `forever` is asserted across THREE periods.
+    applied_coupon_service.rb:79 returns false from should_terminate_applied_coupon? unconditionally for a
+    forever coupon, and amount_service.rb:32-35 re-reads the full amount rather than a dwindling
+    remainder, so every invoice carries the same credit. All three invoices are discounted identically —
+    `once` would have discounted only the first and `recurring` with duration 2 only the first two, which
+    is exactly the contrast the third period buys. The undiscounted invoice in this row is 10_000¢ of
+    fees, 1_500¢ of tax, 11_500¢ total. One more ordering is baked into these numbers: the true-up is a
+    PRODUCER, created at calculate_fees_service.rb:46 before the coupon reducer at :54, and
+    calculate_true_up_fee_service.rb:37-41 reads raw amount_cents. So it tops the period up to the 10_000¢
+    floor from 5_000¢ of real fees, and the coupon then discounts the floor itself rather than being
+    absorbed by the headroom under it.
+
+- id: "b10/percentage/once/billing-entity"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"once","tax_level":"billing-entity"}
+  group: be
+  key: b10_pc_once_be
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 pc_once_be coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"once","percentage_rate":25,"expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_be_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1800
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1500}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2400
+        total_amount_cents: 12400
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 2000}
+  math: >-
+    The billing entity default is the LAST rung (apply_taxes_service.rb:77) — nothing can shadow it, so
+    the only way to prove it is a rung rather than a global setting is to put a fee beside it that
+    resolves higher. `b10_be_charge` carries 25% on the charge and takes rung 3 (:68); the subscription
+    fee has no charge, no plan tax and no customer tax, so it falls all the way through :68-:74 and picks
+    up the entity's 20%. Two different rates on one invoice is the assertion: a uniform 20% would mean
+    rung 3 never fired, and a uniform 25% would mean the entity default is not a fallback at all. Which
+    level won: billing-entity (rung 8, apply_taxes_service.rb:77). Overridden: rung 3 (the charge's own
+    25%) shadows the entity default for the charge fee; the entity default is itself the bottom of the
+    ladder and shadows nothing. Had the shadowed rung won instead, the entity default's 20% applied to the
+    charge fee as well would have made the discounted invoice total 9_000¢ rather than 9_300¢. Order of
+    the reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage
+    coupon COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢
+    off a 10_000¢ base, taxes on 7_500¢ = 1_800¢, total 9_300¢ — and tax-first would give 2_400¢ of tax on
+    the gross, then 25% of the tax-inclusive 12_400¢ = 3_100¢, for a total of 9_300¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_100¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_400¢) and taxes_amount_cents
+    1_800¢ (tax-first: 2_400¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 25% = 1_500¢ — 1_800¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `once` is asserted across TWO periods, not one, because a single
+    invoice cannot tell the three frequencies apart. On the first invoice the credit equals the whole
+    applied amount, so applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and
+    terminates the applied coupon; the second period's invoice therefore carries coupons_amount_cents: 0
+    and the undiscounted tax. Had the coupon been `forever` the second invoice would repeat the first. The
+    undiscounted invoice in this row is 10_000¢ of fees, 2_400¢ of tax, 12_400¢ total.
+
+- id: "b10/percentage/once/customer"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"once","tax_level":"customer"}
+  group: cu
+  key: b10_pc_once_cu
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 pc_once_cu coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"once","percentage_rate":25,"expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cu_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Two rungs, and the lower one is configured so that its absence is visible. The customer carries 20%
+    (rung 7, :74) and the billing entity default carries 5% (rung 8, :77). Every fee here is a
+    subscription or a plain charge with no charge-, plan-, fixed-charge- or commitment-level tax, so
+    :68-:73 all fall through and rung 7 wins for both fees. The 5% is never applied to anything — that
+    absence is what the row pins. Which level won: customer (rung 7, apply_taxes_service.rb:74).
+    Overridden: the billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the entity
+    default's 5% would have made the discounted invoice total 7_875¢ rather than 9_000¢. Order of the
+    reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage
+    coupon COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢
+    off a 10_000¢ base, taxes on 7_500¢ = 1_500¢, total 9_000¢ — and tax-first would give 2_000¢ of tax on
+    the gross, then 25% of the tax-inclusive 12_000¢ = 3_000¢, for a total of 9_000¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_000¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_000¢) and taxes_amount_cents
+    1_500¢ (tax-first: 2_000¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 20% = 1_200¢ — 1_500¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `once` is asserted across TWO periods, not one, because a single
+    invoice cannot tell the three frequencies apart. On the first invoice the credit equals the whole
+    applied amount, so applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and
+    terminates the applied coupon; the second period's invoice therefore carries coupons_amount_cents: 0
+    and the undiscounted tax. Had the coupon been `forever` the second invoice would repeat the first. The
+    undiscounted invoice in this row is 10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/percentage/once/plan"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"once","tax_level":"plan"}
+  group: pl
+  key: b10_pc_once_pl
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 pc_once_pl coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"once","percentage_rate":25,"expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_pl_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Three rungs stacked so that the winner is unambiguous. The plan carries 20% (rung 6, :71-73), the
+    customer 10% (rung 7, :74) and the billing entity 5% (rung 8, :77). Rung 6 is guarded by a fee-type
+    check — it only fires for charge, subscription, commitment and fixed_charge fees — and both fees here
+    qualify, so the plan's 20% is what lands. A 20% observed rate can come from nowhere else in this
+    setup, which is precisely why the customer was given 10% rather than the same 20%. Which level won:
+    plan (rung 6, apply_taxes_service.rb:71-73). Overridden: the customer (rung 7, 10%) and the
+    billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the customer's 10% would have
+    made the discounted invoice total 8_250¢ rather than 9_000¢. Order of the reducers.
+    calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage coupon
+    COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢ off a
+    10_000¢ base, taxes on 7_500¢ = 1_500¢, total 9_000¢ — and tax-first would give 2_000¢ of tax on the
+    gross, then 25% of the tax-inclusive 12_000¢ = 3_000¢, for a total of 9_000¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_000¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_000¢) and taxes_amount_cents
+    1_500¢ (tax-first: 2_000¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 20% = 1_200¢ — 1_500¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `once` is asserted across TWO periods, not one, because a single
+    invoice cannot tell the three frequencies apart. On the first invoice the credit equals the whole
+    applied amount, so applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and
+    terminates the applied coupon; the second period's invoice therefore carries coupons_amount_cents: 0
+    and the undiscounted tax. Had the coupon been `forever` the second invoice would repeat the first. The
+    undiscounted invoice in this row is 10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/percentage/once/charge"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"once","tax_level":"charge"}
+  group: ch
+  key: b10_pc_once_ch
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 pc_once_ch coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"once","percentage_rate":25,"expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_ch_sum","properties":{"amount":80}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_ch_sum","properties":{"amount":80}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1350
+        total_amount_cents: 8850
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1800
+        total_amount_cents: 11800
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    The charge rung (3, :68) against the plan rung (6, :71-73), with the entity default (8, :77)
+    underneath as a witness that never fires. The metered charge carries its own 20% and takes rung 3; the
+    subscription fee has no charge at all, so :68 cannot match and it drops to the plan's 10%. Two rates
+    on one invoice, asserted per fee, because the invoice total cannot tell 10%-here-20%-there from a
+    uniform blend. Which level won: charge (rung 3, apply_taxes_service.rb:68). Overridden: the plan (rung
+    6, 10%) for the charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    8_250¢ rather than 8_850¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 2_500¢ off a 10_000¢ base, taxes on 7_500¢ = 1_350¢, total 8_850¢ — and
+    tax-first would give 1_800¢ of tax on the gross, then 25% of the tax-inclusive 11_800¢ = 2_950¢, for a
+    total of 8_850¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 2_500¢ (tax-first: 2_950¢), sub_total_excluding_taxes_amount_cents 7_500¢
+    (tax-first: 11_800¢) and taxes_amount_cents 1_350¢ (tax-first: 1_800¢). Each of the three separates
+    the orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 2_000¢ on the charge fee. Each fee is then taxed at ITS own rate on what remains
+    (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 6_000 × 20% = 1_200¢ — 1_350¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `once` is
+    asserted across TWO periods, not one, because a single invoice cannot tell the three frequencies
+    apart. On the first invoice the credit equals the whole applied amount, so
+    applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and terminates the applied
+    coupon; the second period's invoice therefore carries coupons_amount_cents: 0 and the undiscounted
+    tax. Had the coupon been `forever` the second invoice would repeat the first. The undiscounted invoice
+    in this row is 10_000¢ of fees, 1_800¢ of tax, 11_800¢ total.
+
+- id: "b10/percentage/once/fixed-charge"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"once","tax_level":"fixed-charge"}
+  group: fc
+  key: b10_pc_once_fc
+  dimensions: {periods: 2}
+  setup: {"coupons":[{"name":"b10 pc_once_fc coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"once","percentage_rate":25,"expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 1500
+        sub_total_excluding_taxes_amount_cents: 4500
+        taxes_amount_cents: 750
+        total_amount_cents: 5250
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 600}
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1000
+        total_amount_cents: 7000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 800}
+  math: >-
+    The fixed-charge rung (4, :69) against the plan rung (6, :71-73). The fixed charge prices an add-on on
+    the plan and carries its own 20%, so `fee.fixed_charge? && fee.fixed_charge.taxes.any?` matches at :69
+    and short-circuits before the plan check. The subscription fee is not a fixed charge, so it falls to
+    the plan's 10%. The entity's 5% is configured and never used. Note the fee-type reach of rung 6: it
+    explicitly lists fixed_charge, so without the fixed charge's own tax BOTH fees would have taken 10%.
+    Which level won: fixed-charge (rung 4, apply_taxes_service.rb:69). Overridden: the plan (rung 6, 10%)
+    for the fixed-charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the shadowed
+    rung won instead, the plan's 10% on every fee would have made the discounted invoice total 4_950¢
+    rather than 5_250¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and :56
+    computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 1_500¢ off a 6_000¢ base, taxes on 4_500¢ = 750¢, total 5_250¢ — and
+    tax-first would give 1_000¢ of tax on the gross, then 25% of the tax-inclusive 7_000¢ = 1_750¢, for a
+    total of 5_250¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 1_500¢ (tax-first: 1_750¢), sub_total_excluding_taxes_amount_cents 4_500¢
+    (tax-first: 7_000¢) and taxes_amount_cents 750¢ (tax-first: 1_000¢). Each of the three separates the
+    orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates differ
+    (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 1_000¢ on the fixed_charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 3_000 × 20% = 600¢ — 750¢ in total.
+    fees_amount_cents is 6_000¢ under either order and is therefore not load-bearing here. `once` is
+    asserted across TWO periods, not one, because a single invoice cannot tell the three frequencies
+    apart. On the first invoice the credit equals the whole applied amount, so
+    applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and terminates the applied
+    coupon; the second period's invoice therefore carries coupons_amount_cents: 0 and the undiscounted
+    tax. Had the coupon been `forever` the second invoice would repeat the first. The undiscounted invoice
+    in this row is 6_000¢ of fees, 1_000¢ of tax, 7_000¢ total.
+
+- id: "b10/percentage/once/commitment"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"once","tax_level":"commitment"}
+  group: cm
+  key: b10_pc_once_cm
+  dimensions: {periods: 2}
+  premium: true
+  setup: {"coupons":[{"name":"b10 pc_once_cm coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"once","percentage_rate":25,"expiration":"no_expiration"}]}
+  timeline: [{"at":"2024-03-01T00:00:00Z","do":"create_subscription"},{"at":"2024-03-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-04-01T01:00:00Z","do":"perform_billing"},{"at":"2024-04-05T10:00:00Z","do":"ingest_events","events":[{"code":"b10_cm_sum","properties":{"amount":30}}]},{"at":"2024-05-01T01:00:00Z","do":"perform_billing"}]
+  expect:
+    invoices: 2
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1125
+        total_amount_cents: 8625
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 225}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 750}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1500
+        total_amount_cents: 11500
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 300}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 1000}
+  math: >-
+    The commitment rung (5, :70) against the plan rung (6, :71-73). `premium: true` is load-bearing:
+    plans/create_service.rb:67 drops `minimum_commitment` entirely without a licence and still answers
+    HTTP 200, so a non-premium row would have no commitment fee, no rung 5, and would pass while asserting
+    nothing about it. The true-up fee's `invoiceable` is the Commitment record and it carries 20%, so :70
+    matches; the subscription and charge fees are neither commitments nor charge-taxed, so they fall to
+    the plan's 10%. Which level won: commitment (rung 5, apply_taxes_service.rb:70). Overridden: the plan
+    (rung 6, 10%) for the true-up fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    8_250¢ rather than 8_625¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 2_500¢ off a 10_000¢ base, taxes on 7_500¢ = 1_125¢, total 8_625¢ — and
+    tax-first would give 1_500¢ of tax on the gross, then 25% of the tax-inclusive 11_500¢ = 2_875¢, for a
+    total of 8_625¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 2_500¢ (tax-first: 2_875¢), sub_total_excluding_taxes_amount_cents 7_500¢
+    (tax-first: 11_500¢) and taxes_amount_cents 1_125¢ (tax-first: 1_500¢). Each of the three separates
+    the orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 750¢ on the charge fee + 1_250¢ on the commitment fee. Each fee is then taxed at
+    ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 2_250 × 10% = 225¢;
+    3_750 × 20% = 750¢ — 1_125¢ in total. fees_amount_cents is 10_000¢ under either order and is therefore
+    not load-bearing here. `once` is asserted across TWO periods, not one, because a single invoice cannot
+    tell the three frequencies apart. On the first invoice the credit equals the whole applied amount, so
+    applied_coupon_service.rb:82 sees `credit_amount >= remaining_amount` and terminates the applied
+    coupon; the second period's invoice therefore carries coupons_amount_cents: 0 and the undiscounted
+    tax. Had the coupon been `forever` the second invoice would repeat the first. The undiscounted invoice
+    in this row is 10_000¢ of fees, 1_500¢ of tax, 11_500¢ total. One more ordering is baked into these
+    numbers: the true-up is a PRODUCER, created at calculate_fees_service.rb:46 before the coupon reducer
+    at :54, and calculate_true_up_fee_service.rb:37-41 reads raw amount_cents. So it tops the period up to
+    the 10_000¢ floor from 5_000¢ of real fees, and the coupon then discounts the floor itself rather than
+    being absorbed by the headroom under it.
+
+- id: "b10/percentage/recurring/billing-entity"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"recurring","tax_level":"billing-entity"}
+  group: be
+  key: b10_pc_rec_be
+  setup: {"coupons":[{"name":"b10 pc_rec_be coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"recurring","frequency_duration":2,"percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1800
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1500}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1800
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1500}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2400
+        total_amount_cents: 12400
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 2000}
+  math: >-
+    The billing entity default is the LAST rung (apply_taxes_service.rb:77) — nothing can shadow it, so
+    the only way to prove it is a rung rather than a global setting is to put a fee beside it that
+    resolves higher. `b10_be_charge` carries 25% on the charge and takes rung 3 (:68); the subscription
+    fee has no charge, no plan tax and no customer tax, so it falls all the way through :68-:74 and picks
+    up the entity's 20%. Two different rates on one invoice is the assertion: a uniform 20% would mean
+    rung 3 never fired, and a uniform 25% would mean the entity default is not a fallback at all. Which
+    level won: billing-entity (rung 8, apply_taxes_service.rb:77). Overridden: rung 3 (the charge's own
+    25%) shadows the entity default for the charge fee; the entity default is itself the bottom of the
+    ladder and shadows nothing. Had the shadowed rung won instead, the entity default's 20% applied to the
+    charge fee as well would have made the discounted invoice total 9_000¢ rather than 9_300¢. Order of
+    the reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage
+    coupon COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢
+    off a 10_000¢ base, taxes on 7_500¢ = 1_800¢, total 9_300¢ — and tax-first would give 2_400¢ of tax on
+    the gross, then 25% of the tax-inclusive 12_400¢ = 3_100¢, for a total of 9_300¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_100¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_400¢) and taxes_amount_cents
+    1_800¢ (tax-first: 2_400¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 25% = 1_500¢ — 1_800¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `recurring` with frequency_duration 2 is asserted across THREE
+    periods, which is the only window that separates it from both neighbours.
+    applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each application and :84
+    terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 -> 0 after the second
+    (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would have discounted
+    only the first; `forever` would have discounted all three. The undiscounted invoice in this row is
+    10_000¢ of fees, 2_400¢ of tax, 12_400¢ total.
+
+- id: "b10/percentage/recurring/plan"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"recurring","tax_level":"plan"}
+  group: pl
+  key: b10_pc_rec_pl
+  setup: {"coupons":[{"name":"b10 pc_rec_pl coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"recurring","frequency_duration":2,"percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 2000
+        total_amount_cents: 12000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 400}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    Three rungs stacked so that the winner is unambiguous. The plan carries 20% (rung 6, :71-73), the
+    customer 10% (rung 7, :74) and the billing entity 5% (rung 8, :77). Rung 6 is guarded by a fee-type
+    check — it only fires for charge, subscription, commitment and fixed_charge fees — and both fees here
+    qualify, so the plan's 20% is what lands. A 20% observed rate can come from nowhere else in this
+    setup, which is precisely why the customer was given 10% rather than the same 20%. Which level won:
+    plan (rung 6, apply_taxes_service.rb:71-73). Overridden: the customer (rung 7, 10%) and the
+    billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the customer's 10% would have
+    made the discounted invoice total 8_250¢ rather than 9_000¢. Order of the reducers.
+    calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage coupon
+    COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢ off a
+    10_000¢ base, taxes on 7_500¢ = 1_500¢, total 9_000¢ — and tax-first would give 2_000¢ of tax on the
+    gross, then 25% of the tax-inclusive 12_000¢ = 3_000¢, for a total of 9_000¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_000¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_000¢) and taxes_amount_cents
+    1_500¢ (tax-first: 2_000¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 20% = 1_200¢ — 1_500¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `recurring` with frequency_duration 2 is asserted across THREE
+    periods, which is the only window that separates it from both neighbours.
+    applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each application and :84
+    terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 -> 0 after the second
+    (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would have discounted
+    only the first; `forever` would have discounted all three. The undiscounted invoice in this row is
+    10_000¢ of fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/percentage/recurring/charge"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"recurring","tax_level":"charge"}
+  group: ch
+  key: b10_pc_rec_ch
+  setup: {"coupons":[{"name":"b10 pc_rec_ch coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"recurring","frequency_duration":2,"percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1350
+        total_amount_cents: 8850
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1350
+        total_amount_cents: 8850
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1800
+        total_amount_cents: 11800
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1600}
+  math: >-
+    The charge rung (3, :68) against the plan rung (6, :71-73), with the entity default (8, :77)
+    underneath as a witness that never fires. The metered charge carries its own 20% and takes rung 3; the
+    subscription fee has no charge at all, so :68 cannot match and it drops to the plan's 10%. Two rates
+    on one invoice, asserted per fee, because the invoice total cannot tell 10%-here-20%-there from a
+    uniform blend. Which level won: charge (rung 3, apply_taxes_service.rb:68). Overridden: the plan (rung
+    6, 10%) for the charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    8_250¢ rather than 8_850¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 2_500¢ off a 10_000¢ base, taxes on 7_500¢ = 1_350¢, total 8_850¢ — and
+    tax-first would give 1_800¢ of tax on the gross, then 25% of the tax-inclusive 11_800¢ = 2_950¢, for a
+    total of 8_850¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 2_500¢ (tax-first: 2_950¢), sub_total_excluding_taxes_amount_cents 7_500¢
+    (tax-first: 11_800¢) and taxes_amount_cents 1_350¢ (tax-first: 1_800¢). Each of the three separates
+    the orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 2_000¢ on the charge fee. Each fee is then taxed at ITS own rate on what remains
+    (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 6_000 × 20% = 1_200¢ — 1_350¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `recurring`
+    with frequency_duration 2 is asserted across THREE periods, which is the only window that separates it
+    from both neighbours. applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each
+    application and :84 terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 ->
+    0 after the second (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would
+    have discounted only the first; `forever` would have discounted all three. The undiscounted invoice in
+    this row is 10_000¢ of fees, 1_800¢ of tax, 11_800¢ total.
+
+- id: "b10/percentage/recurring/fixed-charge"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"recurring","tax_level":"fixed-charge"}
+  group: fc
+  key: b10_pc_rec_fc
+  setup: {"coupons":[{"name":"b10 pc_rec_fc coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"recurring","frequency_duration":2,"percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 1500
+        sub_total_excluding_taxes_amount_cents: 4500
+        taxes_amount_cents: 750
+        total_amount_cents: 5250
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 600}
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 1500
+        sub_total_excluding_taxes_amount_cents: 4500
+        taxes_amount_cents: 750
+        total_amount_cents: 5250
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 600}
+      - select: {index: 2}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 6000
+        taxes_amount_cents: 1000
+        total_amount_cents: 7000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 800}
+  math: >-
+    The fixed-charge rung (4, :69) against the plan rung (6, :71-73). The fixed charge prices an add-on on
+    the plan and carries its own 20%, so `fee.fixed_charge? && fee.fixed_charge.taxes.any?` matches at :69
+    and short-circuits before the plan check. The subscription fee is not a fixed charge, so it falls to
+    the plan's 10%. The entity's 5% is configured and never used. Note the fee-type reach of rung 6: it
+    explicitly lists fixed_charge, so without the fixed charge's own tax BOTH fees would have taken 10%.
+    Which level won: fixed-charge (rung 4, apply_taxes_service.rb:69). Overridden: the plan (rung 6, 10%)
+    for the fixed-charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the shadowed
+    rung won instead, the plan's 10% on every fee would have made the discounted invoice total 4_950¢
+    rather than 5_250¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and :56
+    computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 1_500¢ off a 6_000¢ base, taxes on 4_500¢ = 750¢, total 5_250¢ — and
+    tax-first would give 1_000¢ of tax on the gross, then 25% of the tax-inclusive 7_000¢ = 1_750¢, for a
+    total of 5_250¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 1_500¢ (tax-first: 1_750¢), sub_total_excluding_taxes_amount_cents 4_500¢
+    (tax-first: 7_000¢) and taxes_amount_cents 750¢ (tax-first: 1_000¢). Each of the three separates the
+    orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates differ
+    (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 1_000¢ on the fixed_charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 3_000 × 20% = 600¢ — 750¢ in total.
+    fees_amount_cents is 6_000¢ under either order and is therefore not load-bearing here. `recurring`
+    with frequency_duration 2 is asserted across THREE periods, which is the only window that separates it
+    from both neighbours. applied_coupon_service.rb:88-89 decrements frequency_duration_remaining on each
+    application and :84 terminates when it reaches 0: 2 -> 1 after the first invoice (still active), 1 ->
+    0 after the second (terminated). So invoices 1 and 2 are discounted and invoice 3 is not. `once` would
+    have discounted only the first; `forever` would have discounted all three. The undiscounted invoice in
+    this row is 6_000¢ of fees, 1_000¢ of tax, 7_000¢ total.
+
+- id: "b10/percentage/recurring/commitment"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"recurring","tax_level":"commitment"}
+  group: cm
+  key: b10_pc_rec_cm
+  premium: true
+  setup: {"coupons":[{"name":"b10 pc_rec_cm coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"recurring","frequency_duration":2,"percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1125
+        total_amount_cents: 8625
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 225}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 750}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1125
+        total_amount_cents: 8625
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 225}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 750}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 0
+        sub_total_excluding_taxes_amount_cents: 10000
+        taxes_amount_cents: 1500
+        total_amount_cents: 11500
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 200}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 300}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 1000}
+  math: >-
+    The commitment rung (5, :70) against the plan rung (6, :71-73). `premium: true` is load-bearing:
+    plans/create_service.rb:67 drops `minimum_commitment` entirely without a licence and still answers
+    HTTP 200, so a non-premium row would have no commitment fee, no rung 5, and would pass while asserting
+    nothing about it. The true-up fee's `invoiceable` is the Commitment record and it carries 20%, so :70
+    matches; the subscription and charge fees are neither commitments nor charge-taxed, so they fall to
+    the plan's 10%. Which level won: commitment (rung 5, apply_taxes_service.rb:70). Overridden: the plan
+    (rung 6, 10%) for the true-up fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    8_250¢ rather than 8_625¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 2_500¢ off a 10_000¢ base, taxes on 7_500¢ = 1_125¢, total 8_625¢ — and
+    tax-first would give 1_500¢ of tax on the gross, then 25% of the tax-inclusive 11_500¢ = 2_875¢, for a
+    total of 8_625¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 2_500¢ (tax-first: 2_875¢), sub_total_excluding_taxes_amount_cents 7_500¢
+    (tax-first: 11_500¢) and taxes_amount_cents 1_125¢ (tax-first: 1_500¢). Each of the three separates
+    the orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 750¢ on the charge fee + 1_250¢ on the commitment fee. Each fee is then taxed at
+    ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 2_250 × 10% = 225¢;
+    3_750 × 20% = 750¢ — 1_125¢ in total. fees_amount_cents is 10_000¢ under either order and is therefore
+    not load-bearing here. `recurring` with frequency_duration 2 is asserted across THREE periods, which
+    is the only window that separates it from both neighbours. applied_coupon_service.rb:88-89 decrements
+    frequency_duration_remaining on each application and :84 terminates when it reaches 0: 2 -> 1 after
+    the first invoice (still active), 1 -> 0 after the second (terminated). So invoices 1 and 2 are
+    discounted and invoice 3 is not. `once` would have discounted only the first; `forever` would have
+    discounted all three. The undiscounted invoice in this row is 10_000¢ of fees, 1_500¢ of tax, 11_500¢
+    total. One more ordering is baked into these numbers: the true-up is a PRODUCER, created at
+    calculate_fees_service.rb:46 before the coupon reducer at :54, and
+    calculate_true_up_fee_service.rb:37-41 reads raw amount_cents. So it tops the period up to the 10_000¢
+    floor from 5_000¢ of real fees, and the coupon then discounts the floor itself rather than being
+    absorbed by the headroom under it.
+
+- id: "b10/percentage/forever/billing-entity"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"forever","tax_level":"billing-entity"}
+  group: be
+  key: b10_pc_fvr_be
+  setup: {"coupons":[{"name":"b10 pc_fvr_be coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"forever","percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1800
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1500}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1800
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1500}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1800
+        total_amount_cents: 9300
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1500}
+  math: >-
+    The billing entity default is the LAST rung (apply_taxes_service.rb:77) — nothing can shadow it, so
+    the only way to prove it is a rung rather than a global setting is to put a fee beside it that
+    resolves higher. `b10_be_charge` carries 25% on the charge and takes rung 3 (:68); the subscription
+    fee has no charge, no plan tax and no customer tax, so it falls all the way through :68-:74 and picks
+    up the entity's 20%. Two different rates on one invoice is the assertion: a uniform 20% would mean
+    rung 3 never fired, and a uniform 25% would mean the entity default is not a fallback at all. Which
+    level won: billing-entity (rung 8, apply_taxes_service.rb:77). Overridden: rung 3 (the charge's own
+    25%) shadows the entity default for the charge fee; the entity default is itself the bottom of the
+    ladder and shadows nothing. Had the shadowed rung won instead, the entity default's 20% applied to the
+    charge fee as well would have made the discounted invoice total 9_000¢ rather than 9_300¢. Order of
+    the reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage
+    coupon COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢
+    off a 10_000¢ base, taxes on 7_500¢ = 1_800¢, total 9_300¢ — and tax-first would give 2_400¢ of tax on
+    the gross, then 25% of the tax-inclusive 12_400¢ = 3_100¢, for a total of 9_300¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_100¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_400¢) and taxes_amount_cents
+    1_800¢ (tax-first: 2_400¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 25% = 1_500¢ — 1_800¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `forever` is asserted across THREE periods.
+    applied_coupon_service.rb:79 returns false from should_terminate_applied_coupon? unconditionally for a
+    forever coupon, and amount_service.rb:32-35 re-reads the full amount rather than a dwindling
+    remainder, so every invoice carries the same credit. All three invoices are discounted identically —
+    `once` would have discounted only the first and `recurring` with duration 2 only the first two, which
+    is exactly the contrast the third period buys. The undiscounted invoice in this row is 10_000¢ of
+    fees, 2_400¢ of tax, 12_400¢ total.
+
+- id: "b10/percentage/forever/customer"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"forever","tax_level":"customer"}
+  group: cu
+  key: b10_pc_fvr_cu
+  setup: {"coupons":[{"name":"b10 pc_fvr_cu coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"forever","percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+  math: >-
+    Two rungs, and the lower one is configured so that its absence is visible. The customer carries 20%
+    (rung 7, :74) and the billing entity default carries 5% (rung 8, :77). Every fee here is a
+    subscription or a plain charge with no charge-, plan-, fixed-charge- or commitment-level tax, so
+    :68-:73 all fall through and rung 7 wins for both fees. The 5% is never applied to anything — that
+    absence is what the row pins. Which level won: customer (rung 7, apply_taxes_service.rb:74).
+    Overridden: the billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the entity
+    default's 5% would have made the discounted invoice total 7_875¢ rather than 9_000¢. Order of the
+    reducers. calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage
+    coupon COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢
+    off a 10_000¢ base, taxes on 7_500¢ = 1_500¢, total 9_000¢ — and tax-first would give 2_000¢ of tax on
+    the gross, then 25% of the tax-inclusive 12_000¢ = 3_000¢, for a total of 9_000¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_000¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_000¢) and taxes_amount_cents
+    1_500¢ (tax-first: 2_000¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 20% = 1_200¢ — 1_500¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `forever` is asserted across THREE periods.
+    applied_coupon_service.rb:79 returns false from should_terminate_applied_coupon? unconditionally for a
+    forever coupon, and amount_service.rb:32-35 re-reads the full amount rather than a dwindling
+    remainder, so every invoice carries the same credit. All three invoices are discounted identically —
+    `once` would have discounted only the first and `recurring` with duration 2 only the first two, which
+    is exactly the contrast the third period buys. The undiscounted invoice in this row is 10_000¢ of
+    fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/percentage/forever/plan"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"forever","tax_level":"plan"}
+  group: pl
+  key: b10_pc_fvr_pl
+  setup: {"coupons":[{"name":"b10 pc_fvr_pl coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"forever","percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1500
+        total_amount_cents: 9000
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 300}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+  math: >-
+    Three rungs stacked so that the winner is unambiguous. The plan carries 20% (rung 6, :71-73), the
+    customer 10% (rung 7, :74) and the billing entity 5% (rung 8, :77). Rung 6 is guarded by a fee-type
+    check — it only fires for charge, subscription, commitment and fixed_charge fees — and both fees here
+    qualify, so the plan's 20% is what lands. A 20% observed rate can come from nowhere else in this
+    setup, which is precisely why the customer was given 10% rather than the same 20%. Which level won:
+    plan (rung 6, apply_taxes_service.rb:71-73). Overridden: the customer (rung 7, 10%) and the
+    billing-entity default (rung 8, 5%). Had the shadowed rung won instead, the customer's 10% would have
+    made the discounted invoice total 8_250¢ rather than 9_000¢. Order of the reducers.
+    calculate_fees_service.rb:54 applies the coupon and :56 computes the taxes. A percentage coupon
+    COMMUTES with a percentage tax, so the total alone proves nothing: coupon-first gives 2_500¢ off a
+    10_000¢ base, taxes on 7_500¢ = 1_500¢, total 9_000¢ — and tax-first would give 2_000¢ of tax on the
+    gross, then 25% of the tax-inclusive 12_000¢ = 3_000¢, for a total of 9_000¢. That is why this row
+    asserts the INTERMEDIATE fields rather than only the total: coupons_amount_cents 2_500¢ (tax-first:
+    3_000¢), sub_total_excluding_taxes_amount_cents 7_500¢ (tax-first: 12_000¢) and taxes_amount_cents
+    1_500¢ (tax-first: 2_000¢). Each of the three separates the orders even where the total does not.
+    Per-fee arithmetic, and it is per-fee because the rates differ (or, where they do not, because the
+    invoice total would hide a wrong rung behind a blend). applied_coupon_service.rb:37 with fee.rb:235
+    spreads the credit pro rata on amount_cents: 500¢ on the subscription fee + 2_000¢ on the charge fee.
+    Each fee is then taxed at ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 20% =
+    300¢; 6_000 × 20% = 1_200¢ — 1_500¢ in total. fees_amount_cents is 10_000¢ under either order and is
+    therefore not load-bearing here. `forever` is asserted across THREE periods.
+    applied_coupon_service.rb:79 returns false from should_terminate_applied_coupon? unconditionally for a
+    forever coupon, and amount_service.rb:32-35 re-reads the full amount rather than a dwindling
+    remainder, so every invoice carries the same credit. All three invoices are discounted identically —
+    `once` would have discounted only the first and `recurring` with duration 2 only the first two, which
+    is exactly the contrast the third period buys. The undiscounted invoice in this row is 10_000¢ of
+    fees, 2_000¢ of tax, 12_000¢ total.
+
+- id: "b10/percentage/forever/charge"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"forever","tax_level":"charge"}
+  group: ch
+  key: b10_pc_fvr_ch
+  setup: {"coupons":[{"name":"b10 pc_fvr_ch coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"forever","percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1350
+        total_amount_cents: 8850
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1350
+        total_amount_cents: 8850
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1350
+        total_amount_cents: 8850
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 8000, taxes_amount_cents: 1200}
+  math: >-
+    The charge rung (3, :68) against the plan rung (6, :71-73), with the entity default (8, :77)
+    underneath as a witness that never fires. The metered charge carries its own 20% and takes rung 3; the
+    subscription fee has no charge at all, so :68 cannot match and it drops to the plan's 10%. Two rates
+    on one invoice, asserted per fee, because the invoice total cannot tell 10%-here-20%-there from a
+    uniform blend. Which level won: charge (rung 3, apply_taxes_service.rb:68). Overridden: the plan (rung
+    6, 10%) for the charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    8_250¢ rather than 8_850¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 2_500¢ off a 10_000¢ base, taxes on 7_500¢ = 1_350¢, total 8_850¢ — and
+    tax-first would give 1_800¢ of tax on the gross, then 25% of the tax-inclusive 11_800¢ = 2_950¢, for a
+    total of 8_850¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 2_500¢ (tax-first: 2_950¢), sub_total_excluding_taxes_amount_cents 7_500¢
+    (tax-first: 11_800¢) and taxes_amount_cents 1_350¢ (tax-first: 1_800¢). Each of the three separates
+    the orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 2_000¢ on the charge fee. Each fee is then taxed at ITS own rate on what remains
+    (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 6_000 × 20% = 1_200¢ — 1_350¢ in total.
+    fees_amount_cents is 10_000¢ under either order and is therefore not load-bearing here. `forever` is
+    asserted across THREE periods. applied_coupon_service.rb:79 returns false from
+    should_terminate_applied_coupon? unconditionally for a forever coupon, and amount_service.rb:32-35
+    re-reads the full amount rather than a dwindling remainder, so every invoice carries the same credit.
+    All three invoices are discounted identically — `once` would have discounted only the first and
+    `recurring` with duration 2 only the first two, which is exactly the contrast the third period buys.
+    The undiscounted invoice in this row is 10_000¢ of fees, 1_800¢ of tax, 11_800¢ total.
+
+- id: "b10/percentage/forever/fixed-charge"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"forever","tax_level":"fixed-charge"}
+  group: fc
+  key: b10_pc_fvr_fc
+  setup: {"coupons":[{"name":"b10 pc_fvr_fc coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"forever","percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 1500
+        sub_total_excluding_taxes_amount_cents: 4500
+        taxes_amount_cents: 750
+        total_amount_cents: 5250
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 600}
+      - select: {index: 1}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 1500
+        sub_total_excluding_taxes_amount_cents: 4500
+        taxes_amount_cents: 750
+        total_amount_cents: 5250
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 600}
+      - select: {index: 2}
+        fees_amount_cents: 6000
+        coupons_amount_cents: 1500
+        sub_total_excluding_taxes_amount_cents: 4500
+        taxes_amount_cents: 750
+        total_amount_cents: 5250
+        fees_count: 2
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: fixed_charge, item_code: b10_fc_seat, amount_cents: 4000, taxes_amount_cents: 600}
+  math: >-
+    The fixed-charge rung (4, :69) against the plan rung (6, :71-73). The fixed charge prices an add-on on
+    the plan and carries its own 20%, so `fee.fixed_charge? && fee.fixed_charge.taxes.any?` matches at :69
+    and short-circuits before the plan check. The subscription fee is not a fixed charge, so it falls to
+    the plan's 10%. The entity's 5% is configured and never used. Note the fee-type reach of rung 6: it
+    explicitly lists fixed_charge, so without the fixed charge's own tax BOTH fees would have taken 10%.
+    Which level won: fixed-charge (rung 4, apply_taxes_service.rb:69). Overridden: the plan (rung 6, 10%)
+    for the fixed-charge fee, and the billing-entity default (rung 8, 5%) for everything. Had the shadowed
+    rung won instead, the plan's 10% on every fee would have made the discounted invoice total 4_950¢
+    rather than 5_250¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and :56
+    computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 1_500¢ off a 6_000¢ base, taxes on 4_500¢ = 750¢, total 5_250¢ — and
+    tax-first would give 1_000¢ of tax on the gross, then 25% of the tax-inclusive 7_000¢ = 1_750¢, for a
+    total of 5_250¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 1_500¢ (tax-first: 1_750¢), sub_total_excluding_taxes_amount_cents 4_500¢
+    (tax-first: 7_000¢) and taxes_amount_cents 750¢ (tax-first: 1_000¢). Each of the three separates the
+    orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates differ
+    (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 1_000¢ on the fixed_charge fee. Each fee is then taxed at ITS own rate on what
+    remains (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 3_000 × 20% = 600¢ — 750¢ in total.
+    fees_amount_cents is 6_000¢ under either order and is therefore not load-bearing here. `forever` is
+    asserted across THREE periods. applied_coupon_service.rb:79 returns false from
+    should_terminate_applied_coupon? unconditionally for a forever coupon, and amount_service.rb:32-35
+    re-reads the full amount rather than a dwindling remainder, so every invoice carries the same credit.
+    All three invoices are discounted identically — `once` would have discounted only the first and
+    `recurring` with duration 2 only the first two, which is exactly the contrast the third period buys.
+    The undiscounted invoice in this row is 6_000¢ of fees, 1_000¢ of tax, 7_000¢ total.
+
+- id: "b10/percentage/forever/commitment"
+  block: B10
+  axes: {"coupon_type":"percentage","coupon_frequency":"forever","tax_level":"commitment"}
+  group: cm
+  key: b10_pc_fvr_cm
+  premium: true
+  setup: {"coupons":[{"name":"b10 pc_fvr_cm coupon","code":"%{key}_coupon","coupon_type":"percentage","frequency":"forever","percentage_rate":25,"expiration":"no_expiration"}]}
+  expect:
+    invoices: 3
+    invoice:
+      - select: {index: 0}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1125
+        total_amount_cents: 8625
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 225}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 750}
+      - select: {index: 1}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1125
+        total_amount_cents: 8625
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 225}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 750}
+      - select: {index: 2}
+        fees_amount_cents: 10000
+        coupons_amount_cents: 2500
+        sub_total_excluding_taxes_amount_cents: 7500
+        taxes_amount_cents: 1125
+        total_amount_cents: 8625
+        fees_count: 3
+        fees:
+          - {fee_type: subscription, amount_cents: 2000, taxes_amount_cents: 150}
+          - {fee_type: charge, amount_cents: 3000, taxes_amount_cents: 225}
+          - {fee_type: commitment, amount_cents: 5000, taxes_amount_cents: 750}
+  math: >-
+    The commitment rung (5, :70) against the plan rung (6, :71-73). `premium: true` is load-bearing:
+    plans/create_service.rb:67 drops `minimum_commitment` entirely without a licence and still answers
+    HTTP 200, so a non-premium row would have no commitment fee, no rung 5, and would pass while asserting
+    nothing about it. The true-up fee's `invoiceable` is the Commitment record and it carries 20%, so :70
+    matches; the subscription and charge fees are neither commitments nor charge-taxed, so they fall to
+    the plan's 10%. Which level won: commitment (rung 5, apply_taxes_service.rb:70). Overridden: the plan
+    (rung 6, 10%) for the true-up fee, and the billing-entity default (rung 8, 5%) for everything. Had the
+    shadowed rung won instead, the plan's 10% on every fee would have made the discounted invoice total
+    8_250¢ rather than 8_625¢. Order of the reducers. calculate_fees_service.rb:54 applies the coupon and
+    :56 computes the taxes. A percentage coupon COMMUTES with a percentage tax, so the total alone proves
+    nothing: coupon-first gives 2_500¢ off a 10_000¢ base, taxes on 7_500¢ = 1_125¢, total 8_625¢ — and
+    tax-first would give 1_500¢ of tax on the gross, then 25% of the tax-inclusive 11_500¢ = 2_875¢, for a
+    total of 8_625¢. That is why this row asserts the INTERMEDIATE fields rather than only the total:
+    coupons_amount_cents 2_500¢ (tax-first: 2_875¢), sub_total_excluding_taxes_amount_cents 7_500¢
+    (tax-first: 11_500¢) and taxes_amount_cents 1_125¢ (tax-first: 1_500¢). Each of the three separates
+    the orders even where the total does not. Per-fee arithmetic, and it is per-fee because the rates
+    differ (or, where they do not, because the invoice total would hide a wrong rung behind a blend).
+    applied_coupon_service.rb:37 with fee.rb:235 spreads the credit pro rata on amount_cents: 500¢ on the
+    subscription fee + 750¢ on the charge fee + 1_250¢ on the commitment fee. Each fee is then taxed at
+    ITS own rate on what remains (apply_taxes_service.rb:37): 1_500 × 10% = 150¢; 2_250 × 10% = 225¢;
+    3_750 × 20% = 750¢ — 1_125¢ in total. fees_amount_cents is 10_000¢ under either order and is therefore
+    not load-bearing here. `forever` is asserted across THREE periods. applied_coupon_service.rb:79
+    returns false from should_terminate_applied_coupon? unconditionally for a forever coupon, and
+    amount_service.rb:32-35 re-reads the full amount rather than a dwindling remainder, so every invoice
+    carries the same credit. All three invoices are discounted identically — `once` would have discounted
+    only the first and `recurring` with duration 2 only the first two, which is exactly the contrast the
+    third period buys. The undiscounted invoice in this row is 10_000¢ of fees, 1_500¢ of tax, 11_500¢
+    total. One more ordering is baked into these numbers: the true-up is a PRODUCER, created at
+    calculate_fees_service.rb:46 before the coupon reducer at :54, and
+    calculate_true_up_fee_service.rb:37-41 reads raw amount_cents. So it tops the period up to the 10_000¢
+    floor from 5_000¢ of real fees, and the coupon then discounts the floor itself rather than being
+    absorbed by the headroom under it.
