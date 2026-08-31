@@ -17,6 +17,11 @@ RSpec.describe Wallets::Balance::DecreaseService do
     create(:wallet_transaction, wallet:, amount: "4.5", credit_amount: BigDecimal("4.5"))
   end
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   before do
     wallet
     wallet_transaction

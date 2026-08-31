@@ -7,6 +7,11 @@ RSpec.describe Webhooks::RetryService do
 
   let(:webhook) { create(:webhook, :failed) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   it "enqueues a SendWebhookJob" do
     expect { retry_service.call }.to have_enqueued_job(SendHttpWebhookJob).with(webhook)
   end

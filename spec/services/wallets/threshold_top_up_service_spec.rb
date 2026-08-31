@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Wallets::ThresholdTopUpService do
   subject(:top_up_service) { described_class.new(wallet:) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   let(:paid_top_up_min_amount_cents) { 205_50 }
   let(:paid_top_up_max_amount_cents) { nil }
   let(:wallet) do

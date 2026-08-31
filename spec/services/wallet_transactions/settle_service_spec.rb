@@ -7,6 +7,11 @@ RSpec.describe WalletTransactions::SettleService do
 
   let(:wallet_transaction) { create(:wallet_transaction, status: "pending", settled_at: nil) }
 
+before_all do
+  create_default(:organization)
+create_default(:customer)
+end
+
   describe ".call" do
     it "updates wallet_transaction status" do
       expect {

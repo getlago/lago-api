@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Wallets::RecurringTransactionRules::TerminateService do
   subject(:terminate_service) { described_class.new(recurring_transaction_rule:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization)}
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:) }
   let(:recurring_transaction_rule) do
     create(
