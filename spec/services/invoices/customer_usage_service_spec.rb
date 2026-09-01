@@ -1009,4 +1009,57 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
   end
+
+  describe "with the usage buckets", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # Serving the buckets requires the organization to read the clickhouse events store, so the
+    # fallback has to count clickhouse events rather than the postgres ones the other specs use.
+    let(:events) do
+      create_list(
+        :clickhouse_events_enriched,
+        2,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:
+      )
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      create(:tax, :applied_to_billing_entity, organization:, rate: 0)
+      charge
+      events
+
+      create(
+        :clickhouse_usage_bucket,
+        organization:, customer:, subscription:, charge:, billable_metric:,
+        bucket: window_start,
+        units: "5.0",
+        events_count: 5,
+        aggregation_type: "count_agg"
+      )
+    end
+
+    it "serves the units of the buckets instead of counting the events" do
+      usage = usage_service.call.usage
+
+      expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
+    end
+
+    context "when the organization flag is off" do
+      before { organization.disable_feature_flag!(:realtime_usage) }
+
+      it "counts the events" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+  end
 end

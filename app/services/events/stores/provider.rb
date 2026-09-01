@@ -7,11 +7,12 @@ module Events
     #
     # Scoped to one computation at one window: build one per request or job.
     class Provider
-      def initialize(organization:, subscription:, boundaries:, usage_buckets: nil)
+      def initialize(organization:, subscription:, boundaries:, usage_buckets: nil, current_usage: false)
         @organization = organization
         @subscription = subscription
         @boundaries = boundaries
         @usage_buckets = usage_buckets
+        @current_usage = current_usage
       end
 
       attr_reader :subscription, :boundaries
@@ -54,13 +55,9 @@ module Events
       attr_reader :usage_buckets
 
       # Options to merge into those passed to `aggregate`, or none when the charge has to
-      # read events. The totals answer for the whole (charge, filter), so a group-scoped
-      # or pay-in-advance read cannot use them.
+      # read events.
       def precomputed_options_for(charge:, filters: {})
-        return {} if usage_buckets.nil?
-        return {} unless RealtimeUsage.enabled?(organization)
-        return {} unless bucket_servable?(charge)
-        return {} if filters[:grouped_by_values].present? || filters[:event].present?
+        return {} unless serves?(charge:, filters:)
 
         charge_id = charge.id
         charge_filter_id = self.class.bucket_charge_filter_id(filters[:charge_filter])
@@ -71,6 +68,26 @@ module Events
         }
       end
 
+      # Whether this (charge, filter) is answered from the buckets. The totals answer for the
+      # whole (charge, filter), so a group-scoped or pay-in-advance read cannot use them, and
+      # a presentation breakdown reads events anyway. A window without a single bucket is a
+      # pipeline gap rather than an absence of usage: answering zero would undercharge.
+      #
+      # The buckets close 15 minutes at a time, so they always lag: current usage can read a
+      # lagging total, an invoice cannot.
+      def serves?(charge:, filters: {})
+        return false if usage_buckets.blank?
+        return false unless current_usage
+        return false unless RealtimeUsage.enabled?(organization)
+        return false if RealtimeUsage.deduplicated?(organization)
+        return false unless RealtimeUsage.supported_charge?(charge)
+
+        filters[:grouped_by_values].blank? &&
+          filters[:event].blank? &&
+          filters[:presentation_by].blank? &&
+          filters[:filter_by_group].blank?
+      end
+
       # The sink writes `COALESCE(charge_filter_id, '')`, while the unfiltered fee carries
       # an unpersisted ChargeFilter whose id is nil.
       def self.bucket_charge_filter_id(charge_filter)
@@ -79,13 +96,7 @@ module Events
 
       private
 
-      attr_reader :organization
-
-      def bucket_servable?(charge)
-        return false if deduplicate
-
-        RealtimeUsage.supported_charge?(charge)
-      end
+      attr_reader :organization, :current_usage
     end
   end
 end

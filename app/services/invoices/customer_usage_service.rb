@@ -152,9 +152,22 @@ module Invoices
           # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
           skip_adjusted_fees: true,
           filtered_aggregations: applied_filters.keys,
-          usage_filters:
+          usage_filters:,
+          usage_buckets:
         )
         .fees
+    end
+
+    # Prefetched once for the whole computation, so every charge of the plan is answered by a
+    # single ClickHouse query. nil when this computation reads events, which is also the case
+    # for a group-scoped read and for the frozen window of the daily usage backfill: neither
+    # matches what the buckets hold.
+    def usage_buckets
+      return @usage_buckets if defined?(@usage_buckets)
+
+      @usage_buckets = if max_timestamp.nil? && usage_filters.filter_by_group.blank?
+        RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries:).usage_buckets
+      end
     end
 
     def boundaries
