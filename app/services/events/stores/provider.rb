@@ -2,14 +2,16 @@
 
 module Events
   module Stores
-    # Mints the event store instances used by a single usage or billing computation.
-    # Stateful and scoped to one computation at one window: build one per request or
-    # per job, never at class level.
+    # Mints the event store instances used by a single usage or billing computation, and
+    # holds the pre-aggregated usage buckets it may serve count and sum from.
+    #
+    # Scoped to one computation at one window: build one per request or job.
     class Provider
-      def initialize(organization:, subscription:, boundaries:)
+      def initialize(organization:, subscription:, boundaries:, usage_buckets: nil)
         @organization = organization
         @subscription = subscription
         @boundaries = boundaries
+        @usage_buckets = usage_buckets
       end
 
       attr_reader :subscription, :boundaries
@@ -47,9 +49,43 @@ module Events
         end
       end
 
+      # nil when this computation does not serve from buckets. An empty set is not nil: it
+      # means the prefetch ran and found no usage.
+      attr_reader :usage_buckets
+
+      # Options to merge into those passed to `aggregate`, or none when the charge has to
+      # read events. The totals answer for the whole (charge, filter), so a group-scoped
+      # or pay-in-advance read cannot use them.
+      def precomputed_options_for(charge:, filters: {})
+        return {} if usage_buckets.nil?
+        return {} unless RealtimeUsage.enabled?(organization)
+        return {} unless bucket_servable?(charge)
+        return {} if filters[:grouped_by_values].present? || filters[:event].present?
+
+        charge_id = charge.id
+        charge_filter_id = self.class.bucket_charge_filter_id(filters[:charge_filter])
+
+        {
+          precomputed_aggregation: usage_buckets.aggregation_result_for(charge_id:, charge_filter_id:),
+          precomputed_grouped_aggregations: usage_buckets.grouped_aggregation_results_for(charge_id:, charge_filter_id:)
+        }
+      end
+
+      # The sink writes `COALESCE(charge_filter_id, '')`, while the unfiltered fee carries
+      # an unpersisted ChargeFilter whose id is nil.
+      def self.bucket_charge_filter_id(charge_filter)
+        charge_filter&.id || ""
+      end
+
       private
 
       attr_reader :organization
+
+      def bucket_servable?(charge)
+        return false if deduplicate
+
+        RealtimeUsage.supported_charge?(charge)
+      end
     end
   end
 end
