@@ -7,9 +7,11 @@ module Events
     class UsageBucketSet
       Totals = Data.define(:units, :events_count)
 
+      # Copied before freezing: the caller usually builds these hashes as accumulators, and
+      # freezing its own object would raise on the next write, far from here.
       def initialize(totals: {}, grouped_totals: {})
-        @totals = totals.freeze
-        @grouped_totals = grouped_totals.freeze
+        @totals = totals.dup.freeze
+        @grouped_totals = grouped_totals.dup.freeze
         freeze
       end
 

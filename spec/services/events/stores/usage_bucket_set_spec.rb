@@ -78,5 +78,15 @@ RSpec.describe Events::Stores::UsageBucketSet do
     it "is frozen so a computation cannot rewrite the window it read" do
       expect(bucket_set).to be_frozen
     end
+
+    it "copies the rows, so the builder keeps writing to its own accumulators" do
+      bucket_set
+
+      expect { totals[["charge_2", ""]] = described_class::Totals.new(units: BigDecimal("1"), events_count: 1) }
+        .not_to raise_error
+      expect { grouped_totals[["charge_2", ""]] = [] }.not_to raise_error
+
+      expect(bucket_set.aggregation_result_for(charge_id: "charge_2", charge_filter_id: "").value).to eq(0)
+    end
   end
 end

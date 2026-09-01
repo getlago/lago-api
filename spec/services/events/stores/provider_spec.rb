@@ -80,14 +80,24 @@ RSpec.describe Events::Stores::Provider do
 
     include_context "with realtime usage availability"
 
-    let(:organization) { create(:organization, feature_flags: ["realtime_usage"]) }
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
     let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("42.5"), events_count: 7) }
     let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}) }
 
     context "when the organization is not enabled for realtime usage" do
-      let(:organization) { create(:organization) }
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
 
       it "reads events" do
+        expect(provider.precomputed_options_for(charge:)).to eq({})
+      end
+    end
+
+    context "when the organization still reads the postgres events store" do
+      let(:organization) { create(:organization, feature_flags: ["realtime_usage"]) }
+
+      it "reads events, because the buckets and the postgres events would disagree" do
         expect(provider.precomputed_options_for(charge:)).to eq({})
       end
     end

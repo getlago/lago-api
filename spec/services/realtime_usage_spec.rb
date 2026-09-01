@@ -6,16 +6,26 @@ RSpec.describe RealtimeUsage do
   describe ".enabled?" do
     subject(:enabled) { described_class.enabled?(organization) }
 
-    let(:organization) { create(:organization, feature_flags: ["realtime_usage"]) }
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
 
     include_context "with realtime usage availability"
 
     it { expect(enabled).to be(true) }
 
     context "when the organization flag is off" do
-      let(:organization) { create(:organization) }
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
 
       it { expect(enabled).to be(false) }
+    end
+
+    context "when the organization still reads the postgres events store" do
+      let(:organization) { create(:organization, feature_flags: ["realtime_usage"]) }
+
+      it "refuses, because the buckets and the postgres events would disagree" do
+        expect(enabled).to be(false)
+      end
     end
 
     context "when the kill switch is off" do
