@@ -111,7 +111,7 @@ gem "slim-rails"
 gem "addressing"
 
 # Kafka
-gem "karafka", "~> 2.5.0"
+gem "karafka", "~> 2.6.0"
 gem "karafka-web", "~> 0.11.3"
 
 # Taxes
