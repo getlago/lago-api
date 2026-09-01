@@ -65,7 +65,7 @@ module RealtimeUsage
 
     def rows
       @rows ||= Clickhouse::UsageBucket
-        .where(organization_id: organization.id, subscription_id: subscription.id, is_deleted: 0)
+        .where(organization_id: organization.id, subscription_id: subscription.id)
         .where(bucket: window)
         .group(:charge_id, :charge_filter_id, :grouped_by)
         .pluck(Arel.sql("charge_id, charge_filter_id, grouped_by, sum(units), sum(events_count)"))

@@ -79,7 +79,8 @@ module Events
         return false if usage_buckets.blank?
         return false unless current_usage
         return false unless RealtimeUsage.enabled?(organization)
-        return false unless bucket_servable?(charge)
+        return false if RealtimeUsage.deduplicated?(organization)
+        return false unless RealtimeUsage.supported_charge?(charge)
 
         filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&
@@ -96,12 +97,6 @@ module Events
       private
 
       attr_reader :organization, :current_usage
-
-      def bucket_servable?(charge)
-        return false if deduplicate
-
-        RealtimeUsage.supported_charge?(charge)
-      end
     end
   end
 end
