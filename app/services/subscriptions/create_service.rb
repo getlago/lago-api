@@ -29,7 +29,9 @@ module Subscriptions
         ending_at: params[:ending_at],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
-        subscription_type:
+        subscription_type:,
+        consolidate_invoice: params[:consolidate_invoice],
+        consolidate_invoice_provided: params.key?(:consolidate_invoice)
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
@@ -145,7 +147,7 @@ module Subscriptions
         ending_at: params[:ending_at],
         purchase_order_number: params[:purchase_order_number],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
-        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
+        consolidate_invoice: consolidate_invoice,
         billing_entity: resolve_billing_entity(organization: customer.organization, params:)
       )
 
@@ -296,6 +298,12 @@ module Subscriptions
           units: entry[:units]
         )
       end
+    end
+
+    def consolidate_invoice
+      return true unless params.key?(:consolidate_invoice)
+
+      ActiveModel::Type::Boolean.new.cast(params[:consolidate_invoice])
     end
 
     def payment_method

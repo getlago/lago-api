@@ -712,6 +712,24 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when consolidate_invoice is null" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          consolidate_invoice: "null"
+        }
+      end
+
+      it "returns a validation failure" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({consolidate_invoice: ["invalid_value"]})
+      end
+    end
+
     context "with applied_invoice_custom_sections in response" do
       it "includes applied_invoice_custom_sections in the serialized response" do
         subject

@@ -39,7 +39,9 @@ module Subscriptions
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
         subscription_type: "update",
-        subscription:
+        subscription:,
+        consolidate_invoice: params[:consolidate_invoice],
+        consolidate_invoice_provided: params.key?(:consolidate_invoice)
       )
         return result
       end
@@ -63,7 +65,9 @@ module Subscriptions
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
         subscription.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
-        subscription.consolidate_invoice = params[:consolidate_invoice] if params.key?(:consolidate_invoice)
+        if params.key?(:consolidate_invoice)
+          subscription.consolidate_invoice = ActiveModel::Type::Boolean.new.cast(params[:consolidate_invoice])
+        end
 
         if pay_in_advance? && params.key?(:on_termination_credit_note)
           subscription.on_termination_credit_note = params[:on_termination_credit_note]
