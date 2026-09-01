@@ -16,20 +16,21 @@ class ContractRateCard < ApplicationRecord
 
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
-  validates :started_at, presence: true
-  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_at: nil) }}
+  validates :effective_date, presence: true
+  validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_date: nil) }}
 
-  validate :validate_started_before_ended
+  validate :validate_effective_before_ended
 
   default_scope -> { kept }
 
   private
 
-  def validate_started_before_ended
-    return if started_at.blank? || ended_at.blank?
-    return if started_at <= ended_at
+  def validate_effective_before_ended
+    return if effective_date.blank? || ended_date.blank?
+    return if effective_date <= ended_date
 
-    errors.add(:ended_at, :must_be_after_started_at)
+    errors.add(:ended_date, :must_be_after_effective_date)
   end
 end
 
@@ -41,9 +42,9 @@ end
 #  id                  :uuid             not null, primary key
 #  billing_anchor_date :date             not null
 #  deleted_at          :datetime
-#  ended_at            :datetime
+#  effective_date      :date             not null
+#  ended_date          :date
 #  next_billing_at     :datetime         not null
-#  started_at          :datetime         not null
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
@@ -53,10 +54,10 @@ end
 #
 # Indexes
 #
-#  index_active_contract_rate_cards_on_contract_and_card  (contract_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
+#  index_active_contract_rate_cards_on_contract_and_card  (contract_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
 #  index_contract_rate_cards_on_contract_id               (contract_id)
 #  index_contract_rate_cards_on_deleted_at                (deleted_at)
-#  index_contract_rate_cards_on_next_billing_at           (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
+#  index_contract_rate_cards_on_next_billing_at           (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
 #  index_contract_rate_cards_on_organization_id           (organization_id)
 #  index_contract_rate_cards_on_rate_card_id              (rate_card_id)
 #

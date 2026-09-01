@@ -2537,13 +2537,13 @@ CREATE TABLE public.contract_rate_cards (
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
     next_billing_at timestamp without time zone NOT NULL,
-    started_at timestamp without time zone NOT NULL,
-    ended_at timestamp without time zone,
+    effective_date date NOT NULL,
+    ended_date date,
     units numeric,
     deleted_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT contract_rate_cards_started_before_ended CHECK (((ended_at IS NULL) OR (started_at <= ended_at)))
+    CONSTRAINT contract_rate_cards_effective_before_ended CHECK (((ended_date IS NULL) OR (effective_date <= ended_date)))
 );
 
 
@@ -7740,7 +7740,7 @@ CREATE INDEX index_active_charge_filters ON public.charge_filters USING btree (c
 -- Name: index_active_contract_rate_cards_on_contract_and_card; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_active_contract_rate_cards_on_contract_and_card ON public.contract_rate_cards USING btree (contract_id, rate_card_id) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL));
+CREATE UNIQUE INDEX index_active_contract_rate_cards_on_contract_and_card ON public.contract_rate_cards USING btree (contract_id, rate_card_id) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL));
 
 
 --
@@ -8363,7 +8363,7 @@ CREATE INDEX index_contract_rate_cards_on_deleted_at ON public.contract_rate_car
 -- Name: index_contract_rate_cards_on_next_billing_at; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_contract_rate_cards_on_next_billing_at ON public.contract_rate_cards USING btree (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL));
+CREATE INDEX index_contract_rate_cards_on_next_billing_at ON public.contract_rate_cards USING btree (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL));
 
 
 --
