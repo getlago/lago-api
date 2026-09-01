@@ -55,6 +55,26 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".deduplicated?" do
+    subject(:deduplicated) { described_class.deduplicated?(organization) }
+
+    let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
+
+    it { expect(deduplicated).to be(true) }
+
+    context "when the organization reads the postgres store" do
+      let(:organization) { create(:organization, clickhouse_deduplication_enabled: true) }
+
+      it { expect(deduplicated).to be(false) }
+    end
+
+    context "without deduplication" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it { expect(deduplicated).to be(false) }
+    end
+  end
+
   describe ".supported_charge?" do
     subject(:supported) { described_class.supported_charge?(charge) }
 
@@ -115,6 +135,14 @@ RSpec.describe RealtimeUsage do
       let(:billable_metric) { create(:sum_billable_metric, organization:, expression: "event.properties.value * 2") }
 
       it "is not served, because the pipeline does not evaluate expressions yet" do
+        expect(supported).to be(false)
+      end
+    end
+
+    context "with a charge accepting a target wallet" do
+      let(:charge) { build(:standard_charge, billable_metric:, accepts_target_wallet: true) }
+
+      it "is not served, because the buckets hold the target wallet outside the group keys" do
         expect(supported).to be(false)
       end
     end

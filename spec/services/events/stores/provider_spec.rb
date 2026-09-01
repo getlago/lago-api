@@ -67,7 +67,7 @@ RSpec.describe Events::Stores::Provider do
       expect(provider.usage_buckets).to eq(bucket_set)
     end
 
-    it "keeps an empty set, which answers zero rather than sending the charge back to events" do
+    it "keeps an empty set, which the prefetch built after finding no usage" do
       empty_set = Events::Stores::UsageBucketSet.new
       provider = described_class.new(organization:, subscription:, boundaries:, usage_buckets: empty_set)
 
@@ -76,7 +76,9 @@ RSpec.describe Events::Stores::Provider do
   end
 
   describe "#precomputed_options_for" do
-    subject(:provider) { described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set) }
+    subject(:provider) do
+      described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set, current_usage: true)
+    end
 
     include_context "with realtime usage availability"
 
@@ -165,9 +167,19 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "when the computation carries no buckets" do
-      subject(:provider) { described_class.new(organization:, subscription:, boundaries:) }
+      subject(:provider) { described_class.new(organization:, subscription:, boundaries:, current_usage: true) }
 
       it "reads events" do
+        expect(provider.precomputed_options_for(charge:)).to eq({})
+      end
+    end
+
+    context "when the computation is not current usage" do
+      subject(:provider) do
+        described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set)
+      end
+
+      it "reads events, because the buckets always lag behind the window they close" do
         expect(provider.precomputed_options_for(charge:)).to eq({})
       end
     end
@@ -223,6 +235,54 @@ RSpec.describe Events::Stores::Provider do
 
       it "answers zero for the unfiltered charge" do
         expect(provider.precomputed_options_for(charge:)[:precomputed_aggregation].value).to eq(0)
+      end
+    end
+
+    context "when the window holds no bucket at all" do
+      let(:bucket_set) { Events::Stores::UsageBucketSet.new }
+
+      it "reads events, because a pipeline gap and an absence of usage look the same" do
+        expect(provider.precomputed_options_for(charge:)).to eq({})
+      end
+    end
+
+    context "with a presentation breakdown" do
+      it "reads events, which the breakdown queries anyway" do
+        expect(provider.precomputed_options_for(charge:, filters: {presentation_by: ["region"]})).to eq({})
+      end
+    end
+
+    context "when the read is narrowed to one pricing group" do
+      it "reads events, because the totals answer for every group of the charge" do
+        options = provider.precomputed_options_for(charge:, filters: {filter_by_group: {"workspace" => ["A"]}})
+
+        expect(options).to eq({})
+      end
+    end
+  end
+
+  describe "#serves?" do
+    subject(:provider) do
+      described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set, current_usage: true)
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+
+    it "answers the same question as the precomputed options, so the charge cache cannot disagree" do
+      expect(provider.serves?(charge:)).to be(true)
+      expect(provider.precomputed_options_for(charge:)).not_to eq({})
+    end
+
+    context "with an excluded charge" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "answers false, and the options stay empty" do
+        expect(provider.serves?(charge:)).to be(false)
+        expect(provider.precomputed_options_for(charge:)).to eq({})
       end
     end
   end

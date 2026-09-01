@@ -4623,4 +4623,85 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
   end
+
+  describe "with a usage bucket set", cache: :memory, clickhouse: {clean_before: true} do
+    subject(:charge_subscription_service) do
+      described_class.new(
+        invoice:,
+        charge:,
+        subscription:,
+        boundaries:,
+        context: :current_usage,
+        apply_taxes: false,
+        cache_middleware:,
+        usage_buckets:,
+        usage_filters:
+      )
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:usage_filters) { UsageFilters::NONE }
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+
+    let(:cache_middleware) do
+      Subscriptions::ChargeCacheMiddleware.new(
+        subscription:,
+        charge:,
+        to_datetime: boundaries.charges_to_datetime,
+        cache: true
+      )
+    end
+
+    let(:usage_buckets) do
+      Events::Stores::UsageBucketSet.new(
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("12"), events_count: 3)}
+      )
+    end
+
+    before do
+      Rails.cache.clear
+      allow(Subscriptions::ChargeCacheService).to receive(:call).and_call_original
+    end
+
+    it "bills the units of the buckets without reading a single event" do
+      result = charge_subscription_service.call
+      expect(result).to be_success
+
+      expect(result.fees.first).to have_attributes(units: 12, events_count: 3, amount_cents: 24_000)
+    end
+
+    it "bypasses the charge cache, whose staleness is what the buckets remove" do
+      charge_subscription_service.call
+
+      expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+    end
+
+    context "with a charge the buckets cannot answer" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "reads events, and keeps caching the result" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first.units).to eq(0)
+        expect(Subscriptions::ChargeCacheService).to have_received(:call)
+      end
+    end
+
+    context "when the read is narrowed to one pricing group" do
+      let(:usage_filters) { UsageFilters.new(filter_by_group: {"region" => "us"}) }
+
+      it "reads events, because the totals answer for every group of the charge" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first.units).to eq(0)
+      end
+    end
+  end
 end

@@ -28,6 +28,12 @@ module RealtimeUsage
       organization.feature_flag_enabled?(:realtime_usage)
     end
 
+    # The stream counts every event it receives, so an organization whose store drops
+    # duplicates gets a different number from the buckets by construction.
+    def deduplicated?(organization)
+      organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
+    end
+
     def supported_charge?(charge)
       billable_metric = charge.billable_metric
 
@@ -36,6 +42,10 @@ module RealtimeUsage
       return false if charge.pay_in_advance?
       return false if charge.prorated?
       return false if billable_metric.recurring?
+
+      # The buckets carry the target wallet in its own column, while the events store returns
+      # it as one more group key, so the served groups would miss it.
+      return false if charge.accepts_target_wallet
 
       # The pipeline does not evaluate custom expressions yet.
       billable_metric.expression.blank?

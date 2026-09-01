@@ -25,6 +25,7 @@ module Fees
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE,
       skip_adjusted_fees: false,
+      usage_buckets: nil,
       plan: nil,
       customer: nil
     )
@@ -46,6 +47,7 @@ module Fees
       @filtered_aggregations = filtered_aggregations
       @usage_filters = usage_filters
       @skip_adjusted_fees = skip_adjusted_fees
+      @usage_buckets = usage_buckets
 
       @plan = plan
       @customer = customer
@@ -86,6 +88,8 @@ module Fees
     end
 
     private
+
+    attr_reader :usage_buckets
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
       :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :usage_filters
@@ -146,9 +150,18 @@ module Fees
       !filtered_aggregations.include?(charge_filter&.id)
     end
 
+    # Caching a value whose point is freshness would reintroduce staleness, so a filter served
+    # from the buckets skips the cache. The bypass asks the provider the same question the
+    # store choice asks, so the two cannot disagree.
+    def with_cache(charge_filter:, &block)
+      return yield if provider.serves?(charge:, filters: bucket_filters(charge_filter:))
+
+      cache_middleware.call(charge_filter:, &block)
+    end
+
     def compute_fees_with_cache(properties:, charge_filter:)
-      cache_middleware.call(charge_filter:) do
-        aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
+      with_cache(charge_filter:) do
+        aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties, charge_filter:))
 
         unless aggregation_result.success?
           result.fail_with_error!(aggregation_result.error)
@@ -410,13 +423,22 @@ module Fees
       ).apply
     end
 
-    def options(properties)
+    def options(properties, charge_filter: nil)
       {
         free_units_per_events: properties["free_units_per_events"].to_i,
         free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0),
         is_current_usage: current_usage,
         is_pay_in_advance: charge.pay_in_advance?
-      }
+      }.merge(provider.precomputed_options_for(charge:, filters: bucket_filters(charge_filter:)))
+    end
+
+    # The keys the provider reads to decide whether it answers this (charge, filter), without
+    # resolving the matching and ignored filters the store needs. `filter_by_group` narrows the
+    # read below the whole (charge, filter) the totals answer for, and it reaches the store
+    # folded into `matching_filters`, where the provider could no longer tell it apart from the
+    # charge filter's own values.
+    def bucket_filters(charge_filter:)
+      {charge_filter:, presentation_by:, filter_by_group: usage_filters.filter_by_group}
     end
 
     def already_billed?
@@ -449,15 +471,30 @@ module Fees
         charge:,
         current_usage:,
         subscription:,
-        boundaries: {
-          from_datetime: boundaries.charges_from_datetime,
-          to_datetime: boundaries.charges_to_datetime,
-          charges_duration: boundaries.charges_duration,
-          max_timestamp: boundaries.max_timestamp
-        },
+        provider:,
+        boundaries: aggregation_boundaries,
         filters: aggregation_filters(charge_filter:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate
       )
+    end
+
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization: billable_metric.organization,
+        subscription:,
+        boundaries: aggregation_boundaries,
+        usage_buckets:,
+        current_usage:
+      )
+    end
+
+    def aggregation_boundaries
+      @aggregation_boundaries ||= {
+        from_datetime: boundaries.charges_from_datetime,
+        to_datetime: boundaries.charges_to_datetime,
+        charges_duration: boundaries.charges_duration,
+        max_timestamp: boundaries.max_timestamp
+      }
     end
 
     def persist_recurring_value(aggregation_results, charge_filter, breakdowns_by_group)
@@ -497,16 +534,20 @@ module Fees
       grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
     end
 
+    def presentation_by
+      return @presentation_by if defined?(@presentation_by)
+
+      values = charge.presentation_group_keys_values
+      @presentation_by = values.presence && (values & (usage_filters.filter_by_presentation || values))
+    end
+
     def aggregation_filters(charge_filter: nil, bypass_aggregation: false)
       filters = {charge_id: charge.id}
 
       grouped_by_keys = grouped_by_keys(charge_filter:)
       filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
 
-      presentation_group_keys_values = charge.presentation_group_keys_values
-      if presentation_group_keys_values.present?
-        filters[:presentation_by] = presentation_group_keys_values & (usage_filters.filter_by_presentation || presentation_group_keys_values)
-      end
+      filters[:presentation_by] = presentation_by unless presentation_by.nil?
 
       if charge_filter.present?
         filters[:charge_filter] = charge_filter
