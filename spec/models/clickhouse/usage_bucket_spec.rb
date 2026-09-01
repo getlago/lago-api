@@ -29,7 +29,25 @@ RSpec.describe Clickhouse::UsageBucket, clickhouse: true do
     end
 
     it "collapses re-upserted versions of a bucket instead of summing them" do
-      bucket = create(:clickhouse_usage_bucket, units: "10.0", events_count: 2)
+      bucket = create(:clickhouse_usage_bucket, units: "10.0", events_count: 2, last_ingested_at: 2.minutes.ago)
+      reupsert(bucket, units: "25.0", events_count: 5, last_ingested_at: 1.minute.ago)
+
+      rows = described_class.where(organization_id: bucket.organization_id)
+
+      expect(rows.count).to eq(1)
+      expect(rows.sum(:units)).to eq(BigDecimal("25.0"))
+    end
+
+    it "keeps the version the sink produced last, not the one inserted last" do
+      bucket = create(:clickhouse_usage_bucket, units: "25.0", events_count: 5, last_ingested_at: 1.minute.ago)
+      reupsert(bucket, units: "10.0", events_count: 2, last_ingested_at: 2.minutes.ago)
+
+      rows = described_class.where(organization_id: bucket.organization_id)
+
+      expect(rows.sum(:units)).to eq(BigDecimal("25.0"))
+    end
+
+    def reupsert(bucket, attributes)
       create(
         :clickhouse_usage_bucket,
         organization_id: bucket.organization_id,
@@ -42,14 +60,8 @@ RSpec.describe Clickhouse::UsageBucket, clickhouse: true do
         grouped_by: bucket.grouped_by,
         aggregation_type: bucket.aggregation_type,
         bucket: bucket.bucket,
-        units: "25.0",
-        events_count: 5
+        **attributes
       )
-
-      rows = described_class.where(organization_id: bucket.organization_id)
-
-      expect(rows.count).to eq(1)
-      expect(rows.sum(:units)).to eq(BigDecimal("25.0"))
     end
   end
 
@@ -64,10 +76,17 @@ RSpec.describe Clickhouse::UsageBucket, clickhouse: true do
   end
 
   describe "columns" do
-    it "keeps units at the Decimal(38, 26) precision the sink writes" do
-      bucket = described_class.find_by(organization_id: create(:clickhouse_usage_bucket, units: "0.00000000000000000000000001").organization_id)
+    it "keeps units at the Decimal(38, 20) precision the sink writes" do
+      bucket = described_class.find_by(organization_id: create(:clickhouse_usage_bucket, units: "0.00000000000000000001").organization_id)
 
-      expect(bucket.units).to eq(BigDecimal("0.00000000000000000000000001"))
+      expect(bucket.units).to eq(BigDecimal("0.00000000000000000001"))
+    end
+
+    it "holds a units total wider than a single event value" do
+      created = create(:clickhouse_usage_bucket, units: "123456789012345678.0")
+      bucket = described_class.find_by(organization_id: created.organization_id)
+
+      expect(bucket.units).to eq(BigDecimal("123456789012345678.0"))
     end
 
     it "allows plan_id and target_wallet_code to be null" do

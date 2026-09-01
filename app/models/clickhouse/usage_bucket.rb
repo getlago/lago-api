@@ -27,8 +27,7 @@ end
 #  last_event_at      :datetime         not null
 #  last_ingested_at   :datetime         not null
 #  target_wallet_code :string
-#  units              :decimal(38, 26)  not null
-#  ver                :datetime         not null
+#  units              :decimal(38, 20)  not null
 #  charge_filter_id   :string           not null, primary key
 #  charge_id          :string           not null, primary key
 #  customer_id        :string           not null

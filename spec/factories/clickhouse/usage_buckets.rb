@@ -28,10 +28,9 @@ FactoryBot.define do
     is_deleted { 0 }
 
     # The RisingWave sink owns every write to usage_buckets_15m, so the model is
-    # read-only and `save` would raise. Tests still need rows, so insert around
-    # the guard. `ver` is MATERIALIZED and ClickHouse rejects it on insert.
+    # read-only and `save` would raise. Tests still need rows, so insert around the guard.
     to_create do |usage_bucket|
-      Clickhouse::UsageBucket.insert_all([usage_bucket.attributes.except("ver")]) # rubocop:disable Rails/SkipsModelValidations
+      Clickhouse::UsageBucket.insert_all([usage_bucket.attributes]) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

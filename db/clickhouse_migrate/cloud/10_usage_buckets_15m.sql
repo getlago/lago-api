@@ -12,13 +12,12 @@ CREATE TABLE default.usage_buckets_15m
     `grouped_by` String,
     `aggregation_type` String,
     `events_count` Int64,
-    `units` Decimal(38, 26),
+    `units` Decimal(38, 20),
     `last_event_at` DateTime64(3),
     `last_ingested_at` DateTime64(3),
-    `is_deleted` UInt8 DEFAULT 0,
-    `ver` DateTime64(3) MATERIALIZED now64(3)
+    `is_deleted` UInt8 DEFAULT 0
 )
-ENGINE = SharedReplacingMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}', ver, is_deleted)
+ENGINE = SharedReplacingMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}', last_ingested_at, is_deleted)
 PARTITION BY toYYYYMM(bucket)
 ORDER BY (organization_id, subscription_id, charge_id, charge_filter_id, grouped_by, bucket)
 SETTINGS index_granularity = 8192
