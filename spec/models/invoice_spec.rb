@@ -1149,6 +1149,122 @@ RSpec.describe Invoice do
         expect(invoice.recurring_breakdown(fee)).to eq([])
       end
     end
+
+    context "with events on a prorated recurring charge" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, organization:, customer:) }
+      let(:charge) { create(:standard_charge, organization:, plan: subscription.plan, billable_metric:, prorated: true) }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          customer:,
+          subscription_at: Time.zone.parse("2022-12-01 00:00:00"),
+          started_at: Time.zone.parse("2022-12-01 00:00:00"),
+          billing_time: :anniversary
+        )
+      end
+
+      let(:fee) do
+        create(
+          :charge_fee,
+          organization:,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            "charges_from_datetime" => "2023-05-01T00:00:00Z",
+            "charges_to_datetime" => "2023-05-31T23:59:59Z",
+            "charges_duration" => 31
+          }
+        )
+      end
+
+      context "when the billable metric is a sum_agg" do
+        let(:billable_metric) do
+          create(:sum_billable_metric, organization:, field_name: "total_count", recurring: true)
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-04-10 00:00:00"),
+            properties: {"total_count" => 12}
+          )
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-05-11 00:00:00"),
+            properties: {"total_count" => 5}
+          )
+        end
+
+        it "returns the persisted units and the units added during the period" do
+          breakdown = invoice.recurring_breakdown(fee)
+
+          expect(breakdown.map { |item| [item.date.to_s, item.action, item.amount.to_i, item.duration, item.total_duration] })
+            .to eq(
+              [
+                ["2023-05-01", "add", 12, 31, 31],
+                ["2023-05-11", "add", 5, 21, 31]
+              ]
+            )
+        end
+      end
+
+      context "when the billable metric is a unique_count_agg" do
+        let(:billable_metric) do
+          create(:unique_count_billable_metric, organization:, field_name: "unique_id", recurring: true)
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-04-10 00:00:00"),
+            properties: {"unique_id" => "111"}
+          )
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-05-11 00:00:00"),
+            properties: {"unique_id" => "222"}
+          )
+        end
+
+        it "returns the persisted item and the item added during the period" do
+          breakdown = invoice.recurring_breakdown(fee)
+
+          expect(breakdown.map { |item| [item.date.to_s, item.action, item.amount, item.duration, item.total_duration] })
+            .to eq(
+              [
+                ["2023-05-01", "add", 1, 31, 31],
+                ["2023-05-11", "add", 1, 21, 31]
+              ]
+            )
+        end
+      end
+
+      context "when the aggregation type is not supported" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true) }
+        let(:charge) { create(:standard_charge, organization:, plan: subscription.plan, billable_metric:) }
+
+        it "raises a NotImplementedError" do
+          expect { invoice.recurring_breakdown(fee) }.to raise_error(NotImplementedError)
+        end
+      end
+    end
   end
 
   describe "#document_invoice_name" do
