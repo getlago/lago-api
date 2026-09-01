@@ -8,6 +8,16 @@ module CreditNotes
       include Customers::PaymentProviderFinder
 
       INVALID_PAYMENT_METHOD_ERROR = "charge_not_refundable"
+      CHARGE_DISPUTED_ERROR = "charge_disputed"
+      CHARGE_ALREADY_REFUNDED_ERROR = "charge_already_refunded"
+      # NOTE: lago-specific, stripe rejects an over-refund without an error code
+      INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR = "insufficient_refundable_amount"
+
+      NON_RETRYABLE_ERRORS = [
+        INVALID_PAYMENT_METHOD_ERROR,
+        CHARGE_DISPUTED_ERROR,
+        CHARGE_ALREADY_REFUNDED_ERROR
+      ].freeze
 
       def initialize(credit_note = nil)
         @credit_note = credit_note
@@ -18,6 +28,12 @@ module CreditNotes
       def create
         result.credit_note = credit_note
         return result unless should_process_refund?
+
+        blocking_error_code = refund_blocked_error_code
+        if blocking_error_code
+          handle_refund_failure(message: refund_blocked_message(blocking_error_code), code: blocking_error_code)
+          return result
+        end
 
         stripe_result = create_stripe_refund
 
@@ -44,10 +60,8 @@ module CreditNotes
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ::Stripe::InvalidRequestError => e
-        deliver_error_webhook(message: e.message, code: e.code)
-        update_credit_note_status(:failed)
-        Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
-        return result if e.code == INVALID_PAYMENT_METHOD_ERROR
+        handle_refund_failure(message: e.message, code: e.code)
+        return result if NON_RETRYABLE_ERRORS.include?(e.code)
 
         result.service_failure!(code: "stripe_error", message: e.message)
       end
@@ -103,6 +117,70 @@ module CreditNotes
             .order("payments.created_at DESC")
             .first
         end
+      end
+
+      def refund_blocked_error_code
+        return CHARGE_DISPUTED_ERROR if invoice.payment_refund_blocked_at?
+
+        remaining = stripe_refundable_amount_cents
+        # NOTE: nil means stripe could not be asked. The pre-check is an optimisation, never a
+        #       gate: when in doubt we let Stripe::Refund.create decide.
+        return nil if remaining.nil?
+        return CHARGE_ALREADY_REFUNDED_ERROR if remaining <= 0
+        return INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR if remaining < credit_note.refund_amount_cents
+
+        nil
+      end
+
+      def refund_blocked_message(code)
+        case code
+        when CHARGE_DISPUTED_ERROR
+          "The charge is disputed and cannot be refunded"
+        when CHARGE_ALREADY_REFUNDED_ERROR
+          "The charge has already been fully refunded"
+        when INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR
+          "The charge has only #{stripe_refundable_amount_cents} cents left to refund, " \
+            "#{credit_note.refund_amount_cents} are required"
+        end
+      end
+
+      def stripe_refundable_amount_cents
+        return @stripe_refundable_amount_cents if defined?(@stripe_refundable_amount_cents)
+
+        charge = stripe_charge
+        # NOTE: bracket access, stripe objects raise NoMethodError on fields absent from the
+        #       pinned API version.
+        captured = charge && (charge[:amount_captured] || charge[:amount])
+        refunded = charge && charge[:amount_refunded]
+
+        @stripe_refundable_amount_cents = if captured.nil? || refunded.nil?
+          nil
+        else
+          captured - refunded
+        end
+      end
+
+      def stripe_charge
+        return @stripe_charge if defined?(@stripe_charge)
+        # NOTE: manual payments have no provider payment id, and Stripe::Charge.list would then
+        #       silently return the whole account's charges instead of filtering.
+        return @stripe_charge = nil if payment.provider_payment_id.blank?
+
+        charges = ::Stripe::Charge.list(
+          {payment_intent: payment.provider_payment_id, limit: 10},
+          {api_key: stripe_api_key}
+        )
+        # NOTE: a payment intent can carry failed attempts alongside the successful charge.
+        @stripe_charge = charges.data.detect { |charge| charge[:status] == "succeeded" }
+      rescue ::Stripe::StripeError => e
+        Rails.logger.warn("Unable to retrieve stripe charge for payment #{payment.id}: #{e.message}")
+        @stripe_charge = nil
+      end
+
+      def handle_refund_failure(message:, code:)
+        deliver_error_webhook(message:, code:)
+        update_credit_note_status(:failed)
+        Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
       end
 
       def stripe_api_key

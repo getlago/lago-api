@@ -9,6 +9,8 @@ module PaymentProviders
         "payment_intent.payment_failed" => PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedService,
         "customer.updated" => PaymentProviders::Stripe::Webhooks::CustomerUpdatedService,
         "charge.dispute.closed" => PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService,
+        "charge.dispute.created" => PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService,
+        "charge.dispute.updated" => PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService,
         "payment_intent.canceled" => PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedService
       }.freeze
 

@@ -1904,6 +1904,42 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#mark_refund_as_blocked!" do
+    context "when refunds are not blocked" do
+      let(:invoice) { create(:invoice, status: "finalized") }
+
+      it "blocks refunds" do
+        expect { invoice.mark_refund_as_blocked! }.to change(invoice, :payment_refund_blocked_at).from(nil)
+      end
+    end
+
+    context "when refunds are already blocked" do
+      let(:invoice) { create(:invoice, :refund_blocked, status: "finalized") }
+
+      it "keeps the initial date" do
+        expect { invoice.mark_refund_as_blocked! }.not_to change(invoice, :payment_refund_blocked_at)
+      end
+    end
+
+    context "when the invoice is a draft" do
+      let(:invoice) { create(:invoice, :draft) }
+
+      # NOTE: unlike payment_dispute_lost_at, no validation blocks this. Recording an inbound
+      #       dispute must never fail.
+      it "blocks refunds" do
+        expect { invoice.mark_refund_as_blocked! }.to change(invoice, :payment_refund_blocked_at).from(nil)
+      end
+    end
+  end
+
+  describe "#mark_refund_as_unblocked!" do
+    let(:invoice) { create(:invoice, :refund_blocked, status: "finalized") }
+
+    it "unblocks refunds" do
+      expect { invoice.mark_refund_as_unblocked! }.to change(invoice, :payment_refund_blocked_at).to(nil)
+    end
+  end
+
   describe "#mark_as_dispute_lost!" do
     subject(:mark_as_dispute_lost_call) { invoice.mark_as_dispute_lost! }
 
