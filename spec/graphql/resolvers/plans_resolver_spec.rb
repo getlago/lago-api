@@ -8,8 +8,26 @@ RSpec.describe Resolvers::PlansResolver do
     <<~GQL
       query($withDeleted: Boolean) {
         plans(limit: 5, withDeleted: $withDeleted) {
-          collection { id chargesCount customersCount }
+          collection {
+            id
+            activeSubscriptionsCount
+            chargesCount
+            customersCount
+            draftInvoicesCount
+            fixedChargesCount
+            subscriptionsCount
+          }
           metadata { currentPage, totalCount }
+        }
+      }
+    GQL
+  end
+  let(:query_without_counts) do
+    <<~GQL
+      query {
+        plans(limit: 5) {
+          collection { id }
+          metadata { totalCount }
         }
       }
     GQL
@@ -19,14 +37,10 @@ RSpec.describe Resolvers::PlansResolver do
   let(:plan) { create(:plan, organization:) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
+  let(:subscriptions) { create_list(:subscription, 2, customer:, plan:, organization:) }
 
   before do
-    plan
-    customer
-
-    2.times do
-      create(:subscription, customer:, plan:)
-    end
+    subscriptions
   end
 
   it_behaves_like "requires current user"
@@ -45,10 +59,60 @@ RSpec.describe Resolvers::PlansResolver do
 
     expect(plans_response["collection"].count).to eq(organization.plans.count)
     expect(plans_response["collection"].first["id"]).to eq(plan.id)
-    expect(plans_response["collection"].first["customersCount"]).to eq(1)
+    expect(plans_response["collection"].first).to include(
+      "activeSubscriptionsCount" => 2,
+      "chargesCount" => 0,
+      "customersCount" => 1,
+      "draftInvoicesCount" => 0,
+      "fixedChargesCount" => 0,
+      "subscriptionsCount" => 2
+    )
 
     expect(plans_response["metadata"]["currentPage"]).to eq(1)
     expect(plans_response["metadata"]["totalCount"]).to eq(1)
+  end
+
+  it "loads all plan counts in one query" do
+    create_list(:plan, 2, organization:)
+    query_count = 0
+    counter = lambda do |_name, _start, _finish, _id, payload|
+      query_count += 1 if payload[:sql]&.include?("active_subscription_counts AS")
+    end
+
+    result = nil
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+    end
+
+    expect(result["errors"]).to be_nil
+    expect(result.dig("data", "plans", "collection").count).to eq(3)
+    expect(query_count).to eq(1)
+  end
+
+  it "does not load plan counts when count fields are not requested" do
+    query_count = 0
+    counter = lambda do |_name, _start, _finish, _id, payload|
+      query_count += 1 if payload[:sql]&.include?("active_subscription_counts AS")
+    end
+
+    result = nil
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: query_without_counts
+      )
+    end
+
+    expect(result["errors"]).to be_nil
+    expect(result.dig("data", "plans", "collection").count).to eq(1)
+    expect(query_count).to eq(0)
   end
 
   context "when filtering by with_deleted" do

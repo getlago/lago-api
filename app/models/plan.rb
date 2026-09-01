@@ -70,6 +70,13 @@ class Plan < ApplicationRecord
   default_scope -> { kept }
   scope :parents, -> { where(parent_id: nil) }
 
+  attr_writer :active_subscriptions_count,
+    :charges_count,
+    :customers_count,
+    :draft_invoices_count,
+    :fixed_charges_count,
+    :subscriptions_count
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
@@ -127,13 +134,23 @@ class Plan < ApplicationRecord
   end
 
   def active_subscriptions_count
+    return @active_subscriptions_count if defined?(@active_subscriptions_count)
+
     count = subscriptions.active.count
     return count unless children
 
     count + children.joins(:subscriptions).merge(Subscription.active).select("subscriptions.id").distinct.count
   end
 
+  def charges_count
+    return @charges_count if defined?(@charges_count)
+
+    charges.count
+  end
+
   def customers_count
+    return @customers_count if defined?(@customers_count)
+
     count = subscriptions.active.select(:customer_id).distinct.count
     return count unless children
 
@@ -141,10 +158,27 @@ class Plan < ApplicationRecord
   end
 
   def draft_invoices_count
+    return @draft_invoices_count if defined?(@draft_invoices_count)
+
     count = subscriptions.joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
     return count unless children
 
     count + children.joins(:subscriptions).joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
+  end
+
+  def fixed_charges_count
+    return @fixed_charges_count if defined?(@fixed_charges_count)
+
+    fixed_charges.count
+  end
+
+  def subscriptions_count
+    return @subscriptions_count if defined?(@subscriptions_count)
+
+    count = subscriptions.count
+    return count unless children
+
+    count + children.joins(:subscriptions).select("subscriptions.id").distinct.count
   end
 
   private

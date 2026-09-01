@@ -76,21 +76,6 @@ module Types
         object.fixed_charges.order(created_at: :asc)
       end
 
-      def charges_count
-        object.charges.count
-      end
-
-      def fixed_charges_count
-        object.fixed_charges.count
-      end
-
-      def subscriptions_count
-        count = object.subscriptions.count
-        return count unless object.children
-
-        count + object.children.joins(:subscriptions).select("subscriptions.id").distinct.count
-      end
-
       def is_overridden
         object.parent_id.present?
       end
