@@ -21,9 +21,10 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
             expect(messages.size).to eq(2)
 
             events.each_with_index do |event, index|
+              expect(messages[index]).not_to have_key(:key)
+
               expect(messages[index]).to eq(
                 topic: "raw_events",
-                key: "#{organization.id}-#{event.external_subscription_id}",
                 payload: {
                   organization_id: organization.id,
                   external_customer_id: event.external_customer_id,

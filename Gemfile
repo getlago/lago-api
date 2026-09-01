@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "4.0.2"
+ruby "4.0.6"
 
 # Core
 gem "aasm"
@@ -42,7 +42,6 @@ gem "after_commit_everywhere"
 gem "clickhouse-activerecord", "~> 1.6.1"
 gem "discard", "~> 2.0"
 gem "kaminari-activerecord"
-gem "meilisearch-rails"
 gem "paper_trail"
 gem "pg"
 gem "ransack"
@@ -101,6 +100,10 @@ gem "datadog", require: false
 # Storage
 gem "aws-sdk-s3", require: false
 gem "google-cloud-storage", require: false
+# google-apis-core < 1.2.1 loads representable/json, which calls `gem "multi_json"`
+# without declaring the dependency. googleauth 1.17 and signet 0.22 both migrated to
+# stdlib json, so multi_json is no longer pulled in transitively and must be pinned.
+gem "multi_json", require: false
 
 # Templating
 gem "slim"

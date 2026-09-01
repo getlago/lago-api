@@ -16,6 +16,11 @@ class RateOverride < ApplicationRecord
   belongs_to :organization
 
   has_one :rate_phase
+
+  # Transient validation context: the property validators shared with v1
+  # charges read the metric from the record; the create service injects the
+  # card's item metric.
+  attr_accessor :billable_metric
   has_many :fees
 
   enum :rate_model, RATE_MODELS, validate: true

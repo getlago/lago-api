@@ -345,10 +345,6 @@ GEM
     highline (3.1.2)
       reline
     htmlbeautifier (1.4.3)
-    httparty (0.24.2)
-      csv
-      mini_mime (>= 1.0.0)
-      multi_xml (>= 0.5.2)
     httpclient (2.9.0)
       mutex_m
     httplog (1.8.0)
@@ -476,10 +472,6 @@ GEM
       net-pop
       net-smtp
     marcel (1.2.1)
-    meilisearch (0.33.0)
-      httparty (~> 0.24)
-    meilisearch-rails (0.14.1)
-      meilisearch (~> 0.28)
     method_source (1.1.0)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
@@ -497,6 +489,7 @@ GEM
       money (~> 7.0)
       railties (>= 7.0)
     msgpack (1.8.2)
+    multi_json (1.21.1)
     multi_xml (0.9.1)
       bigdecimal (>= 3.1, < 5)
     multipart-post (2.4.1)
@@ -1130,8 +1123,8 @@ DEPENDENCIES
   lago-expression!
   lograge
   logstash-event
-  meilisearch-rails
   money-rails
+  multi_json
   multipart-post
   mutex_m
   newrelic_rpm
@@ -1193,7 +1186,7 @@ DEPENDENCIES
   yabeda-rails
 
 RUBY VERSION
-  ruby 4.0.2
+  ruby 4.0.6
 
 BUNDLED WITH
-  4.0.4
+  4.0.16

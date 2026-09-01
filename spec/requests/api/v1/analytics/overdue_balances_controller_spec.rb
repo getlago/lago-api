@@ -31,14 +31,14 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController do
           [
             {
               month: "2023-11-01T00:00:00.000Z",
-              amount_cents: "1000.0",
+              amount_cents: 1000,
               currency: "EUR",
               lago_invoice_ids: [i1.id],
               billing_entity_id: organization.default_billing_entity.id
             },
             {
               month: "2024-01-01T00:00:00.000Z",
-              amount_cents: "5000.0",
+              amount_cents: 5000,
               currency: "EUR",
               lago_invoice_ids: match_array([i2.id, i3.id]),
               billing_entity_id: organization.default_billing_entity.id

@@ -8,7 +8,7 @@ RSpec.describe Mutations::Invoices::ResendEmail do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:, email: "customer@example.com") }
   let(:billing_entity) { customer.billing_entity }
-  let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
+  let(:invoice) { create(:invoice, customer:, organization:, status: :finalized, fees_amount_cents: 1000) }
 
   let(:mutation) do
     <<~GQL
