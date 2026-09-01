@@ -271,7 +271,8 @@ GEM
       ruby-progressbar (~> 1.4)
     globalid (1.4.0)
       activesupport (>= 6.1)
-    gocardless_pro (2.57.0)
+    gocardless_pro (4.5.3)
+      base64
       faraday (>= 2, < 3)
     google-apis-core (0.18.0)
       addressable (~> 2.5, >= 2.5.1)
@@ -1103,7 +1104,7 @@ DEPENDENCIES
   factory_bot_rails
   faker
   fuubar
-  gocardless_pro (~> 2.34)
+  gocardless_pro (~> 4.0)
   google-cloud-storage
   googleauth (~> 1.17.0)
   graphiql-rails
