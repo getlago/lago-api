@@ -9,11 +9,15 @@ class SubscriptionRateCard < ApplicationRecord
 
   belongs_to :organization
   belongs_to :subscription
+  # Customer default-scopes to kept, so without this a discarded customer reads back as nil
+  # and the billing clock loses the timezone it needs. Every sibling does the same.
+  belongs_to :customer, -> { with_discarded }
   belongs_to :rate_card
 
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
+  has_many :billing_segments
 
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
@@ -32,6 +36,23 @@ class SubscriptionRateCard < ApplicationRecord
   # versions visible.
   scope :active_at, ->(time) { where(started_at: ..time).where("ended_at IS NULL OR ended_at > ?", time) }
   scope :current_and_scheduled, -> { where("ended_at IS NULL OR ended_at > ?", Time.current) }
+
+  # Every version of this card on this subscription, oldest first. A units change versions
+  # the row instead of editing it, so the set of rows IS the units history: each carries the
+  # quantity in force over its [started_at, ended_at) window.
+  #
+  # Named card_versions, not versions: PaperTrailTraceable already owns `versions` for the
+  # audit trail.
+  def card_versions
+    self.class.where(subscription_id:, rate_card_id:).order(:started_at)
+  end
+
+  # When the card was first attached to the subscription. A version's own started_at is when
+  # its quantity took effect, which is not where a billing period begins — periods are
+  # anchored on the card, not on whichever version happens to be current.
+  def card_started_at
+    card_versions.minimum(:started_at) || started_at
+  end
 
   private
 
@@ -57,6 +78,7 @@ end
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
+#  customer_id         :uuid             not null
 #  organization_id     :uuid             not null
 #  rate_card_id        :uuid             not null
 #  subscription_id     :uuid             not null
@@ -64,6 +86,7 @@ end
 # Indexes
 #
 #  index_active_subscription_rate_cards_on_sub_and_card  (subscription_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
+#  index_subscription_rate_cards_on_customer_id          (customer_id)
 #  index_subscription_rate_cards_on_deleted_at           (deleted_at)
 #  index_subscription_rate_cards_on_next_billing_at      (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_at IS NULL))
 #  index_subscription_rate_cards_on_organization_id      (organization_id)
@@ -72,6 +95,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (rate_card_id => rate_cards.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
