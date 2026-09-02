@@ -48,6 +48,9 @@ Rails.application.routes.draw do
         end
         draw(:plan_nested_api)
       end
+      # The constraint mirrors v1: without it, an external id containing a
+      # dot is truncated at the format separator.
+      resources :contracts, only: %i[index show create], param: :external_id, constraints: {external_id: /[^\/]+/}
     end
 
     namespace :v2, module: :v1 do

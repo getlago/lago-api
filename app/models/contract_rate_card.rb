@@ -24,6 +24,11 @@ class ContractRateCard < ApplicationRecord
 
   default_scope -> { kept }
 
+  # The window is day-grained and the end inclusive: the card still bills on
+  # its ended_date, charges stop after it. Ended attachments are history;
+  # upcoming ones stay visible.
+  scope :current_and_scheduled, -> { where("ended_date IS NULL OR ended_date >= ?", Date.current) }
+
   private
 
   def validate_effective_before_ended

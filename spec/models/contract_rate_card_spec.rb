@@ -17,6 +17,18 @@ RSpec.describe ContractRateCard do
     end
   end
 
+  describe "Scopes" do
+    describe ".current_and_scheduled" do
+      it "keeps open and upcoming attachments, hides ended ones" do
+        open_card = create(:contract_rate_card)
+        ending_today = create(:contract_rate_card, effective_date: 10.days.ago.to_date, ended_date: Date.current)
+        create(:contract_rate_card, effective_date: 10.days.ago.to_date, ended_date: 1.day.ago.to_date)
+
+        expect(described_class.current_and_scheduled).to contain_exactly(open_card, ending_today)
+      end
+    end
+  end
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:billing_anchor_date) }
     it { is_expected.to validate_presence_of(:next_billing_at) }
