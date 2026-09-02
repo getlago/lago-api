@@ -727,6 +727,11 @@ type AlertCollection {
 
 type AlertThreshold {
   code: String
+
+  """
+  Transitions this threshold notifies on. Always includes triggered; resolved is opt in.
+  """
+  notifyOn: [NotifyOnEnum!]!
   recurring: Boolean!
   value: String!
 }
@@ -10152,6 +10157,11 @@ enum NextSubscriptionTypeEnum {
   upgrade
 }
 
+enum NotifyOnEnum {
+  resolved
+  triggered
+}
+
 scalar ObfuscatedString
 
 """
@@ -13691,6 +13701,13 @@ input TerminateSubscriptionInput {
 
 input ThresholdInput {
   code: String
+
+  """
+  Transitions this threshold notifies on. Must include triggered. Adding
+  resolved requires a code that is unique within the alert, and is not supported
+  on recurring thresholds.
+  """
+  notifyOn: [NotifyOnEnum!]
   recurring: Boolean
   value: String!
 }

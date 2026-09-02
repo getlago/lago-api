@@ -148,6 +148,96 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "with notify_on" do
+      let(:base) { {alert_type: "current_usage_amount", code: "ok"} }
+
+      it "accepts opting a coded threshold in to resolution" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+
+      it "defaults to notifying on trigger only" do
+        params = base.merge(thresholds: [{code: "warn", value: 10}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
+      end
+
+      it "rejects an unknown transition" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[triggered exploded]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("value_is_invalid")
+      end
+
+      it "rejects dropping triggered" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+
+      it "rejects opting in without a code" do
+        params = base.merge(thresholds: [{value: 10, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:code"]).to include("value_is_mandatory")
+      end
+
+      it "rejects a code reused within the alert" do
+        params = base.merge(thresholds: [
+          {code: "warn", value: 10, notify_on: %w[triggered resolved]},
+          {code: "warn", value: 20}
+        ])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:thresholds]).to include("duplicate_threshold_codes")
+      end
+
+      it "allows a code shared between thresholds that do not opt in" do
+        params = base.merge(thresholds: [
+          {code: "final", value: 30, notify_on: %w[triggered resolved]},
+          {code: "tier", value: 10},
+          {code: "tier", value: 20}
+        ])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+      end
+
+      it "falls back to the default when notify_on is explicitly null" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: nil}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
+      end
+
+      it "rejects an explicitly emptied list" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: []}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+
+      it "rejects opting a recurring threshold in to resolution" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: true, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("recurring_not_supported")
+      end
+    end
+
     context "when thresholds have duplicate values with falsy recurring variants" do
       [
         [{value: 1, recurring: false}, {value: 1, recurring: "0"}],

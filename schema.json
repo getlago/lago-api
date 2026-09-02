@@ -2831,6 +2831,30 @@
               "deprecationReason": null
             },
             {
+              "name": "notifyOn",
+              "description": "Transitions this threshold notifies on. Always includes triggered; resolved is opt in.",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "NotifyOnEnum",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "recurring",
               "description": null,
               "args": [],
@@ -47911,6 +47935,29 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "NotifyOnEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "triggered",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "resolved",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
           "kind": "SCALAR",
           "name": "ObfuscatedString",
           "description": null,
@@ -74575,6 +74622,26 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "notifyOn",
+              "description": "Transitions this threshold notifies on. Must include triggered. Adding resolved requires a code that is unique within the alert, and is not supported on recurring thresholds.",
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "NotifyOnEnum",
+                    "ofType": null
+                  }
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,

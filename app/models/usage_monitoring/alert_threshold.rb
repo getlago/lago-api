@@ -2,7 +2,9 @@
 
 class UsageMonitoring::AlertThreshold < ApplicationRecord
   SOFT_LIMIT = 20
+  NOTIFY_ON_TRIGGERED = "triggered"
   NOTIFY_ON_RESOLVED = "resolved"
+  NOTIFY_ON_VALUES = [NOTIFY_ON_TRIGGERED, NOTIFY_ON_RESOLVED].freeze
 
   belongs_to :organization
   belongs_to :alert,
