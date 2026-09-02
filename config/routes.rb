@@ -57,7 +57,12 @@ Rails.application.routes.draw do
           end
         end
       end
+      get "subscriptions/cycles", to: "subscriptions#cycles"
       resources :subscriptions, only: %i[index show], param: :external_id, constraints: {external_id: /[^\/]+/}
+      delete "subscriptions/:external_id", to: "subscriptions#terminate", constraints: {external_id: /[^\/]+/}
+      get "subscriptions/:external_id/cycles", to: "subscriptions#cycles", constraints: {external_id: /[^\/]+/}
+      post "subscriptions/:external_id/bill", to: "subscriptions#bill", constraints: {external_id: /[^\/]+/}
+      post "subscriptions/bill", to: "subscriptions#bill"
     end
 
     namespace :v2, module: :v1 do

@@ -114,6 +114,11 @@ module SubscriptionRateCards
       at = effective_at
 
       ActiveRecord::Base.transaction do
+        # Re-read before duplicating: the successor inherits next_billing_at, and a stale copy
+        # would carry a clock the producer has already advanced, making the successor look due
+        # and re-billing the period that was just invoiced.
+        subscription_rate_card.reload
+
         # A newer change supersedes any still-scheduled one.
         subscription_rate_card.subscription.applied_rate_cards
           .where(rate_card_id: subscription_rate_card.rate_card_id)
@@ -137,6 +142,13 @@ module SubscriptionRateCards
           copied_phase.rate_override = copied_override
           copied_phase.save!
         end
+
+        # A pay-in-advance rise inside a period that has already been invoiced owes the
+        # difference for the days still ahead. Inside the transaction on purpose: a change
+        # that is recorded but never billed is silent revenue loss, so if the charge cannot
+        # be scheduled the change does not stand either. Returns without doing anything for
+        # arrears, for decreases, and for a rise that stays under the watermark.
+        BillingCycles::ScheduleAdvanceIncrementService.call!(subscription_rate_card: successor, at:)
 
         result.subscription_rate_card = successor
       end

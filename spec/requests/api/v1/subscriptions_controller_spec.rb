@@ -110,6 +110,138 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "with an advance product catalog rate card" do
+      let(:customer) { create(:customer, organization:, currency: "USD") }
+      let(:payment_method) { nil }
+      let(:rate_card_proration) { false }
+
+      let(:plan) do
+        create(
+          :plan,
+          organization:,
+          code: "pl_fresh_adv",
+          pricing_type: "product_catalog",
+          interval: nil,
+          amount_cents: nil,
+          amount_currency: "USD",
+          pay_in_advance: nil
+        )
+      end
+
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          external_id: "sub_fresh_adv",
+          plan_code: plan.code
+        }
+      end
+
+      before do
+        product_category = create(:product_category, organization:, code: "cat_fresh_adv")
+        product = create(:product, :fixed, organization:, product_category:, code: "prod_fresh_adv")
+        rate_card = create(
+          :rate_card,
+          :advance,
+          organization:,
+          product:,
+          code: "rc_fresh_adv",
+          currency: "USD",
+          proration: rate_card_proration,
+          display_on_invoice: true,
+          regroup_paid_fees: "none"
+        )
+
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card:,
+          code: "r_fresh_adv",
+          effective_from: Time.zone.parse("2026-01-01"),
+          rate_model: "standard",
+          rate_properties: {"amount" => "30.00"},
+          min_amount_cents: 0,
+          billing_interval_count: 1,
+          billing_interval_unit: "month"
+        )
+
+        plan_rate_card = create(:plan_rate_card, organization:, plan:, rate_card:, units: 5)
+        create(:rate_phase, organization:, plan_rate_card:, code: "default", position: 1)
+      end
+
+      it "creates the subscription without requiring the legacy billing_time param" do
+        travel_to(Time.zone.parse("2026-08-11 12:45:13")) do
+          subject
+        end
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription]).to include(
+          external_id: "sub_fresh_adv",
+          billing_time: "calendar",
+          status: "active"
+        )
+      end
+
+      context "when the customer does not exist yet" do
+        let(:customer) { nil }
+
+        let(:params) do
+          {
+            external_customer_id: "cust_probe_y",
+            external_id: "sub_fresh_adv",
+            plan_code: plan.code
+          }
+        end
+
+        it "creates the customer and subscription" do
+          travel_to(Time.zone.parse("2026-08-11 12:45:13")) do
+            subject
+          end
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:subscription]).to include(
+            external_id: "sub_fresh_adv",
+            external_customer_id: "cust_probe_y",
+            billing_time: "calendar",
+            status: "active"
+          )
+        end
+      end
+
+      context "when a backdated advance subscription has a stub period" do
+        let(:rate_card_proration) { true }
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_cs1a_4",
+            plan_code: plan.code,
+            subscription_at: "2026-08-10T00:00:00Z",
+            billing_anchor_date: "2026-09-01"
+          }
+        end
+
+        it "bills the generated cycle boundaries instead of a one-day activation window" do
+          travel_to(Time.zone.parse("2026-08-11 12:45:13")) do
+            expect do
+              perform_enqueued_jobs(only: BillingCycles::BillSubscriptionJob) { subject }
+            end.to change(Invoice, :count).by(1)
+          end
+
+          expect(response).to have_http_status(:ok)
+
+          fee = Fee.sole
+          expect(fee.amount_cents).to eq(10_645)
+          expect(fee.properties).to include(
+            "from_datetime" => Time.zone.parse("2026-08-10").iso8601(3),
+            "to_datetime" => Time.zone.parse("2026-08-31 23:59:59.999999").iso8601(3)
+          )
+
+          invoice_subscription = InvoiceSubscription.sole
+          expect(invoice_subscription.from_datetime).to eq(Time.zone.parse("2026-08-10"))
+          expect(invoice_subscription.to_datetime).to eq(Time.zone.parse("2026-08-31 23:59:59.999999"))
+        end
+      end
+    end
+
     context "with a malformed billing_anchor_date" do
       let(:params) do
         {

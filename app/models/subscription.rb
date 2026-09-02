@@ -22,6 +22,7 @@ class Subscription < ApplicationRecord
   has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :fees
   has_many :applied_rate_cards, class_name: "SubscriptionRateCard"
+  has_many :billing_cycles
   has_many :daily_usages
   has_many :usage_thresholds
   has_many :entitlements, class_name: "Entitlement::Entitlement"
