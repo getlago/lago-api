@@ -4,6 +4,15 @@ module Subscriptions
   class OrganizationBillingService < BaseService
     Result = BaseResult
 
+    CONNECTION_ID_ATTRIBUTES = {
+      payment: :payment_provider_customer_id,
+      tax: :integration_customer_id,
+      accounting: :integration_customer_id,
+      crm: :integration_customer_id
+    }.freeze
+
+    CONNECTION_CATEGORIES = CONNECTION_ID_ATTRIBUTES.keys.freeze
+
     def initialize(organization:, billing_at: Time.current)
       @organization = organization
       @today = billing_at
@@ -29,6 +38,9 @@ module Subscriptions
         subscription_groups = group_by_payment_method(billing_subscriptions)
         subscription_groups = group_by_currency(subscription_groups)
         subscription_groups = group_by_billing_entity(subscription_groups)
+
+        subscription_groups = group_by_connections(subscription_groups) if multi_connection_enabled?
+
         subscription_groups = split_consolidation_opted_out(subscription_groups)
         subscription_groups = group_by_purchase_order_number(subscription_groups)
 
@@ -557,6 +569,58 @@ module Subscriptions
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by(&:purchase_order_number).values
       end
+    end
+
+    def multi_connection_enabled?
+      organization.feature_flag_enabled?(:multi_connection)
+    end
+
+    def group_by_connections(subscription_groups)
+      subscription_groups.flat_map do |subscriptions|
+        next [subscriptions] if subscriptions.size <= 1
+
+        subscriptions.group_by { |sub| connection_key(sub) }.values
+      end
+    end
+
+    def connection_key(subscription)
+      CONNECTION_CATEGORIES.map { |category| effective_connection_id(subscription, category) }
+    end
+
+    def effective_connection_id(subscription, category)
+      override = subscription.billing_object_connections.find { |c| c.category == category.to_s }
+
+      return default_connection_id(subscription, category) unless override
+      return if override.skip?
+
+      override.public_send(CONNECTION_ID_ATTRIBUTES.fetch(category))
+    end
+
+    def default_connection_id(subscription, category)
+      key = [subscription.customer_id, category]
+
+      default_connection_ids.fetch(key) do
+        default_connection_ids[key] = resolve_default_connection_id(subscription.customer, category)
+      end
+    end
+
+    def default_connection_ids
+      @default_connection_ids ||= {}
+    end
+
+    def resolve_default_connection_id(customer, category)
+      connections = customer_connections(customer, category)
+
+      return connections.first.id if connections.one?
+
+      connections.find(&:is_default?)&.id
+    end
+
+    def customer_connections(customer, category)
+      return customer.payment_provider_customers.to_a if category == :payment
+
+      types = IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.select { |_type, c| c == category.to_s }.keys
+      customer.integration_customers.where(type: types).to_a
     end
 
     # NOTE: Returns array of subscription groups
