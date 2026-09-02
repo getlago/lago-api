@@ -70,9 +70,12 @@ module Contracts
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ActiveRecord::RecordNotUnique
+    rescue ActiveRecord::RecordNotUnique => e
       # A concurrent create won the race past the advisory check; same answer
-      # as the check itself.
+      # as the check itself. Any other uniqueness violation in the transaction
+      # stays loud instead of masquerading as a duplicate external id.
+      raise unless e.message.include?("index_contracts_on_live_external_id")
+
       result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
     rescue BaseService::FailedResult => e
       e.result
