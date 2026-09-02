@@ -35,7 +35,7 @@ module Contracts
 
       # A window that already closed cannot be created: nothing would ever
       # terminate it, leaving a zombie active contract.
-      if params[:ended_at].present? && Time.zone.parse(params[:ended_at].to_s) <= Time.current
+      if params[:ended_at].present? && parse_in_customer_zone(params[:ended_at]) <= Time.current
         return result.single_validation_failure!(field: :ended_at, error_code: "already_ended")
       end
 
@@ -47,7 +47,7 @@ module Contracts
         return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
       end
 
-      started_at = params[:started_at].present? ? Time.zone.parse(params[:started_at].to_s) : Time.current
+      started_at = params[:started_at].present? ? parse_in_customer_zone(params[:started_at]) : Time.current
 
       ActiveRecord::Base.transaction do
         contract = organization.contracts.create!(
@@ -58,7 +58,7 @@ module Contracts
           billing_time: params[:billing_time].presence || "calendar",
           billing_anchor_date: params[:billing_anchor_date],
           started_at:,
-          ended_at: params[:ended_at],
+          ended_at: params[:ended_at].presence && parse_in_customer_zone(params[:ended_at]),
           status: started_at.future? ? :pending : :active
         )
 
@@ -91,6 +91,13 @@ module Contracts
 
     def plan
       @plan ||= organization.plans.parents.find_by(code: params[:plan_code])
+    end
+
+    # A datetime without an offset means the customer's wall clock, not the
+    # application's: "2026-10-01T00:00:00" from a Los Angeles customer is
+    # their midnight. Explicit offsets are respected as provided.
+    def parse_in_customer_zone(value)
+      Time.use_zone(customer.applicable_timezone) { Time.zone.parse(value.to_s) }
     end
   end
 end

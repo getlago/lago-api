@@ -74,6 +74,21 @@ RSpec.describe Contracts::CreateService do
     end
   end
 
+  context "with naive datetimes and a customer timezone" do
+    let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+    let(:params) { super().merge(started_at: "2026-10-01T00:00:00", ended_at: "2027-10-01T00:00:00") }
+
+    it "reads the customer's wall clock, not the application's" do
+      rate_card = create(:rate_card, organization:)
+      create(:plan_rate_card, organization:, plan:, rate_card:)
+
+      contract = result.contract
+      expect(contract.started_at).to eq(Time.zone.parse("2026-10-01T07:00:00Z"))
+      expect(contract.ended_at).to eq(Time.zone.parse("2027-10-01T07:00:00Z"))
+      expect(contract.applied_rate_cards.sole.effective_date).to eq(Date.new(2026, 10, 1))
+    end
+  end
+
   context "with a malformed date" do
     let(:params) { super().merge(billing_anchor_date: "hello") }
 
