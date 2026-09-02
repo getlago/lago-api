@@ -14215,6 +14215,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260819134021'),
 ('20260819111435'),
 ('20260819111434'),
 ('20260819000710'),
