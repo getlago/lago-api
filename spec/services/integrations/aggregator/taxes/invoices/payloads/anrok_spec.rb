@@ -67,6 +67,70 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Anrok do
       end
     end
 
+    context "with Product fees" do
+      subject(:fees_payload) do
+        described_class.new(integration:, customer:, invoice:, integration_customer:, fees:).body.sole["fees"]
+      end
+
+      let(:organization) { create(:organization) }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:invoice) { create(:invoice, organization:, billing_entity:, customer:) }
+      let(:subscription) { create(:subscription, organization:, customer:) }
+      let(:fixed_product) { create(:product, :fixed, organization:) }
+      let(:usage_product) { create(:product, organization:) }
+      let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product) }
+      let(:usage_rate_card) { create(:rate_card, organization:, product: usage_product) }
+      let(:fixed_rate) { create(:rate_card_rate, organization:, rate_card: fixed_rate_card) }
+      let(:usage_rate) { create(:rate_card_rate, organization:, rate_card: usage_rate_card) }
+      let(:fixed_fee) do
+        create(:product_fee, invoice:, subscription:, rate_card_rate: fixed_rate, units: 2, amount_cents: 250)
+      end
+      let(:usage_fee) do
+        create(:product_fee, invoice:, subscription:, rate_card_rate: usage_rate, units: 3, amount_cents: 375)
+      end
+      let(:fees) { [fixed_fee, usage_fee] }
+
+      before do
+        create(
+          :anrok_mapping,
+          integration:,
+          organization:,
+          billing_entity:,
+          mappable: fixed_product,
+          settings: {external_id: "fixed-product"}
+        )
+        create(
+          :anrok_mapping,
+          integration:,
+          organization:,
+          mappable: usage_product,
+          settings: {external_id: "usage-product"}
+        )
+      end
+
+      it "uses Product mappings for fixed and usage fees" do
+        expect(fees_payload).to match_array(
+          [
+            {
+              "item_key" => fixed_fee.item_key,
+              "item_id" => fixed_fee.id,
+              "item_code" => "fixed-product",
+              "amount_cents" => 250
+            },
+            {
+              "item_key" => usage_fee.item_key,
+              "item_id" => usage_fee.id,
+              "item_code" => "usage-product",
+              "amount_cents" => 375
+            }
+          ]
+        )
+      end
+    end
+
     describe "shipping address fallback" do
       let(:integration) { create(:anrok_integration) }
       let(:customer) do

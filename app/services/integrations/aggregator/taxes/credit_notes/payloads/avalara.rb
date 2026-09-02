@@ -50,7 +50,9 @@ module Integrations
             def cn_item(item)
               fee = item.fee
 
-              mapped_item = if fee.charge?
+              mapped_item = if fee.product?
+                product_item(fee)
+              elsif fee.charge?
                 billable_metric_item(fee)
               elsif fee.add_on_id.present?
                 add_on_item(fee)
