@@ -155,7 +155,7 @@ RSpec.describe RateCardRates::CreateService do
   end
 
   context "when the card is attached to a subscription" do
-    before { create(:subscription_rate_card, organization:, rate_card:) }
+    before { create(:contract_rate_card, organization:, rate_card:) }
 
     it "appends the rate" do
       expect(result).to be_success
