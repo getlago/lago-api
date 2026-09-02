@@ -50,6 +50,27 @@ RSpec.describe Contract do
       expect(contract).not_to be_valid
       expect(contract.errors.where(:ended_at, :must_be_after_started_at)).to be_present
     end
+
+    describe "live external id uniqueness (database)" do
+      it "allows one pending and one active but never two of either" do
+        organization = create(:organization)
+        customer = create(:customer, organization:)
+        create(:contract, organization:, customer:, external_id: "c-1")
+        create(:contract, :pending, organization:, customer:, external_id: "c-1")
+
+        expect { create(:contract, organization:, customer:, external_id: "c-1") }
+          .to raise_error(ActiveRecord::RecordNotUnique)
+      end
+
+      it "does not constrain finished contracts" do
+        organization = create(:organization)
+        customer = create(:customer, organization:)
+        create(:contract, :terminated, organization:, customer:, external_id: "c-1")
+        create(:contract, :terminated, organization:, customer:, external_id: "c-1")
+
+        expect { create(:contract, organization:, customer:, external_id: "c-1") }.not_to raise_error
+      end
+    end
   end
 
   describe "#effective_billing_anchor_date" do

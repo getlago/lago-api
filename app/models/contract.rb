@@ -75,6 +75,7 @@ end
 # Indexes
 #
 #  index_contracts_on_customer_id                      (customer_id)
+#  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                  (organization_id)
 #  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
 #  index_contracts_on_plan_id                          (plan_id)

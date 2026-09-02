@@ -102,6 +102,12 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(json[:contracts].map { |c| c[:lago_id] }).to eq([pending_contract.id])
       end
+
+      it "accepts the scalar status form" do
+        get_with_token(organization, "/api/v2/contracts?status=pending")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([pending_contract.id])
+      end
     end
   end
 

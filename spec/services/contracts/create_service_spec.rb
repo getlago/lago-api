@@ -84,11 +84,20 @@ RSpec.describe Contracts::CreateService do
   end
 
   context "when ended_at is before started_at" do
-    let(:params) { super().merge(started_at: "2026-10-01T00:00:00Z", ended_at: "2026-09-01T00:00:00Z") }
+    let(:params) { super().merge(started_at: 2.months.from_now.iso8601, ended_at: 1.month.from_now.iso8601) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:ended_at]).to eq(["must_be_after_started_at"])
+    end
+  end
+
+  context "when the window already closed" do
+    let(:params) { super().merge(started_at: 2.months.ago.iso8601, ended_at: 1.month.ago.iso8601) }
+
+    it "rejects the already-ended contract" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:ended_at]).to eq(["already_ended"])
     end
   end
 

@@ -19,8 +19,12 @@ module Api
       end
 
       def index
-        filters = params.permit(:plan_code, :external_customer_id, :external_id, status: [])
-        filters[:status] = ["active"] if filters[:status].blank?
+        filters = params.permit(:plan_code, :external_customer_id, :external_id)
+        # Accept both ?status=pending and ?status[]=pending — strong params
+        # would silently drop the scalar form and hand back active contracts
+        # to a caller who believes they filtered.
+        statuses = params[:status].is_a?(Array) ? params[:status] : [params[:status]]
+        filters[:status] = statuses.compact_blank.presence || ["active"]
 
         result = ::ContractsQuery.call(
           organization: current_organization,

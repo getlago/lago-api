@@ -33,9 +33,16 @@ module Contracts
         end
       end
 
+      # A window that already closed cannot be created: nothing would ever
+      # terminate it, leaving a zombie active contract.
+      if params[:ended_at].present? && Time.zone.parse(params[:ended_at].to_s) <= Time.current
+        return result.single_validation_failure!(field: :ended_at, error_code: "already_ended")
+      end
+
       # One live agreement per external id. Replacement flows (upgrade,
       # downgrade, renewal) will create their pending sibling explicitly when
       # they exist; a blind second create is a mistake, not a replacement.
+      # Advisory under concurrency — the partial unique index closes the race.
       if organization.contracts.where(status: %w[pending active], external_id: params[:external_id]).exists?
         return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
       end
@@ -63,6 +70,10 @@ module Contracts
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      # A concurrent create won the race past the advisory check; same answer
+      # as the check itself.
+      result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
     rescue BaseService::FailedResult => e
       e.result
     end
