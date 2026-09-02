@@ -64,6 +64,7 @@ class Fee < ApplicationRecord
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
   validate :validate_contract_provenance
+  validates :rate_card_rate, presence: true, if: :product?
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
 

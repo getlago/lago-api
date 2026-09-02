@@ -15,6 +15,7 @@ module Taxes
       return result.not_found_failure!(resource: "tax") unless tax
 
       customer_ids = tax.applicable_customers.select(:id).to_a
+      draft_invoice_ids = tax.draft_fee_taxes.distinct.pluck("fees.invoice_id")
 
       tax.name = params[:name] if params.key?(:name)
       tax.code = params[:code] if params.key?(:code)
@@ -26,8 +27,9 @@ module Taxes
       manage_taxes_on_billing_entity if params.key?(:applied_to_organization)
 
       customer_ids = (customer_ids + tax.reload.applicable_customers.select(:id)).uniq
-      draft_invoices = tax.organization.invoices.where(customer_id: customer_ids).draft
-      draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      draft_invoice_ids |= tax.organization.invoices.where(customer_id: customer_ids).draft.pluck(:id)
+      tax.organization.invoices.where(id: draft_invoice_ids)
+        .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result.tax = tax
       result
