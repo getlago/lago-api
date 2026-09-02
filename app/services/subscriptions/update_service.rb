@@ -101,8 +101,10 @@ module Subscriptions
         end
 
         if subscription.starting_in_the_future? && params.key?(:subscription_at)
+          previous_subscription_at = subscription.subscription_at
           subscription.subscription_at = params[:subscription_at]
 
+          resync_product_catalog_rate_cards(subscription, previous_subscription_at)
           process_subscription_at_change(subscription)
         else
           subscription.save!
@@ -150,6 +152,22 @@ module Subscriptions
       return false unless params.key?(:subscription_at)
 
       DateTime.parse(params[:subscription_at]).to_date < Date.current
+    end
+
+    # Materialized and default-dated entries follow the subscription's new
+    # start; entries authored with their own explicit dates keep them.
+    def resync_product_catalog_rate_cards(subscription, previous_subscription_at)
+      return unless subscription.plan&.product_catalog?
+
+      new_start = subscription.subscription_at
+      subscription.applied_rate_cards.where(started_at: previous_subscription_at).find_each do |card|
+        card.started_at = new_start
+        card.next_billing_at = new_start
+        if subscription.billing_anchor_date.nil? && card.billing_anchor_date == previous_subscription_at.to_date
+          card.billing_anchor_date = new_start.to_date
+        end
+        card.save!
+      end
     end
 
     def process_subscription_at_change(subscription)

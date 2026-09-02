@@ -30,8 +30,8 @@ Rails.application.routes.draw do
       draw(:shared_api)
     end
 
-    # Drawn first so catalog routes win recognition; everything else on /api/v2
-    # falls through to v1.
+    # Catalog-specific v2 routes are drawn before the v1 fallback: for the
+    # paths defined here (e.g. GET /api/v2/subscriptions) the first match wins.
     namespace :v2 do
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
@@ -48,6 +48,9 @@ Rails.application.routes.draw do
         end
         draw(:plan_nested_api)
       end
+      # The constraint mirrors v1: without it, an external id containing a
+      # dot is truncated at the format separator.
+      resources :subscriptions, only: %i[index show], param: :external_id, constraints: {external_id: /[^\/]+/}
     end
 
     namespace :v2, module: :v1 do

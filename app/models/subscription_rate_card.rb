@@ -3,6 +3,7 @@
 class SubscriptionRateCard < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include RatePhaseable
 
   self.discard_column = :deleted_at
 
@@ -21,7 +22,16 @@ class SubscriptionRateCard < ApplicationRecord
 
   validate :validate_started_before_ended
 
+  validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+
   default_scope -> { kept }
+
+  # An entry is versioned on units changes: rows are time-bounded by
+  # [started_at, ended_at). active_at picks the version in force at a given
+  # time; current_and_scheduled hides superseded history but keeps upcoming
+  # versions visible.
+  scope :active_at, ->(time) { where(started_at: ..time).where("ended_at IS NULL OR ended_at > ?", time) }
+  scope :current_and_scheduled, -> { where("ended_at IS NULL OR ended_at > ?", Time.current) }
 
   private
 
