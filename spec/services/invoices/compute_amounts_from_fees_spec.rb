@@ -52,6 +52,17 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
         precise_amount_cents: 151
       )
     end
+    let(:fee2) do
+      create(
+        :product_fee,
+        invoice:,
+        subscription:,
+        rate_card_rate:,
+        amount_cents: 379,
+        precise_amount_cents: 379,
+        precise_coupons_amount_cents: 100
+      )
+    end
 
     before do
       create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:)
@@ -62,6 +73,92 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
 
       expect(fee1.reload.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
       expect(fee1).to have_attributes(taxes_rate: 10, taxes_amount_cents: 15)
+      expect(invoice.applied_taxes.sole).to have_attributes(
+        tax: tax1,
+        tax_code: tax1.code,
+        tax_rate: 10,
+        amount_cents: 43,
+        fees_amount_cents: 430
+      )
+      expect(invoice).to have_attributes(
+        taxes_rate: 10,
+        taxes_amount_cents: 43,
+        sub_total_including_taxes_amount_cents: 473,
+        total_amount_cents: 473
+      )
+    end
+
+    context "with different taxes that have the same rate" do
+      let(:same_rate_tax) { create(:tax, organization:, rate: tax1.rate, code: "same-rate-tax") }
+
+      before do
+        create(:rate_card_applied_tax, rate_card:, tax: same_rate_tax, organization:)
+      end
+
+      it "keeps separate invoice tax groups" do
+        compute_amounts.call
+
+        expect(invoice.applied_taxes.order(:tax_code).pluck(:tax_code, :tax_rate, :amount_cents)).to eq(
+          [
+            [same_rate_tax.code, 10, 43],
+            [tax1.code, 10, 43]
+          ]
+        )
+      end
+    end
+
+    context "with a zero-rate tax" do
+      let(:zero_rate_tax) { create(:tax, organization:, rate: 0, code: "zero-rate-tax") }
+
+      before do
+        create(:rate_card_applied_tax, rate_card:, tax: zero_rate_tax, organization:)
+      end
+
+      it "keeps the zero-rate tax on the invoice" do
+        compute_amounts.call
+
+        expect(invoice.applied_taxes.find_by!(tax: zero_rate_tax)).to have_attributes(
+          tax_code: zero_rate_tax.code,
+          tax_rate: 0,
+          amount_cents: 0,
+          fees_amount_cents: 430
+        )
+      end
+    end
+
+    context "when fee tax amounts require rounding" do
+      let(:fee1) do
+        create(
+          :product_fee,
+          invoice:,
+          subscription:,
+          rate_card_rate:,
+          amount_cents: 55,
+          precise_amount_cents: 55
+        )
+      end
+      let(:fee2) do
+        create(
+          :product_fee,
+          invoice:,
+          subscription:,
+          rate_card_rate:,
+          amount_cents: 55,
+          precise_amount_cents: 55
+        )
+      end
+
+      before do
+        invoice.credits.destroy_all
+      end
+
+      it "rounds the combined invoice tax amount" do
+        compute_amounts.call
+
+        expect(invoice.fees.sum(&:taxes_amount_cents)).to eq(12)
+        expect(invoice.applied_taxes.sole.amount_cents).to eq(11)
+        expect(invoice.taxes_amount_cents).to eq(11)
+      end
     end
   end
 
@@ -186,6 +283,42 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       expect(invoice.sub_total_including_taxes_amount_cents).to eq(272)
       expect(invoice.taxes_rate).to eq(80)
       expect(invoice.total_amount_cents).to eq(272)
+    end
+
+    context "when the invoice contains a product fee" do
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+      let(:rate_card) { create(:rate_card, organization:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+      let(:fee1) do
+        create(
+          :product_fee,
+          invoice:,
+          subscription:,
+          rate_card_rate:,
+          amount_cents: 151,
+          precise_amount_cents: 151
+        )
+      end
+
+      it "preserves provider tax metadata on the invoice" do
+        described_class.new(invoice:, provider_taxes: [fee_taxes]).call
+
+        expect(invoice.applied_taxes.order(:tax_code).pluck(
+          :tax_description,
+          :tax_code,
+          :tax_name,
+          :tax_rate,
+          :amount_cents,
+          :taxable_base_amount_cents
+        )).to eq(
+          [
+            ["type1", "tax_1", "tax 1", 50, 76, 151],
+            ["type2", "tax_2", "tax 2", 30, 45, 151]
+          ]
+        )
+        expect(invoice).to have_attributes(taxes_amount_cents: 121, taxes_rate: 80)
+      end
     end
 
     context "when provider taxes are not provided" do
