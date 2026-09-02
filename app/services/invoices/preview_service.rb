@@ -217,12 +217,11 @@ module Invoices
             Fees::ChargeService
               .call!(
                 invoice:,
-                charge:,
+                metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
                 subscription:,
-                boundaries:,
-                context: :invoice_preview,
                 cache_middleware:,
-                filtered_aggregations: applied_filters.keys
+                filtered_aggregations: applied_filters.keys,
+                options: Fees::ChargeService::Options.new(context: :invoice_preview)
               )
               .fees
           end

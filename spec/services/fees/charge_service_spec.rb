@@ -12,11 +12,11 @@ RSpec.describe Fees::ChargeService, :premium do
   subject(:charge_subscription_service) do
     described_class.new(
       invoice:,
-      charge:,
+      metered_item:,
       subscription:,
-      boundaries:,
-      context:,
-      apply_taxes:,
+      options:,
+      plan: subscription.plan,
+      customer:,
       filtered_aggregations:
     )
   end
@@ -26,6 +26,8 @@ RSpec.describe Fees::ChargeService, :premium do
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:filtered_aggregations) { nil }
+  let(:metered_item) { described_class::MeteredItem.from_charge(charge:, boundaries:) }
+  let(:options) { described_class::Options.new(context:, apply_taxes:) }
 
   let(:subscription) do
     create(
@@ -64,6 +66,32 @@ RSpec.describe Fees::ChargeService, :premium do
         amount: "20"
       }
     )
+  end
+
+  describe "validations" do
+    it "validates the metered item" do
+      expect do
+        described_class.new(invoice:, metered_item: nil, subscription:)
+      end.to raise_error(ArgumentError, "metered_item must be a Fees::ChargeService::MeteredItem")
+    end
+
+    it "validates the options" do
+      expect do
+        described_class.new(invoice:, metered_item:, subscription:, options: Object.new)
+      end.to raise_error(ArgumentError, "options must be a Fees::ChargeService::Options")
+    end
+
+    it "requires plan and customer when applying taxes" do
+      tax_options = described_class::Options.new(apply_taxes: true)
+
+      expect do
+        described_class.new(invoice:, metered_item:, subscription:, options: tax_options, customer:)
+      end.to raise_error(ArgumentError, "plan is required when applying taxes")
+
+      expect do
+        described_class.new(invoice:, metered_item:, subscription:, options: tax_options, plan: subscription.plan)
+      end.to raise_error(ArgumentError, "customer is required when applying taxes")
+    end
   end
 
   describe ".call" do
@@ -1140,12 +1168,9 @@ RSpec.describe Fees::ChargeService, :premium do
           subject(:charge_subscription_service) do
             described_class.new(
               invoice:,
-              charge:,
+              metered_item:,
               subscription:,
-              boundaries:,
-              context:,
-              apply_taxes:,
-              skip_adjusted_fees: true,
+              options: described_class::Options.new(context:, apply_taxes:, skip_adjusted_fees: true),
               filtered_aggregations:
             )
           end
@@ -3462,11 +3487,9 @@ RSpec.describe Fees::ChargeService, :premium do
           subject(:charge_subscription_service) do
             described_class.new(
               invoice:,
-              charge:,
+              metered_item:,
               subscription:,
-              boundaries:,
-              context: :current_usage,
-              apply_taxes: false,
+              options: described_class::Options.new(context: :current_usage),
               filtered_aggregations: nil,
               cache_middleware:
             )
@@ -4118,13 +4141,13 @@ RSpec.describe Fees::ChargeService, :premium do
         subject(:charge_subscription_service) do
           described_class.new(
             invoice:,
-            charge:,
+            metered_item:,
             subscription:,
-            boundaries:,
-            context: :current_usage,
-            apply_taxes: false,
+            options: described_class::Options.new(
+              context: :current_usage,
+              with_zero_units_filters:
+            ),
             filtered_aggregations:,
-            with_zero_units_filters:,
             cache_middleware:
           )
         end
@@ -4199,13 +4222,13 @@ RSpec.describe Fees::ChargeService, :premium do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
-          charge:,
+          metered_item:,
           subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
           filtered_aggregations: nil,
-          usage_filters: UsageFilters.new(filter_by_group:)
+          options: described_class::Options.new(
+            context: :current_usage,
+            usage_filters: UsageFilters.new(filter_by_group:)
+          )
         )
       end
 
@@ -4306,13 +4329,13 @@ RSpec.describe Fees::ChargeService, :premium do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
-          charge:,
+          metered_item:,
           subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
           filtered_aggregations: nil,
-          usage_filters: UsageFilters.new(filter_by_presentation: filter_by_presentation)
+          options: described_class::Options.new(
+            context: :current_usage,
+            usage_filters: UsageFilters.new(filter_by_presentation: filter_by_presentation)
+          )
         )
       end
 
@@ -4452,13 +4475,13 @@ RSpec.describe Fees::ChargeService, :premium do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
-          charge:,
+          metered_item:,
           subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
           filtered_aggregations: nil,
-          usage_filters: UsageFilters.new(skip_grouping: true)
+          options: described_class::Options.new(
+            context: :current_usage,
+            usage_filters: UsageFilters.new(skip_grouping: true)
+          )
         )
       end
 

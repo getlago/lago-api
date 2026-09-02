@@ -86,7 +86,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
       expect(AdjustedFee).not_to have_received(:matching_charge_boundaries)
       expect(Fees::ChargeService).to have_received(:call!)
-        .with(hash_including(skip_adjusted_fees: true))
+        .with(hash_including(options: have_attributes(skip_adjusted_fees: true)))
     end
 
     context "when initializes an invoice" do
