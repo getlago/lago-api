@@ -146,4 +146,44 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara d
       ]
     end
   end
+
+  context "with a Product fee" do
+    subject(:fee_payload) do
+      described_class.new(integration:, customer:, integration_customer:, credit_note:).body.sole["fees"].sole
+    end
+
+    let(:organization) { create(:organization) }
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:integration) { create(:avalara_integration, organization:) }
+    let(:customer) { create(:customer, organization:, billing_entity:) }
+    let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+    let(:invoice) { create(:invoice, organization:, billing_entity:, customer:) }
+    let(:subscription) { create(:subscription, organization:, customer:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:fee) { create(:product_fee, invoice:, subscription:, rate_card_rate: rate, units: 2, amount_cents: 250) }
+    let(:credit_note) { create(:credit_note, organization:, customer:, invoice:) }
+
+    before do
+      create(:credit_note_item, credit_note:, fee:, amount_cents: 190)
+      create(
+        :avalara_mapping,
+        integration:,
+        organization:,
+        billing_entity:,
+        mappable: product,
+        settings: {external_id: "product-code"}
+      )
+    end
+
+    it "uses the Product mapping" do
+      expect(fee_payload).to eq(
+        "item_id" => fee.item_id,
+        "item_code" => "product-code",
+        "unit" => 2.0,
+        "amount" => "-1.9"
+      )
+    end
+  end
 end
