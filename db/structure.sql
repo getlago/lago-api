@@ -78,6 +78,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_cdb874acd1;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_cdaf36dc89;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS fk_rails_cd99351ee3;
+ALTER TABLE IF EXISTS ONLY public.pricing_imports DROP CONSTRAINT IF EXISTS fk_rails_cd04033576;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
@@ -95,6 +96,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_b
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
+ALTER TABLE IF EXISTS ONLY public.pricing_imports DROP CONSTRAINT IF EXISTS fk_rails_bd81699989;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_bcb5aecd6c;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_bc33c71114;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
@@ -541,6 +543,8 @@ DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_fee_id;
+DROP INDEX IF EXISTS public.index_pricing_imports_on_organization_id;
+DROP INDEX IF EXISTS public.index_pricing_imports_on_membership_id;
 DROP INDEX IF EXISTS public.index_presentation_breakdowns_on_organization_id;
 DROP INDEX IF EXISTS public.index_presentation_breakdowns_on_fee_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
@@ -1054,6 +1058,7 @@ ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.product_categories DROP CONSTRAINT IF EXISTS product_categories_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.pricing_imports DROP CONSTRAINT IF EXISTS pricing_imports_pkey;
 ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS presentation_breakdowns_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
@@ -1190,6 +1195,7 @@ DROP TABLE IF EXISTS public.product_filter_values;
 DROP TABLE IF EXISTS public.product_categories;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
+DROP TABLE IF EXISTS public.pricing_imports;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.plan_rate_cards;
 DROP TABLE IF EXISTS public.pending_vies_checks;
@@ -1355,6 +1361,7 @@ DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.quote_order_type;
 DROP TYPE IF EXISTS public.product_type;
+DROP TYPE IF EXISTS public.pricing_import_state;
 DROP TYPE IF EXISTS public.plan_pricing_type;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
@@ -1690,6 +1697,19 @@ CREATE TYPE public.payment_type AS ENUM (
 CREATE TYPE public.plan_pricing_type AS ENUM (
     'legacy',
     'product_catalog'
+);
+
+
+--
+-- Name: pricing_import_state; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.pricing_import_state AS ENUM (
+    'draft',
+    'confirmed',
+    'processing',
+    'completed',
+    'failed'
 );
 
 
@@ -3805,6 +3825,7 @@ CREATE TABLE public.subscriptions (
     activated_at timestamp(6) without time zone,
     billing_entity_id uuid,
     consolidate_invoice boolean DEFAULT true NOT NULL,
+    invoice_consolidation_enabled boolean DEFAULT true NOT NULL,
     skip_daily_usage boolean DEFAULT false NOT NULL,
     cancellation_reason public.subscription_cancellation_reasons,
     purchase_order_number character varying,
@@ -5309,6 +5330,29 @@ CREATE TABLE public.presentation_breakdowns (
 
 
 --
+-- Name: pricing_imports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_imports (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    membership_id uuid,
+    state public.pricing_import_state DEFAULT 'draft'::public.pricing_import_state NOT NULL,
+    source_filename character varying,
+    proposed_plan jsonb DEFAULT '{}'::jsonb NOT NULL,
+    edited_plan jsonb DEFAULT '{}'::jsonb NOT NULL,
+    execution_report jsonb DEFAULT '[]'::jsonb NOT NULL,
+    progress_current integer DEFAULT 0 NOT NULL,
+    progress_total integer DEFAULT 0 NOT NULL,
+    error_message text,
+    started_at timestamp(6) without time zone,
+    finished_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: pricing_unit_usages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6786,6 +6830,14 @@ ALTER TABLE ONLY public.plans_taxes
 
 ALTER TABLE ONLY public.presentation_breakdowns
     ADD CONSTRAINT presentation_breakdowns_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pricing_imports pricing_imports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_imports
+    ADD CONSTRAINT pricing_imports_pkey PRIMARY KEY (id);
 
 
 --
@@ -10453,6 +10505,20 @@ CREATE INDEX index_presentation_breakdowns_on_organization_id ON public.presenta
 
 
 --
+-- Name: index_pricing_imports_on_membership_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_imports_on_membership_id ON public.pricing_imports USING btree (membership_id);
+
+
+--
+-- Name: index_pricing_imports_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_imports_on_organization_id ON public.pricing_imports USING btree (organization_id);
+
+
+--
 -- Name: index_pricing_unit_usages_on_fee_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13743,6 +13809,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: pricing_imports fk_rails_bd81699989; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_imports
+    ADD CONSTRAINT fk_rails_bd81699989 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_subscription_activities fk_rails_bda048a8d9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13876,6 +13950,14 @@ ALTER TABLE ONLY public.plans
 
 ALTER TABLE ONLY public.integration_mappings
     ADD CONSTRAINT fk_rails_cc318ad1ff FOREIGN KEY (integration_id) REFERENCES public.integrations(id);
+
+
+--
+-- Name: pricing_imports fk_rails_cd04033576; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_imports
+    ADD CONSTRAINT fk_rails_cd04033576 FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
 
 
 --
@@ -14546,6 +14628,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260518152858'),
 ('20260517101105'),
 ('20260513181544'),
+('20260513130417'),
 ('20260513105210'),
 ('20260513105209'),
 ('20260512155310'),
@@ -14559,6 +14642,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260429123434'),
 ('20260424170418'),
 ('20260424131927'),
+('20260423130621'),
 ('20260422085615'),
 ('20260421123920'),
 ('20260421103557'),
