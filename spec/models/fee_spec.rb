@@ -104,6 +104,16 @@ RSpec.describe Fee do
     end
   end
 
+  describe "validations" do
+    it "requires a Rate Card Rate for Product fees" do
+      fee = build(:fee, fee_type: :product, rate_card_rate: nil)
+
+      fee.validate
+
+      expect(fee.errors.of_kind?(:rate_card_rate, :blank)).to be(true)
+    end
+  end
+
   describe "#ordered_by_period" do
     let(:fee1) do
       create(:fee, properties: {
