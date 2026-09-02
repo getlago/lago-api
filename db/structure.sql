@@ -4129,6 +4129,7 @@ CREATE VIEW public.exports_invoices AS
             WHEN 5 THEN 'open'::text
             WHEN 6 THEN 'close'::text
             WHEN 7 THEN 'pending'::text
+            WHEN 8 THEN 'deleted'::text
             ELSE NULL::text
         END AS status,
         CASE i.payment_status
@@ -4163,7 +4164,7 @@ CREATE VIEW public.exports_invoices AS
            FROM public.error_details ed
           WHERE (ed.owner_id = i.id)) AS error_details
    FROM public.invoices i
-  WHERE (i.status = ANY (ARRAY[0, 1, 2, 4, 7]));
+  WHERE (i.status = ANY (ARRAY[0, 1, 2, 4, 7, 8]));
 
 
 --
@@ -14446,6 +14447,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260902143604'),
+('20260902120000'),
 ('20260826235314'),
 ('20260826235313'),
 ('20260826235312'),
