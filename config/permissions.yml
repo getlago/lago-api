@@ -38,6 +38,9 @@ charges:
   create:
   update:
   delete:
+contracts:
+  view:
+  create:
 coupons:
   view:
     - finance

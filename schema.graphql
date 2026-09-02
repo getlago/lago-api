@@ -1467,6 +1467,73 @@ enum CommitmentTypeEnum {
   minimum_commitment
 }
 
+"""
+The agreement a customer signed: an optional plan, a validity window and the billing anchor
+"""
+type Contract {
+  appliedRateCards: [ContractAppliedRateCard!]!
+  appliedRateCardsCount: Int!
+  billingAnchorDate: ISO8601Date
+  billingTime: ContractBillingTimeEnum!
+  canceledAt: ISO8601DateTime
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  endedAt: ISO8601DateTime
+  externalId: String!
+  id: ID!
+  name: String
+  plan: Plan
+  startedAt: ISO8601DateTime
+  status: ContractStatusEnum!
+  terminatedAt: ISO8601DateTime
+  updatedAt: ISO8601DateTime!
+}
+
+"""
+Rate card applied to a contract
+"""
+type ContractAppliedRateCard {
+  billingAnchorDate: ISO8601Date!
+  createdAt: ISO8601DateTime!
+  effectiveDate: ISO8601Date!
+  endedDate: ISO8601Date
+  id: ID!
+  nextBillingAt: ISO8601DateTime!
+  product: Product!
+  rateCard: RateCard!
+  ratePhases: [RatePhase!]!
+  ratePhasesCount: Int!
+  units: Float
+  updatedAt: ISO8601DateTime!
+}
+
+enum ContractBillingTimeEnum {
+  anniversary
+  calendar
+}
+
+"""
+ContractCollection type
+"""
+type ContractCollection {
+  """
+  A collection of paginated ContractCollection
+  """
+  collection: [Contract!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum ContractStatusEnum {
+  active
+  canceled
+  pending
+  terminated
+}
+
 enum CountryCode {
   """
   Andorra
@@ -2970,6 +3037,25 @@ input CreateCatalogPlanInput {
   description: String
   invoiceDisplayName: String
   name: String!
+}
+
+"""
+Create contract input arguments
+"""
+input CreateContractInput {
+  billingAnchorDate: ISO8601Date
+  billingTime: ContractBillingTimeEnum
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  endedAt: ISO8601DateTime
+  externalCustomerId: String!
+  externalId: String!
+  name: String
+  planCode: String
+  startedAt: ISO8601DateTime
 }
 
 """
@@ -8121,6 +8207,16 @@ type Mutation {
   ): ChargeFilter
 
   """
+  Creates a new contract
+  """
+  createContract(
+    """
+    Parameters for CreateContract
+    """
+    input: CreateContractInput!
+  ): Contract
+
+  """
   Creates a new Coupon
   """
   createCoupon(
@@ -10571,6 +10667,8 @@ enum PermissionEnum {
   charges_create
   charges_delete
   charges_update
+  contracts_create
+  contracts_view
   coupons_attach
   coupons_create
   coupons_delete
@@ -10707,6 +10805,8 @@ type Permissions {
   chargesCreate: Boolean!
   chargesDelete: Boolean!
   chargesUpdate: Boolean!
+  contractsCreate: Boolean!
+  contractsView: Boolean!
   couponsAttach: Boolean!
   couponsCreate: Boolean!
   couponsDelete: Boolean!
@@ -11502,6 +11602,21 @@ type Query {
     """
     billingEntityId: ID!
   ): TaxCollection!
+
+  """
+  Query a single contract of an organization
+  """
+  contract(
+    """
+    Uniq ID of the contract
+    """
+    id: ID!
+  ): Contract
+
+  """
+  Query contracts of an organization
+  """
+  contracts(externalCustomerId: String, externalId: String, limit: Int, page: Int, planCode: String, status: [ContractStatusEnum!]): ContractCollection!
 
   """
   Query a single coupon of an organization
