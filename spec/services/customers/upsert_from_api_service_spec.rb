@@ -95,6 +95,50 @@ RSpec.describe Customers::UpsertFromApiService do
     )
   end
 
+  context "when net_payment_term is provided" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+
+    before do
+      customer
+      create_args[:net_payment_term] = 45
+    end
+
+    it "writes the structured payment term alias" do
+      expect(result.customer).to have_attributes(
+        net_payment_term: 45,
+        payment_term: {"term_type" => "net", "days" => 45}
+      )
+    end
+  end
+
+  context "when net_payment_term is cleared" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+
+    let(:create_args) { {external_id:, net_payment_term: nil} }
+
+    before { customer }
+
+    it "clears the structured payment term alias" do
+      expect(result.customer).to have_attributes(net_payment_term: nil, payment_term: nil)
+    end
+  end
+
   it "calls SendWebhookJob with customer.created" do
     customer = result.customer
 
