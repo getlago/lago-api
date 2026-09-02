@@ -29,7 +29,6 @@ module Events
     def build_message(event)
       {
         topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
-        key: "#{organization.id}-#{event.external_subscription_id}",
         payload: build_payload(event).to_json
       }
     end

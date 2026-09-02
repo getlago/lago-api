@@ -97,10 +97,9 @@ module Invoices
       charges.find_each do |charge|
         Fees::ChargeService.call!(
           invoice:,
-          charge:,
+          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
           subscription:,
-          context: :finalize,
-          boundaries:,
+          options: Fees::ChargeService::Options.new(context: :finalize),
           filtered_aggregations: filters[charge.target_key]&.keys || []
         )
       end

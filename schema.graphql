@@ -6478,7 +6478,6 @@ enum FeatureFlagEnum {
   enriched_events_aggregation
   fixed_charge_usage_delta_migration
   lazy_charge_usage_cache
-  meilisearch
   multi_connection
   order_forms
   payment_gated_subscriptions
@@ -11845,7 +11844,7 @@ type Query {
   """
   Query pending invites of an organization
   """
-  invites(limit: Int, page: Int): InviteCollection!
+  invites(limit: Int, page: Int, roleIds: [ID!], searchTerm: String): InviteCollection!
 
   """
   Query a single Invoice of an organization
@@ -11939,7 +11938,7 @@ type Query {
   """
   Query memberships of an organization
   """
-  memberships(limit: Int, page: Int): MembershipCollection!
+  memberships(limit: Int, page: Int, roleIds: [ID!], searchTerm: String): MembershipCollection!
 
   """
   Query MRR of an organization

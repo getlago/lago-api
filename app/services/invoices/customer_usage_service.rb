@@ -142,17 +142,18 @@ module Invoices
       Fees::ChargeService
         .call!(
           invoice:,
-          charge:,
+          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
           subscription:,
-          boundaries: applied_boundaries,
-          context: :current_usage,
           cache_middleware:,
-          calculate_projected_usage:,
-          with_zero_units_filters:,
-          # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
-          skip_adjusted_fees: true,
           filtered_aggregations: applied_filters.keys,
-          usage_filters:
+          options: Fees::ChargeService::Options.new(
+            context: :current_usage,
+            calculate_projected_usage:,
+            with_zero_units_filters:,
+            usage_filters:,
+            # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
+            skip_adjusted_fees: true
+          )
         )
         .fees
     end

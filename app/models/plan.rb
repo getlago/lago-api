@@ -22,6 +22,7 @@ class Plan < ApplicationRecord
   has_many :fixed_charges, dependent: :destroy
   has_many :add_ons, through: :fixed_charges
   has_many :subscriptions
+  has_many :contracts
   has_many :customers, through: :subscriptions
   has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
   has_many :coupon_targets
@@ -90,8 +91,10 @@ class Plan < ApplicationRecord
     !pay_in_advance
   end
 
+  # A catalog plan is subscribed through contracts, a legacy plan through
+  # subscriptions; either attachment freezes the plan.
   def attached_to_subscriptions?
-    subscriptions.exists?
+    subscriptions.exists? || contracts.exists?
   end
 
   def has_trial?

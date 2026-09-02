@@ -339,7 +339,7 @@ RSpec.describe Events::CreateBatchService do
               expected_params = events_params[:events][index]
 
               expect(message[:topic]).to eq("raw_events")
-              expect(message[:key]).to eq("#{organization.id}-#{external_subscription_id}")
+              expect(message).not_to have_key(:key)
 
               payload = JSON.parse(message[:payload])
               expect(payload["organization_id"]).to eq(organization.id)

@@ -909,37 +909,6 @@ RSpec.describe Resolvers::InvoicesResolver do
           expect(metadata).to include("hasNextPage" => false)
         end
       end
-
-      context "when the search is delegated to Meilisearch" do
-        let(:query) do
-          <<~GQL
-            query {
-              invoices(page: 1, limit: 1, searchTerm: "Acme") {
-                collection { id }
-                metadata { totalCount totalCountCapped hasNextPage }
-              }
-            }
-          GQL
-        end
-
-        before do
-          organization.enable_feature_flag!(:meilisearch)
-          stub_const(
-            "ENV",
-            ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700", "LAGO_MEILISEARCH_SEARCH_ENABLED" => "true")
-          )
-          allow(Invoice).to receive(:search)
-            .and_return(Kaminari.paginate_array([invoice_first], total_count: 42).page(1).per(1))
-        end
-
-        it "leaves the Meilisearch total untouched" do
-          expect(metadata).to eq(
-            "totalCount" => 42,
-            "totalCountCapped" => false,
-            "hasNextPage" => true
-          )
-        end
-      end
     end
   end
 end

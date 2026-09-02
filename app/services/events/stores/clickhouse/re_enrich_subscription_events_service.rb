@@ -66,7 +66,6 @@ module Events
         def build_message(event)
           {
             topic:,
-            key: "#{event.organization_id}-#{event.external_subscription_id}",
             payload: build_payload(event).to_json
           }
         end

@@ -1149,6 +1149,122 @@ RSpec.describe Invoice do
         expect(invoice.recurring_breakdown(fee)).to eq([])
       end
     end
+
+    context "with events on a prorated recurring charge" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, organization:, customer:) }
+      let(:charge) { create(:standard_charge, organization:, plan: subscription.plan, billable_metric:, prorated: true) }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          customer:,
+          subscription_at: Time.zone.parse("2022-12-01 00:00:00"),
+          started_at: Time.zone.parse("2022-12-01 00:00:00"),
+          billing_time: :anniversary
+        )
+      end
+
+      let(:fee) do
+        create(
+          :charge_fee,
+          organization:,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            "charges_from_datetime" => "2023-05-01T00:00:00Z",
+            "charges_to_datetime" => "2023-05-31T23:59:59Z",
+            "charges_duration" => 31
+          }
+        )
+      end
+
+      context "when the billable metric is a sum_agg" do
+        let(:billable_metric) do
+          create(:sum_billable_metric, organization:, field_name: "total_count", recurring: true)
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-04-10 00:00:00"),
+            properties: {"total_count" => 12}
+          )
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-05-11 00:00:00"),
+            properties: {"total_count" => 5}
+          )
+        end
+
+        it "returns the persisted units and the units added during the period" do
+          breakdown = invoice.recurring_breakdown(fee)
+
+          expect(breakdown.map { |item| [item.date.to_s, item.action, item.amount.to_i, item.duration, item.total_duration] })
+            .to eq(
+              [
+                ["2023-05-01", "add", 12, 31, 31],
+                ["2023-05-11", "add", 5, 21, 31]
+              ]
+            )
+        end
+      end
+
+      context "when the billable metric is a unique_count_agg" do
+        let(:billable_metric) do
+          create(:unique_count_billable_metric, organization:, field_name: "unique_id", recurring: true)
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-04-10 00:00:00"),
+            properties: {"unique_id" => "111"}
+          )
+          create(
+            :event,
+            organization:,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2023-05-11 00:00:00"),
+            properties: {"unique_id" => "222"}
+          )
+        end
+
+        it "returns the persisted item and the item added during the period" do
+          breakdown = invoice.recurring_breakdown(fee)
+
+          expect(breakdown.map { |item| [item.date.to_s, item.action, item.amount, item.duration, item.total_duration] })
+            .to eq(
+              [
+                ["2023-05-01", "add", 1, 31, 31],
+                ["2023-05-11", "add", 1, 21, 31]
+              ]
+            )
+        end
+      end
+
+      context "when the aggregation type is not supported" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true) }
+        let(:charge) { create(:standard_charge, organization:, plan: subscription.plan, billable_metric:) }
+
+        it "raises a NotImplementedError" do
+          expect { invoice.recurring_breakdown(fee) }.to raise_error(NotImplementedError)
+        end
+      end
+    end
   end
 
   describe "#document_invoice_name" do
@@ -2540,173 +2656,6 @@ RSpec.describe Invoice do
 
       it "returns issuing_date value" do
         expect(subject).to eq(invoice.issuing_date)
-      end
-    end
-  end
-
-  describe "meilisearch document" do
-    subject(:document) { described_class.meilisearch_settings.get_attributes(invoice) }
-
-    let(:customer) do
-      create(
-        :customer,
-        organization:,
-        name: "Acme Corp",
-        firstname: "John",
-        lastname: "Doe",
-        legal_name: "Acme Corporation",
-        external_id: "ext-123",
-        email: "john@acme.test"
-      )
-    end
-    let(:invoice) do
-      create(
-        :invoice,
-        organization:,
-        customer:,
-        number: "INV-001",
-        invoice_type: "subscription",
-        currency: "EUR",
-        status: "finalized",
-        payment_status: "pending",
-        payment_overdue: true,
-        self_billed: false,
-        total_amount_cents: 1000,
-        total_paid_amount_cents: 400,
-        issuing_date: Date.new(2026, 1, 15),
-        purchase_order_number: "PO-123"
-      )
-    end
-
-    it "exposes the searchable, filterable and denormalized attributes" do
-      expect(document).to eq(
-        "number" => "INV-001",
-        "organization_id" => organization.id,
-        "billing_entity_id" => invoice.billing_entity_id,
-        "currency" => "EUR",
-        "customer_id" => customer.id,
-        "invoice_type" => "subscription",
-        "status" => "finalized",
-        "payment_status" => "pending",
-        "payment_overdue" => true,
-        "self_billed" => false,
-        "total_amount_cents" => 1000,
-        "total_paid_amount_cents" => 400,
-        "created_at" => invoice.created_at.to_i,
-        "issuing_date" => Date.new(2026, 1, 15).to_time(:utc).to_i,
-        "due_amount_cents" => 600,
-        "partially_paid" => true,
-        "payment_dispute_lost" => false,
-        "customer_name" => "Acme Corp",
-        "customer_firstname" => "John",
-        "customer_lastname" => "Doe",
-        "customer_legal_name" => "Acme Corporation",
-        "customer_external_id" => "ext-123",
-        "customer_email" => "john@acme.test",
-        "subscription_ids" => [],
-        "settlement_types" => [],
-        "metadata" => [],
-        "metadata_keys" => [],
-        "purchase_order_number" => "PO-123"
-      )
-    end
-
-    context "with metadata, subscriptions and settlements" do
-      let(:subscription) { create(:subscription, organization:, customer:) }
-
-      before do
-        create(:invoice_metadata, invoice:, key: "po", value: "123")
-        create(:invoice_subscription, invoice:, subscription:)
-        create(:invoice_settlement, :with_payment, organization:, billing_entity: organization.default_billing_entity, target_invoice: invoice)
-      end
-
-      it "denormalizes the associated values" do
-        expect(document).to include(
-          "metadata" => ["po::123"],
-          "metadata_keys" => ["po"],
-          "subscription_ids" => [subscription.id],
-          "settlement_types" => ["payment"]
-        )
-      end
-    end
-
-    context "when the customer is discarded" do
-      before { customer.discard! }
-
-      it "omits the descriptive customer fields but keeps customer_id" do
-        expect(document).to include(
-          "customer_id" => customer.id,
-          "customer_name" => nil,
-          "customer_firstname" => nil,
-          "customer_lastname" => nil,
-          "customer_legal_name" => nil,
-          "customer_external_id" => nil,
-          "customer_email" => nil
-        )
-      end
-    end
-  end
-
-  describe "meilisearch index settings" do
-    it "declares the searchable, filterable, sortable and index settings" do
-      expect(described_class.meilisearch_settings.to_settings).to eq(
-        searchable_attributes: %i[number customer_name customer_firstname customer_lastname
-          customer_legal_name customer_external_id customer_email purchase_order_number],
-        filterable_attributes: [
-          {
-            "attributePatterns" => %w[id organization_id billing_entity_id customer_id
-              customer_external_id subscription_ids metadata metadata_keys
-              currency invoice_type status payment_status settlement_types
-              payment_dispute_lost payment_overdue self_billed partially_paid
-              purchase_order_number],
-            "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => false}}
-          },
-          {
-            "attributePatterns" => %w[issuing_date total_amount_cents due_amount_cents],
-            "features" => {"facetSearch" => false, "filter" => {"equality" => true, "comparison" => true}}
-          }
-        ],
-        sortable_attributes: %i[issuing_date created_at id],
-        pagination: {"maxTotalHits" => 100_000},
-        typo_tolerance: {"disableOnAttributes" => %w[number customer_external_id customer_email]},
-        proximity_precision: "byAttribute"
-      )
-    end
-
-    it "matches the server settings format so settings are not re-applied on every index call" do
-      settings = described_class.meilisearch_settings.to_settings
-      server_state = JSON.parse(settings.transform_keys { |key| key.to_s.camelize(:lower) }.to_json)
-
-      expect(described_class.send(:meilisearch_settings_changed?, server_state, settings)).to be(false)
-    end
-  end
-
-  describe "search indexing" do
-    context "when Meilisearch is enabled" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700")) }
-
-      it "enqueues a search index job after commit when a visible invoice is created" do
-        expect { create(:invoice, organization:) }
-          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob)
-      end
-
-      it "enqueues a search index job after commit when a visible invoice is saved" do
-        invoice = create(:invoice, organization:)
-        ActiveJob::Base.queue_adapter.enqueued_jobs.clear
-
-        expect { invoice.update!(payment_status: :succeeded) }
-          .to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
-      end
-
-      it "does not enqueue a search index job for an invisible invoice" do
-        expect { create(:invoice, :invisible, organization:) }
-          .not_to have_enqueued_job(Invoices::SearchIndexJob)
-      end
-    end
-
-    context "when Meilisearch is disabled" do
-      it "does not enqueue a search index job" do
-        expect { create(:invoice, organization:) }.not_to have_enqueued_job(Invoices::SearchIndexJob)
       end
     end
   end

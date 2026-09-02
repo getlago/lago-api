@@ -127,7 +127,7 @@ RSpec.describe RateCardRates::UpdateService do
   context "when the card is attached to a subscription" do
     let(:params) { {rate_properties: {"amount" => "25"}} }
 
-    before { create(:subscription_rate_card, organization:, rate_card:) }
+    before { create(:contract_rate_card, organization:, rate_card:) }
 
     context "with a pending rate" do
       let(:rate_card_rate) do

@@ -6,9 +6,9 @@ module RatePhases
   class CreateService < BaseService
     Result = BaseResult[:rate_phase]
 
-    def initialize(plan_rate_card: nil, subscription_rate_card: nil, params: {})
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, params: {})
       @plan_rate_card = plan_rate_card
-      @subscription_rate_card = subscription_rate_card
+      @contract_rate_card = contract_rate_card
       @params = params.to_h.with_indifferent_access
       super
     end
@@ -54,7 +54,7 @@ module RatePhases
         result.rate_phase = RatePhase.create!(
           organization: parent.organization,
           plan_rate_card:,
-          subscription_rate_card:,
+          contract_rate_card:,
           code: params[:code].presence,
           position:,
           billing_interval_cycle_count: params[:billing_interval_cycle_count],
@@ -72,10 +72,10 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :subscription_rate_card, :params
+    attr_reader :plan_rate_card, :contract_rate_card, :params
 
     def parent
-      plan_rate_card || subscription_rate_card
+      plan_rate_card || contract_rate_card
     end
 
     def build_override

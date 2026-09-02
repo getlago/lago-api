@@ -49,7 +49,7 @@ RSpec.describe RateCardRates::DestroyService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
 
-    before { create(:subscription_rate_card, organization:, rate_card:) }
+    before { create(:contract_rate_card, organization:, rate_card:) }
 
     it "deletes the pending rate" do
       expect(result).to be_success

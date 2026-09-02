@@ -251,6 +251,72 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    describe "issuing_date and payment_due_date" do
+      let(:regeneration_date) { DateTime.new(2023, 3, 10) }
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          invoice_grace_period: 30,
+          net_payment_term: 30,
+          subscription_invoice_issuing_date_anchor:,
+          subscription_invoice_issuing_date_adjustment:
+        )
+      end
+
+      let(:voided_invoice) do
+        original_invoice
+        travel_to(DateTime.new(2023, 2, 1)) { perform_billing }
+        subscription.invoices.order(:created_at).last.tap { |invoice| invoice.update!(status: :voided) }
+      end
+
+      let(:fees_params) do
+        voided_invoice.fees.map { |fee| {id: fee.id, subscription_id: fee.subscription_id, units: fee.units} }
+      end
+
+      before { voided_invoice }
+
+      shared_examples "an invoice issued at the regeneration date" do
+        it "ignores the voided invoice dates and the grace period" do
+          expect(voided_invoice.issuing_date).to eq(voided_issuing_date)
+
+          travel_to(regeneration_date) do
+            invoice = regenerate_result.invoice
+
+            expect(invoice.issuing_date).to eq(regeneration_date.to_date)
+            expect(invoice.payment_due_date).to eq(regeneration_date.to_date + 30.days)
+          end
+        end
+      end
+
+      context "when aligning the issuing date with the finalization date" do
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+        let(:voided_issuing_date) { Date.new(2023, 3, 3) }
+
+        it_behaves_like "an invoice issued at the regeneration date"
+      end
+
+      context "when keeping the anchor" do
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        context "with the next_period_start anchor" do
+          let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+          let(:voided_issuing_date) { Date.new(2023, 2, 1) }
+
+          it_behaves_like "an invoice issued at the regeneration date"
+        end
+
+        context "with the current_period_end anchor" do
+          let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+          let(:voided_issuing_date) { Date.new(2023, 1, 31) }
+
+          it_behaves_like "an invoice issued at the regeneration date"
+        end
+      end
+    end
+
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 

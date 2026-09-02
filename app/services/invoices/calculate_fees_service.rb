@@ -118,8 +118,6 @@ module Invoices
       return unless charge_boundaries_valid?(boundaries)
 
       filters = event_filters(subscription, boundaries).filter_targets
-      plan = subscription.plan
-      customer = subscription.customer
       adjusted_fee_exists = AdjustedFee.where(invoice:, subscription:).matching_charge_boundaries(boundaries).exists?
 
       subscription
@@ -135,13 +133,12 @@ module Invoices
 
           Fees::ChargeService.call!(
             invoice:,
-            charge:,
+            metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
             subscription:,
-            boundaries:,
-            context:,
-            plan:,
-            customer:,
-            skip_adjusted_fees: !adjusted_fee_exists,
+            options: Fees::ChargeService::Options.new(
+              context:,
+              skip_adjusted_fees: !adjusted_fee_exists
+            ),
             filtered_aggregations: filters[charge.target_key]&.keys || []
           )
         end
@@ -231,13 +228,14 @@ module Invoices
 
           fee_result = Fees::ChargeService.call!(
             invoice: nil,
-            charge:,
+            metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
             subscription:,
-            context: :recurring,
-            boundaries:,
             plan: subscription.plan,
             customer: subscription.customer,
-            apply_taxes: invoice.customer.tax_customer.blank?
+            options: Fees::ChargeService::Options.new(
+              context: :recurring,
+              apply_taxes: invoice.customer.tax_customer.blank?
+            )
           )
 
           result.non_invoiceable_fees.concat(fee_result.fees)
