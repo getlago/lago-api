@@ -12,7 +12,7 @@ module UsageMonitoring
     def call
       return result unless wallet.alerts.any?
 
-      wallet.alerts.using_wallet.includes(:thresholds).find_each do |alert|
+      wallet.alerts.using_wallet.find_each do |alert|
         ProcessAlertService.call(alert:, alertable: wallet, current_metrics: wallet)
       end
 

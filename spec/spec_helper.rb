@@ -83,6 +83,7 @@ RSpec.configure do |config|
   config.include QueuesHelper
   config.include XMLHelper
   config.include AdvisoryLockHelper
+  config.include SqlCaptureHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers

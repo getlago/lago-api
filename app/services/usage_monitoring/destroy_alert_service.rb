@@ -12,7 +12,7 @@ module UsageMonitoring
     def call
       return result.not_found_failure!(resource: "alert") unless alert
 
-      ActiveRecord::Base.transaction do
+      alert.with_lock do
         alert.thresholds.delete_all
         alert.discard!
       end

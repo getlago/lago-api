@@ -375,6 +375,45 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.alert.direction).to eq("decreasing")
       end
 
+      it "inserts the alert before locking the wallet, so balance updates cannot race the baseline" do
+        statements = capture_sql { result }
+
+        inserted_alert = statements.index { it.start_with?("INSERT INTO \"usage_monitoring_alerts\"") }
+        locked_wallet = statements.index { it.include?("\"wallets\"") && it.include?("FOR UPDATE") }
+
+        expect(inserted_alert).not_to be_nil
+        expect(locked_wallet).not_to be_nil
+        expect(inserted_alert).to be < locked_wallet
+        expect(result.alert.previous_value).to eq(wallet.balance_cents)
+      end
+
+      # A balance UPDATE holds FOR NO KEY UPDATE, which the alert insert's foreign-key check does not
+      # conflict with, so only the explicit lock makes the baseline wait for it.
+      it "waits for an in-flight balance update instead of baselining a stale value", transaction: false do
+        wallet_id = wallet.id # materialize on this connection before the other one reads it
+        creator = nil
+
+        Wallet.transaction do
+          Wallet.where(id: wallet_id).update_all(balance_cents: 400) # rubocop:disable Rails/SkipsModelValidations
+
+          creator = Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection { described_class.call(organization:, alertable: wallet, params:) }
+          end
+          sleep 1.5 # long enough that an unlocked read would already have taken the stale balance
+        end
+
+        created = creator.value
+        expect(created).to be_success
+        expect(created.alert.previous_value).to eq(400)
+      end
+
+      it "baselines from the stored balance, not from the caller's copy" do
+        Wallet.where(id: wallet.id).update_all(balance_cents: 42) # rubocop:disable Rails/SkipsModelValidations
+
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(42)
+      end
+
       it "does not create a subscription activity" do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
       end
