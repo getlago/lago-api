@@ -836,6 +836,7 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_contracts_on_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
+DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
@@ -8388,6 +8389,13 @@ CREATE INDEX index_contracts_on_customer_id ON public.contracts USING btree (cus
 
 
 --
+-- Name: index_contracts_on_live_external_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['pending'::public.contract_status, 'active'::public.contract_status]));
+
+
+--
 -- Name: index_contracts_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14437,6 +14445,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260902143604'),
 ('20260826235314'),
 ('20260826235313'),
 ('20260826235312'),

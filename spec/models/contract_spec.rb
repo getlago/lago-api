@@ -50,6 +50,27 @@ RSpec.describe Contract do
       expect(contract).not_to be_valid
       expect(contract.errors.where(:ended_at, :must_be_after_started_at)).to be_present
     end
+
+    describe "live external id uniqueness (database)" do
+      it "allows one pending and one active but never two of either" do
+        organization = create(:organization)
+        customer = create(:customer, organization:)
+        create(:contract, organization:, customer:, external_id: "c-1")
+        create(:contract, :pending, organization:, customer:, external_id: "c-1")
+
+        expect { create(:contract, organization:, customer:, external_id: "c-1") }
+          .to raise_error(ActiveRecord::RecordNotUnique)
+      end
+
+      it "does not constrain finished contracts" do
+        organization = create(:organization)
+        customer = create(:customer, organization:)
+        create(:contract, :terminated, organization:, customer:, external_id: "c-1")
+        create(:contract, :terminated, organization:, customer:, external_id: "c-1")
+
+        expect { create(:contract, organization:, customer:, external_id: "c-1") }.not_to raise_error
+      end
+    end
   end
 
   describe "#effective_billing_anchor_date" do
@@ -65,6 +86,19 @@ RSpec.describe Contract do
 
       upcoming = build(:contract, :pending, billing_anchor_date: nil, started_at: Time.zone.parse("2026-03-01"))
       expect(upcoming.effective_billing_anchor_date).to eq(Date.new(2026, 3, 1))
+    end
+
+    it "derives the fallback in the customer's timezone" do
+      customer = create(:customer, timezone: "America/Los_Angeles")
+      contract = build(
+        :contract,
+        customer:,
+        organization: customer.organization,
+        billing_anchor_date: nil,
+        started_at: Time.zone.parse("2026-10-01T02:00:00Z")
+      )
+
+      expect(contract.effective_billing_anchor_date).to eq(Date.new(2026, 9, 30))
     end
   end
 end

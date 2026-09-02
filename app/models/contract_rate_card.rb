@@ -24,6 +24,25 @@ class ContractRateCard < ApplicationRecord
 
   default_scope -> { kept }
 
+  # The window is day-grained and the end inclusive: the card still bills on
+  # its ended_date, charges stop after it. Ended attachments are history;
+  # upcoming ones stay visible. "Today" is the customer's day, not the
+  # application's — same COALESCE chain as the v1 timezone SQL helpers.
+  #
+  # The plain date bound comes first: the timezone expression cannot use an
+  # index, which turned a similar comparison into a full-scan timeout in the
+  # termination clock (see #6086). Offsets span -12:00..+14:00, so any
+  # customer-local today is at least yesterday's date — the bound is a strict
+  # superset and the exact per-row check decides.
+  scope :current_and_scheduled, -> {
+    joins(contract: [:customer, :organization]).where(
+      "contract_rate_cards.ended_date IS NULL OR (contract_rate_cards.ended_date >= ? AND " \
+      "contract_rate_cards.ended_date >= " \
+      "(?::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC'))::date)",
+      Time.current.to_date - 1, Time.current
+    )
+  }
+
   private
 
   def validate_effective_before_ended

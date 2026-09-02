@@ -17,6 +17,44 @@ RSpec.describe ContractRateCard do
     end
   end
 
+  describe "Scopes" do
+    describe ".current_and_scheduled" do
+      it "keeps open and upcoming attachments, hides ended ones" do
+        open_card = create(:contract_rate_card)
+        ending_today = create(:contract_rate_card, effective_date: 10.days.ago.to_date, ended_date: Date.current)
+        create(:contract_rate_card, effective_date: 10.days.ago.to_date, ended_date: 1.day.ago.to_date)
+
+        expect(described_class.current_and_scheduled).to contain_exactly(open_card, ending_today)
+      end
+
+      it "cuts off on the customer's day, not the application's" do
+        travel_to(Time.zone.parse("2026-10-01T02:00:00Z")) do
+          la_customer = create(:customer, timezone: "America/Los_Angeles")
+          la_contract = create(:contract, organization: la_customer.organization, customer: la_customer)
+          still_current = create(
+            :contract_rate_card,
+            organization: la_customer.organization,
+            contract: la_contract,
+            effective_date: Date.new(2026, 9, 1),
+            ended_date: Date.new(2026, 9, 30)
+          )
+
+          utc_customer = create(:customer, timezone: "UTC")
+          utc_contract = create(:contract, organization: utc_customer.organization, customer: utc_customer)
+          create(
+            :contract_rate_card,
+            organization: utc_customer.organization,
+            contract: utc_contract,
+            effective_date: Date.new(2026, 9, 1),
+            ended_date: Date.new(2026, 9, 30)
+          )
+
+          expect(described_class.current_and_scheduled).to contain_exactly(still_current)
+        end
+      end
+    end
+  end
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:billing_anchor_date) }
     it { is_expected.to validate_presence_of(:next_billing_at) }
