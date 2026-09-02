@@ -24,7 +24,7 @@ module Contracts
             organization: contract.organization,
             rate_card: plan_rate_card.rate_card,
             units: plan_rate_card.units,
-            effective_date: contract.started_at.to_date,
+            effective_date:,
             billing_anchor_date: contract.effective_billing_anchor_date,
             next_billing_at: contract.started_at
           )
@@ -38,5 +38,12 @@ module Contracts
     private
 
     attr_reader :contract
+
+    # Customer-local day of the start instant: the engine interprets card
+    # dates in the customer's timezone, so a UTC truncation would attach the
+    # card one day early or late around the customer's midnight.
+    def effective_date
+      @effective_date ||= contract.started_at.in_time_zone(contract.customer.applicable_timezone).to_date
+    end
   end
 end

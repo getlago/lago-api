@@ -26,8 +26,15 @@ class ContractRateCard < ApplicationRecord
 
   # The window is day-grained and the end inclusive: the card still bills on
   # its ended_date, charges stop after it. Ended attachments are history;
-  # upcoming ones stay visible.
-  scope :current_and_scheduled, -> { where("ended_date IS NULL OR ended_date >= ?", Date.current) }
+  # upcoming ones stay visible. "Today" is the customer's day, not the
+  # application's — same COALESCE chain as the v1 timezone SQL helpers.
+  scope :current_and_scheduled, -> {
+    joins(contract: [:customer, :organization]).where(
+      "contract_rate_cards.ended_date IS NULL OR contract_rate_cards.ended_date >= " \
+      "(?::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC'))::date",
+      Time.current
+    )
+  }
 
   private
 

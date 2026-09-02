@@ -46,6 +46,19 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     end
   end
 
+  context "when the customer's day differs from UTC at the start instant" do
+    let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+    let(:contract) { create(:contract, organization:, customer:, plan:, started_at: Time.zone.parse("2026-10-01T02:00:00Z")) }
+
+    it "materializes on the customer-local day" do
+      result
+
+      card = contract.reload.applied_rate_cards.sole
+      expect(card.effective_date).to eq(Date.new(2026, 9, 30))
+      expect(card.billing_anchor_date).to eq(Date.new(2026, 9, 30))
+    end
+  end
+
   it "does not copy the plan entry's phases: pricing resolves by reference" do
     plan_rate_card = plan.applied_rate_cards.sole
     create(:rate_phase, organization:, plan_rate_card:, position: 1)

@@ -87,5 +87,18 @@ RSpec.describe Contract do
       upcoming = build(:contract, :pending, billing_anchor_date: nil, started_at: Time.zone.parse("2026-03-01"))
       expect(upcoming.effective_billing_anchor_date).to eq(Date.new(2026, 3, 1))
     end
+
+    it "derives the fallback in the customer's timezone" do
+      customer = create(:customer, timezone: "America/Los_Angeles")
+      contract = build(
+        :contract,
+        customer:,
+        organization: customer.organization,
+        billing_anchor_date: nil,
+        started_at: Time.zone.parse("2026-10-01T02:00:00Z")
+      )
+
+      expect(contract.effective_billing_anchor_date).to eq(Date.new(2026, 9, 30))
+    end
   end
 end

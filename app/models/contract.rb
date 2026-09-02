@@ -36,9 +36,12 @@ class Contract < ApplicationRecord
   validate :validate_started_before_ended
 
   # The anchor every attached rate card inherits by default: the explicit
-  # anchor when one was signed, otherwise the day the contract starts.
+  # anchor when one was signed, otherwise the day the contract starts — in
+  # the customer's timezone, since the engine interprets dates as
+  # customer-local days. A UTC truncation would shift the day around the
+  # customer's midnight.
   def effective_billing_anchor_date
-    billing_anchor_date || started_at&.to_date
+    billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
   end
 
   private
