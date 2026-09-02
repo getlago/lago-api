@@ -19,6 +19,16 @@ RSpec.describe Fee do
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
   it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
 
+  describe "validations" do
+    it "requires a Rate Card Rate for Product fees" do
+      fee = build(:fee, fee_type: :product, rate_card_rate: nil)
+
+      fee.validate
+
+      expect(fee.errors.of_kind?(:rate_card_rate, :blank)).to be(true)
+    end
+  end
+
   describe "#ordered_by_period" do
     let(:fee1) do
       create(:fee, properties: {
