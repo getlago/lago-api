@@ -716,7 +716,7 @@ end
 #  finalized_at                            :datetime
 #  invoice_type                            :integer          default("subscription"), not null
 #  issuing_date                            :date
-#  net_payment_term                        :integer          default(0), not null
+#  net_payment_term                        :integer          default(0)
 #  number                                  :string           default(""), not null
 #  payment_attempts                        :integer          default(0), not null
 #  payment_dispute_lost_at                 :datetime
