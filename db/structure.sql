@@ -1219,7 +1219,6 @@ DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
 DROP VIEW IF EXISTS public.flat_filters;
 DROP TABLE IF EXISTS public.fixed_charges_taxes;
-DROP TABLE IF EXISTS public.fixed_charges;
 DROP TABLE IF EXISTS public.fixed_charge_events;
 DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
@@ -1260,6 +1259,7 @@ DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.invoices;
+DROP TABLE IF EXISTS public.fixed_charges;
 DROP TABLE IF EXISTS public.fees;
 DROP VIEW IF EXISTS public.exports_entitlement_features;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
@@ -3682,6 +3682,29 @@ CREATE TABLE public.fees (
 
 
 --
+-- Name: fixed_charges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fixed_charges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    add_on_id uuid NOT NULL,
+    parent_id uuid,
+    charge_model public.fixed_charge_charge_model DEFAULT 'standard'::public.fixed_charge_charge_model NOT NULL,
+    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    invoice_display_name character varying,
+    pay_in_advance boolean DEFAULT false NOT NULL,
+    prorated boolean DEFAULT false NOT NULL,
+    units numeric(30,10) DEFAULT 0.0 NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying NOT NULL
+);
+
+
+--
 -- Name: invoices; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3821,6 +3844,7 @@ CREATE VIEW public.exports_fees AS
  SELECT f.organization_id,
     f.id AS lago_id,
     f.charge_id AS lago_charge_id,
+    f.fixed_charge_id AS lago_fixed_charge_id,
     f.charge_filter_id AS lago_charge_filter_id,
     f.invoice_id AS lago_invoice_id,
     f.subscription_id AS lago_subscription_id,
@@ -3832,30 +3856,35 @@ CREATE VIEW public.exports_fees AS
             WHEN 2 THEN 'subscription'::text
             WHEN 3 THEN 'credit'::text
             WHEN 4 THEN 'commitment'::text
+            WHEN 5 THEN 'fixed_charge'::text
             ELSE 'unknown'::text
         END, 'code',
         CASE f.fee_type
             WHEN 0 THEN bm.code
             WHEN 1 THEN ao.code
             WHEN 3 THEN 'credit'::character varying
+            WHEN 5 THEN fao.code
             ELSE p.code
         END, 'name',
         CASE f.fee_type
             WHEN 0 THEN bm.name
             WHEN 1 THEN ao.name
             WHEN 3 THEN 'credit'::character varying
+            WHEN 5 THEN fao.name
             ELSE p.name
         END, 'description',
         CASE f.fee_type
             WHEN 0 THEN bm.description
             WHEN 1 THEN ao.description
             WHEN 3 THEN 'credit'::character varying
+            WHEN 5 THEN fao.description
             ELSE p.description
         END, 'invoice_display_name', COALESCE(f.invoice_display_name,
         CASE f.fee_type
             WHEN 0 THEN COALESCE(ch.invoice_display_name, bm.name)
             WHEN 1 THEN COALESCE(ao.invoice_display_name, ao.name)
             WHEN 3 THEN 'credit'::character varying
+            WHEN 5 THEN COALESCE(fc.invoice_display_name, fao.invoice_display_name, fao.name)
             ELSE p.invoice_display_name
         END), 'filters', ( SELECT json_agg(json_build_object('id', cf.id, 'charge_id', cf.charge_id, 'properties', cf.properties, 'invoice_display_name', cf.invoice_display_name)) AS json_agg
            FROM public.charge_filters cf
@@ -3864,12 +3893,14 @@ CREATE VIEW public.exports_fees AS
             WHEN 0 THEN bm.id
             WHEN 1 THEN ao.id
             WHEN 3 THEN f.invoiceable_id
+            WHEN 5 THEN fao.id
             ELSE f.subscription_id
         END, 'item_type',
         CASE f.fee_type
             WHEN 0 THEN 'billable_metric'::text
             WHEN 1 THEN 'add_on'::text
             WHEN 3 THEN 'wallet_transaction'::text
+            WHEN 5 THEN 'add_on'::text
             ELSE 'subscription'::text
         END, 'grouped_by', f.grouped_by) AS item,
     f.pay_in_advance,
@@ -3903,18 +3934,22 @@ CREATE VIEW public.exports_fees AS
     f.updated_at,
         CASE f.fee_type
             WHEN 0 THEN (((f.properties ->> 'charges_from_datetime'::text))::timestamp with time zone)::text
+            WHEN 5 THEN (((f.properties ->> 'fixed_charges_from_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'from_datetime'::text))::timestamp with time zone)::text
         END AS from_date,
         CASE f.fee_type
             WHEN 0 THEN (((f.properties ->> 'charges_to_datetime'::text))::timestamp with time zone)::text
+            WHEN 5 THEN (((f.properties ->> 'fixed_charges_to_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'to_datetime'::text))::timestamp with time zone)::text
         END AS to_date
-   FROM (((((((public.fees f
+   FROM (((((((((public.fees f
      LEFT JOIN public.subscriptions s ON ((f.subscription_id = s.id)))
      LEFT JOIN public.customers c ON ((s.customer_id = c.id)))
      LEFT JOIN public.charges ch ON ((f.charge_id = ch.id)))
      LEFT JOIN public.billable_metrics bm ON ((ch.billable_metric_id = bm.id)))
      LEFT JOIN public.add_ons ao ON ((f.add_on_id = ao.id)))
+     LEFT JOIN public.fixed_charges fc ON ((f.fixed_charge_id = fc.id)))
+     LEFT JOIN public.add_ons fao ON ((fc.add_on_id = fao.id)))
      LEFT JOIN public.plans p ON ((s.plan_id = p.id)))
      LEFT JOIN public.invoices i ON ((i.id = f.invoice_id)))
   WHERE (i.status IS DISTINCT FROM 8);
@@ -4783,29 +4818,6 @@ CREATE TABLE public.fixed_charge_events (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: fixed_charges; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.fixed_charges (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
-    add_on_id uuid NOT NULL,
-    parent_id uuid,
-    charge_model public.fixed_charge_charge_model DEFAULT 'standard'::public.fixed_charge_charge_model NOT NULL,
-    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    invoice_display_name character varying,
-    pay_in_advance boolean DEFAULT false NOT NULL,
-    prorated boolean DEFAULT false NOT NULL,
-    units numeric(30,10) DEFAULT 0.0 NOT NULL,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    code character varying NOT NULL
 );
 
 
@@ -14446,6 +14458,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260902143604'),
+('20260902120100'),
 ('20260826235314'),
 ('20260826235313'),
 ('20260826235312'),
