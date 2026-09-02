@@ -6,6 +6,8 @@ module Contracts
   # active when its start has arrived, pending when it starts in the future
   # — lifecycle state lives in the status, the dates only carry the window.
   class CreateService < BaseService
+    include CustomerTimezone
+
     Result = BaseResult[:contract]
 
     def initialize(organization:, params:)
@@ -35,7 +37,7 @@ module Contracts
 
       # A window that already closed cannot be created: nothing would ever
       # terminate it, leaving a zombie active contract.
-      if params[:ended_at].present? && parse_in_customer_zone(params[:ended_at]) <= Time.current
+      if params[:ended_at].present? && ended_at_in_customer_timezone <= Time.current
         return result.single_validation_failure!(field: :ended_at, error_code: "already_ended")
       end
 
@@ -47,7 +49,7 @@ module Contracts
         return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
       end
 
-      started_at = params[:started_at].present? ? parse_in_customer_zone(params[:started_at]) : Time.current
+      started_at = params[:started_at].present? ? started_at_in_customer_timezone : Time.current
 
       ActiveRecord::Base.transaction do
         contract = organization.contracts.create!(
@@ -58,7 +60,7 @@ module Contracts
           billing_time: params[:billing_time].presence || "calendar",
           billing_anchor_date: params[:billing_anchor_date],
           started_at:,
-          ended_at: params[:ended_at].presence && parse_in_customer_zone(params[:ended_at]),
+          ended_at: ended_at_in_customer_timezone,
           status: started_at.future? ? :pending : :active
         )
 
@@ -93,11 +95,16 @@ module Contracts
       @plan ||= organization.plans.parents.find_by(code: params[:plan_code])
     end
 
-    # A datetime without an offset means the customer's wall clock, not the
-    # application's: "2026-10-01T00:00:00" from a Los Angeles customer is
-    # their midnight. Explicit offsets are respected as provided.
-    def parse_in_customer_zone(value)
-      Time.use_zone(customer.applicable_timezone) { Time.zone.parse(value.to_s) }
+    # Read through the CustomerTimezone suffix: a datetime without an offset
+    # means the customer's wall clock, not the application's —
+    # String#in_time_zone parses a naive value in the customer's zone and
+    # respects explicit offsets. Nil when the param is absent.
+    def started_at
+      params[:started_at].presence
+    end
+
+    def ended_at
+      params[:ended_at].presence
     end
   end
 end
