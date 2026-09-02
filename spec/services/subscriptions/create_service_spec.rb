@@ -238,6 +238,28 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when consolidate_invoice is passed as null" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          consolidate_invoice: "null"
+        }
+      end
+
+      it "returns a validation failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({consolidate_invoice: ["invalid_value"]})
+      end
+    end
+
     context "when customer is invalid in an api context" do
       let(:customer) do
         build(:customer, organization:, currency: "EUR", external_id: nil)
