@@ -14,6 +14,9 @@ module Organizations
         params.slice(:name, :document_numbering, :premium_integrations)
       )
 
+      # New organizations default to the product catalog (billing v2).
+      organization.feature_flags = organization.feature_flags.to_a | ["product_catalog"]
+
       if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_CLICKHOUSE_ENABLED"]) && ENV["LAGO_DEFAULT_EVENT_STORE"] == "clickhouse"
         organization.clickhouse_events_store = true
         organization.clickhouse_deduplication_enabled = true

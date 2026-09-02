@@ -8,6 +8,7 @@ module Subscriptions
 
       valid_subscription_at?
       valid_ending_at?
+      valid_billing_anchor_date?
       valid_on_termination_credit_note?
       valid_on_termination_invoice?
       valid_payment_method?
@@ -58,6 +59,17 @@ module Subscriptions
       end
 
       add_error(field: :ending_at, error_code: "invalid_date")
+      false
+    end
+
+    # The column is a date, so a malformed value would silently cast to nil
+    # and the subscription would anchor on its start date instead of failing.
+    def valid_billing_anchor_date?
+      return true if args[:billing_anchor_date].blank?
+      return true if Utils::Datetime.valid_format?(args[:billing_anchor_date])
+
+      add_error(field: :billing_anchor_date, error_code: "value_is_invalid")
+
       false
     end
 

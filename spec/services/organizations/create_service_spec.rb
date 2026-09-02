@@ -27,6 +27,10 @@ RSpec.describe Organizations::CreateService do
           )
       end
 
+      it "enables the product catalog for the new organization" do
+        expect(service_result.organization).to be_product_catalog_enabled
+      end
+
       it "creates an API key for created organization" do
         expect { service_result }.to change(ApiKey, :count).by(1)
 

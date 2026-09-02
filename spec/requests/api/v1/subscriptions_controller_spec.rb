@@ -63,6 +63,71 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
     include_examples "requires API permission", "subscription", "write"
 
+    context "when changing the plan of a product-catalog subscription" do
+      let(:plan) { create(:plan, :product_catalog, organization:) }
+      let(:other_plan) { create(:plan, :product_catalog, organization:) }
+
+      it "rejects the change instead of crashing on the legacy comparison" do
+        post_with_token(organization, "/api/v1/subscriptions", {subscription: {
+          external_customer_id: customer.external_id, plan_code: plan.code, external_id: "cat-sub-1"
+        }})
+        expect(response).to have_http_status(:ok)
+
+        post_with_token(organization, "/api/v1/subscriptions", {subscription: {
+          external_customer_id: customer.external_id, plan_code: other_plan.code, external_id: "cat-sub-1"
+        }})
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :plan)).to eq(["plan_change_not_available"])
+      end
+    end
+
+    context "with a billing_anchor_date" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_anchor_date: "2026-01-01"
+        }
+      end
+
+      it "stores and returns it" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription][:billing_anchor_date]).to eq("2026-01-01")
+      end
+    end
+
+    context "without a billing_anchor_date" do
+      it "returns the effective anchor instead of null" do
+        freeze_time do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:subscription][:billing_anchor_date]).to eq(Time.current.to_date.iso8601)
+        end
+      end
+    end
+
+    context "with a malformed billing_anchor_date" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          billing_anchor_date: "hello"
+        }
+      end
+
+      it "returns a validation error instead of silently dropping it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :billing_anchor_date)).to eq(["value_is_invalid"])
+      end
+    end
+
     it "returns a success" do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: "foo")
       create(:entitlement, organization:, plan:)
