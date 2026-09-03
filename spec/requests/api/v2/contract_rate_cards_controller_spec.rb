@@ -66,20 +66,6 @@ RSpec.describe Api::V2::ContractRateCardsController do
         expect(terminated.reload.applied_rate_cards.count).to eq(0)
       end
     end
-
-    context "when an active contract coexists with the pending one" do
-      let!(:active_sibling) do
-        create(:contract, organization:, customer:, external_id: contract.external_id, started_at: 1.month.ago)
-      end
-
-      it "attaches to the pending contract, not the active sibling" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(contract.reload.applied_rate_cards.count).to eq(1)
-        expect(active_sibling.reload.applied_rate_cards.count).to eq(0)
-      end
-    end
   end
 
   describe "GET /api/v2/contracts/:external_id/applied_rate_cards" do

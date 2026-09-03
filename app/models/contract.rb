@@ -38,17 +38,11 @@ class Contract < ApplicationRecord
   # and canceled siblings accumulate as history under the same external id.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
-  # Resolve an external id to the live contract the write surfaces address.
-  # A pending replacement can coexist with the active contract (same external
-  # id, different status — the partial unique index allows one of each), so
-  # the status is chosen explicitly, never by an implicit "newest" ordering:
-  # prefer the pending contract (the authoring target), fall back to the
-  # active one so the caller gets contract_locked rather than not_found. Each
-  # status is at most one row per external id, so the choice is deterministic
-  # and never a terminated/canceled sibling.
+  # Resolve an external id to the live contract the write surfaces address —
+  # newest first for determinism, never a terminated/canceled sibling that a
+  # bare find_by could return in any order.
   def self.live_by_external_id(external_id)
-    scope = where(external_id:)
-    scope.find_by(status: :pending) || scope.find_by(status: :active)
+    live.order(started_at: :desc).find_by(external_id:)
   end
 
   validates :external_id, presence: true

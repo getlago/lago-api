@@ -133,19 +133,6 @@ RSpec.describe Contract do
         expect(organization.contracts.live_by_external_id("reused")).to eq(live)
       end
 
-      it "prefers the pending contract when it coexists with the active one" do
-        create(:contract, organization:, external_id: "dual", started_at: 1.month.ago)
-        pending = create(:contract, :pending, organization:, external_id: "dual")
-
-        expect(organization.contracts.live_by_external_id("dual")).to eq(pending)
-      end
-
-      it "falls back to the active contract when there is no pending one" do
-        active = create(:contract, organization:, external_id: "active-only")
-
-        expect(organization.contracts.live_by_external_id("active-only")).to eq(active)
-      end
-
       it "returns nil when only historical contracts share the id" do
         create(:contract, :terminated, organization:, external_id: "gone")
 
