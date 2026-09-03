@@ -2,6 +2,8 @@
 
 module RatePhases
   class ReplaceService < BaseService
+    include ParentLock
+
     Result = BaseResult[:rate_phases]
 
     def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [])
@@ -73,15 +75,6 @@ module RatePhases
         rate_card: parent.rate_card,
         params: phase[:rate_override]
       ).raise_if_error!.rate_override
-    end
-
-    def lock_error_code
-      case parent
-      when PlanRateCard
-        "plan_locked" if parent.plan.attached_to_subscriptions?
-      when ContractRateCard
-        "contract_locked" if parent.contract.locked?
-      end
     end
 
     def ordered_params

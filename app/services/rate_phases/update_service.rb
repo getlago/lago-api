@@ -4,6 +4,8 @@ module RatePhases
   # Updates a single phase, addressed by its code. Positions are not editable
   # here: ordering changes go through insert/delete, which renumber safely.
   class UpdateService < BaseService
+    include ParentLock
+
     Result = BaseResult[:rate_phase]
 
     def initialize(rate_phase:, params:)
@@ -73,15 +75,6 @@ module RatePhases
         rate_card: parent.rate_card,
         params: params[:rate_override]
       ).raise_if_error!.rate_override
-    end
-
-    def lock_error_code
-      case parent
-      when PlanRateCard
-        "plan_locked" if parent.plan.attached_to_subscriptions?
-      when ContractRateCard
-        "contract_locked" if parent.contract.locked?
-      end
     end
 
     def last_phase?

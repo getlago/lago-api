@@ -9,7 +9,7 @@ module Api
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 
-          render_rate_phases(contract_rate_card.rate_phases.includes(:rate_override).order(:position))
+          render_rate_phases(contract_rate_card.rate_phases.includes(:rate_override))
         end
 
         def create

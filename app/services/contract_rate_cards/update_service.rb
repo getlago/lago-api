@@ -17,7 +17,7 @@ module ContractRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless contract_rate_card
 
-      if contract_rate_card.contract.locked?
+      unless contract_rate_card.contract.editable?
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
 

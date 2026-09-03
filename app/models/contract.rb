@@ -33,13 +33,13 @@ class Contract < ApplicationRecord
 
   LIVE_STATUSES = %w[pending active].freeze
 
-  # The contract currently in effect for an external id. Exactly one can be
-  # live (the partial unique index covers pending/active), while terminated
-  # and canceled siblings accumulate as history under the same external id.
+  # The live contracts for an external id: at most one per status (the partial
+  # unique index is per status), so a pending replacement can coexist with the
+  # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
   def self.live_by_external_id(external_id)
-    live.order(started_at: :desc).find_by(external_id:)
+    live.order(started_at: :desc, created_at: :desc).find_by(external_id:)
   end
 
   validates :external_id, presence: true
@@ -56,11 +56,27 @@ class Contract < ApplicationRecord
   end
 
   # Authoring is pending-only: once the agreement is active (or ended) its
-  # attached rate cards are signed, so the attach surface is closed. Unit
-  # changes on an active contract are a lifecycle concern priced by the
-  # billing engine, not an authoring edit.
-  def locked?
-    !pending?
+  # attached rate cards are signed. Unit changes on an active contract are a
+  # lifecycle concern priced by the billing engine, not an authoring edit.
+  def editable?
+    pending?
+  end
+
+  # The currency fees bill in: the plan's when there is one, otherwise the
+  # customer's (a plan-less contract), falling back to the organization default.
+  def currency
+    plan&.amount_currency || customer.currency || organization.default_currency
+  end
+
+  # The billing lifecycle a rate card inherits when attached: it starts on the
+  # contract's start day (customer-local) and shares its anchor and clock. An
+  # explicit anchor overrides the default.
+  def default_rate_card_lifecycle(billing_anchor_date: nil)
+    {
+      effective_date: started_at.in_time_zone(customer.applicable_timezone).to_date,
+      billing_anchor_date: billing_anchor_date || effective_billing_anchor_date,
+      next_billing_at: started_at
+    }
   end
 
   private

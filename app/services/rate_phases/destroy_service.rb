@@ -5,6 +5,8 @@ module RatePhases
   # terminal phase promotes the new last phase to indefinite, so the sequence
   # always keeps a coherent tail.
   class DestroyService < BaseService
+    include ParentLock
+
     Result = BaseResult[:rate_phase]
 
     def initialize(rate_phase:)
@@ -52,15 +54,6 @@ module RatePhases
 
     def parent
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
-    end
-
-    def lock_error_code
-      case parent
-      when PlanRateCard
-        "plan_locked" if parent.plan.attached_to_subscriptions?
-      when ContractRateCard
-        "contract_locked" if parent.contract.locked?
-      end
     end
   end
 end

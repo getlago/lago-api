@@ -21,6 +21,13 @@ RSpec.describe ContractRateCardsQuery do
     expect(result.contract_rate_cards.count).to eq(2)
   end
 
+  it "excludes ended cards" do
+    ended = create(:contract_rate_card, organization:, contract:, effective_date: 3.days.ago, ended_date: 1.day.ago)
+
+    expect(result.contract_rate_cards).not_to include(ended)
+    expect(result.contract_rate_cards.count).to eq(2)
+  end
+
   context "with a contract_id filter" do
     let(:filters) { {contract_id: contract.id} }
 

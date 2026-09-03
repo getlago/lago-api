@@ -17,7 +17,7 @@ module ContractRateCards
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      if contract.locked?
+      unless contract.editable?
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
 
@@ -33,7 +33,7 @@ module ContractRateCards
       # Fees bill in the card currency and the invoice in the contract's
       # currency (its plan's, or the customer's for a plan-less contract); a
       # mismatch must fail at configuration time, not on the first invoice.
-      if rate_card.currency != contract_currency
+      if rate_card.currency != contract.currency
         return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
       end
 
@@ -48,9 +48,7 @@ module ContractRateCards
           organization:,
           rate_card:,
           units: params[:units],
-          effective_date:,
-          billing_anchor_date: params[:billing_anchor_date].presence || contract.effective_billing_anchor_date,
-          next_billing_at: contract.started_at
+          **contract.default_rate_card_lifecycle(billing_anchor_date: params[:billing_anchor_date].presence)
         )
 
         # Phases can be authored atomically with the card: a provided sequence
@@ -93,17 +91,6 @@ module ContractRateCards
           product_filter_id: rate_card.product_filter_id
         }
       )
-    end
-
-    def contract_currency
-      contract.plan&.amount_currency || contract.customer.currency || organization.default_currency
-    end
-
-    # The card starts with the contract, in the customer's timezone: the
-    # engine reads card dates as customer-local days, so a UTC truncation
-    # would attach it a day early or late around the customer's midnight.
-    def effective_date
-      @effective_date ||= contract.started_at.in_time_zone(contract.customer.applicable_timezone).to_date
     end
 
     def organization
