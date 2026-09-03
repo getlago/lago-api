@@ -54,6 +54,30 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     end
   end
 
+  describe "PUT .../rate_phases/:code" do
+    subject { put_with_token(organization, "#{base_path}/default", {rate_phase: {name: "Renamed"}}) }
+
+    include_examples "requires API permission", "contract_rate_card", "write"
+
+    it "updates the phase" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:rate_phase][:name]).to eq("Renamed")
+    end
+
+    context "when the contract is active" do
+      let(:contract) { create(:contract, organization:, customer:) }
+
+      it "returns a contract_locked error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:rate_phase]).to eq(["contract_locked"])
+      end
+    end
+  end
+
   describe "DELETE .../rate_phases/:code" do
     subject { delete_with_token(organization, "#{base_path}/#{phase_code}") }
 
