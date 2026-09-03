@@ -4,8 +4,6 @@ module RatePhases
   # Updates a single phase, addressed by its code. Positions are not editable
   # here: ordering changes go through insert/delete, which renumber safely.
   class UpdateService < BaseService
-    include ParentLock
-
     Result = BaseResult[:rate_phase]
 
     def initialize(rate_phase:, params:)
@@ -23,9 +21,9 @@ module RatePhases
         params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
       end
 
-      parent.with_lock do
-        if (locked = lock_error_code)
-          return result.single_validation_failure!(field: :rate_phase, error_code: locked)
+      applied_rate_card.with_lock do
+        if (blocked = applied_rate_card.edit_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
         if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
@@ -63,7 +61,7 @@ module RatePhases
 
     attr_reader :rate_phase, :params
 
-    def parent
+    def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
     end
 
@@ -72,13 +70,13 @@ module RatePhases
       return if params[:rate_override].nil?
 
       RateOverrides::CreateService.call(
-        rate_card: parent.rate_card,
+        rate_card: applied_rate_card.rate_card,
         params: params[:rate_override]
       ).raise_if_error!.rate_override
     end
 
     def last_phase?
-      parent.rate_phases.order(:position).last == rate_phase
+      applied_rate_card.rate_phases.order(:position).last == rate_phase
     end
   end
 end

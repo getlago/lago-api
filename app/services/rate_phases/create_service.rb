@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
 module RatePhases
-  # Inserts a phase into its parent's sequence. Positions renumber (later
-  # phases shift down); the phase's code is the stable identifier.
+  # Inserts a phase into its applied rate card's sequence. Positions renumber
+  # (later phases shift down); the phase's code is the stable identifier.
   class CreateService < BaseService
-    include ParentLock
-
     Result = BaseResult[:rate_phase]
 
     def initialize(plan_rate_card: nil, contract_rate_card: nil, params: {})
@@ -16,7 +14,7 @@ module RatePhases
     end
 
     def call
-      return result.not_found_failure!(resource: "rate_phaseable") unless parent
+      return result.not_found_failure!(resource: "rate_phaseable") unless applied_rate_card
 
       # REST can send "" where nil is meant; normalize before the sequence
       # checks or the blank slips past them and persists as an indefinite phase.
@@ -24,17 +22,17 @@ module RatePhases
         params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
       end
 
-      # The sequence is read, validated and renumbered under a parent lock:
+      # The sequence is read, validated and renumbered under the card's lock:
       # concurrent inserts computing from the same positions would otherwise
-      # leave gaps or die on the unique index. The guards run inside too, so a
+      # leave gaps or die on the unique index. The guard runs inside too, so a
       # contract activating (or a plan gaining a subscription) concurrently
-      # cannot slip past the lock check.
-      parent.with_lock do
-        if (locked = lock_error_code)
-          return result.single_validation_failure!(field: :rate_phase, error_code: locked)
+      # cannot slip past the edit check.
+      applied_rate_card.with_lock do
+        if (blocked = applied_rate_card.edit_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
-        existing = parent.rate_phases.order(:position).to_a
+        existing = applied_rate_card.rate_phases.order(:position).to_a
         position = (params[:position].presence || default_position(existing)).to_i
 
         unless position.between?(1, existing.size + 1)
@@ -48,14 +46,14 @@ module RatePhases
           return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
         end
 
-        # Highest positions first so the unique (parent, position) index never
+        # Highest positions first so the unique (card, position) index never
         # sees a duplicate mid-shift.
         existing.select { |phase| phase.position >= position }.reverse_each do |phase|
           phase.update!(position: phase.position + 1)
         end
 
         result.rate_phase = RatePhase.create!(
-          organization: parent.organization,
+          organization: applied_rate_card.organization,
           plan_rate_card:,
           contract_rate_card:,
           code: params[:code].presence,
@@ -77,7 +75,7 @@ module RatePhases
 
     attr_reader :plan_rate_card, :contract_rate_card, :params
 
-    def parent
+    def applied_rate_card
       plan_rate_card || contract_rate_card
     end
 
@@ -85,7 +83,7 @@ module RatePhases
       return if params[:rate_override].nil?
 
       RateOverrides::CreateService.call(
-        rate_card: parent.rate_card,
+        rate_card: applied_rate_card.rate_card,
         params: params[:rate_override]
       ).raise_if_error!.rate_override
     end

@@ -5,8 +5,6 @@ module RatePhases
   # terminal phase promotes the new last phase to indefinite, so the sequence
   # always keeps a coherent tail.
   class DestroyService < BaseService
-    include ParentLock
-
     Result = BaseResult[:rate_phase]
 
     def initialize(rate_phase:)
@@ -17,14 +15,14 @@ module RatePhases
     def call
       return result.not_found_failure!(resource: "rate_phase") unless rate_phase
 
-      # Sequence reads and renumbering run under a parent lock: two concurrent
+      # Sequence reads and renumbering run under the card's lock: two concurrent
       # deletions computing from the same positions would leave gaps.
-      parent.with_lock do
-        if (locked = lock_error_code)
-          return result.single_validation_failure!(field: :rate_phase, error_code: locked)
+      applied_rate_card.with_lock do
+        if (blocked = applied_rate_card.edit_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
-        siblings = parent.rate_phases.order(:position).to_a
+        siblings = applied_rate_card.rate_phases.order(:position).to_a
         if siblings.size == 1
           return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
         end
@@ -52,7 +50,7 @@ module RatePhases
 
     attr_reader :rate_phase
 
-    def parent
+    def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
     end
   end

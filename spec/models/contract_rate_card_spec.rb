@@ -100,4 +100,16 @@ RSpec.describe ContractRateCard do
       end
     end
   end
+
+  describe "#edit_error_code" do
+    it "is nil while the contract is pending" do
+      card = create(:contract_rate_card, contract: create(:contract, :pending))
+      expect(card.edit_error_code).to be_nil
+    end
+
+    it "is contract_locked once the contract is active" do
+      card = create(:contract_rate_card, contract: create(:contract))
+      expect(card.edit_error_code).to eq("contract_locked")
+    end
+  end
 end
