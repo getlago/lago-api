@@ -1100,5 +1100,106 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(usage.fees.first).to have_attributes(units: 2)
       end
     end
+
+    context "with a delegated charge next to the served one" do
+      # unique_count cannot be recomposed from per-bucket distincts, so this charge reads
+      # events while the count_agg one next to it is served by the same computation.
+      let(:delegated_metric) { create(:unique_count_billable_metric, organization:) }
+      let(:delegated_charge) { create(:standard_charge, plan:, billable_metric: delegated_metric, properties: {amount: "1"}) }
+      let(:cached_charges) { [] }
+
+      before do
+        delegated_charge
+
+        # A charge with no event in the window is dropped before the cache is consulted, so
+        # this one has to have been used for the assertion to say anything.
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: delegated_metric.code,
+          timestamp:,
+          properties: {"item_id" => "item_1"}
+        )
+
+        allow(Subscriptions::ChargeCacheService).to receive(:call) do |**args, &block|
+          cached_charges << args[:charge]
+          block.call
+        end
+      end
+
+      it "caches the charge it delegated and only that one" do
+        usage_service.call
+
+        expect(cached_charges).to eq([delegated_charge])
+      end
+    end
+  end
+
+  describe "the buckets and the events store agree", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # Opening the window on a bucket keeps the coverage guard satisfied: the organization's
+    # earliest bucket is the one the window starts on.
+    let(:event_values) do
+      {
+        window_start => "5.5",
+        window_start + 20.minutes => "4.25",
+        window_start + 23.minutes => "1.25",
+        window_start + 3.hours => "10.0"
+      }
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      event_values.each do |at, value|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      event_values.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, values|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: values.sum { |_, value| value.to_d }.to_s,
+          events_count: values.size,
+          aggregation_type: "sum_agg"
+        )
+      end
+    end
+
+    it "returns the same units, event count and amount either way" do
+      served = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+      delegated = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count,
+        amount_cents: delegated.fees.first.amount_cents
+      )
+    end
+
+    it "sums every bucket of the window, rather than the one the events happen to open" do
+      served = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+
+      expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 4200)
+    end
   end
 end
