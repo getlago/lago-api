@@ -35,6 +35,7 @@ module Types
     field :update_rate_phase, mutation: Mutations::RatePhases::Update
 
     field :create_charge, mutation: Mutations::Charges::Create
+    field :create_contract, mutation: Mutations::Contracts::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
     field :update_charge, mutation: Mutations::Charges::Update
 
