@@ -19,8 +19,6 @@ class PlanRateCard < ApplicationRecord
 
   default_scope -> { kept }
 
-  # The error code to fail an edit with while this card is frozen (its plan has
-  # subscriptions), or nil when it can still be authored.
   def edit_error_code
     "plan_locked" if plan.attached_to_subscriptions?
   end

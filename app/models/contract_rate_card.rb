@@ -43,8 +43,6 @@ class ContractRateCard < ApplicationRecord
     )
   }
 
-  # The error code to fail an edit with while this card is frozen (its contract
-  # is no longer pending), or nil when it can still be authored.
   def edit_error_code
     "contract_locked" unless contract.editable?
   end
