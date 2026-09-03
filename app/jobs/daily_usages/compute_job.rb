@@ -11,10 +11,6 @@ module DailyUsages
     end
 
     retry_on ActiveRecord::ActiveRecordError, wait: :polynomially_longer, attempts: 6
-    # The enqueue lock must outlive the three hourly ticks that share one lock key (customer-local
-    # 00/01/02) plus the enqueue jitter, so a job still queued dedups the later ticks. The runtime
-    # lock serialises ComputeService's check-then-insert, and stays short because a killed worker
-    # strands it for its whole TTL.
     unique :until_and_while_executing,
       on_conflict: :log,
       lock_ttl: 3.hours,
