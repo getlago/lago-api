@@ -18,8 +18,8 @@ module RatePhases
       # Sequence reads and renumbering run under a parent lock: two concurrent
       # deletions computing from the same positions would leave gaps.
       parent.with_lock do
-        if plan_locked?
-          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+        if (locked = lock_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: locked)
         end
 
         siblings = parent.rate_phases.order(:position).to_a
@@ -54,8 +54,13 @@ module RatePhases
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
     end
 
-    def plan_locked?
-      rate_phase.plan_rate_card.present? && rate_phase.plan_rate_card.plan.attached_to_subscriptions?
+    def lock_error_code
+      case parent
+      when PlanRateCard
+        "plan_locked" if parent.plan.attached_to_subscriptions?
+      when ContractRateCard
+        "contract_locked" if parent.contract.locked?
+      end
     end
   end
 end

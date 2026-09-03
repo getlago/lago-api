@@ -44,6 +44,14 @@ class Contract < ApplicationRecord
     billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
   end
 
+  # Authoring is pending-only: once the agreement is active (or ended) its
+  # attached rate cards are signed, so the attach surface is closed. Unit
+  # changes on an active contract are a lifecycle concern priced by the
+  # billing engine, not an authoring edit.
+  def locked?
+    !pending?
+  end
+
   private
 
   def validate_started_before_ended

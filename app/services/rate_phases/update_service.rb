@@ -22,8 +22,8 @@ module RatePhases
       end
 
       parent.with_lock do
-        if plan_locked?
-          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+        if (locked = lock_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: locked)
         end
 
         if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
@@ -75,8 +75,13 @@ module RatePhases
       ).raise_if_error!.rate_override
     end
 
-    def plan_locked?
-      rate_phase.plan_rate_card.present? && rate_phase.plan_rate_card.plan.attached_to_subscriptions?
+    def lock_error_code
+      case parent
+      when PlanRateCard
+        "plan_locked" if parent.plan.attached_to_subscriptions?
+      when ContractRateCard
+        "contract_locked" if parent.contract.locked?
+      end
     end
 
     def last_phase?

@@ -101,4 +101,13 @@ RSpec.describe Contract do
       expect(contract.effective_billing_anchor_date).to eq(Date.new(2026, 9, 30))
     end
   end
+
+  describe "#locked?" do
+    it "is false only while the contract is pending" do
+      expect(build(:contract, :pending).locked?).to be(false)
+      expect(build(:contract, status: :active).locked?).to be(true)
+      expect(build(:contract, :terminated).locked?).to be(true)
+      expect(build(:contract, :canceled).locked?).to be(true)
+    end
+  end
 end

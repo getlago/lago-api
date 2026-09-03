@@ -25,10 +25,11 @@ module RatePhases
       # The sequence is read, validated and renumbered under a parent lock:
       # concurrent inserts computing from the same positions would otherwise
       # leave gaps or die on the unique index. The guards run inside too, so a
-      # subscription attaching concurrently cannot slip past plan_locked?.
+      # contract activating (or a plan gaining a subscription) concurrently
+      # cannot slip past the lock check.
       parent.with_lock do
-        if plan_locked?
-          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+        if (locked = lock_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: locked)
         end
 
         existing = parent.rate_phases.order(:position).to_a
@@ -87,8 +88,13 @@ module RatePhases
       ).raise_if_error!.rate_override
     end
 
-    def plan_locked?
-      plan_rate_card.present? && plan_rate_card.plan.attached_to_subscriptions?
+    def lock_error_code
+      case parent
+      when PlanRateCard
+        "plan_locked" if parent.plan.attached_to_subscriptions?
+      when ContractRateCard
+        "contract_locked" if parent.contract.locked?
+      end
     end
 
     # Omitted position appends at the end — except a definite phase lands just
