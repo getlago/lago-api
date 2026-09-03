@@ -6,6 +6,7 @@ module AuthenticableAdminUser
   private
 
   def ready?(**args)
+    raise unauthorized_error unless License.premium?
     raise unauthorized_error unless context[:current_user]
     raise unauthorized_error unless context[:current_user].cs_admin?
     raise unauthorized_error unless context[:current_user].email.end_with?("@getlago.com")

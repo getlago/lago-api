@@ -37,7 +37,7 @@ RSpec.describe Mutations::Admin::RollbackChange do
     )
   end
 
-  it "reverses the change and returns the rollback log" do
+  it "reverses the change and returns the rollback log", :premium do
     result = rollback
 
     log = result["data"]["adminRollbackChange"]
@@ -50,7 +50,7 @@ RSpec.describe Mutations::Admin::RollbackChange do
     expect(organization.reload.premium_integrations).not_to include("okta")
   end
 
-  context "when the audit log does not exist" do
+  context "when the audit log does not exist", :premium do
     it "returns a not found error" do
       result = rollback(audit_log_id: SecureRandom.uuid)
 
@@ -58,7 +58,7 @@ RSpec.describe Mutations::Admin::RollbackChange do
     end
   end
 
-  context "when the audit log is an organization creation" do
+  context "when the audit log is an organization creation", :premium do
     let(:audit_log) do
       create(
         :cs_admin_audit_log,
@@ -76,6 +76,15 @@ RSpec.describe Mutations::Admin::RollbackChange do
       result = rollback
 
       expect_graphql_error(result:, message: "unprocessable_entity")
+      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
+    end
+  end
+
+  context "when the license is not premium" do
+    it "returns an unauthorized error" do
+      result = rollback
+
+      expect_graphql_error(result:, message: "unauthorized")
       expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
     end
   end

@@ -15,8 +15,11 @@ module Admin
       LagoHttpClient::Client.new(webhook_url).post_with_response(payload, {})
 
       result
+    rescue LagoHttpClient::HttpError => e
+      Rails.logger.error("Slack notification failed for audit log #{audit_log.id}: HTTP #{e.error_code} - #{e.error_body}")
+      result
     rescue => e
-      Rails.logger.error("Slack notification failed for audit log #{audit_log.id}: #{e.message}")
+      Rails.logger.error("Slack notification failed for audit log #{audit_log.id}: #{e.class}")
       result
     end
 
@@ -40,10 +43,18 @@ module Admin
 
     def message_text
       if audit_log.feature_type == "organization"
-        "[#{emoji} Organization created] *#{audit_log.organization.name}* by #{audit_log.actor_email} — reason: \"#{audit_log.reason}\""
+        "[#{emoji} Organization created] *#{escape_mrkdwn(audit_log.organization.name)}* by #{escape_mrkdwn(audit_log.actor_email)} — reason: \"#{escape_mrkdwn(audit_log.reason)}\""
       else
-        "[#{emoji} #{audit_log.feature_key} #{action_text}] on *#{audit_log.organization.name}* by #{audit_log.actor_email} — reason: \"#{audit_log.reason}\""
+        "[#{emoji} #{escape_mrkdwn(audit_log.feature_key)} #{action_text}] on *#{escape_mrkdwn(audit_log.organization.name)}* by #{escape_mrkdwn(audit_log.actor_email)} — reason: \"#{escape_mrkdwn(audit_log.reason)}\""
       end
+    end
+
+    def escape_mrkdwn(value)
+      value.to_s
+        .gsub("&", "&amp;")
+        .gsub("<", "&lt;")
+        .gsub(">", "&gt;")
+        .gsub(/\s+/, " ")
     end
 
     def emoji
