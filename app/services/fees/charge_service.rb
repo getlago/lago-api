@@ -150,17 +150,14 @@ module Fees
       !filtered_aggregations.include?(charge_filter&.id)
     end
 
-    # Caching a value whose point is freshness would reintroduce staleness, so a filter served
-    # from the buckets skips the cache. The bypass asks the provider the same question the
-    # store choice asks, so the two cannot disagree.
-    def with_cache(charge_filter:, &block)
-      return yield if provider.serves?(charge:, filters: bucket_filters(charge_filter:))
-
-      cache_middleware.call(charge_filter:, &block)
+    # The cache bypass asks the provider the same question the store choice asks, so a filter
+    # cannot be served and cached, nor bypassed and then read from events.
+    def served_from_buckets?(charge_filter:)
+      provider.serves?(charge:, filters: bucket_filters(charge_filter:))
     end
 
     def compute_fees_with_cache(properties:, charge_filter:)
-      with_cache(charge_filter:) do
+      cache_middleware.call(charge_filter:, bypass: served_from_buckets?(charge_filter:)) do
         aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties, charge_filter:))
 
         unless aggregation_result.success?
