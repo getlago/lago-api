@@ -11,7 +11,7 @@ module DailyUsages
     end
 
     retry_on ActiveRecord::ActiveRecordError, wait: :polynomially_longer, attempts: 6
-    unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
+    unique :until_executing, on_conflict: :log, lock_ttl: 2.hours
 
     def perform(subscription, timestamp:)
       DailyUsages::ComputeService.call(subscription:, timestamp:).raise_if_error!

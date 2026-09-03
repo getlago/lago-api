@@ -23,6 +23,41 @@ RSpec.describe DailyUsages::ComputeJob do
     end
   end
 
+  describe "retries" do
+    let(:database_error) { ActiveRecord::StatementInvalid.new("PG::ConnectionBad") }
+
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      described_class.unlock!
+      example.run
+      described_class.unlock!
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    def enqueue_and_deserialize
+      described_class.perform_later(subscription, timestamp:)
+      job = ActiveJob::Base.deserialize(enqueued_jobs.last)
+      job.send(:deserialize_arguments_if_needed)
+      job
+    end
+
+    it "re-enqueues the job when the service raises an ActiveRecord error" do
+      allow(DailyUsages::ComputeService).to receive(:call).and_raise(database_error)
+      job = enqueue_and_deserialize
+
+      expect { job.perform_now }.to have_enqueued_job(described_class)
+    end
+
+    it "does not hold the uniqueness lock past a dying execution" do
+      allow(DailyUsages::ComputeService).to receive(:call).and_raise("worker killed")
+      job = enqueue_and_deserialize
+      expect { job.perform_now }.to raise_error("worker killed")
+
+      expect { described_class.perform_later(subscription, timestamp:) }
+        .to have_enqueued_job(described_class)
+    end
+  end
+
   describe "#lock_key_arguments" do
     let(:customer) { create(:customer, timezone: "Europe/Paris") }
     let(:subscription) { create(:subscription, customer:) }
