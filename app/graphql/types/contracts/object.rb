@@ -34,13 +34,14 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       # Ended attachments are history, not cards the contract currently
-      # carries; only pay the scoped query when the field is requested.
+      # carries. Batched across the collection so a list of contracts does not
+      # fire one query per contract; both fields read the same loaded set.
       def applied_rate_cards
-        object.applied_rate_cards.current_and_scheduled.includes(:rate_card).order(:effective_date)
+        dataloader.with(Sources::ContractCurrentRateCards).load(object.id)
       end
 
       def applied_rate_cards_count
-        object.applied_rate_cards.current_and_scheduled.count
+        dataloader.with(Sources::ContractCurrentRateCards).load(object.id).size
       end
     end
   end

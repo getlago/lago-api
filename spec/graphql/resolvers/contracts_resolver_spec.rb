@@ -61,4 +61,42 @@ RSpec.describe Resolvers::ContractsResolver do
       expect(execution["data"]["contracts"]["collection"].map { it["id"] }).to eq([active_contract.id])
     end
   end
+
+  context "when the applied rate cards are requested for several contracts" do
+    let(:query) do
+      <<~GQL
+        query {
+          contracts(limit: 10) {
+            collection { id appliedRateCardsCount appliedRateCards { id rateCard { id } } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      [active_contract, pending_contract].each do |c|
+        create(:contract_rate_card, organization:, contract: c)
+      end
+    end
+
+    def count_queries(table)
+      queries = []
+      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
+      end
+      yield
+      queries
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
+
+    it "loads the cards in one query, not one per contract" do
+      cards_queries = count_queries("contract_rate_cards") { execution }
+
+      # one batched query for the whole page, not one per contract
+      expect(cards_queries.size).to eq(1)
+      counts = execution["data"]["contracts"]["collection"].map { it["appliedRateCardsCount"] }
+      expect(counts.sum).to eq(2)
+    end
+  end
 end
