@@ -383,6 +383,11 @@ class Customer < ApplicationRecord
     payment_provider_customers.find_by(is_default: true)
   end
 
+  # The customer's default integration connection for a category (tax / accounting / crm).
+  def integration_connection(category)
+    integration_customers.where(category:).find_by(is_default: true)
+  end
+
   def payment_connection_status
     connection = payment_connection
 

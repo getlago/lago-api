@@ -4,6 +4,7 @@ class Wallet < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include Currencies
+  include ConnectionResolvable
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
