@@ -478,11 +478,11 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             end
 
             it "resolves the charges and filters that received usage", transaction: false do
-              allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+              allow(Events::BillingPeriodFilterService).to receive(:for_charges!).and_call_original
 
               travel_to(timestamp) { preview_service.call }
 
-              expect(Events::BillingPeriodFilterService).to have_received(:call!)
+              expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             end
 
             context "with charge filters" do

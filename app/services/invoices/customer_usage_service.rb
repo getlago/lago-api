@@ -119,8 +119,8 @@ module Invoices
 
     def compute_charge_fees
       fees = []
-      filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || {}) }
+      filters = event_filters(subscription, boundaries).filter_targets
+      charges.find_each { |c| fees += charge_usage(c, filters[c.target_key] || {}) }
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
@@ -262,7 +262,7 @@ module Invoices
     # avoids resolving combinations for the rest of the plan. The ingestion timestamps are requested
     # only when the charge cache can actually read them.
     def event_filters(subscription, boundaries)
-      Events::BillingPeriodFilterService.call!(
+      Events::BillingPeriodFilterService.for_charges!(
         subscription:,
         boundaries:,
         codes: filtered_metric_codes,

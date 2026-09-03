@@ -98,6 +98,10 @@ class Charge < ApplicationRecord
     applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
   end
 
+  def target_key
+    "charge-#{id}"
+  end
+
   # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
   # the same charge it should not be billed since it is recurring and will be billed at the end of period
   def included_in_next_subscription?(subscription)

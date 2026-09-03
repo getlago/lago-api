@@ -117,7 +117,7 @@ module Invoices
     def create_charges_fees(subscription, boundaries)
       return unless charge_boundaries_valid?(boundaries)
 
-      filters = event_filters(subscription, boundaries).charges
+      filters = event_filters(subscription, boundaries).filter_targets
       adjusted_fee_exists = AdjustedFee.where(invoice:, subscription:).matching_charge_boundaries(boundaries).exists?
 
       subscription
@@ -139,7 +139,7 @@ module Invoices
               context:,
               skip_adjusted_fees: !adjusted_fee_exists
             ),
-            filtered_aggregations: filters[charge.id]&.keys || []
+            filtered_aggregations: filters[charge.target_key]&.keys || []
           )
         end
     end
@@ -420,7 +420,7 @@ module Invoices
     end
 
     def event_filters(subscription, boundaries)
-      Events::BillingPeriodFilterService.call!(
+      Events::BillingPeriodFilterService.for_charges!(
         subscription:, boundaries:, with_last_seen_at: false
       )
     end
