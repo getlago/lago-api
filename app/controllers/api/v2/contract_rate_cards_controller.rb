@@ -89,7 +89,10 @@ module Api
         contract = find_contract
         return nil unless contract
 
-        contract.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
+        # Address the current/scheduled attachment for the code: an ended card
+        # can share its rate-card code with the open one, so the full set would
+        # let find_by pick arbitrary history.
+        contract.applied_rate_cards.current_and_scheduled.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
       end
 
       def create_params

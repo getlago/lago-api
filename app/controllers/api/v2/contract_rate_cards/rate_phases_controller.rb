@@ -61,7 +61,9 @@ module Api
         def contract_rate_card
           @contract_rate_card ||= begin
             contract = current_organization.contracts.live_by_external_id(params[:contract_external_id])
-            contract&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
+            # Current/scheduled only: an ended attachment can share the open
+            # one's rate-card code, so the full set would resolve to history.
+            contract&.applied_rate_cards&.current_and_scheduled&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
           end
         end
 

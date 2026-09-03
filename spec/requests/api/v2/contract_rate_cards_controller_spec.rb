@@ -66,6 +66,20 @@ RSpec.describe Api::V2::ContractRateCardsController do
         expect(terminated.reload.applied_rate_cards.count).to eq(0)
       end
     end
+
+    context "when an active contract coexists with the pending one" do
+      let!(:active_sibling) do
+        create(:contract, organization:, customer:, external_id: contract.external_id, started_at: 1.month.ago)
+      end
+
+      it "attaches to the pending contract, not the active sibling" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.reload.applied_rate_cards.count).to eq(1)
+        expect(active_sibling.reload.applied_rate_cards.count).to eq(0)
+      end
+    end
   end
 
   describe "GET /api/v2/contracts/:external_id/applied_rate_cards" do
@@ -108,6 +122,18 @@ RSpec.describe Api::V2::ContractRateCardsController do
       it "returns a not found error" do
         subject
         expect(response).to be_not_found_error("applied_rate_card")
+      end
+    end
+
+    context "when an ended card shares the rate card code" do
+      before { create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: 3.days.ago, ended_date: 1.day.ago) }
+
+      it "resolves to the current open card, not the ended one" do
+        contract_rate_card
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_rate_card][:lago_id]).to eq(contract_rate_card.id)
       end
     end
   end
