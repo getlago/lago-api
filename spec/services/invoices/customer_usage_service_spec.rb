@@ -1142,6 +1142,24 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
+    context "with a projected read" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          calculate_projected_usage: true,
+          use_usage_buckets: true
+        )
+      end
+
+      it "counts the events, which the projection re-aggregates from at presentation time" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+
     context "with a delegated charge next to the served one" do
       # unique_count cannot be recomposed from per-bucket distincts, so this charge reads
       # events while the count_agg one next to it is served by the same computation.

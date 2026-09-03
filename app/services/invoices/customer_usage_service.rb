@@ -199,9 +199,14 @@ module Invoices
     # period. A frozen one and a group-scoped one are refused again by the provider, per
     # charge; refusing them here keeps the prefetch, and the coverage query behind it, off a
     # computation that could never use them.
+    #
+    # A projected read is refused too: Fees::ProjectionService re-aggregates from the events at
+    # presentation time, so serving the units from the buckets would render a projection below
+    # the usage it projects.
     def prefetch_buckets?
       use_usage_buckets &&
         !usage_filters.full_usage &&
+        !calculate_projected_usage &&
         max_timestamp.nil? &&
         usage_filters.filter_by_group.blank?
     end
