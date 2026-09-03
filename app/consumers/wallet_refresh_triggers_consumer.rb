@@ -80,6 +80,10 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
     {organization_id:, customer_id:, subscription_id:, watermark_ms:, offset: message.offset}
   end
 
+  # The sink encodes `ingested_at` as integer epoch milliseconds (RisingWave's JSON rendering
+  # of a naive timestamp), which is already the unit the watermark is compared in. The string
+  # forms are tolerated so that quoting the number, or sinking the column as a timestamptz,
+  # does not silently turn every trigger into a wait that can only time out.
   def epoch_ms(value)
     case value
     when Integer then value
@@ -87,8 +91,8 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
     end
   end
 
-  # The pipeline carries `ingested_at` as a naive UTC timestamp. Converted through a Rational
-  # rather than a Float so the millisecond never rounds above the one ClickHouse stored.
+  # Converted through a Rational rather than a Float so the millisecond never rounds above
+  # the one ClickHouse stored.
   def parsed_epoch_ms(value)
     time = Time.find_zone!("UTC").parse(value)
 

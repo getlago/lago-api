@@ -20,7 +20,8 @@ RSpec.describe WalletRefreshTriggersConsumer, clickhouse: {clean_before: true} d
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
   let(:last_ingested_at) { Time.current.beginning_of_hour }
-  let(:watermark) { last_ingested_at.utc.iso8601(3) }
+  # What the sink actually sends: RisingWave renders a naive timestamp as epoch milliseconds.
+  let(:watermark) { (last_ingested_at.to_r * 1000).to_i }
 
   before do
     create(:wallet, customer:, organization:)
@@ -60,8 +61,8 @@ RSpec.describe WalletRefreshTriggersConsumer, clickhouse: {clean_before: true} d
         expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob).with(customer).once
       end
 
-      it "accepts a watermark sent as epoch milliseconds" do
-        produce(ingested_at: (last_ingested_at.to_r * 1000).to_i)
+      it "tolerates a watermark sent as a timestamp string" do
+        produce(ingested_at: last_ingested_at.utc.iso8601(3))
 
         expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob).with(customer)
       end
