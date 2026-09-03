@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Charge do
   subject(:charge) { create(:standard_charge) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "plan pricing type validation" do
     it "rejects a charge on a product-catalog plan" do
       plan = create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
@@ -814,7 +819,8 @@ RSpec.describe Charge do
       end
 
       it "allows same code on different plans" do
-        create(:standard_charge, code: "my_code")
+        plan = create(:plan)
+        create(:standard_charge, code: "my_code", plan:)
         new_charge = build(:standard_charge, code: "my_code")
         expect(new_charge).to be_valid
       end
@@ -926,10 +932,6 @@ RSpec.describe Charge do
   end
 
   describe "#validate_accepts_target_wallet" do
-    let(:organization) { create(:organization) }
-    let(:plan) { create(:plan, organization:) }
-    let(:billable_metric) { create(:billable_metric, organization:) }
-
     context "when accepts_target_wallet is false" do
       it "is valid" do
         charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: false)
@@ -957,9 +959,9 @@ RSpec.describe Charge do
       end
 
       context "when feature is enabled", :premium do
-        before do
-          organization.update!(premium_integrations: ["events_targeting_wallets"])
-        end
+        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:plan) { create(:plan, organization:) }
 
         it "is valid" do
           charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)

@@ -21,15 +21,16 @@ RSpec.describe IntegrationMappings::BaseMapping do
       let(:mapping) do
         build(:netsuite_mapping, integration:, organization:, mappable: add_on, billing_entity:)
       end
-      let(:organization) { create(:organization) }
       let(:integration) { create(:netsuite_integration, organization: organization) }
-      let(:add_on) { create(:add_on, organization: organization) }
-      let(:other_add_on) { create(:add_on, organization: organization) }
-      let(:billable_metric) { create(:billable_metric, id: add_on.id, organization: organization) }
       let(:other_integration) { create(:netsuite_integration, organization: organization) }
-      let(:billing_entity) { create(:billing_entity, organization: organization) }
-      let(:other_billing_entity) { create(:billing_entity, organization: organization) }
       let(:other_organization) { create(:organization) }
+
+      let_it_be(:organization) { create_default(:organization) }
+      let_it_be(:add_on) { create_default(:add_on, organization: organization) }
+      let_it_be(:other_add_on) { create(:add_on, organization: organization) }
+      let_it_be(:billable_metric) { create_default(:billable_metric, id: add_on.id, organization: organization) }
+      let_it_be(:billing_entity) { create_default(:billing_entity, organization: organization) }
+      let_it_be(:other_billing_entity) { create(:billing_entity, organization: organization) }
 
       context "without billing entity" do
         let(:mapping) do
@@ -95,11 +96,12 @@ RSpec.describe IntegrationMappings::BaseMapping do
     end
 
     describe "billing entity organization validation" do
-      let(:organization) { create(:organization) }
-      let(:different_organization) { create(:organization) }
+      let_it_be(:organization) { create_default(:organization) }
+      let_it_be(:different_organization) { create_default(:organization) }
       let(:integration) { create(:netsuite_integration, organization: organization) }
-      let(:billing_entity) { create(:billing_entity, organization: different_organization) }
-      let(:add_on) { create(:add_on, organization: organization) }
+
+      let_it_be(:billing_entity) { create_default(:billing_entity, organization: different_organization) }
+      let_it_be(:add_on) { create_default(:add_on, organization: organization) }
 
       it "validates billing entity belongs to same organization" do
         mapping = build(

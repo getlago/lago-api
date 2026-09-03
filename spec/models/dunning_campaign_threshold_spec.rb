@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe DunningCampaignThreshold do
   subject(:dunning_campaign_threshold) { create(:dunning_campaign_threshold) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:dunning_campaign) }

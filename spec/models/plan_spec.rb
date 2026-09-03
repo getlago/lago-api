@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Plan do
   subject(:plan) { build(:plan, trial_period: 3) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { expect(described_class).to be_soft_deletable }
 
   it do
@@ -85,7 +87,7 @@ RSpec.describe Plan do
   end
 
   describe "#applicable_usage_thresholds" do
-    let(:plan) { create(:plan) }
+    let_it_be(:plan) { create_default(:plan) }
 
     it "returns usage thresholds plan is a parent" do
       threshold = create(:usage_threshold, plan: plan)

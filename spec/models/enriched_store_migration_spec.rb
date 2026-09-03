@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe EnrichedStoreMigration do
   subject(:migration) { create(:enriched_store_migration) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:status)

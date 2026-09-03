@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping do
   subject(:mapping) { build(:netsuite_collection_mapping) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   describe "#external_id" do
     let(:external_id) { SecureRandom.uuid }
 

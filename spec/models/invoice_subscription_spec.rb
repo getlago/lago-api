@@ -15,6 +15,10 @@ RSpec.describe InvoiceSubscription do
     )
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   let(:invoice) { invoice_subscription.invoice }
   let(:subscription) { invoice_subscription.subscription }
 
@@ -28,17 +32,14 @@ RSpec.describe InvoiceSubscription do
   it { is_expected.to belong_to(:organization) }
 
   describe ".order_by_subscription_invoice_name" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
-
-    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
-    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
-    let(:plan_beta) { create(:plan, organization:, name: "Beta Plan", invoice_display_name: "Custom Beta") }
-
     let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
     let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
     let(:subscription_custom) { create(:subscription, customer:, plan: plan_beta, name: "AAA Custom Name") }
+
+    let_it_be(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let_it_be(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
+    let_it_be(:plan_beta) { create(:plan, organization:, name: "Beta Plan", invoice_display_name: "Custom Beta") }
 
     before do
       create(:invoice_subscription, invoice:, subscription: subscription_zebra)
@@ -107,14 +108,12 @@ RSpec.describe InvoiceSubscription do
         timestamp: Time.current
       )
     end
-
     let(:base_from_datetime) { "2022-01-01 00:00:00" }
     let(:base_to_datetime) { "2022-01-31 23:59:59" }
     let(:base_charges_from_datetime) { "2022-01-01 00:00:00" }
     let(:base_charges_to_datetime) { "2022-01-31 23:59:59" }
     let(:base_fixed_charges_from_datetime) { "2022-01-01 00:00:00" }
     let(:base_fixed_charges_to_datetime) { "2022-01-31 23:59:59" }
-
     let(:from_datetime) { base_from_datetime }
     let(:to_datetime) { base_to_datetime }
     let(:charges_from_datetime) { base_charges_from_datetime }

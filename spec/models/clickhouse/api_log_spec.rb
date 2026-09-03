@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Clickhouse::ApiLog, clickhouse: true do
   subject(:api_log) { create(:clickhouse_api_log) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:api_key) }
 

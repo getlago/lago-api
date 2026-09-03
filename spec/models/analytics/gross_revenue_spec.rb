@@ -79,9 +79,9 @@ RSpec.describe Analytics::GrossRevenue do
   describe ".find_all_by" do
     subject(:gross_revenues) { described_class.find_all_by(organization.id, **args) }
 
-    let(:organization) { create(:organization, created_at: 3.months.ago) }
+    let_it_be(:customer) { create_default(:customer) }
+    let_it_be(:organization) { create_default(:organization, created_at: 3.months.ago) }
     let(:billing_entity1) { organization.default_billing_entity }
-    let(:billing_entity2) { create(:billing_entity, organization: organization) }
     let(:invoices) {
       [
         create(:invoice, organization:, total_amount_cents: 1000, issuing_date: 1.month.ago, billing_entity: billing_entity1),
@@ -90,6 +90,8 @@ RSpec.describe Analytics::GrossRevenue do
         create(:invoice, organization:, total_amount_cents: 4000, issuing_date: 2.months.ago, billing_entity: billing_entity2)
       ]
     }
+
+    let_it_be(:billing_entity2) { create(:billing_entity, organization: organization) }
 
     before { invoices }
 

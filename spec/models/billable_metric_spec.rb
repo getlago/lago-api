@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe BillableMetric do
-  subject(:billable_metric) { create(:billable_metric) }
+  subject(:billable_metric) { create_default(:billable_metric) }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   it_behaves_like "paper_trail traceable"
 
@@ -144,8 +146,8 @@ RSpec.describe BillableMetric do
   describe "#attached_subscriptions" do
     subject(:billable_metric) { create(:billable_metric, organization:) }
 
-    let(:organization) { create(:organization) }
-    let(:plan) { create(:plan, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:plan) { create_default(:plan, organization:) }
     let(:other_plan) { create(:plan, organization:) }
 
     it "returns subscriptions of plans that have a charge for this billable metric" do

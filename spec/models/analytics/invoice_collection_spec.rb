@@ -88,9 +88,8 @@ RSpec.describe Analytics::InvoiceCollection do
   describe ".find_all_by" do
     subject(:invoice_collections) { described_class.find_all_by(organization.id, **args) }
 
-    let(:organization) { create(:organization, created_at: 3.months.ago) }
+    let_it_be(:organization) { create_default(:organization, created_at: 3.months.ago) }
     let(:billing_entity1) { organization.default_billing_entity }
-    let(:billing_entity2) { create(:billing_entity, organization: organization) }
     let(:invoices) {
       [
         create(:invoice, organization:, customer: customer1, billing_entity: billing_entity1, issuing_date: 2.months.ago, total_amount_cents: 100, status: :pending),
@@ -100,8 +99,10 @@ RSpec.describe Analytics::InvoiceCollection do
       ]
     }
 
-    let(:customer1) { create(:customer, organization:, tax_identification_number: nil) }
-    let(:customer2) { create(:customer, organization:, tax_identification_number: "123456789") }
+    let_it_be(:billing_entity2) { create(:billing_entity, organization: organization) }
+
+    let_it_be(:customer1) { create(:customer, organization:, tax_identification_number: nil) }
+    let_it_be(:customer2) { create(:customer, organization:, tax_identification_number: "123456789") }
 
     before { invoices }
 

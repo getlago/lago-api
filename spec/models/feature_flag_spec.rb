@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe FeatureFlag do
-  let(:valid_flag) { "test_flag" }
+  let_it_be(:valid_flag) { "test_flag" }
 
   before do
     stub_const(
@@ -46,10 +46,10 @@ RSpec.describe FeatureFlag do
   end
 
   describe ".sanitize!" do
-    let(:organization_with_valid_flags) { create(:organization, feature_flags: [valid_flag]) }
-    let(:organization_with_invalid_flags) { create(:organization, feature_flags: ["invalid_flag", "another_invalid"]) }
-    let(:organization_with_mixed_flags) { create(:organization, feature_flags: [valid_flag, "invalid_flag"]) }
-    let(:organization_without_flags) { create(:organization, feature_flags: []) }
+    let_it_be(:organization_with_valid_flags) { create(:organization, feature_flags: [valid_flag]) }
+    let_it_be(:organization_with_invalid_flags) { create(:organization, feature_flags: ["invalid_flag", "another_invalid"]) }
+    let_it_be(:organization_with_mixed_flags) { create(:organization, feature_flags: [valid_flag, "invalid_flag"]) }
+    let_it_be(:organization_without_flags) { create(:organization, feature_flags: []) }
 
     before do
       organization_with_valid_flags

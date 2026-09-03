@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Invite do
   subject(:invite) { create(:invite) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "paper_trail traceable"
 
   describe "#mark_as_revoked" do
@@ -37,7 +39,7 @@ RSpec.describe Invite do
   describe "validations" do
     subject(:invite) { build(:invite, organization:) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let!(:role) { create(:role, :custom, organization:) }
 
     before { create(:role, :admin) }

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe DunningCampaign do
   subject(:dunning_campaign) { create(:dunning_campaign) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "paper_trail traceable"
 
   it do

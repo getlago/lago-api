@@ -28,8 +28,8 @@ RSpec.describe Wallet do
   end
 
   describe "#billing_entity" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
 
     context "when wallet has a billing_entity" do
       let(:billing_entity) { create(:billing_entity, organization:) }

@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Tax do
   subject(:tax) { create(:tax, applied_to_organization:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+
   let(:organization) { tax.organization }
   let(:applied_to_organization) { false }
 
