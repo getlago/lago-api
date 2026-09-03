@@ -763,6 +763,80 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             end
           end
         end
+
+        context "when a recurring metric already covers full history" do
+          subject(:usage_service) do
+            described_class.new(
+              customer:,
+              subscription:,
+              apply_taxes: false,
+              with_cache: true,
+              usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+            )
+          end
+
+          let(:current_date) { DateTime.parse("2025-06-15") }
+          let(:timestamp) { current_date }
+
+          let(:subscription) do
+            create(:subscription, plan:, customer:, started_at: DateTime.parse("2025-01-01"))
+          end
+
+          let(:billable_metric) { create(:billable_metric, :recurring, aggregation_type: "sum_agg", field_name: "value") }
+          let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
+
+          before do
+            create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+              timestamp: current_date, properties: {value: 5}, created_at: current_date - 1.hour)
+          end
+
+          it "reads the current period entry instead of a full-usage one" do
+            travel_to(current_date) do
+              expect { usage_service.call }.to change { Rails.cache.exist?(current_usage_cache_key) }.from(false).to(true)
+
+              expect(Rails.cache.exist?(full_usage_cache_key)).to be(false)
+            end
+          end
+
+          context "when the charge is pay in advance" do
+            let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true, properties: {amount: "2"}) }
+
+            it "does not take the shortcut and uses the full-usage entry instead" do
+              travel_to(current_date) do
+                expect { usage_service.call }.to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
+
+                expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
+              end
+            end
+          end
+
+          context "when the charge is prorated" do
+            let(:charge) { create(:standard_charge, plan:, billable_metric:, prorated: true, properties: {amount: "2"}) }
+
+            it "is refused before reaching the shortcut" do
+              travel_to(current_date) do
+                result = usage_service.call
+
+                expect(result).not_to be_success
+                expect(result.error.code).to eq("full_usage_not_allowed")
+              end
+            end
+          end
+
+          context "when the metric aggregation is unique_count_agg" do
+            let(:billable_metric) do
+              create(:billable_metric, :recurring, aggregation_type: "unique_count_agg", field_name: "value")
+            end
+
+            it "reads the current period entry instead of a full-usage one" do
+              travel_to(current_date) do
+                expect { usage_service.call }.to change { Rails.cache.exist?(current_usage_cache_key) }.from(false).to(true)
+
+                expect(Rails.cache.exist?(full_usage_cache_key)).to be(false)
+              end
+            end
+          end
+        end
       end
     end
 
