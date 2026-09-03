@@ -4,7 +4,7 @@ module Admin
   class ToggleFeatureService < ::BaseService
     Result = BaseResult[:audit_log]
 
-    def initialize(actor:, organization:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin:, batch_id: nil)
+    def initialize(actor:, organization:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin:)
       @actor = actor
       @organization = organization
       @feature_type = feature_type
@@ -12,7 +12,6 @@ module Admin
       @enabled = enabled
       @reason = reason
       @notify_org_admin = notify_org_admin
-      @batch_id = batch_id
       super()
     end
 
@@ -35,8 +34,7 @@ module Admin
           feature_key: feature_key,
           before_value: before_value,
           after_value: enabled,
-          reason: reason,
-          batch_id: batch_id
+          reason: reason
         )
 
         result.audit_log = audit_log
@@ -57,7 +55,7 @@ module Admin
 
     private
 
-    attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin, :batch_id
+    attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin
 
     def toggleable_feature_type?
       CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES.include?(feature_type.to_s)
