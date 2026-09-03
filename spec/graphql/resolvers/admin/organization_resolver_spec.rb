@@ -20,7 +20,7 @@ RSpec.describe Resolvers::Admin::OrganizationResolver do
     execute_graphql(current_user:, query:, variables: {organizationId: organization_id})
   end
 
-  it "returns the organization" do
+  it "returns the organization", :premium do
     result = fetch
 
     expect(result["data"]["adminOrganization"]).to include(
@@ -30,10 +30,16 @@ RSpec.describe Resolvers::Admin::OrganizationResolver do
     )
   end
 
-  it "returns nothing when the organization does not exist" do
+  it "returns nothing when the organization does not exist", :premium do
     result = fetch(organization_id: SecureRandom.uuid)
 
     expect(result["data"]["adminOrganization"]).to be_nil
+  end
+
+  context "when the license is not premium" do
+    it "returns an unauthorized error" do
+      expect_graphql_error(result: fetch, message: "unauthorized")
+    end
   end
 
   context "when the user is not a CS admin" do

@@ -63,7 +63,7 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
       actor_user: admin_user,
       action: :toggle_on,
       feature_type: :feature_flag,
-      feature_key: "multi_currency",
+      feature_key: "order_forms",
       created_at: 1.hour.ago)
   end
 
@@ -72,7 +72,7 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
     result["data"]["adminAuditLogs"]
   end
 
-  it "returns every log when no filter is given" do
+  it "returns every log when no filter is given", :premium do
     logs = fetch
 
     expect(logs["metadata"]["totalCount"]).to eq(3)
@@ -80,26 +80,26 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
       .to match_array([toggle_on_log.id, org_created_log.id, other_org_log.id])
   end
 
-  it "filters by action" do
+  it "filters by action", :premium do
     logs = fetch(actions: ["org_created"])
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([org_created_log.id])
   end
 
-  it "filters by several actions" do
+  it "filters by several actions", :premium do
     logs = fetch(actions: %w[org_created toggle_off])
 
     expect(logs["collection"].map { |log| log["id"] })
       .to match_array([org_created_log.id, other_org_log.id])
   end
 
-  it "filters by actor" do
+  it "filters by actor", :premium do
     logs = fetch(actorUserIds: [admin_user.id])
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([toggle_on_log.id])
   end
 
-  it "filters by several actors" do
+  it "filters by several actors", :premium do
     logs = fetch(actorUserIds: [admin_user.id, other_admin.id])
 
     expect(logs["metadata"]["totalCount"]).to eq(3)
@@ -107,13 +107,13 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
       .to match_array([toggle_on_log.id, org_created_log.id, other_org_log.id])
   end
 
-  it "filters by organization" do
+  it "filters by organization", :premium do
     logs = fetch(organizationIds: [other_organization.id])
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([other_org_log.id])
   end
 
-  it "filters by several organizations" do
+  it "filters by several organizations", :premium do
     logs = fetch(organizationIds: [organization.id, other_organization.id])
 
     expect(logs["metadata"]["totalCount"]).to eq(3)
@@ -121,15 +121,15 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
       .to match_array([toggle_on_log.id, org_created_log.id, other_org_log.id])
   end
 
-  it "filters by feature key" do
+  it "filters by feature key", :premium do
     flag_log
 
-    logs = fetch(featureKey: "multi_currency")
+    logs = fetch(featureKey: "order_forms")
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([flag_log.id])
   end
 
-  it "filters by feature type" do
+  it "filters by feature type", :premium do
     flag_log
 
     logs = fetch(featureType: "feature_flag")
@@ -142,25 +142,25 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
       .to match_array([toggle_on_log.id, org_created_log.id, other_org_log.id])
   end
 
-  it "filters by from date" do
+  it "filters by from date", :premium do
     logs = fetch(fromDate: 2.days.ago.to_date.iso8601)
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([other_org_log.id, org_created_log.id])
   end
 
-  it "filters by to date" do
+  it "filters by to date", :premium do
     logs = fetch(toDate: 2.days.ago.to_date.iso8601)
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([org_created_log.id, toggle_on_log.id])
   end
 
-  it "combines both dates" do
+  it "combines both dates", :premium do
     logs = fetch(fromDate: 2.days.ago.to_date.iso8601, toDate: 2.days.ago.to_date.iso8601)
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([org_created_log.id])
   end
 
-  it "paginates the results, newest first" do
+  it "paginates the results, newest first", :premium do
     logs = fetch(page: 1, limit: 2)
 
     expect(logs["metadata"]["currentPage"]).to eq(1)
@@ -173,13 +173,13 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
     expect(logs["collection"].map { |log| log["id"] }).to eq([toggle_on_log.id])
   end
 
-  it "combines the filters" do
+  it "combines the filters", :premium do
     logs = fetch(actions: %w[org_created toggle_off], organizationIds: [organization.id])
 
     expect(logs["collection"].map { |log| log["id"] }).to eq([org_created_log.id])
   end
 
-  it "combines actors, actions and organizations" do
+  it "combines actors, actions and organizations", :premium do
     logs = fetch(
       actorUserIds: [other_admin.id],
       actions: %w[org_created toggle_off],
@@ -189,24 +189,32 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
     expect(logs["collection"].map { |log| log["id"] }).to eq([org_created_log.id])
   end
 
-  it "returns the organization name of each log" do
+  it "returns the organization name of each log", :premium do
     logs = fetch(organizationIds: [organization.id])
 
     expect(logs["collection"].map { |log| log["organizationName"] }.uniq).to eq(["ACME Corp"])
   end
 
-  it "reports logs that were not rolled back" do
+  it "reports logs that were not rolled back", :premium do
     logs = fetch(actorUserIds: [admin_user.id])
 
     expect(logs["collection"].map { |log| log["rolledBack"] }).to eq([false])
   end
 
-  it "reports logs that were rolled back" do
+  it "reports logs that were rolled back", :premium do
     create(:cs_admin_audit_log, action: :rollback, rollback_of: toggle_on_log, organization:)
 
     logs = fetch(actorUserIds: [admin_user.id])
 
     expect(logs["collection"].map { |log| log["rolledBack"] }).to eq([true])
+  end
+
+  context "when the license is not premium" do
+    it "returns an unauthorized error" do
+      result = execute_graphql(current_user: admin_user, query:, variables: {})
+
+      expect_graphql_error(result:, message: "unauthorized")
+    end
   end
 
   context "when the user is not a CS admin" do

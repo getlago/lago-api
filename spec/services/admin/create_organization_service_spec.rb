@@ -20,7 +20,7 @@ RSpec.describe Admin::CreateOrganizationService do
   let(:owner_email) { "owner@hooli.com" }
   let(:timezone) { nil }
   let(:premium_integrations) { ["okta", "netsuite"] }
-  let(:feature_flags) { ["multi_currency"] }
+  let(:feature_flags) { ["order_forms"] }
   let(:reason) { "New enterprise customer onboarding" }
 
   before do
@@ -37,9 +37,7 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(organization.name).to eq("Hooli Inc")
     end
 
-    context "when a timezone is provided" do
-      around { |example| lago_premium!(&example) }
-
+    context "when a timezone is provided", :premium do
       let(:timezone) { "Europe/Paris" }
 
       it "sets the timezone on the organization" do
@@ -58,7 +56,7 @@ RSpec.describe Admin::CreateOrganizationService do
     it "sets feature flags on the organization" do
       result = service.call
 
-      expect(result.organization.reload.feature_flags).to include("multi_currency")
+      expect(result.organization.reload.feature_flags).to include("order_forms")
     end
 
     it "creates an invite for the owner email and returns the invite url" do
@@ -86,7 +84,7 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(integration_logs.pluck(:feature_key)).to match_array(["okta", "netsuite"])
 
       flag_logs = logs.where(feature_type: "feature_flag")
-      expect(flag_logs.pluck(:feature_key)).to eq(["multi_currency"])
+      expect(flag_logs.pluck(:feature_key)).to eq(["order_forms"])
 
       logs.each do |log|
         expect(log.actor_user).to eq(actor)
@@ -130,7 +128,7 @@ RSpec.describe Admin::CreateOrganizationService do
     end
 
     context "when a feature flag is unknown" do
-      let(:feature_flags) { ["multi_currency", "not_a_real_flag"] }
+      let(:feature_flags) { ["order_forms", "not_a_real_flag"] }
 
       it "returns a validation failure" do
         result = service.call

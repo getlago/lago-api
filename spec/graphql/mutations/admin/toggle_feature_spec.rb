@@ -33,7 +33,7 @@ RSpec.describe Mutations::Admin::ToggleFeature do
     )
   end
 
-  it "toggles the feature and returns the audit log" do
+  it "toggles the feature and returns the audit log", :premium do
     result = toggle
 
     log = result["data"]["adminToggleFeature"]
@@ -47,11 +47,20 @@ RSpec.describe Mutations::Admin::ToggleFeature do
     expect(organization.reload.premium_integrations).to include("okta")
   end
 
-  context "when the organization does not exist" do
+  context "when the organization does not exist", :premium do
     it "returns a not found error" do
       result = toggle(organization_id: SecureRandom.uuid)
 
       expect_graphql_error(result:, message: "not_found")
+    end
+  end
+
+  context "when the license is not premium" do
+    it "returns an unauthorized error" do
+      result = toggle
+
+      expect_graphql_error(result:, message: "unauthorized")
+      expect(organization.reload.premium_integrations).not_to include("okta")
     end
   end
 

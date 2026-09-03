@@ -89,6 +89,40 @@ RSpec.describe Admin::SlackNotificationService do
         end
       end
 
+      context "when the organization name contains Slack markup" do
+        let(:organization) { create(:organization, name: "Acme <https://evil.test|Grant access>") }
+
+        it "escapes the markup so it cannot render as a link" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            text = JSON.parse(req.body)["blocks"].first["text"]["text"]
+            text.include?("Acme &lt;https://evil.test|Grant access&gt;") &&
+              !text.include?("<https://evil.test|Grant access>")
+          }).to have_been_made.once
+        end
+      end
+
+      context "when the reason spans several lines" do
+        let(:audit_log) do
+          create(:cs_admin_audit_log,
+            organization:,
+            action: :toggle_on,
+            feature_key: "netsuite",
+            actor_email: "admin@lago.com",
+            reason: "Approved\nby\nsomeone else")
+        end
+
+        it "collapses the newlines into a single line" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            text = JSON.parse(req.body)["blocks"].first["text"]["text"]
+            text.include?("Approved by someone else") && !text.include?("\n")
+          }).to have_been_made.once
+        end
+      end
+
       context "when the log is the organization creation itself" do
         let(:audit_log) do
           create(:cs_admin_audit_log,
@@ -138,6 +172,16 @@ RSpec.describe Admin::SlackNotificationService do
         expect(Rails.logger).to have_received(:error).with(
           include(audit_log.id.to_s)
         )
+      end
+
+      it "does not log the webhook url" do
+        allow(Rails.logger).to receive(:error)
+
+        service.call
+
+        expect(Rails.logger).to have_received(:error) do |message|
+          expect(message).not_to include(webhook_url)
+        end
       end
 
       it "still returns a success result" do

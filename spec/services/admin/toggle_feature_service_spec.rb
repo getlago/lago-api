@@ -76,7 +76,7 @@ RSpec.describe Admin::ToggleFeatureService do
           actor: actor,
           organization: organization,
           feature_type: "feature_flag",
-          feature_key: "multi_currency",
+          feature_key: "order_forms",
           enabled: true,
           reason: "Enabling feature flag for testing purposes",
           notify_org_admin: false
@@ -89,12 +89,12 @@ RSpec.describe Admin::ToggleFeatureService do
         result = service.call
 
         expect(result).to be_success
-        expect(organization).to have_received(:enable_feature_flag!).with("multi_currency")
+        expect(organization).to have_received(:enable_feature_flag!).with("order_forms")
 
         audit_log = result.audit_log
         expect(audit_log.action).to eq("toggle_on")
         expect(audit_log.feature_type).to eq("feature_flag")
-        expect(audit_log.feature_key).to eq("multi_currency")
+        expect(audit_log.feature_key).to eq("order_forms")
       end
     end
 
@@ -104,7 +104,7 @@ RSpec.describe Admin::ToggleFeatureService do
           actor: actor,
           organization: organization,
           feature_type: "feature_flag",
-          feature_key: "multi_currency",
+          feature_key: "order_forms",
           enabled: false,
           reason: "Disabling feature flag for testing purposes",
           notify_org_admin: false
@@ -117,7 +117,7 @@ RSpec.describe Admin::ToggleFeatureService do
         result = service.call
 
         expect(result).to be_success
-        expect(organization).to have_received(:disable_feature_flag!).with("multi_currency")
+        expect(organization).to have_received(:disable_feature_flag!).with("order_forms")
 
         audit_log = result.audit_log
         expect(audit_log.action).to eq("toggle_off")

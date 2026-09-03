@@ -18,7 +18,7 @@ RSpec.describe Mutations::Admin::CreateOrganization do
 
   before { create(:role, :admin) }
 
-  def create_organization(current_user: admin_user, feature_flags: ["multi_currency"])
+  def create_organization(current_user: admin_user, feature_flags: ["order_forms"])
     execute_graphql(
       current_user:,
       query:,
@@ -34,25 +34,34 @@ RSpec.describe Mutations::Admin::CreateOrganization do
     )
   end
 
-  it "creates the organization with its features and returns the invite url" do
+  it "creates the organization with its features and returns the invite url", :premium do
     result = create_organization
 
     payload = result["data"]["adminCreateOrganization"]
     expect(payload["organization"]["name"]).to eq("Hooli Inc")
     expect(payload["organization"]["premiumIntegrations"]).to eq(["okta"])
-    expect(payload["organization"]["featureFlags"]).to eq(["multi_currency"])
+    expect(payload["organization"]["featureFlags"]).to eq(["order_forms"])
     expect(payload["inviteUrl"]).to be_present
 
     organization = Organization.find(payload["organization"]["id"])
     expect(CsAdminAuditLog.where(organization:).pluck(:feature_key))
-      .to match_array(%w[organization okta multi_currency])
+      .to match_array(%w[organization okta order_forms])
   end
 
-  context "when a feature flag is unknown" do
+  context "when a feature flag is unknown", :premium do
     it "returns a validation error" do
       result = create_organization(feature_flags: ["not_a_real_flag"])
 
       expect_graphql_error(result:, message: "unprocessable_entity")
+      expect(Organization.find_by(name: "Hooli Inc")).to be_nil
+    end
+  end
+
+  context "when the license is not premium" do
+    it "returns an unauthorized error" do
+      result = create_organization
+
+      expect_graphql_error(result:, message: "unauthorized")
       expect(Organization.find_by(name: "Hooli Inc")).to be_nil
     end
   end
