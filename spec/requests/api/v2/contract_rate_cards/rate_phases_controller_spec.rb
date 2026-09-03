@@ -52,6 +52,19 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
         expect(json[:error_details][:rate_phase]).to eq(["contract_locked"])
       end
     end
+
+    context "when a terminated contract reuses the external id" do
+      before do
+        create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
+      end
+
+      it "targets the live contract's card" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[ramp default])
+      end
+    end
   end
 
   describe "PUT .../rate_phases/:code" do

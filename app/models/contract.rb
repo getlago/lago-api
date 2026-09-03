@@ -31,6 +31,20 @@ class Contract < ApplicationRecord
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
 
+  LIVE_STATUSES = %w[pending active].freeze
+
+  # The contract currently in effect for an external id. Exactly one can be
+  # live (the partial unique index covers pending/active), while terminated
+  # and canceled siblings accumulate as history under the same external id.
+  scope :live, -> { where(status: LIVE_STATUSES) }
+
+  # Resolve an external id to the live contract the write surfaces address —
+  # newest first for determinism, never a terminated/canceled sibling that a
+  # bare find_by could return in any order.
+  def self.live_by_external_id(external_id)
+    live.order(started_at: :desc).find_by(external_id:)
+  end
+
   validates :external_id, presence: true
 
   validate :validate_started_before_ended

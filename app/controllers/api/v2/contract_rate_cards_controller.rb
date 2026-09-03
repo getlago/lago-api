@@ -82,7 +82,7 @@ module Api
       private
 
       def find_contract
-        @find_contract ||= current_organization.contracts.find_by(external_id: params[:contract_external_id])
+        @find_contract ||= current_organization.contracts.live_by_external_id(params[:contract_external_id])
       end
 
       def find_contract_rate_card

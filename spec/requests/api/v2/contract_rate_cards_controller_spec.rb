@@ -52,6 +52,20 @@ RSpec.describe Api::V2::ContractRateCardsController do
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
+
+    context "when a terminated contract reuses the external id" do
+      let!(:terminated) do
+        create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
+      end
+
+      it "attaches to the live contract, not the terminated sibling" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.reload.applied_rate_cards.count).to eq(1)
+        expect(terminated.reload.applied_rate_cards.count).to eq(0)
+      end
+    end
   end
 
   describe "GET /api/v2/contracts/:external_id/applied_rate_cards" do

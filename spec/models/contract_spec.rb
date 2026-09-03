@@ -110,4 +110,34 @@ RSpec.describe Contract do
       expect(build(:contract, :canceled).locked?).to be(true)
     end
   end
+
+  describe "Scopes" do
+    describe ".live" do
+      it "returns only pending and active contracts" do
+        pending = create(:contract, :pending)
+        active = create(:contract)
+        create(:contract, :terminated)
+        create(:contract, :canceled)
+
+        expect(described_class.live).to match_array([pending, active])
+      end
+    end
+
+    describe ".live_by_external_id" do
+      let(:organization) { create(:organization) }
+
+      it "resolves to the live contract, ignoring terminated siblings" do
+        create(:contract, :terminated, organization:, external_id: "reused", started_at: 2.months.ago)
+        live = create(:contract, :pending, organization:, external_id: "reused")
+
+        expect(organization.contracts.live_by_external_id("reused")).to eq(live)
+      end
+
+      it "returns nil when only historical contracts share the id" do
+        create(:contract, :terminated, organization:, external_id: "gone")
+
+        expect(organization.contracts.live_by_external_id("gone")).to be_nil
+      end
+    end
+  end
 end
