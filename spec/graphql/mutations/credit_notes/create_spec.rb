@@ -3,14 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::Create, :premium do
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "credit_notes:create" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
-  let(:customer) { create(:customer, organization:) }
-
   let(:fee1) { create(:fee, invoice:) }
   let(:fee2) { create(:charge_fee, invoice:) }
-
   let(:invoice) do
     create(
       :invoice,
@@ -24,7 +20,6 @@ RSpec.describe Mutations::CreditNotes::Create, :premium do
       total_paid_amount_cents: 110
     )
   end
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateCreditNoteInput!) {
@@ -50,6 +45,12 @@ RSpec.describe Mutations::CreditNotes::Create, :premium do
       }
     GQL
   end
+
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -22,10 +22,12 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy do
       }
     GQL
   end
-  let(:required_permission) { "developers:manage" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let!(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
+  let(:required_permission) { "developers:manage" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

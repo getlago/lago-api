@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,11 +17,8 @@ RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
   end
 
   let(:required_permission) { "plans:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
   let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
-
   let(:query) do
     <<~GQL
       query($planId: ID) {
@@ -29,6 +29,9 @@ RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

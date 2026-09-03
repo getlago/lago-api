@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::DownloadXml do
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:required_permission) { "credit_notes:view" }
   let(:credit_note) { create(:credit_note) }
   let(:organization) { credit_note.organization }

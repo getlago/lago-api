@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Invites::Accept do
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:password) { Faker::Internet.password }
 
   let(:mutation) do

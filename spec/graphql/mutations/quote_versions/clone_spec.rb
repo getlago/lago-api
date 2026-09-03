@@ -5,14 +5,13 @@ require "rails_helper"
 RSpec.describe Mutations::QuoteVersions::Clone do
   let(:required_permission) { "quotes:clone" }
   let(:membership) { create(:membership) }
+  let(:customer) { create(:customer) }
   let(:quote_version) { create(:quote_version, organization: membership.organization) }
-
   let(:input) do
     {
       id: quote_version.id
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CloneQuoteVersionInput!) {
@@ -27,6 +26,8 @@ RSpec.describe Mutations::QuoteVersions::Clone do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

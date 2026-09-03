@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ApiLogResolver, clickhouse: true do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "audit_logs:view" }
+  let(:organization) { membership.organization }
+  let(:clickhouse_api_log) { create(:clickhouse_api_log, membership:) }
   let(:query) do
     <<~GQL
       query($requestId: ID!) {
@@ -14,9 +18,7 @@ RSpec.describe Resolvers::ApiLogResolver, clickhouse: true do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:clickhouse_api_log) { create(:clickhouse_api_log, membership:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

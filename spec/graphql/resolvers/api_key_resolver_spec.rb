@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ApiKeyResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -22,10 +24,10 @@ RSpec.describe Resolvers::ApiKeyResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:required_permission) { "developers:keys:manage" }
   let(:api_key) { membership.organization.api_keys.first }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { create(:api_key) }
 

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::ApiKeys::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -20,10 +22,11 @@ RSpec.describe Mutations::ApiKeys::Create do
       }
     GQL
   end
+  let(:name) { Faker::Lorem.word }
 
   let(:required_permission) { "developers:keys:manage" }
-  let!(:membership) { create(:membership) }
-  let(:name) { Faker::Lorem.word }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   include_context "with mocked security logger"
 

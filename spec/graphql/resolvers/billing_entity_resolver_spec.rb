@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::BillingEntityResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:graphql_request) do
     execute_graphql(
       current_user: membership.user,
@@ -14,6 +16,7 @@ RSpec.describe Resolvers::BillingEntityResolver do
   end
 
   let(:required_permission) { "billing_entities:view" }
+  let(:organization) { membership.organization }
   let(:query) do
     <<~GQL
       query($billingEntityCode: String!) {
@@ -35,9 +38,9 @@ RSpec.describe Resolvers::BillingEntityResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

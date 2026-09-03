@@ -4,12 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationCustomers::Create do
   let(:required_permission) { "customers:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:integration) { create(:netsuite_integration, organization:, code: "ns_main") }
   let(:external_customer_id) { SecureRandom.uuid }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateIntegrationCustomerInput!) {
@@ -28,6 +24,11 @@ RSpec.describe Mutations::IntegrationCustomers::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { integration }
 

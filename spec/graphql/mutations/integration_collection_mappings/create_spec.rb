@@ -6,14 +6,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
-
   let(:query) do
     <<-GQL
       mutation($input: CreateIntegrationCollectionMappingInput!) {
@@ -40,6 +35,11 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
     }
   end
   let(:billing_entity_id) { nil }
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   def create_integration_collection_mapping(input:, raw: false)
     result = execute_query(query:, input:)

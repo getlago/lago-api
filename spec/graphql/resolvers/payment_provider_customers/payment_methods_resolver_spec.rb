@@ -3,18 +3,16 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PaymentProviderCustomers::PaymentMethodsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permissions) { %w[customers:view payment_methods:view] }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
   let(:connection) { create(:stripe_customer, customer:, organization:) }
   let(:other_connection) { create(:gocardless_customer, customer:, organization:) }
-
   let(:payment_method) { create(:payment_method, customer:, organization:, payment_provider_customer: connection) }
   let(:other_payment_method) do
     create(:payment_method, customer:, organization:, payment_provider_customer: other_connection, is_default: false)
   end
-
   let(:query) do
     <<~GQL
       query($id: ID!, $withDeleted: Boolean) {
@@ -31,6 +29,9 @@ RSpec.describe Resolvers::PaymentProviderCustomers::PaymentMethodsResolver do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:, payment_provider: "stripe") }
 
   before do
     connection

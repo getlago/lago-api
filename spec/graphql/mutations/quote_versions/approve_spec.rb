@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Mutations::QuoteVersions::Approve do
   let(:required_permission) { "quotes:approve" }
   let(:membership) { create(:membership) }
+  let(:customer) { create(:customer) }
+  let(:plan) { create(:plan) }
   let(:quote) { create(:quote, organization: membership.organization) }
   let(:quote_version) do
     create(
@@ -14,13 +16,11 @@ RSpec.describe Mutations::QuoteVersions::Approve do
       organization: membership.organization
     )
   end
-
   let(:input) do
     {
       id: quote_version.id
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: ApproveQuoteVersionInput!) {
@@ -34,6 +34,8 @@ RSpec.describe Mutations::QuoteVersions::Approve do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

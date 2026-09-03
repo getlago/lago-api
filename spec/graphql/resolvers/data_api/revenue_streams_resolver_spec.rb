@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::DataApi::RevenueStreamsResolver, :premium do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "data_api:view" }
+  let(:organization) { membership.organization }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $externalCustomerId: String) {
@@ -25,9 +29,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreamsResolver, :premium do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")

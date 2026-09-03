@@ -14,13 +14,11 @@ RSpec.describe Mutations::RateCardRates::Destroy do
   end
 
   let(:required_permission) { "rate_cards:delete" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:rate_card) { create(:rate_card, organization:) }
   let(:rate_card_rate) do
     create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyRateCardRateInput!) {
@@ -28,6 +26,10 @@ RSpec.describe Mutations::RateCardRates::Destroy do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

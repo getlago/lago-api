@@ -3,12 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "credit_notes:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:user) { membership.user }
-
   let(:invoice) do
     create(
       :invoice,
@@ -19,7 +18,6 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
       currency: "EUR"
     )
   end
-
   let(:credit_note) do
     create(
       :credit_note,
@@ -29,7 +27,6 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
       invoice:
     )
   end
-
   let(:subscription) do
     create(
       :subscription,
@@ -39,10 +36,8 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
       created_at: started_at
     )
   end
-
   let(:timestamp) { Time.zone.now - 1.year }
   let(:started_at) { Time.zone.now - 2.years }
-  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:fee_subscription) do
     create(
       :fee,
@@ -52,7 +47,6 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
       amount_cents: 2_000
     )
   end
-
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:response) { instance_double(Net::HTTPOK) }
@@ -79,6 +73,11 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  let_it_be(:plan) { create_default(:plan, organization:, interval: "monthly") }
 
   before do
     integration_collection_mapping

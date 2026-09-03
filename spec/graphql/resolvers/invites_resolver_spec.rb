@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::InvitesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query {
@@ -13,10 +15,10 @@ RSpec.describe Resolvers::InvitesResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invite) { create(:invite, organization:) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it "returns a list of invites" do
     result = execute_graphql(

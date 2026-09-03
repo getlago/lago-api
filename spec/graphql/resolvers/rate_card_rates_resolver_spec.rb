@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::RateCardRatesResolver do
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,11 +17,9 @@ RSpec.describe Resolvers::RateCardRatesResolver do
   end
 
   let(:required_permission) { "rate_cards:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:rate_card) { create(:rate_card, organization:) }
   let!(:rate) { create(:rate_card_rate, organization:, rate_card:) }
-
   let(:query) do
     <<~GQL
       query($rateCardId: ID!) {
@@ -29,6 +30,8 @@ RSpec.describe Resolvers::RateCardRatesResolver do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { create(:rate_card_rate, organization:) }
 

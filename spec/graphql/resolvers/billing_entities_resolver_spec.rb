@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::BillingEntitiesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "billing_entities:view" }
+  let(:organization) { membership.organization }
+  let(:billing_entity1) { organization.default_billing_entity }
   let(:query) do
     <<~GQL
       query {
@@ -17,10 +21,9 @@ RSpec.describe Resolvers::BillingEntitiesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity1) { organization.default_billing_entity }
-  let(:billing_entity2) { create(:billing_entity, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:billing_entity2) { create_default(:billing_entity, organization:) }
 
   before do
     billing_entity1

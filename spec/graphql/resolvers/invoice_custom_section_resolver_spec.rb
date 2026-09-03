@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceCustomSectionResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($invoiceCustomSectionId: ID!) {
@@ -12,10 +14,10 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { invoice_custom_section }
 

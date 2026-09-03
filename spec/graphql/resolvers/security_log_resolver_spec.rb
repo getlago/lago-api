@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::SecurityLogResolver, clickhouse: true do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($logId: ID!) {
@@ -15,10 +17,11 @@ RSpec.describe Resolvers::SecurityLogResolver, clickhouse: true do
       }
     GQL
   end
-  let(:variables) { {logId: security_log.log_id} }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:security_log) { create(:clickhouse_security_log, membership:) }
+  let(:variables) { {logId: security_log.log_id} }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { organization.update!(premium_integrations: ["security_logs"]) }
 

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::InvoicesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query {
@@ -13,12 +15,12 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:draft_invoice) { create(:invoice, :draft, customer:, organization:) }
   let(:finalized_invoice) { create(:invoice, customer:, organization:) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     draft_invoice

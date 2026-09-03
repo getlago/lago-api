@@ -4,10 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationMappings::Create do
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:mappable) { create(:add_on, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
@@ -39,6 +35,11 @@ RSpec.describe Mutations::IntegrationMappings::Create do
     }
   end
   let(:billing_entity_id) { nil }
+  let(:integration) { create(:netsuite_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:mappable) { create_default(:add_on, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   def create_integration_mapping(input:, raw: false)
     result = execute_query(query: mutation, input:)

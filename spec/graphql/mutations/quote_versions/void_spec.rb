@@ -4,15 +4,12 @@ require "rails_helper"
 
 RSpec.describe Mutations::QuoteVersions::Void do
   let(:required_permission) { "quotes:void" }
-  let(:membership) { create(:membership) }
   let(:quote_version) { create(:quote_version, organization: membership.organization) }
-
   let(:input) do
     {
       id: quote_version.id
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: VoidQuoteVersionInput!) {
@@ -27,6 +24,10 @@ RSpec.describe Mutations::QuoteVersions::Void do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

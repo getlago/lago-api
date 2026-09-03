@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Coupons::Update do
   let(:required_permission) { "coupons:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:coupon) { create(:coupon, organization:) }
   let(:expiration_at) { Time.current + 3.days }
   let(:plan) { create(:plan, organization:) }
@@ -32,6 +30,9 @@ RSpec.describe Mutations::Coupons::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

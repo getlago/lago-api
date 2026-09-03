@@ -4,6 +4,46 @@ require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceResolver do
   let(:required_permission) { "invoices:view" }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
+  let(:subscription) { invoice_subscription.subscription }
+  let(:fee) do
+    create(:fee, subscription:, invoice:, amount_cents: 10, properties: {
+      from_datetime: Time.current.beginning_of_month,
+      to_datetime: Time.current.end_of_month,
+      charges_from_datetime: Time.current.beginning_of_month - 1.month,
+      charges_to_datetime: Time.current.end_of_month - 1.month,
+      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
+      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
+    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
+  end
+  let(:charge_with_display_keys) do
+    create(:standard_charge, properties: {
+      "amount" => "100",
+      "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
+    })
+  end
+  let(:charge_fee) do
+    create(:charge_fee, charge: charge_with_display_keys, subscription:, invoice:, amount_cents: 10, properties: {
+      from_datetime: Time.current.beginning_of_month,
+      to_datetime: Time.current.end_of_month,
+      charges_from_datetime: Time.current.beginning_of_month - 1.month,
+      charges_to_datetime: Time.current.end_of_month - 1.month,
+      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
+      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
+    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
+  end
+  let(:fixed_charge_fee) do
+    create(:fixed_charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
+      from_datetime: Time.current.beginning_of_month,
+      to_datetime: Time.current.end_of_month,
+      charges_from_datetime: Time.current.beginning_of_month - 1.month,
+      charges_to_datetime: Time.current.end_of_month - 1.month,
+      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
+      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
+    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
+  end
   let(:query) do
     <<~GQL
       query($id: ID!) {
@@ -111,48 +151,11 @@ RSpec.describe Resolvers::InvoiceResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
-  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
-  let(:subscription) { invoice_subscription.subscription }
-  let(:fee) do
-    create(:fee, subscription:, invoice:, amount_cents: 10, properties: {
-      from_datetime: Time.current.beginning_of_month,
-      to_datetime: Time.current.end_of_month,
-      charges_from_datetime: Time.current.beginning_of_month - 1.month,
-      charges_to_datetime: Time.current.end_of_month - 1.month,
-      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
-      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
-    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
-  end
-  let(:charge_with_display_keys) do
-    create(:standard_charge, properties: {
-      "amount" => "100",
-      "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
-    })
-  end
-  let(:charge_fee) do
-    create(:charge_fee, charge: charge_with_display_keys, subscription:, invoice:, amount_cents: 10, properties: {
-      from_datetime: Time.current.beginning_of_month,
-      to_datetime: Time.current.end_of_month,
-      charges_from_datetime: Time.current.beginning_of_month - 1.month,
-      charges_to_datetime: Time.current.end_of_month - 1.month,
-      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
-      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
-    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
-  end
-  let(:fixed_charge_fee) do
-    create(:fixed_charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
-      from_datetime: Time.current.beginning_of_month,
-      to_datetime: Time.current.end_of_month,
-      charges_from_datetime: Time.current.beginning_of_month - 1.month,
-      charges_to_datetime: Time.current.end_of_month - 1.month,
-      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
-      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
-    }, presentation_breakdowns: [build(:presentation_breakdown, organization:)])
-  end
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     fee

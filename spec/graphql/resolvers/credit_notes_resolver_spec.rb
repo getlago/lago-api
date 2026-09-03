@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CreditNotesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -13,6 +15,9 @@ RSpec.describe Resolvers::CreditNotesResolver do
   end
 
   let(:required_permission) { "credit_notes:view" }
+  let(:organization) { membership.organization }
+  let(:arguments) { "" }
+  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
   let(:query) do
     <<~GQL
       query {
@@ -24,12 +29,8 @@ RSpec.describe Resolvers::CreditNotesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:arguments) { "" }
-
-  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { create(:credit_note, :draft, customer:) }
 

@@ -14,8 +14,8 @@ RSpec.describe Resolvers::MembershipsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership, roles: %i[admin]) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, roles: %i[admin]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -129,11 +129,10 @@ RSpec.describe Resolvers::MembershipsResolver do
   end
 
   describe "traversal attack attempt" do
-    let!(:other_org) { create(:organization) }
-
-    let(:other_user) { create(:user) }
-    let(:other_user_membership) { create(:membership, user: other_user, organization:) }
-    let(:other_user_other_membership) { create(:membership, user: other_user, organization: other_org) }
+    let_it_be(:other_org) { create(:organization) }
+    let_it_be(:other_user) { create(:user) }
+    let_it_be(:other_user_membership) { create(:membership, user: other_user, organization:) }
+    let_it_be(:other_user_other_membership) { create(:membership, user: other_user, organization: other_org) }
 
     let(:query) do
       <<~GQL

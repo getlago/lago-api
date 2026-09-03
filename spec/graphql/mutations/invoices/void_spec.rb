@@ -4,11 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Void do
   let(:required_permission) { "invoices:void" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, status: :finalized, customer:, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: VoidInvoiceInput!) {
@@ -19,6 +15,10 @@ RSpec.describe Mutations::Invoices::Void do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

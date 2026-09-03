@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::WebhookEndpointResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "developers:manage" }
+  let(:webhook_endpoint) { build(:webhook_endpoint, organization:, event_types: ["customer.created"]) }
+  let(:organization) { membership.organization }
   let(:query) do
     <<-GQL
       query($webhookEndpointId: ID!) {
@@ -21,9 +25,7 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:webhook_endpoint) { build(:webhook_endpoint, organization:, event_types: ["customer.created"]) }
-  let(:organization) { membership.organization }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     organization.webhook_endpoints << webhook_endpoint

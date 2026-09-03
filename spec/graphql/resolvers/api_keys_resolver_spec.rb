@@ -22,11 +22,11 @@ RSpec.describe Resolvers::ApiKeysResolver do
       }
     GQL
   end
-
-  let(:organization) { create(:api_key).organization }
-  let(:membership) { create(:membership, organization:) }
   let(:required_permission) { "developers:keys:manage" }
   let(:api_key) { membership.organization.api_keys.first }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

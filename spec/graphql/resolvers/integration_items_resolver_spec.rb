@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::IntegrationItemsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "organization:integrations:view" }
   let(:query) do
     <<~GQL
@@ -19,7 +21,8 @@ RSpec.describe Resolvers::IntegrationItemsResolver do
   let(:integration_item2) { create(:integration_item, item_type: "tax", integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     integration_item

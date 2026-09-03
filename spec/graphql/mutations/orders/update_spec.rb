@@ -3,12 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Orders::Update do
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "orders:update" }
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:membership) { create(:membership, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:order) { create(:order, organization:, customer:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: UpdateOrderInput!) {
@@ -21,6 +18,10 @@ RSpec.describe Mutations::Orders::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

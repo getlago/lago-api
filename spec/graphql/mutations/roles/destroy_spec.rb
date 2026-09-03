@@ -22,10 +22,11 @@ RSpec.describe Mutations::Roles::Destroy do
       }
     GQL
   end
-  let(:required_permission) { "roles:delete" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
   let(:role) { create(:role, organization:) }
+  let(:required_permission) { "roles:delete" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   include_context "with mocked security logger"
 

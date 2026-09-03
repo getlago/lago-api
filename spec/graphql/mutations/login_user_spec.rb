@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::LoginUser do
-  let(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:user) { membership.user }
   let(:mutation) do
     <<~GQL

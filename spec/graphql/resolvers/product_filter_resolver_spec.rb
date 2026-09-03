@@ -13,11 +13,10 @@ RSpec.describe Resolvers::ProductFilterResolver do
     )
   end
 
-  let(:required_permission) { "product_filters:view" }
-  let(:membership) { create(:membership) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:organization) { membership.organization }
+  let(:required_permission) { "product_filters:view" }
   let(:product_filter) { create(:product_filter, :with_values, organization:) }
-
   let(:query) do
     <<~GQL
       query($filterId: ID!) {

@@ -3,7 +3,29 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "invoices:view" }
+  let(:organization) { membership.organization }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10, taxes_rate: 15) }
+  let(:subscription) { invoice_subscription.subscription }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:charge) { create(:standard_charge, plan: subscription.plan) }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:fee) do
+    create(:fee, subscription:, invoice:, amount_cents: 50)
+  end
+  let(:charge_fee) do
+    create(:charge_fee, subscription:, invoice:, amount_cents: 250, charge:)
+  end
+  let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+  let(:fixed_charge_fee) do
+    create(:fixed_charge_fee, subscription:, invoice:, amount_cents: 150, fixed_charge:)
+  end
   let(:query) do
     <<~GQL
       query($id: ID!) {
@@ -254,25 +276,8 @@ RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
-  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10, taxes_rate: 15) }
-  let(:subscription) { invoice_subscription.subscription }
-  let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:charge) { create(:standard_charge, plan: subscription.plan) }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:fee) do
-    create(:fee, subscription:, invoice:, amount_cents: 50)
-  end
-  let(:charge_fee) do
-    create(:charge_fee, subscription:, invoice:, amount_cents: 250, charge:)
-  end
-  let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
-  let(:fixed_charge_fee) do
-    create(:fixed_charge_fee, subscription:, invoice:, amount_cents: 150, fixed_charge:)
-  end
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     fee

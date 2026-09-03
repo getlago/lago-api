@@ -14,11 +14,8 @@ RSpec.describe Mutations::Payments::Create do
   end
 
   let(:required_permission) { "payments:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, total_amount_cents: 100) }
-
   let(:input) do
     {
       invoiceId: invoice.id,
@@ -27,7 +24,6 @@ RSpec.describe Mutations::Payments::Create do
       createdAt: 1.day.ago.iso8601
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreatePaymentInput!) {
@@ -39,6 +35,10 @@ RSpec.describe Mutations::Payments::Create do
       }
     GQL
   end
+
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   context "with premium organization", :premium do
     it "creates a manual payment" do

@@ -12,6 +12,9 @@ RSpec.describe Resolvers::RolesResolver do
     )
   end
 
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+
   let(:query) do
     <<~GQL
       query {
@@ -27,10 +30,10 @@ RSpec.describe Resolvers::RolesResolver do
   end
 
   let(:required_permission) { "roles:view" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:other_user) { create(:user, email: "other@example.com") }
-  let!(:other_membership) { create(:membership, organization:, user: other_user) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:other_user) { create(:user, email: "other@example.com") }
+  let_it_be(:other_membership) { create(:membership, organization:, user: other_user) }
 
   before do
     create(:role, :admin)

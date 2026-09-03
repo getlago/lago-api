@@ -4,6 +4,15 @@ require "rails_helper"
 
 RSpec.describe Resolvers::InvoicesResolver do
   let(:required_permission) { "invoices:view" }
+  let(:customer_first) { create(:customer, organization:) }
+  let(:customer_second) { create(:customer, organization:) }
+  let(:organization) { membership.organization }
+  let(:invoice_first) do
+    create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized, organization:)
+  end
+  let(:invoice_second) do
+    create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized, organization:)
+  end
   let(:query) do
     <<~GQL
       query {
@@ -15,16 +24,8 @@ RSpec.describe Resolvers::InvoicesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer_first) { create(:customer, organization:) }
-  let(:customer_second) { create(:customer, organization:) }
-  let(:invoice_first) do
-    create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized, organization:)
-  end
-  let(:invoice_second) do
-    create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized, organization:)
-  end
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     invoice_first

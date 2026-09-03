@@ -3,13 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Mutations::AdjustedFees::Destroy do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let(:customer) { create(:customer) }
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, status: :draft, organization:) }
   let(:fee) { create(:charge_fee, invoice:) }
   let(:adjusted_fee) { create(:adjusted_fee, invoice:, fee:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyAdjustedFeeInput!) {
@@ -17,6 +19,8 @@ RSpec.describe Mutations::AdjustedFees::Destroy do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { adjusted_fee }
 

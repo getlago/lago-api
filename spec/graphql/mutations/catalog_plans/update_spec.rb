@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CatalogPlans::Update do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -13,12 +15,9 @@ RSpec.describe Mutations::CatalogPlans::Update do
     )
   end
 
-  let(:membership) { create(:membership) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:organization) { membership.organization }
-  let(:required_permission) { "plans:update" }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
   let(:input) { {id: plan.id, name: "Renamed"} }
-
   let(:query) do
     <<~GQL
       mutation($input: UpdateCatalogPlanInput!) {
@@ -26,6 +25,9 @@ RSpec.describe Mutations::CatalogPlans::Update do
       }
     GQL
   end
+  let(:required_permission) { "plans:update" }
+
+  let_it_be(:plan) { create_default(:plan, :product_catalog, organization:) }
 
   before { organization.enable_feature_flag!(:product_catalog) }
 

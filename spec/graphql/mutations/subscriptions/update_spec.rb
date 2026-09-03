@@ -6,11 +6,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:) }
-
   let(:subscription) do
     create(
       :subscription,
@@ -19,7 +15,6 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       subscription_at: Time.current + 3.days
     )
   end
-
   let(:query) do
     <<~GQL
       mutation($input: UpdateSubscriptionInput!) {
@@ -57,6 +52,12 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       }
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   before do
     plan

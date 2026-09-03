@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Sources::CountByForeignKey do
   subject(:source) { described_class.new(ProductFilter, :product_id) }
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
 
   describe "#fetch" do

@@ -4,11 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::Wallets::Alerts::Update do
   let(:required_permission) { "wallets:update" }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization) }
   let(:wallet) { create(:wallet, customer:, organization: membership.organization) }
   let(:alert) { create(:wallet_balance_amount_alert, wallet:, organization: membership.organization, recurring_threshold: 10, thresholds: [75, 50, 25]) }
-
   let(:mutation) do
     <<-GQL
     mutation ($input: UpdateCustomerWalletAlertInput!) {
@@ -21,6 +18,10 @@ RSpec.describe Mutations::Wallets::Alerts::Update do
     }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization: membership.organization) }
 
   before do
     wallet

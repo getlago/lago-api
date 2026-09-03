@@ -6,7 +6,6 @@ RSpec.describe Mutations::Invites::Create do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:members:create" }
-  let(:membership) { create(:membership) }
   let(:revoked_membership) do
     create(
       :membership,
@@ -14,10 +13,8 @@ RSpec.describe Mutations::Invites::Create do
       status: :revoked
     )
   end
-  let(:organization) { membership.organization }
   let(:email) { Faker::Internet.email }
   let(:roles) { %w[finance] }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateInviteInput!) {
@@ -30,6 +27,9 @@ RSpec.describe Mutations::Invites::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { create(:role, :finance) }
 

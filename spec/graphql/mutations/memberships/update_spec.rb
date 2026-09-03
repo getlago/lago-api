@@ -6,12 +6,7 @@ RSpec.describe Mutations::Memberships::Update do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:members:update" }
-  let(:admin_role) { create(:role, :admin) }
-  let(:finance_role) { create(:role, :finance) }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:user) { membership.user }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateMembershipInput!) {
@@ -22,6 +17,11 @@ RSpec.describe Mutations::Memberships::Update do
       }
     GQL
   end
+  let(:admin_role) { create(:role, :admin) }
+  let(:finance_role) { create(:role, :finance) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -43,7 +43,7 @@ RSpec.describe Mutations::Memberships::Update do
       )
     end
 
-    let(:membership_to_edit) { create(:membership, organization:) }
+    let_it_be(:membership_to_edit) { create_default(:membership, organization:) }
 
     before do
       create(:membership_role, membership: membership_to_edit, role: finance_role)

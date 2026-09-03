@@ -4,11 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::Superset::CreateGuestToken do
   let(:required_permission) { "analytics:view" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:dashboard_id) { "42" }
   let(:guest_token) { "fresh-guest-token" }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateSupersetGuestTokenInput!) {
@@ -18,10 +15,12 @@ RSpec.describe Mutations::Superset::CreateGuestToken do
       }
     GQL
   end
-
   let(:result) do
     Auth::Superset::GuestTokenService::Result.new.tap { |r| r.guest_token = guest_token }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(Auth::Superset::GuestTokenService).to receive(:call).and_return(result)

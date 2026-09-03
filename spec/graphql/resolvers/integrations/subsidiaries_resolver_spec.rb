@@ -3,7 +3,24 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Integrations::SubsidiariesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "organization:integrations:view" }
+  let(:organization) { membership.organization }
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:lago_client) { instance_double(LagoHttpClient::Client) }
+  let(:subsidiaries_endpoint) { "https://api.nango.dev/v1/netsuite/subsidiaries" }
+  let(:headers) do
+    {
+      "Connection-Id" => integration.connection_id,
+      "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+      "Provider-Config-Key" => "netsuite-tba"
+    }
+  end
+  let(:aggregator_response) do
+    path = Rails.root.join("spec/fixtures/integration_aggregator/subsidiaries_response.json")
+    JSON.parse(File.read(path))
+  end
   let(:query) do
     <<~GQL
       query($integrationId: ID!) {
@@ -14,24 +31,7 @@ RSpec.describe Resolvers::Integrations::SubsidiariesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:subsidiaries_endpoint) { "https://api.nango.dev/v1/netsuite/subsidiaries" }
-
-  let(:headers) do
-    {
-      "Connection-Id" => integration.connection_id,
-      "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      "Provider-Config-Key" => "netsuite-tba"
-    }
-  end
-
-  let(:aggregator_response) do
-    path = Rails.root.join("spec/fixtures/integration_aggregator/subsidiaries_response.json")
-    JSON.parse(File.read(path))
-  end
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

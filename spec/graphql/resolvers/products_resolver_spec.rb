@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ProductsResolver do
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,10 +17,8 @@ RSpec.describe Resolvers::ProductsResolver do
   end
 
   let(:required_permission) { "products:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:variables) { {} }
-
   let(:query) do
     <<~GQL
       query($searchTerm: String, $productType: ProductTypeEnum, $productCategoryIds: [ID!], $withoutProductCategory: Boolean) {
@@ -28,10 +29,11 @@ RSpec.describe Resolvers::ProductsResolver do
       }
     GQL
   end
-
   let(:product_category) { create(:product_category, organization:) }
   let!(:usage_item) { create(:product, organization:, product_category:, name: "Storage", code: "storage") }
   let!(:fixed_item) { create(:product, :fixed, :standalone, organization:, name: "Seats", code: "seats") }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

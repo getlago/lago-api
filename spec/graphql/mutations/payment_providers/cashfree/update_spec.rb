@@ -4,10 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Cashfree::Update do
   let(:required_permission) { "organization:integrations:update" }
-  let(:membership) { create(:membership) }
   let(:cashfree_provider) { create(:cashfree_provider, organization: membership.organization) }
   let(:success_redirect_url) { Faker::Internet.url }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateCashfreePaymentProviderInput!) {
@@ -18,6 +16,9 @@ RSpec.describe Mutations::PaymentProviders::Cashfree::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

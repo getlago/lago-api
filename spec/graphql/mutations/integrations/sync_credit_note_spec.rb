@@ -16,13 +16,8 @@ RSpec.describe Mutations::Integrations::SyncCreditNote do
   end
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:credit_note) { create(:credit_note, customer:, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: SyncIntegrationCreditNoteInput!) {
@@ -30,14 +25,17 @@ RSpec.describe Mutations::Integrations::SyncCreditNote do
       }
     GQL
   end
-
   let(:service) { instance_double(Integrations::Aggregator::CreditNotes::CreateService) }
-
   let(:result) do
     r = Integrations::Aggregator::CreditNotes::CreateService::Result.new
     r.credit_note_id = credit_note.id
     r
   end
+  let(:credit_note) { create(:credit_note, customer:, organization:) }
+  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     integration_customer

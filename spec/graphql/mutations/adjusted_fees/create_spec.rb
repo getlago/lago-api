@@ -4,15 +4,10 @@ require "rails_helper"
 
 RSpec.describe Mutations::AdjustedFees::Create, :premium do
   let(:required_permission) { "invoices:update" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
-  let(:invoice) { create(:invoice, invoice_type: :subscription, organization:, customer:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:customer) { create(:customer, organization:) }
+  let(:invoice) { create(:invoice, invoice_type: :subscription, organization:, customer:) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:subscription) { create(:subscription, customer:, plan:, started_at: Time.current - 1.year) }
-
   let(:invoice_subscription) do
     create(
       :invoice_subscription,
@@ -25,7 +20,6 @@ RSpec.describe Mutations::AdjustedFees::Create, :premium do
       charges_to_datetime: (Time.current - 1.month).end_of_month
     )
   end
-
   let(:fee) do
     create(
       :charge_fee,
@@ -41,7 +35,6 @@ RSpec.describe Mutations::AdjustedFees::Create, :premium do
       }
     )
   end
-
   let(:input) do
     {
       feeId: fee.id,
@@ -51,7 +44,6 @@ RSpec.describe Mutations::AdjustedFees::Create, :premium do
       invoiceDisplayName: "Hello"
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateAdjustedFeeInput!) {
@@ -64,6 +56,11 @@ RSpec.describe Mutations::AdjustedFees::Create, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
 
   before { fee.invoice.draft! }
 

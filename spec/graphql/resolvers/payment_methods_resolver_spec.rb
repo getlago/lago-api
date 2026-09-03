@@ -4,11 +4,12 @@ require "rails_helper"
 
 RSpec.describe Resolvers::PaymentMethodsResolver do
   let(:required_permission) { "payment_methods:view" }
-
   let(:payment_method) { create(:payment_method, customer:, organization:) }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     payment_method

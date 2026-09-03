@@ -8,7 +8,6 @@ RSpec.describe Mutations::Webhooks::Retry do
   let(:webhook_endpoint) { create(:webhook_endpoint) }
   let(:organization) { webhook_endpoint.organization.reload }
   let(:membership) { create(:membership, organization:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: RetryWebhookInput!) {
@@ -18,6 +17,9 @@ RSpec.describe Mutations::Webhooks::Retry do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   before { webhook }
 

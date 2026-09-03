@@ -22,7 +22,8 @@ RSpec.describe Mutations::ApiKeys::Destroy do
   end
 
   let(:required_permission) { "developers:keys:manage" }
-  let!(:membership) { create(:membership) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   include_context "with mocked security logger"
 

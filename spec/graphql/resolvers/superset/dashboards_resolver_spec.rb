@@ -3,23 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Superset::DashboardsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "analytics:view" }
-  let(:query) do
-    <<~GQL
-      query {
-        supersetDashboards {
-          id
-          dashboardTitle
-          embeddedId
-          guestToken
-        }
-      }
-    GQL
-  end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:dashboards) do
     [
       {
@@ -36,12 +23,25 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
       }
     ]
   end
-
   let(:result) do
     Auth::SupersetService::Result.new.tap do |result|
       result.dashboards = dashboards
     end
   end
+  let(:query) do
+    <<~GQL
+      query {
+        supersetDashboards {
+          id
+          dashboardTitle
+          embeddedId
+          guestToken
+        }
+      }
+    GQL
+  end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(Auth::SupersetService).to receive(:call).and_return(result)

@@ -5,8 +5,10 @@ require "rails_helper"
 RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementsResolver, :premium do
   subject { execute_query(query:, variables:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:plan) { create(:plan, organization:) }
+  let(:customer) { create(:customer) }
   let(:subscription) { create(:subscription, organization:, plan:) }
   let(:required_permission) { "subscriptions:view" }
   let(:query) do

@@ -4,6 +4,16 @@ require "rails_helper"
 
 RSpec.describe Resolvers::CustomerResolver do
   let(:required_permission) { "customers:view" }
+  let(:customer) do
+    create(:customer, billing_entity:, organization:, currency: "EUR", skip_invoice_custom_sections: false)
+  end
+  let(:organization) { membership.organization }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:applied_add_on) { create(:applied_add_on, customer:) }
+  let(:applied_tax) { create(:customer_applied_tax, customer:) }
+  let(:credit_note) { create(:credit_note, customer:) }
+  let(:credit_note_item) { create(:credit_note_item, credit_note:) }
+  let(:invoice_custom_sections) { create_list(:invoice_custom_section, 3, organization:) }
   let(:query) do
     <<~GQL
       query($customerId: ID, $externalId: ID) {
@@ -56,18 +66,11 @@ RSpec.describe Resolvers::CustomerResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:, timezone: "America/New_York") }
-  let(:customer) do
-    create(:customer, billing_entity:, organization:, currency: "EUR", skip_invoice_custom_sections: false)
-  end
-  let(:subscription) { create(:subscription, customer:) }
-  let(:applied_add_on) { create(:applied_add_on, customer:) }
-  let(:applied_tax) { create(:customer_applied_tax, customer:) }
-  let(:credit_note) { create(:credit_note, customer:) }
-  let(:credit_note_item) { create(:credit_note_item, credit_note:) }
-  let(:invoice_custom_sections) { create_list(:invoice_custom_section, 3, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:, timezone: "America/New_York") }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     create_list(:invoice, 2, customer:)

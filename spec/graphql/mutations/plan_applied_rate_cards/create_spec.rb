@@ -14,13 +14,7 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
   end
 
   let(:input) { {planId: plan.id, rateCardCode: rate_card.code, units: 10.0} }
-
-  let(:required_permission) { "plans:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreatePlanAppliedRateCardInput!) {
@@ -34,6 +28,13 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
       }
     GQL
   end
+
+  let(:required_permission) { "plans:update" }
+
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan, :product_catalog, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -14,13 +14,9 @@ RSpec.describe Mutations::RatePhases::Destroy do
   end
 
   let(:required_permission) { "plans:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
-
   let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3) }
   let!(:terminal) { create(:rate_phase, organization:, plan_rate_card:, position: 2, billing_interval_cycle_count: nil) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: DestroyRatePhaseInput!) {
@@ -30,6 +26,11 @@ RSpec.describe Mutations::RatePhases::Destroy do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

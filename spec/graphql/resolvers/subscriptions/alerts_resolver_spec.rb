@@ -3,15 +3,17 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Subscriptions::AlertsResolver do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let(:required_permission) { "subscriptions:view" }
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:subscription) { create(:subscription) }
   let(:alert) { create(:alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
   let(:alert_bm) { create(:billable_metric_current_usage_amount_alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
   let(:another_alert) { create(:alert, organization:) }
-
   let(:query) do
     <<~GQL
       query($subscriptionExternalId: String!) {
@@ -22,6 +24,8 @@ RSpec.describe Resolvers::Subscriptions::AlertsResolver do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     alert
