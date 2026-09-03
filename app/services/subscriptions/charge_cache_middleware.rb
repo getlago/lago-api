@@ -13,7 +13,11 @@ module Subscriptions
       @last_seen_at = last_seen_at || {}
     end
 
-    def call(charge_filter:)
+    # `cache` is the subscription-level decision, taken when this middleware is built. `bypass`
+    # is the per-filter one: a filter answered from the pre-aggregated usage buckets is already
+    # fresh, and caching it would put back the staleness the buckets remove.
+    def call(charge_filter:, bypass: false)
+      return yield if bypass
       return yield unless cache
 
       # Lazily invalidate the cache when a more recent event was ingested for this charge/filter.

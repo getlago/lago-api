@@ -38,6 +38,17 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
       end
     end
 
+    context "when the filter is bypassed" do
+      it "yields and returns the block result without touching the cache" do
+        fees = [build(:charge_fee, subscription:, charge:)]
+
+        result = middleware.call(charge_filter:, bypass: true) { fees }
+
+        expect(result).to eq(fees)
+        expect(Rails.cache.exist?(cache_key)).to be(false)
+      end
+    end
+
     context "when the cache is empty" do
       let(:fee) { build(:charge_fee, subscription:, charge:, amount_cents: 999) }
 

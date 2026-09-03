@@ -162,21 +162,29 @@ module Invoices
 
     # Prefetched once for the whole computation, so every charge of the plan is answered by a
     # single ClickHouse query. nil when this computation reads events.
-    #
-    # Callers opt in: the buckets always lag the stream by up to a bucket, which a value read
-    # again a minute later absorbs and a value written once does not. So a caller that
-    # persists what it computes — the daily usages, which also derive a diff from it — keeps
-    # reading events, and so does any caller nobody has considered yet.
-    #
-    # A lifetime window is refused even when asked for: it opens on `subscription.started_at`,
-    # which the prefetch cannot tell apart from a first billing period, and it spans
-    # everything the bucket retention has already dropped.
     def usage_buckets
       return @usage_buckets if defined?(@usage_buckets)
 
-      @usage_buckets = if use_usage_buckets && max_timestamp.nil? && usage_filters.filter_by_group.blank? && !usage_filters.full_usage
+      @usage_buckets = if prefetch_buckets?
         RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries:).usage_buckets
       end
+    end
+
+    # The buckets hold the running total of the current billing period, and callers opt in:
+    # they lag the stream by up to a bucket, which a value read again a minute later absorbs
+    # and a value written once does not. So a caller that persists what it computes keeps
+    # reading events, and so does any caller nobody has considered yet.
+    #
+    # Three reads are not that window. A lifetime one has to be refused here, as it opens on
+    # `subscription.started_at`, which nothing downstream can tell apart from a first billing
+    # period. A frozen one and a group-scoped one are refused again by the provider, per
+    # charge; refusing them here keeps the prefetch, and the coverage query behind it, off a
+    # computation that could never use them.
+    def prefetch_buckets?
+      use_usage_buckets &&
+        !usage_filters.full_usage &&
+        max_timestamp.nil? &&
+        usage_filters.filter_by_group.blank?
     end
 
     def boundaries
