@@ -1101,6 +1101,65 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
+    context "with several charges and several charge filters" do
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+
+      let(:second_metric) { create(:sum_billable_metric, organization:) }
+      let(:second_charge) { create(:standard_charge, plan:, billable_metric: second_metric, properties: {amount: "1"}) }
+
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "1"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "1"}) }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+        second_charge
+
+        [[charge, eu_filter.id], [charge, us_filter.id], [second_charge, ""]].each do |billed_charge, filter_id|
+          create(
+            :clickhouse_usage_bucket,
+            organization:, customer:, subscription:, billable_metric:,
+            charge: billed_charge,
+            charge_filter_id: filter_id,
+            bucket: window_start,
+            units: "3.0",
+            events_count: 3,
+            aggregation_type: "count_agg"
+          )
+        end
+      end
+
+      # Two reads that do not grow with the plan: the usage rows of every charge and filter, and
+      # the organization-level coverage probe, which is cached for five minutes. The one events
+      # read left is the pre-filtering, which resolves the used filters whatever answers them.
+      it "reads the buckets once and aggregates no event, whatever the shape of the plan" do
+        queries = capture_queries { usage_service.call }
+        bucket_reads = queries.select { |sql| sql.include?("usage_buckets_15m") }
+
+        expect(bucket_reads.count { |sql| sql.include?("sum(units)") }).to eq(1)
+        expect(bucket_reads.size).to eq(2)
+        expect(queries.count { |sql| sql.include?("events_enriched") }).to eq(1)
+      end
+    end
+
+    context "with a projected read" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          calculate_projected_usage: true,
+          use_usage_buckets: true
+        )
+      end
+
+      it "counts the events, which the projection re-aggregates from at presentation time" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+
     context "with a delegated charge next to the served one" do
       # unique_count cannot be recomposed from per-bucket distincts, so this charge reads
       # events while the count_agg one next to it is served by the same computation.
@@ -1134,6 +1193,17 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(cached_charges).to eq([delegated_charge])
       end
     end
+  end
+
+  def capture_queries
+    queries = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
+      queries << payload[:sql]
+    end
+    yield
+    queries
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber)
   end
 
   describe "the buckets and the events store agree", clickhouse: {clean_before: true} do

@@ -43,6 +43,25 @@ RSpec.describe BillingPeriodBoundaries do
     end
   end
 
+  describe "#aggregation_boundaries" do
+    it "returns the charges window the event stores read" do
+      expect(boundaries.aggregation_boundaries).to eq(
+        from_datetime: charges_from_datetime,
+        to_datetime: charges_to_datetime,
+        charges_duration: charges_duration,
+        max_timestamp: nil
+      )
+    end
+
+    context "when the window is frozen at a past timestamp" do
+      it "carries it, so a store cannot read past the frozen end" do
+        boundaries.max_timestamp = to_datetime - 1.day
+
+        expect(boundaries.aggregation_boundaries[:max_timestamp]).to eq(to_datetime - 1.day)
+      end
+    end
+  end
+
   describe ".from_fee" do
     let(:fee) { build(:charge_fee) }
 

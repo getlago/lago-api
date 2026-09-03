@@ -4634,7 +4634,7 @@ RSpec.describe Fees::ChargeService, :premium do
         context: :current_usage,
         apply_taxes: false,
         cache_middleware:,
-        usage_buckets:,
+        provider:,
         usage_filters:
       )
     end
@@ -4663,6 +4663,16 @@ RSpec.describe Fees::ChargeService, :premium do
       )
     end
 
+    let(:provider) do
+      Events::Stores::Provider.new(
+        organization:,
+        subscription:,
+        boundaries: boundaries.aggregation_boundaries,
+        usage_buckets:,
+        current_usage: true
+      )
+    end
+
     before do
       Rails.cache.clear
       allow(Subscriptions::ChargeCacheService).to receive(:call).and_call_original
@@ -4673,6 +4683,22 @@ RSpec.describe Fees::ChargeService, :premium do
       expect(result).to be_success
 
       expect(result.fees.first).to have_attributes(units: 12, events_count: 3, amount_cents: 24_000)
+    end
+
+    context "when the provider was built for another window" do
+      let(:provider) do
+        Events::Stores::Provider.new(
+          organization:,
+          subscription:,
+          boundaries: boundaries.aggregation_boundaries.merge(max_timestamp: 1.hour.ago),
+          usage_buckets:,
+          current_usage: true
+        )
+      end
+
+      it "refuses it, rather than billing the totals of a window it did not compute" do
+        expect { charge_subscription_service }.to raise_error(ArgumentError, /another subscription or window/)
+      end
     end
 
     it "bypasses the charge cache, whose staleness is what the buckets remove" do

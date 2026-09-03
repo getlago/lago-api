@@ -138,9 +138,6 @@ module Invoices
         last_seen_at: applied_filters
       )
 
-      applied_boundaries = boundaries
-      applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-
       Fees::ChargeService
         .call!(
           invoice:,
@@ -155,9 +152,31 @@ module Invoices
           skip_adjusted_fees: true,
           filtered_aggregations: applied_filters.keys,
           usage_filters:,
-          usage_buckets:
+          provider:
         )
         .fees
+    end
+
+    def applied_boundaries
+      return @applied_boundaries if defined?(@applied_boundaries)
+
+      @applied_boundaries = if max_timestamp
+        boundaries.dup.tap { it.max_timestamp = max_timestamp }
+      else
+        boundaries
+      end
+    end
+
+    # Built once for the whole computation: every charge of the plan is aggregated over the same
+    # window, so they can share the resolved store class and the prefetched buckets behind it.
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization:,
+        subscription:,
+        boundaries: applied_boundaries.aggregation_boundaries,
+        usage_buckets:,
+        current_usage: true
+      )
     end
 
     # Prefetched once for the whole computation, so every charge of the plan is answered by a
@@ -166,7 +185,7 @@ module Invoices
       return @usage_buckets if defined?(@usage_buckets)
 
       @usage_buckets = if prefetch_buckets?
-        RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries:).usage_buckets
+        RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries: applied_boundaries).usage_buckets
       end
     end
 
@@ -180,9 +199,14 @@ module Invoices
     # period. A frozen one and a group-scoped one are refused again by the provider, per
     # charge; refusing them here keeps the prefetch, and the coverage query behind it, off a
     # computation that could never use them.
+    #
+    # A projected read is refused too: Fees::ProjectionService re-aggregates from the events at
+    # presentation time, so serving the units from the buckets would render a projection below
+    # the usage it projects.
     def prefetch_buckets?
       use_usage_buckets &&
         !usage_filters.full_usage &&
+        !calculate_projected_usage &&
         max_timestamp.nil? &&
         usage_filters.filter_by_group.blank?
     end
