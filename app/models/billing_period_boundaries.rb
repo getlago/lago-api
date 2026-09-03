@@ -57,6 +57,17 @@ class BillingPeriodBoundaries
     @max_timestamp = max_timestamp
   end
 
+  # The window the event stores and the aggregations read. It is the charges period, which a
+  # plan billed in advance moves ahead of the subscription one.
+  def aggregation_boundaries
+    {
+      from_datetime: charges_from_datetime,
+      to_datetime: charges_to_datetime,
+      charges_duration:,
+      max_timestamp:
+    }
+  end
+
   def to_h
     h = {
       "from_datetime" => from_datetime,

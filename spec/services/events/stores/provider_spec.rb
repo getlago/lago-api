@@ -56,6 +56,37 @@ RSpec.describe Events::Stores::Provider do
     end
   end
 
+  describe "#scoped_to?" do
+    it "is true for the subscription and window it was built for" do
+      expect(provider.scoped_to?(subscription:, boundaries: boundaries.dup)).to be(true)
+    end
+
+    it "is false for another subscription" do
+      other = create(:subscription, organization:)
+
+      expect(provider.scoped_to?(subscription: other, boundaries:)).to be(false)
+    end
+
+    it "is false for another window" do
+      other = boundaries.merge(max_timestamp: 1.hour.ago)
+
+      expect(provider.scoped_to?(subscription:, boundaries: other)).to be(false)
+    end
+  end
+
+  describe "#scoped_to!" do
+    it "returns nothing when the scope matches" do
+      expect(provider.scoped_to!(subscription:, boundaries:)).to be_nil
+    end
+
+    it "raises when the window differs, rather than answering for the wrong one" do
+      other = boundaries.merge(to_datetime: 1.day.from_now)
+
+      expect { provider.scoped_to!(subscription:, boundaries: other) }
+        .to raise_error(ArgumentError, /scoped to another subscription or window/)
+    end
+  end
+
   describe "#usage_buckets" do
     it "is nil when the computation was built without buckets" do
       expect(provider.usage_buckets).to be_nil

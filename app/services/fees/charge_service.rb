@@ -25,7 +25,7 @@ module Fees
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE,
       skip_adjusted_fees: false,
-      usage_buckets: nil,
+      provider: nil,
       plan: nil,
       customer: nil
     )
@@ -47,7 +47,11 @@ module Fees
       @filtered_aggregations = filtered_aggregations
       @usage_filters = usage_filters
       @skip_adjusted_fees = skip_adjusted_fees
-      @usage_buckets = usage_buckets
+
+      # A computation running the whole plan hands the same provider to every charge. Refuse one
+      # built elsewhere: its stores, and its buckets, answer for another subscription or window.
+      provider&.scoped_to!(subscription:, boundaries: aggregation_boundaries)
+      @provider = provider
 
       @plan = plan
       @customer = customer
@@ -88,8 +92,6 @@ module Fees
     end
 
     private
-
-    attr_reader :usage_buckets
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
       :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :usage_filters
@@ -475,23 +477,18 @@ module Fees
       )
     end
 
+    # Built here when the caller runs a single charge, so this service keeps working on its own.
     def provider
       @provider ||= Events::Stores::Provider.new(
         organization: billable_metric.organization,
         subscription:,
         boundaries: aggregation_boundaries,
-        usage_buckets:,
         current_usage:
       )
     end
 
     def aggregation_boundaries
-      @aggregation_boundaries ||= {
-        from_datetime: boundaries.charges_from_datetime,
-        to_datetime: boundaries.charges_to_datetime,
-        charges_duration: boundaries.charges_duration,
-        max_timestamp: boundaries.max_timestamp
-      }
+      @aggregation_boundaries ||= boundaries.aggregation_boundaries
     end
 
     def persist_recurring_value(aggregation_results, charge_filter, breakdowns_by_group)

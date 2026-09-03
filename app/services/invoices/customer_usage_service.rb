@@ -138,9 +138,6 @@ module Invoices
         last_seen_at: applied_filters
       )
 
-      applied_boundaries = boundaries
-      applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-
       Fees::ChargeService
         .call!(
           invoice:,
@@ -155,9 +152,31 @@ module Invoices
           skip_adjusted_fees: true,
           filtered_aggregations: applied_filters.keys,
           usage_filters:,
-          usage_buckets:
+          provider:
         )
         .fees
+    end
+
+    def applied_boundaries
+      return @applied_boundaries if defined?(@applied_boundaries)
+
+      @applied_boundaries = if max_timestamp
+        boundaries.dup.tap { it.max_timestamp = max_timestamp }
+      else
+        boundaries
+      end
+    end
+
+    # Built once for the whole computation: every charge of the plan is aggregated over the same
+    # window, so they can share the resolved store class and the prefetched buckets behind it.
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization:,
+        subscription:,
+        boundaries: applied_boundaries.aggregation_boundaries,
+        usage_buckets:,
+        current_usage: true
+      )
     end
 
     # Prefetched once for the whole computation, so every charge of the plan is answered by a
@@ -166,7 +185,7 @@ module Invoices
       return @usage_buckets if defined?(@usage_buckets)
 
       @usage_buckets = if prefetch_buckets?
-        RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries:).usage_buckets
+        RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries: applied_boundaries).usage_buckets
       end
     end
 

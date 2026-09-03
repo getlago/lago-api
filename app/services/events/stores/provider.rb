@@ -25,6 +25,12 @@ module Events
         self.subscription == subscription && self.boundaries == boundaries
       end
 
+      def scoped_to!(subscription:, boundaries:)
+        return if scoped_to?(subscription:, boundaries:)
+
+        raise ArgumentError, "event store provider is scoped to another subscription or window"
+      end
+
       # NOTE: never share the instance between charges, the aggregators write their own
       #       state (aggregation_property, numeric_property, use_from_boundary) into it.
       def store_for(charge:, filters: {})

@@ -7,10 +7,7 @@ module BillableMetrics
     #       the others get a degenerate one, scoped to this single aggregation.
     def self.new_instance(charge:, current_usage: false, provider: nil, **attributes)
       if provider
-        unless provider.scoped_to?(subscription: attributes[:subscription], boundaries: attributes[:boundaries])
-          raise ArgumentError,
-            "event store provider runs on another subscription or window than this aggregation"
-        end
+        provider.scoped_to!(subscription: attributes[:subscription], boundaries: attributes[:boundaries])
       else
         provider = Events::Stores::Provider.new(
           organization: charge.billable_metric.organization,
