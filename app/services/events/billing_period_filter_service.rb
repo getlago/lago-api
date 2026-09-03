@@ -4,8 +4,8 @@ module Events
   class BillingPeriodFilterService < BaseService
     Result = BaseResult[:filter_targets]
 
-    def self.for_charges(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
-      new(
+    def self.for_charges!(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
+      call!(
         resolver: BillingPeriodFilters::ChargesResolver.new(
           subscription:,
           boundaries:,

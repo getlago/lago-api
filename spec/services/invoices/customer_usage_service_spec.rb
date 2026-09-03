@@ -824,7 +824,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         ].join("/")
       end
 
-      before { allow(Events::BillingPeriodFilterService).to receive(:for_charges).and_call_original }
+      before { allow(Events::BillingPeriodFilterService).to receive(:for_charges!).and_call_original }
 
       context "when the usage is not filtered" do
         subject(:usage_service) do
@@ -833,7 +833,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         it "caches the charge and requests the ingestion timestamps" do
           expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
-          expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(codes: nil, with_last_seen_at: true))
         end
       end
@@ -851,7 +851,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         it "restricts the lookup to the filtered codes and keeps the timestamps" do
           expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
-          expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(codes: [billable_metric.code], with_last_seen_at: true))
         end
       end
@@ -863,7 +863,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         it "skips both the cache and the ingestion timestamps" do
           expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
-          expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(with_last_seen_at: false))
         end
       end
@@ -894,7 +894,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         it "skips both the cache and the ingestion timestamps" do
           expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
-          expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(with_last_seen_at: false))
         end
       end
@@ -924,7 +924,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         it "skips both the cache and the ingestion timestamps" do
           expect { usage_service.call }.not_to change { Rails.cache.exist?(full_usage_cache_key) }.from(false)
 
-          expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(with_last_seen_at: false))
         end
 
@@ -943,7 +943,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
               .to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
 
             expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
-            expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
               .with(hash_including(with_last_seen_at: true))
           end
         end
@@ -1003,7 +1003,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           expect { usage_service.call }.not_to change { Rails.cache.exist?(full_usage_cache_key) }.from(false)
 
           expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
-          expect(Events::BillingPeriodFilterService).to have_received(:for_charges)
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(with_last_seen_at: false))
         end
       end

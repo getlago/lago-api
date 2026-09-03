@@ -163,9 +163,9 @@ module Invoices
     end
 
     def event_filters(subscription, boundaries)
-      Events::BillingPeriodFilterService.for_charges(
+      Events::BillingPeriodFilterService.for_charges!(
         subscription:, boundaries:, with_last_seen_at: false
-      ).call!
+      )
     end
   end
 end
