@@ -13,7 +13,8 @@ module Invoices
       max_timestamp: nil,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      usage_filters: UsageFilters::NONE
+      usage_filters: UsageFilters::NONE,
+      use_usage_buckets: false
     )
       super
 
@@ -25,24 +26,25 @@ module Invoices
       @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
       @usage_filters = usage_filters
+      @use_usage_buckets = use_usage_buckets
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
-      calculate_projected_usage: false, usage_filters: UsageFilters::NONE)
+      calculate_projected_usage: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
 
-    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false)
+    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false, use_usage_buckets: false)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -63,7 +65,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
-    attr_reader :usage_filters
+    attr_reader :usage_filters, :use_usage_buckets
 
     delegate :plan, to: :subscription
     delegate :billing_entity, to: :customer
@@ -159,13 +161,20 @@ module Invoices
     end
 
     # Prefetched once for the whole computation, so every charge of the plan is answered by a
-    # single ClickHouse query. nil when this computation reads events, which is also the case
-    # for a group-scoped read and for the frozen window of the daily usage backfill: neither
-    # matches what the buckets hold.
+    # single ClickHouse query. nil when this computation reads events.
+    #
+    # Callers opt in: the buckets always lag the stream by up to a bucket, which a value read
+    # again a minute later absorbs and a value written once does not. So a caller that
+    # persists what it computes — the daily usages, which also derive a diff from it — keeps
+    # reading events, and so does any caller nobody has considered yet.
+    #
+    # A lifetime window is refused even when asked for: it opens on `subscription.started_at`,
+    # which the prefetch cannot tell apart from a first billing period, and it spans
+    # everything the bucket retention has already dropped.
     def usage_buckets
       return @usage_buckets if defined?(@usage_buckets)
 
-      @usage_buckets = if max_timestamp.nil? && usage_filters.filter_by_group.blank?
+      @usage_buckets = if use_usage_buckets && max_timestamp.nil? && usage_filters.filter_by_group.blank? && !usage_filters.full_usage
         RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries:).usage_buckets
       end
     end

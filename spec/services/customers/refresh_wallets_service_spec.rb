@@ -112,7 +112,8 @@ RSpec.describe Customers::RefreshWalletsService do
           expect(Invoices::CustomerUsageService).to have_received(:call!).with(
             customer:,
             subscription:,
-            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+            use_usage_buckets: true
           )
         end
       end

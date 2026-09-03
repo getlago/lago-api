@@ -76,7 +76,8 @@ module UsageMonitoring
         customer: subscription.customer,
         subscription:,
         apply_taxes: false, # Never use taxes for alerting
-        with_cache: true
+        with_cache: true,
+        use_usage_buckets: true
       ).usage
     end
 

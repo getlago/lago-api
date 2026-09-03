@@ -20,7 +20,8 @@ module Resolvers
           organization_id: current_organization.id,
           customer_id:,
           subscription_id:,
-          apply_taxes: false
+          apply_taxes: false,
+          use_usage_buckets: true
         ).call
 
         result.success? ? result.usage : result_error(result)
