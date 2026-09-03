@@ -190,6 +190,8 @@ To create a webhook:
 - `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
 - `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
+- `LAGO_SMTP_AUTHENTICATION` — SMTP authentication method. Defaults to `login`; set it explicitly to an empty value only for a trusted self-hosted relay that does not require authentication. Example: `LAGO_SMTP_AUTHENTICATION=""`
+- `LAGO_SMTP_ENABLE_STARTTLS_AUTO` — whether SMTP automatically uses STARTTLS. Defaults to true; set it to false only for a trusted self-hosted relay without TLS. Example: `LAGO_SMTP_ENABLE_STARTTLS_AUTO=false`
 - Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
 
 # Service
