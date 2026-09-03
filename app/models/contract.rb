@@ -38,9 +38,6 @@ class Contract < ApplicationRecord
   # and canceled siblings accumulate as history under the same external id.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
-  # Resolve an external id to the live contract the write surfaces address —
-  # newest first for determinism, never a terminated/canceled sibling that a
-  # bare find_by could return in any order.
   def self.live_by_external_id(external_id)
     live.order(started_at: :desc).find_by(external_id:)
   end

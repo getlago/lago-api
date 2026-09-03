@@ -21,8 +21,6 @@ module ContractRateCards
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
 
-      # The column is a date and NOT NULL: a malformed or explicit-null value
-      # would cast to nil and crash on save instead of failing cleanly.
       if params.key?(:billing_anchor_date) && !Utils::Datetime.valid_format?(params[:billing_anchor_date].to_s)
         return result.single_validation_failure!(field: :billing_anchor_date, error_code: "value_is_invalid")
       end
