@@ -77,6 +77,10 @@ RSpec.describe Resolvers::InvoiceResolver do
             itemType
             itemCode
             itemName
+            properties {
+              fromDatetime
+              toDatetime
+            }
             creditableAmountCents
             presentationBreakdowns { presentationBy units }
             charge {
@@ -356,12 +360,15 @@ RSpec.describe Resolvers::InvoiceResolver do
   context "with an add on invoice" do
     let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
     let(:add_on) { create(:add_on, organization:) }
-    let(:applied_add_on) { create(:applied_add_on, add_on:, customer:) }
     let(:fee) do
       create(
-        :add_on_fee,
+        :one_off_fee,
         invoice:,
-        applied_add_on:,
+        add_on:,
+        properties: {
+          "from_datetime" => "2026-08-05T00:00:00.000-07:00",
+          "to_datetime" => "2026-08-05T23:59:59.999-07:00"
+        },
         presentation_breakdowns: [build(:presentation_breakdown, organization:)]
       )
     end
@@ -390,7 +397,48 @@ RSpec.describe Resolvers::InvoiceResolver do
         "itemCode" => add_on.code,
         "itemName" => add_on.name
       )
+      expect(add_on_fee["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T00:00:00+00:00",
+        "toDatetime" => "2026-08-05T00:00:00+00:00"
+      )
       expect(add_on_fee["presentationBreakdowns"]).to eq([])
+    end
+
+    it "preserves add-on calendar dates only below the single-invoice field" do
+      mixed_query = <<~GQL
+        query($id: ID!) {
+          invoice(id: $id) {
+            fees { id properties { fromDatetime toDatetime } }
+          }
+          invoices(limit: 5) {
+            collection {
+              id
+              fees { id properties { fromDatetime toDatetime } }
+            }
+          }
+        }
+      GQL
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mixed_query,
+        variables: {id: invoice.id}
+      )
+
+      detail_fee = result.dig("data", "invoice", "fees").find { |item| item["id"] == fee.id }
+      collection_invoice = result.dig("data", "invoices", "collection").find { |item| item["id"] == invoice.id }
+      collection_fee = collection_invoice["fees"].find { |item| item["id"] == fee.id }
+
+      expect(detail_fee["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T00:00:00+00:00",
+        "toDatetime" => "2026-08-05T00:00:00+00:00"
+      )
+      expect(collection_fee["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T00:00:00-07:00",
+        "toDatetime" => "2026-08-05T23:59:59-07:00"
+      )
     end
 
     context "with a deleted add_on" do
