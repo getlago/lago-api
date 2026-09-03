@@ -211,7 +211,7 @@ RSpec.describe DailyUsages::ComputeService do
             .and_raise(ActiveRecord::RecordInvalid.new(DailyUsage.new))
         end
 
-        it "lets the error bubble up so the job can retry" do
+        it "does not swallow the error into a failed result" do
           travel_to(timestamp) do
             expect { compute_service.call }.to raise_error(ActiveRecord::RecordInvalid)
           end

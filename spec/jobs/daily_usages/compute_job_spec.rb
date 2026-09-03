@@ -23,7 +23,7 @@ RSpec.describe DailyUsages::ComputeJob do
     end
   end
 
-  describe "retries" do
+  describe "uniqueness" do
     let(:database_error) { ActiveRecord::StatementInvalid.new("PG::ConnectionBad") }
 
     around do |example|
@@ -36,25 +36,44 @@ RSpec.describe DailyUsages::ComputeJob do
 
     def enqueue_and_deserialize
       described_class.perform_later(subscription, timestamp:)
-      job = ActiveJob::Base.deserialize(enqueued_jobs.last)
-      job.send(:deserialize_arguments_if_needed)
-      job
+      ActiveJob::Base.deserialize(enqueued_jobs.last)
     end
 
-    it "re-enqueues the job when the service raises an ActiveRecord error" do
+    it "lets a retry be enqueued from inside perform" do
       allow(DailyUsages::ComputeService).to receive(:call).and_raise(database_error)
       job = enqueue_and_deserialize
 
       expect { job.perform_now }.to have_enqueued_job(described_class)
     end
 
-    it "does not hold the uniqueness lock past a dying execution" do
+    it "does not hold the enqueue lock past a dying execution" do
       allow(DailyUsages::ComputeService).to receive(:call).and_raise("worker killed")
       job = enqueue_and_deserialize
       expect { job.perform_now }.to raise_error("worker killed")
 
       expect { described_class.perform_later(subscription, timestamp:) }
         .to have_enqueued_job(described_class)
+    end
+
+    it "does not run a concurrent job for the same subscription and date" do
+      overlapping_run = nil
+      overlapped = false
+
+      # The enqueue lock is released before perform, so a later tick does get enqueued while
+      # this job runs: only the runtime lock keeps the two executions from overlapping.
+      allow(DailyUsages::ComputeService).to receive(:call) do
+        unless overlapped
+          overlapped = true
+          overlapping_run = enqueue_and_deserialize.perform_now
+        end
+
+        result
+      end
+
+      enqueue_and_deserialize.perform_now
+
+      expect(overlapping_run).to be(false)
+      expect(DailyUsages::ComputeService).to have_received(:call).once
     end
   end
 
