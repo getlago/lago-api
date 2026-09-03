@@ -26,6 +26,7 @@ module Wallets
     # until the buckets catch up to it.
     BUCKET_WAIT_TIMEOUT = 5.seconds
     BUCKET_WAIT_INTERVAL = 0.1
+    STALE_WATERMARK_CUTOFF = 30.seconds
 
     def initialize(organization_id:, customer_id:, wallet_codes: [], expected_ingested_at: {})
       @organization_id = organization_id
@@ -65,7 +66,9 @@ module Wallets
     attr_reader :organization_id, :customer_id, :wallet_codes, :expected_ingested_at
 
     def wait_for_buckets
-      pending = expected_ingested_at.dup
+      pending = expected_ingested_at
+        .reject { |_sub, ms| ms.to_i < ((Time.current - STALE_WATERMARK_CUTOFF).to_f * 1000).to_i }
+        .dup
       return if pending.empty?
 
       deadline = Time.current + BUCKET_WAIT_TIMEOUT
