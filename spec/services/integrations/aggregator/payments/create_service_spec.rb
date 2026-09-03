@@ -105,6 +105,23 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       end
     end
 
+    context "when the lock is held by another sync of the same payment" do
+      let(:response) { instance_double(Net::HTTPOK) }
+
+      before do
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(Integrations::Aggregator::Payments::LockService).to receive(:call)
+          .and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock accounting-payment-sync-#{payment.id}")
+      end
+
+      it "returns result without making an API call" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
     context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
 

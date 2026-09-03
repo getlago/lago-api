@@ -42,7 +42,10 @@ module Invoices
         payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
-        deliver_webhook if payable_payment_status.to_sym == :succeeded
+        if payable_payment_status.to_sym == :succeeded
+          deliver_webhook
+          Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+        end
 
         unless authentication_retry_pending?(payment, status)
           update_invoice_payment_status(
