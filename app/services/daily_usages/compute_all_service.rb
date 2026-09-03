@@ -14,19 +14,11 @@ module DailyUsages
 
     def call
       Organization.with_revenue_analytics_support.find_each do |organization|
-        ids = Set.new
-
-        # Each leg runs its (cheap, indexed) selection query ONCE via pluck. We never iterate the
-        # heavy relation with find_each, which would re-execute the whole query per 1000-row batch.
-        ids.merge(event_subscriptions(organization).pluck("subscriptions.id"))
-        ids.merge(time_dependent_subscriptions(organization).pluck("subscriptions.id"))
-        ids.merge(recurring_rollover_subscriptions(organization).pluck("subscriptions.id"))
-
-        # Drop subscriptions already computed for yesterday. Subtracting here runs the dedup query
-        # once per organization, instead of three times (once per leg) if it lived in base_scope.
-        ids.subtract(already_computed_subscription_ids(organization))
-
-        enqueue(ids)
+        schedule_organization(organization)
+      rescue => e
+        # Nothing recomputes an older day and the clock job is not retried, so letting one
+        # organization's failure abort the run would permanently lose the day for all the others.
+        report_failure(organization, e)
       end
 
       result
@@ -35,6 +27,32 @@ module DailyUsages
     private
 
     attr_reader :timestamp
+
+    def schedule_organization(organization)
+      ids = Set.new
+
+      # Each leg runs its (cheap, indexed) selection query ONCE via pluck. We never iterate the
+      # heavy relation with find_each, which would re-execute the whole query per 1000-row batch.
+      ids.merge(event_subscriptions(organization).pluck("subscriptions.id"))
+      ids.merge(time_dependent_subscriptions(organization).pluck("subscriptions.id"))
+      ids.merge(recurring_rollover_subscriptions(organization).pluck("subscriptions.id"))
+
+      # Drop subscriptions already computed for yesterday. Subtracting here runs the dedup query
+      # once per organization, instead of three times (once per leg) if it lived in base_scope.
+      ids.subtract(already_computed_subscription_ids(organization))
+
+      enqueue(ids)
+    end
+
+    def report_failure(organization, error)
+      context = {organization_id: organization.id, timestamp: timestamp.iso8601}
+
+      Rails.logger.warn(
+        "Daily usage computation skipped for an organization: #{error.class} #{error.message} " \
+        "#{context.map { |k, v| "#{k}=#{v}" }.join(" ")}"
+      )
+      Sentry.capture_exception(error, extra: context)
+    end
 
     # Recompute every day for subscriptions that received an event recently: their usage may have
     # changed. Restricted to customers entering a new day in their timezone.

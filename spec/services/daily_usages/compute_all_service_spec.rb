@@ -301,5 +301,48 @@ RSpec.describe DailyUsages::ComputeAllService do
         expect(DailyUsages::ComputeJob).not_to have_been_enqueued
       end
     end
+
+    context "when the selection fails for one organization" do
+      let(:other_organization) { create(:organization, premium_integrations:) }
+      let(:other_customer) { create(:customer, organization: other_organization) }
+      let(:error) { ActiveRecord::StatementTimeout.new("canceling statement due to statement timeout") }
+
+      let(:other_subscription) do
+        create(:subscription, customer: other_customer, last_received_event_on: timestamp.to_date - 1.day)
+      end
+
+      before do
+        other_subscription
+        allow(Sentry).to receive(:capture_exception)
+        # rubocop:disable RSpec/SubjectStub -- simulate a statement timeout on one organization's selection query
+        allow(compute_service).to receive(:event_subscriptions).and_wrap_original do |original, selected|
+          if selected.id == organization.id
+            raise error
+          else
+            original.call(selected)
+          end
+        end
+        # rubocop:enable RSpec/SubjectStub
+      end
+
+      it "still enqueues the jobs of the other organizations" do
+        expect(compute_service.call).to be_success
+        expect(DailyUsages::ComputeJob).to have_been_enqueued.with(other_subscription, timestamp:)
+      end
+
+      it "does not enqueue the jobs of the failing organization" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscription, timestamp:)
+        end
+      end
+
+      it "reports the error" do
+        compute_service.call
+
+        expect(Sentry).to have_received(:capture_exception)
+          .with(error, extra: {organization_id: organization.id, timestamp: timestamp.iso8601})
+      end
+    end
   end
 end
