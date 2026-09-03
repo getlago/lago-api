@@ -107,14 +107,14 @@ RSpec.describe Admin::RollbackService do
           action: :toggle_on,
           organization: organization,
           feature_type: :feature_flag,
-          feature_key: "multi_currency",
+          feature_key: "order_forms",
           before_value: false,
           after_value: true,
           reason: "Enabling flag for testing purposes"
         )
       end
 
-      before { organization.enable_feature_flag!("multi_currency") }
+      before { organization.enable_feature_flag!("order_forms") }
 
       it "disables the feature flag and creates a rollback audit log" do
         allow(organization).to receive(:disable_feature_flag!).and_call_original
@@ -122,12 +122,12 @@ RSpec.describe Admin::RollbackService do
         result = service.call
 
         expect(result).to be_success
-        expect(organization).to have_received(:disable_feature_flag!).with("multi_currency")
+        expect(organization).to have_received(:disable_feature_flag!).with("order_forms")
 
         rollback_log = result.audit_log
         expect(rollback_log.action).to eq("rollback")
         expect(rollback_log.feature_type).to eq("feature_flag")
-        expect(rollback_log.feature_key).to eq("multi_currency")
+        expect(rollback_log.feature_key).to eq("order_forms")
         expect(rollback_log.after_value).to be(false)
         expect(rollback_log.rollback_of).to eq(original_log)
       end
