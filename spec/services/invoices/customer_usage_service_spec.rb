@@ -1011,6 +1011,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
   end
 
   describe "with the usage buckets", clickhouse: {clean_before: true} do
+    subject(:usage_service) do
+      described_class.new(customer:, subscription:, apply_taxes: false, use_usage_buckets: true)
+    end
+
     include_context "with realtime usage availability"
 
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
@@ -1056,6 +1060,41 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       before { organization.disable_feature_flag!(:realtime_usage) }
 
       it "counts the events" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+
+    context "when the caller did not ask for the buckets" do
+      subject(:usage_service) { described_class.new(customer:, subscription:, apply_taxes: false) }
+
+      it "counts the events, as a caller nobody considered has to keep today's behaviour" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+
+    context "with a lifetime window", :premium do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true),
+          use_usage_buckets: true
+        )
+      end
+
+      # Started on the earliest bucket, so nothing but the lifetime window itself keeps this
+      # read off the buckets: the alignment and the coverage guards both pass.
+      let(:subscription) { create(:subscription, plan:, customer:, started_at: window_start) }
+
+      before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
+
+      it "counts the events, as the window reaches past what the buckets retain" do
         usage = usage_service.call.usage
 
         expect(usage.fees.first).to have_attributes(units: 2)

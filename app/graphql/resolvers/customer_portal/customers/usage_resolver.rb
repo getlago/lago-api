@@ -17,7 +17,8 @@ module Resolvers
             organization_id: context[:customer_portal_user].organization_id,
             customer_id: context[:customer_portal_user].id,
             subscription_id:,
-            apply_taxes: false
+            apply_taxes: false,
+            use_usage_buckets: true
           ).call
 
           result.success? ? result.usage : result_error(result)
