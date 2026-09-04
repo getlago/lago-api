@@ -13,7 +13,7 @@ class CatalogPlan < ApplicationRecord
   belongs_to :organization
 
   validates :name, presence: true
-  validates :code, presence: true
+  validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
   validates :currency, inclusion: {in: currency_list}
 
   default_scope -> { kept }

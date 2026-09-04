@@ -20,6 +20,30 @@ RSpec.describe CatalogPlan do
       expect(build(:catalog_plan, currency: "EUR")).to be_valid
       expect(build(:catalog_plan, currency: "INVALID")).not_to be_valid
     end
+
+    describe "code uniqueness" do
+      let(:organization) { create(:organization) }
+
+      it "rejects a duplicate code within the organization" do
+        create(:catalog_plan, organization:, code: "dup")
+        duplicate = build(:catalog_plan, organization:, code: "dup")
+
+        expect(duplicate).not_to be_valid
+        expect(duplicate.errors.where(:code, :taken)).to be_present
+      end
+
+      it "allows the same code in another organization" do
+        create(:catalog_plan, organization:, code: "shared")
+
+        expect(build(:catalog_plan, organization: create(:organization), code: "shared")).to be_valid
+      end
+
+      it "frees the code once the holder is discarded" do
+        create(:catalog_plan, organization:, code: "dup").discard!
+
+        expect(build(:catalog_plan, organization:, code: "dup")).to be_valid
+      end
+    end
   end
 
   describe "soft deletion" do
@@ -31,14 +55,12 @@ RSpec.describe CatalogPlan do
       expect(described_class.with_discarded).to include(catalog_plan)
     end
 
-    it "enforces code uniqueness per organization only on kept rows" do
+    it "enforces code uniqueness among kept rows at the database level" do
       organization = create(:organization)
-      first = create(:catalog_plan, organization:, code: "dup")
+      create(:catalog_plan, organization:, code: "dup")
+      duplicate = build(:catalog_plan, organization:, code: "dup")
 
-      expect { create(:catalog_plan, organization:, code: "dup") }.to raise_error(ActiveRecord::RecordNotUnique)
-
-      first.discard!
-      expect { create(:catalog_plan, organization:, code: "dup") }.not_to raise_error
+      expect { duplicate.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
     end
   end
 end
