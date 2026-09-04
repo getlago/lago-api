@@ -17,6 +17,7 @@ RSpec.describe CatalogPlan do
     it do
       expect(catalog_plan).to validate_presence_of(:name)
       expect(catalog_plan).to validate_presence_of(:code)
+      expect(catalog_plan).to validate_presence_of(:currency)
       expect(build(:catalog_plan, currency: "EUR")).to be_valid
       expect(build(:catalog_plan, currency: "INVALID")).not_to be_valid
     end
