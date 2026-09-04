@@ -257,8 +257,8 @@ RSpec.describe RateCards::UpdateService do
       end
     end
 
-    context "when the rate card is attached to a subscription" do
-      before { create(:subscription_rate_card, organization:, rate_card:) }
+    context "when the rate card is attached to a contract" do
+      before { create(:contract_rate_card, organization:, rate_card:) }
 
       it "still updates the taxes" do
         expect(result).to be_success
