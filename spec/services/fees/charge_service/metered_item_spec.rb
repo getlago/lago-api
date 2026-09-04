@@ -28,6 +28,51 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
   end
 
+  describe ".from_billing_segment" do
+    let(:billable_metric) do
+      build(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount", recurring: true)
+    end
+    let(:product) { build(:product, organization:, billable_metric:) }
+    let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: true) }
+    let(:contract_rate_card) { build(:contract_rate_card, organization:, rate_card:) }
+    let(:rate_card_rate) do
+      build(:rate_card_rate, organization:, rate_card:, rate_model: "standard", rate_properties: {"amount" => "42"})
+    end
+    let(:billing_segment) do
+      build(
+        :billing_segment,
+        organization:,
+        contract: contract_rate_card.contract,
+        customer: contract_rate_card.contract.customer,
+        contract_rate_card:,
+        rate_card_rate:,
+        currency: "USD",
+        rate_properties: {"amount" => "24"},
+        proration_ratio: 0.5,
+        billing_at: Time.zone.parse("2026-10-01"),
+        cycle_started_at: Time.zone.parse("2026-09-01"),
+        started_at: Time.zone.parse("2026-09-01"),
+        ended_at: Time.zone.parse("2026-09-30").end_of_day
+      )
+    end
+
+    it "builds a metered item backed by a billing segment source" do
+      metered_item = described_class.from_billing_segment(billing_segment)
+
+      expect(metered_item.billing_segment).to eq(billing_segment)
+      expect(metered_item.billable_metric).to eq(billable_metric)
+      expect(metered_item.properties).to eq("amount" => "24")
+      expect(metered_item.period_ratio).to eq(0.5)
+      expect(metered_item.currency).to eq(Money::Currency.new("USD"))
+      expect(metered_item.boundaries).to have_attributes(
+        charges_from_datetime: billing_segment.started_at,
+        charges_to_datetime: billing_segment.ended_at,
+        charges_duration: 30,
+        timestamp: billing_segment.billing_at
+      )
+    end
+  end
+
   describe "delegations" do
     it "exposes charge source behavior" do
       expect(metered_item.organization_id).to eq(charge.organization_id)

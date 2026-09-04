@@ -34,6 +34,20 @@ module ChargeModels
       )
     end
 
+    def self.from_billing_segment(billing_segment)
+      unless billing_segment.is_a?(BillingSegment)
+        raise NotImplementedError, "Chargeable: #{billing_segment.class.name} is not implemented"
+      end
+
+      new(
+        charge_model: billing_segment.rate.rate_model,
+        properties: billing_segment.rate_properties,
+        prorated: billing_segment.contract_rate_card.rate_card.proration?,
+        accepts_target_wallet: billing_segment.contract_rate_card.rate_card.wallet_targetable?,
+        currency: Money::Currency.new(billing_segment.currency)
+      )
+    end
+
     def self.from_fixed_charge(fixed_charge)
       unless fixed_charge.is_a?(FixedCharge)
         raise NotImplementedError, "Chargeable: #{fixed_charge.class.name} is not implemented"
