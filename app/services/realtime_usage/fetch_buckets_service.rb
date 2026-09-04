@@ -8,7 +8,6 @@ module RealtimeUsage
     Result = BaseResult[:usage_buckets]
 
     BUCKET_SIZE = 15.minutes
-    COVERAGE_CACHE_TTL = 5.minutes
 
     def initialize(subscription:, boundaries:)
       @subscription = subscription
@@ -21,7 +20,6 @@ module RealtimeUsage
       return result unless RealtimeUsage.enabled?(organization)
       return result if RealtimeUsage.deduplicated?(organization)
       return result if window.nil?
-      return result unless covered?
 
       result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)
       result
@@ -95,8 +93,9 @@ module RealtimeUsage
 
     # A window opening inside a bucket would count the whole bucket, except on the very first
     # period: the pipeline attributes an event to a subscription only within its lifetime, so
-    # nothing before `started_at` lands in that bucket. A truncated window (daily usage
-    # backfill) ends mid-bucket and has the same problem at the other end.
+    # nothing before `started_at` lands in that bucket.
+    #
+    # `max_timestamp` marks the daily usage backfill, which is kept off this path today.
     def servable_window?
       return false if from.blank? || to.blank?
       return false if boundaries.max_timestamp.present?
@@ -110,30 +109,6 @@ module RealtimeUsage
 
     def floor_to_bucket(time)
       Time.zone.at(time.to_i - (time.to_i % BUCKET_SIZE.to_i))
-    end
-
-    # Rows exist ⇒ trust them undercounts the first period of a freshly onboarded
-    # organization, which is invisible: no error, only a lower number.
-    def covered?
-      coverage_start.present? && window.first >= coverage_start
-    end
-
-    def coverage_start
-      return @coverage_start if defined?(@coverage_start)
-
-      cached = Rails.cache.fetch("realtime-usage/coverage/#{organization.id}", expires_in: COVERAGE_CACHE_TTL) do
-        earliest_bucket&.to_time&.iso8601(3)
-      end
-
-      @coverage_start = cached && Time.zone.parse(cached)
-    end
-
-    # ClickHouse returns the type default rather than NULL for an aggregate over no row, so an
-    # organization with no bucket at all reads as the epoch.
-    def earliest_bucket
-      earliest = Clickhouse::UsageBucket.where(organization_id: organization.id).minimum(:bucket)
-
-      earliest if earliest.present? && earliest.to_i.positive?
     end
   end
 end

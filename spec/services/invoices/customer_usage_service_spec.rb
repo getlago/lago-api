@@ -1088,8 +1088,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         )
       end
 
-      # Started on the earliest bucket, so nothing but the lifetime window itself keeps this
-      # read off the buckets: the alignment and the coverage guards both pass.
+      # Nothing but the lifetime window itself keeps this read off the buckets: the
+      # alignment guard passes.
       let(:subscription) { create(:subscription, plan:, customer:, started_at: window_start) }
 
       before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
@@ -1129,15 +1129,15 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
-      # Two reads that do not grow with the plan: the usage rows of every charge and filter, and
-      # the organization-level coverage probe, which is cached for five minutes. The one events
-      # read left is the pre-filtering, which resolves the used filters whatever answers them.
+      # One read that does not grow with the plan: the usage rows of every charge and filter.
+      # The one events read left is the pre-filtering, which resolves the used filters
+      # whatever answers them.
       it "reads the buckets once and aggregates no event, whatever the shape of the plan" do
         queries = capture_queries { usage_service.call }
         bucket_reads = queries.select { |sql| sql.include?("usage_buckets_15m") }
 
         expect(bucket_reads.count { |sql| sql.include?("sum(units)") }).to eq(1)
-        expect(bucket_reads.size).to eq(2)
+        expect(bucket_reads.size).to eq(1)
         expect(queries.count { |sql| sql.include?("events_enriched") }).to eq(1)
       end
     end
@@ -1213,8 +1213,6 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
     let(:window_start) { Time.current.beginning_of_month }
 
-    # Opening the window on a bucket keeps the coverage guard satisfied: the organization's
-    # earliest bucket is the one the window starts on.
     let(:event_values) do
       {
         window_start => "5.5",

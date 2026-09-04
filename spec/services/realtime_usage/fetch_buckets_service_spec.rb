@@ -51,6 +51,10 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       expect(totals.events_count).to eq(3)
     end
 
+    it "returns an empty set when the window holds no bucket" do
+      expect(fetch.usage_buckets).to be_empty
+    end
+
     it "reads with FINAL, so a re-upserted bucket is not counted twice" do
       create_bucket(bucket: from_datetime, units: "10.0", events_count: 2)
       create_bucket(bucket: from_datetime, units: "12.0", events_count: 3)
@@ -162,22 +166,6 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       it "returns no bucket, because the window ends inside a bucket" do
         expect(fetch.usage_buckets).to be_nil
       end
-    end
-  end
-
-  describe "the coverage guard" do
-    context "when the window starts before the organization's earliest bucket" do
-      before { create_bucket(bucket: from_datetime + 1.hour) }
-
-      let(:from_datetime) { Time.current.beginning_of_month }
-
-      it "returns no bucket, even though the window holds some" do
-        expect(fetch.usage_buckets).to be_nil
-      end
-    end
-
-    it "returns no bucket when the organization has none at all" do
-      expect(fetch.usage_buckets).to be_nil
     end
   end
 
