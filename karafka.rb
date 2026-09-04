@@ -57,6 +57,26 @@ class KarafkaApp < Karafka::App
       end
     end
   end
+
+  if ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_wallet_refresh_consumer do
+        topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
+          consumer WalletRefreshConsumer
+
+          # The batch is where the triggers of one customer collapse into one refresh, so a
+          # large one is what makes catching up on a backlog cheap.
+          max_messages 5_000
+
+          # Milliseconds. This lane exists to shorten the delay before the wallet is debited,
+          # so a poll returns what is there rather than waiting the default second to fill.
+          max_wait_time 100
+
+          dead_letter_queue(topic: "unprocessed_wallet_refresh", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+        end
+      end
+    end
+  end
 end
 
 Karafka::Process.tags.add(:application_name, "lago-api")
