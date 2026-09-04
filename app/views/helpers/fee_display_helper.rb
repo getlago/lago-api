@@ -52,6 +52,10 @@ class FeeDisplayHelper
     end
   end
 
+  def self.format_percentage_rate(rate)
+    format("%.2f%%", BigDecimal(rate))
+  end
+
   def self.sorted_presentation_breakdowns_displayed_in_invoice(fee)
     rows = fee.presentation_breakdowns_displayed_in_invoice.map { |b| [fee.presentation_group_keys_values_displayed_in_invoice.map { |k| b.presentation_by[k] }, b.units] }
     clean, blank = rows.partition { |values, _| values.all?(&:present?) }
