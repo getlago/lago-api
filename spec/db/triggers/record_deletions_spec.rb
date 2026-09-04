@@ -99,6 +99,21 @@ RSpec.describe "record_deletion trigger" do # rubocop:disable RSpec/DescribeClas
     end
   end
 
+  describe "credit_notes_taxes" do
+    it "records the deleted row" do
+      credit_note = create(:credit_note, invoice:, customer:, organization:)
+      applied_tax = create(:credit_note_applied_tax, credit_note:, tax:, organization:)
+
+      expect { applied_tax.destroy! }.to change(RecordDeletion, :count).by(1)
+
+      expect(RecordDeletion.sole).to have_attributes(
+        record_table: "credit_notes_taxes",
+        record_id: applied_tax.id,
+        organization_id: organization.id
+      )
+    end
+  end
+
   describe "a draft invoice refresh" do
     let(:started_at) { 1.month.ago.beginning_of_month }
 
