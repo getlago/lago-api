@@ -51,7 +51,8 @@ module Billing
       end
 
       def cycles_due_by(timestamp)
-        walk(timestamp).first
+        due, _pending = walk(timestamp)
+        due
       end
 
       def cycles_overlapping(range)
@@ -59,7 +60,8 @@ module Billing
       end
 
       def due_after(timestamp)
-        walk(timestamp).last&.due_at
+        _due, pending = walk(timestamp)
+        pending&.due_at
       end
 
       def next_billing_at(timestamp)
