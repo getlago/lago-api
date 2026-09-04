@@ -27,6 +27,7 @@ class Contract < ApplicationRecord
   belongs_to :plan, -> { with_discarded }, optional: true
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
+  has_many :billing_segments
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
