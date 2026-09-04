@@ -64,7 +64,7 @@ GEM
       erubi (~> 1.11)
       rails-dom-testing (~> 2.2)
       rails-html-sanitizer (~> 1.6)
-    active_storage_validations (3.0.4)
+    active_storage_validations (3.0.6)
       activejob (>= 6.1.4)
       activemodel (>= 6.1.4)
       activestorage (>= 6.1.4)
@@ -742,7 +742,7 @@ GEM
     puma (7.2.1)
       nio4r (~> 2.0)
     racc (1.8.1)
-    rack (3.2.6)
+    rack (3.2.7)
     rack-cors (3.0.0)
       logger
       rack (>= 3.0.14)
