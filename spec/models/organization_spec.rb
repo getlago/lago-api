@@ -27,6 +27,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:product_filters)
       expect(subject).to have_many(:rate_cards)
       expect(subject).to have_many(:rate_card_rates)
+      expect(subject).to have_many(:catalog_plans)
       expect(subject).to have_many(:customers)
       expect(subject).to have_many(:subscriptions)
       expect(subject).to have_many(:contracts)
