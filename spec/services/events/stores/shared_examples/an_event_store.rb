@@ -4,7 +4,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   subject(:event_store) do
     described_class.new(
       code:,
-      subscription:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries:,
       filters: {
         grouped_by:,
@@ -824,7 +824,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         subject(:event_store) do
           described_class.new(
             code:,
-            subscription:,
+            context: Events::Stores::EventContext.from(subscription:),
             boundaries:,
             filters: {
               grouped_by:,
@@ -1580,7 +1580,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1645,7 +1645,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1705,7 +1705,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1768,7 +1768,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1833,7 +1833,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1900,7 +1900,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,

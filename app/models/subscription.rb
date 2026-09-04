@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 class Subscription < ApplicationRecord
+  include BillingPeriodDateDiff
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include RansackUuidSearch
+  include Terminatable
 
   self.ignored_columns += %w[incompleted_at cancelation_reason]
 
@@ -252,35 +254,8 @@ class Subscription < ApplicationRecord
     name.presence || plan.invoice_name
   end
 
-  # When upgrade, we want to bill one day less since date of the upgrade will be
-  # included in the first invoice for the new plan
-  def date_diff_with_timezone(from_datetime, to_datetime)
-    number_od_days = Utils::Datetime.date_diff_with_timezone(
-      from_datetime,
-      to_datetime,
-      customer.applicable_timezone
-    )
-
-    return number_od_days unless terminated? && upgraded?
-
-    number_od_days -= 1
-
-    number_od_days.negative? ? 0 : number_od_days
-  end
-
   def should_sync_hubspot_subscription?
     customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_subscriptions }
-  end
-
-  def terminated_at?(timestamp)
-    return false unless terminated?
-    return false if terminated_at.nil? || timestamp.nil?
-
-    # TODO: should be cleaned up to only use Time
-    timestamp = timestamp.to_time if [Date, DateTime, String].include?(timestamp.class)
-    timestamp = Time.zone.at(timestamp) if timestamp.is_a?(Integer)
-
-    terminated_at.round <= timestamp.round
   end
 
   # TODO: Apply this method in CreateInvoiceSubscriptionService

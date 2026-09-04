@@ -5,7 +5,9 @@
 # plan-less shape is native (plan_id is nullable). Legacy billing keeps its
 # own `subscriptions` table; the two engines never share rows.
 class Contract < ApplicationRecord
+  include BillingPeriodDateDiff
   include PaperTrailTraceable
+  include Terminatable
 
   STATUSES = {
     pending: "pending",

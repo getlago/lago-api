@@ -39,7 +39,7 @@ module Events
         effective_to = to_datetime || applicable_to_datetime
 
         if needs_code_based_fallback?(force_from:)
-          current_query = charge_id_based_query(from_datetime: subscription.started_at, to_datetime: effective_to)
+          current_query = charge_id_based_query(from_datetime: context.started_at, to_datetime: effective_to)
           fallback_query = code_based_fallback_query(from_datetime: (from_datetime if force_from))
 
           current_sql = current_query.project(select).to_sql
@@ -66,7 +66,7 @@ module Events
 
         # Should we include recurring events from previous subscription by relying on the code instead of the charge_id
         use_fallback = needs_code_based_fallback?(force_from:)
-        current_from = use_fallback ? subscription.started_at : (from_datetime if force_from || use_from_boundary)
+        current_from = use_fallback ? context.started_at : (from_datetime if force_from || use_from_boundary)
 
         ctes = {
           "latest_enriched_current" => latest_enriched_current_sql(from_datetime: current_from, to_datetime: effective_to)
@@ -158,8 +158,8 @@ module Events
         lower_bound = include_all_history ? nil : from_datetime
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization_id)
+            .where(external_subscription_id: context.external_id)
+            .where(organization_id: context.organization_id)
             .where(timestamp: lower_bound..to_datetime)
 
           scope = scope.where(code: codes) unless codes.nil?
@@ -863,9 +863,9 @@ module Events
         prefix = alias_prefix ? "#{alias_prefix}." : ""
 
         conditions = [
-          sql_condition("#{prefix}organization_id = ?", subscription.organization_id),
+          sql_condition("#{prefix}organization_id = ?", context.organization_id),
           sql_condition("#{prefix}code = ?", code),
-          sql_condition("#{prefix}external_subscription_id = ?", subscription.external_id),
+          sql_condition("#{prefix}external_subscription_id = ?", context.external_id),
           sql_condition("#{prefix}charge_id = ?", charge_id),
           sql_condition("#{prefix}charge_filter_id = ?", charge_filter_id || "")
         ]
@@ -881,10 +881,10 @@ module Events
         prefix = alias_prefix ? "#{alias_prefix}." : ""
 
         conditions = [
-          sql_condition("#{prefix}organization_id = ?", subscription.organization_id),
+          sql_condition("#{prefix}organization_id = ?", context.organization_id),
           sql_condition("#{prefix}code = ?", code),
-          sql_condition("#{prefix}external_subscription_id = ?", subscription.external_id),
-          sql_condition("#{prefix}timestamp < ?", subscription.started_at)
+          sql_condition("#{prefix}external_subscription_id = ?", context.external_id),
+          sql_condition("#{prefix}timestamp < ?", context.started_at)
         ]
 
         conditions << sql_condition("#{prefix}timestamp >= ?", from_datetime) if from_datetime
@@ -934,11 +934,11 @@ module Events
       end
 
       def needs_code_based_fallback?(force_from:)
-        return false if subscription.previous_subscription_id.blank?
+        return false if context.previous_subscription_id.blank?
         return false if use_from_boundary
 
         effective_from = from_datetime if force_from
-        effective_from.nil? || effective_from < subscription.started_at
+        effective_from.nil? || effective_from < context.started_at
       end
 
       def charge_id_based_query(from_datetime:, to_datetime:)

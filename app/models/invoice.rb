@@ -312,7 +312,7 @@ class Invoice < ApplicationRecord
     service.new(
       event_store_class: Events::Stores::StoreFactory.store_class(organization:),
       charge: fee.charge,
-      subscription: fee.subscription,
+      context: Events::Stores::EventContext.from(subscription: fee.subscription),
       boundaries: {
         from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
         to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
