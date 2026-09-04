@@ -30,7 +30,7 @@ module RealtimeUsage
       return result if RealtimeUsage.deduplicated?(organization)
       return result if charges.empty?
 
-      result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:, unservable_charge_ids:)
+      result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:, unservable_charge_ids:, last_ingested_at:)
       result
     rescue *READ_ERRORS => e
       Sentry.capture_exception(e)
@@ -71,6 +71,15 @@ module RealtimeUsage
       )
     end
 
+    # When the sink last wrote anything into this window. Taking the oldest instead would report
+    # the age of the billing period: a bucket closed on day one is never rewritten.
+    #
+    # It cannot tell a stalled pipeline from a charge nobody sends events for, which is why
+    # liveness comes from the pipeline's own loopback rather than from here.
+    def last_ingested_at
+      rows.filter_map { it[:last_ingested_at] }.max
+    end
+
     def rows
       @rows ||= Events::Stores::Utils::ClickhouseConnection.with_retry { fetch_rows }
     end
@@ -80,15 +89,16 @@ module RealtimeUsage
         .where(organization_id: organization.id, subscription_id: subscription.id, charge_id: charge_ids)
         .where(bucket: window, is_deleted: 0)
         .group(:charge_id, :charge_filter_id, :grouped_by, :aggregation_type)
-        .pluck(Arel.sql("charge_id, charge_filter_id, grouped_by, aggregation_type, sum(units), sum(events_count)"))
-        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, units, events_count|
+        .pluck(Arel.sql("charge_id, charge_filter_id, grouped_by, aggregation_type, sum(units), sum(events_count), max(last_ingested_at)"))
+        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, units, events_count, last_ingested_at|
           {
             charge_id:,
             charge_filter_id:,
             aggregation_type:,
             groups: parse_groups(grouped_by),
             units: units.to_d,
-            events_count: events_count.to_i
+            events_count: events_count.to_i,
+            last_ingested_at: parse_time(last_ingested_at)
           }
         end
     end
@@ -107,6 +117,12 @@ module RealtimeUsage
       parsed.transform_values(&:presence) if parsed.is_a?(Hash)
     rescue JSON::ParserError, TypeError
       nil
+    end
+
+    def parse_time(value)
+      return nil if value.blank?
+
+      value.is_a?(String) ? Time.zone.parse(value) : value.to_time
     end
 
     # Rails asks the store for one group per key of `Fees::ChargeService#grouped_by_keys`, so a
