@@ -8,8 +8,7 @@ class CreateRecordDeletions < ActiveRecord::Migration[8.0]
       t.string :record_table, null: false
       t.uuid :record_id, null: false
 
-      # Defaults are required because the only writer is the record_deletion()
-      # trigger, which inserts outside of ActiveRecord.
+      # Defaulted in the database: the record_deletion() trigger inserts outside ActiveRecord.
       t.datetime :deleted_at, null: false, default: -> { "CURRENT_TIMESTAMP" }
       t.timestamps default: -> { "CURRENT_TIMESTAMP" }
 

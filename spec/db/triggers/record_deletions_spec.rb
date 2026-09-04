@@ -34,6 +34,18 @@ RSpec.describe "record_deletion trigger" do # rubocop:disable RSpec/DescribeClas
       )
     end
 
+    it "stamps every timestamp from the delete rather than from the transaction" do
+      fee = create(:fee, invoice:, subscription:, organization:)
+      transaction_started_at = ActiveRecord::Base.connection.select_value("SELECT CURRENT_TIMESTAMP")
+
+      fee.destroy!
+
+      tombstone = RecordDeletion.sole
+      expect(tombstone.deleted_at).to be > transaction_started_at
+      expect(tombstone.created_at).to eq(tombstone.deleted_at)
+      expect(tombstone.updated_at).to eq(tombstone.deleted_at)
+    end
+
     it "records one row per fee when several are deleted in a single statement" do
       fees = create_list(:fee, 3, invoice:, subscription:, organization:)
 

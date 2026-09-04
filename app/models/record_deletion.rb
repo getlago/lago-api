@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-# Rows are written exclusively by the `record_deletion()` Postgres trigger installed
-# on TRACKED_TABLES (see AddRecordDeletionTriggers). Nothing in the application
-# inserts here, and nothing should: the trigger is what makes the feed complete for
-# code paths added later.
+# Written only by the `record_deletion()` trigger on TRACKED_TABLES, never by the application.
 class RecordDeletion < ApplicationRecord
   TRACKED_TABLES = %w[fees fees_taxes invoice_subscriptions invoices_taxes].freeze
 
