@@ -108,5 +108,22 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
         expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
       end
     end
+
+    context "when the invited email already belongs to an existing user" do
+      before { create(:user, email: "foo@bar.com") }
+
+      it "does not authenticate the user" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("existing_user_must_authenticate")
+      end
+
+      it "does not accept the invite" do
+        service.call
+
+        expect(invite.reload).to be_pending
+      end
+    end
   end
 end

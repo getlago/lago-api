@@ -60,7 +60,7 @@ module Auth
         userinfo_headers = {"Authorization" => "Bearer #{result.okta_access_token}"}
         response = userinfo_client.get(headers: userinfo_headers)
 
-        raise ValidationError, "okta_userinfo_error" if response["email"] != email
+        raise ValidationError, "okta_userinfo_error" unless response["email"]&.casecmp?(email)
 
         result.userinfo = response
       end
