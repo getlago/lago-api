@@ -2,8 +2,8 @@
 
 module RealtimeUsage
   # Reads the pre-aggregated usage of one subscription over one window from the ClickHouse
-  # buckets. `usage_buckets` is nil when the window cannot be answered, which leaves the
-  # whole computation reading events.
+  # buckets. `usage_buckets` is nil when ClickHouse is unreachable, which leaves the whole
+  # computation reading events.
   class FetchBucketsService < BaseService
     Result = BaseResult[:usage_buckets]
 
@@ -19,7 +19,6 @@ module RealtimeUsage
     def call
       return result unless RealtimeUsage.enabled?(organization)
       return result if RealtimeUsage.deduplicated?(organization)
-      return result if window.nil?
 
       result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)
       result
@@ -77,38 +76,22 @@ module RealtimeUsage
       JSON.parse(grouped_by.presence || "{}").transform_values(&:presence)
     end
 
+    # Widening the window to whole buckets cannot pull in usage from a neighbouring period:
+    # the pipeline attributes an event to a subscription only within its lifetime, so an
+    # upgrade or a termination mid-bucket routes each event to the right subscription however
+    # the boundary falls.
     def window
-      return @window if defined?(@window)
-
-      @window = servable_window? ? (floor_to_bucket(from)...to) : nil
-    end
-
-    def from
-      boundaries.charges_from_datetime
-    end
-
-    def to
-      boundaries.charges_to_datetime
-    end
-
-    # A window opening inside a bucket would count the whole bucket, except on the very first
-    # period: the pipeline attributes an event to a subscription only within its lifetime, so
-    # nothing before `started_at` lands in that bucket.
-    #
-    # `max_timestamp` marks the daily usage backfill, which is kept off this path today.
-    def servable_window?
-      return false if from.blank? || to.blank?
-      return false if boundaries.max_timestamp.present?
-
-      aligned?(from) || from == subscription.started_at
-    end
-
-    def aligned?(time)
-      (time.to_i % BUCKET_SIZE.to_i).zero? && time.usec.zero?
+      @window ||= floor_to_bucket(boundaries.charges_from_datetime)...ceil_to_bucket(boundaries.charges_to_datetime)
     end
 
     def floor_to_bucket(time)
       Time.zone.at(time.to_i - (time.to_i % BUCKET_SIZE.to_i))
+    end
+
+    def ceil_to_bucket(time)
+      floor = floor_to_bucket(time)
+
+      (floor == time) ? floor : floor + BUCKET_SIZE
     end
   end
 end

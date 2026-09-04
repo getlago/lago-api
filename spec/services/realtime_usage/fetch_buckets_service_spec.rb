@@ -133,38 +133,35 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
   end
 
   describe "the served window" do
-    before { create_bucket(bucket: subscription.started_at.beginning_of_day) }
-
     context "when the window starts inside a bucket" do
       let(:from_datetime) { Time.current.beginning_of_day - 1.day + 1.second }
 
-      it "returns no bucket, because the enclosing bucket also holds usage of the previous period" do
-        expect(fetch.usage_buckets).to be_nil
+      it "floors the start, so the enclosing bucket is counted" do
+        create_bucket(bucket: from_datetime - 1.second, units: "7.0", events_count: 1)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect(totals.value).to eq(BigDecimal("7.0"))
       end
     end
 
-    context "when the window starts at a 15-minute wall of a shifted timezone" do
-      let(:from_datetime) { Time.current.in_time_zone("Asia/Kathmandu").beginning_of_day - 1.day }
+    context "when the window ends inside a bucket" do
+      let(:to_datetime) { from_datetime + 1.month - 1.second }
 
-      it "is served, as every UTC offset is a multiple of 15 minutes" do
-        expect(fetch.usage_buckets).not_to be_nil
+      it "tops the end, so the enclosing bucket is counted" do
+        create_bucket(bucket: from_datetime + 1.month - 15.minutes, units: "3.0", events_count: 1)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect(totals.value).to eq(BigDecimal("3.0"))
       end
     end
 
-    context "when the window starts mid-bucket at the subscription start" do
-      let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at: 1.month.ago.change(sec: 37)) }
-      let(:from_datetime) { subscription.started_at }
+    context "when the window ends on a bucket wall" do
+      it "leaves out the bucket opening at the end" do
+        create_bucket(bucket: to_datetime, units: "3.0", events_count: 1)
 
-      it "is served, as no event before the subscription started lands in that bucket" do
-        expect(fetch.usage_buckets).not_to be_nil
-      end
-    end
-
-    context "when the window end is truncated" do
-      before { boundaries.max_timestamp = to_datetime - 1.day }
-
-      it "returns no bucket, because the window ends inside a bucket" do
-        expect(fetch.usage_buckets).to be_nil
+        expect(fetch.usage_buckets).to be_empty
       end
     end
   end
