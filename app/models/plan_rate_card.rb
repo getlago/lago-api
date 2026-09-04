@@ -18,6 +18,10 @@ class PlanRateCard < ApplicationRecord
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
 
   default_scope -> { kept }
+
+  def edit_error_code
+    "plan_locked" if plan.attached_to_subscriptions?
+  end
 end
 
 # == Schema Information
