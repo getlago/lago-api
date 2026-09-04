@@ -82,7 +82,9 @@ module Api
       private
 
       def find_contract
-        @find_contract ||= current_organization.contracts.live_by_external_id(params[:contract_external_id])
+        return @find_contract if defined?(@find_contract)
+
+        @find_contract = current_organization.contracts.live_by_external_id(params[:contract_external_id])
       end
 
       def find_contract_rate_card
