@@ -50,6 +50,18 @@ RSpec.describe DeliverEventJob, type: :job do
 
       expect(EventDestinations::CustomerUsage::RefreshedService).to have_received(:call).with(object: customer)
     end
+
+    it "logs the drop in the shape the monitors match on" do
+      allow(Rails.logger).to receive(:info)
+      job = described_class.new("customer_usage.refreshed", customer)
+      contend_on_runtime_lock(job)
+
+      job.perform_now
+
+      expect(Rails.logger).to have_received(:info).with(
+        a_string_matching(/outcome=superseded event_type=customer_usage.refreshed customer_id=#{customer.id}/)
+      )
+    end
   end
 
   # The global test lock manager always grants a lock, so contention has to be forced. Only the
