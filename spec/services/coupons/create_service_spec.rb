@@ -38,6 +38,12 @@ RSpec.describe Coupons::CreateService do
       expect(Utils::ActivityLog).to have_produced("coupon.created").after_commit.with(coupon)
     end
 
+    it "enqueues a coupon.created webhook" do
+      result = create_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.created", result.coupon)
+    end
+
     context "with code already used by a deleted coupon" do
       it "creates an coupon with the same code" do
         create(:coupon, :deleted, organization:, code: coupon_code)
