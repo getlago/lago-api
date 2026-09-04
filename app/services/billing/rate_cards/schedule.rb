@@ -74,7 +74,15 @@ module Billing
 
       attr_reader :anchor_date, :phases, :rates, :terms, :realign_billing_anchor, :timezone, :starts_at, :ends_at, :timing
 
+      # Both consumers of this engine read the walk twice — /cycles serializes the windows
+      # and reports the next billing instant, /bill writes the rows and advances the clock.
+      # The previous engine memoized its own walk for the same reason.
       def walk(timestamp)
+        @walks ||= {}
+        @walks[timestamp] ||= walk_from(timestamp)
+      end
+
+      def walk_from(timestamp)
         cursor = starts_at
         index = 0
         due = []
