@@ -293,6 +293,32 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
+  # The walk builds one ruler per (anchor, interval), not one per cycle. No assertion on the
+  # cycles it returns can see the difference — 240 identical calendars produce the same
+  # answer as one — so the count is asserted here directly.
+  describe "calendar reuse" do
+    let(:asked_at) { Time.utc(2032, 1, 1) }
+
+    before { allow(Billing::Calendar).to receive(:new).and_call_original }
+
+    it "builds one calendar however many cycles it walks" do
+      expect(schedule.cycles_due_by(asked_at).size).to eq(120)
+      expect(Billing::Calendar).to have_received(:new).once
+    end
+
+    context "when a phase changes the cadence" do
+      let(:phases) do
+        [phase(cycle_count: 3, every: 1, unit: :week, code: "intro"),
+          phase(cycle_count: nil, every: 1, unit: :month)]
+      end
+
+      it "builds one calendar per cadence, not one per cycle" do
+        expect(schedule.cycles_due_by(asked_at).size).to eq(121)
+        expect(Billing::Calendar).to have_received(:new).twice
+      end
+    end
+  end
+
   # The worked example the PR description is built on, kept executable so the two cannot
   # drift. A monthly card with a three-cycle weekly intro phase, starting two days after its
   # anchor, with two rates taking effect inside cycles rather than on a boundary.

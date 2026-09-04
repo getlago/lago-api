@@ -96,7 +96,7 @@ module Billing
             anchor = cursor.in_time_zone(timezone).to_date if realign_billing_anchor && cadence && cadence != interval
             cadence = interval
 
-            calendar = Calendar.new(anchor_date: anchor, interval:, timezone:)
+            calendar = calendar_for(anchor, interval)
             period = calendar.interval_containing(cursor)
             cycle = cycle_for(period, cursor, index, phase, calendar)
             if cycle.due_at > timestamp
@@ -122,6 +122,13 @@ module Billing
         phases.each_with_index
           .sort_by { |phase, index| [phase.position || Float::INFINITY, index] }
           .map(&:first)
+      end
+
+      # One ruler per (anchor, interval) rather than one per cycle: a card that never changes
+      # cadence builds a single Calendar however many cycles it walks.
+      def calendar_for(anchor, interval)
+        @calendars ||= {}
+        @calendars[[anchor, interval]] ||= Calendar.new(anchor_date: anchor, interval:, timezone:)
       end
 
       def cadence_rate_at(cursor)
