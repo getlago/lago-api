@@ -27,7 +27,7 @@ module BillableMetrics
       def persisted_breakdown
         event_store = event_store_class.new(
           code: billable_metric.code,
-          subscription:,
+          context:,
           boundaries: {to_datetime: from_datetime},
           filters:
         )

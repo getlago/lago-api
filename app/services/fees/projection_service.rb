@@ -113,7 +113,7 @@ module Fees
 
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         charge: charge,
-        subscription: subscription,
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: boundaries,
         filters: aggregation_filters,
         current_usage: true

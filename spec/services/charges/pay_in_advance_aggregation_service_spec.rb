@@ -33,6 +33,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
   end
 
   let(:agg_result) { BaseService::Result.new }
+  let(:subscription_context) { have_attributes(external_id: subscription.external_id, organization: subscription.organization) }
 
   describe "#call" do
     describe "when count aggregation" do
@@ -47,7 +48,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           .with(
             event_store_class: Events::Stores::PostgresStore,
             charge:,
-            subscription:,
+            context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
@@ -94,7 +95,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               charge:,
-              subscription:,
+              context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -142,7 +143,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               charge:,
-              subscription:,
+              context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -193,7 +194,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               .with(
                 event_store_class: Events::Stores::PostgresStore,
                 charge:,
-                subscription:,
+                context: subscription_context,
                 boundaries: {
                   from_datetime: boundaries.charges_from_datetime,
                   to_datetime: boundaries.charges_to_datetime,
@@ -239,7 +240,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               charge:,
-              subscription:,
+              context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -287,7 +288,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               charge:,
-              subscription:,
+              context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -331,7 +332,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               charge:,
-              subscription:,
+              context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -370,7 +371,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           .with(
             event_store_class: Events::Stores::PostgresStore,
             charge:,
-            subscription:,
+            context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
@@ -404,7 +405,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           .with(
             event_store_class: Events::Stores::PostgresStore,
             charge:,
-            subscription:,
+            context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,

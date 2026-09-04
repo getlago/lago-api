@@ -7,7 +7,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService do
     described_class.new(
       event_store_class:,
       charge:,
-      subscription:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries: {
         from_datetime:,
         to_datetime:

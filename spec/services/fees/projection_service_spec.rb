@@ -138,7 +138,7 @@ RSpec.describe Fees::ProjectionService do
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           charge: charge,
-          subscription: subscription,
+          context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
             to_datetime: match_datetime(to_datetime),
@@ -224,7 +224,7 @@ RSpec.describe Fees::ProjectionService do
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           charge: charge,
-          subscription: subscription,
+          context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
             to_datetime: match_datetime(to_datetime),
