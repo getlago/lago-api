@@ -725,6 +725,22 @@ RSpec.describe SendWebhookJob do
       end
     end
 
+    context "with add_on webhooks" do
+      let(:object) { create(:add_on, organization:) }
+
+      it_behaves_like "a webhook service",
+        "add_on.created",
+        Webhooks::AddOns::CreatedService
+
+      it_behaves_like "a webhook service",
+        "add_on.updated",
+        Webhooks::AddOns::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "add_on.deleted",
+        Webhooks::AddOns::DeletedService
+    end
+
     context "with billable metric webhooks" do
       let(:object) { create(:billable_metric, organization:) }
 
