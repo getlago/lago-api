@@ -9,14 +9,19 @@ module Events
 
       # Copied before freezing: the caller usually builds these hashes as accumulators, and
       # freezing its own object would raise on the next write, far from here.
-      def initialize(totals: {}, grouped_totals: {}, unservable_charge_ids: [])
+      def initialize(totals: {}, grouped_totals: {}, unservable_charge_ids: [], last_ingested_at: nil)
         @totals = totals.dup.freeze
         @grouped_totals = grouped_totals.dup.freeze
         @unservable_charge_ids = unservable_charge_ids.to_set.freeze
+        @last_ingested_at = last_ingested_at
         freeze
       end
 
       attr_reader :unservable_charge_ids
+
+      # The watermark the whole set answers for: nil when it holds no row, so a computation
+      # served entirely from absent rows reports no freshness rather than an age of forever.
+      attr_reader :last_ingested_at
 
       def empty?
         totals.empty? && grouped_totals.empty?

@@ -345,6 +345,165 @@ RSpec.describe Events::Stores::Provider do
     end
   end
 
+  describe "the reported outcome" do
+    subject(:provider) do
+      described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set, current_usage: true)
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+    let(:reported) { [] }
+
+    before { allow(Yabeda.realtime_usage.lookups_total).to receive(:increment) { |tags| reported << tags } }
+
+    it "reports a served lookup once, however many callers ask the same question" do
+      provider.serves?(charge:)
+      provider.serves?(charge:)
+
+      expect(reported).to eq([{outcome: "served", reason: "none"}])
+    end
+
+    it "reports each filter of a charge separately, as each is a lookup a fee took" do
+      provider.serves?(charge:)
+      provider.serves?(charge:, filters: {charge_filter: create(:charge_filter, charge:)})
+
+      expect(reported.size).to eq(2)
+    end
+
+    it "reports nothing outside a current usage computation, which never asked for buckets" do
+      described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set).serves?(charge:)
+
+      expect(reported).to be_empty
+    end
+
+    it "reports nothing for an organization the gate is shut for, whose declines would drown the ratio" do
+      other_organization = create(:organization, clickhouse_events_store: true)
+
+      described_class
+        .new(organization: other_organization, subscription:, boundaries:, usage_buckets: bucket_set, current_usage: true)
+        .serves?(charge:)
+
+      expect(reported).to be_empty
+    end
+
+    context "when the organization deduplicates its events" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"], clickhouse_deduplication_enabled: true)
+      end
+
+      it "reports the delegation" do
+        provider.serves?(charge:)
+
+        expect(reported).to eq([{outcome: "delegated", reason: "deduplicated"}])
+      end
+    end
+
+    context "when the read is frozen at a past timestamp" do
+      let(:boundaries) { {from_datetime: Time.current.beginning_of_month, to_datetime: Time.current, max_timestamp: 1.day.ago} }
+
+      it "reports the delegation" do
+        provider.serves?(charge:)
+
+        expect(reported).to eq([{outcome: "delegated", reason: "frozen_window"}])
+      end
+    end
+
+    context "with a charge the buckets were never going to answer" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "reports the delegation" do
+        provider.serves?(charge:)
+
+        expect(reported).to eq([{outcome: "delegated", reason: "ineligible_charge"}])
+      end
+    end
+
+    it "reports a read whose shape the totals cannot answer" do
+      provider.serves?(charge:, filters: {presentation_by: ["region"]})
+
+      expect(reported).to eq([{outcome: "delegated", reason: "unsupported_read"}])
+    end
+
+    context "when the computation holds no prefetch" do
+      let(:bucket_set) { nil }
+
+      it "reports the delegation" do
+        provider.serves?(charge:)
+
+        expect(reported).to eq([{outcome: "delegated", reason: "not_prefetched"}])
+      end
+    end
+
+    context "when the window holds no bucket" do
+      let(:bucket_set) { Events::Stores::UsageBucketSet.new }
+
+      it "reports the delegation, as answering zero would undercharge" do
+        provider.serves?(charge:)
+
+        expect(reported).to eq([{outcome: "delegated", reason: "no_buckets"}])
+      end
+    end
+
+    context "with a charge the prefetch found drifting" do
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("10"), events_count: 2)},
+          unservable_charge_ids: [charge.id]
+        )
+      end
+
+      it "reports the delegation" do
+        provider.serves?(charge:)
+
+        expect(reported).to eq([{outcome: "delegated", reason: "drift"}])
+      end
+    end
+  end
+
+  describe "the reported freshness" do
+    subject(:provider) do
+      described_class.new(organization:, subscription:, boundaries:, usage_buckets: bucket_set, current_usage: true)
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+    let(:bucket_set) do
+      Events::Stores::UsageBucketSet.new(
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("10"), events_count: 2)},
+        last_ingested_at: 2.minutes.ago
+      )
+    end
+
+    before { allow(Yabeda.realtime_usage.freshness).to receive(:measure) }
+
+    it "measures the age of the last bucket write once, as the watermark answers for the whole set" do
+      provider.serves?(charge:)
+      provider.serves?(charge:, filters: {charge_filter: create(:charge_filter, charge:)})
+
+      expect(Yabeda.realtime_usage.freshness).to have_received(:measure).once.with({}, be_within(5).of(120))
+    end
+
+    context "when the set carries no watermark" do
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("10"), events_count: 2)}
+        )
+      end
+
+      it "measures nothing, rather than an age of forever" do
+        provider.serves?(charge:)
+
+        expect(Yabeda.realtime_usage.freshness).not_to have_received(:measure)
+      end
+    end
+  end
+
   describe "#plain_store" do
     it "returns a store with no metric code" do
       store = provider.plain_store
