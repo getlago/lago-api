@@ -412,6 +412,134 @@ RSpec.describe Events::BillingPeriodFilterService do
     end
   end
 
+  describe ".for_billing_segments!" do
+    subject(:filter_result) do
+      described_class.for_billing_segments!(contract:, billing_segments: [billing_segment])
+    end
+
+    let(:contract) { create(:contract, organization:, customer:, external_id: "contract_external_id") }
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:,
+        cycle_started_at: boundaries.charges_from_datetime,
+        started_at: boundaries.charges_from_datetime,
+        ended_at: boundaries.charges_to_datetime
+      )
+    end
+
+    it "runs through the class-level service entrypoint" do
+      allow(described_class).to receive(:call!).and_call_original
+
+      filter_result
+
+      expect(described_class).to have_received(:call!)
+        .with(resolver: an_instance_of(Events::BillingPeriodFilters::BillingSegmentsResolver))
+    end
+
+    context "with events matching billing segment products" do
+      before do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: contract.external_id,
+          timestamp: billing_segment.started_at + 5.days,
+          code: billable_metric.code,
+          properties: {"region" => "eu"}
+        )
+      end
+
+      context "without product filters" do
+        it "returns the product default bucket" do
+          result = filter_result
+
+          expect(result).to be_success
+          expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [nil]})
+        end
+      end
+
+      context "with product filters" do
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:product_filter_value) do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+        end
+
+        before { product_filter_value }
+
+        it "returns the matching product filter keyed by product" do
+          result = filter_result
+
+          expect(result).to be_success
+          expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [product_filter.id]})
+        end
+
+        it "returns the last seen timestamp for the product filter" do
+          result = filter_result
+
+          expect(result.filter_targets[product.target_key][product_filter.id]).to be_present
+        end
+
+        context "when the product filter selects the key only" do
+          let(:product_filter_value) do
+            create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: nil)
+          end
+
+          it "matches any event carrying the key" do
+            result = filter_result
+
+            expect(result).to be_success
+            expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [product_filter.id]})
+          end
+        end
+      end
+    end
+
+    it "queries raw event property combinations for billing segment products" do
+      billable_metric_filter = create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+      product_filter = create(:product_filter, organization:, product:)
+      create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+      event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+      allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+      filter_result
+
+      expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+        .with(codes: [billable_metric.code], filter_keys: ["region"], with_last_seen_at: true)
+    end
+
+    context "when codes restrict the lookup" do
+      subject(:filter_result) do
+        described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
+      end
+
+      before do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: contract.external_id,
+          timestamp: billing_segment.started_at + 5.days,
+          code: billable_metric.code
+        )
+      end
+
+      it "returns no billing segment target for other codes" do
+        result = filter_result
+
+        expect(result).to be_success
+        expect(result.filter_targets).to eq({})
+      end
+    end
+  end
+
   describe "#call" do
     context "when relying on event codes" do
       it "returns the filtered charge_ids" do

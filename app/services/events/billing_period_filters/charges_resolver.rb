@@ -2,7 +2,7 @@
 
 module Events
   module BillingPeriodFilters
-    class ChargesResolver
+    class ChargesResolver < BaseResolver
       def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
         @subscription = subscription
         @boundaries = boundaries
@@ -63,35 +63,15 @@ module Events
           )
         end
 
-        combinations_by_code = combinations.group_by(&:first)
-        result = recurring_event_filter_targets
-
-        charges_with_events(combinations_by_code.keys).each do |charge|
-          code = charge.billable_metric.code
-          target_filter = Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
-
-          combinations_by_code[code].each do |(_code, properties, last_seen_at)|
-            event = ::Event.new(code:, properties:)
-            matching = Events::BillingPeriodFilters::EventMatchingService.call(target_filter:, event:).matching_filters
-
-            if matching.empty?
-              record(result, target_filter.target_key, nil, last_seen_at)
-            else
-              matching.each { |filter| record(result, target_filter.target_key, filter.id, last_seen_at) }
-            end
-          end
-        end
-
-        result
+        filter_targets_from_combinations(
+          combinations:,
+          targets: charges_with_events(combinations.map(&:first).uniq),
+          result: recurring_event_filter_targets
+        )
       end
 
-      def record(accumulator, target_key, filter_id, last_seen_at)
-        bucket = (accumulator[target_key] ||= {})
-        current = bucket[filter_id]
-
-        if !bucket.key?(filter_id) || (last_seen_at && (current.nil? || last_seen_at > current))
-          bucket[filter_id] = last_seen_at
-        end
+      def filter_target_for(charge)
+        Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
       end
 
       def recurring_event_filter_targets

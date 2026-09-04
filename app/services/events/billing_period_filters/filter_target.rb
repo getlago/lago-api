@@ -7,6 +7,10 @@ module Events
         new(source: Sources::Charge.new(charge:, filter:))
       end
 
+      def self.from_billing_segment(billing_segment:, filter: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, filter:))
+      end
+
       delegate :all_filter_values?,
         :billable_metric,
         :filter_match_values,
