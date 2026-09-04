@@ -89,7 +89,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "reports the next billing instant on the cadence in force" do
-      expect(schedule.next_due_at(Time.utc(2026, 5, 20))).to eq(Time.utc(2026, 6, 6))
+      expect(schedule.due_after(Time.utc(2026, 5, 20))).to eq(Time.utc(2026, 6, 6))
     end
 
     # Reading A, which LAGO-1766 weighed and declined: the cadence still follows the rates,
@@ -247,7 +247,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.next_due_at(Time.utc(2027, 1, 1))).to be_nil
+      expect(schedule.due_after(Time.utc(2027, 1, 1))).to be_nil
     end
   end
 end

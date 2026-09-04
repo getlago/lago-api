@@ -259,7 +259,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       end
     end
 
-    [windows, schedule.next_due_at(to)&.utc&.iso8601(6)]
+    [windows, schedule.due_after(to)&.utc&.iso8601(6)]
   end
 
   scenarios.each do |scenario|

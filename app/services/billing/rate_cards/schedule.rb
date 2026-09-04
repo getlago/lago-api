@@ -58,7 +58,7 @@ module Billing
         cycles_due_by(range.end).select { |cycle| cycle.ended_at > range.begin && cycle.started_at < range.end }
       end
 
-      def next_due_at(timestamp)
+      def due_after(timestamp)
         walk(timestamp).last&.due_at
       end
 

@@ -243,21 +243,21 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
-  describe "#next_due_at" do
+  describe "#due_after" do
     it "reports when the first cycle beyond the timestamp falls due" do
-      expect(schedule.next_due_at(Time.utc(2022, 3, 1))).to eq(Time.utc(2022, 4, 1))
+      expect(schedule.due_after(Time.utc(2022, 3, 1))).to eq(Time.utc(2022, 4, 1))
     end
 
     context "when the schedule has already ended" do
       let(:ends_at) { Time.utc(2022, 3, 1) }
 
       it "reports nothing further" do
-        expect(schedule.next_due_at(Time.utc(2023, 1, 1))).to be_nil
+        expect(schedule.due_after(Time.utc(2023, 1, 1))).to be_nil
       end
     end
   end
 
-  # What seeds the clock: unlike #next_due_at this counts a cycle already due but still
+  # What seeds the clock: unlike #due_after this counts a cycle already due but still
   # running, because nothing has billed it yet.
   describe "#next_billing_at" do
     it "waits for the first cycle to close in arrears" do
@@ -277,10 +277,10 @@ RSpec.describe Billing::RateCards::Schedule do
       end
 
       # The cycle covering Mar 10 opened on Mar 1 and was never billed, so the clock owes
-      # that rather than the cycle ahead — which is what #next_due_at would answer.
+      # that rather than the cycle ahead — which is what #due_after would answer.
       it "does not skip a due cycle that is still running" do
         expect(schedule.next_billing_at(Time.utc(2022, 3, 10))).to eq(Time.utc(2022, 3, 1))
-        expect(schedule.next_due_at(Time.utc(2022, 3, 10))).to eq(Time.utc(2022, 4, 1))
+        expect(schedule.due_after(Time.utc(2022, 3, 10))).to eq(Time.utc(2022, 4, 1))
       end
     end
 
@@ -434,7 +434,7 @@ RSpec.describe Billing::RateCards::Schedule do
     end
 
     it "reports the published next billing date" do
-      expect(schedule.next_due_at(end_on)).to eq(Time.utc(2028, 1, 21))
+      expect(schedule.due_after(end_on)).to eq(Time.utc(2028, 1, 21))
     end
   end
 end
