@@ -10,9 +10,9 @@ module RealtimeUsage
   SUPPORTED_CHARGE_MODELS = %w[standard graduated package volume graduated_percentage].freeze
 
   class << self
-    # The env var is the deployment-wide kill switch, the flag is the per-organization
-    # rollout. The override belongs to the ClickHouse migration comparison, which has to
-    # keep comparing two event stores.
+    # Premium only. The env var is the deployment-wide kill switch, the flag is the
+    # per-organization rollout. The override belongs to the ClickHouse migration comparison,
+    # which has to keep comparing two event stores.
     #
     # The buckets and the ClickHouse events store are fed by the same stream, so they agree
     # by construction. An organization still reading Postgres has no such guarantee: its
@@ -20,9 +20,10 @@ module RealtimeUsage
     # the `events` table, and the unique index on that table drops duplicates the stream
     # counts. The two would disagree with nothing to reconcile them.
     def enabled?(organization)
+      return false unless License.premium?
       return false if Events::Stores::StoreFactory.override
       return false unless Events::Stores::StoreFactory.supports_clickhouse?
-      return false unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_RISINGWAVE_USAGE_ENABLED"])
+      return false unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ENABLED"])
       return false unless organization.clickhouse_events_store?
 
       organization.feature_flag_enabled?(:realtime_usage)

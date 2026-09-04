@@ -105,7 +105,7 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "when the deployment kill switch is off" do
-      let(:risingwave_usage_enabled) { nil }
+      let(:realtime_usage_enabled) { nil }
 
       it "reads events" do
         expect(provider.precomputed_options_for(charge:)).to eq({})

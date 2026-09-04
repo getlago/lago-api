@@ -3,8 +3,13 @@
 RSpec.shared_context "with realtime usage availability" do
   include_context "with clickhouse availability"
 
-  let(:risingwave_usage_enabled) { "true" }
+  let(:realtime_usage_enabled) { "true" }
+  let(:premium_license) { true }
 
-  before { ENV["LAGO_RISINGWAVE_USAGE_ENABLED"] = risingwave_usage_enabled }
-  after { ENV["LAGO_RISINGWAVE_USAGE_ENABLED"] = nil }
+  before do
+    ENV["LAGO_REALTIME_USAGE_ENABLED"] = realtime_usage_enabled
+    allow(License).to receive(:premium?).and_return(premium_license)
+  end
+
+  after { ENV["LAGO_REALTIME_USAGE_ENABLED"] = nil }
 end

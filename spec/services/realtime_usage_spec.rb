@@ -29,19 +29,25 @@ RSpec.describe RealtimeUsage do
     end
 
     context "when the kill switch is off" do
-      let(:risingwave_usage_enabled) { nil }
+      let(:realtime_usage_enabled) { nil }
 
       it { expect(enabled).to be(false) }
     end
 
     context "when the kill switch is set to false" do
-      let(:risingwave_usage_enabled) { "false" }
+      let(:realtime_usage_enabled) { "false" }
 
       it { expect(enabled).to be(false) }
     end
 
     context "when clickhouse is not available" do
       let(:clickhouse_enabled) { nil }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "without a premium license" do
+      let(:premium_license) { false }
 
       it { expect(enabled).to be(false) }
     end
