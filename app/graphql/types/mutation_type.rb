@@ -191,6 +191,7 @@ module Types
 
     field :accept_invite, mutation: Mutations::Invites::Accept
     field :create_invite, mutation: Mutations::Invites::Create
+    field :join_organization, mutation: Mutations::Invites::JoinOrganization
     field :revoke_invite, mutation: Mutations::Invites::Revoke
     field :update_invite, mutation: Mutations::Invites::Update
 

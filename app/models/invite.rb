@@ -19,6 +19,19 @@ class Invite < ApplicationRecord
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
+  # NOTE: Emails are saved with the case the user typed, so this lookup ignores case.
+  def existing_user
+    User.find_by("lower(email) = ?", email.to_s.downcase)
+  end
+
+  def existing_user?
+    existing_user.present?
+  end
+
+  def login_method_allowed?(login_method)
+    organization.authentication_methods.include?(login_method)
+  end
+
   def mark_as_revoked!(timestamp = Time.current)
     self.revoked_at ||= timestamp
     revoked!

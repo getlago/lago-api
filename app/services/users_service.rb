@@ -23,7 +23,7 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    unless result.user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
       return result.single_validation_failure!(
         error_code: "login_method_not_authorized",
         field: Organizations::AuthenticationMethods::EMAIL_PASSWORD
@@ -90,29 +90,17 @@ class UsersService < BaseService
     ActiveRecord::Base.transaction do
       user = User.find_or_initialize_by(email: invite.email)
 
+      # NOTE: The password is only set when the user is created. The password of an existing user
+      #       is never reset by an invitation.
       if user.new_record?
         user.password = password
         user.save!
-      elsif user.memberships.active.none?
-        user.update!(password:)
       end
 
       result.user = user
       result.organization = invite.organization
 
-      result.membership = Membership.create!(
-        user: result.user,
-        organization: result.organization
-      )
-
-      invite.roles.each do |role_code|
-        role = Role.with_code(role_code).with_organization(invite.organization_id).first!
-        MembershipRole.create!(
-          organization: result.organization,
-          membership: result.membership,
-          role:
-        )
-      end
+      result.membership = Memberships::CreateFromInviteService.call!(invite:, user:).membership
 
       result.token = generate_token
     rescue ActiveRecord::RecordInvalid => e
