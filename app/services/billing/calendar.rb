@@ -54,7 +54,8 @@ module Billing
     #   interval_with_index_start_at(1)  # => Feb 28
     #   interval_with_index_start_at(2)  # => Mar 31
     def interval_with_index_start_at(index)
-      interval.advance(anchor, index)
+      @boundaries ||= {}
+      @boundaries[index] ||= interval.advance(anchor, index)
     end
 
     # Days in the half-open window [from, to): a day belongs to the window holding its
