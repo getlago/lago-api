@@ -59,9 +59,18 @@ module Api
       end
 
       def show
-        contract = current_organization.contracts
-          .order(started_at: :desc)
-          .find_by(external_id: params[:external_id], status: requested_status)
+        # No status filter resolves to the live contract (pending or active),
+        # so a pending contract is visible on its own detail URL and matches
+        # what the nested applied-rate-card endpoints operate on. An explicit
+        # status reads a specific one, including terminated/canceled history.
+        contract =
+          if params[:status].present?
+            current_organization.contracts
+              .order(started_at: :desc)
+              .find_by(external_id: params[:external_id], status: requested_status)
+          else
+            current_organization.contracts.live_by_external_id(params[:external_id])
+          end
         return not_found_error(resource: "contract") unless contract
 
         render(

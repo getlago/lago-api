@@ -148,6 +148,31 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "when the contract is pending" do
+      let!(:contract) { create(:contract, :pending, organization:, customer:) }
+
+      it "returns it without a status filter" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+        expect(json[:contract][:status]).to eq("pending")
+      end
+    end
+
+    context "when reading a terminated contract by status" do
+      let!(:contract) { create(:contract, :terminated, organization:, customer:) }
+
+      it "returns it only with an explicit status filter" do
+        subject
+        expect(response).to be_not_found_error("contract")
+
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=terminated")
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+      end
+    end
+
     context "when it does not exist" do
       subject { get_with_token(organization, "/api/v2/contracts/unknown") }
 
