@@ -1115,16 +1115,23 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
         second_charge
 
-        [[charge, eu_filter.id], [charge, us_filter.id], [second_charge, ""]].each do |billed_charge, filter_id|
+        rows = [
+          [charge, eu_filter.id, billable_metric],
+          [charge, us_filter.id, billable_metric],
+          [second_charge, "", second_metric]
+        ]
+
+        rows.each do |billed_charge, filter_id, metric|
           create(
             :clickhouse_usage_bucket,
-            organization:, customer:, subscription:, billable_metric:,
+            organization:, customer:, subscription:,
+            billable_metric: metric,
             charge: billed_charge,
             charge_filter_id: filter_id,
             bucket: window_start,
             units: "3.0",
             events_count: 3,
-            aggregation_type: "count_agg"
+            aggregation_type: metric.aggregation_type
           )
         end
       end
@@ -1139,6 +1146,16 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(bucket_reads.count { |sql| sql.include?("sum(units)") }).to eq(1)
         expect(bucket_reads.size).to eq(1)
         expect(queries.count { |sql| sql.include?("events_enriched") }).to eq(1)
+      end
+    end
+
+    context "with a plan the buckets can answer nothing of" do
+      let(:charge) { create(:percentage_charge, plan:, billable_metric:, properties: {rate: "1", fixed_amount: "0"}) }
+
+      it "issues no bucket query at all" do
+        queries = capture_queries { usage_service.call }
+
+        expect(queries.count { |sql| sql.include?("usage_buckets_15m") }).to eq(0)
       end
     end
 

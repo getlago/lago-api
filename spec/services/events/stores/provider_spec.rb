@@ -326,6 +326,23 @@ RSpec.describe Events::Stores::Provider do
         expect(provider.precomputed_options_for(charge:)).to eq({})
       end
     end
+
+    context "with a charge the prefetch found drifting" do
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("10"), events_count: 2)},
+          unservable_charge_ids: [charge.id]
+        )
+      end
+
+      it "answers false for every filter of it, whatever the totals hold" do
+        charge_filter = create(:charge_filter, charge:)
+
+        expect(provider.serves?(charge:)).to be(false)
+        expect(provider.serves?(charge:, filters: {charge_filter:})).to be(false)
+        expect(provider.precomputed_options_for(charge:)).to eq({})
+      end
+    end
   end
 
   describe "#plain_store" do

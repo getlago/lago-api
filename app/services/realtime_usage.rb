@@ -44,8 +44,9 @@ module RealtimeUsage
       return false if charge.prorated?
       return false if billable_metric.recurring?
 
-      # The buckets carry the target wallet in its own column, while the events store returns
-      # it as one more group key, so the served groups would miss it.
+      # `grouped_by` does carry `target_wallet_code`, but the pipeline omits the key entirely
+      # for an event carrying no wallet, where Rails always emits it with nil. Reconciling that
+      # is not worth its complexity for a shape this rare; revisit if it becomes common.
       return false if charge.accepts_target_wallet
 
       # The pipeline does not evaluate custom expressions yet.
