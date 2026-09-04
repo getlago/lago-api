@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class AddRecordDeletionTriggers < ActiveRecord::Migration[8.0]
-  TRACKED_TABLES = %w[fees fees_taxes invoice_subscriptions invoices_taxes].freeze
+  TRACKED_TABLES = %w[fees fees_taxes invoice_subscriptions invoices_taxes credit_notes_taxes].freeze
 
   def up
     safety_assured do
