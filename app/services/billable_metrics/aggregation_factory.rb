@@ -2,9 +2,25 @@
 
 module BillableMetrics
   class AggregationFactory
-    def self.new_instance(charge:, current_usage: false, **attributes)
+    # NOTE: provider is the collaborator that mints the event store instance for this
+    #       charge. Callers that already run one for the whole computation pass theirs;
+    #       the others get a degenerate one, scoped to this single aggregation.
+    def self.new_instance(charge:, current_usage: false, provider: nil, **attributes)
+      if provider
+        unless provider.scoped_to?(subscription: attributes[:subscription], boundaries: attributes[:boundaries])
+          raise ArgumentError,
+            "event store provider runs on another subscription or window than this aggregation"
+        end
+      else
+        provider = Events::Stores::Provider.new(
+          organization: charge.billable_metric.organization,
+          subscription: attributes[:subscription],
+          boundaries: attributes[:boundaries]
+        )
+      end
+
       aggregator_class(charge, current_usage).new(
-        event_store_class: Events::Stores::StoreFactory.store_class(organization: charge.billable_metric.organization),
+        event_store: provider.store_for(charge:, filters: attributes[:filters] || {}),
         charge:,
         **attributes
       )

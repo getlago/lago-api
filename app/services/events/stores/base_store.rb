@@ -91,6 +91,17 @@ module Events
         @grouped_by_values = previous_grouped_by_values
       end
 
+      # NOTE: mints a sibling store for another window, aggregating the same property.
+      #       `use_from_boundary` is left to the caller: a window with no lower bound must
+      #       not apply one.
+      def for_window(filters: nil, **boundaries)
+        store = self.class.new(code:, subscription:, boundaries:, filters: filters || self.filters, deduplicate:)
+
+        store.aggregation_property = aggregation_property
+        store.numeric_property = numeric_property
+        store
+      end
+
       def events(force_from: false)
         raise NotImplementedError
       end
@@ -211,9 +222,9 @@ module Events
 
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
-      protected
+      attr_reader :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+      protected
 
       delegate :customer, to: :subscription
 

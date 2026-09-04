@@ -255,7 +255,7 @@ RSpec.describe ChargeModels::PercentageService do
 
     let(:aggregator) do
       BillableMetrics::Aggregations::SumService.new(
-        event_store_class:,
+        event_store: event_store_class.new(subscription:, boundaries: nil),
         charge:,
         subscription:,
         boundaries: nil

@@ -150,20 +150,12 @@ module BillableMetrics
       def latest_value_from_events
         return @latest_value_from_events if defined?(@latest_value_from_events)
 
-        event_store = event_store_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries: {to_datetime: from_datetime - 1.second},
-          filters:
-        )
+        store = event_store.for_window(to_datetime: from_datetime - 1.second)
+        store.use_from_boundary = false
 
-        event_store.use_from_boundary = false
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
+        breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
-
-        @latest_value_from_events = [BigDecimal(event_store.sum(with_count: false).value), breakdowns]
+        @latest_value_from_events = [BigDecimal(store.sum(with_count: false).value), breakdowns]
       end
 
       def grouped_latest_values
@@ -212,20 +204,12 @@ module BillableMetrics
       end
 
       def grouped_latest_values_from_events
-        event_store = event_store_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries: {to_datetime: from_datetime - 1.second},
-          filters:
-        )
+        store = event_store.for_window(to_datetime: from_datetime - 1.second)
+        store.use_from_boundary = false
 
-        event_store.use_from_boundary = false
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
+        breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
-
-        [event_store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
+        [store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
       end
     end
   end

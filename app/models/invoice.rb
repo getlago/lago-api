@@ -309,15 +309,19 @@ class Invoice < ApplicationRecord
       filters[:ignored_filters] = result.ignored_filters
     end
 
+    boundaries = {
+      from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
+      to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
+      charges_duration: fee.properties["charges_duration"]
+    }
+
+    provider = Events::Stores::Provider.new(organization:, subscription: fee.subscription, boundaries:)
+
     service.new(
-      event_store_class: Events::Stores::StoreFactory.store_class(organization:),
+      event_store: provider.store_for(charge: fee.charge, filters:),
       charge: fee.charge,
       subscription: fee.subscription,
-      boundaries: {
-        from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
-        to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
-        charges_duration: fee.properties["charges_duration"]
-      },
+      boundaries:,
       filters:
     ).breakdown.breakdown
   end
