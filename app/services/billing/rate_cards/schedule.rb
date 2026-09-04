@@ -5,10 +5,10 @@ module Billing
     class Schedule
       TIMINGS = %i[advance arrears].freeze
 
-      Phase = Data.define(:cycle_count, :code, :override) do
-        # The card on its own cadence, unbounded and unpriced by any override. A nil code is
-        # how a caller tells this from the phase the create services persist as "default".
-        def self.default = new(cycle_count: nil, code: nil, override: nil)
+      Phase = Data.define(:position, :cycle_count, :code, :override) do
+        # The card on its own cadence, unbounded and unpriced by any override. It has no
+        # position because nothing persisted it — being last is what defines it.
+        def self.default = new(position: nil, cycle_count: nil, code: nil, override: nil)
       end
 
       # What the card charges for a window: which end of it falls due, and whether a partial
@@ -37,7 +37,7 @@ module Billing
       def initialize(anchor_date:, phases:, rates:, prorated:, timezone:, starts_at:, timing:,
         ends_at: nil, realign_billing_anchor: true)
         @anchor_date = anchor_date
-        @phases = phases
+        @phases = ordered(phases)
         @rates = rates
         @realign_billing_anchor = realign_billing_anchor
         @timezone = timezone
@@ -112,6 +112,16 @@ module Billing
         end
 
         [due, pending]
+      end
+
+      # The billing order is the phases' own, not the caller's. Sorting here rather than
+      # trusting the list means a phase cannot be billed out of sequence by whoever built
+      # it; an unpositioned phase is the synthesized default and belongs last. sort_by is
+      # not stable, so the given order breaks ties.
+      def ordered(phases)
+        phases.each_with_index
+          .sort_by { |phase, index| [phase.position || Float::INFINITY, index] }
+          .map(&:first)
       end
 
       def cadence_rate_at(cursor)

@@ -28,8 +28,11 @@ RSpec.describe Billing::RateCards::Schedule do
     Struct.new(:billing_interval_count, :billing_interval_unit, :label).new(count, unit, label)
   end
 
-  def phase(cycle_count:, every:, unit:, code: "standard", override: nil)
+  # No position: the phases are handed in the order they should bill, and the schedule's
+  # stable sort keeps unpositioned ones where they were given.
+  def phase(cycle_count:, every:, unit:, code: "standard", override: nil, position: nil)
     described_class::Phase.new(
+      position:,
       cycle_count:,
       code:,
       override: interval_override(every, unit, override)

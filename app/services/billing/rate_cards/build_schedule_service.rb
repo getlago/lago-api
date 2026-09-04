@@ -54,6 +54,7 @@ module Billing
       def phases
         configured = rate_phases.map do |phase|
           Schedule::Phase.new(
+            position: phase.position,
             cycle_count: phase.billing_interval_cycle_count,
             code: phase.code,
             override: phase.rate_override

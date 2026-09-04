@@ -16,11 +16,8 @@ module SubscriptionRateCards
       super
     end
 
-    # Sorted here rather than relied on: both associations happen to order by position
-    # today, but Billing::RateCards::Schedule walks the list in the order it is handed and a Phase
-    # carries no position to sort by, so the guarantee has to be made once, on the way out.
     def call
-      result.rate_phases = phases.sort_by(&:position)
+      result.rate_phases = phases
       result
     end
 
