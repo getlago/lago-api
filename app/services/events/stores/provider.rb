@@ -89,6 +89,7 @@ module Events
         return false unless RealtimeUsage.enabled?(organization)
         return false if RealtimeUsage.deduplicated?(organization)
         return false unless RealtimeUsage.supported_charge?(charge)
+        return false unless usage_buckets.serves_charge?(charge.id)
 
         filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&

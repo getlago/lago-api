@@ -184,9 +184,18 @@ module Invoices
     def usage_buckets
       return @usage_buckets if defined?(@usage_buckets)
 
-      @usage_buckets = if prefetch_buckets?
-        RealtimeUsage::FetchBucketsService.call!(subscription:, boundaries: applied_boundaries).usage_buckets
+      @usage_buckets = if prefetch_buckets? && bucket_charges.any?
+        RealtimeUsage::FetchBucketsService
+          .call!(subscription:, boundaries: applied_boundaries, charges: bucket_charges)
+          .usage_buckets
       end
+    end
+
+    # The charges the buckets could answer. A plan whose charges are all recurring, prorated or
+    # pay-in-advance pays neither the bucket read nor the coverage probe behind it, and the ones
+    # left scope that read to the table's `organization_id, subscription_id, charge_id` prefix.
+    def bucket_charges
+      @bucket_charges ||= charges.select { RealtimeUsage.supported_charge?(it) }
     end
 
     # The buckets hold the running total of the current billing period, and callers opt in:
