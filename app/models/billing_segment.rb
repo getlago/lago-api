@@ -79,7 +79,7 @@ end
 #  invoice_id                :uuid
 #  organization_id           :uuid             not null
 #  pricing_unit_id           :uuid
-#  rate_card_rate_id         :uuid             not null
+#  rate_card_rate_id         :uuid
 #  rate_override_id          :uuid
 #  subscription_id           :uuid             not null
 #  subscription_rate_card_id :uuid             not null
