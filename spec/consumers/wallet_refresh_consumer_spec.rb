@@ -145,6 +145,36 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         expect(consumer).to have_received(:pause).with(0, described_class::WATERMARK_PAUSE_TIMEOUT)
       end
 
+      # Pausing re-delivers the whole batch, so without a record of what it already refreshed
+      # every caught-up customer of the batch would cost a refresh per cycle.
+      it "does not refresh a caught-up customer again on the next cycle" do
+        other_wallet
+        create_other_bucket(last_ingested_at:)
+
+        produce_other
+        produce
+
+        expect { 2.times { consumer.consume } }
+          .to have_enqueued_job(Customers::RefreshWalletJob).with(other_customer, wallet_ids: [other_wallet.id]).once
+      end
+
+      # Usage ingested since the refresh raises the watermark, which is the whole point of the
+      # lane: that customer is refreshed again even though it was refreshed a cycle ago.
+      it "refreshes a caught-up customer again once its watermark has moved" do
+        other_wallet
+        create_other_bucket(last_ingested_at:)
+
+        produce_other
+        produce
+        consumer.consume
+
+        create_other_bucket(last_ingested_at: last_ingested_at + 1.second)
+        produce_other(ingested_at: watermark + 1_000, offset: 2)
+
+        expect { consumer.consume }
+          .to have_enqueued_job(Customers::RefreshWalletJob).with(other_customer, wallet_ids: [other_wallet.id])
+      end
+
       it "commits the messages preceding the blocked one" do
         allow(consumer).to receive(:mark_as_consumed)
 
@@ -158,6 +188,32 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
 
         expect(consumer).to have_received(:pause).with(1, described_class::WATERMARK_PAUSE_TIMEOUT)
         expect(consumer).to have_received(:mark_as_consumed).with(consumer.messages.first)
+      end
+    end
+
+    # `Customers::RefreshWalletsService` recomputes usage across every active subscription of
+    # the customer, so a subscription left behind would debit the wallet against its previous
+    # epoch even though the trigger that carried the highest watermark has caught up.
+    context "when the batch carries several subscriptions of one customer" do
+      let(:second_subscription) { create(:subscription, organization:, customer:, plan:) }
+
+      before do
+        create_bucket(last_ingested_at:)
+
+        produce
+        produce(subscription_id: second_subscription.id, ingested_at: watermark - 1_000)
+      end
+
+      it "does not refresh while one of them is behind its own watermark" do
+        create_bucket(subscription: second_subscription, last_ingested_at: last_ingested_at - 2.seconds)
+
+        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+      end
+
+      it "refreshes once every one of them has caught up" do
+        create_bucket(subscription: second_subscription, last_ingested_at: last_ingested_at - 1.second)
+
+        expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob).once
       end
     end
 
@@ -180,6 +236,47 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         3.times { consumer.consume }
 
         expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
+      end
+
+      # Pausing re-delivers the same messages with their original timestamps, so the trigger
+      # ages out while it is waited on. Re-judging its age there would drop it silently.
+      it "hands a trigger that aged out while waiting to the dead letter queue" do
+        consumer.consume
+
+        travel(described_class::MAX_TRIGGER_AGE + 1.second)
+
+        2.times { consumer.consume }
+
+        expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
+      end
+
+      # Every blocked customer was re-checked on every cycle, so they have all waited as long
+      # as the offset the budget was counted on; walking them one at a time would hold the
+      # partition for one budget each.
+      it "dead-letters every trigger the batch is still blocked on" do
+        other_wallet
+        create_other_bucket(last_ingested_at: last_ingested_at - 1.second)
+
+        produce_other
+
+        3.times { consumer.consume }
+
+        expect(dlq_messages.map { it[:payload] }).to match_array(consumer.messages.map(&:raw_payload))
+      end
+
+      # `pause` seeks past the offsets between the blocked ones, so leaving them unmarked
+      # would replay their refreshes after a crash or a rebalance.
+      it "commits past every trigger it gave up on" do
+        allow(consumer).to receive(:mark_as_consumed)
+
+        other_wallet
+        create_other_bucket(last_ingested_at: last_ingested_at - 1.second)
+
+        produce_other
+
+        3.times { consumer.consume }
+
+        expect(consumer).to have_received(:mark_as_consumed).with(consumer.messages.last)
       end
 
       it "commits the offset it gave up on so the partition moves past it" do
@@ -269,6 +366,16 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
 
         expect(dlq_messages).to be_empty
       end
+
+      # An outage, or a query that can no longer run at all, would otherwise hold the offset
+      # for good: the adapter reports both as the same error.
+      it "gives up once the read keeps failing past the failure budget" do
+        stub_const("#{described_class}::MAX_WATERMARK_READ_FAILURES", 1)
+
+        3.times { consumer.consume }
+
+        expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
+      end
     end
 
     # The sink does not COALESCE `ingested_at`. Each of the two examples seeds the bucket the
@@ -288,6 +395,26 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         consumer.consume
 
         expect(consumer).not_to have_received(:pause)
+      end
+    end
+
+    # `Time.parse` raises on a component out of range, and reads decimal epoch milliseconds as
+    # a date, so neither may reach the watermark comparison unguarded.
+    context "when the trigger carries a watermark the parser cannot be trusted with" do
+      it "skips a date out of range instead of failing the batch" do
+        create_bucket(last_ingested_at:)
+        produce(ingested_at: "2026-13-01T00:00:00Z")
+
+        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+      end
+
+      # Parsed as a date this lands at midnight, behind every bucket, and would refresh on
+      # usage that has not landed yet.
+      it "reads decimal epoch milliseconds as an epoch, not as a date" do
+        create_bucket(last_ingested_at: last_ingested_at - 1.second)
+        produce(ingested_at: "#{watermark}.0")
+
+        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
       end
     end
 

@@ -29,9 +29,18 @@ class WalletRefreshConsumer < ApplicationConsumer
   # this budget the trigger goes to the dead letter queue.
   MAX_WATERMARK_ATTEMPTS = 300
 
-  # A failed read cannot tell a late bucket from one that will never land, so ClickHouse being
-  # unavailable holds the offset without spending its budget: that is backpressure, not a bad
-  # message. Letting the error out would send the batch to the dead letter queue instead.
+  # Pause cycles a failed watermark read may spend before it stops being read as a blip. The
+  # ClickHouse adapter reports an unreachable server and a query that can no longer run as the
+  # same error, so past this the offset spends its attempt budget like any other wait and ends
+  # up in the dead letter queue, rather than holding the partition for good.
+  MAX_WATERMARK_READ_FAILURES = 30
+
+  # Epoch milliseconds, whole or decimal, as opposed to a rendered timestamp.
+  NUMERIC_EPOCH = /\A\d+(?:\.\d+)?\z/
+
+  # Caught rather than let out: the error would fail a batch of thousands, of which Karafka
+  # dead-letters only the first message. A read that fails is treated as backpressure instead,
+  # bounded by `MAX_WATERMARK_READ_FAILURES`.
   CLICKHOUSE_ERRORS = [
     ActiveRecord::ActiveRecordError,
     Net::OpenTimeout,
@@ -46,8 +55,24 @@ class WalletRefreshConsumer < ApplicationConsumer
 
     log_stale_triggers
 
-    return if triggers.empty?
+    blocked_offsets = triggers.empty? ? [] : dispatch_refreshes
 
+    if blocked_offsets.any?
+      wait_for_buckets(blocked_offsets.sort)
+    else
+      clear_pause_state
+    end
+  end
+
+  private
+
+  # Karafka keeps the consumer instance alive across batches (`consumer_persistence`), so the
+  # per-batch state is rebuilt on every `consume` instead of being memoized.
+  attr_reader :batch, :triggers, :stale_triggers, :refreshable_customers, :active_wallet_ids,
+    :caught_up_subscription_ids
+
+  # Returns the offset each blocked customer has to be resumed from.
+  def dispatch_refreshes
     @refreshable_customers = fetch_refreshable_customers
     @active_wallet_ids = fetch_active_wallet_ids
     @caught_up_subscription_ids = fetch_caught_up_subscription_ids
@@ -59,28 +84,59 @@ class WalletRefreshConsumer < ApplicationConsumer
       next if customer.nil?
 
       if buckets_caught_up?(trigger)
-        Customers::RefreshWalletJob.perform_later(customer, wallet_ids: active_wallet_ids[customer.id])
+        refresh(customer, trigger) unless already_refreshed?(trigger)
       else
         blocked_offsets << trigger[:offset]
       end
     end
 
-    wait_for_buckets(blocked_offsets.sort) if blocked_offsets.any?
+    blocked_offsets
   end
 
-  private
+  def refresh(customer, trigger)
+    Customers::RefreshWalletJob.perform_later(customer, wallet_ids: active_wallet_ids[customer.id])
 
-  # Karafka keeps the consumer instance alive across batches (`consumer_persistence`), so the
-  # per-batch state is rebuilt on every `consume` instead of being memoized.
-  attr_reader :batch, :triggers, :refreshable_customers, :active_wallet_ids, :caught_up_subscription_ids
+    refreshed_watermarks_ms[trigger[:customer_id]] = trigger[:watermarks_ms]
+  end
+
+  # A pause re-delivers the whole batch, so one blocked subscription would otherwise cost the
+  # batch's every other customer a refresh per cycle — up to `MAX_WATERMARK_ATTEMPTS` of them,
+  # and `unique :until_executed` only collapses the ones still queued. A customer is refreshed
+  # again once one of its subscriptions carries a watermark past the one already refreshed,
+  # which is what usage ingested since looks like.
+  #
+  # Only offsets at or after the paused one come back, so the record is dropped as soon as the
+  # partition resumes.
+  def already_refreshed?(trigger)
+    refreshed = refreshed_watermarks_ms[trigger[:customer_id]]
+
+    return false if refreshed.nil?
+
+    trigger[:watermarks_ms].all? { |subscription_id, watermark_ms| watermark_ms <= refreshed[subscription_id].to_i }
+  end
+
+  def refreshed_watermarks_ms
+    @refreshed_watermarks_ms ||= {}
+  end
+
+  # Nothing is blocked, so the partition moves on and everything the wait carried across its
+  # cycles goes with it.
+  def clear_pause_state
+    @paused_offset = nil
+    @read_failures = 0
+    @refreshed_watermarks_ms = nil
+  end
 
   # One entry per customer: N triggers for one customer cost one refresh, so catching up
   # costs O(distinct customers) rather than O(messages). An entry keeps the batch's highest
-  # watermark together with the subscription that carried it — the event behind that
-  # watermark landed in a bucket of that subscription, so that is where it will appear — and
-  # the offset of the customer's first message, which is where the partition has to resume
-  # when the customer turns out to be blocked.
+  # watermark for every subscription it carried for that customer — the refresh recomputes
+  # usage across all of the customer's active subscriptions, so waiting on one of them would
+  # still debit the wallet against another's previous epoch — and the offset of the customer's
+  # first message, which is where the partition has to resume when the customer turns out to
+  # be blocked.
   def build_triggers
+    @stale_triggers = 0
+
     batch.each_with_object({}) do |message, acc|
       trigger = build_trigger(message)
       next if trigger.nil?
@@ -89,8 +145,8 @@ class WalletRefreshConsumer < ApplicationConsumer
 
       if known.nil?
         acc[trigger[:customer_id]] = trigger
-      elsif trigger[:watermark_ms] > known[:watermark_ms]
-        known.merge!(trigger.slice(:watermark_ms, :subscription_id))
+      else
+        known[:watermarks_ms].merge!(trigger[:watermarks_ms]) { |_id, kept, added| [kept, added].max }
       end
     end
   end
@@ -103,7 +159,12 @@ class WalletRefreshConsumer < ApplicationConsumer
     watermark_ms = epoch_ms(payload["last_ingested_at"])
 
     return nil if organization_id.blank? || customer_id.blank? || subscription_id.blank?
-    return nil if message.timestamp < MAX_TRIGGER_AGE.ago
+
+    if stale?(message)
+      @stale_triggers += 1
+
+      return nil
+    end
 
     # The sink does not COALESCE `ingested_at` and the topic contract does not guarantee it.
     # There is no epoch to wait for, and refreshing anyway would read the buckets early.
@@ -113,37 +174,55 @@ class WalletRefreshConsumer < ApplicationConsumer
       return nil
     end
 
-    {organization_id:, customer_id:, subscription_id:, watermark_ms:, offset: message.offset}
+    {organization_id:, customer_id:, watermarks_ms: {subscription_id => watermark_ms}, offset: message.offset}
+  end
+
+  # Age is judged on first delivery only. A paused partition re-delivers the same messages
+  # with their original timestamps, so judging them again would age out the very trigger the
+  # pause is waiting for and drop it silently, short of the attempt budget and of the dead
+  # letter queue.
+  def stale?(message)
+    return false if @paused_offset && message.offset >= @paused_offset
+
+    message.timestamp < MAX_TRIGGER_AGE.ago
   end
 
   # Dropping a backlog is the policy, but it has to be visible: a pipeline lagging past the
   # window, or a producer clock sitting behind ours, otherwise looks exactly like silence.
   def log_stale_triggers
-    cutoff = MAX_TRIGGER_AGE.ago
-    stale = batch.count { |message| message.timestamp < cutoff }
+    return if stale_triggers.zero?
 
-    return if stale.zero?
-
-    Karafka.logger.warn("#{self.class}: #{stale} trigger(s) older than #{MAX_TRIGGER_AGE.inspect}, left to the sweep")
+    Karafka.logger.warn(
+      "#{self.class}: #{stale_triggers} trigger(s) older than #{MAX_TRIGGER_AGE.inspect}, left to the sweep"
+    )
   end
 
   # The sink encodes `ingested_at` as integer epoch milliseconds (RisingWave's JSON rendering
-  # of a naive timestamp), which is already the unit the watermark is compared in. The string
-  # forms are tolerated so that quoting the number, or sinking the column as a timestamptz,
-  # does not silently turn every trigger into a wait that can only time out.
+  # of a naive timestamp), which is already the unit the watermark is compared in. The other
+  # forms are tolerated so that quoting the number, rendering it as a decimal, or sinking the
+  # column as a timestamptz, does not silently turn every trigger into a wait that can only
+  # time out. Truncating rather than rounding keeps the expectation from landing above the
+  # millisecond ClickHouse stored, which no bucket could ever satisfy.
   def epoch_ms(value)
     case value
-    when Integer then value
-    when String then value.match?(/\A\d+\z/) ? value.to_i : parsed_epoch_ms(value)
+    when Numeric then value.to_i
+    when String then value.match?(NUMERIC_EPOCH) ? value.to_i : parsed_epoch_ms(value)
     end
   end
 
   # Converted through a Rational rather than a Float so the millisecond never rounds above
   # the one ClickHouse stored.
+  #
+  # `parse` answers nil for a string that is not a date at all, but raises on one whose
+  # components are out of range — "mon out of range" for a thirteenth month — and a single
+  # trigger may not fail a batch of thousands of which the dead letter queue would receive
+  # only the first message.
   def parsed_epoch_ms(value)
     time = Time.find_zone!("UTC").parse(value)
 
     (time.to_time.to_r * 1000).to_i if time
+  rescue ArgumentError
+    nil
   end
 
   # One query for the whole batch. These filters decide whether a refresh could do anything at
@@ -176,7 +255,7 @@ class WalletRefreshConsumer < ApplicationConsumer
   def buckets_caught_up?(trigger)
     return false if watermark_read_failed?
 
-    caught_up_subscription_ids.include?(trigger[:subscription_id])
+    trigger[:watermarks_ms].each_key.all? { caught_up_subscription_ids.include?(it) }
   end
 
   def watermark_read_failed?
@@ -189,7 +268,11 @@ class WalletRefreshConsumer < ApplicationConsumer
     watermarks = triggers
       .each_value
       .select { refreshable_customers.key?(it[:customer_id]) }
-      .map { it.slice(:organization_id, :subscription_id, :watermark_ms) }
+      .flat_map do |trigger|
+        trigger[:watermarks_ms].map do |subscription_id, watermark_ms|
+          {organization_id: trigger[:organization_id], subscription_id:, watermark_ms:}
+        end
+      end
 
     return Set.new if watermarks.empty?
 
@@ -215,13 +298,28 @@ class WalletRefreshConsumer < ApplicationConsumer
       @paused_attempts = 0
     end
 
-    @paused_attempts += 1 unless watermark_read_failed?
+    @paused_attempts += 1 if spend_attempt?
 
     if @paused_attempts > MAX_WATERMARK_ATTEMPTS
       give_up_on(offsets)
     else
       pause_on(offset)
     end
+  end
+
+  # A failed read is free for as long as it can still be a blip. Past that the wait is no
+  # longer backpressure, and holding the offset would trade an unbounded lag for a trigger the
+  # dead letter queue would have surfaced.
+  def spend_attempt?
+    if watermark_read_failed?
+      @read_failures = @read_failures.to_i + 1
+
+      return @read_failures > MAX_WATERMARK_READ_FAILURES
+    end
+
+    @read_failures = 0
+
+    true
   end
 
   def pause_on(offset)
@@ -233,32 +331,28 @@ class WalletRefreshConsumer < ApplicationConsumer
   end
 
   # No other lane refreshes these customers, so a trigger whose buckets never landed is handed
-  # to the dead letter queue instead of being dropped, and the partition moves on to the next
-  # customer still waiting.
+  # to the dead letter queue instead of being dropped.
+  #
+  # The whole blocked set goes at once: pausing re-delivers the batch, so every one of them was
+  # re-checked on every cycle and has waited exactly as long as the offset the budget was
+  # counted on. Walking them one at a time would instead hold the partition for one budget per
+  # blocked customer.
   #
   # `dispatch_to_dlq` is Karafka's own, from the route's dead letter queue: it builds the same
   # envelope and emits the same `dead_letter_queue.dispatched` event as an unprocessable
   # message, so both kinds of unprocessed trigger are replayed and monitored the same way.
   def give_up_on(offsets)
-    message = batch.find { |candidate| candidate.offset == offsets.first }
+    blocked = offsets.to_set
+    blocked_messages = batch.select { blocked.include?(it.offset) }
 
     Karafka.logger.warn(
-      "#{self.class}: buckets still behind at offset #{message.offset} after " \
-      "#{@paused_attempts} attempts, moving the trigger to the dead letter queue"
+      "#{self.class}: buckets still behind for #{blocked_messages.count} trigger(s) after " \
+      "#{@paused_attempts} attempts, moving them to the dead letter queue"
     )
 
-    dispatch_to_dlq(message)
-    mark_as_consumed(message)
+    blocked_messages.each { dispatch_to_dlq(it) }
+    mark_as_consumed(blocked_messages.last)
 
-    remaining = offsets.drop(1)
-
-    if remaining.any?
-      @paused_offset = remaining.first
-      @paused_attempts = 1
-
-      pause(remaining.first, WATERMARK_PAUSE_TIMEOUT)
-    else
-      @paused_offset = nil
-    end
+    clear_pause_state
   end
 end
