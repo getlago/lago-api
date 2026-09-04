@@ -30,6 +30,14 @@ module Fees
           )
         end
 
+        def billing_segment
+          nil
+        end
+
+        def product_filter
+          nil
+        end
+
         def properties
           properties_override || charge_filter&.properties || charge.properties
         end

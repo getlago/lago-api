@@ -38,6 +38,10 @@ class BillingSegment < ApplicationRecord
     rate_override || rate_card_rate
   end
 
+  def duration_in_days
+    Utils::Datetime.date_diff_with_timezone(started_at, ended_at, customer.applicable_timezone)
+  end
+
   def pricing_unit_conversion_rate
     if rate_override
       rate_override.pricing_unit_conversion_rate
