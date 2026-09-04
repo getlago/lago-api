@@ -1,13 +1,6 @@
 # frozen_string_literal: true
 
-# A durable billing-period row: the outbox + retry unit of the new billing engine.
-# One per (subscription_rate_card, period). The scheduler inserts it (status
-# pending) while advancing the clock; the processor turns pending segments into an
-# invoice and marks them done. High-volume ledger — no soft delete, no PaperTrail.
 class BillingSegment < ApplicationRecord
-  # The engine's windows are half-open; ended_at is stored inclusive, so it is the last
-  # instant covered rather than the one the window stops at. Every writer goes through
-  # .inclusive_end so the conversion cannot be forgotten in one of them.
   MICROSECOND = Rational(1, 1_000_000)
 
   def self.inclusive_end(instant) = instant - MICROSECOND

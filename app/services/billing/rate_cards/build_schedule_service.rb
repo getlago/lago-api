@@ -61,7 +61,7 @@ module Billing
           )
         end
 
-        if configured.last && configured.last.cycle_count.nil?
+        if configured.any? { |phase| phase.cycle_count.nil? }
           configured
         else
           configured + [Schedule::Phase.default]
