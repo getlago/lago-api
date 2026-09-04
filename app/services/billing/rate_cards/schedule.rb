@@ -97,15 +97,15 @@ module Billing
             cadence = interval
 
             calendar = calendar_for(anchor, interval)
-            period = calendar.interval_containing(cursor)
-            cycle = cycle_for(period, cursor, index, phase, calendar)
+            window = calendar.interval_containing(cursor)
+            cycle = cycle_for(window, cursor, index, phase, calendar)
             if cycle.due_at > timestamp
               pending = cycle
               break
             end
 
             due << cycle
-            cursor = period.end
+            cursor = window.end
             index += 1
             produced += 1
           end
@@ -139,9 +139,9 @@ module Billing
         ends_at.present? && cursor >= ends_at
       end
 
-      def cycle_for(period, cursor, index, phase, calendar)
-        started_at = [period.begin, cursor].max
-        ended_at = ends_at ? [period.end, ends_at].min : period.end
+      def cycle_for(window, cursor, index, phase, calendar)
+        started_at = [window.begin, cursor].max
+        ended_at = ends_at ? [window.end, ends_at].min : window.end
 
         Cycle.new(index:, started_at:, ended_at:, phase:, calendar:, terms:)
       end
