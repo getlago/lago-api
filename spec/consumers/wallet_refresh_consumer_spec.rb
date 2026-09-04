@@ -116,6 +116,41 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       end
     end
 
+    # Karafka keeps the consumer instance alive across batches, so per-batch state that
+    # outlived a `consume` would replay the first batch instead of the one just delivered.
+    context "when the consumer instance is reused across batches" do
+      let(:other_customer) { create(:customer, organization:, awaiting_wallet_refresh: true) }
+      let(:other_subscription) { create(:subscription, organization:, customer: other_customer, plan:) }
+
+      before do
+        create_bucket(last_ingested_at:)
+        create(:wallet, customer: other_customer, organization:)
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer: other_customer, subscription: other_subscription,
+          charge:, billable_metric:, last_ingested_at:
+        )
+
+        produce
+        consumer.consume
+        _karafka_consumer_messages.clear
+      end
+
+      it "refreshes the customer carried by the second batch" do
+        produce(customer_id: other_customer.id, subscription_id: other_subscription.id, offset: 1)
+
+        expect { consumer.consume }
+          .to have_enqueued_job(Customers::RefreshWalletJob).with(other_customer)
+      end
+
+      it "does not replay the first batch" do
+        produce(customer_id: other_customer.id, subscription_id: other_subscription.id, offset: 1)
+
+        expect { consumer.consume }
+          .not_to have_enqueued_job(Customers::RefreshWalletJob).with(customer)
+      end
+    end
+
     # The sink does not COALESCE `ingested_at`. Each of the two examples seeds the bucket the
     # other outcome would need, so neither can pass for the wrong reason.
     context "when the trigger carries no watermark" do

@@ -23,7 +23,12 @@ class WalletRefreshConsumer < ApplicationConsumer
   MAX_TRIGGER_AGE = 10.seconds
 
   def consume
+    @batch = messages.to_a
+    @triggers = build_triggers
+
     return if triggers.empty?
+
+    @refreshable_customers = fetch_refreshable_customers
 
     blocked_offsets = []
 
@@ -43,9 +48,9 @@ class WalletRefreshConsumer < ApplicationConsumer
 
   private
 
-  def batch
-    @batch ||= messages.to_a
-  end
+  # Karafka keeps the consumer instance alive across batches (`consumer_persistence`), so the
+  # per-batch state is rebuilt on every `consume` instead of being memoized.
+  attr_reader :batch, :triggers, :refreshable_customers
 
   # One entry per customer: N triggers for one customer cost one refresh, so catching up
   # costs O(distinct customers) rather than O(messages). An entry keeps the batch's highest
@@ -53,8 +58,8 @@ class WalletRefreshConsumer < ApplicationConsumer
   # watermark landed in a bucket of that subscription, so that is where it will appear — and
   # the offset of the customer's first message, which is where the partition has to resume
   # when the customer turns out to be blocked.
-  def triggers
-    @triggers ||= batch.each_with_object({}) do |message, acc|
+  def build_triggers
+    batch.each_with_object({}) do |message, acc|
       trigger = build_trigger(message)
       next if trigger.nil?
 
@@ -107,8 +112,8 @@ class WalletRefreshConsumer < ApplicationConsumer
   # sweep would not pick up costs nothing here either. Organizations outside the realtime
   # usage rollout are dropped because their refresh does not read the buckets, so there is no
   # watermark for this consumer to be waiting on.
-  def refreshable_customers
-    @refreshable_customers ||= Customer
+  def fetch_refreshable_customers
+    Customer
       .with_active_wallets
       .awaiting_wallet_refresh
       .without_tax_errors
