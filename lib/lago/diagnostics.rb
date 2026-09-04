@@ -568,6 +568,10 @@ module Lago
     def smtp
       section("8. SMTP") do
         enabled = ENV["LAGO_SMTP_ADDRESS"].present?
+        authentication = ENV.fetch("LAGO_SMTP_AUTHENTICATION", "login").presence
+        starttls_enabled = ActiveModel::Type::Boolean.new.cast(
+          ENV.fetch("LAGO_SMTP_ENABLE_STARTTLS_AUTO", true).presence || true
+        )
 
         output.puts "  Enabled        : #{enabled}"
         if enabled
@@ -580,8 +584,8 @@ module Lago
           setting("Port", "LAGO_SMTP_PORT")
           setting("Domain", "LAGO_SMTP_DOMAIN")
           setting("Username", "LAGO_SMTP_USERNAME")
-          fact("Authentication", "login")
-          fact("STARTTLS", "enabled")
+          fact("Authentication", authentication || "none")
+          fact("STARTTLS", starttls_enabled ? "enabled" : "disabled")
         end
       end
     end

@@ -82,8 +82,10 @@ Rails.application.configure do
       domain: ENV["LAGO_SMTP_DOMAIN"],
       user_name: ENV["LAGO_SMTP_USERNAME"],
       password: ENV["LAGO_SMTP_PASSWORD"],
-      authentication: "login",
-      enable_starttls_auto: true
+      authentication: ENV.fetch("LAGO_SMTP_AUTHENTICATION", "login").presence,
+      enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(
+        ENV.fetch("LAGO_SMTP_ENABLE_STARTTLS_AUTO", true).presence || true
+      )
     }
   end
 end
