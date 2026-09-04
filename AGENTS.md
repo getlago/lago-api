@@ -190,6 +190,10 @@ To create a webhook:
 - `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
 - `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
+- `LAGO_EVENT_DESTINATION_ORG_ID` (POC only): id of the single organization whose current usage is delivered to an event destination on wallet refresh. When blank the feature is fully off. Example: `LAGO_EVENT_DESTINATION_ORG_ID=11111111-2222-3333-4444-555555555555`
+- `LAGO_EVENT_DESTINATION_TRANSPORT` (POC only): `log`, the default, stubs the Kinesis client so records are only logged; `kinesis` talks to the real stream. Example: `LAGO_EVENT_DESTINATION_TRANSPORT=log`
+- `LAGO_EVENT_DESTINATION_KINESIS_STREAM_ARN`: ARN of the target Kinesis stream. Example: `LAGO_EVENT_DESTINATION_KINESIS_STREAM_ARN=arn:aws:kinesis:eu-west-1:123456789012:stream/lago-current-usage`
+- `LAGO_EVENT_DESTINATION_KINESIS_REGION`: AWS region used to build the Kinesis client. Example: `LAGO_EVENT_DESTINATION_KINESIS_REGION=eu-west-1`
 - Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
 
 # Service

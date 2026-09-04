@@ -99,6 +99,7 @@ gem "datadog", require: false
 
 # Storage
 gem "aws-sdk-s3", require: false
+gem "aws-sdk-kinesis"
 gem "google-cloud-storage", require: false
 # google-apis-core < 1.2.1 loads representable/json, which calls `gem "multi_json"`
 # without declaring the dependency. googleauth 1.17 and signet 0.22 both migrated to

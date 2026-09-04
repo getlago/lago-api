@@ -35,6 +35,10 @@ module Customers
 
       customer.update!(awaiting_wallet_refresh: false)
 
+      if EventDestinations::KinesisStream.for(customer.organization)
+        DeliverEventJob.perform_after_commit("customer_usage.refreshed", customer)
+      end
+
       result.wallets = customer.wallets.active.reload
       result
     rescue BaseService::FailedResult => e
