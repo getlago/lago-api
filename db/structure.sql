@@ -2410,7 +2410,7 @@ CREATE TABLE public.billing_segments (
     customer_id uuid NOT NULL,
     subscription_rate_card_id uuid NOT NULL,
     invoice_id uuid,
-    rate_card_rate_id uuid NOT NULL,
+    rate_card_rate_id uuid,
     rate_override_id uuid,
     pricing_unit_id uuid,
     rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
