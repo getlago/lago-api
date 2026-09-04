@@ -14,6 +14,8 @@ module Fees
     def call
       result.applied_taxes = []
       return result if fee.applied_taxes.any?
+      return result if fee_taxes.nil? && !fee.taxable?
+      return unreported_fee_failure if fee_taxes.nil?
 
       applied_taxes_amount_cents = 0
       applied_precise_taxes_amount_cents = 0.to_d
@@ -60,6 +62,16 @@ module Fees
     private
 
     attr_reader :fee, :fee_taxes
+
+    # NOTE: A fee with no amount is left out of the provider request, so having no entry in the
+    #       response is expected. Any other fee missing from a successful response means the
+    #       response is incomplete, and taxing it as zero would under-charge it silently.
+    def unreported_fee_failure
+      result.service_failure!(
+        code: "fee_missing_from_tax_response",
+        message: "Fee #{fee.id} is missing from the provider tax response"
+      )
+    end
 
     def taxes_base_rate(tax)
       return 1 unless tax
