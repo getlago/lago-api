@@ -4,10 +4,6 @@ module Invoices
   class CustomerUsageService < BaseService
     Result = BaseResult[:invoice, :usage, :fees_taxes]
 
-    # Recurring metrics of these types set use_from_boundary to false, so they aggregate all history
-    # up to the upper boundary whatever lower boundary they are given.
-    LIFETIME_BY_DEFAULT_AGGREGATIONS = %w[sum_agg unique_count_agg].freeze
-
     def initialize(
       customer:,
       subscription:,
@@ -131,12 +127,35 @@ module Invoices
     end
 
     def charge_usage(charge, applied_filters)
+      if usage_filters.full_usage
+        full_usage_charge_fees(charge, applied_filters)
+      else
+        current_period_charge_fees(charge, applied_filters)
+      end
+    end
+
+    def full_usage_charge_fees(charge, applied_filters)
+      Fees::FullUsageChargeService
+        .call!(
+          invoice:,
+          subscription:,
+          charge:,
+          boundaries:,
+          date_service:,
+          applied_filters:,
+          options: charge_options,
+          cache: charge_cache_enabled?,
+          max_timestamp:
+        )
+        .fees
+    end
+
+    def current_period_charge_fees(charge, applied_filters)
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
         to_datetime: boundaries.charges_to_datetime,
         cache: charge_cache_enabled?,
-        full_usage: usage_filters.full_usage && !lifetime_by_default?(charge),
         last_seen_at: applied_filters
       )
 
@@ -150,31 +169,20 @@ module Invoices
           subscription:,
           cache_middleware:,
           filtered_aggregations: applied_filters.keys,
-          options: Fees::ChargeService::Options.new(
-            context: :current_usage,
-            calculate_projected_usage:,
-            with_zero_units_filters:,
-            usage_filters:,
-            # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
-            skip_adjusted_fees: true
-          )
+          options: charge_options
         )
         .fees
     end
 
-    # A recurring sum or unique count aggregates all history whatever lower boundary it is given, so
-    # its full usage is the number the ordinary current period entry already holds. Only the cache
-    # key changes: the window it is computed over is irrelevant to the result.
-    #
-    # Pay in advance is excluded because find_cached_aggregation is scoped by the lower boundary,
-    # and prorated because the period ratio is applied to it.
-    def lifetime_by_default?(charge)
-      return false unless usage_filters.full_usage
-      return false if calculate_projected_usage || max_timestamp
-      return false if charge.pay_in_advance? || charge.prorated?
-
-      metric = charge.billable_metric
-      metric.recurring? && LIFETIME_BY_DEFAULT_AGGREGATIONS.include?(metric.aggregation_type)
+    def charge_options
+      @charge_options ||= Fees::ChargeService::Options.new(
+        context: :current_usage,
+        calculate_projected_usage:,
+        with_zero_units_filters:,
+        usage_filters:,
+        # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
+        skip_adjusted_fees: true
+      )
     end
 
     def boundaries
@@ -322,7 +330,12 @@ module Invoices
 
       # full usage is only allowed for subscriptions without prorated charges
       # and only when filtering by charge or by group
-      !subscription_has_prorated_charges && any_filter_present
+      return false unless !subscription_has_prorated_charges && any_filter_present
+
+      charges.all? do
+        Fees::FullUsageChargeService::FULL_USAGE_AGGREGATIONS.include?(it.billable_metric.aggregation_type) &&
+          it.standard?
+      end
     end
   end
 end

@@ -154,5 +154,60 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
         expect(result.first.pricing_unit_usage).to be_present
       end
     end
+
+    context "with prior periods" do
+      subject(:middleware) do
+        described_class.new(subscription:, charge:, to_datetime:, cache: cache_enabled, prior_periods: true, context: "some-context", last_seen_at:)
+      end
+
+      let(:prior_periods_cache_key) do
+        Subscriptions::ChargeCacheService.new(subscription:, charge:, charge_filter:, prior_periods: true).cache_key
+      end
+
+      it "passes prior_periods and context through to the cache service" do
+        allow(Subscriptions::ChargeCacheService).to receive(:new).and_call_original
+
+        middleware.call(charge_filter:) { [] }
+
+        expect(Subscriptions::ChargeCacheService).to have_received(:new)
+          .with(hash_including(prior_periods: true, context: "some-context"))
+      end
+
+      context "when a more recent event was ingested for the charge" do
+        let(:last_seen_at) { {nil => Time.current} }
+
+        before do
+          Rails.cache.write(
+            prior_periods_cache_key,
+            {"cached_at" => 1.hour.ago.iso8601, "context" => "some-context", "value" => [{"amount_cents" => 500}].to_json}
+          )
+        end
+
+        it "still returns the cached fees without calling the block" do
+          block_called = false
+          result = middleware.call(charge_filter:) do
+            block_called = true
+            []
+          end
+
+          expect(block_called).to be false
+          expect(result.map(&:amount_cents)).to eq([500])
+        end
+      end
+    end
+  end
+
+  describe ".prior_periods_expiration" do
+    it "defaults to one day" do
+      expect(described_class.prior_periods_expiration).to eq(described_class::DEFAULT_PRIOR_PERIODS_EXPIRATION)
+    end
+
+    context "when LAGO_PRIOR_PERIODS_USAGE_CACHE_TTL_SECONDS is set" do
+      before { stub_const("ENV", ENV.to_hash.merge("LAGO_PRIOR_PERIODS_USAGE_CACHE_TTL_SECONDS" => "3600")) }
+
+      it "returns the overridden expiration" do
+        expect(described_class.prior_periods_expiration).to eq(3_600.seconds)
+      end
+    end
   end
 end

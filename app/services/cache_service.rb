@@ -4,9 +4,10 @@ class CacheService < BaseService
   # How long after latest event is enriched is needed to settle on Clickhouse side
   SETTLE_WINDOW = 1.second
 
-  def initialize(*, expires_in: nil, invalidate_if_older_than: nil)
+  def initialize(*, expires_in: nil, invalidate_if_older_than: nil, context: nil)
     @expires_in = expires_in
     @invalidate_if_older_than = invalidate_if_older_than
+    @context = context
     super(nil)
   end
 
@@ -45,7 +46,7 @@ class CacheService < BaseService
 
   private
 
-  attr_reader :expires_in, :invalidate_if_older_than
+  attr_reader :expires_in, :invalidate_if_older_than, :context
 
   # Subclasses opting into lazy validation override this to wrap the stored value with its
   # creation time, so the cache can be invalidated at read time by comparing it against the
@@ -54,16 +55,26 @@ class CacheService < BaseService
     false
   end
 
+  # context is a string rather than a hash so the comparison does not depend on how the cache
+  # store round-trips key types.
+  def wrapped?
+    track_created_at? || context.present?
+  end
+
   def wrap(value, computed_at)
-    return value unless track_created_at?
+    return value unless wrapped?
+
+    payload = {"value" => value}
+    payload["context"] = context if context.present?
+    return payload unless track_created_at?
 
     # cached_at is a watermark of what the value aggregated, not a wall clock reading. It must stay
     # the last seen event timestamp so that *any* event above it invalidates the entry.
     #
     # With no event seen yet there is no watermark to use, so fall back to the same conservative
     # bound the settle gate applies rather than to Time.current
-    cached_at = (invalidate_if_older_than || computed_at - SETTLE_WINDOW).iso8601(6)
-    {"cached_at" => cached_at, "value" => value}
+    payload["cached_at"] = (invalidate_if_older_than || computed_at - SETTLE_WINDOW).iso8601(6)
+    payload
   end
 
   # An event enriched at the boundary timestamp may still be committing when the aggregation runs.
@@ -81,7 +92,7 @@ class CacheService < BaseService
   end
 
   def unwrap(cached)
-    return cached unless track_created_at?
+    return cached unless wrapped?
 
     cached.is_a?(Hash) ? cached["value"] : cached
   end
@@ -89,12 +100,20 @@ class CacheService < BaseService
   # Returns false when a more recent value is checked, forcing a recompute.
   # A legacy (unwrapped) entry is always considered stale so it gets rewritten.
   def valid_cache?(cached)
+    return false if wrapped? && !cached.is_a?(Hash)
+    return false unless context_matches?(cached)
     return true unless track_created_at?
     return true if invalidate_if_older_than.nil?
 
-    cached_at = cached.is_a?(Hash) ? cached["cached_at"] : nil
+    cached_at = cached["cached_at"]
     return false if cached_at.nil?
 
     Time.iso8601(cached_at) >= invalidate_if_older_than
+  end
+
+  def context_matches?(cached)
+    return true if context.blank?
+
+    cached["context"] == context
   end
 end

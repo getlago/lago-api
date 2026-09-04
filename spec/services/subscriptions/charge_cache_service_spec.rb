@@ -50,6 +50,33 @@ RSpec.describe Subscriptions::ChargeCacheService do
         end
       end
     end
+
+    context "with prior periods" do
+      subject(:cache_service) { described_class.new(subscription:, charge:, charge_filter:, prior_periods: true) }
+
+      it "returns a cache key distinct from the current and full usage ones" do
+        expect(cache_service.cache_key)
+          .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/prior-periods")
+      end
+
+      context "with a charge filter" do
+        let(:charge_filter) { create(:charge_filter) }
+
+        it "returns the cache key with the charge filter" do
+          expect(cache_service.cache_key)
+            .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/#{charge_filter.id}/#{charge_filter.updated_at.iso8601}/prior-periods")
+        end
+      end
+
+      context "when the lazy charge usage cache flag is enabled" do
+        before { subscription.organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+
+        it "uses the lazy cache key version" do
+          expect(cache_service.cache_key)
+            .to eq("charge-usage/#{described_class::LAZY_CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/prior-periods")
+        end
+      end
+    end
   end
 
   describe "#expire_cache" do
@@ -65,16 +92,37 @@ RSpec.describe Subscriptions::ChargeCacheService do
   describe ".expire_cache" do
     let(:current_usage_key) { described_class.new(subscription:, charge:, charge_filter:).cache_key }
     let(:full_usage_key) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true).cache_key }
+    let(:prior_periods_key) { described_class.new(subscription:, charge:, charge_filter:, prior_periods: true).cache_key }
 
     # Both go unconditionally: removing usage (a deleted metric, de-duplicated events) does not
     # advance the ingestion watermark, so lazy validation would not clear what was left behind.
-    it "deletes both the current usage and the full usage entries" do
+    it "deletes the current usage and full usage entries" do
       allow(Rails.cache).to receive(:delete)
 
       described_class.expire_cache(subscription:, charge:, charge_filter:)
 
       expect(Rails.cache).to have_received(:delete).with(current_usage_key)
       expect(Rails.cache).to have_received(:delete).with(full_usage_key)
+    end
+
+    it "does not delete the prior periods entry, which cannot exist without lazy validation" do
+      allow(Rails.cache).to receive(:delete)
+
+      described_class.expire_cache(subscription:, charge:, charge_filter:)
+
+      expect(Rails.cache).not_to have_received(:delete).with(prior_periods_key)
+    end
+
+    context "when the lazy charge usage cache flag is enabled" do
+      before { subscription.organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+
+      it "also deletes the prior periods entry" do
+        allow(Rails.cache).to receive(:delete)
+
+        described_class.expire_cache(subscription:, charge:, charge_filter:)
+
+        expect(Rails.cache).to have_received(:delete).with(prior_periods_key)
+      end
     end
   end
 

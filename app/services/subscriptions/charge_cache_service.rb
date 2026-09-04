@@ -8,9 +8,10 @@ module Subscriptions
     # this version instead of invalidating every organization's cache at once.
     LAZY_CACHE_KEY_VERSION = "2"
 
-    # Full usage aggregates from subscription.started_at, not the current period start. The two
-    # windows can coincide, but started_at is editable, so they never share an entry.
     FULL_USAGE_KEY_SEGMENT = "full-usage"
+
+    # subscription.started_at up to the start of the current billing period.
+    PRIOR_PERIODS_KEY_SEGMENT = "prior-periods"
 
     def self.expire_for_subscriptions(subscription_ids)
       Subscription
@@ -41,15 +42,22 @@ module Subscriptions
     def self.expire_cache(subscription:, charge:, charge_filter: nil)
       new(subscription:, charge:, charge_filter:).expire_cache
       new(subscription:, charge:, charge_filter:, full_usage: true).expire_cache
+
+      # Prior periods only exist under lazy validation, so without it there is nothing to delete.
+      return unless subscription.organization.feature_flag_enabled?(:lazy_charge_usage_cache)
+
+      new(subscription:, charge:, charge_filter:, prior_periods: true).expire_cache
     end
 
-    def initialize(subscription:, charge:, charge_filter: nil, full_usage: false, expires_in: nil, invalidate_if_older_than: nil)
+    def initialize(subscription:, charge:, charge_filter: nil, full_usage: false, prior_periods: false,
+      expires_in: nil, invalidate_if_older_than: nil, context: nil)
       @subscription = subscription
       @charge = charge
       @charge_filter = charge_filter
       @full_usage = full_usage
+      @prior_periods = prior_periods
 
-      super(expires_in:, invalidate_if_older_than:)
+      super(expires_in:, invalidate_if_older_than:, context:)
     end
 
     # IMPORTANT
@@ -63,13 +71,14 @@ module Subscriptions
         charge.updated_at.iso8601,
         charge_filter&.id,
         charge_filter&.updated_at&.iso8601,
-        (FULL_USAGE_KEY_SEGMENT if full_usage)
+        (FULL_USAGE_KEY_SEGMENT if full_usage),
+        (PRIOR_PERIODS_KEY_SEGMENT if prior_periods)
       ].compact.join("/")
     end
 
     private
 
-    attr_reader :subscription, :charge, :charge_filter, :full_usage
+    attr_reader :subscription, :charge, :charge_filter, :full_usage, :prior_periods
 
     def cache_key_version
       lazy_validation? ? LAZY_CACHE_KEY_VERSION : CACHE_KEY_VERSION

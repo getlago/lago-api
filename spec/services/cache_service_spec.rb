@@ -407,6 +407,251 @@ RSpec.describe CacheService do
     end
   end
 
+  describe "#call with context" do
+    let(:context_cache_service_class) do
+      Class.new(described_class) do
+        def initialize(key_suffix = nil, context: nil)
+          @key_suffix = key_suffix
+          super(nil, context:)
+        end
+
+        def cache_key
+          "context_cache_service:#{@key_suffix}"
+        end
+      end
+    end
+
+    let(:context_tracking_cache_service_class) do
+      Class.new(described_class) do
+        def initialize(key_suffix = nil, context: nil, invalidate_if_older_than: nil)
+          @key_suffix = key_suffix
+          super(nil, context:, invalidate_if_older_than:)
+        end
+
+        def cache_key
+          "context_tracking_cache_service:#{@key_suffix}"
+        end
+
+        private
+
+        def track_created_at?
+          true
+        end
+      end
+    end
+
+    let(:new_value) { "new_value" }
+
+    before { allow(Rails.cache).to receive(:write) }
+
+    describe "without track_created_at" do
+      let(:cache_key) { "context_cache_service:test" }
+
+      def write_entry(context:, value: "new_value")
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+        wrapped = nil
+        allow(Rails.cache).to receive(:write) { |_key, written, **| wrapped = written }
+
+        context_cache_service_class.new("test", context:).call { value }
+
+        wrapped
+      end
+
+      def read_entry(wrapped, context:)
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(wrapped)
+
+        block_called = false
+        result = context_cache_service_class.new("test", context:).call do
+          block_called = true
+          "recomputed"
+        end
+
+        [result, block_called]
+      end
+
+      it "stores the value wrapped with the context" do
+        wrapped = write_entry(context: "plan:v2")
+
+        expect(wrapped).to eq({"value" => new_value, "context" => "plan:v2"})
+      end
+
+      it "serves the cached value on a re-read with the same context" do
+        wrapped = write_entry(context: "plan:v2")
+        result, block_called = read_entry(wrapped, context: "plan:v2")
+
+        expect(result).to eq(new_value)
+        expect(block_called).to be false
+      end
+
+      it "recomputes and overwrites when read with a different context" do
+        wrapped = write_entry(context: "plan:v2")
+
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(wrapped)
+        overwritten = nil
+        allow(Rails.cache).to receive(:write) { |_key, written, **| overwritten = written }
+
+        result = context_cache_service_class.new("test", context: "plan:v3").call { "recomputed" }
+
+        expect(result).to eq("recomputed")
+        expect(overwritten).to eq({"value" => "recomputed", "context" => "plan:v3"})
+      end
+
+      it "treats a legacy unwrapped entry as stale" do
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return("legacy_value")
+
+        result = context_cache_service_class.new("test", context: "plan:v2").call { "recomputed" }
+
+        expect(result).to eq("recomputed")
+      end
+
+      context "when context is blank" do
+        it "stores the value unwrapped when context is nil, exactly like no context at all" do
+          service = context_cache_service_class.new("test", context: nil)
+          allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+          result = service.call { new_value }
+
+          expect(result).to eq(new_value)
+          expect(Rails.cache).to have_received(:write).with(cache_key, new_value, expires_in: nil)
+        end
+
+        it "stores the value unwrapped when context is an empty string, exactly like no context at all" do
+          service = context_cache_service_class.new("test", context: "")
+          allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+          result = service.call { new_value }
+
+          expect(result).to eq(new_value)
+          expect(Rails.cache).to have_received(:write).with(cache_key, new_value, expires_in: nil)
+        end
+      end
+    end
+
+    describe "with track_created_at" do
+      let(:cache_key) { "context_tracking_cache_service:test" }
+
+      def write_entry(computed_at:, context:, invalidate_if_older_than: nil, value: "new_value")
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+        wrapped = nil
+        allow(Rails.cache).to receive(:write) { |_key, written, **| wrapped = written }
+
+        travel_to(computed_at, with_usec: true) do
+          context_tracking_cache_service_class.new("test", context:, invalidate_if_older_than:).call { value }
+        end
+
+        wrapped
+      end
+
+      def read_entry(wrapped, context:, invalidate_if_older_than:)
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(wrapped)
+
+        block_called = false
+        result = context_tracking_cache_service_class.new("test", context:, invalidate_if_older_than:).call do
+          block_called = true
+          "recomputed"
+        end
+
+        [result, block_called]
+      end
+
+      it "round-trips both cached_at and context" do
+        last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
+
+        wrapped = write_entry(
+          computed_at: last_seen_at + 10.seconds,
+          invalidate_if_older_than: last_seen_at,
+          context: "plan:v2"
+        )
+
+        expect(wrapped).to eq(
+          {"value" => new_value, "context" => "plan:v2", "cached_at" => last_seen_at.iso8601(6)}
+        )
+      end
+
+      it "serves the cached value when both context and cached_at still match" do
+        last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
+        wrapped = write_entry(
+          computed_at: last_seen_at + 10.seconds,
+          invalidate_if_older_than: last_seen_at,
+          context: "plan:v2"
+        )
+
+        result, block_called = read_entry(wrapped, context: "plan:v2", invalidate_if_older_than: last_seen_at)
+
+        expect(result).to eq(new_value)
+        expect(block_called).to be false
+      end
+
+      it "recomputes when the context no longer matches, even though cached_at is still fresh" do
+        last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
+        wrapped = write_entry(
+          computed_at: last_seen_at + 10.seconds,
+          invalidate_if_older_than: last_seen_at,
+          context: "plan:v2"
+        )
+
+        result, block_called = read_entry(wrapped, context: "plan:v3", invalidate_if_older_than: last_seen_at)
+
+        expect(result).to eq("recomputed")
+        expect(block_called).to be true
+      end
+
+      it "recomputes when cached_at is stale, even though the context still matches" do
+        last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
+        wrapped = write_entry(
+          computed_at: last_seen_at + 10.seconds,
+          invalidate_if_older_than: last_seen_at,
+          context: "plan:v2"
+        )
+
+        result, block_called = read_entry(wrapped, context: "plan:v2", invalidate_if_older_than: Time.current)
+
+        expect(result).to eq("recomputed")
+        expect(block_called).to be true
+      end
+
+      context "when context is blank" do
+        it "omits the context key when context is nil, exactly like no context at all" do
+          last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
+          service = context_tracking_cache_service_class.new(
+            "test", context: nil, invalidate_if_older_than: last_seen_at
+          )
+          allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+          travel_to(last_seen_at + 10.seconds, with_usec: true) do
+            service.call { new_value }
+          end
+
+          expect(Rails.cache).to have_received(:write).with(
+            cache_key,
+            {"value" => new_value, "cached_at" => last_seen_at.iso8601(6)},
+            expires_in: nil
+          )
+        end
+
+        it "omits the context key when context is an empty string, exactly like no context at all" do
+          last_seen_at = Time.zone.parse("2026-07-27T10:00:00.123Z")
+          service = context_tracking_cache_service_class.new(
+            "test", context: "", invalidate_if_older_than: last_seen_at
+          )
+          allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+
+          travel_to(last_seen_at + 10.seconds, with_usec: true) do
+            service.call { new_value }
+          end
+
+          expect(Rails.cache).to have_received(:write).with(
+            cache_key,
+            {"value" => new_value, "cached_at" => last_seen_at.iso8601(6)},
+            expires_in: nil
+          )
+        end
+      end
+    end
+  end
+
   describe "#expire_cache" do
     let(:cache_service) { test_cache_service_class.new("test") }
     let(:cache_key) { cache_service.cache_key }

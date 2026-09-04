@@ -549,6 +549,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           Subscriptions::ChargeCacheService.new(subscription:, charge:, full_usage: true).cache_key
         end
 
+        let(:prior_periods_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:, prior_periods: true).cache_key
+        end
+
         before do
           organization.update!(premium_integrations: %w[granular_lifetime_usage])
           organization.enable_feature_flag!(:lazy_charge_usage_cache)
@@ -742,12 +746,13 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
               code: billable_metric.code, timestamp:, created_at: current_date - 1.hour)
           end
 
-          it "uses the full usage cache entry, not the current usage one" do
+          it "splits into a prior periods entry and the current usage one" do
             travel_to(current_date) do
               expect { usage_service.call }
-                .to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
+                .to change { Rails.cache.exist?(current_usage_cache_key) }.from(false).to(true)
 
-              expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
+              expect(Rails.cache.exist?(prior_periods_cache_key)).to be(true)
+              expect(Rails.cache.exist?(full_usage_cache_key)).to be(false)
             end
           end
 
@@ -828,11 +833,13 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
               create(:billable_metric, :recurring, aggregation_type: "unique_count_agg", field_name: "value")
             end
 
-            it "reads the current period entry instead of a full-usage one" do
+            # FULL_USAGE_AGGREGATIONS does not admit unique_count_agg, so the shortcut is unreachable.
+            it "is refused before reaching the shortcut" do
               travel_to(current_date) do
-                expect { usage_service.call }.to change { Rails.cache.exist?(current_usage_cache_key) }.from(false).to(true)
+                result = usage_service.call
 
-                expect(Rails.cache.exist?(full_usage_cache_key)).to be(false)
+                expect(result).not_to be_success
+                expect(result.error.code).to eq("full_usage_not_allowed")
               end
             end
           end
@@ -993,6 +1000,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
         end
 
+        let(:prior_periods_cache_key) do
+          Subscriptions::ChargeCacheService.new(subscription:, charge:, prior_periods: true).cache_key
+        end
+
         before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
 
         it "skips both the cache and the ingestion timestamps" do
@@ -1012,11 +1023,12 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
           before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
 
-          it "caches the charge under the full usage key and requests the ingestion timestamps" do
+          it "splits the charge across the two windows and requests the ingestion timestamps" do
             expect { usage_service.call }
-              .to change { Rails.cache.exist?(full_usage_cache_key) }.from(false).to(true)
+              .to change { Rails.cache.exist?(current_usage_cache_key) }.from(false).to(true)
 
-            expect(Rails.cache.exist?(current_usage_cache_key)).to be(false)
+            expect(Rails.cache.exist?(prior_periods_cache_key)).to be(true)
+            expect(Rails.cache.exist?(full_usage_cache_key)).to be(false)
             expect(Events::BillingPeriodFilterService).to have_received(:call!)
               .with(hash_including(with_last_seen_at: true))
           end

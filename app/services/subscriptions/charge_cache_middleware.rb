@@ -4,13 +4,24 @@ module Subscriptions
   class ChargeCacheMiddleware
     EMPTY_ARRAY = [].freeze
 
-    def initialize(subscription:, charge:, to_datetime:, cache: true, full_usage: false, last_seen_at: nil)
+    # The ingestion timestamp is indexed on neither store, so a backdated event cannot be detected
+    # on read. This expiration is what bounds how long one stays invisible.
+    DEFAULT_PRIOR_PERIODS_EXPIRATION = 1.day
+
+    def initialize(subscription:, charge:, to_datetime:, cache: true, full_usage: false, prior_periods: false,
+      context: nil, last_seen_at: nil)
       @subscription = subscription
       @charge = charge
       @to_datetime = to_datetime
       @cache = cache
       @full_usage = full_usage
+      @prior_periods = prior_periods
+      @context = context
       @last_seen_at = last_seen_at || {}
+    end
+
+    def self.prior_periods_expiration
+      (ENV["LAGO_PRIOR_PERIODS_USAGE_CACHE_TTL_SECONDS"].presence || DEFAULT_PRIOR_PERIODS_EXPIRATION).to_i.seconds
     end
 
     def call(charge_filter:)
@@ -18,9 +29,9 @@ module Subscriptions
 
       # Lazily invalidate the cache when a more recent event was ingested for this charge/filter.
       # last_seen_at is the { filter_id => timestamp } bucket for the current charge.
-      invalidate_if_older_than = last_seen_at[charge_filter&.id]
+      invalidate_if_older_than = prior_periods ? nil : last_seen_at[charge_filter&.id]
 
-      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, full_usage:, expires_in: cache_expiration, invalidate_if_older_than:) do
+      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, full_usage:, prior_periods:, context:, expires_in: cache_expiration, invalidate_if_older_than:) do
         yield
           .map do |fee|
             fee.attributes.merge(
@@ -53,9 +64,10 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :charge, :to_datetime, :cache, :full_usage, :last_seen_at
+    attr_reader :subscription, :charge, :to_datetime, :cache, :full_usage, :prior_periods, :context, :last_seen_at
 
     def cache_expiration
+      return self.class.prior_periods_expiration if prior_periods
       return 0 unless to_datetime
 
       [(to_datetime - Time.current).to_i.seconds, 0].max
