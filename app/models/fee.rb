@@ -60,6 +60,7 @@ class Fee < ApplicationRecord
   validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
+  validates :rate_card_rate, presence: true, if: :product?
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
 

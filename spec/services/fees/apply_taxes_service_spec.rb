@@ -327,6 +327,166 @@ RSpec.describe Fees::ApplyTaxesService do
       end
     end
 
+    context "when fee is a product type" do
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+      let(:product) { create(:product, organization:) }
+      let(:rate_card) { create(:rate_card, organization:, product:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+      let(:rate_card_tax) { create(:tax, organization:, rate: 8) }
+      let(:fee) do
+        create(
+          :product_fee,
+          invoice:,
+          subscription:,
+          rate_card_rate:,
+          amount_cents: 1000,
+          precise_amount_cents: 1000.0
+        )
+      end
+
+      it "uses the rate card taxes before the other levels" do
+        create(:rate_card_applied_tax, rate_card:, tax: rate_card_tax, organization:)
+        create(:plan_applied_tax, plan:, tax: tax2)
+        create(:customer_applied_tax, customer:, tax: tax1)
+
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes).to contain_exactly(
+          have_attributes(
+            fee:,
+            tax: rate_card_tax,
+            tax_description: rate_card_tax.description,
+            tax_code: rate_card_tax.code,
+            tax_name: rate_card_tax.name,
+            tax_rate: 8,
+            amount_currency: fee.currency,
+            amount_cents: 80,
+            precise_amount_cents: 80.0
+          )
+        )
+        expect(fee).to have_attributes(taxes_amount_cents: 80, taxes_precise_amount_cents: 80.0, taxes_rate: 8)
+      end
+
+      it "falls back to the plan taxes" do
+        create(:plan_applied_tax, plan:, tax: tax2)
+        create(:customer_applied_tax, customer:, tax: tax1)
+
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code)
+      end
+
+      it "falls back to the customer taxes" do
+        create(:customer_applied_tax, customer:, tax: tax1)
+
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
+      end
+
+      it "falls back to the billing entity taxes" do
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax3.code)
+      end
+
+      context "when the subscription uses another billing entity" do
+        let(:subscription_billing_entity) { create(:billing_entity, organization:) }
+        let(:subscription_tax) { create(:tax, organization:, rate: 20) }
+        let(:invoice) { create(:invoice, organization:, customer:, billing_entity: subscription_billing_entity) }
+        let(:subscription) do
+          create(:subscription, organization:, customer:, plan:, billing_entity: subscription_billing_entity)
+        end
+
+        before do
+          create(
+            :billing_entity_applied_tax,
+            billing_entity: subscription_billing_entity,
+            tax: subscription_tax
+          )
+        end
+
+        it "falls back to the subscription billing entity taxes" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(subscription_tax.code)
+        end
+      end
+
+      it "applies no taxes when every level is empty" do
+        billing_entity.applied_taxes.destroy_all
+
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes).to be_empty
+        expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0, taxes_rate: 0)
+      end
+
+      it "uses every assigned rate card tax" do
+        create(:rate_card_applied_tax, rate_card:, tax: rate_card_tax, organization:)
+        create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:)
+        create(:plan_applied_tax, plan:, tax: tax2)
+
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(rate_card_tax.code, tax1.code)
+        expect(fee).to have_attributes(taxes_amount_cents: 180, taxes_precise_amount_cents: 180.0, taxes_rate: 18)
+      end
+
+      it "treats a zero-percent rate card tax as an override" do
+        zero_tax = create(:tax, organization:, rate: 0)
+        create(:rate_card_applied_tax, rate_card:, tax: zero_tax, organization:)
+        create(:plan_applied_tax, plan:, tax: tax2)
+
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(zero_tax.code)
+        expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0)
+      end
+
+      it "uses the next configured level for a replacement fee after removing the rate card override" do
+        create(:rate_card_applied_tax, rate_card:, tax: rate_card_tax, organization:)
+        create(:plan_applied_tax, plan:, tax: tax2)
+
+        first_result = apply_service.call
+        RateCards::ApplyTaxesService.call!(rate_card:, tax_codes: [])
+
+        replacement_fee = create(:product_fee, invoice:, subscription:, rate_card_rate:, amount_cents: 1000)
+        replacement_result = described_class.call(fee: replacement_fee)
+
+        expect(first_result.applied_taxes.map(&:tax_code)).to contain_exactly(rate_card_tax.code)
+        expect(replacement_result.applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code)
+      end
+
+      it "keeps the stored tax snapshot after the invoice is finalized" do
+        create(:rate_card_applied_tax, rate_card:, tax: rate_card_tax, organization:)
+        apply_service.call
+        invoice.update!(status: :finalized)
+
+        RateCards::ApplyTaxesService.call!(rate_card:, tax_codes: [])
+
+        expect(fee.reload.applied_taxes).to contain_exactly(
+          have_attributes(
+            tax_id: rate_card_tax.id,
+            tax_code: rate_card_tax.code,
+            tax_name: rate_card_tax.name,
+            tax_rate: 8,
+            amount_cents: 80,
+            precise_amount_cents: 80.0
+          )
+        )
+      end
+    end
+
     context "when fee is a fixed charge type with taxes" do
       let(:fixed_charge) { create(:fixed_charge, organization:) }
       let(:fee) { create(:fixed_charge_fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, fixed_charge:) }
