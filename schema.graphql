@@ -6562,6 +6562,7 @@ input ExportFinanceAssistantResultInput {
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
+  account_tree
   enriched_events_aggregation
   fixed_charge_usage_delta_migration
   lazy_charge_usage_cache

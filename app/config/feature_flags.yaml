@@ -41,3 +41,7 @@ product_catalog:
 skip_credit_invoice_auto_payment_delay:
   description: "Trigger the auto-payment of credit invoices (wallet top-ups) immediately instead of delaying it behind a possible hosted checkout payment"
   owners: ["@brunomiguelpinto"]
+
+account_tree:
+  description: "Enable the account tree - hierarchy based attributed usage below the customer"
+  owners: ["@lovrocolic"]
