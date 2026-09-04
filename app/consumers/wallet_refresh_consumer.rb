@@ -6,10 +6,6 @@ class WalletRefreshConsumer < ApplicationConsumer
   # Milliseconds. Pausing re-delivers the offset without holding the thread a sleep would.
   WATERMARK_PAUSE_TIMEOUT = 1_000
 
-  # Past this age the sweep is the cheaper lane: a backlog drains at full speed instead of
-  # being waited through one offset at a time.
-  MAX_TRIGGER_AGE = 30.seconds
-
   # Pause cycles one offset may wait, so five minutes. Buckets that never land must neither
   # stall the partition nor vanish, so past this the trigger goes to the dead letter queue.
   MAX_WATERMARK_ATTEMPTS = 300
@@ -17,9 +13,6 @@ class WalletRefreshConsumer < ApplicationConsumer
   # The adapter reports an unreachable server and a query that can no longer run as the same
   # error, so a failed read is free only this long before it spends the attempt budget too.
   MAX_WATERMARK_READ_FAILURES = 30
-
-  # Epoch milliseconds, whole or decimal, as opposed to a rendered timestamp.
-  NUMERIC_EPOCH = /\A\d+(?:\.\d+)?\z/
 
   # Caught rather than let out: the error would fail a batch of thousands, of which Karafka
   # dead-letters only the first message.
@@ -33,9 +26,11 @@ class WalletRefreshConsumer < ApplicationConsumer
 
   def consume
     @batch = messages.to_a
-    @triggers = build_triggers
 
-    log_stale_triggers
+    parsed = RealtimeUsage::WalletRefreshTriggersService.call!(messages: batch, paused_offset: @paused_offset)
+    @triggers = parsed.triggers
+
+    log_stale_triggers(parsed.stale_count)
 
     blocked_offsets = triggers.empty? ? [] : dispatch_refreshes
 
@@ -50,12 +45,13 @@ class WalletRefreshConsumer < ApplicationConsumer
 
   # Karafka keeps the instance alive across batches, so per-batch state is rebuilt on every
   # `consume` rather than memoized.
-  attr_reader :batch, :triggers, :stale_triggers, :refreshable_customers, :active_wallet_ids,
-    :caught_up_subscription_ids
+  attr_reader :batch, :triggers, :refreshable_customers, :active_wallet_ids, :caught_up_subscription_ids
 
   def dispatch_refreshes
-    @refreshable_customers = fetch_refreshable_customers
-    @active_wallet_ids = fetch_active_wallet_ids
+    refreshable = RealtimeUsage::RefreshableCustomersService.call!(triggers:)
+
+    @refreshable_customers = refreshable.customers
+    @active_wallet_ids = refreshable.active_wallet_ids
     @caught_up_subscription_ids = fetch_caught_up_subscription_ids
 
     blocked_offsets = []
@@ -100,110 +96,15 @@ class WalletRefreshConsumer < ApplicationConsumer
     @refreshed_watermarks_ms = nil
   end
 
-  # One entry per customer, holding the highest watermark of each of its subscriptions: the
-  # refresh reads them all, so waiting on one would debit the wallet against another's epoch.
-  def build_triggers
-    @stale_triggers = 0
-
-    batch.each_with_object({}) do |message, acc|
-      trigger = build_trigger(message)
-      next if trigger.nil?
-
-      known = acc[trigger[:customer_id]]
-
-      if known.nil?
-        acc[trigger[:customer_id]] = trigger
-      else
-        known[:watermarks_ms].merge!(trigger[:watermarks_ms]) { |_id, kept, added| [kept, added].max }
-      end
-    end
-  end
-
-  def build_trigger(message)
-    payload = message.payload
-    organization_id = payload["organization_id"]
-    customer_id = payload["customer_id"]
-    subscription_id = payload["subscription_id"]
-    watermark_ms = epoch_ms(payload["last_ingested_at"])
-
-    return nil if organization_id.blank? || customer_id.blank? || subscription_id.blank?
-
-    if stale?(message)
-      @stale_triggers += 1
-
-      return nil
-    end
-
-    # The sink does not COALESCE `ingested_at`: there is no epoch to wait for, and refreshing
-    # anyway would read the buckets early.
-    if watermark_ms.nil?
-      Karafka.logger.warn("#{self.class}: trigger without a watermark at offset #{message.offset}, skipped")
-
-      return nil
-    end
-
-    {organization_id:, customer_id:, watermarks_ms: {subscription_id => watermark_ms}, offset: message.offset}
-  end
-
-  # Judged on first delivery only: a pause re-delivers the same timestamps, so judging again
-  # would age out the very trigger being waited on, short of the dead letter queue.
-  def stale?(message)
-    return false if @paused_offset && message.offset >= @paused_offset
-
-    message.timestamp < MAX_TRIGGER_AGE.ago
-  end
-
   # Dropping a backlog is the policy, but a pipeline lagging past the window, or a producer
   # clock behind ours, otherwise looks exactly like silence.
-  def log_stale_triggers
-    return if stale_triggers.zero?
+  def log_stale_triggers(count)
+    return if count.zero?
 
     Karafka.logger.warn(
-      "#{self.class}: #{stale_triggers} trigger(s) older than #{MAX_TRIGGER_AGE.inspect}, left to the sweep"
+      "#{self.class}: #{count} trigger(s) older than " \
+      "#{RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE.inspect}, left to the sweep"
     )
-  end
-
-  # The sink sends integer epoch milliseconds, already the unit compared. The other forms are
-  # tolerated, truncated so the expectation never lands above the millisecond ClickHouse stored.
-  def epoch_ms(value)
-    case value
-    when Numeric then value.to_i
-    when String then value.match?(NUMERIC_EPOCH) ? value.to_i : parsed_epoch_ms(value)
-    end
-  end
-
-  # Through a Rational so the millisecond never rounds above the stored one. `parse` raises on
-  # components out of range, and one trigger may not fail a batch of thousands.
-  def parsed_epoch_ms(value)
-    time = Time.zone.parse(value)
-
-    (time.to_time.to_r * 1000).to_i if time
-  rescue ArgumentError
-    nil
-  end
-
-  # One query for the whole batch. No active wallet, a tax error, or an organization off the
-  # rollout each make the refresh a no-op, so none of them is worth dispatching.
-  def fetch_refreshable_customers
-    Customer
-      .with_active_wallets
-      .without_tax_errors
-      .includes(:organization)
-      .where(organization_id: triggers.each_value.map { it[:organization_id] }.uniq, id: triggers.keys)
-      .distinct
-      .index_by(&:id)
-      .select { |_id, customer| RealtimeUsage.enabled?(customer.organization) }
-  end
-
-  # One query for the whole batch. The wallet ids let the job run for a customer the sweep has
-  # not flagged, so this lane does not ride on the sweep's bookkeeping.
-  def fetch_active_wallet_ids
-    Wallet
-      .active
-      .where(customer_id: refreshable_customers.keys)
-      .pluck(:customer_id, :id)
-      .group_by(&:first)
-      .transform_values { |pairs| pairs.map(&:last) }
   end
 
   def buckets_caught_up?(trigger)

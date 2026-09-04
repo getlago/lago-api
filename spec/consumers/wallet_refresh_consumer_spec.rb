@@ -83,12 +83,6 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob).once
       end
 
-      it "tolerates a watermark sent as a timestamp string" do
-        produce(ingested_at: last_ingested_at.utc.iso8601(3))
-
-        expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob)
-      end
-
       it "does not pause the partition" do
         produce
         consumer.consume
@@ -97,7 +91,7 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       end
 
       it "refreshes a trigger produced inside the age window" do
-        produce(timestamp: (described_class::MAX_TRIGGER_AGE - 5.seconds).ago)
+        produce(timestamp: (RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE - 5.seconds).ago)
 
         expect { consumer.consume }
           .to have_enqueued_job(Customers::RefreshWalletJob).with(customer, wallet_ids: [wallet.id])
@@ -107,7 +101,7 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
     # A backlog left by a restart or a downtime drains instead of being waited through, one
     # offset at a time, for usage the clock sweep picks up in one pass.
     context "when the trigger is older than the maximum age" do
-      let(:stale) { {timestamp: described_class::MAX_TRIGGER_AGE.ago - 1.second} }
+      let(:stale) { {timestamp: RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE.ago - 1.second} }
 
       it "leaves the customer to the clock sweep, even with the buckets caught up" do
         create_bucket(last_ingested_at:)
@@ -241,7 +235,7 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       it "hands a trigger that aged out while waiting to the dead letter queue" do
         consumer.consume
 
-        travel(described_class::MAX_TRIGGER_AGE + 1.second)
+        travel(RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE + 1.second)
 
         2.times { consumer.consume }
 
@@ -392,26 +386,6 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         consumer.consume
 
         expect(consumer).not_to have_received(:pause)
-      end
-    end
-
-    # `Time.parse` raises on a component out of range, and reads decimal epoch milliseconds as
-    # a date, so neither may reach the watermark comparison unguarded.
-    context "when the trigger carries a watermark the parser cannot be trusted with" do
-      it "skips a date out of range instead of failing the batch" do
-        create_bucket(last_ingested_at:)
-        produce(ingested_at: "2026-13-01T00:00:00Z")
-
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
-      end
-
-      # Parsed as a date this lands at midnight, behind every bucket, and would refresh on
-      # usage that has not landed yet.
-      it "reads decimal epoch milliseconds as an epoch, not as a date" do
-        create_bucket(last_ingested_at: last_ingested_at - 1.second)
-        produce(ingested_at: "#{watermark}.0")
-
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
       end
     end
 
