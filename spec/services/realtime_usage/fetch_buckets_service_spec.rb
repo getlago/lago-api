@@ -331,4 +331,19 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       end
     end
   end
+
+  describe "the freshness watermark" do
+    it "is when the sink last wrote, not when the oldest bucket of the period closed" do
+      create_bucket(bucket: from_datetime, last_ingested_at: 20.minutes.ago)
+      create_bucket(bucket: from_datetime + 15.minutes, last_ingested_at: 1.minute.ago)
+
+      expect(fetch.usage_buckets.last_ingested_at).to be_within(30.seconds).of(1.minute.ago)
+    end
+
+    it "is absent when the window holds no bucket" do
+      create_bucket(bucket: from_datetime - 1.day)
+
+      expect(fetch.usage_buckets.last_ingested_at).to be_nil
+    end
+  end
 end
