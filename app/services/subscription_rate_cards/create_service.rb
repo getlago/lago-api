@@ -50,6 +50,7 @@ module SubscriptionRateCards
       ActiveRecord::Base.transaction do
         subscription_rate_card = subscription.applied_rate_cards.create!(
           organization:,
+          customer: subscription.customer,
           rate_card:,
           units: params[:units],
           started_at:,
