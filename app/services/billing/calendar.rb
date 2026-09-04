@@ -18,7 +18,7 @@ module Billing
     def interval_containing(timestamp)
       index = interval_index(timestamp)
 
-      interval_with_index_start_at(index)...interval_with_index_start_at(index + 1)
+      interval_with_index_starts_at(index)...interval_with_index_starts_at(index + 1)
     end
 
     # Fraction of the interval containing `from` that the half-open window [from, to) covers.
@@ -51,9 +51,9 @@ module Billing
     # The boundary at position `index`
     #
     # @example anchored Jan 31, monthly
-    #   interval_with_index_start_at(1)  # => Feb 28
-    #   interval_with_index_start_at(2)  # => Mar 31
-    def interval_with_index_start_at(index)
+    #   interval_with_index_starts_at(1)  # => Feb 28
+    #   interval_with_index_starts_at(2)  # => Mar 31
+    def interval_with_index_starts_at(index)
       @boundaries ||= {}
       @boundaries[index] ||= interval.advance(anchor, index)
     end
