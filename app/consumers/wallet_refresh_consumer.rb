@@ -18,9 +18,25 @@ class WalletRefreshConsumer < ApplicationConsumer
   WATERMARK_PAUSE_TIMEOUT = 1_000
 
   # Past this age the sweep is the cheaper lane, so a trigger is dropped instead of waited
-  # on. It is also what bounds the pausing above with no state to carry across batches, and
-  # what keeps a seeded backlog draining at full speed instead of pausing through it.
+  # on, which is also what keeps a seeded backlog draining at full speed instead of pausing
+  # through it.
   MAX_TRIGGER_AGE = 10.seconds
+
+  # How many times one offset may pause before the sweep is left to it. `MAX_TRIGGER_AGE` is
+  # measured on the pipeline's clock, so a producer running ahead of us would age no trigger
+  # out and pause the partition forever; this bound is counted here and cannot be skewed away.
+  MAX_WATERMARK_ATTEMPTS = 10
+
+  # A failed read cannot tell caught-up buckets from late ones, and every trigger is owned by
+  # the sweep anyway, so a ClickHouse outage waits and then drops. Letting the error out would
+  # instead walk the whole topic into the dead letter queue one message per batch.
+  CLICKHOUSE_ERRORS = [
+    ActiveRecord::ActiveRecordError,
+    Net::OpenTimeout,
+    Net::ReadTimeout,
+    SocketError,
+    SystemCallError
+  ].freeze
 
   def consume
     @batch = messages.to_a
@@ -29,6 +45,7 @@ class WalletRefreshConsumer < ApplicationConsumer
     return if triggers.empty?
 
     @refreshable_customers = fetch_refreshable_customers
+    @caught_up_subscription_ids = fetch_caught_up_subscription_ids
 
     blocked_offsets = []
 
@@ -36,7 +53,7 @@ class WalletRefreshConsumer < ApplicationConsumer
       customer = refreshable_customers[trigger[:customer_id]]
       next if customer.nil?
 
-      if buckets_caught_up?(trigger)
+      if caught_up_subscription_ids.include?(trigger[:subscription_id])
         Customers::RefreshWalletJob.perform_later(customer)
       else
         blocked_offsets << trigger[:offset]
@@ -50,7 +67,7 @@ class WalletRefreshConsumer < ApplicationConsumer
 
   # Karafka keeps the consumer instance alive across batches (`consumer_persistence`), so the
   # per-batch state is rebuilt on every `consume` instead of being memoized.
-  attr_reader :batch, :triggers, :refreshable_customers
+  attr_reader :batch, :triggers, :refreshable_customers, :caught_up_subscription_ids
 
   # One entry per customer: N triggers for one customer cost one refresh, so catching up
   # costs O(distinct customers) rather than O(messages). An entry keeps the batch's highest
@@ -124,22 +141,50 @@ class WalletRefreshConsumer < ApplicationConsumer
       .select { |_id, customer| RealtimeUsage.enabled?(customer.organization) }
   end
 
-  def buckets_caught_up?(trigger)
-    RealtimeUsage::BucketWatermarkService.call!(
-      organization_id: trigger[:organization_id],
-      subscription_id: trigger[:subscription_id],
-      watermark_ms: trigger[:watermark_ms]
-    ).reached
+  # Only the customers the sweep would pick up are worth a watermark: the others are not
+  # refreshed whatever the buckets hold, so waiting on them would pause the partition for a
+  # refresh that is never dispatched.
+  def fetch_caught_up_subscription_ids
+    watermarks = triggers
+      .each_value
+      .select { refreshable_customers.key?(it[:customer_id]) }
+      .map { it.slice(:organization_id, :subscription_id, :watermark_ms) }
+
+    return Set.new if watermarks.empty?
+
+    RealtimeUsage::BucketWatermarkService.call!(watermarks:).caught_up_subscription_ids
+  rescue *CLICKHOUSE_ERRORS => e
+    Karafka.logger.warn("WalletRefreshConsumer: bucket watermark read failed (#{e.class}), waiting")
+
+    Set.new
   end
 
   # Resuming re-delivers from the blocked offset, so nothing before it may stay uncommitted
   # and nothing at or after it may be committed. Karafka skips its own automatic marking once
-  # the partition is manually paused.
+  # the partition is manually paused, and resumes it once the pausing stops, which is how
+  # giving up lets the partition move past an offset whose buckets never landed.
+  #
+  # The attempt count lives on the consumer because Karafka resets its own pause tracker after
+  # every successful `consume`. It only bounds the wait where the instance outlives the batch,
+  # which is everywhere but development; there `MAX_TRIGGER_AGE` remains the only bound.
   def wait_for_buckets(offset)
-    index = batch.index { |message| message.offset == offset }
+    if offset == @paused_offset
+      @paused_attempts += 1
+    else
+      @paused_offset = offset
+      @paused_attempts = 1
+    end
 
-    mark_as_consumed(batch[index - 1]) if index.positive?
+    if @paused_attempts > MAX_WATERMARK_ATTEMPTS
+      Karafka.logger.warn("WalletRefreshConsumer: buckets still behind at offset #{offset}, leaving it to the sweep")
 
-    pause(offset, WATERMARK_PAUSE_TIMEOUT)
+      @paused_offset = nil
+    else
+      index = batch.index { |message| message.offset == offset }
+
+      mark_as_consumed(batch[index - 1]) if index.positive?
+
+      pause(offset, WATERMARK_PAUSE_TIMEOUT)
+    end
   end
 end
