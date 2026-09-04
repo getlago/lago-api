@@ -71,6 +71,7 @@ class Organization < ApplicationRecord
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_receipts
   has_many :payment_requests
+  has_many :streaming_destinations, class_name: "StreamingDestinations::BaseDestination"
   has_many :taxes
   has_many :wallets
   has_many :wallet_transactions
