@@ -185,7 +185,7 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
     end
 
     context "when the kill switch is off" do
-      let(:risingwave_usage_enabled) { nil }
+      let(:realtime_usage_enabled) { nil }
 
       it { expect(fetch.usage_buckets).to be_nil }
     end
