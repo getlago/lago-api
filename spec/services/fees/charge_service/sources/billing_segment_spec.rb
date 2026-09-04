@@ -78,4 +78,20 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       expect(source.period_ratio).to eq(0.5)
     end
   end
+
+  describe "#pricing_group_keys" do
+    let(:segment_rate_properties) { {"pricing_group_keys" => ["region"]} }
+
+    it "returns the pricing group keys from the stored properties" do
+      expect(source.pricing_group_keys).to eq(["region"])
+    end
+
+    context "when the rate card accepts target wallet grouping" do
+      let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", wallet_targetable: true) }
+
+      it "adds the target wallet code to the pricing group keys" do
+        expect(source.pricing_group_keys).to eq(["region", ::Charge::EVENT_TARGET_WALLET_CODE])
+      end
+    end
+  end
 end

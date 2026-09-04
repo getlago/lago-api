@@ -100,8 +100,19 @@ RSpec.describe BillingSegment do
   describe "#duration_in_days" do
     it "returns the inclusive segment duration" do
       segment = described_class.new(
+        customer: build(:customer, timezone: "UTC"),
         started_at: Time.zone.parse("2026-09-01"),
         ended_at: Time.zone.parse("2026-09-30").end_of_day
+      )
+
+      expect(segment.duration_in_days).to eq(30)
+    end
+
+    it "counts days in the customer timezone" do
+      segment = described_class.new(
+        customer: build(:customer, timezone: "Asia/Tokyo"),
+        started_at: Time.zone.parse("2026-08-31 15:00:00"),
+        ended_at: Time.zone.parse("2026-09-30 14:59:59")
       )
 
       expect(segment.duration_in_days).to eq(30)

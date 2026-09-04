@@ -55,10 +55,18 @@ module Fees
           billing_segment.proration_ratio
         end
 
+        # NOTE: Product-catalog pricing groups will move to product/plan data once that feature is supported.
         def pricing_group_keys
-          properties["pricing_group_keys"] || []
+          keys = properties["pricing_group_keys"]&.dup || []
+
+          if accepts_target_wallet? && !keys.include?(::Charge::EVENT_TARGET_WALLET_CODE)
+            keys << ::Charge::EVENT_TARGET_WALLET_CODE
+          end
+
+          keys
         end
 
+        # NOTE: Product-catalog presentation groups will move to product/plan data once that feature is supported.
         def presentation_group_keys_values
           []
         end
