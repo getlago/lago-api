@@ -10,7 +10,7 @@ RSpec.describe BillingSegment do
       expect(subject).to belong_to(:customer)
       expect(subject).to belong_to(:subscription_rate_card)
       expect(subject).to belong_to(:invoice).optional
-      expect(subject).to belong_to(:rate_card_rate).optional
+      expect(subject).to belong_to(:rate_card_rate)
       expect(subject).to belong_to(:rate_override).optional
       expect(subject).to belong_to(:pricing_unit).optional
       expect(described_class.reflect_on_association(:customer).scope).to be_present

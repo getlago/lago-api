@@ -17,7 +17,7 @@ class BillingSegment < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :subscription_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true
-  belongs_to :rate_card_rate, -> { with_discarded }, optional: true
+  belongs_to :rate_card_rate, -> { with_discarded }
   belongs_to :rate_override, -> { with_discarded }, optional: true
   belongs_to :pricing_unit, optional: true
 

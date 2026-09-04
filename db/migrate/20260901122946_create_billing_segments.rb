@@ -20,7 +20,7 @@ class CreateBillingSegments < ActiveRecord::Migration[8.0]
 
       # The pricing in force when the segment was scheduled, snapshotted so a later
       # catalog change cannot re-price what has already been billed.
-      t.references :rate_card_rate, foreign_key: true, type: :uuid
+      t.references :rate_card_rate, null: false, foreign_key: true, type: :uuid
       t.references :rate_override, foreign_key: true, type: :uuid
       t.references :pricing_unit, foreign_key: true, type: :uuid
       t.jsonb :rate_properties, null: false, default: {}
