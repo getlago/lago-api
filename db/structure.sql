@@ -329,6 +329,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_1c069c1c44;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
+ALTER TABLE IF EXISTS ONLY public.catalog_plans DROP CONSTRAINT IF EXISTS fk_rails_19759667f5;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_1811b32fcd;
@@ -887,6 +888,9 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_deleted_at;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
@@ -1158,6 +1162,7 @@ ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS charge
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS charges_pkey;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS charge_filters_pkey;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS charge_filter_values_pkey;
+ALTER TABLE IF EXISTS ONLY public.catalog_plans DROP CONSTRAINT IF EXISTS catalog_plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS cached_aggregations_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS billing_segments_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS billing_segments_no_overlapping_periods;
@@ -1340,6 +1345,7 @@ DROP TABLE IF EXISTS public.charges_taxes;
 DROP TABLE IF EXISTS public.charges;
 DROP TABLE IF EXISTS public.charge_filters;
 DROP TABLE IF EXISTS public.charge_filter_values;
+DROP TABLE IF EXISTS public.catalog_plans;
 DROP TABLE IF EXISTS public.cached_aggregations;
 DROP TABLE IF EXISTS public.billing_segments;
 DROP TABLE IF EXISTS public.billing_object_connections;
@@ -2503,6 +2509,24 @@ CREATE TABLE public.cached_aggregations (
     current_amount numeric,
     event_transaction_id character varying,
     presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
+);
+
+
+--
+-- Name: catalog_plans; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.catalog_plans (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    name character varying NOT NULL,
+    code character varying NOT NULL,
+    invoice_display_name character varying,
+    description character varying,
+    currency character varying NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -6295,6 +6319,14 @@ ALTER TABLE ONLY public.cached_aggregations
 
 
 --
+-- Name: catalog_plans catalog_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_plans
+    ADD CONSTRAINT catalog_plans_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: charge_filter_values charge_filter_values_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8339,6 +8371,27 @@ CREATE INDEX index_cached_aggregations_on_event_transaction_id ON public.cached_
 --
 
 CREATE INDEX index_cached_aggregations_on_external_subscription_id ON public.cached_aggregations USING btree (external_subscription_id);
+
+
+--
+-- Name: index_catalog_plans_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_on_deleted_at ON public.catalog_plans USING btree (deleted_at);
+
+
+--
+-- Name: index_catalog_plans_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_on_organization_id ON public.catalog_plans USING btree (organization_id);
+
+
+--
+-- Name: index_catalog_plans_on_organization_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_catalog_plans_on_organization_id_and_code ON public.catalog_plans USING btree (organization_id, code) WHERE (deleted_at IS NULL);
 
 
 --
@@ -12193,6 +12246,14 @@ ALTER TABLE ONLY public.customer_metadata
 
 
 --
+-- Name: catalog_plans fk_rails_19759667f5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_plans
+    ADD CONSTRAINT fk_rails_19759667f5 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: billing_entities_invoice_custom_sections fk_rails_19c47827ba; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14760,6 +14821,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260904132835'),
+('20260904083017'),
 ('20260902143604'),
 ('20260826235314'),
 ('20260826235313'),
@@ -15875,3 +15937,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
