@@ -444,6 +444,94 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       end
     end
 
+    context "when the invoice has a zero-amount fee" do
+      let(:fee_charge) do
+        create(
+          :fee,
+          invoice:,
+          charge:,
+          fee_type: :charge,
+          total_aggregated_units: 100,
+          amount_cents: 0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0
+        )
+      end
+      let(:body) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
+        response = JSON.parse(File.read(path))
+
+        fees = response["succeededInvoices"].first["fees"]
+        fees.first["item_id"] = fee_subscription.id
+        response["succeededInvoices"].first["fees"] = [fees.first]
+
+        response.to_json
+      end
+
+      it "does not report the zero-amount fee to the tax provider" do
+        pull_taxes_service.call
+
+        expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+          expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
+        end
+      end
+
+      it "leaves the zero-amount fee untaxed and taxes the rest of the invoice" do
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(fee_charge.reload.applied_taxes).to be_empty
+        expect(fee_charge).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
+
+        expect(result.invoice.fees_amount_cents).to eq(2_000)
+        expect(result.invoice.taxes_amount_cents).to eq(200)
+        expect(result.invoice.taxes_rate).to eq(10.0)
+        expect(result.invoice.applied_taxes.count).to eq(1)
+        expect(result.invoice.total_amount_cents).to eq(2_200)
+      end
+    end
+
+    context "when no fee has an amount" do
+      let(:fee_subscription) do
+        create(
+          :fee,
+          invoice:,
+          subscription:,
+          fee_type: :subscription,
+          amount_cents: 0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0
+        )
+      end
+      let(:fee_charge) do
+        create(
+          :fee,
+          invoice:,
+          charge:,
+          fee_type: :charge,
+          total_aggregated_units: 100,
+          amount_cents: 0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0
+        )
+      end
+
+      it "finalizes the invoice with zero taxes without calling the tax provider" do
+        result = pull_taxes_service.call
+
+        expect(result).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+        expect(result.invoice).to have_attributes(
+          tax_status: "succeeded",
+          fees_amount_cents: 0,
+          taxes_amount_cents: 0,
+          taxes_rate: 0,
+          total_amount_cents: 0
+        )
+        expect(result.invoice.applied_taxes).to be_empty
+      end
+    end
+
     context "when failed to fetch taxes" do
       let(:body) do
         path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
