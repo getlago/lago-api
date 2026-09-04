@@ -11,12 +11,16 @@ module Lago
 
       ROLE_SESSION_NAME = "lago-event-destinations"
 
+      THROTTLE_ERRORS = [
+        Aws::Kinesis::Errors::ProvisionedThroughputExceededException
+      ].freeze
+
       DELIVERY_ERRORS = [
         Aws::Kinesis::Errors::ResourceNotFoundException,
         Aws::Kinesis::Errors::AccessDeniedException,
         Aws::Kinesis::Errors::ValidationException,
         Aws::Kinesis::Errors::InvalidArgumentException,
-        Aws::Kinesis::Errors::ProvisionedThroughputExceededException,
+        *THROTTLE_ERRORS,
         Aws::STS::Errors::AccessDenied,
         Aws::Errors::MissingCredentialsError,
         Seahorse::Client::NetworkingError
@@ -32,22 +36,32 @@ module Lago
       def produce(data:, partition_key:)
         payload = JSON.generate(data)
 
+        started_at = Time.current
+
         response = client.put_record(
           stream_arn: destination.stream_arn,
           data: payload,
           partition_key:
         )
 
-        Rails.logger.info(
-          "#{log_prefix} delivered partition_key=#{partition_key} bytes=#{payload.bytesize} " \
-          "shard=#{response.shard_id} sequence=#{response.sequence_number}"
+        log(
+          :delivered,
+          partition_key:,
+          bytes: payload.bytesize,
+          shard: response.shard_id,
+          sequence: response.sequence_number,
+          duration_ms: duration_ms(started_at)
         )
 
         response
       rescue *DELIVERY_ERRORS => e
-        Rails.logger.error(
-          "#{log_prefix} dropped partition_key=#{partition_key} bytes=#{payload&.bytesize} " \
-          "error=#{e.class} message=#{e.message}"
+        log(
+          outcome_for(e),
+          partition_key:,
+          bytes: payload&.bytesize,
+          duration_ms: duration_ms(started_at),
+          error: e.class,
+          message: e.message
         )
 
         nil
@@ -57,8 +71,18 @@ module Lago
 
       attr_reader :destination
 
-      def log_prefix
-        "[streaming] destination=#{destination.id} stream=#{destination.stream_arn}"
+      def outcome_for(error)
+        return :throttled if THROTTLE_ERRORS.any? { error.is_a?(it) }
+
+        :dropped
+      end
+
+      def log(outcome, **fields)
+        EventDestinations::DeliveryLogger.emit(outcome, destination:, stream: destination.stream_arn, **fields)
+      end
+
+      def duration_ms(started_at)
+        ((Time.current - started_at) * 1000).round
       end
 
       def client
