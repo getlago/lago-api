@@ -99,6 +99,38 @@ RSpec.describe Customers::RefreshWalletsService do
       expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
     end
 
+    describe "streaming the refreshed usage" do
+      it "does not enqueue when the organization has no destination" do
+        expect { result }.not_to have_enqueued_job(DeliverEventJob)
+      end
+
+      context "when the organization has a destination for the event" do
+        before { create(:kinesis_destination, organization:) }
+
+        it "enqueues the delivery" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed", customer)
+        end
+
+        it "enqueues nothing when the wrapping transaction rolls back" do
+          expect do
+            ActiveRecord::Base.transaction do
+              described_class.call(customer:, include_generating_invoices:)
+              raise ActiveRecord::Rollback
+            end
+          end.not_to have_enqueued_job(DeliverEventJob)
+        end
+      end
+
+      context "when the destination asks for another event type" do
+        before { create(:kinesis_destination, organization:).update_column(:event_types, ["wallet.updated"]) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "enqueues nothing" do
+          expect { result }.not_to have_enqueued_job(DeliverEventJob)
+        end
+      end
+    end
+
     context "when charges have presentation_group_keys" do
       before do
         allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original

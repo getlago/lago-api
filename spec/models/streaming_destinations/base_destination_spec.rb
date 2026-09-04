@@ -63,6 +63,12 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
     end
   end
 
+  describe "#producer" do
+    it "is the subtype's responsibility" do
+      expect { described_class.new.producer }.to raise_error(NotImplementedError)
+    end
+  end
+
   describe ".for_event" do
     let(:organization) { create(:organization) }
     let!(:destination) { create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"]) }

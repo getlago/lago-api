@@ -20,6 +20,14 @@ module StreamingDestinations
       where(organization:).where("event_types @> ARRAY[?]::varchar[]", event_type)
     }
 
+    def producer
+      raise NotImplementedError
+    end
+
+    def partition_key_for(customer:, subscription:)
+      nil
+    end
+
     private
 
     def event_types_are_known
