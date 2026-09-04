@@ -2,8 +2,10 @@
 
 module StreamingDestinations
   class KinesisDestination < BaseDestination
-    PARTITION_KEYS = %w[customer_external_id].freeze
-    DEFAULT_PARTITION_KEY = "customer_external_id"
+    PARTITION_KEY_CUSTOMER_EXTERNAL_ID = "customer_external_id"
+    PARTITION_KEY_MAX_LENGTH = 256
+    PARTITION_KEYS = [PARTITION_KEY_CUSTOMER_EXTERNAL_ID].freeze
+    DEFAULT_PARTITION_KEY = PARTITION_KEY_CUSTOMER_EXTERNAL_ID
 
     settings_accessors :stream_arn, :region, :role_arn
     settings_accessors :partition_key, default: DEFAULT_PARTITION_KEY
@@ -12,6 +14,19 @@ module StreamingDestinations
     validates :region, presence: true
     validates :role_arn, presence: true
     validates :partition_key, inclusion: {in: PARTITION_KEYS}
+
+    def producer
+      EventDestinations::KinesisProducer.new(destination: self)
+    end
+
+    def partition_key_for(customer:, subscription:)
+      case partition_key
+      when PARTITION_KEY_CUSTOMER_EXTERNAL_ID
+        customer.external_id&.slice(0, PARTITION_KEY_MAX_LENGTH)
+      else
+        raise ArgumentError, "unsupported partition key #{partition_key.inspect}"
+      end
+    end
   end
 end
 
