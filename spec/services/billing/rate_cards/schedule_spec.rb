@@ -158,14 +158,13 @@ RSpec.describe Billing::RateCards::Schedule do
   # The window is chosen deliberately, so a cycle that closed before it is left out even
   # though it has fallen due. Mapped from the old engine on 2026-08-31.
   describe "#cycles_overlapping" do
-    it "keeps a cycle whose period reaches into the window" do
+    it "keeps a cycle that reaches into the window" do
       window = Time.utc(2022, 1, 31)...Time.utc(2022, 2, 1)
 
       expect(windows(schedule.cycles_overlapping(window))).to eq(["2022-01-15 -> 2022-01-31"])
     end
 
-    # The cycle closes exactly where the window opens, so its period ends an instant before
-    # it. This is the case the old engine's default range fell into on every clock tick.
+    # The cycle closes exactly where the window opens, so it ends an instant before it. This is the case the old engine's default range fell into on every clock tick.
     it "leaves out a cycle closing exactly where the window opens" do
       window = Time.utc(2022, 2, 1)...Time.utc(2022, 2, 2)
 
@@ -222,9 +221,9 @@ RSpec.describe Billing::RateCards::Schedule do
         expect(cycle.proration_ratio(cycle)).to eq(1.0)
       end
 
-      # The two sides of a rate change have to add up to one period, whatever hour the
+      # The two sides of a rate change have to add up to one interval, whatever hour the
       # change lands at — the rule Calendar#covered_days exists to keep.
-      it "shares one period between the segments of a cut cycle" do
+      it "shares one interval between the segments of a cut cycle" do
         segments = cycle.segments(rates: [rate(Time.utc(2021, 1, 1)), rate(Time.utc(2022, 3, 15, 14))])
         ratios = segments.map { |segment| cycle.proration_ratio(segment) }
 
