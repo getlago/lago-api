@@ -94,6 +94,19 @@ RSpec.describe Fees::ApplyProviderTaxesService do
       end
     end
 
+    context "when the fee was not reported to the tax provider" do
+      let(:fee_taxes) { nil }
+
+      it "leaves the fee untaxed" do
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes).to be_empty
+        expect(fee.applied_taxes).to be_empty
+        expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
+      end
+    end
+
     context "when fee already have taxes" do
       before { create(:fee_applied_tax, fee:) }
 

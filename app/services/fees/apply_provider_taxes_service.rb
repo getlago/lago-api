@@ -14,6 +14,7 @@ module Fees
     def call
       result.applied_taxes = []
       return result if fee.applied_taxes.any?
+      return result if fee_taxes.nil?
 
       applied_taxes_amount_cents = 0
       applied_precise_taxes_amount_cents = 0.to_d

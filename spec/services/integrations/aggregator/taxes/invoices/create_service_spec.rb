@@ -139,6 +139,54 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         it "does not create integration resource" do
           expect { service_call }.not_to change { invoice.reload.integration_resources.count }
         end
+
+        context "when a fee has no amount" do
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+          let(:params) { super().tap { |body| body.first["fees"] = [body.first["fees"].first] } }
+
+          it "excludes it from the request" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
+        end
+
+        context "when no fee has an amount" do
+          let(:fee_add_on) do
+            create(
+              :fee,
+              invoice:,
+              add_on:,
+              amount_cents: 0,
+              created_at: current_time - 3.seconds
+            )
+          end
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+
+          it "reports no fee taxes without calling the provider" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees).to eq([])
+            expect(WebMock).not_to have_requested(:post, endpoint)
+          end
+        end
       end
 
       context "when Avalara taxes are successfully fetched for finalized invoice" do
@@ -214,6 +262,25 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
 
         it "creates integration resource" do
           expect { service_call }.to change { invoice.reload.integration_resources.count }.by(1)
+        end
+
+        context "when a fee has no amount" do
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+          let(:params) { super().tap { |body| body.first["fees"] = [body.first["fees"].first] } }
+
+          it "excludes it from the request" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
         end
 
         context "when invoice is voided" do

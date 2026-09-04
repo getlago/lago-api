@@ -130,6 +130,54 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           expect(result.fees.first.tax_breakdown.last.rate).to eq("0.00")
         end
 
+        context "when a fee has no amount" do
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+          let(:params) { super().tap { |request_body| request_body.first["fees"] = [request_body.first["fees"].first] } }
+
+          it "excludes it from the request" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
+        end
+
+        context "when no fee has an amount" do
+          let(:fee_add_on) do
+            create(
+              :fee,
+              invoice:,
+              add_on:,
+              amount_cents: 0,
+              created_at: current_time - 3.seconds
+            )
+          end
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+
+          it "reports no fee taxes without calling the provider" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees).to eq([])
+            expect(WebMock).not_to have_requested(:post, endpoint)
+          end
+        end
+
         context "when special rules applied" do
           let(:body) do
             parsed_body = JSON.parse(base_body)

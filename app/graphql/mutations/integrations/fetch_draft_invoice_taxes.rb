@@ -50,6 +50,8 @@ module Mutations
         def commitment? = false
 
         def subscription? = false
+
+        def taxable? = sub_total_excluding_taxes_amount_cents.positive?
       end
 
       def invoice(customer, args)
