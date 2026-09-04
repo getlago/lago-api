@@ -26,6 +26,7 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:customer)
       expect(contract).to belong_to(:plan).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
+      expect(contract).to have_many(:billing_segments)
     end
 
     it "resolves a discarded customer and plan" do

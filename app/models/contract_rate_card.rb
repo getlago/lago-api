@@ -13,6 +13,7 @@ class ContractRateCard < ApplicationRecord
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
+  has_many :billing_segments
 
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true

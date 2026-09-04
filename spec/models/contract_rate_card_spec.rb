@@ -13,6 +13,7 @@ RSpec.describe ContractRateCard do
       expect(contract_rate_card).to belong_to(:contract)
       expect(contract_rate_card).to belong_to(:rate_card)
       expect(contract_rate_card).to have_many(:rate_phases).order(:position)
+      expect(contract_rate_card).to have_many(:billing_segments)
       expect(contract_rate_card).to have_one(:product).through(:rate_card)
     end
   end
