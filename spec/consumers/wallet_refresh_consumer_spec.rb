@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
   include_context "with realtime usage availability"
 
-  # Not a `subject`: the partition control this consumer exercises — `pause` and
-  # `mark_as_consumed` — reaches Kafka through a client the testing gem does not fake, so
-  # both have to be stubbed on the consumer itself.
+  # Not a `subject`: `pause` and `mark_as_consumed` reach Kafka through a client the testing
+  # gem does not fake, so both have to be stubbed on the consumer itself.
   let(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"]) }
 
   let(:organization) do
@@ -191,9 +190,8 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       end
     end
 
-    # `Customers::RefreshWalletsService` recomputes usage across every active subscription of
-    # the customer, so a subscription left behind would debit the wallet against its previous
-    # epoch even though the trigger that carried the highest watermark has caught up.
+    # The refresh recomputes usage across every active subscription, so one left behind would
+    # debit the wallet against its previous epoch.
     context "when the batch carries several subscriptions of one customer" do
       let(:second_subscription) { create(:subscription, organization:, customer:, plan:) }
 
@@ -250,8 +248,7 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
       end
 
-      # Every blocked customer was re-checked on every cycle, so they have all waited as long
-      # as the offset the budget was counted on; walking them one at a time would hold the
+      # They were all re-checked on every cycle, so walking them one at a time would hold the
       # partition for one budget each.
       it "dead-letters every trigger the batch is still blocked on" do
         other_wallet

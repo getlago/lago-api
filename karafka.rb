@@ -68,9 +68,8 @@ class KarafkaApp < Karafka::App
           # large one is what makes catching up on a backlog cheap.
           max_messages 5_000
 
-          # Milliseconds. This lane exists to shorten the delay between ingesting usage and
-          # debiting the wallet, so a poll returns what is there rather than waiting the
-          # default second for a batch that a steady stream would never fill.
+          # Milliseconds. This lane exists to shorten the delay before the wallet is debited,
+          # so a poll returns what is there rather than waiting the default second to fill.
           max_wait_time 100
 
           dead_letter_queue(topic: "unprocessed_wallet_refresh", max_retries: 1, independent: true, dispatch_method: :produce_sync)
