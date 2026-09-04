@@ -15,6 +15,12 @@ class AddCatalogPlanToEcosystem < ActiveRecord::Migration[8.0]
     add_foreign_key :plans_taxes, :catalog_plans, validate: false
     change_column_null :plans_taxes, :plan_id, true
     add_index :plans_taxes, %i[catalog_plan_id tax_id], unique: true, algorithm: :concurrently
+    # plan_id was NOT NULL; keep the "exactly one plan" guarantee at the
+    # database level now that a tax may point at a catalog plan instead.
+    add_check_constraint :plans_taxes,
+      "num_nonnulls(plan_id, catalog_plan_id) = 1",
+      name: "plans_taxes_check_exactly_one_plan",
+      validate: false
 
     add_reference :entitlement_entitlements, :catalog_plan, type: :uuid, null: true, index: {algorithm: :concurrently}
     add_foreign_key :entitlement_entitlements, :catalog_plans, validate: false
@@ -45,6 +51,7 @@ class AddCatalogPlanToEcosystem < ActiveRecord::Migration[8.0]
     remove_foreign_key :entitlement_entitlements, :catalog_plans
     remove_reference :entitlement_entitlements, :catalog_plan
 
+    remove_check_constraint :plans_taxes, name: "plans_taxes_check_exactly_one_plan"
     remove_index :plans_taxes, name: "index_plans_taxes_on_catalog_plan_id_and_tax_id"
     change_column_null :plans_taxes, :plan_id, false
     remove_foreign_key :plans_taxes, :catalog_plans

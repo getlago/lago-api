@@ -32,5 +32,20 @@ RSpec.describe Plan::AppliedTax do
         expect(applied_tax.errors.where(:base, :exactly_one_plan_required)).to be_present
       end
     end
+
+    describe "database parent guard" do
+      it "rejects a row with no plan even past model validation" do
+        applied_tax = build(:plan_applied_tax, plan: nil)
+
+        expect { applied_tax.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+
+      it "rejects a row with both plans even past model validation" do
+        applied_tax = create(:plan_applied_tax)
+        applied_tax.catalog_plan = create(:catalog_plan, organization: applied_tax.organization)
+
+        expect { applied_tax.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+    end
   end
 end
