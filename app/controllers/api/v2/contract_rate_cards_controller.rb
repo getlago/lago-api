@@ -69,7 +69,7 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.contract_rate_cards.includes(:contract, :rate_card, :rate_phases),
-              ::V1::ContractRateCardSerializer,
+              ::V2::ContractAppliedRateCardSerializer,
               collection_name: "applied_rate_cards",
               meta: pagination_metadata(result.contract_rate_cards)
             )
@@ -126,7 +126,7 @@ module Api
       end
 
       def render_contract_rate_card(contract_rate_card)
-        render(json: ::V1::ContractRateCardSerializer.new(contract_rate_card, root_name: "applied_rate_card"))
+        render(json: ::V2::ContractAppliedRateCardSerializer.new(contract_rate_card, root_name: "applied_rate_card"))
       end
 
       def resource_name

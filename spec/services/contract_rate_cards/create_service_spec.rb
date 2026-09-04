@@ -99,4 +99,16 @@ RSpec.describe ContractRateCards::CreateService do
       expect(result.error.messages[:rate_card]).to eq(["product_already_priced"])
     end
   end
+
+  context "when the product's existing card has ended" do
+    before do
+      create(:contract_rate_card, organization:, contract:,
+        rate_card: create(:rate_card, organization:, currency: "EUR", product: rate_card.product),
+        effective_date: 3.days.ago, ended_date: 1.day.ago)
+    end
+
+    it "allows pricing the product again" do
+      expect(result).to be_success
+    end
+  end
 end
