@@ -810,7 +810,7 @@ GEM
       tsort
     redis (5.4.1)
       redis-client (>= 0.22.0)
-    redis-client (0.26.3)
+    redis-client (0.30.1)
       connection_pool
     redis-prescription (2.6.0)
     redlock (2.0.6)
@@ -939,7 +939,7 @@ GEM
     sidekiq-prometheus-exporter (0.3.0)
       rack (>= 1.6.0)
       sidekiq (>= 4.1.0)
-    sidekiq-throttled (1.4.0)
+    sidekiq-throttled (1.5.2)
       concurrent-ruby (>= 1.2.0)
       redis-prescription (~> 2.2)
       sidekiq (>= 6.5)
@@ -1163,7 +1163,7 @@ DEPENDENCIES
   sidekiq
   sidekiq-pro!
   sidekiq-prometheus-exporter
-  sidekiq-throttled (= 1.4.0)
+  sidekiq-throttled (= 1.5.2)
   simplecov
   slim
   slim-rails
