@@ -2,11 +2,11 @@
 
 module RealtimeUsage
   # Whether the ClickHouse usage buckets of one subscription have caught up with the
-  # ingestion watermark carried by a wallet refresh trigger.
+  # ingestion watermark carried by a realtime usage trigger.
   #
   # The trigger and the bucket upsert are two sinks of the same stream epoch with no
-  # cross-sink ordering guarantee, so a refresh dispatched on the trigger alone would debit
-  # the wallet against the previous epoch's usage.
+  # cross-sink ordering guarantee, so a reaction dispatched on the trigger alone would read
+  # the previous epoch's usage — for wallet refresh, debiting the wallet against it.
   class BucketWatermarkService < BaseService
     Result = BaseResult[:reached]
 

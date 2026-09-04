@@ -58,17 +58,17 @@ class KarafkaApp < Karafka::App
     end
   end
 
-  if ENV["LAGO_KAFKA_WALLET_REFRESH_TRIGGERS_TOPIC"].present?
+  if ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"].present?
     routes.draw do
-      consumer_group :lago_wallet_refresh_triggers_consumer do
-        topic ENV["LAGO_KAFKA_WALLET_REFRESH_TRIGGERS_TOPIC"] do
-          consumer WalletRefreshTriggersConsumer
+      consumer_group :lago_wallet_refresh_consumer do
+        topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
+          consumer WalletRefreshConsumer
 
           # The batch is where the triggers of one customer collapse into one refresh, so a
           # large one is what makes catching up on a backlog cheap.
           max_messages 5_000
 
-          dead_letter_queue(topic: "unprocessed_wallet_refresh_triggers", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+          dead_letter_queue(topic: "unprocessed_wallet_refresh", max_retries: 1, independent: true, dispatch_method: :produce_sync)
         end
       end
     end

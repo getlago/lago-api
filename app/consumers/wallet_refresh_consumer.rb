@@ -3,12 +3,16 @@
 # Pulls the wallet ongoing-balance refresh forward from the five-minute sweep. The pipeline
 # emits one trigger per enriched count/sum event, keyed by (organization_id, customer_id).
 #
+# The trigger topic is shared by every realtime usage reaction, so each reaction gets its own
+# consumer group: this one pauses its partition on the bucket watermark, and a group per
+# reaction keeps that wait from stalling the others.
+#
 # The Redis flag-and-sweep lane stays authoritative and this consumer adds no bookkeeping of
 # its own: it dispatches the very same `Customers::RefreshWalletJob`, whose uniqueness lock
 # and `awaiting_wallet_refresh` guard collapse both lanes into one refresh per flagged epoch.
 # Every trigger dropped here is therefore still owned by the sweep, which is what lets this
 # consumer drop freely rather than wait.
-class WalletRefreshTriggersConsumer < ApplicationConsumer
+class WalletRefreshConsumer < ApplicationConsumer
   # Milliseconds. Pausing re-delivers the offset without holding a worker thread, where a
   # sleep would hold the thread and the partition for as long as it ran.
   WATERMARK_PAUSE_TIMEOUT = 1_000

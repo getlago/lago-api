@@ -2,13 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe WalletRefreshTriggersConsumer, clickhouse: {clean_before: true} do
+RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
   include_context "with realtime usage availability"
 
   # Not a `subject`: the partition control this consumer exercises — `pause` and
   # `mark_as_consumed` — reaches Kafka through a client the testing gem does not fake, so
   # both have to be stubbed on the consumer itself.
-  let(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_WALLET_REFRESH_TRIGGERS_TOPIC"]) }
+  let(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"]) }
 
   let(:organization) do
     create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
