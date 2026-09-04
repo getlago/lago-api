@@ -97,13 +97,33 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         expect(consumer).not_to have_received(:pause)
       end
 
-      # A restart, a rebalance or any downtime leaves a backlog of older triggers behind, and
-      # every one of them still owns a refresh.
-      it "refreshes a trigger produced long before the batch was polled" do
-        produce(timestamp: 30.minutes.ago)
+      it "refreshes a trigger produced inside the age window" do
+        produce(timestamp: (described_class::MAX_TRIGGER_AGE - 5.seconds).ago)
 
         expect { consumer.consume }
           .to have_enqueued_job(Customers::RefreshWalletJob).with(customer, wallet_ids: [wallet.id])
+      end
+    end
+
+    # A backlog left by a restart or a downtime drains instead of being waited through, one
+    # offset at a time, for usage the clock sweep picks up in one pass.
+    context "when the trigger is older than the maximum age" do
+      let(:stale) { {timestamp: described_class::MAX_TRIGGER_AGE.ago - 1.second} }
+
+      it "leaves the customer to the clock sweep, even with the buckets caught up" do
+        create_bucket(last_ingested_at:)
+        produce(**stale)
+
+        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+      end
+
+      it "does not pause, even with the buckets behind" do
+        create_bucket(last_ingested_at: last_ingested_at - 1.second)
+        produce(**stale)
+
+        consumer.consume
+
+        expect(consumer).not_to have_received(:pause)
       end
     end
 

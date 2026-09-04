@@ -8,15 +8,20 @@
 # consumer group: this one pauses its partition on the bucket watermark, and a group per
 # reaction keeps that wait from stalling the others.
 #
-# Every trigger is acted on. The refresh carries the customer's wallet ids, which is how
-# `Customers::RefreshWalletJob` runs for a customer the five-minute sweep has not flagged, so
-# this lane owns the refreshes it dispatches instead of riding on the sweep's bookkeeping. A
-# trigger whose buckets never land is given up on only after `MAX_WATERMARK_ATTEMPTS`, and
-# then it goes to the dead letter queue rather than being dropped.
+# The refresh carries the customer's wallet ids, which is how `Customers::RefreshWalletJob`
+# runs for a customer the five-minute sweep has not flagged, so this lane does not ride on the
+# sweep's bookkeeping to reach the wallet. A trigger whose buckets never land is given up on
+# only after `MAX_WATERMARK_ATTEMPTS`, and then it goes to the dead letter queue rather than
+# being dropped.
 class WalletRefreshConsumer < ApplicationConsumer
   # Milliseconds. Pausing re-delivers the offset without holding a worker thread, where a
   # sleep would hold the thread and the partition for as long as it ran.
   WATERMARK_PAUSE_TIMEOUT = 1_000
+
+  # Past this age the sweep is the cheaper lane, so the trigger is left to it: a backlog from
+  # a restart or a downtime drains at full speed instead of being paused and waited through,
+  # one offset at a time, for usage the sweep will pick up in one pass.
+  MAX_TRIGGER_AGE = 30.seconds
 
   # Pause cycles one offset may spend waiting for its buckets, so five minutes at the timeout
   # above. Buckets that never land — the subscription carries no bucket-backed charge, or the
@@ -38,6 +43,8 @@ class WalletRefreshConsumer < ApplicationConsumer
   def consume
     @batch = messages.to_a
     @triggers = build_triggers
+
+    log_stale_triggers
 
     return if triggers.empty?
 
@@ -96,6 +103,7 @@ class WalletRefreshConsumer < ApplicationConsumer
     watermark_ms = epoch_ms(payload["last_ingested_at"])
 
     return nil if organization_id.blank? || customer_id.blank? || subscription_id.blank?
+    return nil if message.timestamp < MAX_TRIGGER_AGE.ago
 
     # The sink does not COALESCE `ingested_at` and the topic contract does not guarantee it.
     # There is no epoch to wait for, and refreshing anyway would read the buckets early.
@@ -106,6 +114,17 @@ class WalletRefreshConsumer < ApplicationConsumer
     end
 
     {organization_id:, customer_id:, subscription_id:, watermark_ms:, offset: message.offset}
+  end
+
+  # Dropping a backlog is the policy, but it has to be visible: a pipeline lagging past the
+  # window, or a producer clock sitting behind ours, otherwise looks exactly like silence.
+  def log_stale_triggers
+    cutoff = MAX_TRIGGER_AGE.ago
+    stale = batch.count { |message| message.timestamp < cutoff }
+
+    return if stale.zero?
+
+    Karafka.logger.warn("#{self.class}: #{stale} trigger(s) older than #{MAX_TRIGGER_AGE.inspect}, left to the sweep")
   end
 
   # The sink encodes `ingested_at` as integer epoch milliseconds (RisingWave's JSON rendering
