@@ -36,6 +36,27 @@ RSpec.describe RealtimeUsage::BucketWatermarkService, clickhouse: {clean_before:
       expect(service.caught_up_subscription_ids).to eq(Set[subscription.id])
     end
 
+    # A tombstone carries the highest version by construction, so counting one would read as
+    # caught up on usage that no longer exists.
+    it "is not caught up on a tombstoned bucket" do
+      create_bucket(last_ingested_at:, is_deleted: 1)
+
+      expect(service.caught_up_subscription_ids).to be_empty
+    end
+
+    # `bucket` is the partition key: the read is floored to keep it off every other month.
+    it "is not caught up on a bucket older than the grace" do
+      create_bucket(last_ingested_at:, bucket: last_ingested_at - described_class::BUCKET_GRACE - 1.day)
+
+      expect(service.caught_up_subscription_ids).to be_empty
+    end
+
+    it "is caught up on a bucket inside the grace" do
+      create_bucket(last_ingested_at:, bucket: last_ingested_at - described_class::BUCKET_GRACE + 1.hour)
+
+      expect(service.caught_up_subscription_ids).to eq(Set[subscription.id])
+    end
+
     it "is not caught up when every bucket is still behind the watermark" do
       create_bucket(last_ingested_at: last_ingested_at - 0.001)
 

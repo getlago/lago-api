@@ -209,7 +209,9 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       end
     end
 
-    context "when the buckets stay behind for the whole attempt budget" do
+    # The partition is keyed by customer, so holding it for one customer's buckets delays every
+    # other customer hashed to it. Past the grace that customer is left to the clock sweep.
+    context "when the buckets stay behind for the whole grace" do
       before do
         stub_const("#{described_class}::MAX_WATERMARK_ATTEMPTS", 2)
 
@@ -217,47 +219,30 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         produce
       end
 
-      it "stops pausing once the budget is spent" do
+      it "stops pausing once the grace is spent" do
         3.times { consumer.consume }
 
         expect(consumer).to have_received(:pause).twice
       end
 
-      # Nothing else refreshes this customer, so giving up may not mean dropping the trigger.
-      it "hands the trigger to the dead letter queue" do
+      # Ingestion flags the customer, so the sweep covers the refresh this lane walks away from.
+      it "leaves the trigger to the sweep rather than the dead letter queue" do
         3.times { consumer.consume }
 
-        expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
+        expect(dlq_messages).to be_empty
       end
 
-      # Pausing re-delivers the same messages with their original timestamps, so the trigger
-      # ages out while it is waited on. Re-judging its age there would drop it silently.
-      it "hands a trigger that aged out while waiting to the dead letter queue" do
-        consumer.consume
+      it "commits past the trigger it walked away from" do
+        allow(consumer).to receive(:mark_as_consumed)
 
-        travel(RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE + 1.second)
+        3.times { consumer.consume }
 
-        2.times { consumer.consume }
-
-        expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
+        expect(consumer).to have_received(:mark_as_consumed).with(consumer.messages.first)
       end
 
       # They were all re-checked on every cycle, so walking them one at a time would hold the
-      # partition for one budget each.
-      it "dead-letters every trigger the batch is still blocked on" do
-        other_wallet
-        create_other_bucket(last_ingested_at: last_ingested_at - 1.second)
-
-        produce_other
-
-        3.times { consumer.consume }
-
-        expect(dlq_messages.map { it[:payload] }).to match_array(consumer.messages.map(&:raw_payload))
-      end
-
-      # `pause` seeks past the offsets between the blocked ones, so leaving them unmarked
-      # would replay their refreshes after a crash or a rebalance.
-      it "commits past every trigger it gave up on" do
+      # partition for one grace each.
+      it "commits past every trigger the batch is still blocked on" do
         allow(consumer).to receive(:mark_as_consumed)
 
         other_wallet
@@ -270,12 +255,17 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         expect(consumer).to have_received(:mark_as_consumed).with(consumer.messages.last)
       end
 
-      it "commits the offset it gave up on so the partition moves past it" do
-        allow(consumer).to receive(:mark_as_consumed)
+      # A pause re-delivers the same messages with their original timestamps, so the trigger
+      # ages out while it is waited on; that may not change where it ends up.
+      it "leaves a trigger that aged out while waiting to the sweep" do
+        consumer.consume
 
-        3.times { consumer.consume }
+        travel(RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE + 1.second)
 
-        expect(consumer).to have_received(:mark_as_consumed).with(consumer.messages.first)
+        2.times { consumer.consume }
+
+        expect(dlq_messages).to be_empty
+        expect(consumer).to have_received(:pause).twice
       end
     end
 
@@ -360,12 +350,12 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
 
       # An outage, or a query that can no longer run at all, would otherwise hold the offset
       # for good: the adapter reports both as the same error.
-      it "gives up once the read keeps failing past the failure budget" do
+      it "stops waiting once the read keeps failing past the failure grace" do
         stub_const("#{described_class}::MAX_WATERMARK_READ_FAILURES", 1)
 
         3.times { consumer.consume }
 
-        expect(dlq_messages.map { it[:payload] }).to eq([consumer.messages.first.raw_payload])
+        expect(consumer).to have_received(:pause).twice
       end
     end
 

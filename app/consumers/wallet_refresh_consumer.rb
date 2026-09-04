@@ -6,13 +6,14 @@ class WalletRefreshConsumer < ApplicationConsumer
   # Milliseconds. Pausing re-delivers the offset without holding the thread a sleep would.
   WATERMARK_PAUSE_TIMEOUT = 1_000
 
-  # Pause cycles one offset may wait, so five minutes. Buckets that never land must neither
-  # stall the partition nor vanish, so past this the trigger goes to the dead letter queue.
-  MAX_WATERMARK_ATTEMPTS = 300
+  # Pause cycles one offset may wait. The partition is keyed by customer, so every cycle spent
+  # on one customer is a cycle every other customer on it waits too: past this grace the sweep
+  # is the better lane for the one still behind.
+  MAX_WATERMARK_ATTEMPTS = 5
 
   # The adapter reports an unreachable server and a query that can no longer run as the same
-  # error, so a failed read is free only this long before it spends the attempt budget too.
-  MAX_WATERMARK_READ_FAILURES = 30
+  # error, so a failed read is free only this long before it spends the grace too.
+  MAX_WATERMARK_READ_FAILURES = 5
 
   # Caught rather than let out: the error would fail a batch of thousands, of which Karafka
   # dead-letters only the first message.
@@ -151,7 +152,7 @@ class WalletRefreshConsumer < ApplicationConsumer
     @paused_attempts += 1 if spend_attempt?
 
     if @paused_attempts > MAX_WATERMARK_ATTEMPTS
-      give_up_on(offsets)
+      leave_to_sweep(offsets)
     else
       pause_on(offset)
     end
@@ -181,18 +182,17 @@ class WalletRefreshConsumer < ApplicationConsumer
     pause(offset, WATERMARK_PAUSE_TIMEOUT)
   end
 
-  # No other lane refreshes these customers, so the trigger is dead-lettered rather than
-  # dropped, the whole blocked set at once: they have all waited the same and cost a budget each.
-  def give_up_on(offsets)
+  # Waiting longer would hold every other customer on the partition for a wait only these ones
+  # need. Ingestion flags the customer, so the five-minute sweep still covers the refresh.
+  def leave_to_sweep(offsets)
     blocked = offsets.to_set
     blocked_messages = batch.select { blocked.include?(it.offset) }
 
     Karafka.logger.warn(
       "#{self.class}: buckets still behind for #{blocked_messages.count} trigger(s) after " \
-      "#{@paused_attempts} attempts, moving them to the dead letter queue"
+      "#{@paused_attempts} attempts, left to the sweep"
     )
 
-    blocked_messages.each { dispatch_to_dlq(it) }
     mark_as_consumed(blocked_messages.last)
 
     clear_pause_state

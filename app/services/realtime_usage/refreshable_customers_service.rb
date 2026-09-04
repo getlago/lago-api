@@ -38,10 +38,14 @@ module RealtimeUsage
 
     # One query for the whole batch. The wallet ids let the job run for a customer the sweep has
     # not flagged, so this lane does not ride on the sweep's bookkeeping.
+    #
+    # Ordered because the job's uniqueness lock digests its arguments: an unstable array order
+    # would key the same refresh twice and let two of them run concurrently.
     def active_wallet_ids
       Wallet
         .active
         .where(customer_id: customers.keys)
+        .order(:id)
         .pluck(:customer_id, :id)
         .group_by(&:first)
         .transform_values { |pairs| pairs.map(&:last) }
