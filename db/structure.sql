@@ -1964,9 +1964,14 @@ CREATE FUNCTION public.ensure_role_consistency() RETURNS trigger
 CREATE FUNCTION public.record_deletion() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+  -- All three timestamps come from one value: leaving created_at/updated_at to the
+  -- column defaults would stamp them with the transaction start, which can be far
+  -- behind the delete and behind the pipeline cursor by the time the row commits.
+  deleted_time timestamp := statement_timestamp() AT TIME ZONE 'UTC';
 BEGIN
-  INSERT INTO record_deletions (organization_id, record_table, record_id, deleted_at)
-  SELECT deleted_rows.organization_id, TG_TABLE_NAME, deleted_rows.id, statement_timestamp()
+  INSERT INTO record_deletions (organization_id, record_table, record_id, deleted_at, created_at, updated_at)
+  SELECT deleted_rows.organization_id, TG_TABLE_NAME, deleted_rows.id, deleted_time, deleted_time, deleted_time
   FROM deleted_rows;
 
   RETURN NULL;
