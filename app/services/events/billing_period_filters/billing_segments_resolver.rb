@@ -2,7 +2,7 @@
 
 module Events
   module BillingPeriodFilters
-    class BillingSegmentsResolver
+    class BillingSegmentsResolver < BaseResolver
       def initialize(contract:, billing_segments:, codes: nil, with_last_seen_at: true)
         @contract = contract
         @billing_segments = billing_segments
@@ -20,28 +20,7 @@ module Events
           with_last_seen_at:
         )
 
-        combinations_by_code = combinations.group_by(&:first)
-        result = {}
-
-        target_segments.each do |billing_segment|
-          code = billing_segment.contract_rate_card.product.billable_metric.code
-          next if combinations_by_code[code].blank?
-
-          target_filter = Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
-
-          combinations_by_code[code].each do |(_code, properties, last_seen_at)|
-            event = ::Event.new(code:, properties:)
-            matching = Events::BillingPeriodFilters::EventMatchingService.call(target_filter:, event:).matching_filters
-
-            if matching.empty?
-              record(result, target_filter.target_key, nil, last_seen_at)
-            else
-              matching.each { |filter| record(result, target_filter.target_key, filter.id, last_seen_at) }
-            end
-          end
-        end
-
-        result
+        filter_targets_from_combinations(combinations:, targets: target_segments)
       end
 
       private
@@ -49,6 +28,10 @@ module Events
       attr_reader :contract, :billing_segments, :codes, :with_last_seen_at
 
       delegate :organization, to: :contract
+
+      def filter_target_for(billing_segment)
+        Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
+      end
 
       def target_segments
         @target_segments ||= billing_segments_scope.filter_map do |billing_segment|
@@ -93,15 +76,6 @@ module Events
             to_datetime: target_segments.map(&:ended_at).max
           }
         )
-      end
-
-      def record(accumulator, target_key, filter_id, last_seen_at)
-        bucket = (accumulator[target_key] ||= {})
-        current = bucket[filter_id]
-
-        if !bucket.key?(filter_id) || (last_seen_at && (current.nil? || last_seen_at > current))
-          bucket[filter_id] = last_seen_at
-        end
       end
     end
   end
