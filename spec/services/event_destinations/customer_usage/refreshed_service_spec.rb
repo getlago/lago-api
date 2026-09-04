@@ -110,7 +110,8 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
 
         expect(service.call).to be_success
         expect(call_count).to eq(2)
-        expect(Rails.logger).to have_received(:error).with(a_string_matching(/failed for subscription/))
+        expect(Rails.logger).to have_received(:error)
+          .with(a_string_matching(/outcome=failed .*error=RuntimeError message=boom/))
       end
     end
 
@@ -122,7 +123,8 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
 
       expect(service.call).to be_success
       expect(producer).not_to have_received(:produce)
-      expect(Rails.logger).to have_received(:warn).with(a_string_matching(/skipped for subscription/))
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_matching(/outcome=skipped .*subscription_id=#{subscription.id}/))
     end
   end
 end

@@ -21,9 +21,7 @@ module EventDestinations
         customer.active_subscriptions.each do |subscription|
           deliver(subscription)
         rescue => e
-          Rails.logger.error(
-            "[streaming] #{EVENT_TYPE} failed for subscription #{subscription.id}: #{e.class} #{e.message}"
-          )
+          log(:failed, subscription, error: e.class, message: e.message)
         end
 
         result
@@ -54,15 +52,24 @@ module EventDestinations
         )
 
         unless usage_result.success?
-          Rails.logger.warn(
-            "[streaming] #{EVENT_TYPE} skipped for subscription #{subscription.id}: #{usage_result.error}"
-          )
+          log(:skipped, subscription, error: usage_result.error.class, message: usage_result.error)
           return
         end
 
         producer.produce(
           data: envelope(subscription, usage_result.usage),
           partition_key: partition_key_for(subscription)
+        )
+      end
+
+      def log(outcome, subscription, **fields)
+        EventDestinations::DeliveryLogger.emit(
+          outcome,
+          destination:,
+          event_type: EVENT_TYPE,
+          customer_id: customer.id,
+          subscription_id: subscription.id,
+          **fields
         )
       end
 

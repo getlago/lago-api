@@ -32,5 +32,15 @@ RSpec.describe DeliverEventJob, type: :job do
     it "releases the enqueue lock before executing, so a refresh landing mid-delivery is not lost" do
       expect(described_class.lock_strategy_class).to eq(ActiveJob::Uniqueness::Strategies::UntilAndWhileExecuting)
     end
+
+    it "logs the drop in the shape the monitors match on" do
+      allow(Rails.logger).to receive(:info)
+
+      described_class::ON_CONFLICT.call(described_class.new("customer_usage.refreshed", customer))
+
+      expect(Rails.logger).to have_received(:info).with(
+        a_string_matching(/outcome=superseded event_type=customer_usage.refreshed customer_id=#{customer.id}/)
+      )
+    end
   end
 end

@@ -40,7 +40,9 @@ RSpec.describe EventDestinations::KinesisProducer do
       producer.produce(data: {hello: "world"}, partition_key: "cust_1")
 
       expect(Rails.logger).to have_received(:info).with(
-        a_string_matching(/delivered partition_key=cust_1 bytes=17 shard=shardId-000000000000 sequence=4966/)
+        a_string_matching(
+          /outcome=delivered destination_id=#{destination.id} organization_id=#{destination.organization_id} .*partition_key=cust_1 bytes=17 shard=shardId-000000000000 sequence=4966/
+        )
       )
     end
 
@@ -49,10 +51,22 @@ RSpec.describe EventDestinations::KinesisProducer do
         allow(client).to receive(:put_record).and_raise(build_aws_error(error_class))
         allow(Rails.logger).to receive(:error)
 
+        outcome = described_class::THROTTLE_ERRORS.include?(error_class) ? "throttled" : "dropped"
+
         expect(producer.produce(data: {hello: "world"}, partition_key: "cust_1")).to be_nil
         expect(Rails.logger).to have_received(:error)
-          .with(a_string_matching(/dropped .*#{Regexp.escape(error_class.name)}/))
+          .with(a_string_matching(/outcome=#{outcome} .*error=#{Regexp.escape(error_class.name)}/))
       end
+    end
+
+    it "separates a throttle from a configuration fault" do
+      allow(client).to receive(:put_record)
+        .and_raise(Aws::Kinesis::Errors::ProvisionedThroughputExceededException.new(nil, "slow down"))
+      allow(Rails.logger).to receive(:error)
+
+      producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+      expect(Rails.logger).to have_received(:error).with(a_string_matching(/outcome=throttled/))
     end
 
     it "does not swallow an error that is not a delivery failure" do
