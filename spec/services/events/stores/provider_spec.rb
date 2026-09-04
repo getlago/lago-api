@@ -416,6 +416,19 @@ RSpec.describe Events::Stores::Provider do
       end
     end
 
+    context "with a charge the prefetch found drifting" do
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}, unservable_charge_ids: [charge.id])
+      end
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      it "reads events for every filter of it, whatever the totals hold" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(provider.store_for(metered_item:, boundaries:, filters: {charge_filter:}))
+          .to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
     context "when the provider was built without a window" do
       subject(:provider) do
         described_class.new(organization:, billing_context:, serve_current_usage_from_buckets: true)

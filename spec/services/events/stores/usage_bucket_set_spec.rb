@@ -74,6 +74,25 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
   end
 
+  describe "#serves_charge?" do
+    it "is true for a charge the prefetch found no drift on" do
+      expect(bucket_set.serves_charge?("charge_1")).to be(true)
+    end
+
+    context "when the prefetch reported the charge unservable" do
+      subject(:bucket_set) { described_class.new(totals:, grouped_totals:, unservable_charge_ids: ["charge_1"]) }
+
+      it "is false, and the other charges stay servable" do
+        expect(bucket_set.serves_charge?("charge_1")).to be(false)
+        expect(bucket_set.serves_charge?("charge_2")).to be(true)
+      end
+
+      it "exposes the ids the prefetch refused" do
+        expect(bucket_set.unservable_charge_ids).to eq(["charge_1"].to_set)
+      end
+    end
+  end
+
   describe "immutability" do
     it "is frozen so a computation cannot rewrite the window it read" do
       expect(bucket_set).to be_frozen

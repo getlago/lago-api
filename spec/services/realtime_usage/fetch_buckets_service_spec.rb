@@ -95,6 +95,10 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
     end
 
     context "with grouped buckets" do
+      let(:charge) do
+        create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "5", "pricing_group_keys" => ["region"]})
+      end
+
       it "returns one result per group, and the total across them" do
         create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json)
         create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
@@ -189,6 +193,27 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
         expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:with_retry)
       end
     end
+
+    context "when clickhouse fails before its retries are spent" do
+      before do
+        failures = 0
+
+        allow(Clickhouse::UsageBucket).to receive(:where).and_wrap_original do |original, *args|
+          failures += 1
+          raise ActiveRecord::ConnectionNotEstablished if failures == 1
+
+          original.call(*args)
+        end
+      end
+
+      it "serves the computation, as a transient blip is retried" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect(totals.value).to eq(BigDecimal("10.0"))
+      end
+    end
   end
 
   describe "the emitted query" do
@@ -213,6 +238,63 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
 
       expect(sql).to include(charge.id)
       expect(sql).not_to include(other_charge.id)
+    end
+  end
+
+  describe "group key drift" do
+    let(:charge) do
+      create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "5", "pricing_group_keys" => ["region"]})
+    end
+
+    it "serves a charge whose rows carry the keys rails asks for" do
+      create_bucket(bucket: from_datetime, grouped_by: {"region" => "eu"}.to_json)
+
+      usage_buckets = fetch.usage_buckets
+
+      expect(usage_buckets.unservable_charge_ids).to be_empty
+      expect(usage_buckets.serves_charge?(charge.id)).to be(true)
+    end
+
+    it "makes every filter of the charge unservable when a single row drifts" do
+      charge_filter = create(:charge_filter, charge:)
+      create_bucket(bucket: from_datetime, grouped_by: {"region" => "eu"}.to_json)
+      create_bucket(bucket: from_datetime, grouped_by: {"country" => "fr"}.to_json, charge_filter_id: charge_filter.id)
+
+      usage_buckets = fetch.usage_buckets
+
+      expect(usage_buckets.unservable_charge_ids).to eq([charge.id].to_set)
+      expect(usage_buckets.serves_charge?(charge.id)).to be(false)
+    end
+
+    it "delegates rather than raising on a grouped_by that does not parse" do
+      create_bucket(bucket: from_datetime, grouped_by: "{not json")
+
+      expect { fetch }.not_to raise_error
+      expect(fetch.usage_buckets.serves_charge?(charge.id)).to be(false)
+    end
+
+    it "delegates a row aggregated another way than its metric" do
+      create_bucket(bucket: from_datetime, grouped_by: {"region" => "eu"}.to_json, aggregation_type: "count_agg")
+
+      expect(fetch.usage_buckets.serves_charge?(charge.id)).to be(false)
+    end
+
+    it "ignores the rows of a charge filter the charge no longer carries" do
+      charge_filter = create(:charge_filter, charge:)
+      create_bucket(bucket: from_datetime, grouped_by: {"region" => "eu"}.to_json)
+      create_bucket(bucket: from_datetime, grouped_by: {"country" => "fr"}.to_json, charge_filter_id: charge_filter.id)
+      charge_filter.discard!
+
+      expect(fetch.usage_buckets.serves_charge?(charge.id)).to be(true)
+    end
+
+    context "when the charge mixes filters with charge level group keys" do
+      it "delegates, because rails groups the events matching no filter and the pipeline does not" do
+        create(:charge_filter, charge:, properties: {"amount" => "5"})
+        create_bucket(bucket: from_datetime, grouped_by: "{}")
+
+        expect(fetch.usage_buckets.serves_charge?(charge.id)).to be(false)
+      end
     end
   end
 

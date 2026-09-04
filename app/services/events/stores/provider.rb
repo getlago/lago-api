@@ -95,7 +95,9 @@ module Events
         # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
-        usage_buckets.present?
+        return false if usage_buckets.blank?
+
+        usage_buckets.serves_charge?(metered_item.charge.id)
       end
 
       def same_window_as_prefetch?(window)
