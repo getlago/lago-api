@@ -58,18 +58,29 @@ module RateCards
         return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
       end
 
-      assign_attributes
-      rate_card.save!
+      ActiveRecord::Base.transaction do
+        assign_attributes
+        rate_card.save!
+        apply_taxes
+      end
 
       result.rate_card = rate_card
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e.result.error)
     end
 
     private
 
     attr_reader :rate_card, :params
+
+    def apply_taxes
+      return unless params.key?(:tax_codes) && !params[:tax_codes].nil?
+
+      RateCards::ApplyTaxesService.call!(rate_card:, tax_codes: params[:tax_codes])
+    end
 
     def assign_attributes
       rate_card.code = params[:code]&.strip if params.key?(:code)

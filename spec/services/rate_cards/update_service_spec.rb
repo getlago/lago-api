@@ -218,6 +218,68 @@ RSpec.describe RateCards::UpdateService do
     end
   end
 
+  describe "taxes" do
+    let(:tax1) { create(:tax, organization:) }
+    let(:tax2) { create(:tax, organization:) }
+    let(:params) { {tax_codes: [tax2.code]} }
+
+    before { create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:) }
+
+    it "replaces the rate card taxes" do
+      expect(result).to be_success
+      expect(result.rate_card.taxes).to eq([tax2])
+    end
+
+    context "when tax codes are empty" do
+      let(:params) { {tax_codes: []} }
+
+      it "removes the rate card tax override" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to be_empty
+      end
+    end
+
+    context "when tax codes are null" do
+      let(:params) { {tax_codes: nil} }
+
+      it "keeps the existing taxes" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to eq([tax1])
+      end
+    end
+
+    context "when tax codes are omitted" do
+      let(:params) { {name: "Renamed"} }
+
+      it "keeps the existing taxes" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to eq([tax1])
+      end
+    end
+
+    context "when the rate card is attached to a contract" do
+      before { create(:contract_rate_card, organization:, rate_card:) }
+
+      it "still updates the taxes" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to eq([tax2])
+      end
+    end
+
+    context "when a tax belongs to another organization" do
+      let(:other_tax) { create(:tax) }
+      let(:params) { {name: "Should roll back", tax_codes: [other_tax.code]} }
+
+      it "returns a tax not found failure and rolls back other changes" do
+        expect(result).to be_a(described_class::Result)
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("tax")
+        expect(rate_card.reload.name).to eq("Before")
+        expect(rate_card.taxes).to eq([tax1])
+      end
+    end
+  end
+
   context "when rate_card is nil" do
     let(:rate_card) { nil }
 

@@ -6,7 +6,7 @@ module Types
       graphql_name "RateCard"
       description "Base rate card"
 
-      dataload_association :product, :product_filter
+      dataload_association :product, :product_filter, :taxes
 
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
@@ -31,6 +31,7 @@ module Types
 
       field :product, Types::Products::Object, null: false
       field :product_filter, Types::ProductFilters::Object, null: true
+      field :taxes, [Types::Taxes::Object], null: false
 
       field :active_rate, Types::RateCardRates::Object, null: true
       field :rates_count, Integer, null: false
