@@ -6569,6 +6569,7 @@ enum FeatureFlagEnum {
   payment_gated_subscriptions
   postgres_enriched_events
   product_catalog
+  realtime_usage
   skip_credit_invoice_auto_payment_delay
   stripe_shared_payment_token
   wallet_traceability
