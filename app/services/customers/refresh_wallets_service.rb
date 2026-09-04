@@ -35,6 +35,8 @@ module Customers
 
       customer.update!(awaiting_wallet_refresh: false)
 
+      deliver_current_usage
+
       result.wallets = customer.wallets.active.reload
       result
     rescue BaseService::FailedResult => e
@@ -44,6 +46,16 @@ module Customers
     private
 
     attr_reader :customer, :include_generating_invoices
+
+    def deliver_current_usage
+      event_type = EventDestinations::CustomerUsage::RefreshedService::EVENT_TYPE
+
+      return unless StreamingDestinations::KinesisDestination
+        .for_event(customer.organization, event_type)
+        .exists?
+
+      DeliverEventJob.perform_after_commit(event_type, customer)
+    end
 
     def all_wallets
       @all_wallets ||= customer.wallets.active.includes(:recurring_transaction_rules, :wallet_targets).in_application_order.to_a

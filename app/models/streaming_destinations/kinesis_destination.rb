@@ -2,8 +2,9 @@
 
 module StreamingDestinations
   class KinesisDestination < BaseDestination
-    PARTITION_KEYS = %w[customer_external_id].freeze
-    DEFAULT_PARTITION_KEY = "customer_external_id"
+    PARTITION_KEY_CUSTOMER_EXTERNAL_ID = "customer_external_id"
+    PARTITION_KEYS = [PARTITION_KEY_CUSTOMER_EXTERNAL_ID].freeze
+    DEFAULT_PARTITION_KEY = PARTITION_KEY_CUSTOMER_EXTERNAL_ID
 
     settings_accessors :stream_arn, :region, :role_arn
     settings_accessors :partition_key, default: DEFAULT_PARTITION_KEY
