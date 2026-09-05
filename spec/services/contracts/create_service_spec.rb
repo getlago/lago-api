@@ -7,26 +7,26 @@ RSpec.describe Contracts::CreateService do
 
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
 
   let(:params) do
     {
       external_customer_id: customer.external_id,
       external_id: "contract-1",
-      plan_code: plan.code
+      plan_code: catalog_plan.code
     }
   end
 
   it "creates an active contract on the plan and materializes its rate cards" do
     rate_card = create(:rate_card, organization:)
-    create(:plan_rate_card, organization:, plan:, rate_card:, units: 5)
+    create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
 
     expect { result }.to change(Contract, :count).by(1).and change(ContractRateCard, :count).by(1)
 
     contract = result.contract
     expect(contract).to have_attributes(
       customer:,
-      plan:,
+      catalog_plan:,
       external_id: "contract-1",
       status: "active",
       billing_time: "calendar"
@@ -41,7 +41,7 @@ RSpec.describe Contracts::CreateService do
     it "creates a plan-less contract with no rate cards" do
       expect { result }.to change(Contract, :count).by(1)
 
-      expect(result.contract.plan).to be_nil
+      expect(result.contract.catalog_plan).to be_nil
       expect(result.contract.applied_rate_cards).to be_empty
     end
   end
@@ -80,7 +80,7 @@ RSpec.describe Contracts::CreateService do
 
     it "reads the customer's wall clock, not the application's" do
       rate_card = create(:rate_card, organization:)
-      create(:plan_rate_card, organization:, plan:, rate_card:)
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
 
       contract = result.contract
       expect(contract.started_at).to eq(Time.zone.parse("2026-10-01T07:00:00Z"))
@@ -131,15 +131,6 @@ RSpec.describe Contracts::CreateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error.resource).to eq("plan")
-    end
-  end
-
-  context "when the plan is a legacy plan" do
-    let(:plan) { create(:plan, organization:) }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:plan]).to eq(["not_a_product_catalog_plan"])
     end
   end
 

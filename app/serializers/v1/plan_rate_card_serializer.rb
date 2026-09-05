@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        plan_code: model.plan.code,
+        plan_code: model.catalog_plan.code,
         rate_card_code: model.rate_card.code,
         units: model.units,
         rate_phases_count: model.rate_phases.size,

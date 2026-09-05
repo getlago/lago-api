@@ -7,10 +7,10 @@ RSpec.describe ContractsQuery do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:filters) { {} }
 
-  let!(:contract) { create(:contract, organization:, customer:, plan:) }
+  let!(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
   let!(:other_contract) { create(:contract, organization:) }
 
   before { create(:contract) }
@@ -28,7 +28,7 @@ RSpec.describe ContractsQuery do
   end
 
   context "when filtering by plan_code" do
-    let(:filters) { {plan_code: plan.code} }
+    let(:filters) { {plan_code: catalog_plan.code} }
 
     it "returns the plan's contracts" do
       expect(result.contracts).to contain_exactly(contract)

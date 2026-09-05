@@ -29,7 +29,7 @@ class ContractsQuery < BaseQuery
   end
 
   def with_plan_code(scope)
-    scope.where(plan_id: organization.plans.where(code: filters.plan_code).select(:id))
+    scope.where(catalog_plan_id: organization.catalog_plans.where(code: filters.plan_code).select(:id))
   end
 
   def with_external_id(scope)

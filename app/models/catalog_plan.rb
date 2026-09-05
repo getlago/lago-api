@@ -12,6 +12,9 @@ class CatalogPlan < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :applied_rate_cards, class_name: "PlanRateCard"
+  has_many :contracts
+
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
@@ -28,6 +31,12 @@ class CatalogPlan < ApplicationRecord
   # The v2 GraphQL surface exposes the currency under the legacy `amountCurrency`
   # field name; the catalog table stores it natively as `currency`.
   alias_attribute :amount_currency, :currency
+
+  # A catalog plan is subscribed through contracts; any attachment freezes its
+  # pricing (its rate cards can no longer be edited).
+  def attached_to_contracts?
+    contracts.exists?
+  end
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

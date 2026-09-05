@@ -13,7 +13,7 @@ module V2
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
         name: model.name,
-        plan_code: model.plan&.code,
+        plan_code: model.catalog_plan&.code,
         status: model.status,
         billing_time: model.billing_time,
         billing_anchor_date: model.billing_anchor_date&.iso8601,

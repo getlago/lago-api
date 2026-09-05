@@ -15,11 +15,11 @@ module Contracts
     end
 
     def call
-      return result unless contract.plan
+      return result unless contract.catalog_plan
 
       materialized = []
       ActiveRecord::Base.transaction do
-        contract.plan.applied_rate_cards.find_each do |plan_rate_card|
+        contract.catalog_plan.applied_rate_cards.find_each do |plan_rate_card|
           materialized << contract.applied_rate_cards.create!(
             organization: contract.organization,
             rate_card: plan_rate_card.rate_card,

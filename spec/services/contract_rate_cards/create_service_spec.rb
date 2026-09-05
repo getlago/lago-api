@@ -7,8 +7,8 @@ RSpec.describe ContractRateCards::CreateService do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency: "EUR") }
-  let(:plan) { nil }
-  let(:contract) { create(:contract, :pending, organization:, customer:, plan:) }
+  let(:catalog_plan) { nil }
+  let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
   let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
   let(:params) { {rate_card_code: rate_card.code, units: "10"} }
 
@@ -57,7 +57,7 @@ RSpec.describe ContractRateCards::CreateService do
   end
 
   context "when the contract is locked (active)" do
-    let(:contract) { create(:contract, organization:, customer:, plan:) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
     it "fails with a contract_locked error" do
       expect(result).not_to be_success
@@ -84,7 +84,7 @@ RSpec.describe ContractRateCards::CreateService do
   end
 
   context "when the contract prices through a plan" do
-    let(:plan) { create(:plan, :product_catalog, organization:, amount_currency: "EUR") }
+    let(:catalog_plan) { create(:catalog_plan, organization:, currency: "EUR") }
 
     it "matches the currency against the plan" do
       expect(result).to be_success

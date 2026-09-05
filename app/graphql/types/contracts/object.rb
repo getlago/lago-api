@@ -6,7 +6,7 @@ module Types
       graphql_name "Contract"
       description "The agreement a customer signed: an optional plan, a validity window and the billing anchor"
 
-      dataload_association :customer, :plan
+      dataload_association :customer
 
       field :external_id, String, null: false
       field :id, ID, null: false
@@ -24,7 +24,8 @@ module Types
 
       field :customer, Types::Customers::Object, null: false
       # Nullable by design: a plan-less contract prices through directly
-      # attached rate cards.
+      # attached rate cards. Exposed as `plan`; the record lives in
+      # catalog_plans.
       field :plan, Types::Plans::Object, null: true
 
       field :applied_rate_cards, [Types::ContractAppliedRateCards::Object], null: false
@@ -36,6 +37,10 @@ module Types
       # Ended attachments are history, not cards the contract currently
       # carries. Batched across the collection so a list of contracts does not
       # fire one query per contract; both fields read the same loaded set.
+      def plan
+        dataloader.with(Sources::ActiveRecordAssociation, :catalog_plan).load(object)
+      end
+
       def applied_rate_cards
         dataloader.with(Sources::ContractCurrentRateCards).load(object.id)
       end
