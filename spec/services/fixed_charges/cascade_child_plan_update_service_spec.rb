@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
   subject(:result) { described_class.call(plan:, cascade_fixed_charges_payload:, timestamp:) }
 
-  let(:organization) { create(:organization) }
-  let(:parent_plan) { create(:plan, organization:) }
-  let(:plan) { create(:plan, organization:, parent: parent_plan) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:parent_plan) { create(:plan, organization:) }
+  let_it_be(:plan) { create(:plan, organization:, parent: parent_plan) }
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
   let(:timestamp) { Time.current.to_i }
   let(:subscription) { create(:subscription, :pending, plan:) }
   let(:parent_fixed_charge) { create(:fixed_charge, plan: parent_plan, add_on:, units: new_units) }

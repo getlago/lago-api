@@ -22,7 +22,7 @@ RSpec.describe Fees::ChargeService, :premium do
   end
 
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:filtered_aggregations) { nil }

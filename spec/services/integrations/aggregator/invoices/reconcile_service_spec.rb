@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
   subject(:service_call) { described_class.call(invoice:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
   let(:invoice) { create(:invoice, customer:, organization:, number: "INV-001") }

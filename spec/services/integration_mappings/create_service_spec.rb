@@ -6,9 +6,10 @@ RSpec.describe IntegrationMappings::CreateService do
   let(:service) { described_class.new(membership.user) }
 
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-  let(:add_on) { create(:add_on, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
 
   describe "#call" do
     subject(:service_call) { service.call(**create_args) }

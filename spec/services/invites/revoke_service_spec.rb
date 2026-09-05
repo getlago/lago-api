@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Invites::RevokeService do
   subject(:revoke_service) { described_class.new(invite) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:invite) { create(:invite, organization:) }
 
   describe "#call" do

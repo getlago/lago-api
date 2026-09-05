@@ -12,12 +12,9 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
       started_at: DateTime.parse("2022-03-15")
     )
   end
-  let(:organization) { invoice.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:invoice) { create(:invoice, status: :draft) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
-
-  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
   let(:charge) do
     create(
       :standard_charge,
@@ -30,14 +27,12 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
     )
   end
   let(:properties) { charge.properties }
-
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
       charges_to_datetime: subscription.started_at.end_of_month.end_of_day
     }
   end
-
   let(:adjusted_fee) do
     create(
       :adjusted_fee,
@@ -51,6 +46,10 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
       units: 7
     )
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  let_it_be(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
 
   before do
     invoice_subscription

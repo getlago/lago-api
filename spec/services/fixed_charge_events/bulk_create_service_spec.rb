@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe FixedChargeEvents::BulkCreateService do
   subject(:service) { described_class.new(events_attributes:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
   let(:subscription) { create(:subscription, :active, plan:) }
   let(:timestamp) { Time.current }

@@ -4,17 +4,12 @@ require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
   let(:payload) { described_class.new(integration_customer:, invoice:) }
-  let(:integration_customer) { FactoryBot.create(:hubspot_customer, integration:, customer:) }
-  let(:integration) { create(:hubspot_integration, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:file_url) { Faker::Internet.url }
   let(:invoice_url) do
     url = Rails.application.config.lago_front_url
 
     URI.join(url, "/#{customer.organization.slug}/customer/#{customer.id}/", "invoice/#{invoice.id}/overview").to_s
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -27,10 +22,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
       issuing_date: DateTime.new(2024, 7, 8)
     )
   end
-
   let(:integration_invoice) do
     create(:integration_resource, integration:, resource_type: "invoice", syncable: invoice)
   end
+  let(:integration_customer) { FactoryBot.create(:hubspot_customer, integration:, customer:) }
+  let(:integration) { create(:hubspot_integration, organization:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     integration_invoice

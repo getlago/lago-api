@@ -4,11 +4,6 @@ require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
   let(:payload) { described_class.new(integration_customer:, invoice:) }
-  let(:integration_customer) { create(:xero_customer, integration:, customer:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
-
   let(:invoice) do
     create(
       :invoice,
@@ -22,12 +17,17 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       issuing_date: DateTime.new(2024, 7, 8)
     )
   end
+  let(:integration_customer) { create(:xero_customer, integration:, customer:) }
+  let(:integration) { create(:netsuite_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "#body" do
     subject(:body_call) { payload.body }
 
-    let(:add_on) { create(:add_on, organization:) }
-    let(:billable_metric) { create(:billable_metric, organization:) }
+    let_it_be(:add_on) { create(:add_on, organization:) }
+    let_it_be(:billable_metric) { create(:billable_metric, organization:) }
     let(:charge) { create(:standard_charge, billable_metric:) }
     let(:current_time) { Time.current }
 
@@ -709,7 +709,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
 
     context "when invoice has a fixed_charge fee" do
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:plan) { create_default(:plan) }
       let(:fixed_charge) { create(:fixed_charge, organization:, plan:, add_on:) }
       let(:fixed_charge_fee) do
         create(

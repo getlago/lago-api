@@ -5,9 +5,13 @@ require "rails_helper"
 RSpec.describe FixedCharges::CreateService do
   subject(:create_service) { described_class.new(plan:, params:) }
 
-  let(:plan) { create(:plan) }
-  let(:organization) { plan.organization }
-  let(:add_on) { create(:add_on, organization:) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:plan) { create(:plan) }
+  let_it_be(:organization) { plan.organization }
+  let_it_be(:add_on) { create(:add_on, organization:) }
 
   describe "#call" do
     subject(:result) { create_service.call }

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Invites::AcceptService do
   subject(:accept_service) { described_class.new }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:user) { create(:user) }
   let(:invite) { create(:invite, organization:, email: user.email) }
   let(:accept_args) do

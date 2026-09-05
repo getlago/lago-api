@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe FixedCharges::OverrideService do
   subject(:override_service) { described_class.new(fixed_charge:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:plan2) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:plan2) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:tax) { create(:tax, organization:) }
 
   let(:fixed_charge) do

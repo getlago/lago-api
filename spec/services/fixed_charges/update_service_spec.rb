@@ -7,9 +7,9 @@ RSpec.describe FixedCharges::UpdateService do
     described_class.new(fixed_charge:, params:, cascade_options:, timestamp:)
   end
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:timestamp) { Time.current.to_i }
 
   let(:fixed_charge) do

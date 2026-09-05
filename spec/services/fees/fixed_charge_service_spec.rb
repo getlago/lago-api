@@ -7,8 +7,8 @@ RSpec.describe Fees::FixedChargeService, :premium do
     described_class.new(invoice:, fixed_charge:, subscription:, boundaries:, context:, apply_taxes:)
   end
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:started_at) { Time.zone.parse("2022-03-17") }

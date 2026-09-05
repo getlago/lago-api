@@ -3,8 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
+  before_all do
+    create_default(:organization)
+  end
+
   let(:integration) { integration_customer.integration }
-  let(:integration_customer) { FactoryBot.create(:netsuite_customer, customer:) }
+  let(:integration_customer) { create(:netsuite_customer, customer:) }
   let(:customer) { create(:customer, email:, phone:) }
   let(:subsidiary_id) { Faker::Number.number(digits: 2) }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:, subsidiary_id:) }

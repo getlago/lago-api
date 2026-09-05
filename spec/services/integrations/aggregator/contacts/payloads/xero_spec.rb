@@ -3,9 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Xero do
+  before_all do
+    create_default(:organization)
+  end
+
   let(:integration) { integration_customer.integration }
-  let(:integration_customer) { FactoryBot.create(:xero_customer, customer:) }
-  let(:customer) { create(:customer, firstname:, lastname:) }
+  let(:customer) { create_default(:customer, firstname:, lastname:) }
+  let(:integration_customer) { create_default(:xero_customer, customer:) }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:) }
   let(:customer_link) { payload.__send__(:customer_url) }
   let(:contact_names) { {"firstname" => firstname, "lastname" => lastname}.compact_blank }

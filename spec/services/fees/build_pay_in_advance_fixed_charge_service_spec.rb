@@ -7,10 +7,8 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
     described_class.call(subscription:, fixed_charge:, fixed_charge_event:, timestamp:)
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let(:customer) { create_default(:customer, organization:) }
   let(:subscription) do
     create(
       :subscription,
@@ -21,7 +19,6 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       started_at: Time.zone.parse("2024-03-01")
     )
   end
-
   let(:fixed_charge) do
     create(
       :fixed_charge,
@@ -33,8 +30,10 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       pay_in_advance: true
     )
   end
-
   let(:timestamp) { Time.zone.parse("2024-03-15").to_i }
+
+  let_it_be(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
 
   context "when there are no existing fees (fixed charge added)" do
     let(:fixed_charge_event) do
@@ -680,7 +679,9 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
   end
 
   context "when organization has the fixed_charge_usage_delta_migration feature flag enabled" do
-    let(:organization) { create(:organization, feature_flags: ["fixed_charge_usage_delta_migration"]) }
+    let_it_be(:organization) { create(:organization, feature_flags: ["fixed_charge_usage_delta_migration"]) }
+    let_it_be(:add_on) { create(:add_on, organization:) }
+    let_it_be(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
     let(:usage_charge) do
       create(

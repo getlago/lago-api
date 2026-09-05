@@ -5,38 +5,19 @@ require "rails_helper"
 RSpec.describe Fees::ProjectionService do
   subject(:service) { described_class.new(fees: fees) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
 
   let(:fees) { [fee] }
-  let(:fee) do
-    build(:fee,
-      charge: charge,
-      subscription: subscription,
-      charge_filter: charge_filter,
-      properties: fee_properties,
-      amount_cents: 100,
-      amount_currency: currency)
-  end
-
-  let(:billable_metric) do
-    create(:billable_metric, recurring: false, organization:)
-  end
-
   let(:charge) do
     create(:standard_charge,
       applied_pricing_unit: applied_pricing_unit,
       filters: [],
       billable_metric: billable_metric)
   end
-
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, organization:, customer:) }
-  let(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
-  let(:currency) { "EUR" }
-
   let(:charge_filter) { nil }
   let(:applied_pricing_unit) { nil }
-
   let(:fee_properties) do
     {
       "from_datetime" => from_datetime,
@@ -44,11 +25,9 @@ RSpec.describe Fees::ProjectionService do
       "charges_duration" => charges_duration
     }
   end
-
   let(:from_datetime) { Time.current.beginning_of_month }
   let(:to_datetime) { Time.current.end_of_month }
   let(:charges_duration) { nil }
-
   let(:aggregation_result) do
     instance_double(
       "AggregationResult",
@@ -56,7 +35,6 @@ RSpec.describe Fees::ProjectionService do
       error: nil
     )
   end
-
   let(:charge_model_result) do
     instance_double(
       "ChargeModelResult",
@@ -67,6 +45,22 @@ RSpec.describe Fees::ProjectionService do
       unit_amount: BigDecimal("10.05")
     )
   end
+  let(:fee) do
+    build(:fee,
+      charge: charge,
+      subscription: subscription,
+      charge_filter: charge_filter,
+      properties: fee_properties,
+      amount_cents: 100,
+      amount_currency: currency)
+  end
+
+  let_it_be(:billable_metric) do
+    create(:billable_metric, recurring: false, organization:)
+  end
+
+  let_it_be(:currency) { "EUR" }
+  let_it_be(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
 
   before do
     allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(
@@ -285,7 +279,7 @@ RSpec.describe Fees::ProjectionService do
     end
 
     context "when billable metric is recurring" do
-      let(:billable_metric) { create(:billable_metric, recurring: true, aggregation_type: "sum_agg", field_name: "amount", organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, recurring: true, aggregation_type: "sum_agg", field_name: "amount", organization:) }
 
       it "returns projected values without applying period_ratio" do
         result = service.call
@@ -384,6 +378,7 @@ RSpec.describe Fees::ProjectionService do
 
     context "when currency has different exponent" do
       let(:currency) { "KWD" }
+      let(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
 
       it "rounds and converts correctly" do
         result = service.call

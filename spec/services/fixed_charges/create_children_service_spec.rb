@@ -5,15 +5,14 @@ require "rails_helper"
 RSpec.describe FixedCharges::CreateChildrenService do
   subject(:create_service) { described_class.new(child_ids:, fixed_charge:, payload:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, organization:, plan:, add_on:) }
-
-  let(:child_plan) { create(:plan, organization:, parent_id: plan.id) }
   let(:child_ids) { child_plan.id }
-
   let(:payload) { {} }
+
+  let_it_be(:child_plan) { create(:plan, organization:, parent_id: plan.id) }
 
   before do
     fixed_charge

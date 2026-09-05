@@ -6,8 +6,8 @@ RSpec.describe InvoiceCustomSections::DeselectAllService do
   describe "#call" do
     subject(:service_result) { described_class.call(section:) }
 
-    let(:customer) { create(:customer) }
-    let(:organization) { customer.organization }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create(:customer) }
     let(:billing_entity) { customer.billing_entity }
     let(:section) { create(:invoice_custom_section, organization:) }
 

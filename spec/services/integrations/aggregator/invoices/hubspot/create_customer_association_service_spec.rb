@@ -6,15 +6,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
   subject(:service_call) { service.call }
 
   let(:service) { described_class.new(invoice:) }
-  let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
-  let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/hubspot/association" }
   let(:invoice_file_url) { invoice.file_url }
   let(:due_date) { invoice.payment_due_date.strftime("%Y-%m-%d") }
-
   let(:invoice) do
     create(
       :invoice,
@@ -27,9 +22,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
       taxes_amount_cents: 8000
     )
   end
-
   let(:integration_invoice) { create(:integration_resource, syncable: invoice, integration:) }
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -37,10 +30,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
       "Provider-Config-Key" => "hubspot"
     }
   end
-
   let(:params) do
     service.__send__(:payload).customer_association_body
   end
+  let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+  let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     integration_customer

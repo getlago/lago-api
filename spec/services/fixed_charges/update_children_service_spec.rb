@@ -12,9 +12,9 @@ RSpec.describe FixedCharges::UpdateChildrenService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:old_parent_attrs) { fixed_charge&.attributes }
   let(:fixed_charge) do
     create(

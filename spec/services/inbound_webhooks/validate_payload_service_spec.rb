@@ -13,7 +13,7 @@ RSpec.describe InboundWebhooks::ValidatePayloadService do
     )
   end
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:code) { "payment_provider_1" }
   let(:payload) { "webhook_payload" }
   let(:signature) { "signature" }
