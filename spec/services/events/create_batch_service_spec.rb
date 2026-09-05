@@ -12,7 +12,7 @@ RSpec.describe Events::CreateBatchService do
     )
   end
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:timestamp) { Time.parse("2024-01-01T01:02:03.123456Z").to_f }
   let(:code) { "sum_agg" }
   let(:metadata) { {} }
@@ -359,7 +359,7 @@ RSpec.describe Events::CreateBatchService do
     end
 
     context "when clickhouse is enabled on the organization" do
-      let(:organization) { create(:organization, clickhouse_events_store: true) }
+      let_it_be(:organization) { create(:organization, clickhouse_events_store: true) }
 
       it "does not store the event in postgres" do
         result = nil

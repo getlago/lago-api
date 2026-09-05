@@ -12,10 +12,10 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }

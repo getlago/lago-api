@@ -4,18 +4,11 @@ require "rails_helper"
 
 RSpec.describe Events::PayInAdvanceService do
   let(:in_advance_service) { described_class.new(event:) }
-
-  let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:, plan:, started_at:) }
   let(:event_properties) { {} }
   let(:timestamp) { Time.current - 1.second }
   let(:code) { billable_metric&.code }
   let(:external_subscription_id) { subscription.external_id }
-  let(:started_at) { Time.current - 3.days }
-
   let(:event) do
     build(
       :common_event,
@@ -27,13 +20,19 @@ RSpec.describe Events::PayInAdvanceService do
     )
   end
 
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:started_at) { Time.current - 3.days }
+  let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
+
   describe "#call" do
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
-    let(:billable_metric) do
+    let(:event_properties) { {billable_metric.field_name => "12"} }
+
+    let_it_be(:billable_metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id")
     end
-
-    let(:event_properties) { {billable_metric.field_name => "12"} }
 
     before { charge }
 
@@ -59,11 +58,11 @@ RSpec.describe Events::PayInAdvanceService do
 
     context "when event matches a pay_in_advance charge that is invoiceable" do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
-      let(:billable_metric) do
+      let(:event_properties) { {billable_metric.field_name => "12"} }
+
+      let_it_be(:billable_metric) do
         create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id")
       end
-
-      let(:event_properties) { {billable_metric.field_name => "12"} }
 
       before { charge }
 

@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::SubscriptionOrchestratorService do
   subject(:service) { described_class.new(subscription_migration:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:migration) { create(:enriched_store_migration, :processing, organization:) }
 
   let(:comparison_service) { Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonService }

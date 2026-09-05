@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
   subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "test_feature") }
   let(:privilege) { create(:privilege, feature:, code: "max") }
   let(:feature_code) { feature.code }

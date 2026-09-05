@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe CreditNotes::EstimateService, :premium do
   subject(:estimate_service) { described_class.new(invoice: invoice&.reload, items:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
-  let(:invoice) do
+  let_it_be(:invoice) do
     create(
       :invoice,
       organization:,
@@ -233,7 +233,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
   end
 
   context "when invoice is a prepaid credit invoice" do
-    let(:invoice) do
+    let_it_be(:invoice) do
       create(
         :invoice,
         invoice_type: :credit,

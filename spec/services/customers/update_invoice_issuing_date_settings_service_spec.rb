@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
   subject(:update_service) { described_class.new(customer:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:customer) { create(:customer, organization:) }
   let(:params) do
     {

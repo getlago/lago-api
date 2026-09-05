@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe AddOns::DestroyService do
   subject(:destroy_service) { described_class.new(add_on:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:add_on) { create(:add_on, organization:) }
 
   describe "#call" do

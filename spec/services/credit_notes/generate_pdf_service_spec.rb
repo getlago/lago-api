@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe CreditNotes::GeneratePdfService do
   subject(:credit_note_generate_service) { described_class.new(credit_note:, context:) }
 
-  let(:organization) { create(:organization, name: "LAGO") }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let_it_be(:organization) { create(:organization, name: "LAGO") }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:invoice) { create(:invoice, customer:, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
   let(:fee) { create(:fee, invoice:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }

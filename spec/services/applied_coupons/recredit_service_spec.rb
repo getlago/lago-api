@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe AppliedCoupons::RecreditService do
   subject(:recredit_service) { described_class.new(credit:) }
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
-  let(:coupon) { create(:coupon, organization:) }
-  let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
-  let(:applied_coupon) { create(:applied_coupon, coupon:, customer:, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer) }
+  let_it_be(:coupon) { create(:coupon, organization:) }
+  let_it_be(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
+  let_it_be(:applied_coupon) { create(:applied_coupon, coupon:, customer:, organization:) }
   let(:credit) { create(:credit, invoice:, applied_coupon:, amount_cents: 100) }
 
   describe "#call" do

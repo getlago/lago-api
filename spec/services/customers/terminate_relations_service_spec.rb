@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe Customers::TerminateRelationsService do
   subject(:terminate_service) { described_class.new(customer:) }
 
-  let(:customer) { create(:customer, :deleted) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:customer) { create(:customer, :deleted) }
 
   context "with an active subscription" do
     let(:subscription) { create(:subscription, customer:) }
@@ -37,7 +41,8 @@ RSpec.describe Customers::TerminateRelationsService do
 
   context "with draft invoices" do
     let(:subscription) { create(:subscription, customer:) }
-    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    let_it_be(:invoices) { create_list(:invoice, 2, :draft, customer:) }
 
     before do
       create(:invoice_subscription, invoice: invoices.first, subscription:, invoicing_reason: :subscription_starting)

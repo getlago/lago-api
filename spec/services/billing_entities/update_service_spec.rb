@@ -7,8 +7,8 @@ RSpec.describe BillingEntities::UpdateService do
 
   include_context "with mocked security logger"
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { create(:billing_entity) }
-  let(:organization) { billing_entity.organization }
 
   let(:timezone) { nil }
   let(:email_settings) { [] }

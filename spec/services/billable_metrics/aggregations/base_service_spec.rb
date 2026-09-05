@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::BaseService do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   describe ".null_result" do
     subject(:null_result) { described_class.null_result(result, **args) }
 
@@ -85,10 +91,10 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
         filters:
       )
     end
-
-    let(:subscription) { create(:subscription) }
     let(:charge) { create(:standard_charge, plan: subscription.plan) }
     let(:filters) { {} }
+
+    let_it_be(:subscription) { create(:subscription) }
 
     context "without grouped_by" do
       it "returns the aggregator's result zeroed out with the aggregator attached" do

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe DataExports::Csv::InvoiceFees do
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, timezone:) }
-  let(:plan) { create(:plan, organization: customer.organization) }
   let(:subscription) { create(:subscription, customer:, plan:, organization: customer.organization) }
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
   let(:to_utc) { "2024-06-06 12:48:59 UTC" }
@@ -49,6 +49,8 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   let(:invoice_serializer) { instance_double("V1::InvoiceSerializer", serialize: serialized_invoice) }
   let(:fee_serializer_klass) { class_double("V1::FeeSerializer") }
   let(:invoice_serializer_klass) { class_double("V1::InvoiceSerializer") }
+
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   describe ".base_headers" do
     it "uses timezone-agnostic column names" do

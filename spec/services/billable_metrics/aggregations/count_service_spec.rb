@@ -18,39 +18,19 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:bypass_aggregation) { false }
-  let(:filters) do
-    {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:}
-  end
-
-  let(:subscription) { create(:subscription, organization:) }
-  let(:organization) { create(:organization) }
-  let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
   let(:presentation_by) { nil }
   let(:matching_filters) { {} }
   let(:ignored_filters) { [] }
-
-  let(:billable_metric) do
-    create(
-      :billable_metric,
-      organization:,
-      aggregation_type: "count_agg"
-    )
-  end
-
   let(:charge) do
     create(
       :standard_charge,
       billable_metric:
     )
   end
-
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
-
   let(:pay_in_advance_event) { nil }
-
   let(:event_list) do
     create_list(
       :event,
@@ -62,6 +42,26 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
       timestamp: Time.zone.now - 1.day
     )
   end
+  let(:bypass_aggregation) { false }
+  let(:filters) do
+    {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:}
+  end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) do
+    create(
+      :billable_metric,
+      organization:,
+      aggregation_type: "count_agg"
+    )
+  end
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:subscription) { create(:subscription, organization:) }
 
   before do
     event_list
@@ -405,8 +405,6 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
 
   context "with clickhouse event store", :clickhouse do
     let(:event_store_class) { Events::Stores::ClickhouseStore }
-    let(:organization) { create(:organization, clickhouse_events_store: true) }
-
     let(:event_list) do
       create_list(
         :clickhouse_events_enriched,
@@ -419,6 +417,17 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
       )
     end
 
+    let_it_be(:organization) { create(:organization, clickhouse_events_store: true) }
+
+    let_it_be(:billable_metric) do
+      create(
+        :billable_metric,
+        organization:,
+        aggregation_type: "count_agg"
+      )
+    end
+    let_it_be(:subscription) { create(:subscription, organization:) }
+
     it "aggregates the events" do
       result = count_service.aggregate
 
@@ -426,7 +435,15 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
     end
 
     context "with deduplication" do
-      let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
+      let_it_be(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
+      let_it_be(:billable_metric) do
+        create(
+          :billable_metric,
+          organization:,
+          aggregation_type: "count_agg"
+        )
+      end
+      let_it_be(:subscription) { create(:subscription, organization:) }
 
       let(:event_list) do
         create_list(

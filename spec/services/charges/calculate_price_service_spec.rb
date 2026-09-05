@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Charges::CalculatePriceService do
   subject(:calculate_price_service) { described_class.new(units:, charge:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:, amount_cents: 1000) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:, amount_cents: 1000) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:units) { 5 }
 
   describe "#call" do

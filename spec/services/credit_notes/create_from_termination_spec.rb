@@ -6,16 +6,9 @@ RSpec.describe CreditNotes::CreateFromTermination do
   subject(:create_service) { described_class.new(subscription:, context:, **kwargs) }
 
   let(:kwargs) { {} }
-
-  let(:started_at) { Time.zone.parse("2022-09-01 10:00") }
-  let(:subscription_at) { Time.zone.parse("2022-09-01 10:00") }
-  let(:terminated_at) { Time.zone.parse("2022-10-15 10:00") }
-
   let(:customer) { create(:customer, **(customer_timezone ? {timezone: customer_timezone} : {})) }
   let(:customer_timezone) { nil }
-  let(:organization) { customer.organization }
   let(:context) { nil }
-
   let(:subscription) do
     create(
       :subscription,
@@ -43,12 +36,17 @@ RSpec.describe CreditNotes::CreateFromTermination do
   let(:tax_rate) { 20 }
   let(:coupon_amount) { 0 }
   let(:invoice_purchase_order_number) { nil }
-
   let(:fee_and_invoice) { generate_invoice_and_fee(plan_amount_cents) }
   let(:invoice) { fee_and_invoice[:invoice] }
   let(:subscription_fee) { fee_and_invoice[:subscription_fee] }
   let(:invoice_applied_tax) { fee_and_invoice[:invoice_applied_tax] }
   let(:paid_amount) { 0 }
+
+  let(:started_at) { Time.zone.parse("2022-09-01 10:00") }
+  let(:subscription_at) { Time.zone.parse("2022-09-01 10:00") }
+  let(:terminated_at) { Time.zone.parse("2022-10-15 10:00") }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before { fee_and_invoice }
 

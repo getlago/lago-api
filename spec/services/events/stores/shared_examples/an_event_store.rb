@@ -18,12 +18,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     )
   end
 
-  let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
-  let(:organization) { billable_metric.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:sum_billable_metric, field_name: "value", code: "bm:code") }
   let(:charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:charge_filter) { nil }
 
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, started_at:) }
 
   let(:started_at) { DateTime.parse("2023-03-15") }

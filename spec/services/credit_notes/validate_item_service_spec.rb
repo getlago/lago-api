@@ -5,7 +5,15 @@ require "rails_helper"
 RSpec.describe CreditNotes::ValidateItemService do
   subject(:validator) { described_class.new(result, item:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create(:invoice, total_amount_cents: 120) }
+
   let(:result) { BaseService::Result.new }
+  let(:fee) { create(:fee, invoice:, amount_cents: 100, taxes_rate: 20) }
   let(:amount_cents) { 10 }
   let(:credit_amount_cents) { 10 }
   let(:refund_amount_cents) { 0 }
@@ -26,11 +34,6 @@ RSpec.describe CreditNotes::ValidateItemService do
       fee:
     )
   end
-
-  let(:invoice) { create(:invoice, total_amount_cents: 120) }
-  let(:customer) { invoice.customer }
-
-  let(:fee) { create(:fee, invoice:, amount_cents: 100, taxes_rate: 20) }
 
   describe ".call" do
     it "validates the item" do

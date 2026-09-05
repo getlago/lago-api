@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe CreditNotes::RefreshDraftService do
   subject(:refresh_service) { described_class.new(credit_note:, fee:, old_fee_values:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:invoice) { create(:invoice, organization:, customer:, fees_amount_cents: 100, coupons_amount_cents: 20) }
   let(:tax) { create(:tax, organization:, rate: 20) }
-  let(:invoice) { create(:invoice, organization:, customer:, fees_amount_cents: 100, coupons_amount_cents: 20) }
   let(:old_fee_values) do
     [
       {

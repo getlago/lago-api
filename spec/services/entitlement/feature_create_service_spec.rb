@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Entitlement::FeatureCreateService do
   subject { described_class.call(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:params) do
     {
       code: "seats",

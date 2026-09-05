@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code:, state:) }
 
-  let(:organization) { create(:organization, premium_integrations: ["okta"]) }
+  let_it_be(:organization) { create(:organization, premium_integrations: ["okta"]) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:invite_token) { invite.token }

@@ -5,11 +5,11 @@ require "spec_helper"
 RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedEnrichedExpandedService, :clickhouse do
   subject(:service) { described_class.new(subscription:, codes:, timeout:) }
 
-  let(:organization) { create(:organization, clickhouse_events_store: true) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization, clickhouse_events_store: true) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at: 1.month.ago) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:, plan:) }
   let(:charge_filter) { nil }
   let(:codes) { [] }

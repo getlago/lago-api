@@ -3,14 +3,18 @@
 require "rails_helper"
 
 RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::WaitForEnrichmentService, clickhouse: {clean_before: true} do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:service) { described_class.new(subscription_migration:, attempt:, max_attempts:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "code1") }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, organization:, plan:) }
   let(:migration) { create(:enriched_store_migration, :processing, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:, code: "code1") }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
-  let(:subscription) { create(:subscription, organization:, plan:) }
   let(:subscription_migration) do
     create(:enriched_store_subscription_migration, :waiting_for_enrichment,
       enriched_store_migration: migration,
@@ -19,7 +23,6 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::WaitForEnrich
       events_reprocessed_count:,
       billable_metric_codes: ["code1"])
   end
-
   let(:attempt) { 1 }
   let(:max_attempts) { 10 }
   let(:events_reprocessed_count) { 3 }

@@ -5,7 +5,19 @@ require "rails_helper"
 RSpec.describe CreditNotes::ValidateService do
   subject(:validator) { described_class.new(result, item: credit_note) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:result) { BaseService::Result.new }
+  let(:fee) do
+    create(
+      :fee,
+      invoice:,
+      amount_cents: 100,
+      taxes_rate: 20
+    )
+  end
   let(:amount_cents) { 10 }
   let(:credit_amount_cents) { 12 }
   let(:refund_amount_cents) { 0 }
@@ -36,18 +48,9 @@ RSpec.describe CreditNotes::ValidateService do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
-  let(:customer) { invoice.customer }
-  let(:total_paid_amount_cents) { 0 }
-
-  let(:fee) do
-    create(
-      :fee,
-      invoice:,
-      amount_cents: 100,
-      taxes_rate: 20
-    )
-  end
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:total_paid_amount_cents) { 0 }
+  let_it_be(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
 
   before do
     item
@@ -64,7 +67,9 @@ RSpec.describe CreditNotes::ValidateService do
 
       context "when paid amount equals the total amount" do
         let(:refund_amount_cents) { 2 }
-        let(:total_paid_amount_cents) { 120 }
+
+        let_it_be(:total_paid_amount_cents) { 120 }
+        let_it_be(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
 
         it "fails the validation" do
           expect(validator).not_to be_valid
@@ -134,7 +139,9 @@ RSpec.describe CreditNotes::ValidateService do
 
     context "when refund amount is higher than invoice amount" do
       let(:refund_amount_cents) { 200 }
-      let(:total_paid_amount_cents) { 20 }
+
+      let_it_be(:total_paid_amount_cents) { 20 }
+      let_it_be(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
 
       before do
         invoice.payment_succeeded!
@@ -170,7 +177,9 @@ RSpec.describe CreditNotes::ValidateService do
 
       let(:credit_amount_cents) { 0 }
       let(:refund_amount_cents) { 10 }
-      let(:total_paid_amount_cents) { 5 }
+
+      let_it_be(:total_paid_amount_cents) { 5 }
+      let_it_be(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
 
       it "fails the validation" do
         expect(validator).not_to be_valid
@@ -200,7 +209,7 @@ RSpec.describe CreditNotes::ValidateService do
     end
 
     context "when invoice is v3 with coupons" do
-      let(:invoice) do
+      let_it_be(:invoice) do
         create(
           :invoice,
           currency: "EUR",
@@ -337,11 +346,13 @@ RSpec.describe CreditNotes::ValidateService do
 
     context "with combined credit, refund, and offset amounts" do
       let(:amount_cents) { 50 }
+      let(:precise_taxes_amount_cents) { 0 }
       let(:offset_amount_cents) { 20 }
       let(:credit_amount_cents) { 10 }
       let(:refund_amount_cents) { 20 }
-      let(:total_paid_amount_cents) { 50 }
-      let(:precise_taxes_amount_cents) { 0 }
+
+      let_it_be(:total_paid_amount_cents) { 50 }
+      let_it_be(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
 
       before do
         invoice.payment_succeeded!
@@ -368,7 +379,7 @@ RSpec.describe CreditNotes::ValidateService do
     end
 
     context "when invoice is type credit and payment status is succeeded" do
-      let(:invoice) {
+      let_it_be(:invoice) {
         create(:invoice,
           :credit,
           total_amount_cents: 12,
@@ -413,7 +424,7 @@ RSpec.describe CreditNotes::ValidateService do
     end
 
     context "when invoice is type credit but not paid" do
-      let(:invoice) {
+      let_it_be(:invoice) {
         create(:invoice,
           :credit,
           total_amount_cents: 12,

@@ -4,11 +4,8 @@ require "rails_helper"
 
 RSpec.describe DataApi::UsagesService do
   let(:service) { described_class.new(organization, **params) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/usages.json") }
   let(:from_date) { Date.current - 60.days }
-
   let(:usage_json) do
     {
       "start_of_period_dt" => "2024-01-01",
@@ -20,6 +17,9 @@ RSpec.describe DataApi::UsagesService do
       "units" => 266
     }
   end
+  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create(:organization) }
 
   describe "#call" do
     subject(:service_call) { service.call }

@@ -3,11 +3,14 @@
 require "rails_helper"
 
 RSpec.describe DataExports::ProcessPartService do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject(:result) { described_class.call(data_export_part:) }
 
   let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }
-  let(:data_export_part) { create :data_export_part, data_export:, object_ids: [invoice.id] }
-  let(:invoice) { create :invoice }
   let(:serialized_invoice) do
     {
       lago_id: "invoice-lago-id-123",
@@ -46,6 +49,9 @@ RSpec.describe DataExports::ProcessPartService do
   let(:invoice_serializer) do
     instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
   end
+  let(:data_export_part) { create :data_export_part, data_export:, object_ids: [invoice.id] }
+
+  let_it_be(:invoice) { create :invoice }
 
   before do
     create(:credit_note, offset_amount_cents: 334, invoice:)

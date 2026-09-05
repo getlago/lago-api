@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Customers::GenerateCheckoutUrlService do
   subject(:generate_checkout_url_service) { described_class.new(customer:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
 
   describe ".call" do

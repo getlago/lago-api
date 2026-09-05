@@ -5,16 +5,11 @@ require "rails_helper"
 RSpec.describe CreditNotes::Refunds::AdyenService do
   subject(:adyen_service) { described_class.new(credit_note) }
 
-  let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:code) { "adyen_1" }
+  let_it_be(:customer) { create(:customer, payment_provider_code: code) }
+  let_it_be(:invoice) { create(:invoice, customer:, organization:) }
   let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
-  let(:adyen_customer) { create(:adyen_customer, customer:) }
-  let(:adyen_client) { instance_double(Adyen::Client) }
-  let(:modifications_api) { Adyen::ModificationsApi.new(adyen_client, 70) }
-  let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
-  let(:refunds_response) { generate(:adyen_refunds_response) }
-  let(:code) { "adyen_1" }
   let(:payment) do
     create(
       :payment,
@@ -25,7 +20,6 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       payable: credit_note.invoice
     )
   end
-
   let(:credit_note) do
     create(
       :credit_note,
@@ -36,6 +30,11 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       refund_status: :pending
     )
   end
+  let(:adyen_customer) { create(:adyen_customer, customer:) }
+  let(:adyen_client) { instance_double(Adyen::Client) }
+  let(:modifications_api) { Adyen::ModificationsApi.new(adyen_client, 70) }
+  let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+  let(:refunds_response) { generate(:adyen_refunds_response) }
 
   describe "#create" do
     before do

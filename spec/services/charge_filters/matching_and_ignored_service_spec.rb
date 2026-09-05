@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   subject(:service_result) { described_class.call(charge:, filter: current_filter) }
 
-  let(:billable_metric) { create(:billable_metric) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:billable_metric) { create(:billable_metric) }
   let(:charge) { create(:standard_charge, billable_metric:) }
 
   let(:filter_steps) { create(:billable_metric_filter, billable_metric:, key: "steps", values: %w[25 50 75 100]) }

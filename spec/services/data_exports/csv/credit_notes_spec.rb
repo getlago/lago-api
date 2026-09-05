@@ -7,14 +7,10 @@ RSpec.describe DataExports::Csv::CreditNotes do
     subject(:result) { described_class.new(data_export_part:).call }
 
     let(:data_export) { create(:data_export, resource_type: "credit_notes", organization:) }
-    let(:billing_entity) { create(:billing_entity) }
-    let(:organization) { billing_entity.organization }
     let(:credit_notes) { create_pair(:credit_note, billing_entity:) }
-
     let(:data_export_part) do
       create(:data_export_part, data_export:, object_ids: credit_notes.pluck(:id))
     end
-
     let(:expected_rows) do
       credit_notes.map do |credit_note|
         [
@@ -48,6 +44,9 @@ RSpec.describe DataExports::Csv::CreditNotes do
         ].map(&:to_s)
       end
     end
+
+    let(:organization) { create_default(:organization) }
+    let(:billing_entity) { create(:billing_entity) }
 
     before { create(:credit_note) }
 
