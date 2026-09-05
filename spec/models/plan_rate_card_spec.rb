@@ -10,7 +10,8 @@ RSpec.describe PlanRateCard do
   describe "associations" do
     it do
       expect(plan_rate_card).to belong_to(:organization)
-      expect(plan_rate_card).to belong_to(:plan)
+      expect(plan_rate_card).to belong_to(:plan).optional
+      expect(plan_rate_card).to belong_to(:catalog_plan).optional
       expect(plan_rate_card).to belong_to(:rate_card)
       expect(plan_rate_card).to have_many(:rate_phases).order(:position)
       expect(plan_rate_card).to have_one(:product).through(:rate_card)
@@ -52,6 +53,50 @@ RSpec.describe PlanRateCard do
 
         expect(build(:plan_rate_card, units: 0)).to be_valid
         expect(build(:plan_rate_card, units: nil)).to be_valid
+      end
+    end
+
+    describe "exactly one plan" do
+      let(:catalog_plan) { create(:catalog_plan) }
+
+      it "accepts a catalog plan instead of a plan" do
+        expect(build(:plan_rate_card, plan: nil, catalog_plan:, organization: catalog_plan.organization)).to be_valid
+      end
+
+      it "rejects both a plan and a catalog plan" do
+        card = build(:plan_rate_card, catalog_plan:)
+
+        expect(card).not_to be_valid
+        expect(card.errors.where(:base, :exactly_one_plan_required)).to be_present
+      end
+
+      it "rejects neither" do
+        card = build(:plan_rate_card, plan: nil)
+
+        expect(card).not_to be_valid
+        expect(card.errors.where(:base, :exactly_one_plan_required)).to be_present
+      end
+
+      it "scopes rate card uniqueness to the catalog plan" do
+        existing = create(:plan_rate_card, plan: nil, catalog_plan:, organization: catalog_plan.organization)
+        duplicate = build(:plan_rate_card, plan: nil, catalog_plan:, organization: catalog_plan.organization, rate_card: existing.rate_card)
+        duplicate.valid?
+
+        expect(duplicate.errors.where(:rate_card_id, :taken)).to be_present
+      end
+    end
+
+    describe "database parent guard" do
+      it "rejects a row with neither plan even past model validation" do
+        card = build(:plan_rate_card, plan: nil)
+
+        expect { card.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+
+      it "rejects a row with both plans even past model validation" do
+        card = build(:plan_rate_card, catalog_plan: create(:catalog_plan))
+
+        expect { card.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
       end
     end
   end

@@ -53,6 +53,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_e2dbfbb01e;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.product_categories DROP CONSTRAINT IF EXISTS fk_rails_e13d306a35;
+ALTER TABLE IF EXISTS ONLY public.plan_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_e05bca64df;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_de7694c307;
@@ -196,6 +197,7 @@ ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_752665cc51;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_745b4ca7dd;
+ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_7418f461c3;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_73d83e23b6;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_7286421039;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_710f37148d;
@@ -576,6 +578,7 @@ DROP INDEX IF EXISTS public.index_plan_rate_cards_on_plan_id_and_rate_card_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_plan_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_deleted_at;
+DROP INDEX IF EXISTS public.index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
@@ -854,6 +857,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
+DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
@@ -2674,7 +2678,9 @@ CREATE TABLE public.contracts (
     terminated_at timestamp without time zone,
     canceled_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    catalog_plan_id uuid,
+    CONSTRAINT contracts_check_single_plan CHECK ((num_nonnulls(plan_id, catalog_plan_id) <= 1))
 );
 
 
@@ -5392,12 +5398,14 @@ CREATE TABLE public.pending_vies_checks (
 CREATE TABLE public.plan_rate_cards (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
+    plan_id uuid,
     rate_card_id uuid NOT NULL,
     units numeric,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    catalog_plan_id uuid,
+    CONSTRAINT plan_rate_cards_check_exactly_one_plan CHECK ((num_nonnulls(plan_id, catalog_plan_id) = 1))
 );
 
 
@@ -8633,6 +8641,13 @@ CREATE INDEX index_contract_rate_cards_on_rate_card_id ON public.contract_rate_c
 
 
 --
+-- Name: index_contracts_on_catalog_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_on_catalog_plan_id ON public.contracts USING btree (catalog_plan_id);
+
+
+--
 -- Name: index_contracts_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10576,6 +10591,13 @@ CREATE UNIQUE INDEX index_pending_vies_checks_on_customer_id ON public.pending_v
 --
 
 CREATE INDEX index_pending_vies_checks_on_organization_id ON public.pending_vies_checks USING btree (organization_id);
+
+
+--
+-- Name: index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id ON public.plan_rate_cards USING btree (catalog_plan_id, rate_card_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -13318,6 +13340,14 @@ ALTER TABLE ONLY public.data_exports
 
 
 --
+-- Name: contracts fk_rails_7418f461c3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contracts
+    ADD CONSTRAINT fk_rails_7418f461c3 FOREIGN KEY (catalog_plan_id) REFERENCES public.catalog_plans(id);
+
+
+--
 -- Name: fees_taxes fk_rails_745b4ca7dd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14462,6 +14492,14 @@ ALTER TABLE ONLY public.customer_metadata
 
 
 --
+-- Name: plan_rate_cards fk_rails_e05bca64df; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plan_rate_cards
+    ADD CONSTRAINT fk_rails_e05bca64df FOREIGN KEY (catalog_plan_id) REFERENCES public.catalog_plans(id);
+
+
+--
 -- Name: product_categories fk_rails_e13d306a35; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14820,6 +14858,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260905170745'),
+('20260905170744'),
 ('20260904132835'),
 ('20260904083017'),
 ('20260902143604'),
