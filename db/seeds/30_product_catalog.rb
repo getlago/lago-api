@@ -98,16 +98,12 @@ unless ProductCategory.exists?(organization:, code: "cloud_platform")
     }
   )
 
-  # Assign the rate card to a plan so the catalog is wired into an offer.
-  plan = Plans::CreateService.call!({
+  # Seed a catalog plan for the offer. Rate cards attach to catalog plans in a
+  # later slice, so the plan is seeded on its own for now.
+  CatalogPlans::CreateService.call!(
     organization_id: organization.id,
     name: "Growth",
     code: "growth",
-    amount_currency: "USD"
-  }).plan
-
-  PlanRateCards::CreateService.call!(
-    plan:,
-    params: {rate_card_code: rate_card.code}
+    currency: "USD"
   )
 end
