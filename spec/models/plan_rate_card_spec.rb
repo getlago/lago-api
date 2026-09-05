@@ -84,6 +84,19 @@ RSpec.describe PlanRateCard do
 
         expect(duplicate.errors.where(:rate_card_id, :taken)).to be_present
       end
+
+      it "counts a soft-deleted plan through its id" do
+        card = create(:plan_rate_card)
+        card.plan.discard!
+
+        expect(card.reload).to be_valid
+      end
+
+      it "counts an unsaved catalog plan through the association" do
+        unsaved = build(:catalog_plan)
+
+        expect(build(:plan_rate_card, plan: nil, catalog_plan: unsaved, organization: unsaved.organization)).to be_valid
+      end
     end
 
     describe "database parent guard" do

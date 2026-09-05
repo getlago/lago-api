@@ -15,7 +15,7 @@ module PlanRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless plan_rate_card
 
-      if plan_rate_card.plan.attached_to_subscriptions?
+      if plan_rate_card.plan&.attached_to_subscriptions?
         return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
       end
 

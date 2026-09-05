@@ -28,10 +28,14 @@ class PlanRateCard < ApplicationRecord
 
   private
 
-  # A rate card is applied to exactly one plan, legacy or catalog. The
-  # association is checked, not the id, so an unsaved parent still counts.
+  # A rate card is applied to exactly one plan, legacy or catalog. Both the id
+  # and the association are checked (the rate_phase idiom): the id covers a
+  # persisted parent — even a soft-deleted one, outside the kept scope — and
+  # the association covers an unsaved one.
   def exactly_one_plan
-    return if plan.present? ^ catalog_plan.present?
+    has_plan = plan_id.present? || plan.present?
+    has_catalog_plan = catalog_plan_id.present? || catalog_plan.present?
+    return if has_plan ^ has_catalog_plan
 
     errors.add(:base, :exactly_one_plan_required)
   end

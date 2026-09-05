@@ -94,7 +94,9 @@ class Contract < ApplicationRecord
   # A contract prices through a legacy plan or a catalog plan, never both; a
   # plan-less contract prices through its directly attached rate cards.
   def validate_single_plan
-    return unless plan.present? && catalog_plan.present?
+    has_plan = plan_id.present? || plan.present?
+    has_catalog_plan = catalog_plan_id.present? || catalog_plan.present?
+    return unless has_plan && has_catalog_plan
 
     errors.add(:base, :single_plan)
   end

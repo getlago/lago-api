@@ -54,6 +54,23 @@ RSpec.describe Contract do
     end
 
     describe "single plan" do
+      it "accepts a contract priced only through a catalog plan" do
+        customer = create(:customer)
+        contract = build(
+          :contract,
+          organization: customer.organization,
+          customer:,
+          plan: nil,
+          catalog_plan: create(:catalog_plan, organization: customer.organization)
+        )
+
+        expect(contract).to be_valid
+      end
+
+      it "accepts a plan-less contract" do
+        expect(build(:contract, plan: nil, catalog_plan: nil)).to be_valid
+      end
+
       it "rejects both a plan and a catalog plan" do
         customer = create(:customer)
         contract = build(
