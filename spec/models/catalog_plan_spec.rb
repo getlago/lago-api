@@ -10,6 +10,12 @@ RSpec.describe CatalogPlan do
   describe "associations" do
     it do
       expect(catalog_plan).to belong_to(:organization)
+      expect(catalog_plan).to have_many(:coupon_targets)
+      expect(catalog_plan).to have_many(:coupons).through(:coupon_targets)
+      expect(catalog_plan).to have_many(:applied_taxes).class_name("Plan::AppliedTax").dependent(:destroy)
+      expect(catalog_plan).to have_many(:taxes).through(:applied_taxes)
+      expect(catalog_plan).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
+      expect(catalog_plan).to have_many(:entitlement_values).through(:entitlements).source(:values)
     end
   end
 

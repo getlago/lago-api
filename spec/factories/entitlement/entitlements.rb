@@ -10,5 +10,10 @@ FactoryBot.define do
       plan { nil }
       association :subscription
     end
+
+    trait :catalog_plan do
+      plan { nil }
+      association :catalog_plan
+    end
   end
 end

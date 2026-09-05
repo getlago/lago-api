@@ -11,6 +11,7 @@ module Entitlement
     belongs_to :organization
     belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
     belongs_to :plan, optional: true
+    belongs_to :catalog_plan, optional: true
     belongs_to :subscription, optional: true
     has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_entitlement_id, dependent: :destroy
 
@@ -19,8 +20,7 @@ module Entitlement
     private
 
     def exactly_one_parent_present
-      return if plan_id.present? && subscription_id.blank?
-      return if plan_id.blank? && subscription_id.present?
+      return if [plan_id, catalog_plan_id, subscription_id].count(&:present?) == 1
 
       errors.add(:base, "one_of_plan_or_subscription_required")
     end
@@ -36,6 +36,7 @@ end
 #  deleted_at             :datetime
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
+#  catalog_plan_id        :uuid
 #  entitlement_feature_id :uuid             not null
 #  organization_id        :uuid             not null
 #  plan_id                :uuid
@@ -43,8 +44,10 @@ end
 #
 # Indexes
 #
+#  idx_unique_feature_per_catalog_plan                       (entitlement_feature_id,catalog_plan_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_unique_feature_per_plan                               (entitlement_feature_id,plan_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_unique_feature_per_subscription                       (entitlement_feature_id,subscription_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_entitlement_entitlements_on_catalog_plan_id         (catalog_plan_id)
 #  index_entitlement_entitlements_on_entitlement_feature_id  (entitlement_feature_id)
 #  index_entitlement_entitlements_on_organization_id         (organization_id)
 #  index_entitlement_entitlements_on_plan_id                 (plan_id)
@@ -52,6 +55,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (catalog_plan_id => catalog_plans.id)
 #  fk_rails_...  (entitlement_feature_id => entitlement_features.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_id => plans.id)

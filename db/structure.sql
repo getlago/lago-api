@@ -125,6 +125,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
+ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_a6d07eec6e;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a5cd897b6f;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_a5a0718a08;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_a48f7202cc;
@@ -156,6 +157,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_90302b3ca3;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
+ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_8eeaaf6494;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
@@ -241,6 +243,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_5
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_54c6fe0506;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_533b639bac;
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_530173fa8d;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
@@ -563,6 +566,7 @@ DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_plans_taxes_on_catalog_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_on_parent_id;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id_code_gin_trgm_ops;
@@ -780,6 +784,7 @@ DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_subscription_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_entitlement_feature_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlement_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_enriched_store_migrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id_and_code;
@@ -848,6 +853,7 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_plan_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
+DROP INDEX IF EXISTS public.index_coupon_targets_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_contracts_on_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
@@ -973,6 +979,7 @@ DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
+DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_pif_values_on_filter_metric_filter_and_value;
@@ -2690,7 +2697,8 @@ CREATE TABLE public.coupon_targets (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
     billable_metric_id uuid,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    catalog_plan_id uuid
 );
 
 
@@ -3146,7 +3154,8 @@ CREATE TABLE public.entitlement_entitlements (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     subscription_id uuid,
-    CONSTRAINT entitlement_check_exactly_one_parent CHECK (((plan_id IS NOT NULL) <> (subscription_id IS NOT NULL)))
+    catalog_plan_id uuid,
+    CONSTRAINT entitlement_check_exactly_one_parent CHECK ((num_nonnulls(plan_id, catalog_plan_id, subscription_id) = 1))
 );
 
 
@@ -4461,11 +4470,13 @@ CREATE VIEW public.exports_payments AS
 
 CREATE TABLE public.plans_taxes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    plan_id uuid NOT NULL,
+    plan_id uuid,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    catalog_plan_id uuid,
+    CONSTRAINT plans_taxes_check_exactly_one_plan CHECK ((num_nonnulls(plan_id, catalog_plan_id) = 1))
 );
 
 
@@ -7796,6 +7807,13 @@ CREATE UNIQUE INDEX idx_subscription_unique ON public.usage_monitoring_subscript
 
 
 --
+-- Name: idx_unique_feature_per_catalog_plan; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_feature_per_catalog_plan ON public.entitlement_entitlements USING btree (entitlement_feature_id, catalog_plan_id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_unique_feature_per_plan; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8675,6 +8693,13 @@ CREATE INDEX index_coupon_targets_on_billable_metric_id ON public.coupon_targets
 
 
 --
+-- Name: index_coupon_targets_on_catalog_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_coupon_targets_on_catalog_plan_id ON public.coupon_targets USING btree (catalog_plan_id);
+
+
+--
 -- Name: index_coupon_targets_on_coupon_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9148,6 +9173,13 @@ CREATE UNIQUE INDEX index_enriched_store_migrations_on_organization_id ON public
 --
 
 CREATE INDEX index_entitlement_entitlement_values_on_organization_id ON public.entitlement_entitlement_values USING btree (organization_id);
+
+
+--
+-- Name: index_entitlement_entitlements_on_catalog_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlements_on_catalog_plan_id ON public.entitlement_entitlements USING btree (catalog_plan_id);
 
 
 --
@@ -10667,6 +10699,13 @@ CREATE INDEX index_plans_on_organization_id_name_gin_trgm_ops ON public.plans US
 --
 
 CREATE INDEX index_plans_on_parent_id ON public.plans USING btree (parent_id);
+
+
+--
+-- Name: index_plans_taxes_on_catalog_plan_id_and_tax_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_plans_taxes_on_catalog_plan_id_and_tax_id ON public.plans_taxes USING btree (catalog_plan_id, tax_id);
 
 
 --
@@ -12958,6 +12997,14 @@ ALTER TABLE ONLY public.entitlement_entitlement_values
 
 
 --
+-- Name: entitlement_entitlements fk_rails_54c6fe0506; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_54c6fe0506 FOREIGN KEY (catalog_plan_id) REFERENCES public.catalog_plans(id);
+
+
+--
 -- Name: credits fk_rails_5628a713de; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13638,6 +13685,14 @@ ALTER TABLE ONLY public.applied_pricing_units
 
 
 --
+-- Name: coupon_targets fk_rails_8eeaaf6494; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_8eeaaf6494 FOREIGN KEY (catalog_plan_id) REFERENCES public.catalog_plans(id);
+
+
+--
 -- Name: commitments_taxes fk_rails_8fa6f0d920; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13883,6 +13938,14 @@ ALTER TABLE ONLY public.billing_object_connections
 
 ALTER TABLE ONLY public.rate_phases
     ADD CONSTRAINT fk_rails_a5cd897b6f FOREIGN KEY (plan_rate_card_id) REFERENCES public.plan_rate_cards(id);
+
+
+--
+-- Name: plans_taxes fk_rails_a6d07eec6e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plans_taxes
+    ADD CONSTRAINT fk_rails_a6d07eec6e FOREIGN KEY (catalog_plan_id) REFERENCES public.catalog_plans(id);
 
 
 --
@@ -14820,6 +14883,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260904173416'),
+('20260904173415'),
 ('20260904132835'),
 ('20260904083017'),
 ('20260902143604'),
