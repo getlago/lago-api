@@ -10,6 +10,8 @@ RSpec.describe CatalogPlan do
   describe "associations" do
     it do
       expect(catalog_plan).to belong_to(:organization)
+      expect(catalog_plan).to have_many(:applied_rate_cards).class_name("PlanRateCard")
+      expect(catalog_plan).to have_many(:contracts)
     end
   end
 

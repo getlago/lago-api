@@ -25,6 +25,7 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:organization)
       expect(contract).to belong_to(:customer)
       expect(contract).to belong_to(:plan).optional
+      expect(contract).to belong_to(:catalog_plan).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
     end
@@ -50,6 +51,52 @@ RSpec.describe Contract do
 
       expect(contract).not_to be_valid
       expect(contract.errors.where(:ended_at, :must_be_after_started_at)).to be_present
+    end
+
+    describe "single plan" do
+      it "accepts a contract priced only through a catalog plan" do
+        customer = create(:customer)
+        contract = build(
+          :contract,
+          organization: customer.organization,
+          customer:,
+          plan: nil,
+          catalog_plan: create(:catalog_plan, organization: customer.organization)
+        )
+
+        expect(contract).to be_valid
+      end
+
+      it "accepts a plan-less contract" do
+        expect(build(:contract, plan: nil, catalog_plan: nil)).to be_valid
+      end
+
+      it "rejects both a plan and a catalog plan" do
+        customer = create(:customer)
+        contract = build(
+          :contract,
+          organization: customer.organization,
+          customer:,
+          plan: create(:plan, organization: customer.organization),
+          catalog_plan: create(:catalog_plan, organization: customer.organization)
+        )
+
+        expect(contract).not_to be_valid
+        expect(contract.errors.where(:base, :single_plan)).to be_present
+      end
+
+      it "rejects both parents at the database level even past model validation" do
+        customer = create(:customer)
+        contract = build(
+          :contract,
+          organization: customer.organization,
+          customer:,
+          plan: create(:plan, organization: customer.organization),
+          catalog_plan: create(:catalog_plan, organization: customer.organization)
+        )
+
+        expect { contract.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
     end
 
     describe "live external id uniqueness (database)" do
@@ -123,6 +170,11 @@ RSpec.describe Contract do
 
     it "uses the customer currency for a plan-less contract" do
       expect(build(:contract, organization:, customer:, plan: nil).currency).to eq("USD")
+    end
+
+    it "uses the catalog plan currency when priced through one" do
+      catalog_plan = create(:catalog_plan, organization:, currency: "GBP")
+      expect(build(:contract, organization:, customer:, plan: nil, catalog_plan:).currency).to eq("GBP")
     end
 
     it "falls back to the organization default when the customer has none" do
