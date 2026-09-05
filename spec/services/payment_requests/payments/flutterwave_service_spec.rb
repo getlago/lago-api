@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::FlutterwaveService do
-  let(:organization) { create(:organization, name: "Test Organization") }
+  let_it_be(:organization) { create(:organization, name: "Test Organization") }
   let(:customer) { create(:customer, organization: organization, email: "customer@example.com", name: "John Doe") }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization: organization, secret_key: "FLWSECK_TEST-secret") }
   let(:flutterwave_customer) { create(:flutterwave_customer, customer: customer, payment_provider: flutterwave_provider) }

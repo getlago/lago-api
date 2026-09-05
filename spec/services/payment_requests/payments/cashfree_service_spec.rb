@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::CashfreeService do
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
   let(:cashfree_payment_provider) { create(:cashfree_provider, organization:, code:) }
   let(:cashfree_customer) { create(:cashfree_customer, customer:) }
   let(:cashfree_client) { instance_double(LagoHttpClient::Client) }

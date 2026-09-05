@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::HandleEventService do
   subject(:event_service) { described_class.new(organization:, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   let(:payment_service) { instance_double(Invoices::Payments::StripeService) }
   let(:service_result) { BaseService::Result.new }

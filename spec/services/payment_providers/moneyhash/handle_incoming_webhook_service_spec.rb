@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Moneyhash::HandleIncomingWebhookService do
   subject(:result) { described_class.call(inbound_webhook:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:code) { "mh-test" }
   let(:moneyhash_provider) { create(:moneyhash_provider, code:, organization:) }
   let(:intent_processed_payload) { JSON.parse(Rails.root.join("spec/fixtures/moneyhash/intent.processed.json").read) }

@@ -5,16 +5,13 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCreatedService do
   subject(:mandate_created_service) { described_class.new(payment_provider:, mandate_id:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:payment_provider) { create(:gocardless_provider, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:gocardless_customer) do
     create(:gocardless_customer, customer:, payment_provider:, provider_customer_id:)
   end
-
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
-
   let(:mandate_id) { "index_ID_123" }
   let(:provider_customer_id) { "CU123456" }
   let(:mandate) do
@@ -24,6 +21,8 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCreatedService do
       "links" => {"customer" => provider_customer_id}
     )
   end
+
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#call" do
     before do

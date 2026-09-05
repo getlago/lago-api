@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::ExpirePaymentIntentsService do
   subject(:result) { described_class.call(payment_provider) }
 
-  let(:payment_provider) { create(:stripe_provider) }
-  let(:organization) { payment_provider.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:payment_provider) { create(:stripe_provider) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:payment_intent) { create(:payment_intent, invoice:) }
 

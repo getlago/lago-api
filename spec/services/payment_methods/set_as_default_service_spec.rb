@@ -6,13 +6,14 @@ RSpec.describe PaymentMethods::SetAsDefaultService do
   subject(:default_service) { described_class.new(payment_method:) }
 
   let(:required_permission) { "payment_methods:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:user) { membership.user }
   let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false) }
   let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: true) }
   let(:payment_method3) { create(:payment_method, customer:, organization:, is_default: false) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   describe "#call" do
     context "when payment method exists" do

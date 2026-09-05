@@ -3,23 +3,20 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:moneyhash_customer) { create(:moneyhash_customer, customer:, payment_provider: moneyhash_provider) }
-
   let(:reference) { "1234567890" }
   let(:metadata) { {} }
-
   let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
   let(:payment) { create(:payment, payable: invoice, payment_provider: moneyhash_provider, payment_provider_customer: moneyhash_customer) }
-
   let(:failure_response) { JSON.parse(File.read("spec/fixtures/moneyhash/recurring_mit_payment_failure_response.json")) }
   let(:success_response) { JSON.parse(File.read("spec/fixtures/moneyhash/recurring_mit_payment_success_response.json")) }
-
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
+
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#call" do
     before do

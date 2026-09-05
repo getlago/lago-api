@@ -6,13 +6,8 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
   subject(:validator) { described_class.new(result, quote_version:, billing_items:, scope:) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:target_plan) { create(:plan, organization:, amount_cents: 10_000) }
   let(:subscription) { create(:subscription, customer:, organization:, plan: target_plan) }
-  let(:plan) { create(:plan, organization:, amount_cents: 20_000) }
   let(:scope) { :approve }
-
   let(:quote) do
     create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment)
   end
@@ -31,6 +26,11 @@ RSpec.describe QuoteVersions::Validators::SubscriptionAmendment::BusinessValidat
     }.compact
   end
   let(:billing_items) { {"plans" => [plan_item]} }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:target_plan) { create(:plan, organization:, amount_cents: 10_000) }
+  let_it_be(:plan) { create(:plan, organization:, amount_cents: 20_000) }
 
   describe "#valid?" do
     it "is valid and leaves the result untouched" do

@@ -8,7 +8,7 @@ RSpec.describe Roles::UpdateService do
   describe "#call" do
     subject(:result) { described_class.call(role:, params:) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create(:organization) }
     let(:role) { create(:role, organization:, code: "old_role", name: "Old Name", description: "Old description", permissions: %w[customers:view addons:view]) }
     let(:params) { {name: "New Name", description: "New description", permissions: %w[customers:view plans:view]} }
 

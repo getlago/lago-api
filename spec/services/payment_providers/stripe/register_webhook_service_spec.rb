@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
   subject(:provider_service) { described_class.new(payment_provider) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:payment_provider) { create(:stripe_provider, organization:, code: "stripe_sandbox") }
 
   describe ".call" do

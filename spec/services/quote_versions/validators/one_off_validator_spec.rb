@@ -6,11 +6,8 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
   subject(:validator) { described_class.new(result, quote_version:, scope:) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
   let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR", billing_items:) }
-  let(:add_on) { create(:add_on, organization:) }
   let(:scope) { :approve }
   let(:add_on_item) do
     {
@@ -29,6 +26,10 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
     }
   end
   let(:billing_items) { {"addOns" => [add_on_item]} }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
 
   describe "#valid?" do
     context "with a complete valid quote version" do

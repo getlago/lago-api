@@ -13,8 +13,8 @@ RSpec.describe PaymentMethods::FindOrCreateFromProviderService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:payment_provider_customer) { create(:stripe_customer, customer:) }
   let(:provider_method_id) { "pm_123456" }
   let(:params) { {} }

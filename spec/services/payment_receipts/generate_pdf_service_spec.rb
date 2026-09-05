@@ -6,13 +6,18 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
   subject(:payment_receipt_generate_service) { described_class.new(payment_receipt:, context:) }
 
   let(:context) { "graphql" }
-  let(:organization) { create(:organization, name: "LAGO") }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
   let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
   let(:payment) { create(:payment, payable: invoice) }
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
   let(:blank_pdf_path) { Rails.root.join("spec/fixtures/blank.pdf") }
+
+  let_it_be(:organization) { create_default(:organization, name: "LAGO") }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  before_all do
+    create_default(:plan)
+  end
 
   before do
     billing_entity = organization.default_billing_entity

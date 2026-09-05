@@ -8,7 +8,7 @@ RSpec.describe Roles::DestroyService do
   describe "#call" do
     subject(:result) { described_class.call(role:) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create(:organization) }
     let(:role) { create(:role, organization:) }
 
     context "when role exists and has no assigned members" do
@@ -59,7 +59,7 @@ RSpec.describe Roles::DestroyService do
     end
 
     context "when role has assigned members" do
-      let(:membership) { create(:membership, organization:) }
+      let_it_be(:membership) { create(:membership, organization:) }
 
       before { create(:membership_role, membership:, role:) }
 

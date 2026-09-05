@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::FlutterwaveService do
 
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   describe "#create_or_update" do
     let(:args) do

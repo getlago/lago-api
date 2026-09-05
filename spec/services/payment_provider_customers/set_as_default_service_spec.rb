@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::SetAsDefaultService do
   subject(:set_as_default_service) { described_class.new(payment_provider_customer:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   let(:stripe_customer) { create(:stripe_customer, customer:, organization:, code: "stripe_eu", is_default: true) }
   let(:gocardless_customer) { create(:gocardless_customer, customer:, organization:, code: "gocardless_eu", is_default: false) }

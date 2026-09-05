@@ -5,15 +5,15 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
-  let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:code) { "gocardless_1" }
+  let_it_be(:customer) { create(:customer, payment_provider_code: code) }
   let(:gocardless_payment_provider) { create(:gocardless_provider, organization:, code:) }
   let(:gocardless_customer) { create(:gocardless_customer, customer:, payment_provider: gocardless_payment_provider) }
   let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
   let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
   let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
   let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
-  let(:code) { "gocardless_1" }
   let(:reference) { "organization.name - Invoice #{invoice.number}" }
   let(:metadata) do
     {

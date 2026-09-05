@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::GocardlessService do
-  let(:organization) { create(:organization, webhook_url: "https://webhook.com") }
+  let_it_be(:organization) { create_default(:organization, webhook_url: "https://webhook.com") }
   let(:customer) { create(:customer, organization:, payment_provider_code: code) }
   let(:gocardless_payment_provider) { create(:gocardless_provider, organization:, code:) }
   let(:gocardless_customer) { create(:gocardless_customer, customer:) }

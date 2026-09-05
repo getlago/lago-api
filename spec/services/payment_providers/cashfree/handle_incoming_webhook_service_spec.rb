@@ -4,19 +4,18 @@ require "rails_helper"
 
 RSpec.describe PaymentProviders::Cashfree::HandleIncomingWebhookService do
   let(:webhook_service) { described_class.new(organization_id:, body:, code:, timestamp:, signature:) }
-
-  let(:organization) { create(:organization) }
   let(:organization_id) { organization.id }
   let(:cashfree_provider) { create(:cashfree_provider, organization:, client_secret:) }
   let(:client_secret) { "cfsk_ma_prod_abc_123456" }
   let(:code) { nil }
   let(:timestamp) { "1629271506" }
   let(:signature) { "MFB3Rkubs4jB97ROS/I4iu9llAAP5ykJ3GZYp95o/Mw=" }
-
   let(:body) do
     path = Rails.root.join("spec/fixtures/cashfree/payment_link_event_payment.json")
     JSON.parse(File.read(path)).to_json # NOTE: Ensure valid sha256 signature
   end
+
+  let_it_be(:organization) { create(:organization) }
 
   before { cashfree_provider }
 

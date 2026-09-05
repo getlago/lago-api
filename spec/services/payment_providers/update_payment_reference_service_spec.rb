@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::UpdatePaymentReferenceService do
   subject(:service_result) { described_class.call(payment:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:, status: :finalized, number: "INV-2026-001") }
   let(:payment_provider) { create(:stripe_provider, organization:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider:) }

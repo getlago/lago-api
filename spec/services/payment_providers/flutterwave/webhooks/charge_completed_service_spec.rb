@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService do
   subject(:charge_completed_service) { described_class.new(organization_id: organization.id, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:customer)
+  end
+
   let(:invoice) { create(:invoice, organization:) }
   let(:payment_request) { create(:payment_request, organization:) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }

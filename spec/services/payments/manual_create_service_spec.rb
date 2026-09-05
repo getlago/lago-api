@@ -6,12 +6,18 @@ RSpec.describe Payments::ManualCreateService do
   subject(:service) { described_class.new(organization:, params:) }
 
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
-  let(:invoice_id) { invoice.id }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:params) { {invoice_id:, amount_cents:, reference: "ref1", paid_at:} }
   let(:paid_at) { 1.year.ago.iso8601 }
   let(:amount_cents) { 10000 }
+  let(:invoice_id) { invoice.id }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:billing_entity)
+  end
+
+  let_it_be(:customer) { create(:customer, organization:) }
 
   describe "#call" do
     context "when organization is not premium" do

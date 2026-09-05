@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
   subject(:update_service) { described_class.new(stripe_customer:, payment_method_id:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   let(:stripe_customer) { create(:stripe_customer, customer:) }
   let(:payment_method_id) { "pm_123456" }

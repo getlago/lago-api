@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Adyen::Payments::CancelService do
   subject(:result) { described_class.call(payment:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:payment_provider) do
     create(:adyen_provider, organization:, api_key: "AQEx...test", merchant_account: "LagoTest")

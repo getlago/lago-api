@@ -166,6 +166,8 @@ group :test do
   # HTML testing (invoice rendering)
   gem "rspec-snapshot", "~> 2.0"
   gem "htmlbeautifier", "~> 1.4"
+
+  gem "test-prof", "~> 1.0"
 end
 
 group :development do

@@ -8,7 +8,7 @@ RSpec.describe Roles::CreateService do
   describe "#call" do
     subject(:result) { described_class.call(organization:, code:, name:, description:, permissions:) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create(:organization) }
     let(:code) { "custom_role" }
     let(:name) { "Custom Role" }
     let(:description) { "A custom role description" }

@@ -4,16 +4,18 @@ require "rails_helper"
 
 RSpec.describe PaymentProviders::Gocardless::Customers::CreateService do
   let(:create_service) { described_class.new(customer:, payment_provider_id:, params:, async:) }
-
-  let(:customer) { create(:customer) }
   let(:gocardless_provider) { create(:gocardless_provider, organization: customer.organization) }
   let(:payment_provider_id) { gocardless_provider.id }
-
   let(:params) do
     {provider_customer_id: "id", sync_with_provider: true}
   end
-
   let(:async) { true }
+
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:customer) { create(:customer) }
 
   describe ".call" do
     it "creates a payment_provider_customer" do

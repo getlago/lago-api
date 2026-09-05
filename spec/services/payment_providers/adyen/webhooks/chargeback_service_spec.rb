@@ -6,11 +6,12 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
   subject(:service) { described_class.new(organization_id:, event_json:) }
 
   let(:organization_id) { organization.id }
-  let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:payment) { create(:payment, payable: invoice, provider_payment_id: "9915555555555555") }
   let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: "succeeded") }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "#call" do
     before { payment }

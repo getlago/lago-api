@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Payments::LoseDisputeService do
   subject(:lose_dispute_service) { described_class.new(payment:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   describe "#call" do
     context "when payment does not exist" do
       let(:payment) { nil }

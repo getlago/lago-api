@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Payments::CancelService do
   subject(:result) { described_class.call(payment:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:payment_provider) { create(:stripe_provider, organization:, secret_key: "sk_test_123") }
   let(:payment) do

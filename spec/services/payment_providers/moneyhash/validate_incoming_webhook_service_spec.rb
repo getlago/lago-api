@@ -7,6 +7,10 @@ RSpec.describe PaymentProviders::Moneyhash::ValidateIncomingWebhookService do
     described_class.call(payload:, signature:, payment_provider:)
   end
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:payload) { "webhook_payload" }
   let(:signature) { "t=1743090080,v1=placeholder,v2=placeholder,v3=ca13480c8142f2f2b44822c764909027974e84b3e8c94457a314f129d8d60148" }
   let(:payment_provider) { create(:moneyhash_provider, signature_key: "test_signature_key") }

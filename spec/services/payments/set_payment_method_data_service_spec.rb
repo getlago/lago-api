@@ -6,7 +6,8 @@ RSpec.describe Payments::SetPaymentMethodDataService do
   subject(:service) { described_class.new(payment:, provider_payment_method_id:) }
 
   let(:provider_payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }
-  let(:organization) { create(:organization) }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   describe "#call" do
     context "with Stripe" do

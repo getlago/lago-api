@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductCategories::CreateService do
   subject(:result) { described_class.call(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:params) do
     {
       name: "Cards",
