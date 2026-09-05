@@ -20,7 +20,12 @@ module Entitlement
     private
 
     def exactly_one_parent_present
-      return if [plan_id, catalog_plan_id, subscription_id].count(&:present?) == 1
+      parents = [
+        plan_id.present? || plan.present?,
+        catalog_plan_id.present? || catalog_plan.present?,
+        subscription_id.present? || subscription.present?
+      ]
+      return if parents.count(true) == 1
 
       errors.add(:base, "one_of_plan_or_subscription_required")
     end

@@ -41,6 +41,11 @@ RSpec.describe Entitlement::Entitlement do
         expect(entitlement).to be_valid
       end
 
+      it "counts an unsaved parent through the association" do
+        entitlement = build(:entitlement, organization:, feature:, plan: build(:plan, organization:), subscription: nil)
+        expect(entitlement).to be_valid
+      end
+
       it "is invalid when a plan and a catalog_plan are both present" do
         catalog_plan = create(:catalog_plan, organization:)
         entitlement = build(:entitlement, organization:, feature:, plan:, catalog_plan:)
