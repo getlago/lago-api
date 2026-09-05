@@ -7,13 +7,13 @@ RSpec.describe Contracts::MaterializeRateCardsService do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
-  let(:contract) { create(:contract, organization:, customer:, plan:, started_at: Time.zone.parse("2026-10-01")) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-01")) }
 
   let(:rate_card) { create(:rate_card, organization:) }
 
   before do
-    create(:plan_rate_card, organization:, plan:, rate_card:, units: 5)
+    create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
   end
 
   it "materializes one contract rate card per plan rate card" do
@@ -33,7 +33,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
         :contract,
         organization:,
         customer:,
-        plan:,
+        catalog_plan:,
         started_at: Time.zone.parse("2026-10-15"),
         billing_anchor_date: Date.new(2026, 10, 1)
       )
@@ -48,7 +48,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
 
   context "when the customer's day differs from UTC at the start instant" do
     let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
-    let(:contract) { create(:contract, organization:, customer:, plan:, started_at: Time.zone.parse("2026-10-01T02:00:00Z")) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-01T02:00:00Z")) }
 
     it "materializes on the customer-local day" do
       result
@@ -60,7 +60,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
   end
 
   it "does not copy the plan entry's phases: pricing resolves by reference" do
-    plan_rate_card = plan.applied_rate_cards.sole
+    plan_rate_card = catalog_plan.applied_rate_cards.sole
     create(:rate_phase, organization:, plan_rate_card:, position: 1)
 
     expect { result }.not_to change(RatePhase, :count)
@@ -68,7 +68,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
   end
 
   context "when the contract has no plan" do
-    let(:contract) { create(:contract, organization:, customer:, plan: nil) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan: nil) }
 
     it "materializes nothing" do
       expect { result }.not_to change(ContractRateCard, :count)

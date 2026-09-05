@@ -6,9 +6,9 @@ RSpec.describe RatePhases::ReplaceService do
   subject(:result) { described_class.call(plan_rate_card:, phases_params:) }
 
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
-  let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, rate_card:) }
+  let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
 
   let(:phases_params) do
     [
@@ -141,8 +141,8 @@ RSpec.describe RatePhases::ReplaceService do
     end
   end
 
-  context "when the plan is attached to a subscription" do
-    before { create(:subscription, plan:, organization:) }
+  context "when the plan is attached to a contract" do
+    before { create(:contract, catalog_plan:, organization:) }
 
     it "returns a plan_locked failure" do
       expect(result).not_to be_success

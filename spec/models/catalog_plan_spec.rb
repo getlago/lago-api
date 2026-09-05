@@ -10,6 +10,8 @@ RSpec.describe CatalogPlan do
   describe "associations" do
     it do
       expect(catalog_plan).to belong_to(:organization)
+      expect(catalog_plan).to have_many(:applied_rate_cards).class_name("PlanRateCard")
+      expect(catalog_plan).to have_many(:contracts)
       expect(catalog_plan).to have_many(:coupon_targets)
       expect(catalog_plan).to have_many(:coupons).through(:coupon_targets)
       expect(catalog_plan).to have_many(:applied_taxes).class_name("Plan::AppliedTax").dependent(:destroy)
@@ -50,6 +52,16 @@ RSpec.describe CatalogPlan do
 
         expect(build(:catalog_plan, organization:, code: "dup")).to be_valid
       end
+    end
+  end
+
+  describe "#attached_to_contracts?" do
+    it "is true once a contract references the catalog plan" do
+      catalog_plan = create(:catalog_plan)
+      expect(catalog_plan.attached_to_contracts?).to be(false)
+
+      create(:contract, organization: catalog_plan.organization, catalog_plan:)
+      expect(catalog_plan.attached_to_contracts?).to be(true)
     end
   end
 

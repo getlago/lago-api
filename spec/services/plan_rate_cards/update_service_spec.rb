@@ -6,8 +6,8 @@ RSpec.describe PlanRateCards::UpdateService do
   subject(:result) { described_class.call(plan_rate_card:, params:) }
 
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, units: 5) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, units: 5) }
 
   let(:params) { {units: "12"} }
 
@@ -16,8 +16,8 @@ RSpec.describe PlanRateCards::UpdateService do
     expect(result.plan_rate_card.units).to eq(12)
   end
 
-  context "when the plan has subscriptions" do
-    before { create(:subscription, plan:, organization:) }
+  context "when the plan has contracts" do
+    before { create(:contract, catalog_plan:, organization:) }
 
     it "forbids the update" do
       expect(result).not_to be_success

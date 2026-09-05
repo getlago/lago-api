@@ -24,21 +24,21 @@ RSpec.describe Contract do
     it do
       expect(contract).to belong_to(:organization)
       expect(contract).to belong_to(:customer)
-      expect(contract).to belong_to(:plan).optional
+      expect(contract).to belong_to(:catalog_plan).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
     end
 
-    it "resolves a discarded customer and plan" do
+    it "resolves a discarded customer and catalog plan" do
       customer = create(:customer)
-      plan = create(:plan, organization: customer.organization)
-      contract = create(:contract, customer:, plan:, organization: customer.organization)
+      catalog_plan = create(:catalog_plan, organization: customer.organization)
+      contract = create(:contract, customer:, catalog_plan:, organization: customer.organization)
 
       customer.discard!
-      plan.discard!
+      catalog_plan.discard!
 
       expect(contract.reload.customer).to eq(customer)
-      expect(contract.plan).to eq(plan)
+      expect(contract.catalog_plan).to eq(catalog_plan)
     end
   end
 
@@ -117,17 +117,17 @@ RSpec.describe Contract do
     let(:customer) { create(:customer, organization:, currency: "USD") }
 
     it "prefers the plan currency over the customer currency" do
-      plan = create(:plan, organization:, amount_currency: "EUR")
-      expect(build(:contract, organization:, customer:, plan:).currency).to eq("EUR")
+      catalog_plan = create(:catalog_plan, organization:, currency: "EUR")
+      expect(build(:contract, organization:, customer:, catalog_plan:).currency).to eq("EUR")
     end
 
     it "uses the customer currency for a plan-less contract" do
-      expect(build(:contract, organization:, customer:, plan: nil).currency).to eq("USD")
+      expect(build(:contract, organization:, customer:, catalog_plan: nil).currency).to eq("USD")
     end
 
     it "falls back to the organization default when the customer has none" do
       no_currency = create(:customer, organization:, currency: nil)
-      contract = build(:contract, organization:, customer: no_currency, plan: nil)
+      contract = build(:contract, organization:, customer: no_currency, catalog_plan: nil)
 
       expect(contract.currency).to eq(organization.default_currency)
     end

@@ -4,12 +4,12 @@ require "rails_helper"
 
 RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
-  let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, rate_card:) }
+  let!(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
 
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards/:rate_card_code/rate_phases" do
-    subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases") }
+    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases") }
 
     let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1) }
 
@@ -24,7 +24,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
     end
 
     context "when the plan rate card does not exist" do
-      subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/unknown/rate_phases") }
+      subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/unknown/rate_phases") }
 
       it "returns a not found error" do
         subject
@@ -36,7 +36,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
 
   describe "POST /api/v2/plans/:plan_code/applied_rate_cards/:rate_card_code/rate_phases" do
     subject do
-      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases", {rate_phase: phase_params})
+      post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases", {rate_phase: phase_params})
     end
 
     let!(:terminal) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: nil) }
@@ -89,7 +89,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
     subject do
       put_with_token(
         organization,
-        "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+        "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
         {rate_phase: {name: "Renamed"}}
       )
     end
@@ -109,7 +109,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       subject do
         put_with_token(
           organization,
-          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
           {rate_phase: {name: "Renamed", position: 4}}
         )
       end
@@ -126,7 +126,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       subject do
         put_with_token(
           organization,
-          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
           {rate_phase: {rate_override: nil}}
         )
       end
@@ -149,7 +149,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       subject do
         put_with_token(
           organization,
-          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
           {rate_phase: {rate_override: {}}}
         )
       end
@@ -170,7 +170,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       subject do
         put_with_token(
           organization,
-          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
           {}
         )
       end
@@ -186,7 +186,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       subject do
         put_with_token(
           organization,
-          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
           {rate_phase: {rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}, billing_timing: "advance"}}}
         )
       end
@@ -204,7 +204,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       subject do
         put_with_token(
           organization,
-          "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/unknown",
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/unknown",
           {rate_phase: {name: "Renamed"}}
         )
       end
@@ -219,7 +219,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
 
   describe "DELETE /api/v2/plans/:plan_code/applied_rate_cards/:rate_card_code/rate_phases/:code" do
     subject do
-      delete_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{terminal.code}")
+      delete_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{terminal.code}")
     end
 
     let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3) }

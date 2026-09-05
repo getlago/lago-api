@@ -52,4 +52,23 @@ RSpec.describe CatalogPlans::UpdateService do
       expect(Utils::ActivityLog).not_to have_produced("plan.updated")
     end
   end
+
+  context "when changing the currency of a plan holding applied rate cards" do
+    let(:catalog_plan) { create(:catalog_plan, currency: "EUR") }
+    let(:params) { {currency: "USD"} }
+
+    before { create(:plan_rate_card, organization: catalog_plan.organization, catalog_plan:) }
+
+    it "rejects the change" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:currency]).to eq(["not_editable_with_applied_rate_cards"])
+    end
+
+    it "still allows editing other attributes" do
+      result = described_class.call(catalog_plan:, params: {name: "Renamed"})
+
+      expect(result).to be_success
+      expect(result.catalog_plan.reload.name).to eq("Renamed")
+    end
+  end
 end
