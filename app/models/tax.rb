@@ -26,6 +26,7 @@ class Tax < ApplicationRecord
   has_many :add_ons, through: :add_ons_taxes
   has_many :plans_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :plans, through: :plans_taxes
+  has_many :catalog_plans, through: :plans_taxes
   has_many :charges_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :charges, through: :charges_taxes
   has_many :commitments_taxes, class_name: "Commitment::AppliedTax", dependent: :destroy

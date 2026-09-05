@@ -13,6 +13,7 @@ class Coupon < ApplicationRecord
   has_many :customers, through: :applied_coupons
   has_many :coupon_targets
   has_many :plans, through: :coupon_targets
+  has_many :catalog_plans, through: :coupon_targets
   has_many :billable_metrics, through: :coupon_targets
 
   has_many :activity_logs,
