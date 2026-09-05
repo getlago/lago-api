@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::DunningCampaignFinishedSerializer do
   subject(:serializer) { described_class.new(customer, params) }
 
-  let(:customer) { create(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:params) do
     {
       root_name: "dunning_campaign",

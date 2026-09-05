@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe ::V1::SubscriptionSerializer do
   subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:started_at) { Time.zone.parse("2024-04-23 10:02:03") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
   let(:subscription) do

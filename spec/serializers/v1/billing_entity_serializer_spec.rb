@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe V1::BillingEntitySerializer do
   subject(:serializer) { described_class.new(billing_entity, root_name: "billing_entity", includes: includes_options) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billing_entity) { create(:billing_entity, organization:, phone: "+49 30 1234567") }
   let(:result) { JSON.parse(serializer.to_json) }
   let(:includes_options) { nil }

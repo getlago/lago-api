@@ -10,18 +10,21 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
   end
 
   let(:options) { described_class::Options.new }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:resource) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
   let(:invoice_type) { :subscription }
-  let(:customer) do
-    create(:customer,
+  let(:root) { "//ram:ApplicableHeaderTradeAgreement" }
+  let(:membership) { create(:membership) }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  let_it_be(:customer) do
+    create_default(:customer,
       organization:,
       name: "Its Mii",
       legal_name: nil)
   end
-  let(:billing_entity) do
-    create(:billing_entity,
+  let_it_be(:billing_entity) do
+    create_default(:billing_entity,
       organization:,
       code: "BE_CODE",
       legal_name: "BE Legal Name",
@@ -32,8 +35,6 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
       country: "BR",
       tax_identification_number: "BR987654321")
   end
-
-  let(:root) { "//ram:ApplicableHeaderTradeAgreement" }
 
   describe ".serialize" do
     it { is_expected.not_to be_nil }

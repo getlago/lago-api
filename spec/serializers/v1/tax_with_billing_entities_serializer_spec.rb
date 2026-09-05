@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe ::V1::TaxWithBillingEntitiesSerializer do
   subject(:serializer) { described_class.new(tax, root_name: "tax", default_billing_entity:) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:tax) { create(:tax) }
   let(:default_billing_entity) { tax.organization.default_billing_entity }
 

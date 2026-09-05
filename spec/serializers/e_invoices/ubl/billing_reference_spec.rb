@@ -9,10 +9,14 @@ RSpec.describe EInvoices::Ubl::BillingReference do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   let(:resource) { invoice }
-  let(:issuing_date) { "2025-03-16".to_date }
-  let(:invoice) { create(:invoice, issuing_date:) }
   let(:root) { "//cac:BillingReference" }
+
+  let_it_be(:issuing_date) { "2025-03-16".to_date }
+  let_it_be(:invoice) { create_default(:invoice, issuing_date:) }
 
   describe ".serialize" do
     it { is_expected.not_to be_nil }

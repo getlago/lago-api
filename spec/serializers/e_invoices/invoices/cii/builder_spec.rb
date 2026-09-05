@@ -9,10 +9,14 @@ RSpec.describe EInvoices::Invoices::Cii::Builder do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:invoice) { create(:invoice, invoice_type:, currency: "USD", total_amount_cents: 3000, payment_due_date: "20250316".to_date) }
-  let(:invoice_type) { :one_off }
   let(:invoice_fee1) { create(:fee, invoice:, units: 5, amount: 10, precise_unit_amount: 2) }
   let(:invoice_fee2) { create(:fee, invoice:, units: 1, amount: 25, precise_unit_amount: 25) }
+
+  let(:invoice_type) { :one_off }
 
   before do
     invoice_fee1
@@ -246,12 +250,12 @@ RSpec.describe EInvoices::Invoices::Cii::Builder do
 
     context "when ApplicableTradeTax tag" do
       let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:ApplicableTradeTax" }
-
-      let(:invoice) { create(:invoice, coupons_amount_cents: 100, invoice_type:) }
       let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
       let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
       let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
       let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
+
+      let(:invoice) { create(:invoice, coupons_amount_cents: 100, invoice_type:) }
 
       before do
         invoice_fee1
@@ -286,12 +290,12 @@ RSpec.describe EInvoices::Invoices::Cii::Builder do
 
     context "when SpecifiedTradeAllowanceCharge tag" do
       let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:SpecifiedTradeAllowanceCharge" }
-
-      let(:invoice) { create(:invoice, coupons_amount_cents: 100, invoice_type:) }
       let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
       let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
       let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
       let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
+
+      let(:invoice) { create(:invoice, coupons_amount_cents: 100, invoice_type:) }
 
       before do
         invoice_fee1

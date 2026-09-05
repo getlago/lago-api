@@ -9,10 +9,13 @@ RSpec.describe EInvoices::Ubl::Header do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:resource) { create(:invoice, issuing_date: issuing_date.to_date, currency:) }
-  let(:issuing_date) { "2025-03-16" }
-  let(:currency) { "USD" }
   let(:type_code) { described_class::COMMERCIAL_INVOICE }
+  let(:issuing_date) { "2025-03-16" }
+
+  let(:currency) { "USD" }
 
   before { resource }
 
