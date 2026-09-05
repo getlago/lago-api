@@ -7,7 +7,7 @@ module CatalogPlans
     def initialize(catalog_plan:, params:)
       @catalog_plan = catalog_plan
       @params = params
-      super
+      super()
     end
 
     def call
