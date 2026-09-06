@@ -8,9 +8,9 @@ module Subscriptions
     # immutable once it has subscriptions, so phases and rates resolve by
     # reference through the plan entry.
     #
-    # next_billing_at is seeded through FirstPeriodService, which clamps the first
-    # period to max(started_at, now): a backdated start bills the current period
-    # forward instead of back-billing the missed ones (parity with the legacy engine).
+    # next_billing_at is seeded from the card's own schedule: the next instant a segment
+    # falls due after now. A backdated start therefore does not back-bill the periods it
+    # missed — the clock opens on the first thing still owed.
     class MaterializeService < BaseService
       Result = BaseResult[:subscription_rate_cards]
 
@@ -47,23 +47,23 @@ module Subscriptions
           billing_anchor_date: subscription.effective_billing_anchor_date,
           started_at:
         )
-        item.next_billing_at = initial_next_billing_at(item)
+        item.next_billing_at = initial_next_billing_at(item, plan_rate_card)
         item.save!
         item
       end
 
-      # The rate at signing sets the interval/timing FirstPeriodService needs. Without a
-      # resolvable rate there is no boundary to compute, so fall back to started_at and
-      # let a later scheduler pass advance the clock once the catalog resolves.
+      # The card's own schedule says when it first owes something: the next instant a
+      # segment falls due after now. Phases and rate changes are part of that answer, which
+      # is why the whole schedule is built rather than one interval read off one rate.
       #
-      # NOTE: Shall we consider the rate phases here as well?
-      def initial_next_billing_at(item)
-        rate = item.rate_card&.rate_active_at(started_at)
-        return started_at unless rate
+      # Without a resolvable rate there is no boundary to compute, so fall back to
+      # started_at and let a later scheduler pass advance the clock once the catalog
+      # resolves.
+      def initial_next_billing_at(item, plan_rate_card)
+        build = ::Billing::BuildScheduleService.call(subscription_rate_card: item, plan_rate_card:)
+        return started_at unless build.success?
 
-        BillingPeriods::FirstPeriodService
-          .from_subscription_rate_card(item, rate:)
-          .next_billing_at
+        build.schedule.next_billing_at(after: Time.current) || started_at
       end
 
       def started_at

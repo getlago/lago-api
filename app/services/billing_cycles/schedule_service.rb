@@ -26,6 +26,9 @@ module BillingCycles
   class ScheduleService < BaseService
     OVERLAP_CONSTRAINT = "billing_cycles_no_overlapping_periods"
     UNIQUE_PERIOD_INDEX = "index_billing_cycles_on_product_and_period"
+    # One microsecond, the resolution of a timestamp column: the gap between a window's
+    # exclusive end and the last instant it actually covers.
+    PERIOD_END_PRECISION = Rational(1, 1_000_000)
 
     Result = BaseResult[:billing_cycles]
 
@@ -77,37 +80,68 @@ module BillingCycles
     end
 
     def schedule(subscription_rate_card)
-      rates = rates_for(subscription_rate_card)
-      return if rates.empty?
-
-      dates = BillingPeriods::DatesService.from_subscription_rate_card(
-        subscription_rate_card,
-        rates:,
-        rate_phases: rate_phases_for(subscription_rate_card),
-        range:,
-        options: dates_options(subscription_rate_card)
+      build = Billing::BuildScheduleService.call(
+        subscription_rate_card:,
+        plan_rate_card: plan_rate_card_for(subscription_rate_card)
       )
-      return if dates.periods.empty?
+      return unless build.success?
+
+      segments = due_segments(build.schedule, subscription_rate_card)
+      return if segments.empty?
 
       # TODO: Consider moving this loop to import! or batch inserting BillingCycle rows.
-      dates.periods.each do |period|
-        result.billing_cycles << BillingCycle.create!(
-          organization: subscription_rate_card.organization,
-          subscription: subscription_rate_card.subscription,
-          customer:,
-          subscription_rate_card:,
-          billing_at: period.billing_at,
-          period_from: period.period_from,
-          period_to: period.period_to,
-          rate_card_rate: period.rate,
-          rate_override: period.rate_override,
-          pricing_unit: pricing_unit_for(subscription_rate_card),
-          rate_properties: period.rate_properties,
-          proration_ratio: period.proration_ratio
-        )
+      segments.each do |segment|
+        result.billing_cycles << billing_cycle_for(subscription_rate_card, segment)
       end
 
-      advance_clock(subscription_rate_card, dates.next_billing_at)
+      advance_clock(subscription_rate_card, build.schedule.next_billing_at(after: range_end))
+    end
+
+    # Everything the schedule owes by the end of the range that the caller's window asks
+    # for and the item's clock has not already paid for.
+    #
+    # Two bounds, because they answer different questions. The clock is the durable record
+    # of what has been billed, and it is what keeps a re-run over a wide range from
+    # re-emitting history. The range is the caller's window, and it is what keeps a narrow
+    # scheduling pass from reaching back over cycles it was not asked about.
+    def due_segments(schedule, subscription_rate_card)
+      schedule.segments_due_by(range_end)
+        .select { it.billing_at >= subscription_rate_card.next_billing_at }
+        .select { in_range?(it) }
+    end
+
+    # In the window when the segment still has service left in it, or when it falls due at
+    # or after the window opens. That second half is the one deliberate change: the old
+    # engine tested only the first, against an inclusive end, so an arrears cycle closing
+    # exactly on the scheduling boundary read as "already past" and was dropped. That
+    # boundary is normally the item's own clock, so the cycle was never billed, the clock
+    # never moved, and the item stalled there permanently.
+    def in_range?(segment)
+      segment.ended_at > range_begin || segment.billing_at >= range_begin
+    end
+
+    def billing_cycle_for(subscription_rate_card, segment)
+      BillingCycle.create!(
+        organization: subscription_rate_card.organization,
+        subscription: subscription_rate_card.subscription,
+        customer:,
+        subscription_rate_card:,
+        billing_at: segment.billing_at,
+        period_from: segment.started_at,
+        period_to: inclusive_end_of(segment.ended_at),
+        rate_card_rate: segment.rate,
+        rate_override: segment.rate_override,
+        pricing_unit: pricing_unit_for(subscription_rate_card),
+        rate_properties: (segment.rate_override || segment.rate).properties,
+        proration_ratio: segment.proration_ratio
+      )
+    end
+
+    # The engine's windows are half-open; the column is not. `period_to` is stored as the
+    # last instant covered because the overlap constraint reads it as inclusive, so writing
+    # the exclusive end would make every pair of consecutive cycles collide.
+    def inclusive_end_of(ended_at)
+      ended_at - PERIOD_END_PRECISION
     end
 
     def range_begin
@@ -118,36 +152,12 @@ module BillingCycles
       @range_end ||= range.end.to_date.end_of_day.utc
     end
 
-    # TODO: Move this window query to a Scenic view if rate-range lookups become shared
-    def rates_for(subscription_rate_card)
-      ranked_rates = subscription_rate_card.rate_card.rates
-        .select(
-          "rate_card_rates.*, " \
-            "LEAD(rate_card_rates.effective_from) OVER " \
-            "(ORDER BY rate_card_rates.effective_from) AS next_effective_from"
-        )
-
-      RateCardRate
-        .from(ranked_rates, :rate_card_rates)
-        .where("effective_from <= ?", range_end)
-        .where("next_effective_from IS NULL OR next_effective_from >= ?", range_begin)
-        .order(:effective_from)
-    end
-
-    def dates_options(subscription_rate_card)
-      BillingPeriods::DatesService::Options.new(
-        timezone: subscription_rate_card.subscription.customer.applicable_timezone,
-        exclude_out_of_range: true,
-        realign_billing_anchor: true,
-        termination: false
-      )
-    end
-
-    def rate_phases_for(subscription_rate_card)
-      SubscriptionRateCards::ResolveRatePhasesService.call!(
-        subscription_rate_card:,
-        plan_rate_cards: plan_rate_cards_for(subscription_rate_card.subscription)
-      ).rate_phases
+    # The plan entry that holds this card's phases, handed to the engine as a hint so it
+    # does not look up once per item what one preloaded query already answered for the
+    # whole subscription.
+    def plan_rate_card_for(subscription_rate_card)
+      plan_rate_cards_for(subscription_rate_card.subscription)
+        .find { it.rate_card_id == subscription_rate_card.rate_card_id }
     end
 
     def plan_rate_cards_for(subscription)

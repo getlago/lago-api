@@ -476,6 +476,15 @@ RSpec.describe BillingCycles::ProcessService do
       let(:rate_properties) { {"amount" => "0.00"} }
       let(:billing_cycle_rate_properties) { rate_properties }
 
+      it "still bills a whole cycle priced at zero: the test is the ratio (1), never the amount (0)" do
+        expect(result).to be_success
+
+        invoice = result.invoices.sole.reload
+        expect(billing_cycle.reload.proration_ratio).to eq(1)
+        expect(invoice.fees.sole.amount_cents).to eq(0)
+        expect(billing_cycle.invoice_id).to eq(invoice.id)
+      end
+
       context "when zero amount invoices should be skipped" do
         let(:customer_finalize_zero_amount_invoice) { "skip" }
 
@@ -498,6 +507,110 @@ RSpec.describe BillingCycles::ProcessService do
           expect(invoice.status).to eq("finalized")
           expect(invoice.number).not_to include("DRAFT")
         end
+      end
+    end
+
+    context "with a cycle covering no whole billing day" do
+      let(:billing_cycle_proration_ratio) { 0 }
+
+      it "creates no invoice document when every cycle in the group is zero-ratio" do
+        expect(result).to be_success
+        expect(result.invoices).to be_empty
+        expect(Invoice.where(customer:)).to be_empty
+      end
+
+      it "settles the cycle as done with no invoice so later runs stop picking it up" do
+        result
+
+        expect(billing_cycle.reload).to have_attributes(status: "done", invoice_id: nil)
+      end
+
+      it "keeps the row so the pay-in-advance watermark still counts its units" do
+        result
+
+        subscription_rate_card.update!(
+          started_at: Time.zone.parse("2026-08-01"),
+          ended_at: Time.zone.parse("2026-08-15 09:00:00")
+        )
+        later_version = create(
+          :subscription_rate_card,
+          organization:,
+          customer:,
+          subscription:,
+          rate_card:,
+          units: 9,
+          started_at: Time.zone.parse("2026-08-15 09:00:00")
+        )
+        later_cycle = create(
+          :billing_cycle,
+          organization:,
+          subscription:,
+          customer:,
+          subscription_rate_card: later_version,
+          rate_card_rate:,
+          rate_properties: billing_cycle_rate_properties,
+          billing_at: Time.zone.parse("2026-08-31 23:59:59"),
+          period_from: Time.zone.parse("2026-08-15 09:00:00"),
+          period_to: Time.zone.parse("2026-08-31 23:59:59")
+        )
+
+        watermark = BillingCycles::ResolveWatermarkService.call!(billing_cycle: later_cycle)
+        expect(watermark.units).to eq(5)
+      end
+    end
+
+    context "when a zero-ratio cycle shares a billing date with a billable cycle" do
+      let(:second_rate_card) { create(:rate_card, organization:, currency: "USD") }
+      let(:second_subscription_rate_card) do
+        create(
+          :subscription_rate_card,
+          organization:,
+          customer:,
+          subscription:,
+          rate_card: second_rate_card,
+          units: 3
+        )
+      end
+      let(:second_rate_card_rate) do
+        create(
+          :rate_card_rate,
+          organization:,
+          rate_card: second_rate_card,
+          rate_properties: {"amount" => "20.00"},
+          min_amount_cents: 10_000
+        )
+      end
+
+      let!(:zero_ratio_cycle) do
+        create(
+          :billing_cycle,
+          organization:,
+          subscription:,
+          customer:,
+          subscription_rate_card: second_subscription_rate_card,
+          rate_card_rate: second_rate_card_rate,
+          rate_properties: {"amount" => "20.00"},
+          proration_ratio: 0,
+          billing_at: Time.zone.parse("2026-08-31 10:00:00"),
+          period_from: Time.zone.parse("2026-08-15 09:00:00"),
+          period_to: Time.zone.parse("2026-08-31 23:59:59")
+        )
+      end
+
+      it "bills only the billable cycle, with no fee and no true-up for the zero-ratio one" do
+        expect(result).to be_success
+
+        invoice = result.invoices.sole.reload
+        expect(invoice.fees.map(&:rate_card_rate)).to eq([rate_card_rate])
+      end
+
+      it "attaches every cycle in the group to the invoice as done" do
+        expect(result).to be_success
+
+        invoice = result.invoices.sole
+        cycles = BillingCycle.where(customer:)
+        expect(cycles.pluck(:status).uniq).to eq(["done"])
+        expect(cycles.distinct.pluck(:invoice_id)).to eq([invoice.id])
       end
     end
   end

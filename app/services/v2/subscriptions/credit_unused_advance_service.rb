@@ -7,10 +7,15 @@ module V2
     # BillingCycle created during item termination.
     #
     # Advance bills the whole period up front, so ending mid-period leaves an unused
-    # portion on the already-invoiced fee. The billed period is resolved through
-    # BillingPeriods::DatesService, and Period#ratio gives the consumed share up to
-    # terminated_at. The credited share is the complement of that ratio, net of any
-    # credit notes already issued on the fee.
+    # portion on the already-invoiced fee. The billed segment is resolved through
+    # Billing::BuildScheduleService, and the schedule's consumed_ratio gives the share of
+    # it served up to terminated_at. The credited share is the complement of that ratio,
+    # net of any credit notes already issued on the fee.
+    #
+    # THE RULE: the credited fraction is computed on the same basis the fee was priced on.
+    # A rate change cuts a period into segments priced one by one, so the fee on the invoice
+    # bought one segment and only that segment's own unused days come back. The fee and the
+    # fraction are therefore read off the same period, resolved by the same rule.
     #
     # Because a credit note belongs to a single invoice, creditable fees are grouped
     # by invoice and one credit note is issued per invoice. Items billed together
@@ -47,15 +52,25 @@ module V2
         cycle = open_cycle(subscription_rate_card)
         return unless cycle
 
-        period = dates_for(subscription_rate_card).periods.sole
+        schedule = schedule_through(subscription_rate_card, cycle)
+        return unless schedule
+
+        segment = billed_segment(schedule)
+        return unless segment
 
         fee = cycle.invoice.fees.find_by(invoiceable: subscription_rate_card.product)
         return unless fee
 
-        amount_cents = creditable_amount_cents(fee, period)
+        amount_cents = creditable_amount_cents(schedule, fee, segment)
         return unless amount_cents.positive?
 
         {fee:, amount_cents:}
+      end
+
+      # How far billing ran: the end of the day the termination falls in. The customer entered
+      # that day, so it is served and paid for, and only the days after it come back.
+      def billed_through
+        @billed_through ||= Billing::TerminationDay.billed_through(terminated_at, timezone: subscription.customer.applicable_timezone)
       end
 
       # The already-done advance cycle whose period the termination falls in — the one
@@ -70,9 +85,12 @@ module V2
       end
 
       # Unused fraction of the billed period × the fee, net of credit notes already on it.
-      def creditable_amount_cents(fee, period)
-        credit_ratio = 1 - period.consumed_ratio
-        amount = BigDecimal(fee.amount_cents) * credit_ratio
+      #
+      # The fraction is a share of the segment, because the fee is the price of the segment:
+      # a fraction read off any other period would refund days this fee never charged for.
+      def creditable_amount_cents(schedule, fee, segment)
+        consumed_ratio = schedule.consumed_ratio(segment:, at: billed_through)
+        amount = BigDecimal(fee.amount_cents) * (1 - consumed_ratio)
         amount -= fee.credit_note_items.sum(:amount_cents)
         amount.positive? ? amount : BigDecimal(0)
       end
@@ -106,45 +124,31 @@ module V2
         ).round
       end
 
-      def dates_for(subscription_rate_card)
-        BillingPeriods::DatesService.from_subscription_rate_card(
-          subscription_rate_card,
-          rates: rates_for(subscription_rate_card),
-          rate_phases: rate_phases_for(subscription_rate_card),
-          range: terminated_at..terminated_at,
-          options: dates_options
-        )
+      # The slice of the paid-up-front period the card was in when it ended: the one window
+      # covering terminated_at. Selected by overlap — the same rule #open_cycle applies to
+      # the persisted row — so the fee and the fraction always come off one period. Read off
+      # the due list instead, the two disagreed on a termination falling exactly on a cycle
+      # boundary: the fee came from the cycle opening at that instant while the fraction
+      # came from the previous, fully consumed one, and nothing was credited at all.
+      def billed_segment(schedule)
+        schedule.segments_overlapping(terminated_at..terminated_at).last
       end
 
-      def rates_for(subscription_rate_card)
-        ranked_rates = subscription_rate_card.rate_card.rates
-          .select(
-            "rate_card_rates.*, " \
-              "LEAD(rate_card_rates.effective_from) OVER " \
-              "(ORDER BY rate_card_rates.effective_from) AS next_effective_from"
-          )
-
-        RateCardRate
-          .from(ranked_rates, :rate_card_rates)
-          .where("effective_from <= ?", terminated_at)
-          .where("next_effective_from IS NULL OR next_effective_from >= ?", terminated_at.beginning_of_day)
-          .order(:effective_from)
+      # The schedule as it stood before the termination clipped it. The item's `ended_at`
+      # was set to terminated_at moments ago, and a schedule stopping there can produce
+      # neither the segment opening at that instant nor the whole of the one containing it.
+      # Running it to the end of the billed period restores both, so the segment resolved
+      # here is the segment that was charged — the same window #open_cycle read off the row.
+      def schedule_through(subscription_rate_card, cycle)
+        build = Billing::BuildScheduleService.call(subscription_rate_card:, ends_at: exclusive_end_of(cycle))
+        build.success? ? build.schedule : nil
       end
 
-      def rate_phases_for(subscription_rate_card)
-        SubscriptionRateCards::ResolveRatePhasesService.call!(
-          subscription_rate_card:,
-          plan_rate_cards: subscription.plan.applied_rate_cards.to_a
-        ).rate_phases
-      end
-
-      def dates_options
-        BillingPeriods::DatesService::Options.new(
-          timezone: subscription.customer.applicable_timezone,
-          exclude_out_of_range: true,
-          realign_billing_anchor: true,
-          termination: false
-        )
+      # `period_to` is the last instant the period covers; the engine's windows are
+      # half-open, so its end is the microsecond after that — the one BillingCycles::
+      # ScheduleService subtracted when it wrote the row.
+      def exclusive_end_of(cycle)
+        cycle.period_to + BillingCycles::ScheduleService::PERIOD_END_PRECISION
       end
     end
   end

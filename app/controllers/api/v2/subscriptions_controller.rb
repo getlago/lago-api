@@ -188,7 +188,10 @@ module Api
           next_billing_ats.concat(subscription_next_billing_ats)
         end
 
-        next_billing_at = cycles.empty? ? nil : next_billing_ats.compact.max
+        # The soonest instant anything bills, not the latest: a plan mixing a monthly and a
+        # yearly card would otherwise report the yearly one and hide the invoice due next
+        # month. LAGO-1792 is explicit that consumers schedule billing runs off this field.
+        next_billing_at = cycles.empty? ? nil : next_billing_ats.compact.min
 
         [cycles, next_billing_at]
       end
@@ -199,26 +202,33 @@ module Api
         plan_rate_cards = subscription.plan.applied_rate_cards.to_a
 
         subscription.applied_rate_cards.each do |subscription_rate_card|
-          rates = rates_for(subscription_rate_card)
-          next if rates.empty?
+          plan_rate_card = plan_rate_cards.find { it.rate_card_id == subscription_rate_card.rate_card_id }
+          build = ::Billing::BuildScheduleService.call(subscription_rate_card:, plan_rate_card:)
+          next unless build.success?
 
-          dates = BillingPeriods::DatesService.from_subscription_rate_card(
-            subscription_rate_card,
-            rates:,
-            rate_phases: rate_phases_for(subscription_rate_card, plan_rate_cards:),
-            range: cycles_start_at(subscription_rate_card)..cycles_end_at,
-            options: cycles_date_options(subscription)
+          range = cycles_start_at(subscription_rate_card)..cycles_end_at
+          rate_phases = rate_phases_for(subscription_rate_card, plan_rate_card:)
+          next_billing_ats << build.schedule.next_billing_at(after: range.end)
+          cycles.concat(
+            previewed_segments(build.schedule, subscription_rate_card, range)
+              .map { |segment| serialize_segment(subscription_rate_card, segment, rate_phases) }
           )
-
-          next_billing_ats << dates.next_billing_at
-          cycles.concat(dates.periods.map { |period| serialize_period(subscription_rate_card, period) })
         end
 
         [cycles, next_billing_ats]
       end
 
-      def rates_for(subscription_rate_card)
-        subscription_rate_card.rate_card.rates.order(:effective_from)
+      # The preview shows an advance card everything its windows touch, including the cycle
+      # in progress, and an arrears card everything that has closed by the end of the range.
+      # That asymmetry is the endpoint's own history: the flag it was built on gated advance
+      # cards by overlap and arrears cards by their due date, and changing which cycles the
+      # preview lists is a product decision, not a port.
+      def previewed_segments(schedule, subscription_rate_card, range)
+        if subscription_rate_card.rate_card.arrears?
+          schedule.segments_due_by(range.end)
+        else
+          schedule.segments_overlapping(range)
+        end
       end
 
       def preload_cycle_associations(subscriptions)
@@ -230,13 +240,6 @@ module Api
             {plan: {applied_rate_cards: :rate_phases}}
           ]
         ).call
-      end
-
-      def rate_phases_for(subscription_rate_card, plan_rate_cards:)
-        ::SubscriptionRateCards::ResolveRatePhasesService.call!(
-          subscription_rate_card:,
-          plan_rate_cards:
-        ).rate_phases
       end
 
       def cycles_end_at
@@ -255,36 +258,59 @@ module Api
         end
       end
 
-      def cycles_date_options(subscription)
-        BillingPeriods::DatesService::Options.new(
-          timezone: subscription.customer.applicable_timezone,
-          exclude_out_of_range: false,
-          realign_billing_anchor: true,
-          termination: false
-        )
+      # The engine hands out phases as overrides, not as identities, so the phase a cycle
+      # belongs to is resolved here from its index — the same walk the engine does, on the
+      # same list, and the payload has always carried the code.
+      def rate_phases_for(subscription_rate_card, plan_rate_card:)
+        ::SubscriptionRateCards::ResolveRatePhasesService.call!(
+          subscription_rate_card:,
+          plan_rate_cards: [plan_rate_card].compact
+        ).rate_phases
       end
 
-      def serialize_period(subscription_rate_card, period)
+      def serialize_segment(subscription_rate_card, segment, rate_phases)
         {
           subscription_external_id: subscription_rate_card.subscription.external_id,
           subscription_started_at: subscription_rate_card.subscription.started_at&.iso8601,
           applied_rate_card_id: subscription_rate_card.id,
           applied_rate_card_code: subscription_rate_card.rate_card.code,
-          cycle_index: period.cycle_index + 1, # Display one-based indexes to make QA easier.
-          period_from: period.period_from.iso8601,
-          period_to: period.period_to.iso8601,
-          billing_at: period.billing_at.iso8601,
-          rate_phase_code: period.rate_phase&.code,
-          rate_override: serialize_rate_override(period.rate_override),
-          rate: serialize_rate(period),
-          rate_code: period.rate.code
+          cycle_index: segment.cycle_index + 1, # Display one-based indexes to make QA easier.
+          period_from: segment.started_at.iso8601,
+          period_to: inclusive_end_of(segment.ended_at).iso8601,
+          billing_at: payload_billing_at(subscription_rate_card, segment).iso8601,
+          rate_phase_code: rate_phases.rate_phase_for_cycle(segment.cycle_index)&.code,
+          rate_override: serialize_rate_override(segment.rate_override),
+          rate: serialize_rate(segment),
+          rate_code: segment.rate.code
         }
       end
 
-      def serialize_rate(period)
-        return if period.rate_override
+      # The engine's windows are half-open; this payload has always shown the last instant
+      # a period covers.
+      #
+      # This is NOT the only place the two conventions meet, whatever an earlier version of
+      # this comment claimed. There are three, with two spellings of the same constant:
+      # here, BillingCycles::ScheduleService::PERIOD_END_PRECISION, and
+      # SubscriptionRateCards::TerminateService::PERIOD_END_PRECISION. They collapse into one
+      # when the billing_segments rename lands; until then, changing one means changing three.
+      def inclusive_end_of(ended_at)
+        ended_at - Rational(1, 1_000_000)
+      end
 
-        rate = period.rate
+      # LAGO-1797 pinned this field as "the datetime the cycle actually triggers — period
+      # start for advance, period end for arrears". Period end here means the same instant
+      # period_to shows, so an arrears trigger is converted alongside it rather than
+      # published as the exclusive boundary the engine works in.
+      def payload_billing_at(subscription_rate_card, segment)
+        return segment.billing_at unless subscription_rate_card.rate_card.arrears?
+
+        inclusive_end_of(segment.billing_at)
+      end
+
+      def serialize_rate(segment)
+        return if segment.rate_override
+
+        rate = segment.rate
 
         {
           lago_id: rate.id,

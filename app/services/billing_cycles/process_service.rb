@@ -25,7 +25,11 @@ module BillingCycles
 
       customer.with_advisory_lock("billing_cycle_process_customer_#{customer.id}") do
         pending_cycles.group_by { |cycle| invoice_key(cycle) }.each_value do |cycles|
-          result.invoices << build_invoice(cycles)
+          if cycles.any? { |cycle| billable?(cycle) }
+            result.invoices << build_invoice(cycles)
+          else
+            close_without_invoice(cycles)
+          end
         end
 
         # Finalize inline (invoice numbering) in the same job — one job per invoice, like
@@ -122,7 +126,30 @@ module BillingCycles
       invoice
     end
 
+    # A segment that covers no whole billing day earns nothing: the day it opens and closes
+    # inside is already owned by the segment before it, which was billed for it. Whole-day
+    # granularity is the rule (BIL-425); charging the sliver again is what made the old
+    # engine's slices sum above 100%.
+    #
+    # The row is kept regardless — the pay-in-advance watermark reads WHICH cycles exist, not
+    # what they were worth, so dropping one would let a quantity rise be billed twice.
+    #
+    # The test is the ratio, never the amount. A $0 trial phase is a whole cycle at a zero
+    # price and keeps its invoice document (QA plan PH1); a zero-ratio segment has nothing to
+    # show at any price.
+    def billable?(cycle)
+      !cycle.proration_ratio.zero?
+    end
+
+    # Nothing to invoice, but the cycles are settled: left pending they would be picked up by
+    # every later run.
+    def close_without_invoice(cycles)
+      cycles.each { |cycle| cycle.update!(status: :done) }
+    end
+
     def computed_fees(cycle)
+      return [] unless billable?(cycle)
+
       fee_result = BillingCycles::Fees::ComputeService.call!(billing_cycle: cycle)
       [fee_result.fee, fee_result.true_up_fee].compact
     end

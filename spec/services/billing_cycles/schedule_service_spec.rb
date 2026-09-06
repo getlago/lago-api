@@ -77,7 +77,8 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(current_time)
+        # LAGO-1797: advance falls due on the period start, never clamped forward to now.
+        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-08-01"))
         expect(billing_cycle.proration_ratio).to eq(1)
         expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
       end
@@ -106,13 +107,14 @@ RSpec.describe BillingCycles::ScheduleService do
         let(:billing_anchor_date) { Date.parse("2026-08-20") }
         let(:started_at) { Time.zone.parse("2026-08-10") }
 
-        it "sets billing_at to the scheduling time" do
+        it "bills the backdated period at its own start, not at the scheduling time" do
           expect { result }.to change(BillingCycle, :count).by(1)
 
           billing_cycle = result.billing_cycles.sole
           expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
           expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-08-19 23:59:59.999999"))
-          expect(billing_cycle.billing_at).to eq(current_time)
+          # LAGO-1797: a backdated advance period stays due on its own start, not on now.
+          expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-08-10"))
         end
       end
     end
@@ -145,7 +147,8 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(current_time)
+        # LAGO-1797: arrears falls due when the period closes, never clamped forward to now.
+        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-08-01"))
         expect(billing_cycle.rate_card_rate).to eq(rate_card_rate)
         expect(billing_cycle.rate_override).to be_nil
         expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-01"))
@@ -339,7 +342,8 @@ RSpec.describe BillingCycles::ScheduleService do
         billing_cycle = result.billing_cycles.sole
         expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-07-01"))
         expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-07-31 23:59:59.999999"))
-        expect(billing_cycle.billing_at).to eq(current_time)
+        # LAGO-1797: an elapsed arrears period keeps its own close as billing_at, not now.
+        expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-08-01"))
       end
     end
 
@@ -370,11 +374,21 @@ RSpec.describe BillingCycles::ScheduleService do
       let(:billing_anchor_date) { Date.parse("2026-08-10") }
       let(:started_at) { Time.zone.parse("2026-08-10 12:34:56") }
 
-      it "does not schedule the closed arrears period outside the range" do
-        expect { result }.not_to change(BillingCycle, :count)
+      # INTENTIONAL DIVERGENCE. This example used to assert that nothing was scheduled and
+      # that the clock had not moved — i.e. it pinned a permanent revenue stall. The closed
+      # cycle's inclusive end, 2026-09-09 23:59:59.999999, is one microsecond before the
+      # range's own start, so the old engine read it as already past and dropped it; the
+      # clock then never advanced and the item never billed again. Half-open windows remove
+      # that microsecond (CONTRACT BUGS 1: "period_to = (boundary - 1.second).end_of_day.utc
+      # … Half-open windows remove the arithmetic entirely"), and the cycle that closed on
+      # the boundary now bills.
+      it "schedules the closed arrears period that fell due on the range boundary" do
+        expect { result }.to change(BillingCycle, :count).by(1)
 
-        expect(result.billing_cycles).to eq([])
-        expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-09-10"))
+        billing_cycle = result.billing_cycles.sole
+        expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
+        expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
+        expect(customer.subscription_rate_cards.sole.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
       end
 
       context "with a customer timezone" do
@@ -397,7 +411,8 @@ RSpec.describe BillingCycles::ScheduleService do
           billing_cycle = result.billing_cycles.sole
           expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-08-10"))
           expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-09-09 23:59:59.999999"))
-          expect(billing_cycle.billing_at).to eq(current_time)
+          # LAGO-1797: arrears falls due when the period closes, never clamped forward to now.
+          expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-09-10"))
           expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
         end
 
@@ -424,7 +439,8 @@ RSpec.describe BillingCycles::ScheduleService do
           billing_cycle = result.billing_cycles.sole
           expect(billing_cycle.period_from).to eq(Time.zone.parse("2026-09-10"))
           expect(billing_cycle.period_to).to eq(Time.zone.parse("2026-10-09 23:59:59.999999"))
-          expect(billing_cycle.billing_at).to eq(current_time)
+          # LAGO-1797: advance falls due on the period start, never clamped forward to now.
+          expect(billing_cycle.billing_at).to eq(Time.zone.parse("2026-09-10"))
           expect(billing_cycle.subscription_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-10"))
         end
       end
