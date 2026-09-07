@@ -584,7 +584,7 @@ module Lago
           setting("Port", "LAGO_SMTP_PORT")
           setting("Domain", "LAGO_SMTP_DOMAIN")
           setting("Username", "LAGO_SMTP_USERNAME")
-          fact("Authentication", authentication || "none")
+          fact("Authentication", ENV["LAGO_SMTP_USERNAME"].present? ? (authentication || "plain") : "none")
           fact("STARTTLS", starttls_enabled ? "enabled" : "disabled")
         end
       end

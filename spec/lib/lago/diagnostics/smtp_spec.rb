@@ -16,7 +16,7 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   end
 
   around do |example|
-    env_keys = %w[LAGO_SMTP_ADDRESS LAGO_SMTP_AUTHENTICATION LAGO_SMTP_ENABLE_STARTTLS_AUTO]
+    env_keys = %w[LAGO_SMTP_ADDRESS LAGO_SMTP_AUTHENTICATION LAGO_SMTP_ENABLE_STARTTLS_AUTO LAGO_SMTP_USERNAME]
     previous_environment = env_keys.index_with { |key| ENV[key] }
 
     env_keys.each { |key| ENV.delete(key) }
@@ -41,6 +41,8 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   end
 
   context "when the SMTP security variables are absent" do
+    let(:environment) { {"LAGO_SMTP_USERNAME" => "smtp-user"} }
+
     it "keeps authentication and STARTTLS enabled" do
       expect(smtp_settings).to include(authentication: "login", enable_starttls_auto: true)
 
@@ -50,10 +52,18 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   end
 
   context "when SMTP authentication is explicitly empty" do
+    let(:environment) { {"LAGO_SMTP_AUTHENTICATION" => "", "LAGO_SMTP_USERNAME" => "smtp-user"} }
+
+    it "reports the default authentication used on the wire" do
+      expect(smtp_settings[:authentication]).to be_nil
+      expect(smtp_report).to match(/Authentication\s+: plain/)
+    end
+  end
+
+  context "when the SMTP username is absent" do
     let(:environment) { {"LAGO_SMTP_AUTHENTICATION" => ""} }
 
-    it "disables authentication" do
-      expect(smtp_settings[:authentication]).to be_nil
+    it "reports authentication as disabled" do
       expect(smtp_report).to match(/Authentication\s+: none/)
     end
   end
