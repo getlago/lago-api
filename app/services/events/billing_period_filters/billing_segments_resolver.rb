@@ -6,7 +6,7 @@ module Events
       def initialize(contract:, billing_segments:, codes: nil, with_last_seen_at: true)
         @contract = contract
         @billing_segments = billing_segments
-        @codes = codes
+        @codes = codes&.to_set || Set.new
         @with_last_seen_at = with_last_seen_at
       end
 
@@ -34,37 +34,31 @@ module Events
       end
 
       def target_segments
-        @target_segments ||= billing_segments_scope.filter_map do |billing_segment|
-          product = billing_segment.contract_rate_card.product
-          next if product.billable_metric.nil?
-          next if codes.present? && codes.exclude?(product.billable_metric.code)
-
-          billing_segment
-        end
+        @target_segments ||= billing_segments_scope.preload(
+          contract_rate_card: {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]}
+        ).to_a
       end
 
       def billing_segments_scope
-        scope = billing_segments
-        if scope.respond_to?(:includes)
-          scope = scope.includes(
-            contract_rate_card: {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]}
-          )
-        end
+        scope = BillingSegment.where(id: billing_segments)
+          .joins(contract_rate_card: {product: :billable_metric})
 
-        scope.to_a
+        if codes.present?
+          scope.where(billable_metrics: {code: codes.to_a})
+        else
+          scope
+        end
       end
 
       def metric_codes
-        @metric_codes ||= codes.presence || target_segments.map do |segment|
-          segment.contract_rate_card.product.billable_metric.code
-        end.uniq
+        @metric_codes ||= codes.presence || billing_segments_scope.distinct.pluck("billable_metrics.code")
       end
 
       def billable_metric_filter_keys
-        @billable_metric_filter_keys ||= BillableMetricFilter
-          .where(billable_metric_id: target_segments.map { |segment| segment.contract_rate_card.product.billable_metric_id })
+        @billable_metric_filter_keys ||= billing_segments_scope
+          .joins(contract_rate_card: {product: {billable_metric: :filters}})
           .distinct
-          .pluck(:key)
+          .pluck("billable_metric_filters.key")
       end
 
       def event_store

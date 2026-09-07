@@ -516,6 +516,30 @@ RSpec.describe Events::BillingPeriodFilterService do
         .with(codes: [billable_metric.code], filter_keys: ["region"], with_last_seen_at: true)
     end
 
+    context "with a relation containing segments sharing a billable metric" do
+      subject(:filter_result) do
+        described_class.for_billing_segments!(contract:, billing_segments: contract.billing_segments)
+      end
+
+      before do
+        billing_segment
+        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+          cycle_started_at: billing_segment.cycle_started_at + 1.month,
+          started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+      end
+
+      it "queries distinct metric codes and filter keys" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_result
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: ["region"], with_last_seen_at: true)
+      end
+    end
+
     context "when codes restrict the lookup" do
       subject(:filter_result) do
         described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
