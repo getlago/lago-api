@@ -10509,6 +10509,11 @@ enum PayablePaymentStatusEnum {
   succeeded
 }
 
+enum PayableTypeEnum {
+  Invoice
+  PaymentRequest
+}
+
 type Payment {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -10621,6 +10626,17 @@ input PaymentProviderCustomerInput {
   providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
+}
+
+enum PaymentProviderMethodTypeEnum {
+  bacs_debit
+  boleto
+  card
+  crypto
+  customer_balance
+  link
+  sepa_debit
+  us_bank_account
 }
 
 """
@@ -12202,7 +12218,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(currency: CurrencyEnum, externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
+  payments(amountFrom: BigInt, amountTo: BigInt, createdAtFrom: ISO8601Date, createdAtTo: ISO8601Date, currency: CurrencyEnum, externalCustomerId: ID, invoiceId: ID, invoiceNumber: String, limit: Int, page: Int, payableType: [PayableTypeEnum!], paymentMethodType: [PaymentProviderMethodTypeEnum!], paymentProviderType: [ProviderTypeEnum!], paymentStatus: [PayablePaymentStatusEnum!], paymentType: [PaymentTypeEnum!], receiptNumber: String, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
