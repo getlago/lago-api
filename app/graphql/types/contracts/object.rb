@@ -24,9 +24,9 @@ module Types
 
       field :customer, Types::Customers::Object, null: false
       # Nullable by design: a plan-less contract prices through directly
-      # attached rate cards. Exposed as `plan`; the record lives in
-      # catalog_plans.
-      field :plan, Types::Plans::Object, null: true
+      # attached rate cards. Exposed as `plan`, but the record lives in
+      # catalog_plans, so it carries the CatalogPlan type.
+      field :plan, Types::CatalogPlans::Object, null: true
 
       field :applied_rate_cards, [Types::ContractAppliedRateCards::Object], null: false
       field :applied_rate_cards_count, Integer, null: false

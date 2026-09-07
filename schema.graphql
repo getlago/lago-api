@@ -1497,7 +1497,7 @@ type Contract {
   externalId: String!
   id: ID!
   name: String
-  plan: Plan
+  plan: CatalogPlan
   startedAt: ISO8601DateTime
   status: ContractStatusEnum!
   terminatedAt: ISO8601DateTime
