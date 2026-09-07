@@ -44,5 +44,12 @@ RSpec.describe CatalogPlans::UpdateService do
       expect(result).not_to be_success
       expect(result.error).to be_a(BaseService::ValidationFailure)
     end
+
+    it "emits no webhook and no activity log" do
+      result
+
+      expect(SendWebhookJob).not_to have_been_enqueued
+      expect(Utils::ActivityLog).not_to have_produced("catalog_plan.updated")
+    end
   end
 end
