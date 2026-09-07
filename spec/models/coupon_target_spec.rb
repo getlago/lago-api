@@ -26,5 +26,14 @@ RSpec.describe CouponTarget do
         expect(target.errors.where(:base, :single_plan_target)).to be_present
       end
     end
+
+    describe "database parent guard" do
+      it "rejects a target with both plans even past model validation" do
+        target = create(:coupon_plan)
+        target.catalog_plan = create(:catalog_plan, organization: target.organization)
+
+        expect { target.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+    end
   end
 end

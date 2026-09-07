@@ -65,5 +65,28 @@ RSpec.describe Entitlement::Entitlement do
         expect(entitlement.errors[:base]).to eq(["one_of_plan_or_subscription_required"])
       end
     end
+
+    describe "database parent guard" do
+      let(:organization) { create(:organization) }
+      let(:feature) { create(:feature, organization:) }
+
+      it "rejects a row with no parent even past model validation" do
+        entitlement = build(:entitlement, organization:, feature:, plan: nil, subscription: nil)
+
+        expect { entitlement.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+
+      it "rejects a row with two parents even past model validation" do
+        entitlement = build(
+          :entitlement,
+          organization:,
+          feature:,
+          plan: create(:plan, organization:),
+          subscription: create(:subscription, organization:)
+        )
+
+        expect { entitlement.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+    end
   end
 end

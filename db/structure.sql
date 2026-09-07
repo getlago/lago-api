@@ -2698,7 +2698,8 @@ CREATE TABLE public.coupon_targets (
     deleted_at timestamp(6) without time zone,
     billable_metric_id uuid,
     organization_id uuid NOT NULL,
-    catalog_plan_id uuid
+    catalog_plan_id uuid,
+    CONSTRAINT coupon_targets_check_single_plan CHECK ((num_nonnulls(plan_id, catalog_plan_id) <= 1))
 );
 
 

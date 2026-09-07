@@ -8,6 +8,7 @@ class ValidateCatalogPlanEcosystemForeignKeys < ActiveRecord::Migration[8.0]
 
     validate_check_constraint :entitlement_entitlements, name: "entitlement_check_exactly_one_parent"
     validate_check_constraint :plans_taxes, name: "plans_taxes_check_exactly_one_plan"
+    validate_check_constraint :coupon_targets, name: "coupon_targets_check_single_plan"
   end
 
   def down

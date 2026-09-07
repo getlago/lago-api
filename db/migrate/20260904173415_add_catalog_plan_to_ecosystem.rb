@@ -6,6 +6,13 @@ class AddCatalogPlanToEcosystem < ActiveRecord::Migration[8.0]
   def up
     add_reference :coupon_targets, :catalog_plan, type: :uuid, null: true, index: {algorithm: :concurrently}
     add_foreign_key :coupon_targets, :catalog_plans, validate: false
+    # A coupon target points at a legacy plan, a catalog plan, or a billable
+    # metric (neither) — never at two plans at once. "At most one" (<= 1)
+    # because the billable-metric case legitimately has no plan.
+    add_check_constraint :coupon_targets,
+      "num_nonnulls(plan_id, catalog_plan_id) <= 1",
+      name: "coupon_targets_check_single_plan",
+      validate: false
 
     # A tax now attaches to a legacy plan or a catalog plan, so plan_id is no
     # longer mandatory. The composite unique index mirrors the legacy
@@ -57,6 +64,7 @@ class AddCatalogPlanToEcosystem < ActiveRecord::Migration[8.0]
     remove_foreign_key :plans_taxes, :catalog_plans
     remove_reference :plans_taxes, :catalog_plan
 
+    remove_check_constraint :coupon_targets, name: "coupon_targets_check_single_plan"
     remove_foreign_key :coupon_targets, :catalog_plans
     remove_reference :coupon_targets, :catalog_plan
   end
