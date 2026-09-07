@@ -107,6 +107,7 @@ module Subscriptions
         params: params.merge(plan_id: target_plan.id),
         subscription:
       )
+      @emitted_fixed_charge_events = override_result.fixed_charge_events
       override_result.fixed_charge
     end
 
@@ -121,11 +122,11 @@ module Subscriptions
       existing_fixed_charge.units = params[:units] if params.key?(:units)
       existing_fixed_charge.save!
 
-      FixedCharges::EmitEventsService.call!(
+      @emitted_fixed_charge_events = FixedCharges::EmitEventsService.call!(
         fixed_charge: existing_fixed_charge,
         subscription:,
         apply_units_immediately: !!params[:apply_units_immediately]
-      )
+      ).fixed_charge_events
 
       if params.key?(:tax_codes)
         taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge: existing_fixed_charge, tax_codes: params[:tax_codes])
@@ -140,6 +141,7 @@ module Subscriptions
       return unless params.key?(:units)
       return unless params[:apply_units_immediately]
       return unless target_fixed_charge.pay_in_advance?
+      return if @emitted_fixed_charge_events.blank?
 
       Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
     end

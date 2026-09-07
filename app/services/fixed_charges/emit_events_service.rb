@@ -13,13 +13,26 @@ module FixedCharges
     end
 
     def call
-      events_attributes = subscriptions.map do |subscription|
+      targets = subscriptions.map do |subscription|
         {
-          organization_id: subscription.organization_id,
-          subscription_id: subscription.id,
-          fixed_charge_id: fixed_charge.id,
+          subscription:,
           units: units_for(subscription),
-          timestamp: (apply_units_immediately && !subscription.incomplete?) ? timestamp : next_billing_period(subscription)
+          timestamp: event_timestamp_for(subscription)
+        }
+      end
+
+      baselines = previous_units_by_subscription(targets)
+
+      events_attributes = targets.filter_map do |target|
+        previous_units = baselines[target[:subscription].id]
+        next if previous_units && previous_units == target[:units].to_d
+
+        {
+          organization_id: target[:subscription].organization_id,
+          subscription_id: target[:subscription].id,
+          fixed_charge_id: fixed_charge.id,
+          units: target[:units],
+          timestamp: target[:timestamp]
         }
       end
 
@@ -60,6 +73,34 @@ module FixedCharges
       return fixed_charge.units unless self.subscription
 
       fixed_charge.effective_units_for(subscription)
+    end
+
+    def event_timestamp_for(subscription)
+      if apply_units_immediately && !subscription.incomplete?
+        timestamp
+      else
+        next_billing_period(subscription)
+      end
+    end
+
+    # The baseline is the units effective at the event's own timestamp, not the units effective
+    # now. A deferred change already scheduled for the next period is the baseline for another
+    # deferred change, so re-setting today's value must still emit an event superseding it.
+    #
+    # NOTE: Grouped by timestamp rather than queried per subscription: a plan-wide emission covers
+    #       every subscription on the plan, and calendar billing gives them all the same next
+    #       period, so this is normally a single query.
+    def previous_units_by_subscription(targets)
+      charge_ids = [fixed_charge.id, fixed_charge.parent_id].compact
+
+      targets.group_by { |target| target[:timestamp] }.each_with_object({}) do |(event_timestamp, group), baselines|
+        FixedChargeEvent
+          .where(subscription_id: group.map { |target| target[:subscription].id }, fixed_charge_id: charge_ids)
+          .where(timestamp: ..event_timestamp)
+          .select("DISTINCT ON (subscription_id) subscription_id, units")
+          .order("subscription_id, created_at DESC")
+          .each { |event| baselines[event.subscription_id] = event.units }
+      end
     end
 
     def next_billing_period(subscription)
