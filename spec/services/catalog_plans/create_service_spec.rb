@@ -31,6 +31,21 @@ RSpec.describe CatalogPlans::CreateService do
     )
   end
 
+  it "enqueues a catalog_plan.created webhook" do
+    result
+
+    expect(SendWebhookJob).to have_been_enqueued.with("catalog_plan.created", result.catalog_plan)
+  end
+
+  context "when send_webhook is false" do
+    it "does not enqueue the webhook but still produces the activity log" do
+      result = described_class.call(args, send_webhook: false)
+
+      expect(SendWebhookJob).not_to have_been_enqueued.with("catalog_plan.created", result.catalog_plan)
+      expect(Utils::ActivityLog).to have_produced("catalog_plan.created").after_commit.with(result.catalog_plan)
+    end
+  end
+
   context "when the currency is invalid" do
     let(:args) { {organization_id: organization.id, name: "Growth", code: "growth", currency: "INVALID"} }
 

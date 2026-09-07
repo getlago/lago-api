@@ -16,20 +16,11 @@ module Mutations
       type Types::Plans::Object
 
       def resolve(**args)
-        args[:amount_currency] = args.delete(:currency) if args.key?(:currency)
-        plan = current_organization.plans.parents.product_catalog.find_by(id: args[:id])
+        catalog_plan = current_organization.catalog_plans.find_by(id: args[:id])
 
-        result = ::Plans::UpdateService.call(plan:, params: args.except(:id))
+        result = ::CatalogPlans::UpdateService.call(catalog_plan:, params: args.except(:id))
 
-        return result.plan if result.success?
-
-        # The catalog surface exposes amount_currency as `currency`.
-        if result.error.is_a?(BaseService::ValidationFailure) && result.error.messages.key?(:amount_currency)
-          messages = result.error.messages.except(:amount_currency).merge(currency: result.error.messages[:amount_currency])
-          return validation_error(messages:)
-        end
-
-        result_error(result)
+        result.success? ? result.catalog_plan : result_error(result)
       end
     end
   end

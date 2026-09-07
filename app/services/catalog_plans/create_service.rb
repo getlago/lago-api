@@ -4,10 +4,16 @@ module CatalogPlans
   class CreateService < BaseService
     Result = BaseResult[:catalog_plan]
 
-    def initialize(args)
+    def initialize(args, send_webhook: true)
       @args = args
+      @send_webhook = send_webhook
       super()
     end
+
+    activity_loggable(
+      action: "catalog_plan.created",
+      record: -> { result.catalog_plan }
+    )
 
     def call
       catalog_plan = CatalogPlan.new(
@@ -21,6 +27,7 @@ module CatalogPlans
       catalog_plan.save!
 
       result.catalog_plan = catalog_plan
+      SendWebhookJob.perform_after_commit("catalog_plan.created", catalog_plan) if send_webhook
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -28,6 +35,6 @@ module CatalogPlans
 
     private
 
-    attr_reader :args
+    attr_reader :args, :send_webhook
   end
 end
