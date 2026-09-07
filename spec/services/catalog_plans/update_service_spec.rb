@@ -13,6 +13,21 @@ RSpec.describe CatalogPlans::UpdateService do
     expect(result.catalog_plan.reload).to have_attributes(name: "After", code: "after")
   end
 
+  it "enqueues a catalog_plan.updated webhook" do
+    result
+
+    expect(SendWebhookJob).to have_been_enqueued.with("catalog_plan.updated", catalog_plan)
+  end
+
+  context "when send_webhook is false" do
+    it "does not enqueue the webhook but still produces the activity log" do
+      described_class.call(catalog_plan:, params:, send_webhook: false)
+
+      expect(SendWebhookJob).not_to have_been_enqueued.with("catalog_plan.updated", catalog_plan)
+      expect(Utils::ActivityLog).to have_produced("catalog_plan.updated").after_commit.with(catalog_plan)
+    end
+  end
+
   context "when the catalog plan is missing" do
     let(:catalog_plan) { nil }
 

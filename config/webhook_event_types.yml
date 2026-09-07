@@ -283,6 +283,16 @@ plan_deleted:
   description: A plan has been deleted
   category: Plans
   deprecated: false
+catalog_plan_created:
+  name: catalog_plan.created
+  description: A new catalog plan has been created
+  category: Plans
+  deprecated: false
+catalog_plan_updated:
+  name: catalog_plan.updated
+  description: A catalog plan has been updated
+  category: Plans
+  deprecated: false
 quote_created:
   name: quote.created
   description: A new quote has been created

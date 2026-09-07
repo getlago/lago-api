@@ -25,6 +25,10 @@ class CatalogPlan < ApplicationRecord
 
   default_scope -> { kept }
 
+  # The v2 GraphQL surface exposes the currency under the legacy `amountCurrency`
+  # field name; the catalog table stores it natively as `currency`.
+  alias_attribute :amount_currency, :currency
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end

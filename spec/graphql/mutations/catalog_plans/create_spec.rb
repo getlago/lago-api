@@ -35,9 +35,7 @@ RSpec.describe Mutations::CatalogPlans::Create do
 
     expect(plan_response["code"]).to eq("growth")
     expect(plan_response["amountCurrency"]).to eq("EUR")
-    expect(Plan.find(plan_response["id"])).to have_attributes(
-      pricing_type: "product_catalog", interval: nil, amount_cents: nil
-    )
+    expect(CatalogPlan.find(plan_response["id"])).to have_attributes(name: "Growth", currency: "EUR")
   end
 
   context "when the organization is not on the product catalog" do
