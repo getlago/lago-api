@@ -11,7 +11,7 @@ module CatalogPlans
     end
 
     activity_loggable(
-      action: "catalog_plan.created",
+      action: "plan.created",
       record: -> { result.catalog_plan }
     )
 
@@ -27,7 +27,7 @@ module CatalogPlans
       catalog_plan.save!
 
       result.catalog_plan = catalog_plan
-      SendWebhookJob.perform_after_commit("catalog_plan.created", catalog_plan) if send_webhook
+      SendWebhookJob.perform_after_commit("plan.created", catalog_plan) if send_webhook
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

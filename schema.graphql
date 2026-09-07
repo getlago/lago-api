@@ -128,16 +128,6 @@ enum ActivityTypeEnum {
   billing_entities_updated
 
   """
-  catalog_plan.created
-  """
-  catalog_plan_created
-
-  """
-  catalog_plan.updated
-  """
-  catalog_plan_updated
-
-  """
   coupon.created
   """
   coupon_created
@@ -6481,8 +6471,6 @@ enum EventTypeEnum {
   billable_metric_created
   billable_metric_deleted
   billable_metric_updated
-  catalog_plan_created
-  catalog_plan_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure

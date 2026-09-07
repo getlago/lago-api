@@ -575,18 +575,6 @@
               "deprecationReason": null
             },
             {
-              "name": "catalog_plan_created",
-              "description": "catalog_plan.created",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "catalog_plan_updated",
-              "description": "catalog_plan.updated",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "customer_created",
               "description": "customer.created",
               "isDeprecated": false,
@@ -32060,18 +32048,6 @@
             },
             {
               "name": "plan_deleted",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "catalog_plan_created",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "catalog_plan_updated",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

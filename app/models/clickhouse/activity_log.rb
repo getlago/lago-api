@@ -54,8 +54,6 @@ module Clickhouse
       plan_created: "plan.created",
       plan_updated: "plan.updated",
       plan_deleted: "plan.deleted",
-      catalog_plan_created: "catalog_plan.created",
-      catalog_plan_updated: "catalog_plan.updated",
       customer_created: "customer.created",
       customer_updated: "customer.updated",
       customer_deleted: "customer.deleted",

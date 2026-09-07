@@ -12,8 +12,6 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         plan_created
         plan_updated
         plan_deleted
-        catalog_plan_created
-        catalog_plan_updated
         customer_created
         customer_updated
         customer_deleted
