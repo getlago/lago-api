@@ -129,8 +129,6 @@ namespace :events do
   # FROM/TO bound the event ingestion time, as [FROM, TO). DRY_RUN defaults to true (report only).
   desc "Recover pay-in-advance fees for events that were never post-processed"
   task recover_pay_in_advance_fees: :environment do
-    Rails.logger.level = Logger::Severity::INFO
-
     prefix = "events:recover_pay_in_advance_fees"
     batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
     organization = Organization.find(ENV.fetch("ORGANIZATION_ID"))
@@ -145,10 +143,8 @@ namespace :events do
     raise ArgumentError, "BATCH_SIZE must be positive" unless batch_size.positive?
 
     if organization.clickhouse_events_store?
-      Rails.logger.info(
-        "#{prefix} - Organization #{organization.id} uses the Clickhouse events store: " \
+      puts "#{prefix} - Organization #{organization.id} uses the Clickhouse events store: " \
         "events are not persisted in Postgres, so there is nothing to recover."
-      )
       next
     end
 
@@ -165,7 +161,7 @@ namespace :events do
       .group_by { |charge| [charge.plan_id, charge.billable_metric.code] }
 
     if charges_by_plan_and_code.empty?
-      Rails.logger.info("#{prefix} - Organization #{organization.id} has no pay-in-advance charge.")
+      puts "#{prefix} - Organization #{organization.id} has no pay-in-advance charge."
       next
     end
 
@@ -178,13 +174,27 @@ namespace :events do
     recovered = 0
     invoices_to_create = 0
     not_due = 0
+    scanned = 0
     skipped = []
     tainted_subscriptions = Set.new
+    started_at = Time.current
+    total = scope.count
+
+    puts "#{prefix} [#{mode}]"
+    puts "Organization: #{organization.id}"
+    puts "Ingested in:  [#{from.iso8601}, #{to.iso8601})"
+    puts "Candidates:   #{total} event(s) on #{codes.size} pay-in-advance metric code(s)"
+    puts "=" * 80
 
     # Cursored on (created_at, id) so the scan follows index_events_on_organization_id_and_created_at.
     # The default primary-key cursor would paginate on a random uuid, re-sorting the whole remaining
     # window on every batch.
     scope.in_batches(of: batch_size, cursor: [:created_at, :id], order: :asc, load: true) do |events_in_batch|
+      # Printed every batch so a long run is visibly progressing rather than possibly stuck.
+      scanned += events_in_batch.size
+      puts "  ... #{scanned}/#{total} scanned in #{(Time.current - started_at).round(1)}s, " \
+        "at #{events_in_batch.last.created_at.iso8601}, #{recovered} to recover, #{skipped.size} skipped"
+
       # `group_by` preserves the SQL order, so `covering.first` below is what
       # `Events::Common#subscription` resolves to.
       subscriptions_by_external_id = organization.subscriptions
@@ -320,44 +330,40 @@ namespace :events do
         invoices_to_create += invoiceable_charges
         tainted_subscriptions << subscription.id unless billable_metric.count_agg?
 
-        Rails.logger.info(
-          "#{prefix} [#{mode}] - #{event.transaction_id} " \
-          "subscription=#{event.external_subscription_id} code=#{event.code} " \
-          "invoiceable_charges=#{invoiceable_charges}"
-        )
+        puts "  RECOVER #{event.transaction_id} subscription=#{event.external_subscription_id} " \
+          "code=#{event.code} invoiceable_charges=#{invoiceable_charges}"
 
         Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json) unless dry_run
       end
     end
 
     skipped.each do |transaction_id, external_subscription_id, reason|
-      Rails.logger.warn(
-        "#{prefix} - SKIPPED #{transaction_id} (subscription=#{external_subscription_id}): #{reason}."
-      )
+      puts "  SKIPPED #{transaction_id} (subscription=#{external_subscription_id}): #{reason}."
     end
 
+    puts "=" * 80
+    puts "#{recovered} event(s) to recover, #{skipped.size} skipped, #{not_due} with no fee due " \
+      "(#{scanned} scanned in #{(Time.current - started_at).round(1)}s)"
+
     if tainted_subscriptions.any?
-      Rails.logger.warn(
-        "#{prefix} - Recovered events on subscriptions #{tainted_subscriptions.to_a.join(", ")} use an " \
+      puts
+      puts "WARNING: recovered events on subscriptions #{tainted_subscriptions.to_a.join(", ")} use an " \
         "aggregation other than count_agg, so their units chain through cached aggregations. Where " \
         "those billing periods contain decrements, the fees created for the events that followed the " \
         "gap were computed without the missing rows and may over-bill. This task does not fix " \
         "already-created fees."
-      )
     end
 
     if invoices_to_create.positive?
-      Rails.logger.warn(
-        "#{prefix} [#{mode}] - the replay creates #{invoices_to_create} invoice(s), one per " \
-        "invoiceable charge. Each is finalized and dated at the event timestamp, emailed, pushed to " \
-        "the accounting integrations, and has a payment started for it."
-      )
+      puts
+      puts "WARNING: the replay creates #{invoices_to_create} invoice(s), one per invoiceable charge. " \
+        "Each is finalized and dated at the event timestamp, emailed, pushed to the accounting " \
+        "integrations, and has a payment started for it."
     end
 
-    Rails.logger.info(
-      "#{prefix} [#{mode}] - #{recovered} event(s) to recover, #{skipped.size} skipped, " \
-      "#{not_due} with no fee due."
-    )
-    Rails.logger.info("#{prefix} - Run again with DRY_RUN=false to re-enqueue.") if dry_run && recovered.positive?
+    if dry_run && recovered.positive?
+      puts
+      puts "Run again with DRY_RUN=false to re-enqueue."
+    end
   end
 end
