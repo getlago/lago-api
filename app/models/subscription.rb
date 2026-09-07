@@ -8,7 +8,6 @@ class Subscription < ApplicationRecord
   include Terminatable
   include ConnectionResolvable
 
-
   self.ignored_columns += %w[incompleted_at cancelation_reason]
 
   belongs_to :customer, -> { with_discarded }
