@@ -56,6 +56,17 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
       end
     end
 
+    context "with an invalid email" do
+      it "returns an error without creating the organization" do
+        expect do
+          admin_post("/admin/organizations", create_params.merge(email: "not-an-email"), admin_headers)
+        end.not_to change(Organization, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(Invite.count).to eq(0)
+      end
+    end
+
     context "with an invalid admin key" do
       it "returns unauthorized" do
         admin_post("/admin/organizations", create_params, admin_headers("wrong"))

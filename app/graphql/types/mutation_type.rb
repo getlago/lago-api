@@ -306,5 +306,10 @@ module Types
     field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken
 
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
+
+    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
+
+    field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
+    field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
   end
 end
