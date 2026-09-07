@@ -1472,6 +1472,19 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#integration_connection" do
+    let(:customer) { create(:customer) }
+    let!(:default_connection) { create(:netsuite_customer, customer:, is_default: true) }
+
+    it "returns the default connection of the category" do
+      expect(customer.integration_connection("accounting")).to eq(default_connection)
+    end
+
+    it "returns nil when no connection is default in the category" do
+      expect(customer.integration_connection("crm")).to be_nil
+    end
+  end
+
   describe "#address_changed?" do
     context "when a billing address field changes" do
       it "returns true" do
