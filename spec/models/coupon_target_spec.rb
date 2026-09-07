@@ -24,6 +24,7 @@ RSpec.describe CouponTarget do
 
         expect(target).not_to be_valid
         expect(target.errors.where(:base, :single_plan_target)).to be_present
+        expect(target.errors.messages[:base]).to eq(["single_plan_target"])
       end
     end
 

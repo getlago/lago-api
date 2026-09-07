@@ -23,6 +23,7 @@ RSpec.describe Plan::AppliedTax do
 
         expect(applied_tax).not_to be_valid
         expect(applied_tax.errors.where(:base, :exactly_one_plan_required)).to be_present
+        expect(applied_tax.errors.messages[:base]).to eq(["exactly_one_plan_required"])
       end
 
       it "rejects neither" do
