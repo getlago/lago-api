@@ -53,13 +53,15 @@ module Invoices
     end
 
     # NOTE: The re-expanded subscription set (matched by external_id) can span several
-    #       purchase order numbers — e.g. a terminated and an active subscription sharing
-    #       an external_id after an upgrade. Each PO must produce its own invoice.
+    #       currencies, billing entities and purchase order numbers — e.g. a terminated and an
+    #       active subscription sharing an external_id after an upgrade. An invoice holds one of
+    #       each, so every (currency, billing entity, PO) must produce its own invoice.
     def create_group_invoices
-      pending_billing_contexts_with_fees.group_by(&:purchase_order_number).values.filter_map do |billing_contexts_group|
-        create_group_invoice(billing_contexts_group)
-      end
-    end
+      pending_billing_contexts_with_fees
+        .group_by { |context| [context.currency, context.applicable_billing_entity_id, context.purchase_order_number] }
+        .values
+        .filter_map { |billing_contexts_group| create_group_invoice(billing_contexts_group) }
+end
 
     def create_group_invoice(billing_contexts_group)
       invoice = nil
@@ -95,10 +97,10 @@ module Invoices
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
-        currency:,
+        currency: billing_contexts_group.first.currency,
         datetime: billing_at, # this is an int we need to convert it
-        billing_entity: billing_contexts.first&.applicable_billing_entity,
-        purchase_order_number: billing_contexts_group.first&.purchase_order_number
+        billing_entity: billing_contexts_group.first.applicable_billing_entity,
+        purchase_order_number: billing_contexts_group.first.purchase_order_number
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceService.call!(
           invoice:,

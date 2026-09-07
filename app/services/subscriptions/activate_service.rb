@@ -143,14 +143,38 @@ module Subscriptions
 
     def bill_rotation_subscriptions(billable_subscriptions, billing_at:, non_invoiceable_subscriptions: [subscription.previous_subscription])
       after_commit do
-        # NOTE: On upgrade/downgrade the previous and new subscriptions may carry different
-        #       purchase order numbers. Split them so each PO produces its own invoice.
-        billable_subscriptions.group_by(&:purchase_order_number).each_value do |subscriptions|
+        group_for_invoicing(billable_subscriptions).each do |subscriptions|
           BillSubscriptionJob.perform_later(subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
         end
-        non_invoiceable_subscriptions.group_by(&:purchase_order_number).each_value do |subscriptions|
+        group_for_invoicing(non_invoiceable_subscriptions).each do |subscriptions|
           BillNonInvoiceableFeesJob.perform_later(subscriptions, billing_at)
         end
+      end
+    end
+
+    def group_for_invoicing(subscriptions)
+      default_payment_method = subscription.customer.default_payment_method
+
+      subscriptions.group_by do |sub|
+        [
+          payment_method_key(sub, default_payment_method),
+          sub.plan.amount_currency,
+          sub.applicable_billing_entity_id,
+          sub.purchase_order_number,
+          sub.consolidate_invoice ? nil : sub.id
+        ]
+      end.values
+    end
+
+    def payment_method_key(sub, default_payment_method)
+      if sub.payment_method_id.present?
+        [sub.payment_method_id, sub.payment_method_type]
+      elsif sub.payment_method_type == "manual"
+        [nil, "manual"]
+      elsif default_payment_method.present?
+        [default_payment_method.id, "provider"]
+      else
+        [nil, sub.payment_method_type]
       end
     end
 
