@@ -253,10 +253,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     end
 
     it "reports why, rather than dropping the event silently" do
-      allow(Rails.logger).to receive(:warn).and_call_original
-      invoke
-
-      expect(Rails.logger).to have_received(:warn).with(/its only subscriptions are incomplete/)
+      expect { invoke }.to output(/its only subscriptions are incomplete/).to_stdout
     end
   end
 
@@ -268,10 +265,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     end
 
     it "reports why" do
-      allow(Rails.logger).to receive(:warn).and_call_original
-      invoke
-
-      expect(Rails.logger).to have_received(:warn).with(/gained a pay-in-advance charge/)
+      expect { invoke }.to output(/gained a pay-in-advance charge/).to_stdout
     end
   end
 
@@ -292,10 +286,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     end
 
     it "reports the disagreement" do
-      allow(Rails.logger).to receive(:warn).and_call_original
-      invoke
-
-      expect(Rails.logger).to have_received(:warn).with(/is not the one post-processing would have used/)
+      expect { invoke }.to output(/is not the one post-processing would have used/).to_stdout
     end
   end
 
@@ -396,10 +387,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     end
 
     it "warns that the replay finalizes invoices and starts payments" do
-      allow(Rails.logger).to receive(:warn).and_call_original
-      invoke
-
-      expect(Rails.logger).to have_received(:warn).with(/creates 1 invoice\(s\)/)
+      expect { invoke }.to output(/creates 1 invoice\(s\)/).to_stdout
     end
 
     # One `Invoices::CreatePayInAdvanceChargeJob` per invoiceable charge, each minting its own
@@ -411,10 +399,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
       end
 
       it "counts one invoice per invoiceable charge" do
-        allow(Rails.logger).to receive(:warn).and_call_original
-        invoke
-
-        expect(Rails.logger).to have_received(:warn).with(/creates 2 invoice\(s\)/)
+        expect { invoke }.to output(/creates 2 invoice\(s\)/).to_stdout
       end
     end
   end
@@ -440,6 +425,10 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     it "skips the event rather than enqueueing a partial replay" do
       expect { invoke }.not_to have_enqueued_job(Events::PayInAdvanceJob)
     end
+  end
+
+  it "reports its progress so a long run is visibly advancing" do
+    expect { invoke }.to output(/1\/1 scanned in \d+(\.\d+)?s/).to_stdout
   end
 
   context "when the events span several batches" do
