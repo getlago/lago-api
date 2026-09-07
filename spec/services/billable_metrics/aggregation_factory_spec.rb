@@ -23,7 +23,7 @@ RSpec.describe BillableMetrics::AggregationFactory do
 
   let(:current_usage) { false }
 
-  let(:result) { factory.new_instance(charge:, current_usage:, subscription:, boundaries:) }
+  let(:result) { factory.new_instance(charge:, current_usage:, context: Events::Stores::EventContext.from(subscription:), boundaries:) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do

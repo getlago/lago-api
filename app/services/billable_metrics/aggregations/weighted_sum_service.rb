@@ -101,7 +101,7 @@ module BillableMetrics
           return @latest_value = latest_cached_aggregation.current_aggregation
         end
 
-        if subscription.previous_subscription_id?
+        if context.previous_subscription_id?
           return @latest_value = latest_value_from_events.first
         end
 
@@ -115,7 +115,7 @@ module BillableMetrics
           return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
         end
 
-        if subscription.previous_subscription_id?
+        if context.previous_subscription_id?
           return @latest_breakdowns = latest_value_from_events.second
         end
 
@@ -135,7 +135,7 @@ module BillableMetrics
 
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: subscription.external_id)
+          .where(external_subscription_id: context.external_id)
           .where(charge_id: charge.id)
           .where(timestamp: ...from_datetime)
           .order(timestamp: :desc, created_at: :desc)
@@ -152,7 +152,7 @@ module BillableMetrics
 
         event_store = event_store_class.new(
           code: billable_metric.code,
-          subscription:,
+          context:,
           boundaries: {to_datetime: from_datetime - 1.second},
           filters:
         )
@@ -178,7 +178,7 @@ module BillableMetrics
           end
         end
 
-        if subscription.previous_subscription_id?
+        if context.previous_subscription_id?
           return @grouped_latest_values = grouped_latest_values_from_events.first
         end
 
@@ -192,7 +192,7 @@ module BillableMetrics
           return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map(&:presentation_breakdowns)
         end
 
-        if subscription.previous_subscription_id?
+        if context.previous_subscription_id?
           return @grouped_latest_breakdowns = grouped_latest_values_from_events.second
         end
 
@@ -214,7 +214,7 @@ module BillableMetrics
       def grouped_latest_values_from_events
         event_store = event_store_class.new(
           code: billable_metric.code,
-          subscription:,
+          context:,
           boundaries: {to_datetime: from_datetime - 1.second},
           filters:
         )

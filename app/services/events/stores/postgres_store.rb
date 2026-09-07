@@ -4,8 +4,8 @@ module Events
   module Stores
     class PostgresStore < BaseStore
       def events(force_from: false, ordered: false)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
+        scope = Event.where(external_subscription_id: context.external_id)
+          .where(organization_id: context.organization.id)
           .where(code:)
 
         scope = scope.order(timestamp: :asc) if ordered
@@ -28,8 +28,8 @@ module Events
       # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
       def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
         lower_bound = include_all_history ? nil : from_datetime
-        scope = EnrichedEvent.where(organization_id: subscription.organization_id)
-          .where(subscription_id: subscription.id)
+        scope = EnrichedEvent.where(organization_id: context.organization_id)
+          .where(subscription_id: context.id)
           .where(timestamp: lower_bound..to_datetime)
 
         scope = scope.where(code: codes) unless codes.nil?
@@ -46,8 +46,8 @@ module Events
       # with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
       # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
       def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization_id)
+        scope = Event.where(external_subscription_id: context.external_id)
+          .where(organization_id: context.organization_id)
           .where(code: codes)
           .to_datetime(applicable_to_datetime)
         scope = scope.from_datetime(from_datetime) unless include_all_history
