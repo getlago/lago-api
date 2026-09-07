@@ -72,7 +72,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -1190,6 +1190,21 @@ type CashfreeProvider {
   id: ID!
   name: String!
   successRedirectUrl: String
+}
+
+"""
+A product-catalog plan
+"""
+type CatalogPlan {
+  code: String!
+  createdAt: ISO8601DateTime!
+  currency: CurrencyEnum!
+  description: String
+  id: ID!
+  invoiceDisplayName: String
+  name: String!
+  organization: Organization
+  updatedAt: ISO8601DateTime!
 }
 
 type Charge {
@@ -8194,7 +8209,7 @@ type Mutation {
     Parameters for CreateCatalogPlan
     """
     input: CreateCatalogPlanInput!
-  ): Plan
+  ): CatalogPlan
 
   """
   Creates a new Charge for a Plan
@@ -9684,7 +9699,7 @@ type Mutation {
     Parameters for UpdateCatalogPlan
     """
     input: UpdateCatalogPlanInput!
-  ): Plan
+  ): CatalogPlan
 
   """
   Updates an existing Charge
@@ -13045,6 +13060,11 @@ enum ResourceTypeEnum {
   BillingEntity
   """
   billing_entity
+
+  """
+  CatalogPlan
+  """
+  catalog_plan
 
   """
   Coupon

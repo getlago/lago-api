@@ -11,18 +11,8 @@ class Plan
     belongs_to :tax
     belongs_to :organization
 
-    validate :exactly_one_plan
-
-    private
-
     # A tax applies to exactly one plan, legacy or catalog.
-    def exactly_one_plan
-      has_plan = plan_id.present? || plan.present?
-      has_catalog_plan = catalog_plan_id.present? || catalog_plan.present?
-      return if has_plan ^ has_catalog_plan
-
-      errors.add(:base, :exactly_one_plan_required)
-    end
+    validates_with ParentPresenceValidator, parents: %i[plan catalog_plan], error: :exactly_one_plan_required
   end
 end
 

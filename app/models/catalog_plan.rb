@@ -24,6 +24,10 @@ class CatalogPlan < ApplicationRecord
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
 
   default_scope -> { kept }
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
 end
 
 # == Schema Information

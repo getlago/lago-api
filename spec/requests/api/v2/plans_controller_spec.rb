@@ -12,7 +12,7 @@ RSpec.describe Api::V2::PlansController do
 
     include_examples "requires API permission", "plan", "write"
 
-    it "creates a catalog plan without any legacy pricing field" do
+    it "creates a catalog plan" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -20,7 +20,18 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plan][:currency]).to eq("USD")
       expect(json[:plan]).not_to have_key(:interval)
       expect(json[:plan]).not_to have_key(:amount_cents)
-      expect(Plan.find(json[:plan][:lago_id])).to be_product_catalog
+      expect(CatalogPlan.find(json[:plan][:lago_id])).to be_present
+    end
+
+    context "when the payload is invalid" do
+      let(:create_params) { {name: "Growth", code: "growth", currency: "INVALID"} }
+
+      it "returns the validation error on the currency field" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:currency]).to be_present
+      end
     end
 
     context "when the organization is not on the product catalog", product_catalog: false do
@@ -36,9 +47,9 @@ RSpec.describe Api::V2::PlansController do
   end
 
   describe "PUT /api/v2/plans/:code" do
-    subject { put_with_token(organization, "/api/v2/plans/#{plan.code}", {plan: {name: "After"}}) }
+    subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", {plan: {name: "After"}}) }
 
-    let(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
 
     include_examples "requires API permission", "plan", "write"
 
@@ -49,24 +60,21 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plan][:name]).to eq("After")
     end
 
-    context "when changing the currency of a plan holding applied rate cards" do
-      subject { put_with_token(organization, "/api/v2/plans/#{plan.code}", {plan: {currency: "USD"}}) }
+    context "when the plan does not exist" do
+      subject { put_with_token(organization, "/api/v2/plans/unknown", {plan: {name: "After"}}) }
 
-      before { create(:plan_rate_card, organization:, plan:) }
-
-      it "rejects the change on the v2 field name" do
+      it "returns a not found error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:currency]).to eq(["not_editable_with_applied_rate_cards"])
+        expect(response).to be_not_found_error("plan")
       end
     end
   end
 
   describe "GET /api/v2/plans/:code" do
-    subject { get_with_token(organization, "/api/v2/plans/#{plan.code}") }
+    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}") }
 
-    let(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
 
     include_examples "requires API permission", "plan", "read"
 
@@ -74,9 +82,19 @@ RSpec.describe Api::V2::PlansController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:plan][:lago_id]).to eq(plan.id)
+      expect(json[:plan][:lago_id]).to eq(catalog_plan.id)
       expect(json[:plan][:applied_rate_cards_count]).to eq(0)
       expect(json[:plan]).not_to have_key(:interval)
+    end
+
+    context "when the plan does not exist" do
+      subject { get_with_token(organization, "/api/v2/plans/unknown") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("plan")
+      end
     end
   end
 
@@ -84,19 +102,18 @@ RSpec.describe Api::V2::PlansController do
     subject { get_with_token(organization, "/api/v2/plans", params) }
 
     let(:params) { {} }
-    let!(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
+    let!(:catalog_plan) { create(:catalog_plan, organization:) }
 
     include_examples "requires API permission", "plan", "read"
 
-    it "lists catalog plans with the catalog shape" do
-      create(:plan, organization:)
-      create(:plan, pricing_type: "product_catalog")
+    it "lists the organization catalog plans" do
+      create(:catalog_plan)
 
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:plans].map { it[:lago_id] }).to eq([plan.id])
-      expect(json[:plans].first[:currency]).to eq(plan.amount_currency)
+      expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
+      expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
       expect(json[:plans].first).not_to have_key(:interval)
       expect(json[:meta][:total_count]).to eq(1)
     end
@@ -104,7 +121,7 @@ RSpec.describe Api::V2::PlansController do
     context "with pagination" do
       let(:params) { {page: 2, per_page: 1} }
 
-      before { create(:plan, organization:, pricing_type: "product_catalog", code: "second") }
+      before { create(:catalog_plan, organization:, code: "second") }
 
       it "paginates the catalog plans" do
         subject
@@ -125,6 +142,27 @@ RSpec.describe Api::V2::PlansController do
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
       end
+    end
+  end
+
+  # A plan created through this surface is a CatalogPlan, while the nested
+  # applied_rate_cards routes still resolve their parent as a legacy Plan. Until
+  # a later slice repoints the pricing tables onto CatalogPlan, attaching a rate
+  # card to a plan born here cleanly reports the parent as not found.
+  describe "attaching a rate card to a catalog plan" do
+    let(:rate_card) { create(:rate_card, organization:) }
+
+    it "does not find the parent plan yet" do
+      post_with_token(organization, "/api/v2/plans", {plan: {name: "Growth", code: "growth", currency: "USD"}})
+      expect(response).to have_http_status(:success)
+
+      post_with_token(
+        organization,
+        "/api/v2/plans/growth/applied_rate_cards",
+        {applied_rate_card: {rate_card_code: rate_card.code}}
+      )
+
+      expect(response).to be_not_found_error("plan")
     end
   end
 end

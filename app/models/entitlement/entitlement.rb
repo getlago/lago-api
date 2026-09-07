@@ -15,20 +15,9 @@ module Entitlement
     belongs_to :subscription, optional: true
     has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_entitlement_id, dependent: :destroy
 
-    validate :exactly_one_parent_present
-
-    private
-
-    def exactly_one_parent_present
-      parents = [
-        plan_id.present? || plan.present?,
-        catalog_plan_id.present? || catalog_plan.present?,
-        subscription_id.present? || subscription.present?
-      ]
-      return if parents.count(true) == 1
-
-      errors.add(:base, "one_of_plan_or_subscription_required")
-    end
+    validates_with ParentPresenceValidator,
+      parents: %i[plan catalog_plan subscription],
+      error: "one_of_plan_or_subscription_required"
   end
 end
 
