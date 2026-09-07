@@ -108,12 +108,14 @@ RSpec.describe Api::V2::PlansController do
 
     it "lists the organization catalog plans" do
       create(:catalog_plan)
+      create_list(:plan_rate_card, 2, organization:, catalog_plan:)
 
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
       expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
+      expect(json[:plans].first[:applied_rate_cards_count]).to eq(2)
       expect(json[:plans].first).not_to have_key(:interval)
       expect(json[:meta][:total_count]).to eq(1)
     end
