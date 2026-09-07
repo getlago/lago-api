@@ -271,6 +271,55 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  describe "#for_window" do
+    it "mints a sibling store for another window" do
+      sibling = event_store.for_window(to_datetime: boundaries[:from_datetime] - 1.second)
+
+      expect(sibling).to be_an_instance_of(described_class)
+      expect(sibling).not_to be(event_store)
+      expect(sibling.code).to eq(event_store.code)
+      expect(sibling.subscription).to eq(event_store.subscription)
+      expect(sibling.filters).to eq(event_store.filters)
+      expect(sibling.deduplicate).to eq(event_store.deduplicate)
+      expect(sibling.boundaries).to eq({to_datetime: boundaries[:from_datetime] - 1.second})
+    end
+
+    it "aggregates the same property as the store it was minted from" do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.aggregation_property).to eq("value")
+      expect(sibling.numeric_property).to be(true)
+    end
+
+    it "leaves use_from_boundary to the caller, which declares what the window means" do
+      event_store.use_from_boundary = false
+
+      expect(event_store.for_window(to_datetime: boundaries[:to_datetime]).use_from_boundary).to be(true)
+    end
+
+    it "deduplicates like the store it was minted from" do
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.deduplicate).to eq(event_store.deduplicate)
+    end
+
+    it "forwards the boundaries it was given, whatever keys they carry" do
+      sibling = event_store.for_window(**boundaries)
+
+      expect(sibling.boundaries).to eq(boundaries)
+    end
+
+    it "narrows the filters when asked to" do
+      sibling = event_store.for_window(**boundaries, filters: event_store.filters.merge(grouped_by_values: {"region" => "europe"}))
+
+      expect(sibling.boundaries).to eq(boundaries)
+      expect(sibling.grouped_by_values).to eq({"region" => "europe"})
+    end
+  end
+
   if include_feature?(:count)
     describe "#count" do
       it "returns the number of unique events" do

@@ -126,12 +126,7 @@ module BillableMetrics
         #       of the group
         store = event_store
         if grouped_by_values
-          store = event_store_class.new(
-            code: billable_metric.code,
-            subscription:,
-            boundaries:,
-            filters: filters.merge(grouped_by_values:)
-          )
+          store = event_store.for_window(**boundaries, filters: filters.merge(grouped_by_values:))
         end
 
         # NOTE: Loop over events by batch

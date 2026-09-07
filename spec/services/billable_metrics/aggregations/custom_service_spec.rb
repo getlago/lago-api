@@ -5,19 +5,20 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Aggregations::CustomService do
   subject(:custom_service) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       charge:,
       subscription:,
-      boundaries: {
-        from_datetime:,
-        to_datetime:
-      },
+      boundaries:,
       filters:,
       bypass_aggregation:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:boundaries) { {from_datetime:, to_datetime:} }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, subscription:, boundaries:, filters:)
+  end
   let(:bypass_aggregation) { false }
   let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
 

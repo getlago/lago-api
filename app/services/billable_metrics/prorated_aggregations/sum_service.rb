@@ -7,7 +7,12 @@ module BillableMetrics
 
       def initialize(**args)
         super
-        @base_aggregator = BillableMetrics::Aggregations::SumService.new(**args)
+        # NOTE: the base aggregator gets its own store instance for the same window: both
+        #       aggregators write their own per-charge state into the store they hold, and
+        #       `use_from_boundary` differs between them.
+        @base_aggregator = BillableMetrics::Aggregations::SumService.new(
+          **args.merge(event_store: event_store.for_window(**boundaries))
+        )
         @base_aggregator.result = result
 
         event_store.numeric_property = true
@@ -146,18 +151,11 @@ module BillableMetrics
 
       def persisted_event_store_instance
         @persisted_event_store_instance ||= begin
-          event_store = event_store_class.new(
-            code: billable_metric.code,
-            subscription:,
-            boundaries: {to_datetime: from_datetime - PERSISTED_TOP_BOUNDARY_DELAY}, # Note: Avoid counting events exactly on `from_datetime` twice
-            filters:,
-            deduplicate: deduplicate?
-          )
+          # Note: Avoid counting events exactly on `from_datetime` twice
+          store = event_store.for_window(to_datetime: from_datetime - PERSISTED_TOP_BOUNDARY_DELAY)
 
-          event_store.use_from_boundary = false
-          event_store.aggregation_property = billable_metric.field_name
-          event_store.numeric_property = true
-          event_store
+          store.use_from_boundary = false
+          store
         end
       end
 
