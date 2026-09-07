@@ -44,6 +44,10 @@ class ContractRateCard < ApplicationRecord
     )
   }
 
+  def edit_error_code
+    "contract_locked" unless contract.editable?
+  end
+
   private
 
   def validate_effective_before_ended

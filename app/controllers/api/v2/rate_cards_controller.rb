@@ -115,6 +115,7 @@ module Api
           :regroup_paid_fees,
           :applied_pricing_unit_code,
           :wallet_targetable,
+          tax_codes: [],
           rates: [
             :code,
             :effective_from,
@@ -139,12 +140,13 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable
+          :wallet_targetable,
+          tax_codes: []
         )
       end
 
       def render_rate_card(rate_card)
-        render(json: ::V1::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate]))
+        render(json: ::V1::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate taxes]))
       end
 
       def resource_name

@@ -7,7 +7,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     described_class.new(
       event_store_class:,
       charge:,
-      subscription:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries: {
         from_datetime:,
         to_datetime:,
@@ -831,7 +831,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         described_class.new(
           event_store_class:,
           charge:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime:,
             to_datetime:,
@@ -871,7 +871,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         described_class.new(
           event_store_class:,
           charge:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime:,
             to_datetime:,
