@@ -113,32 +113,28 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     end
   end
 
-  context "when a sum result is injected" do
-    let(:injected_sum_result) { Events::Stores::BaseStore::AggregationResult.new(value: 999, events_count: 7) }
+  context "when a precomputed aggregation is passed" do
+    let(:precomputed_aggregation) { Events::Stores::BaseStore::AggregationResult.new(value: 999, events_count: 7) }
 
-    before { sum_service.injected_sum_result = injected_sum_result }
-
-    it "uses the injected result instead of querying the event store" do
-      result = sum_service.aggregate(options: {})
+    it "uses it instead of querying the event store" do
+      result = sum_service.aggregate(options: {precomputed_aggregation:})
 
       expect(result.aggregation).to eq(999)
       expect(result.count).to eq(7)
     end
   end
 
-  context "when a grouped sum result is injected" do
+  context "when precomputed grouped aggregations are passed" do
     let(:grouped_by) { %w[region] }
-    let(:injected_grouped_sum_result) do
+    let(:precomputed_grouped_aggregations) do
       [
         Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "us"}, value: 100, events_count: 3),
         Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "eu"}, value: 50, events_count: 2)
       ]
     end
 
-    before { sum_service.injected_grouped_sum_result = injected_grouped_sum_result }
-
-    it "builds the group results from the injected values" do
-      result = sum_service.aggregate(options: {})
+    it "builds the group results from them" do
+      result = sum_service.aggregate(options: {precomputed_grouped_aggregations:})
 
       expect(result.aggregations.map { |agg| [agg.grouped_by, agg.aggregation, agg.count] }).to match_array(
         [
@@ -148,11 +144,11 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       )
     end
 
-    context "when the injected grouped result is blank" do
-      let(:injected_grouped_sum_result) { [] }
+    context "when they are blank" do
+      let(:precomputed_grouped_aggregations) { [] }
 
       it "returns empty results" do
-        result = sum_service.aggregate(options: {})
+        result = sum_service.aggregate(options: {precomputed_grouped_aggregations:})
 
         expect(result.aggregations.map(&:aggregation)).to eq([0])
       end

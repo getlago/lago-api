@@ -276,6 +276,49 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
     end
   end
 
+  context "when a precomputed aggregation is passed" do
+    let(:precomputed_aggregation) { Events::Stores::BaseStore::AggregationResult.new(value: 999, events_count: 999) }
+
+    it "uses it instead of querying the event store" do
+      result = count_service.aggregate(options: {precomputed_aggregation:})
+
+      expect(result.aggregation).to eq(999)
+      expect(result.count).to eq(999)
+      expect(result.current_usage_units).to eq(999)
+    end
+  end
+
+  context "when precomputed grouped aggregations are passed" do
+    let(:grouped_by) { %w[region] }
+    let(:precomputed_grouped_aggregations) do
+      [
+        Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "us"}, value: 3, events_count: 3),
+        Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "eu"}, value: 2, events_count: 2)
+      ]
+    end
+
+    it "builds the group results from them" do
+      result = count_service.aggregate(options: {precomputed_grouped_aggregations:})
+
+      expect(result.aggregations.map { |agg| [agg.grouped_by, agg.aggregation, agg.count] }).to match_array(
+        [
+          [{"region" => "us"}, 3, 3],
+          [{"region" => "eu"}, 2, 2]
+        ]
+      )
+    end
+
+    context "when they are blank" do
+      let(:precomputed_grouped_aggregations) { [] }
+
+      it "returns empty results" do
+        result = count_service.aggregate(options: {precomputed_grouped_aggregations:})
+
+        expect(result.aggregations.map(&:aggregation)).to eq([0])
+      end
+    end
+  end
+
   describe ".per_event_aggregation" do
     it "aggregates per events" do
       result = count_service.per_event_aggregation

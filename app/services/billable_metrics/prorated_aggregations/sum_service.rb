@@ -22,9 +22,10 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return base_aggregator.aggregate(options:) if bill_full_amount?(options)
 
-        # NOTE: Inject the result in the non-prorated aggregator to avoid duplicated queries
-        base_aggregator.injected_sum_result = non_prorated_sum_result
-        aggregation_without_proration = base_aggregator.aggregate(options:)
+        # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries
+        aggregation_without_proration = base_aggregator.aggregate(
+          options: options.merge(precomputed_aggregation: non_prorated_sum_result)
+        )
 
         aggregation = compute_event_aggregation.ceil(5)
         result.full_units_number = aggregation_without_proration.aggregation if event.nil?
@@ -65,9 +66,10 @@ module BillableMetrics
       def compute_grouped_by_aggregation(options: {})
         return base_aggregator.aggregate(options:) if bill_full_amount?(options)
 
-        # NOTE: Inject the result in the non-prorated aggregator to avoid duplicated queries
-        base_aggregator.injected_grouped_sum_result = non_prorated_grouped_sum_result
-        aggregation_without_proration = base_aggregator.aggregate(options:)
+        # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries
+        aggregation_without_proration = base_aggregator.aggregate(
+          options: options.merge(precomputed_grouped_aggregations: non_prorated_grouped_sum_result)
+        )
 
         aggregations = compute_grouped_event_aggregation
         return empty_results if aggregations.blank?

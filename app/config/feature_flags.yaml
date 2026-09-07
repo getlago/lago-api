@@ -38,6 +38,10 @@ product_catalog:
   description: "Use the product catalog (billing v2): product_categories, products, rate cards and plan rate phases"
   owners: ["@rsempe"]
 
+realtime_usage:
+  description: "Serve count and sum current usage from the pre-aggregated ClickHouse usage buckets instead of aggregating raw events"
+  owners: ["@vincent-pochet"]
+
 skip_credit_invoice_auto_payment_delay:
   description: "Trigger the auto-payment of credit invoices (wallet top-ups) immediately instead of delaying it behind a possible hosted checkout payment"
   owners: ["@brunomiguelpinto"]

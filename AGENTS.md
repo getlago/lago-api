@@ -27,6 +27,16 @@ You must use the `rails` cli in the container too, for example: `lago exec api b
     this
     ```
 
+## Comments
+
+- Do not comment code that speaks for itself. Needing a comment to explain *what* the code
+  does usually means the code is too complex: rename it or extract it instead.
+- Only comment to record a *why* the reader cannot get from the code: a non-obvious
+  external constraint, a deliberate trade-off, a bug being worked around.
+- Keep it to one or two lines. Long rationale belongs in the commit message, the PR
+  description or a doc, not in the source.
+- Never restate the class or method name as prose above it.
+
 # Commit Messages
 
 All commit messages must follow the Conventional Commits specification:
@@ -187,6 +197,7 @@ To create a webhook:
 - `LAGO_ENABLE_YJIT` — when true, enables YJIT (`config.yjit`). Disabled by default. Example: `LAGO_ENABLE_YJIT=true`
 - `SIDEKIQ_WALLETS` — when true, wallet jobs (e.g. `Customers::RefreshWalletJob`) are routed to the `wallets` queue, processed by the dedicated wallet worker (`scripts/start.wallets.worker.sh`). Example: `SIDEKIQ_WALLETS=true`
 - `SIDEKIQ_AI_AGENT` — when true, AI conversation jobs (`AiConversations::StreamJob`) are routed to the `ai_agent` queue. Example: `SIDEKIQ_AI_AGENT=true`
+- `LAGO_REALTIME_USAGE_ENABLED` — when true, allows current usage to be served from the pre-aggregated ClickHouse usage buckets. The value is cast as a boolean, so `false` or `0` disables serving. Deployment-wide kill switch: serving also requires a premium license, `LAGO_CLICKHOUSE_ENABLED`, the organization reading the ClickHouse events store, and the per-organization `realtime_usage` feature flag. Example: `LAGO_REALTIME_USAGE_ENABLED=true`
 - `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
 - `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
