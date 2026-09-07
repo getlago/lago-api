@@ -13,7 +13,7 @@ module Mutations
       description "Updates an existing catalog plan"
 
       input_object_class Types::CatalogPlans::UpdateInput
-      type Types::Plans::Object
+      type Types::CatalogPlans::Object
 
       def resolve(**args)
         catalog_plan = current_organization.catalog_plans.find_by(id: args[:id])

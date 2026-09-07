@@ -13,7 +13,7 @@ module Mutations
       description "Creates a new catalog plan"
 
       input_object_class Types::CatalogPlans::CreateInput
-      type Types::Plans::Object
+      type Types::CatalogPlans::Object
 
       def resolve(**args)
         result = ::CatalogPlans::CreateService.call(args.merge(organization_id: current_organization.id))
