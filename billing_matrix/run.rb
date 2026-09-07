@@ -78,7 +78,7 @@ module BillingMatrix
       results.write!(@options[:out])
 
       report(results, rows.size)
-      results.summary[:canaries_broken].zero? ? EXIT_OK : EXIT_CANARY_BROKEN
+      trustworthy_exit(results, rows)
     rescue Error, Errno::ENOENT => e
       abort_harness(e.message)
     end
@@ -155,15 +155,38 @@ module BillingMatrix
       warn format("%s %6.1fs  %s", mark, duration_ms / 1000.0, row.id)
     end
 
+    # A canary that did not fail is a canary that asserted nothing, whether it passed or
+    # blew up on the way. Both make the run unusable, so both exit 2. Selecting a subset of
+    # rows by hand legitimately runs no canaries at all — that is a debugging run, and it
+    # says so rather than claiming a verdict it cannot support.
+    def trustworthy_exit(results, rows)
+      return EXIT_OK if results.trustworthy?
+
+      if results.summary[:canaries_total].zero?
+        warn ""
+        warn "No canaries ran, so nothing here is vouched for. Run the full corpus before " \
+             "treating any of this as a result."
+        return rows.any?(&:canary) ? EXIT_CANARY_BROKEN : EXIT_OK
+      end
+
+      EXIT_CANARY_BROKEN
+    end
+
     def report(results, count)
       s = results.summary
       warn ""
       warn "#{count} rows  ·  #{s[:passed]} passed  ·  #{s[:failed]} failed  ·  #{s[:errored]} errored"
       warn "results: #{@options[:out]}"
-      return if s[:canaries_broken].zero?
+      return if s[:canaries_unproven].zero?
 
       warn ""
-      warn "#{s[:canaries_broken]} canary/canaries PASSED, which means they no longer assert anything."
+      if s[:canaries_broken].positive?
+        warn "#{s[:canaries_broken]} canary/canaries PASSED, which means they no longer assert anything."
+      end
+      errored_canaries = s[:canaries_unproven] - s[:canaries_broken]
+      if errored_canaries.positive?
+        warn "#{errored_canaries} canary/canaries never got as far as asserting anything."
+      end
       warn "This run proves nothing. Fix the assertion mechanism before trusting any result above."
     end
 

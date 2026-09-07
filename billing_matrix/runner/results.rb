@@ -27,7 +27,7 @@ module BillingMatrix
   class Results
     VERDICTS = %i[passed failed errored canary_broken].freeze
 
-    Row = Struct.new(:id, :area, :verdict, :duration_ms, :mismatches, :error, keyword_init: true)
+    Row = Struct.new(:id, :area, :canary, :verdict, :duration_ms, :mismatches, :error, keyword_init: true)
 
     def initialize
       @rows = []
@@ -40,6 +40,7 @@ module BillingMatrix
       @rows << Row.new(
         id: row.id,
         area: row.area,
+        canary: !row.canary.nil?,
         verdict: apply_canary_semantics(row, verdict),
         duration_ms: duration_ms,
         mismatches: mismatches,
@@ -54,13 +55,31 @@ module BillingMatrix
       @rows.find { |row| row.id == id }&.verdict
     end
 
+    # A canary is proven only by failing its assertion, which records as :passed here.
+    # Anything else — it errored, or it passed and got flipped to :canary_broken — means
+    # the mechanism it guards was never exercised this run.
+    #
+    # Counting only :canary_broken was not enough: a run against an unmigrated database
+    # errored every row, left canaries_broken at zero, and reported a green build. A run
+    # in which no canary actually failed proves nothing, however the canaries got there.
     def summary
       {
         passed: count(:passed),
         failed: count(:failed),
         errored: count(:errored),
-        canaries_broken: count(:canary_broken)
+        canaries_broken: count(:canary_broken),
+        canaries_total: canaries.size,
+        canaries_unproven: canaries.count { _1.verdict != :passed }
       }
+    end
+
+    def canaries
+      @rows.select(&:canary)
+    end
+
+    # The single question the rest of the pipeline asks: may today's verdicts be believed?
+    def trustworthy?
+      canaries.any? && summary[:canaries_unproven].zero?
     end
 
     def write!(path)

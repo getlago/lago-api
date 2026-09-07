@@ -79,13 +79,24 @@ module BillingMatrix
     # A canary that passed means an assertion mechanism has died. Every verdict in the
     # file was produced by machinery we can no longer vouch for, so the ledger must not
     # move and the report must not pretend to be news.
+    # Any canary that did not fail — it passed, or it errored before asserting — leaves the
+    # run unvouched for. A results file with no canaries at all is a hand-filtered debugging
+    # run and must never move the ledger either.
     def void?
-      summary.fetch("canaries_broken", 0).positive?
+      summary.fetch("canaries_unproven", 0).positive? ||
+        summary.fetch("canaries_total", 0).zero? ||
+        summary.fetch("canaries_broken", 0).positive?
     end
 
     def void_run
-      warn "ledger: refusing to apply — #{summary["canaries_broken"]} canary/canaries passed, " \
-           "so this run's verdicts prove nothing. Fix the assertion mechanism and re-run."
+      reason =
+        if summary.fetch("canaries_total", 0).zero?
+          "this run contains no canaries, so none of its verdicts are vouched for"
+        else
+          "#{summary["canaries_unproven"]} of #{summary["canaries_total"]} canaries did not " \
+            "fail as designed, so this run's verdicts prove nothing"
+        end
+      warn "ledger: refusing to apply — #{reason}. Fix the assertion mechanism and re-run."
       EXIT_VOID
     end
 
