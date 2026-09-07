@@ -445,6 +445,30 @@ RSpec.describe Events::BillingPeriodFilterService do
         .with(resolver: an_instance_of(Events::BillingPeriodFilters::BillingSegmentsResolver))
     end
 
+    context "when event pre-filtering is enabled" do
+      let(:organization) { create(:organization, pre_filter_events: true) }
+
+      it "fails explicitly instead of falling back to raw events" do
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_call_original
+
+        expect { filter_result }.to raise_error(
+          NotImplementedError,
+          "Pre-enriched billing segment filtering requires product-aware enrichment and store lookups"
+        )
+        expect(Events::Stores::StoreFactory).not_to have_received(:new_instance)
+      end
+
+      context "without billing segments" do
+        subject(:filter_result) do
+          described_class.for_billing_segments!(contract:, billing_segments: [])
+        end
+
+        it "still surfaces the unsupported configuration" do
+          expect { filter_result }.to raise_error(NotImplementedError, /product-aware enrichment/)
+        end
+      end
+    end
+
     context "with events matching billing segment products" do
       before do
         create(
@@ -537,6 +561,108 @@ RSpec.describe Events::BillingPeriodFilterService do
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
           .with(codes: [billable_metric.code], filter_keys: ["region"], with_last_seen_at: true)
+      end
+    end
+
+    context "with recurring product usage" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+
+      it "seeds the default bucket without events" do
+        expect(filter_result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
+      end
+
+      it "uses the combined period start for segments sharing a product" do
+        later_segment = create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+          cycle_started_at: billing_segment.cycle_started_at + 1.month,
+          started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
+
+        result = described_class.for_billing_segments!(contract:, billing_segments: [later_segment, billing_segment])
+
+        expect(result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
+      end
+
+      context "with product filters" do
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+
+        before do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+        end
+
+        it "seeds current filters and the default bucket without events" do
+          expect(filter_result.filter_targets).to eq({product.target_key => {
+            product_filter.id => billing_segment.started_at,
+            nil => billing_segment.started_at
+          }})
+        end
+
+        context "with a backdated event ingested after the period start" do
+          let(:ingested_at) { billing_segment.started_at + 2.days }
+
+          before do
+            create(:event, organization_id: organization.id, external_subscription_id: contract.external_id,
+              code: billable_metric.code, properties: {"region" => "eu"},
+              timestamp: billing_segment.started_at - 1.month, created_at: ingested_at)
+          end
+
+          it "updates the historical usage bucket with the ingestion timestamp" do
+            expect(filter_result.filter_targets).to eq({product.target_key => {
+              product_filter.id => ingested_at,
+              nil => billing_segment.started_at
+            }})
+          end
+
+          context "when timestamp aggregation is disabled" do
+            subject(:filter_result) do
+              described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], with_last_seen_at: false)
+            end
+
+            it "retains the seeded timestamps" do
+              expect(filter_result.filter_targets).to eq({product.target_key => {
+                product_filter.id => billing_segment.started_at,
+                nil => billing_segment.started_at
+              }})
+            end
+          end
+        end
+      end
+
+      it "separates period-only codes from recurring history and forwards timestamp options" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        described_class.for_billing_segments!(contract:, billing_segments: [billing_segment],
+          codes: [billable_metric.code, "other_code"], with_last_seen_at: false)
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: ["other_code"], filter_keys: [], with_last_seen_at: false)
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [], include_all_history: true, with_last_seen_at: false)
+      end
+
+      it "does not seed recurring products excluded by explicit codes" do
+        result = described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
+
+        expect(result.filter_targets).to eq({})
+      end
+
+      it "ignores events after the segment end" do
+        create(:event, organization_id: organization.id, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: billing_segment.ended_at + 1.day,
+          created_at: billing_segment.ended_at + 2.days)
+
+        expect(filter_result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
+      end
+    end
+
+    context "with non-recurring usage before the segment start" do
+      before do
+        create(:event, organization_id: organization.id, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: billing_segment.started_at - 1.day)
+      end
+
+      it "does not carry historical usage forward" do
+        expect(filter_result.filter_targets).to eq({})
       end
     end
 

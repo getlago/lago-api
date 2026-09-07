@@ -10,14 +10,6 @@ module Events
         @with_last_seen_at = with_last_seen_at
       end
 
-      def filter_targets
-        if organization.pre_filter_events?
-          filter_targets_from_pre_enriched_events
-        else
-          filter_targets_from_events
-        end
-      end
-
       private
 
       attr_reader :subscription, :boundaries, :codes, :with_last_seen_at
@@ -41,55 +33,15 @@ module Events
 
       # A code outside of the plan matches no event, so codes is used as is: dropping it would leave
       # its charge out of the result, billed as zero units instead of surfaced.
-      def plan_codes
-        @plan_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
-      end
-
-      def filter_targets_from_events
-        combinations = event_store.distinct_codes_and_property_combinations(
-          codes: non_recurring_plan_codes,
-          filter_keys: billable_metric_filter_keys,
-          with_last_seen_at:
-        )
-
-        # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
-        # for prior periods.
-        if recurring_plan_codes.any?
-          combinations += event_store.distinct_codes_and_property_combinations(
-            codes: recurring_plan_codes,
-            filter_keys: billable_metric_filter_keys,
-            include_all_history: true,
-            with_last_seen_at:
-          )
-        end
-
-        filter_targets_from_combinations(
-          combinations:,
-          targets: charges_with_events(combinations.map(&:first).uniq),
-          result: recurring_event_filter_targets
-        )
+      def metric_codes
+        @metric_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
       end
 
       def filter_target_for(charge)
         Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
       end
 
-      def recurring_event_filter_targets
-        result = {}
-
-        current_recurring_charges.each do |charge|
-          if charge.filters.any?
-            charge.filters.each { |filter| record(result, charge.target_key, filter.id, period_start) }
-          else
-            record(result, charge.target_key, nil, period_start)
-          end
-        end
-
-        result.each_key { |target_key| record(result, target_key, nil, period_start) }
-        result
-      end
-
-      def charges_with_events(codes)
+      def targets_with_events(codes)
         plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {code: codes})
@@ -98,22 +50,14 @@ module Events
 
       def billable_metric_filter_keys
         @billable_metric_filter_keys ||= BillableMetricFilter
-          .where(billable_metric_id: plan.billable_metrics.where(code: plan_codes).select(:id))
+          .where(billable_metric_id: plan.billable_metrics.where(code: metric_codes).select(:id))
           .distinct
           .pluck(:key)
       end
 
       def filter_targets_from_pre_enriched_events
-        values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes, with_last_seen_at:)
-
-        # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
-        # for prior periods.
-        if recurring_plan_codes.any?
-          values += event_store.distinct_charges_and_filters(
-            codes: recurring_plan_codes,
-            include_all_history: true,
-            with_last_seen_at:
-          )
+        values = event_values_with_history do |**options|
+          event_store.distinct_charges_and_filters(**options)
         end
 
         charge_filter_ids = values.map { |v| v[1] }.reject(&:blank?)
@@ -168,7 +112,7 @@ module Events
         previous_bm_ids = previous_subscriptions_billable_metric_ids
         return result if previous_bm_ids.empty?
 
-        current_recurring_charges.each do |charge|
+        current_recurring_targets.each do |charge|
           next unless previous_bm_ids.include?(charge.billable_metric_id)
 
           charge.filters.each { |filter| record(result, charge.target_key, filter.id, period_start) }
@@ -177,16 +121,12 @@ module Events
         result
       end
 
-      def recurring_plan_codes
-        @recurring_plan_codes ||= plan.billable_metrics.where(recurring: true).where(code: plan_codes).distinct.pluck(:code)
+      def recurring_metric_codes
+        @recurring_metric_codes ||= plan.billable_metrics.where(recurring: true).where(code: metric_codes).distinct.pluck(:code)
       end
 
-      def non_recurring_plan_codes
-        @non_recurring_plan_codes ||= plan_codes - recurring_plan_codes
-      end
-
-      def current_recurring_charges
-        @current_recurring_charges ||= plan.charges
+      def current_recurring_targets
+        @current_recurring_targets ||= plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {recurring: true})
           .includes(:filters)
@@ -197,7 +137,7 @@ module Events
         previous_sub_ids = collect_previous_subscription_ids
         return Set.new if previous_sub_ids.empty?
 
-        bm_ids = current_recurring_charges.map(&:billable_metric_id)
+        bm_ids = current_recurring_targets.map(&:billable_metric_id)
         return Set.new if bm_ids.empty?
 
         Fee.where(subscription_id: previous_sub_ids, fee_type: :charge)
