@@ -16,6 +16,7 @@ module Types
       argument :name, String, required: false
       argument :proration, Boolean, required: false
       argument :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, required: false
+      argument :tax_codes, [String], required: false
       argument :wallet_targetable, Boolean, required: false
     end
   end

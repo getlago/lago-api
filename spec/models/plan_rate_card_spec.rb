@@ -55,4 +55,17 @@ RSpec.describe PlanRateCard do
       end
     end
   end
+
+  describe "#edit_error_code" do
+    it "is nil while the plan has no subscriptions" do
+      expect(create(:plan_rate_card).edit_error_code).to be_nil
+    end
+
+    it "is plan_locked once the plan has subscriptions" do
+      card = create(:plan_rate_card)
+      create(:subscription, plan: card.plan)
+
+      expect(card.edit_error_code).to eq("plan_locked")
+    end
+  end
 end

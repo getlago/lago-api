@@ -21,9 +21,9 @@ module RatePhases
         params[:billing_interval_cycle_count] = params[:billing_interval_cycle_count].presence
       end
 
-      parent.with_lock do
-        if plan_locked?
-          return result.single_validation_failure!(field: :rate_phase, error_code: "plan_locked")
+      applied_rate_card.with_lock do
+        if (blocked = applied_rate_card.edit_error_code)
+          return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
         if params.key?(:billing_interval_cycle_count) && params[:billing_interval_cycle_count].nil? && !last_phase?
@@ -61,7 +61,7 @@ module RatePhases
 
     attr_reader :rate_phase, :params
 
-    def parent
+    def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
     end
 
@@ -70,17 +70,13 @@ module RatePhases
       return if params[:rate_override].nil?
 
       RateOverrides::CreateService.call(
-        rate_card: parent.rate_card,
+        rate_card: applied_rate_card.rate_card,
         params: params[:rate_override]
       ).raise_if_error!.rate_override
     end
 
-    def plan_locked?
-      rate_phase.plan_rate_card.present? && rate_phase.plan_rate_card.plan.attached_to_subscriptions?
-    end
-
     def last_phase?
-      parent.rate_phases.order(:position).last == rate_phase
+      applied_rate_card.rate_phases.order(:position).last == rate_phase
     end
   end
 end

@@ -6,6 +6,8 @@ class Subscription < ApplicationRecord
   include PaperTrailTraceable
   include RansackUuidSearch
   include Terminatable
+  include ConnectionResolvable
+
 
   self.ignored_columns += %w[incompleted_at cancelation_reason]
 

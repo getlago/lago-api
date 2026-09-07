@@ -7,6 +7,8 @@ RSpec.describe Coupon do
 
   it_behaves_like "paper_trail traceable"
 
+  it { is_expected.to have_many(:catalog_plans).through(:coupon_targets) }
+
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
