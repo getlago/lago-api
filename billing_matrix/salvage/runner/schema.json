@@ -1,0 +1,1662 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Golden billing matrix row",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/row"
+  },
+  "definitions": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "block",
+        "axes",
+        "provenance",
+        "runners",
+        "setup",
+        "expect"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^b[0-9]{1,2}/[a-z0-9._/-]+$",
+          "description": "Stable row identifier. Never reuse an id for different behaviour."
+        },
+        "block": {
+          "type": "string",
+          "pattern": "^B[0-9]{1,2}$"
+        },
+        "axes": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "The cell this row claims in its block's coverage product. Read by the ledger.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "dimensions": {
+          "type": "object",
+          "description": "Pinned context that is NOT an axis of this block. Documentation, not coverage.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "provenance": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Why this row exists: a ticket id, a commit sha, 'coverage-gap', 'characterization', or 'discover@<sha>'."
+        },
+        "runners": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "rspec",
+              "live"
+            ]
+          }
+        },
+        "premium": {
+          "type": "boolean",
+          "default": false
+        },
+        "characterization": {
+          "type": "boolean",
+          "default": false,
+          "description": "Records current behaviour rather than asserting intended behaviour. Must be stated, never implied."
+        },
+        "calendar_sensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "Expectation depends on the absolute calendar (leap day, month length, yday==1, DST). Live runner cannot shift it."
+        },
+        "needs_forward_time": {
+          "type": "boolean",
+          "default": false,
+          "description": "Needs the clock to move forward (trial end, deferred downgrade). Live runner cannot drive it."
+        },
+        "custom_spec": {
+          "type": "string",
+          "description": "Escape hatch: path to a hand-written spec that replaces the interpreted timeline."
+        },
+        "setup": {
+          "$ref": "#/definitions/setup"
+        },
+        "timeline": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
+        "expect": {
+          "$ref": "#/definitions/expectation"
+        },
+        "math": {
+          "type": "string",
+          "minLength": 3,
+          "description": "How the expected numbers are derived. Mandatory whenever a non-zero amount is expected; a math line that does not derive its expect is a lint failure."
+        },
+        "note": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string",
+          "description": "ISO8601 instant to materialise setup at, for rows whose whole action IS the setup (a resource-characterization row). Mutually exclusive with `timeline`."
+        },
+        "no_transaction": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run this row with DatabaseCleaner's deletion strategy instead of a wrapping transaction (RSpec `transaction: false`). Required by anything using idempotent_transaction — notably progressive billing — which refuses to run inside an open transaction."
+        },
+        "pins": {
+          "type": "array",
+          "description": "Finding ids this row holds still (see scratchpad FINDINGS.md, e.g. F01). A row that pins a finding is what stops that bug moving unnoticed; the ledger reports findings with no pinning row.",
+          "items": {
+            "type": "string",
+            "pattern": "^F[0-9]{2,3}$"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "organization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "currency": {
+              "type": "string"
+            },
+            "premium_integrations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "custom_aggregation": {
+              "type": "boolean",
+              "description": "Org flag gating custom_agg metrics (BillableMetrics::CreateService:20). Not the premium licence — a separate switch."
+            }
+          }
+        },
+        "taxes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "rate"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "number"
+              },
+              "applied_to_organization": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "aggregation_type"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "aggregation_type": {
+                "enum": [
+                  "count_agg",
+                  "sum_agg",
+                  "max_agg",
+                  "unique_count_agg",
+                  "weighted_sum_agg",
+                  "latest_agg",
+                  "custom_agg"
+                ]
+              },
+              "field_name": {
+                "type": "string"
+              },
+              "recurring": {
+                "type": "boolean"
+              },
+              "weighted_interval": {
+                "enum": [
+                  "seconds"
+                ]
+              },
+              "expression": {
+                "type": "string"
+              },
+              "rounding_function": {
+                "enum": [
+                  "round",
+                  "ceil",
+                  "floor"
+                ]
+              },
+              "rounding_precision": {
+                "type": "integer"
+              },
+              "filters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "key",
+                    "values"
+                  ],
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "values": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "custom_aggregator": {
+                "type": "string",
+                "description": "Ruby source defining aggregate(event, previous_state, aggregation_properties); required for custom_agg."
+              }
+            }
+          }
+        },
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "interval": {
+              "enum": [
+                "weekly",
+                "monthly",
+                "quarterly",
+                "semiannual",
+                "yearly",
+                null
+              ],
+              "description": "null is meaningful: a blank interval is a B14 rejection row, so it must survive into the payload rather than being defaulted."
+            },
+            "amount_cents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "amount_currency": {
+              "type": "string"
+            },
+            "pay_in_advance": {
+              "type": "boolean"
+            },
+            "trial_period": {
+              "type": "number"
+            },
+            "bill_charges_monthly": {
+              "type": "boolean"
+            },
+            "tax_codes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "minimum_commitment": {
+              "type": "object"
+            },
+            "usage_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "charges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "billable_metric_code",
+              "charge_model"
+            ],
+            "properties": {
+              "billable_metric_code": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "charge_model": {
+                "enum": [
+                  "standard",
+                  "graduated",
+                  "package",
+                  "percentage",
+                  "volume",
+                  "graduated_percentage",
+                  "custom",
+                  "dynamic"
+                ]
+              },
+              "properties": {
+                "type": "object"
+              },
+              "pay_in_advance": {
+                "type": "boolean"
+              },
+              "prorated": {
+                "type": "boolean"
+              },
+              "invoiceable": {
+                "type": "boolean"
+              },
+              "regroup_paid_fees": {
+                "enum": [
+                  "invoice",
+                  null
+                ]
+              },
+              "min_amount_cents": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tax_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "accepts_target_wallet": {
+                "type": "boolean"
+              },
+              "filters": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "customer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "external_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            },
+            "tax_codes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "net_payment_term": {
+              "type": "integer"
+            },
+            "invoice_grace_period": {
+              "type": "integer",
+              "description": "Sent under billing_configuration by the runner; a top-level value is dropped by strong params."
+            },
+            "finalize_zero_amount_invoice": {
+              "enum": [
+                "inherit",
+                "skip",
+                "finalize"
+              ]
+            },
+            "document_locale": {
+              "type": "string"
+            }
+          }
+        },
+        "subscription": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "external_id": {
+              "type": "string"
+            },
+            "billing_time": {
+              "enum": [
+                "calendar",
+                "anniversary"
+              ]
+            },
+            "subscription_at": {
+              "type": "string"
+            },
+            "ending_at": {
+              "type": "string"
+            },
+            "on_termination_credit_note": {
+              "enum": [
+                "credit",
+                "skip",
+                "refund",
+                "offset"
+              ]
+            },
+            "on_termination_invoice": {
+              "enum": [
+                "generate",
+                "skip"
+              ]
+            },
+            "activation_rules": {
+              "type": "array",
+              "description": "Gates activation until the rule is satisfied. Applied only at creation, while the subscription is still `pending` (Subscriptions::ActivationRules::ApplyService refuses any other status). A `payment` rule is applicable only on a pay_in_advance plan outside a trial (subscription/activation_rule/payment.rb:5-7); otherwise it resolves not_applicable and the subscription activates normally.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "payment"
+                    ]
+                  },
+                  "timeout_hours": {
+                    "type": "integer",
+                    "description": "Hours before a pending rule expires. 0 (the column default) means never."
+                  }
+                }
+              }
+            },
+            "plan_overrides": {
+              "type": "object",
+              "description": "Creates an override plan. fixed_charges entries may name add_on_code/code instead of the UUID the API wants; the runner resolves it."
+            }
+          }
+        },
+        "coupons": {
+          "type": "array",
+          "description": "Coupons created and applied to the customer. `expiration` is mandatory — omitting it fails with expiration/value_is_invalid.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "coupon_type",
+              "frequency",
+              "expiration"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "coupon_type": {
+                "enum": [
+                  "fixed_amount",
+                  "percentage"
+                ]
+              },
+              "frequency": {
+                "enum": [
+                  "once",
+                  "recurring",
+                  "forever"
+                ]
+              },
+              "frequency_duration": {
+                "type": "integer"
+              },
+              "amount_cents": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "amount_currency": {
+                "type": "string"
+              },
+              "percentage_rate": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "expiration": {
+                "enum": [
+                  "no_expiration",
+                  "time_limit"
+                ]
+              },
+              "expiration_at": {
+                "type": "string"
+              },
+              "reusable": {
+                "type": "boolean"
+              },
+              "applies_to": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "billable_metric_codes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "plan_codes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "wallets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rate_amount",
+              "currency"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "rate_amount": {
+                "type": [
+                  "string",
+                  "number"
+                ],
+                "description": "credits → currency conversion rate"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "paid_credits": {
+                "type": [
+                  "string",
+                  "number"
+                ],
+                "description": "purchased; creates a `credit` invoice"
+              },
+              "granted_credits": {
+                "type": [
+                  "string",
+                  "number"
+                ],
+                "description": "free; creates no invoice"
+              },
+              "priority": {
+                "type": "integer",
+                "description": "1..50, lower is consumed first"
+              },
+              "expiration_at": {
+                "type": "string"
+              },
+              "invoice_requires_successful_payment": {
+                "type": "boolean"
+              },
+              "applies_to": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Limitations. Absent means the wallet pays for anything.",
+                "properties": {
+                  "fee_types": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "billable_metric_codes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "recurring_transaction_rules": {
+                "type": "array",
+                "description": "Automatic top-ups. `trigger: interval` re-arms on a schedule, `trigger: threshold` when the balance falls below threshold_credits; `method: target` tops up TO target_ongoing_balance rather than BY a fixed amount.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "trigger": {
+                      "enum": [
+                        "interval",
+                        "threshold"
+                      ]
+                    },
+                    "interval": {
+                      "enum": [
+                        "weekly",
+                        "monthly",
+                        "quarterly",
+                        "yearly",
+                        "semiannual"
+                      ]
+                    },
+                    "method": {
+                      "enum": [
+                        "fixed",
+                        "target"
+                      ]
+                    },
+                    "paid_credits": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    },
+                    "granted_credits": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    },
+                    "threshold_credits": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    },
+                    "target_ongoing_balance": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    },
+                    "grants_target_top_up": {
+                      "type": "boolean"
+                    },
+                    "started_at": {
+                      "type": "string"
+                    },
+                    "expiration_at": {
+                      "type": "string"
+                    },
+                    "invoice_requires_successful_payment": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "add_ons": {
+          "type": "array",
+          "description": "One-off priced items. A fixed charge prices an add-on on a plan, so add-ons are also the prerequisite for setup.fixed_charges.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "amount_cents"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "amount_cents": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "amount_currency": {
+                "type": "string"
+              },
+              "tax_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "fixed_charges": {
+          "type": "array",
+          "description": "Recurring priced units on the plan, independent of metered usage. Created AFTER the plan: inlining them in POST /plans returns 500, so the runner posts them to /plans/:code/fixed_charges.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "add_on_code",
+              "charge_model"
+            ],
+            "properties": {
+              "add_on_code": {
+                "type": "string",
+                "description": "must name an add-on the row declares"
+              },
+              "code": {
+                "type": "string"
+              },
+              "charge_model": {
+                "enum": [
+                  "standard",
+                  "graduated",
+                  "volume"
+                ]
+              },
+              "units": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "pay_in_advance": {
+                "type": "boolean"
+              },
+              "prorated": {
+                "type": "boolean"
+              },
+              "apply_units_immediately": {
+                "type": "boolean"
+              },
+              "properties": {
+                "type": "object"
+              },
+              "tax_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "plans": {
+          "type": "array",
+          "description": "ADDITIONAL plans beyond setup.plan, so a row can move a subscription between them (upgrade/downgrade). Each carries its own charges; setup.charges belongs to setup.plan. A timeline step selects one with params.plan_code.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "interval": {
+                "enum": [
+                  "weekly",
+                  "monthly",
+                  "quarterly",
+                  "semiannual",
+                  "yearly",
+                  null
+                ]
+              },
+              "amount_cents": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "amount_currency": {
+                "type": "string"
+              },
+              "pay_in_advance": {
+                "type": "boolean"
+              },
+              "trial_period": {
+                "type": "number"
+              },
+              "charges": {
+                "$ref": "#/definitions/setup/properties/charges"
+              }
+            }
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at",
+        "do"
+      ],
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "ISO8601 instant. travel_to for rspec; shifted for live."
+        },
+        "do": {
+          "enum": [
+            "create_subscription",
+            "ingest_events",
+            "pay_fees",
+            "pay_invoice",
+            "perform_billing",
+            "perform_usage_update",
+            "perform_invoices_refresh",
+            "perform_finalize_refresh",
+            "perform_wallet_refresh",
+        "perform_interval_wallet_top_ups",
+            "perform_ended_subscriptions_termination",
+            "perform_subscriptions_activation",
+            "fetch_current_usage",
+            "terminate_subscription",
+            "refresh_invoice",
+            "finalize_invoice",
+            "void_invoice",
+            "create_credit_note",
+            "create_one_off_invoice",
+            "update_plan_charge",
+            "update_plan_fixed_charge",
+            "update_subscription_fixed_charge",
+            "preview_invoice",
+            "update_tax",
+            "update_coupon",
+            "update_customer",
+            "update_plan",
+        "delete_metric",
+            "top_up_wallet",
+            "update_subscription"
+          ]
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "billable metric code"
+              },
+              "properties": {
+                "type": "object"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              },
+              "timestamp": {
+                "type": "string"
+              },
+              "precise_total_amount_cents": {
+                "type": [
+                  "string",
+                  "number"
+                ],
+                "description": "Top-level event field, not a property. The dynamic charge model takes its amount from here."
+              }
+            }
+          }
+        },
+        "params": {
+          "type": "object",
+          "description": "Free-form body for the mutation verbs. On update_plan, a `charges` entry may name `billable_metric_code` instead of the `billable_metric_id` UUID the endpoint requires (plans_controller.rb:122-131) \u2014 the runner resolves it against the metric the setup created. An entry carrying no `id` therefore REPLACES the charge for that metric: Plans::UpdateService creates it (update_service.rb:230-235) and sanitize_charges discards the one the array omitted (:241-248), which is the only way a row can rewrite a charge_id without cloning a plan."
+        },
+        "invoice_type": {
+          "type": "string",
+          "description": "pay_invoice: which invoice to settle, by type. Defaults to the most recent."
+        },
+        "credit_note": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items"
+          ],
+          "description": "create_credit_note: items are PRE-TAX per fee; credit/refund/offset amounts are the tax-INCLUSIVE totals.",
+          "properties": {
+            "reason": {
+              "enum": [
+                "duplicated_charge",
+                "product_unsatisfactory",
+                "order_change",
+                "order_cancellation",
+                "fraudulent_charge",
+                "other"
+              ]
+            },
+            "credit_amount_cents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "refund_amount_cents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "offset_amount_cents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "invoice_type": {
+              "type": "string",
+              "description": "which invoice to credit; defaults to the most recent"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "fee_type",
+                  "amount_cents"
+                ],
+                "properties": {
+                  "fee_type": {
+                    "enum": [
+                      "charge",
+                      "subscription",
+                      "add_on",
+                      "commitment",
+                      "fixed_charge"
+                    ]
+                  },
+                  "amount_cents": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "charge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "billable_metric_code",
+            "charge_model"
+          ],
+          "description": "update_plan_charge: the charge to update on the PARENT plan. Charge codes default to the metric code, so the metric code identifies it.",
+          "properties": {
+            "billable_metric_code": {
+              "type": "string"
+            },
+            "properties": {
+              "type": "object"
+            },
+            "min_amount_cents": {
+              "type": "integer"
+            },
+            "cascade_updates": {
+              "type": "boolean",
+              "description": "propagate the change to child (overridden) plans"
+            },
+            "filters": {
+              "type": "array",
+              "description": "The charge's filter set, as a REPLACEMENT array — one verb for create, update and delete. Entries are resolved against the filters already on the charge by their `values` (ChargeFilters::CreateOrUpdateBatchService), never by id, because a row cannot know a filter's UUID: a new `values` combination creates, a known one with new `properties` updates, and an omitted one is discarded. `filters: []` deletes them all.",
+              "items": {
+                "type": "object"
+              }
+            },
+            "charge_model": {
+              "enum": [
+                "standard",
+                "graduated",
+                "package",
+                "percentage",
+                "volume",
+                "graduated_percentage",
+                "custom",
+                "dynamic"
+              ],
+              "description": "Mandatory: PUT /plans/:code/charges/:code is a full replacement, so omitting it fails with charge_model/value_is_mandatory."
+            }
+          }
+        },
+        "one_off": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "add_ons"
+          ],
+          "description": "create_one_off_invoice: POST /api/v1/invoices, the only route that can produce a fee with `fee_type: :add_on` (assigned in exactly one place app-wide, fees/one_off_service.rb:40, reached only from Invoices::CreateOneOffService). The invoice it makes is `invoice_type: one_off` and always finalized \u2014 only Invoices::SubscriptionService consults the grace period (subscription_service.rb:193) \u2014 so it has no draft, and Invoices::RefreshDraftService refuses it outright with `return result.forbidden_failure! unless invoice.subscription?` (refresh_draft_service.rb:32). It is also absent from #preview_params (invoices_controller.rb:336-381), which permits no `fees` key at all. An add-on fee is therefore observable on a finalized invoice and nowhere else.",
+          "properties": {
+            "add_ons": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Codes of add-ons the row declared in setup.add_ons, one fee each. Named by code because `fees[].add_on_code` is the only identifier InvoicesController#create_params permits (invoices_controller.rb:296-303)."
+            },
+            "units": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Units for EVERY fee in the call, not per add-on: ScenariosHelper#create_one_off_invoice takes one `units:` for the whole list. Two add-ons that must differ therefore differ by their own setup.add_ons `amount_cents`, which becomes each fee's `unit_amount_cents`. Defaults to 1."
+            },
+            "tax_codes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Explicit tax codes on EVERY fee in the call \u2014 the first rung of the Fees::ApplyTaxesService ladder (`return ...taxes.where(code: tax_codes) if tax_codes`, apply_taxes_service.rb:64-66), and POST /api/v1/invoices is the only route that carries them. An empty array is NOT a distinct assertion here: Fees::OneOffService gates on `tax_codes.present?` (one_off_service.rb:56), so `[]` never reaches ApplyTaxesService and behaves exactly like omitting the key \u2014 the ladder falls through to the add-on rung either way. Say the codes or say nothing."
+            }
+          }
+        },
+        "fixed_charge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "units"
+          ],
+          "description": "update_plan_fixed_charge / update_subscription_fixed_charge: which fixed charge to move, and to how many units. Both endpoints are addressed by the charge's CODE, which the runner defaults to the add-on's code on creation, so a row names `add_on_code` and needs no UUID. update_plan_fixed_charge moves the PLAN's units (and so every subscription on it that has no override of its own); update_subscription_fixed_charge moves ONE subscription's, writing a Subscription::FixedChargeUnitsOverride that a later plan-level update then skips. The subscription endpoint is premium-only, so rows using it need `premium: true`.",
+          "properties": {
+            "add_on_code": {
+              "type": "string",
+              "description": "the fixed charge's code, which defaults to the add-on's code"
+            },
+            "code": {
+              "type": "string",
+              "description": "the fixed charge's code, when the row gave it one that is not the add-on's"
+            },
+            "units": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Mandatory. FixedCharges::UpdateService assigns `units` unconditionally, so an omitted value nulls the column rather than leaving it alone; and the new FixedChargeEvent is only emitted when the units actually moved (update_service.rb:35, :44)."
+            },
+            "apply_units_immediately": {
+              "type": "boolean",
+              "description": "WHEN the new units take effect, and the whole point of the B13 units_change axis. FixedCharges::EmitEventsService stamps the new FixedChargeEvent at Time.current when true and at fixed_charges_period_to_datetime + 1.second when false (emit_events_service.rb:22) — the second is outside the current period's range, so the period bills the OLD units and the change shows up next period. Forwarded on presence of the KEY, not truthiness: `false` is the deferred half of the axis, not an omission."
+            },
+            "properties": {
+              "type": "object",
+              "description": "Mandatory for update_plan_fixed_charge: the endpoint replaces properties, and omitting them falls back to ChargeModels::BuildDefaultPropertiesService — amount \"0\" for a standard charge (update_service.rb:36-38) — so a units-only row would silently reprice the charge to nothing. Optional on the subscription endpoint, where sending it switches the service off the units-only override path onto the plan-clone path (fixed_charge_units_override_detection_concern.rb:26-31)."
+            },
+            "charge_model": {
+              "enum": [
+                "standard",
+                "graduated",
+                "package",
+                "percentage",
+                "volume",
+                "graduated_percentage",
+                "dynamic"
+              ],
+              "description": "Mandatory for update_plan_fixed_charge — it selects the fallback properties above. It does NOT change the charge model once the plan has subscriptions: `fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?` (update_service.rb:31), so resend the existing one."
+            },
+            "invoice_display_name": {
+              "type": "string"
+            },
+            "tax_codes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cascade_updates": {
+              "type": "boolean",
+              "description": "update_plan_fixed_charge: propagate to child (overridden) plans"
+            }
+          }
+        },
+        "code": {
+          "type": "string",
+          "description": "which resource the mutation targets (update_tax, update_coupon, delete_metric, top_up_wallet); defaults to the first the setup declared. On top_up_wallet it is what makes two wallets distinguishable at all — the lookup is otherwise unordered, so a two-wallet row without it funds one at random."
+        },
+        "select": {
+          "description": "which invoice the step acts on; same shape as an expectation's select. Defaults to the newest.",
+          "oneOf": [
+            {
+              "enum": [
+                "first",
+                "last"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "invoice_type": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stage",
+            "status",
+            "code"
+          ],
+          "properties": {
+            "stage": {
+              "enum": [
+                "metric",
+                "plan",
+                "charge",
+                "subscription",
+                "usage"
+              ],
+              "description": "Which call must be rejected. Every stage but `usage` is a setup call; `usage` is the GET current_usage a fetch_current_usage step performs, asserted at that step, which is how a refusal-only cell (current-usage after termination, 405 no_active_subscription) is expressible at all. Deliberately limited to what the interpreter implements (GoldenRunner::SUPPORTED_ERROR_STAGES) — harness_spec.rb asserts the two agree, because a stage the schema permits but the runner ignores lets a row assert nothing and pass. Named `stage`, not `on`: YAML 1.1 reads a bare `on` key as boolean true."
+            },
+            "status": {
+              "type": "integer"
+            },
+            "code": {
+              "type": "string",
+              "description": "Lago error code, e.g. invalid_aggregation_type_or_charge_model"
+            },
+            "field": {
+              "type": "string",
+              "description": "error_details key, e.g. pay_in_advance"
+            }
+          }
+        },
+        "invoices": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total invoice count for the customer."
+        },
+        "invoice": {
+          "description": "One invoice expectation, or a list of them when the row asserts money moving between invoices. Each entry in a list must carry its own `select`.",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/invoice_expectation"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/invoice_expectation"
+              }
+            }
+          ]
+        },
+        "usage": {
+          "$ref": "#/definitions/usage_expectation"
+        },
+        "resource": {
+          "$ref": "#/definitions/resource_expectation"
+        },
+        "credit_note": {
+          "$ref": "#/definitions/credit_note_expectation"
+        },
+        "wallet": {
+          "description": "A single wallet, or a list. The multi-wallet-priority axis is defined by what the OTHER wallet kept, so a two-wallet row asserts both balances rather than inferring the second arithmetically.",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/wallet_expectation"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/wallet_expectation"
+              }
+            }
+          ]
+        },
+        "lifetime_usage": {
+          "$ref": "#/definitions/lifetime_usage_expectation"
+        },
+        "preview": {
+          "$ref": "#/definitions/invoice_expectation",
+          "description": "The un-persisted invoice returned by POST /invoices/preview. Same assertable fields as a real invoice, which is the point: a preview that disagrees with the invoice it predicts is the bug."
+        }
+      }
+    },
+    "invoice_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Assertable-field allowlist. Volatile fields (lago_id, number, sequential_id, created_at, issuing_date, file_url) are deliberately absent so no row can pin them.",
+      "properties": {
+        "select": {
+          "oneOf": [
+            {
+              "enum": [
+                "last",
+                "first"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "invoice_type": {
+                  "type": "string"
+                }
+              }
+            }
+          ],
+          "default": "last"
+        },
+        "invoice_type": {
+          "enum": [
+            "subscription",
+            "add_on",
+            "credit",
+            "one_off",
+            "advance_charges",
+            "progressive_billing"
+          ]
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "finalized",
+            "voided",
+            "failed",
+            "pending",
+            "generating",
+            "open",
+            "closed",
+            "deleted"
+          ]
+        },
+        "payment_status": {
+          "enum": [
+            "pending",
+            "succeeded",
+            "failed"
+          ]
+        },
+        "taxes_status": {
+          "enum": [
+            "pending",
+            "succeeded",
+            "failed"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "fees_amount_cents": {
+          "type": "integer"
+        },
+        "coupons_amount_cents": {
+          "type": "integer"
+        },
+        "credit_notes_amount_cents": {
+          "type": "integer"
+        },
+        "prepaid_credit_amount_cents": {
+          "type": "integer"
+        },
+        "prepaid_granted_credit_amount_cents": {
+          "type": "integer"
+        },
+        "prepaid_purchased_credit_amount_cents": {
+          "type": "integer"
+        },
+        "progressive_billing_credit_amount_cents": {
+          "type": "integer"
+        },
+        "sub_total_excluding_taxes_amount_cents": {
+          "type": "integer"
+        },
+        "sub_total_including_taxes_amount_cents": {
+          "type": "integer"
+        },
+        "taxes_amount_cents": {
+          "type": "integer"
+        },
+        "total_amount_cents": {
+          "type": "integer"
+        },
+        "total_due_amount_cents": {
+          "type": "integer"
+        },
+        "fees_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "fee_type": {
+                "enum": [
+                  "charge",
+                  "add_on",
+                  "subscription",
+                  "credit",
+                  "commitment",
+                  "fixed_charge",
+                  "product"
+                ]
+              },
+              "item_type": {
+                "type": "string"
+              },
+              "item_code": {
+                "type": "string"
+              },
+              "units": {
+                "type": [
+                  "string",
+                  "number"
+                ],
+                "description": "Compared as BigDecimal (GoldenComparison::NUMERIC_FIELDS), so 20 and \"20.0\" are the same assertion. Both spellings are permitted because the schema said `string` only while two green B9 rows had always written the integer — a rule the comparator never enforced and nothing but the integrity example could see."
+              },
+              "events_count": {
+                "type": "integer"
+              },
+              "amount_cents": {
+                "type": "integer"
+              },
+              "precise_unit_amount": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "taxes_amount_cents": {
+                "type": "integer"
+              },
+              "taxes_rate": {
+                "type": "number"
+              },
+              "total_aggregated_units": {
+                "type": "string"
+              },
+              "from_date": {
+                "type": "string",
+                "description": "V1::FeeSerializer names the period boundaries from_date/to_date, not from_datetime."
+              },
+              "to_date": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "usage_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amount_cents": {
+          "type": "integer"
+        },
+        "taxes_amount_cents": {
+          "type": "integer"
+        },
+        "total_amount_cents": {
+          "type": "integer"
+        },
+        "charges_usage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "billable_metric_code": {
+                "type": "string"
+              },
+              "charge_model": {
+                "type": "string"
+              },
+              "units": {
+                "type": "string"
+              },
+              "amount_cents": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "resource_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "fields"
+      ],
+      "description": "Assert attributes of a resource the setup created. For characterization rows where the API accepts the request but normalises the input, so there is no error to assert.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "metric",
+            "plan",
+            "customer",
+            "charge"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "description": "which one, when the row declares several; defaults to the first"
+        },
+        "fields": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "credit_note_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Assertable fields of the created credit note. Volatile fields (lago_id, number, sequential_id, created_at) are deliberately absent.",
+      "properties": {
+        "select": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Which credit note. Absent means the one created by this row's create_credit_note step; present reads the customer's credit notes, which is the only way to assert one Lago created by itself.",
+          "properties": {
+            "index": {
+              "type": "integer",
+              "description": "into the matched notes, oldest first; -1 is the newest"
+            },
+            "credit_status": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        },
+        "credit_status": {
+          "enum": [
+            "available",
+            "consumed",
+            "voided"
+          ]
+        },
+        "refund_status": {
+          "enum": [
+            "pending",
+            "succeeded",
+            "failed",
+            null
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "sub_total_excluding_taxes_amount_cents": {
+          "type": "integer"
+        },
+        "taxes_amount_cents": {
+          "type": "integer"
+        },
+        "taxes_rate": {
+          "type": "number"
+        },
+        "coupons_adjustment_amount_cents": {
+          "type": "integer"
+        },
+        "credit_amount_cents": {
+          "type": "integer"
+        },
+        "refund_amount_cents": {
+          "type": "integer"
+        },
+        "offset_amount_cents": {
+          "type": "integer"
+        },
+        "total_amount_cents": {
+          "type": "integer"
+        },
+        "balance_amount_cents": {
+          "type": "integer"
+        },
+        "items_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "wallet_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "State of a wallet after the timeline. The only way to assert WHICH wallet paid, or what a balance became — an invoice alone cannot show either.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "which wallet, when the row declares several; defaults to the first"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "terminated"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "rate_amount": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "credits_balance": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "credits_ongoing_balance": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "credits_ongoing_usage_balance": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "consumed_credits": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "balance_cents": {
+          "type": "integer"
+        },
+        "ongoing_balance_cents": {
+          "type": "integer"
+        },
+        "ongoing_usage_balance_cents": {
+          "type": "integer"
+        },
+        "consumed_amount_cents": {
+          "type": "integer"
+        }
+      }
+    },
+    "lifetime_usage_expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Cumulative usage across the subscription's whole life, which is what progressive-billing thresholds are measured against — deliberately not per-period like current usage.",
+      "properties": {
+        "invoiced_usage_amount_cents": {
+          "type": "integer"
+        },
+        "current_usage_amount_cents": {
+          "type": "integer"
+        },
+        "external_historical_usage_amount_cents": {
+          "type": "integer"
+        },
+        "select": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Scopes the read to one subscription STATUS. subscriptions/base_controller.rb:20 resolves external_id together with `status: params[:status] || :active`, so without this the read 404s the moment the subscription stops being active — which is the whole of B7's lifetime-usage after-termination column. A `select` on its own is refused by the interpreter: it satisfies minProperties while asserting nothing.",
+          "properties": {
+            "status": {
+              "enum": [
+                "active",
+                "pending",
+                "terminated",
+                "canceled"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
