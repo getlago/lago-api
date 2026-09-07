@@ -22,8 +22,21 @@ RSpec.describe BillableMetrics::AggregationFactory do
   end
 
   let(:current_usage) { false }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: boundaries[:charges_from_datetime],
+        to_datetime: boundaries[:charges_to_datetime],
+        charges_from_datetime: boundaries[:charges_from_datetime],
+        charges_to_datetime: boundaries[:charges_to_datetime],
+        charges_duration: nil,
+        timestamp: nil
+      )
+    )
+  end
 
-  let(:result) { factory.new_instance(charge:, current_usage:, context: Events::Stores::EventContext.from(subscription:), boundaries:) }
+  let(:result) { factory.new_instance(metered_item:, current_usage:, context: Events::Stores::EventContext.from(subscription:), boundaries:) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do

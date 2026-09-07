@@ -34,6 +34,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
   let(:agg_result) { BaseService::Result.new }
   let(:subscription_context) { have_attributes(external_id: subscription.external_id, organization: subscription.organization) }
+  let(:metered_item) { Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, charge_filter:) }
 
   describe "#call" do
     describe "when count aggregation" do
@@ -47,7 +48,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
           .with(
             event_store_class: Events::Stores::PostgresStore,
-            charge:,
+            metered_item:,
             context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
@@ -94,7 +95,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
               event_store_class: Events::Stores::PostgresStore,
-              charge:,
+              metered_item:,
               context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
@@ -142,7 +143,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
               event_store_class: Events::Stores::PostgresStore,
-              charge:,
+              metered_item:,
               context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
@@ -193,7 +194,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
               .with(
                 event_store_class: Events::Stores::PostgresStore,
-                charge:,
+                metered_item:,
                 context: subscription_context,
                 boundaries: {
                   from_datetime: boundaries.charges_from_datetime,
@@ -239,7 +240,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
               event_store_class: Events::Stores::PostgresStore,
-              charge:,
+              metered_item:,
               context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
@@ -287,7 +288,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
               event_store_class: Events::Stores::PostgresStore,
-              charge:,
+              metered_item:,
               context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
@@ -331,7 +332,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
               event_store_class: Events::Stores::PostgresStore,
-              charge:,
+              metered_item:,
               context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
@@ -370,7 +371,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
           .with(
             event_store_class: Events::Stores::PostgresStore,
-            charge:,
+            metered_item:,
             context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
@@ -404,7 +405,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         expect(BillableMetrics::Aggregations::UniqueCountService).to have_received(:new)
           .with(
             event_store_class: Events::Stores::PostgresStore,
-            charge:,
+            metered_item:,
             context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,

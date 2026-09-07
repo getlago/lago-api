@@ -311,7 +311,11 @@ class Invoice < ApplicationRecord
 
     service.new(
       event_store_class: Events::Stores::StoreFactory.store_class(organization:),
-      charge: fee.charge,
+      metered_item: Fees::ChargeService::MeteredItem.from_charge(
+        charge: fee.charge,
+        boundaries: BillingPeriodBoundaries.from_fee(fee),
+        charge_filter: fee.charge_filter
+      ),
       context: Events::Stores::EventContext.from(subscription: fee.subscription),
       boundaries: {
         from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),

@@ -82,7 +82,7 @@ module BillableMetrics
       def custom_properties
         return charge_filter.properties["custom_properties"] if charge_filter.present?
 
-        charge.properties["custom_properties"]
+        metered_item.properties["custom_properties"]
       end
 
       def current_state(grouped_by_values:)
@@ -97,7 +97,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: context.external_id)
-          .where(charge_id: charge.id)
+          .where(charge_id: metered_item.charge_id)
           .where("cached_aggregations.timestamp < ?", truncated_datetime)
           .where(grouped_by: grouped_by_values.presence || {})
           .order(timestamp: :desc, created_at: :desc)

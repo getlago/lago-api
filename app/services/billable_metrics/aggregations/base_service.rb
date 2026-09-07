@@ -48,10 +48,10 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store_class:, charge:, context:, boundaries:, filters: {}, bypass_aggregation: false)
+      def initialize(event_store_class:, metered_item:, context:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
         @event_store_class = event_store_class
-        @charge = charge
+        @metered_item = metered_item
         @context = context
 
         @filters = filters
@@ -73,14 +73,14 @@ module BillableMetrics
       def aggregate(options: {})
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
-          if charge.dynamic?
+          if metered_item.dynamic?
             compute_grouped_by_precise_total_amount_cents(options:)
           end
 
           result.aggregations.each { apply_rounding(it) }
         else
           compute_aggregation(options:)
-          if charge.dynamic?
+          if metered_item.dynamic?
             compute_precise_total_amount_cents(options:)
           end
 
@@ -132,7 +132,7 @@ module BillableMetrics
       protected
 
       attr_accessor :event_store_class,
-        :charge,
+        :metered_item,
         :context,
         :filters,
         :charge_filter,
@@ -144,7 +144,7 @@ module BillableMetrics
         :bypass_aggregation,
         :uniq_grouped_by_and_presentation_by
 
-      delegate :billable_metric, to: :charge
+      delegate :billable_metric, to: :metered_item
 
       delegate :customer, to: :context
 
@@ -231,7 +231,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: context.external_id)
-          .where(charge_id: charge.id)
+          .where(charge_id: metered_item.charge_id)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
           .where(grouped_by: grouped_by.presence || {})

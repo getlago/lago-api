@@ -136,7 +136,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: context.external_id)
-          .where(charge_id: charge.id)
+          .where(charge_id: metered_item.charge_id)
           .where(timestamp: ...from_datetime)
           .order(timestamp: :desc, created_at: :desc)
 

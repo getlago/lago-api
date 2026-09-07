@@ -9,6 +9,19 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
   let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, plan:) }
   let(:subscription) { create(:subscription, plan:) }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: subscription.started_at,
+        to_datetime: subscription.started_at.end_of_month,
+        charges_from_datetime: subscription.started_at,
+        charges_to_datetime: subscription.started_at.end_of_month,
+        charges_duration: subscription.started_at.end_of_month.day - subscription.started_at.day + 1,
+        timestamp: subscription.started_at.end_of_month
+      )
+    )
+  end
 
   let(:aggregation_result) do
     BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
@@ -25,7 +38,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
   let(:aggregator) do
     BillableMetrics::Aggregations::CountService.new(
       event_store_class: Events::Stores::PostgresStore,
-      charge:,
+      metered_item:,
       context: Events::Stores::EventContext.from(subscription:),
       boundaries: nil
     )
@@ -220,7 +233,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       let(:aggregator) do
         BillableMetrics::Aggregations::SumService.new(
           event_store_class: Events::Stores::PostgresStore,
-          charge:,
+          metered_item:,
           context: Events::Stores::EventContext.from(subscription:),
           boundaries: nil
         )
