@@ -1,0 +1,570 @@
+[
+  {
+    "request": "GET /api/v1/payments?",
+    "status": 200,
+    "count": 29,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?",
+    "status": 200,
+    "count": 10,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {},
+    "status": 200,
+    "count": 29,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_status%5B%5D=succeeded&payment_status%5B%5D=failed",
+    "status": 200,
+    "count": 14,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_status%5B%5D=succeeded&payment_status%5B%5D=failed",
+    "status": 200,
+    "count": 5,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentStatus": [
+        "succeeded",
+        "failed"
+      ]
+    },
+    "status": 200,
+    "count": 14,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_statuses%5B%5D=processing",
+    "status": 200,
+    "count": 7,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_statuses%5B%5D=processing",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentStatus": [
+        "processing"
+      ]
+    },
+    "status": 200,
+    "count": 7,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=1000&amount_to=5000",
+    "status": 200,
+    "count": 6,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?amount_from=1000&amount_to=5000",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "amountFrom": "1000",
+      "amountTo": "5000"
+    },
+    "status": 200,
+    "count": 6,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=5000000000",
+    "status": 200,
+    "count": 8,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?amount_from=5000000000",
+    "status": 200,
+    "count": 3,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "amountFrom": "5000000000"
+    },
+    "status": 200,
+    "count": 8,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=9007199254740993&amount_to=9007199254740993",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?amount_from=9007199254740993&amount_to=9007199254740993",
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "amountFrom": "9007199254740993",
+      "amountTo": "9007199254740993"
+    },
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=9223372036854775807",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?amount_from=9223372036854775807",
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "amountFrom": "9223372036854775807"
+    },
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=0&amount_to=0",
+    "status": 200,
+    "count": 3,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?amount_from=0&amount_to=0",
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "amountFrom": "0",
+      "amountTo": "0"
+    },
+    "status": 200,
+    "count": 3,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?receipt_number=rcpt-2026-0001",
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?receipt_number=rcpt-2026-0001",
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "receiptNumber": "rcpt-2026-0001"
+    },
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?receipt_number=missing",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?receipt_number=missing",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "receiptNumber": "missing"
+    },
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?created_at_from=2026-09-01&created_at_to=2026-09-07",
+    "status": 200,
+    "count": 17,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?created_at_from=2026-09-01&created_at_to=2026-09-07",
+    "status": 200,
+    "count": 6,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "createdAtFrom": "2026-09-01",
+      "createdAtTo": "2026-09-07"
+    },
+    "status": 200,
+    "count": 17,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_provider_type%5B%5D=stripe",
+    "status": 200,
+    "count": 10,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_provider_type%5B%5D=stripe",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentProviderType": [
+        "stripe"
+      ]
+    },
+    "status": 200,
+    "count": 10,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_provider_type%5B%5D=gocardless",
+    "status": 200,
+    "count": 9,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_provider_type%5B%5D=gocardless",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentProviderType": [
+        "gocardless"
+      ]
+    },
+    "status": 200,
+    "count": 9,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_method_type%5B%5D=card&payment_method_type%5B%5D=sepa_debit",
+    "status": 200,
+    "count": 5,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_method_type%5B%5D=card&payment_method_type%5B%5D=sepa_debit",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentMethodType": [
+        "card",
+        "sepa_debit"
+      ]
+    },
+    "status": 200,
+    "count": 5,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?currency=EUR",
+    "status": 200,
+    "count": 15,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?currency=EUR",
+    "status": 200,
+    "count": 5,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "currency": "EUR"
+    },
+    "status": 200,
+    "count": 15,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?invoice_number=lag-1234-001-002",
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?invoice_number=lag-1234-001-002",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "invoiceNumber": "lag-1234-001-002"
+    },
+    "status": 200,
+    "count": 1,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?external_customer_id=cust_1",
+    "status": 200,
+    "count": 10,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?external_customer_id=cust_1",
+    "status": 200,
+    "count": 10,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "externalCustomerId": "cust_1"
+    },
+    "status": 200,
+    "count": 10,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_type=manual&payable_type=PaymentRequest",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_type=manual&payable_type=PaymentRequest",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentType": [
+        "manual"
+      ],
+      "payableType": [
+        "PaymentRequest"
+      ]
+    },
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?search_term=pi_3",
+    "status": 200,
+    "count": 19,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?search_term=pi_3",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "searchTerm": "pi_3"
+    },
+    "status": 200,
+    "count": 19,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_status=succeeded&currency=EUR&amount_from=100&created_at_from=2026-09-01",
+    "status": 200,
+    "count": 4,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_status=succeeded&currency=EUR&amount_from=100&created_at_from=2026-09-01",
+    "status": 200,
+    "count": 2,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentStatus": [
+        "succeeded"
+      ],
+      "currency": "EUR",
+      "amountFrom": "100",
+      "createdAtFrom": "2026-09-01"
+    },
+    "status": 200,
+    "count": 4,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_status%5B%5D=succeeded&payment_method_type%5B%5D=card&payment_method_type%5B%5D=us_bank_account&currency=EUR&search_term=pi_3",
+    "status": 200,
+    "count": 3,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/customers/cust_1/payments?payment_status%5B%5D=succeeded&payment_method_type%5B%5D=card&payment_method_type%5B%5D=us_bank_account&currency=EUR&search_term=pi_3",
+    "status": 200,
+    "count": 0,
+    "ids_match": true
+  },
+  {
+    "request": "GraphQL payments",
+    "variables": {
+      "paymentStatus": [
+        "succeeded"
+      ],
+      "currency": "EUR",
+      "paymentMethodType": [
+        "card",
+        "us_bank_account"
+      ],
+      "searchTerm": "pi_3"
+    },
+    "status": 200,
+    "count": 3,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?created_at_from=invalid&created_at_to=2026-02-30",
+    "status": 200,
+    "count": 29,
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_status=bogus",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_provider_type=bogus",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_method_type=bogus",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_type=bogus",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?payable_type=bogus",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?currency=XYZ",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=-1",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_to=-1",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=500&amount_to=100",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?amount_from=9223372036854775808",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?invoice_id=invalid",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?receipt_number=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?invoice_number=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "status": 422,
+    "validation_error": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_status=succeeded&currency=EUR&amount_from=100&created_at_from=2026-09-01&per_page=2&page=1",
+    "status": 200,
+    "meta": {
+      "current_page": 1,
+      "next_page": 2,
+      "prev_page": null,
+      "total_pages": 2,
+      "total_count": 4
+    },
+    "ids_match": true
+  },
+  {
+    "request": "GET /api/v1/payments?payment_status=succeeded&currency=EUR&amount_from=100&created_at_from=2026-09-01&per_page=2&page=2",
+    "status": 200,
+    "meta": {
+      "current_page": 2,
+      "next_page": null,
+      "prev_page": 1,
+      "total_pages": 2,
+      "total_count": 4
+    },
+    "ids_match": true
+  }
+]
