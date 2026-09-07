@@ -22,7 +22,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     create(:subscription, customer:, organization:, plan:, started_at: 10.days.ago)
   end
 
-  let(:ingested_at) { 3.days.ago.change(usec: 0) }
+  let(:occurred_at) { 3.days.ago.change(usec: 0) }
 
   let(:event) do
     create(
@@ -31,8 +31,8 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
       subscription:,
       code: billable_metric.code,
       properties: {"item_id" => "12"},
-      timestamp: ingested_at,
-      created_at: ingested_at
+      timestamp: occurred_at,
+      created_at: occurred_at
     )
   end
 
@@ -160,6 +160,16 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
     end
   end
 
+  context "when the aggregation is neither count nor custom" do
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: "unique_count_agg", field_name: "item_id")
+    end
+
+    it "still recognises the event as due" do
+      expect { invoke }.to have_enqueued_job(Events::PayInAdvanceJob)
+    end
+  end
+
   context "when the aggregation requires a field that the event does not carry" do
     let(:event) do
       create(
@@ -199,7 +209,7 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
 
   # The window is documented as [FROM, TO), so an event ingested exactly at TO is out.
   context "when the event was ingested exactly at the upper bound" do
-    before { ENV["TO"] = ingested_at.iso8601 }
+    before { ENV["TO"] = occurred_at.iso8601 }
 
     it "does not enqueue anything" do
       expect { invoke }.not_to have_enqueued_job(Events::PayInAdvanceJob)
@@ -207,10 +217,30 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
   end
 
   context "when the event was ingested exactly at the lower bound" do
-    before { ENV["FROM"] = ingested_at.iso8601 }
+    before { ENV["FROM"] = occurred_at.iso8601 }
 
     it "re-enqueues the event" do
       expect { invoke }.to have_enqueued_job(Events::PayInAdvanceJob)
+    end
+  end
+
+  # The window is the event timestamp, not its ingestion time, so a backdated event is out of scope
+  # even when it was ingested inside the window.
+  context "when the event was ingested in the window but timestamped before it" do
+    let(:event) do
+      create(
+        :event,
+        organization_id: organization.id,
+        subscription:,
+        code: billable_metric.code,
+        properties: {"item_id" => "12"},
+        timestamp: 8.days.ago,
+        created_at: occurred_at
+      )
+    end
+
+    it "does not enqueue anything" do
+      expect { invoke }.not_to have_enqueued_job(Events::PayInAdvanceJob)
     end
   end
 
@@ -295,23 +325,11 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
   context "when the external id is shared with a later subscription" do
     let(:new_plan) { create(:plan, organization:) }
 
-    # Ingested during the outage window, but carrying a timestamp from before the upgrade.
-    let(:event) do
-      create(
-        :event,
-        organization_id: organization.id,
-        subscription:,
-        code: billable_metric.code,
-        properties: {"item_id" => "12"},
-        timestamp: 6.days.ago,
-        created_at: 3.days.ago
-      )
-    end
-
+    # The upgrade lands after the event, so only the terminated subscription covers its timestamp.
     before do
-      subscription.update!(terminated_at: 4.days.ago, status: :terminated)
+      subscription.update!(terminated_at: occurred_at + 1.hour, status: :terminated)
       create(:subscription, customer:, organization:, plan: new_plan, external_id: subscription.external_id,
-        started_at: 4.days.ago)
+        started_at: occurred_at + 1.hour)
     end
 
     it "re-enqueues the event against the subscription that covers its timestamp" do
@@ -428,7 +446,25 @@ RSpec.describe "events:recover_pay_in_advance_fees" do # rubocop:disable RSpec/D
   end
 
   it "reports its progress so a long run is visibly advancing" do
-    expect { invoke }.to output(/1\/1 scanned in \d+(\.\d+)?s/).to_stdout
+    expect { invoke }.to output(/1 scanned in \d+(\.\d+)?s/).to_stdout
+  end
+
+  # Subscriptions are streamed in batches, and an external id shared by an upgrade can straddle a
+  # boundary; it must still be visited exactly once.
+  context "when the subscriptions span several batches" do
+    before do
+      ENV["BATCH_SIZE"] = "1"
+      subscription.update!(terminated_at: occurred_at + 1.hour, status: :terminated)
+      create(:subscription, customer:, organization:, plan:, external_id: subscription.external_id,
+        started_at: occurred_at + 1.hour)
+      3.times { create(:subscription, customer:, organization:, plan:, started_at: 10.days.ago) }
+    end
+
+    after { ENV.delete("BATCH_SIZE") }
+
+    it "enqueues the event exactly once" do
+      expect { invoke }.to have_enqueued_job(Events::PayInAdvanceJob).once
+    end
   end
 
   context "when the events span several batches" do
