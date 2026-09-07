@@ -1,0 +1,135 @@
+# A subscription changes identity mid-life (its plan is overridden) and something it
+# carried — here the minimum commitment — must survive the move. March is billed before the
+# churn on every row so each row carries its own positive evidence that the machinery works.
+
+- id: identity_churn/plan-override/commitment
+  area: identity_churn
+  axes: {churn: plan_override, carried_state: minimum_commitment}
+  pins: [F69]
+  control: identity_churn/no-override/commitment
+  setup:
+    metrics: [{code: m_po_cmt, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_po_cmt, interval: monthly, amount_cents: 2000, pay_in_advance: false, minimum_commitment: {amount_cents: 10000}}
+    charges: [{metric: m_po_cmt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_po_cmt}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_po_cmt, plan_code: p_po_cmt}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+    - {at: 2026-04-10, do: update_subscription, plan_overrides: {name: overridden plan}}
+    - at: 2026-04-15T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-05-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 2
+    invoice[1]:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+    invoice[2]:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    March: 2_000¢ plan + 30 × 1.00 = 3_000¢ charge against a 10_000¢ floor over a whole month, so
+    Commitments::Minimum::InArrears::CalculateTrueUpFeeService raises 10_000 − 5_000 = 5_000¢ and the
+    invoice reads 10_000¢ across three fees. On 10 April the subscription is overridden with nothing
+    but a name; the price, the charge and the commitment the customer signed are unchanged, so April
+    must bill the same 10_000¢ with the same three fees.
+    LAGO INSTEAD: Plans::OverrideService dups the plan and every charge but rebuilds the commitment
+    only when params[:minimum_commitment] is present, so the clone has none,
+    subscription.plan.minimum_commitment is nil, CalculateTrueUpFeeService returns 0 and April bills
+    2_000 + 3_000 = 5_000¢ with two fees. fees_count is asserted because 10_000¢ of pure usage would
+    also read 10_000¢ — three fees against two is what names the missing one.
+
+- id: identity_churn/no-override/commitment
+  area: identity_churn
+  axes: {churn: none, carried_state: minimum_commitment}
+  setup:
+    metrics: [{code: m_cmt2, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_cmt2, interval: monthly, amount_cents: 2000, pay_in_advance: false, minimum_commitment: {amount_cents: 10000}}
+    charges: [{metric: m_cmt2, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_cmt2}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_cmt2, plan_code: p_cmt2}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+    - at: 2026-04-15T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-05-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 2
+    invoice[1]:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+    invoice[2]:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    Control: the same subscription left alone. Each whole month is 2_000¢ plan + 30 × 1.00 = 3_000¢
+    of usage against a 10_000¢ floor, so CalculateTrueUpFeeService#amount_cents = 10_000 − 5_000 =
+    5_000¢ in both March and April, three fees each.
+
+- id: identity_churn/plan-override/commitment-restated
+  area: identity_churn
+  axes: {churn: plan_override, carried_state: minimum_commitment_restated}
+  control: identity_churn/no-override/commitment
+  setup:
+    metrics: [{code: m_po_cmt2, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_po_cmt2, interval: monthly, amount_cents: 2000, pay_in_advance: false, minimum_commitment: {amount_cents: 10000}}
+    charges: [{metric: m_po_cmt2, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_po_cmt2}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_po_cmt2, plan_code: p_po_cmt2}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+    - {at: 2026-04-10, do: update_subscription, plan_overrides: {name: overridden plan, minimum_commitment: {amount_cents: 10000}}}
+    - at: 2026-04-15T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-05-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 2
+    invoice[1]:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+    invoice[2]:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    The escape hatch for the row above: the override body restates minimum_commitment, so
+    Plans::OverrideService takes its params[:minimum_commitment].present? branch and
+    Commitments::OverrideService gives the clone a 10_000¢ commitment. April then bills
+    2_000 + 3_000 + (10_000 − 5_000) = 10_000¢, three fees, exactly like March.

@@ -1,0 +1,84 @@
+# Canaries are engineered to fail. Each one asserts something deliberately wrong
+# about the smoke scenario, so that its FAILURE proves one assertion mechanism is
+# still alive. A canary that passes means that mechanism has stopped asserting
+# anything, and one of those voids the entire run.
+#
+# This exists because of a real incident in the previous suite: assert_golden_error
+# ended with a `throw` inside an `ensure`, and 26 rows asserted nothing for weeks
+# while reporting green. No canary guarded that mechanism.
+#
+# Add a canary whenever the runner gains a new way to assert. One per mechanism.
+
+- id: canary/cents-exactness
+  area: canary
+  canary: {guards: exact integer comparison of *_cents}
+  setup:
+    plan: {code: p_canary, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_canary}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary, plan_code: p_canary}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      total_amount_cents: 5001
+  math: >-
+    The real total is 5000¢. Asserting 5001¢ must be reported as a mismatch. If this
+    row passes, cents are no longer compared exactly and every money assertion in the
+    suite is worthless.
+
+- id: canary/invoice-count
+  area: canary
+  canary: {guards: invoice count assertion}
+  setup:
+    plan: {code: p_canary_count, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_canary_count}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary_count, plan_code: p_canary_count}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 2
+  math: >-
+    One period billed once produces one invoice. Asserting two must fail. If this row
+    passes, no row can trust its invoice count — which is how a missing invoice or a
+    duplicated one would go unnoticed.
+
+- id: canary/zero-valued-reducer-field
+  area: canary
+  canary: {guards: a reducer field whose real value is 0 is still observed and compared}
+  setup:
+    plan: {code: p_canary_absent, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_canary_absent}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary_absent, plan_code: p_canary_absent}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      progressive_billing_credit_amount_cents: 1
+  math: >-
+    Nothing here produces a progressive billing credit, so the field is 0 — present and
+    zero, not absent. Asserting 1¢ must fail. If this row passes, a reducer that should
+    have fired but contributed nothing would read as correct, which is how several
+    progressive-billing defects stayed invisible in the old suite.
+    (The separate "expected but absent" path is guarded by canary/fee-identity, where the
+    observed value really is nil.)
+
+- id: canary/fee-identity
+  area: canary
+  canary: {guards: fees matched by content identity, not by array position}
+  setup:
+    plan: {code: p_canary_fee, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_canary_fee}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary_fee, plan_code: p_canary_fee}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees:
+        - {fee_type: charge, amount_cents: 5000}
+  math: >-
+    The only fee is a subscription fee. Claiming a charge fee of the same amount must
+    fail. If this row passes, fees are being matched on amount alone and a fee of the
+    wrong type — or attributed to the wrong charge — would read as correct.

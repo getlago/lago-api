@@ -1,0 +1,30 @@
+# The one row that must be green before any other row means anything.
+#
+# It deliberately exercises no billing subtlety at all: no charges, no events, no
+# taxes, no reducers. Every layer of the harness is on the path — World builds an
+# organization, plan, customer and subscription through the REST API, Timeline
+# travels and bills, Observe reads the invoice back, Comparison checks the cents.
+# So if this row is red, the harness is wrong. That is the whole point of it.
+
+- id: smoke/subscription-fee/monthly-arrears
+  area: smoke
+  axes: {producer: subscription_fee, interval: monthly, billing_time: calendar}
+  setup:
+    plan: {code: p_smoke, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_smoke}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_smoke, plan_code: p_smoke}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      fees_amount_cents: 5000
+      taxes_amount_cents: 0
+      total_amount_cents: 5000
+      fees:
+        - {fee_type: subscription, amount_cents: 5000}
+  math: >-
+    5000¢/month billed in arrears on calendar boundaries. The subscription starts on
+    the 1st, so the first period is whole and nothing prorates. No charges and no tax
+    configured anywhere, so the subscription fee is the entire invoice.
