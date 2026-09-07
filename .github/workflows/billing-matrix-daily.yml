@@ -90,12 +90,30 @@ jobs:
             -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" \
               '{channel: $channel, text: ":rotating_light: Billing matrix canary passed — the suite'\''s assertions can no longer be trusted. This run is void; investigate the harness before trusting any result."}')"
 
+      # Exit 3 is the harness not running at all, which is worse than a void run: exit 2 at
+      # least proves the rows executed. It gets its own alarm rather than a silently red job.
+      - name: Alarm on harness failure
+        if: steps.run_matrix.outputs.exit_code == '3'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -sS https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" --arg url "$RUN_URL" \
+              '{channel: $channel, text: (":rotating_light: Billing matrix could not run — the harness failed before executing any row, so no billing was checked at all today. " + $url)}')"
+
       # `has_news` is a boolean rather than a test on the report string: an empty report
       # still writes a newline through the heredoc, so comparing the text to '' is not a
       # reliable "nothing happened today" signal.
+      # Gated on success, not on "not void": exit 3 means the harness never ran, so
+      # results.json is either absent or left over from a previous run. Reading it would
+      # let yesterday's verdicts move today's ledger.
       - name: Build ledger report
         id: ledger
-        if: steps.run_matrix.outputs.exit_code != '2'
+        if: steps.run_matrix.outputs.exit_code == '0'
         run: |
           pr_url="https://github.com/${{ github.repository }}/compare/main...billing-matrix/ledger?expand=1"
           output="$(ruby billing_matrix/ledger.rb --apply --format slack --pr-url "$pr_url")"
@@ -160,7 +178,7 @@ jobs:
       # built from row ids and mismatch values, and interpolating it directly is the
       # standard Actions command-injection hole.
       - name: Print dry-run report
-        if: env.DRY_RUN == 'true' && steps.run_matrix.outputs.exit_code != '2'
+        if: env.DRY_RUN == 'true' && steps.run_matrix.outputs.exit_code == '0'
         env:
           REPORT: ${{ steps.ledger.outputs.report }}
         run: printf '%s\n' "$REPORT"

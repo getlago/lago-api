@@ -33,6 +33,9 @@ module BillingMatrix
         when "credit_note"
           credit_note = single(credit_notes_for(ctx))
           observed[key] = model_hash(credit_note, value) if credit_note
+        when "subscription"
+          subscription = ctx.subscription
+          observed[key] = subscription_hash(subscription.reload, value) if subscription
         when "preview"
           observed[key] = preview_hash(ctx, value)
         when "error"
@@ -96,6 +99,24 @@ module BillingMatrix
       case field
       when "fees_count" then model.fees.count
       else model.public_send(field)
+      end
+    end
+
+    # A plan override clones the plan into a child record (Plans::OverrideService sets
+    # parent_id), so "the override happened" is observable as the current plan having a
+    # parent. Its id is a fresh UUID no row could state, hence a boolean.
+    def subscription_hash(subscription, expected)
+      expected.each_with_object({}) do |(field, _), hash|
+        hash[field] = subscription_field(subscription, field)
+      end
+    end
+
+    def subscription_field(subscription, field)
+      case field
+      when "plan_overridden" then !subscription.plan.parent_id.nil?
+      when "plan_name" then subscription.plan.name
+      when "plan_code" then subscription.plan.code
+      else subscription.public_send(field)
       end
     end
 

@@ -256,14 +256,22 @@ Reads back only the keys the row actually asserts, as plain Ruby (no AR objects)
 timestamps not under test — must not appear in the output at all.
 
 Supported `expect` keys for the MVP: `invoices` (a count), `invoice` (single, when exactly
-one exists), `invoice[N]` (1-indexed, chronological), `wallet`, `credit_note`, `preview`,
-`error`. Inside an invoice: `invoice_type`, `status`, `fees_amount_cents`,
+one exists), `invoice[N]` (1-indexed, chronological), `wallet`, `credit_note`, `subscription`,
+`preview`, `error`. Inside an invoice: `invoice_type`, `status`, `fees_amount_cents`,
 `coupons_amount_cents`, `prepaid_credit_amount_cents`,
 `progressive_billing_credit_amount_cents`, `credit_notes_amount_cents`,
 `sub_total_excluding_taxes_amount_cents`, `taxes_amount_cents`, `total_amount_cents`,
 `fees_count`, and `fees` as a list. `credit_note` (the customer's single credit note) and
 `wallet` accept any reader on the model, e.g. `credit_amount_cents`, `balance_amount_cents`,
 `credit_status`, `balance_cents`.
+
+`subscription` reads `ctx.subscription` after the timeline: `plan_overridden` (boolean — true when
+the current plan has a `parent_id`, which is what `Plans::OverrideService` leaves behind),
+`plan_name`, `plan_code`, or any reader on the model (`status`, `billing_time`). Never assert
+`plan_id`: an override creates a fresh UUID no row can state; `plan_overridden` is the same fact,
+deterministically. A row on a plan-override axis asserts it on both the churn row and its
+control, otherwise an override the API accepted but ignored is indistinguishable from one that
+worked.
 
 ## comparison.rb
 

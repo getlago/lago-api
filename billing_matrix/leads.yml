@@ -152,3 +152,15 @@
   note: >-
     A fee tagged to a zero-balance, terminated, or foreign-currency wallet passes validation and
     is billed as cash with no error anywhere, while a funded unrestricted wallet sits unused.
+
+- id: identity_churn/plan-override-usage_thresholds
+  sibling_of: F69
+  noted: "2026-09-07"
+  area: identity_churn
+  note: >-
+    Plans::OverrideService carries usage thresholds onto the cloned plan only when
+    params[:usage_thresholds].present? && License.premium? && progressive_billing_enabled?
+    (override_service.rb:57) — the same gate that drops minimum_commitment at line 64 (F69).
+    plan.dup copies columns, not associations, so an override that does not restate its thresholds
+    loses them, while charges and fixed_charges are carried over unconditionally a few lines
+    earlier: the clone keeps every charge and silently stops progressive billing.

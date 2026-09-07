@@ -24,6 +24,7 @@
       events: [{properties: {amount: 15}, count: 2}]
     - {at: 2026-05-01T01:00:00Z, do: perform_billing}
   expect:
+    subscription: {plan_overridden: true}
     invoices: 2
     invoice[1]:
       fees_amount_cents: 10000
@@ -72,6 +73,7 @@
       events: [{properties: {amount: 15}, count: 2}]
     - {at: 2026-05-01T01:00:00Z, do: perform_billing}
   expect:
+    subscription: {plan_overridden: false}
     invoices: 2
     invoice[1]:
       fees_amount_cents: 10000
@@ -115,6 +117,7 @@
       events: [{properties: {amount: 15}, count: 2}]
     - {at: 2026-05-01T01:00:00Z, do: perform_billing}
   expect:
+    subscription: {plan_overridden: true}
     invoices: 2
     invoice[1]:
       fees_amount_cents: 10000
@@ -132,4 +135,7 @@
     The escape hatch for the row above: the override body restates minimum_commitment, so
     Plans::OverrideService takes its params[:minimum_commitment].present? branch and
     Commitments::OverrideService gives the clone a 10_000¢ commitment. April then bills
-    2_000 + 3_000 + (10_000 − 5_000) = 10_000¢, three fees, exactly like March.
+    2_000 + 3_000 + (10_000 − 5_000) = 10_000¢, three fees, exactly like March. Those numbers are
+    identical to the control's, so on their own they cannot tell an override that worked from one
+    the API accepted and ignored; plan_overridden is what proves the clone exists (parent_id set),
+    against the control's false.

@@ -15,7 +15,7 @@ module BillingMatrix
     REQUIRED = %w[id area timeline expect].freeze
     ID_FORMAT = %r{\A[a-z0-9_-]+(/[a-z0-9_.+-]+)+\z}
     PIN_FORMAT = /\A[A-Z]+-?\d+\z/
-    EXPECT_KEY = /\A(invoices|invoice|invoice\[[1-9]\d*\]|wallet|credit_note|preview|error)\z/
+    EXPECT_KEY = /\A(invoices|invoice|invoice\[[1-9]\d*\]|wallet|credit_note|subscription|preview|error)\z/
     INVOICE_LIKE_KEY = /\A(invoice|invoice\[\d+\]|preview)\z/
     INVOICE_KEYS = %w[
       invoice_type status fees_amount_cents coupons_amount_cents prepaid_credit_amount_cents
@@ -226,7 +226,7 @@ module BillingMatrix
       invalid!("expect", "must be a non-empty mapping") unless expect.is_a?(Hash) && expect.any?
 
       expect.each do |key, value|
-        invalid!("expect.#{key}", "unknown expectation; supported: invoices, invoice, invoice[N], wallet, credit_note, preview, error") unless key.to_s.match?(EXPECT_KEY)
+        invalid!("expect.#{key}", "unknown expectation; supported: invoices, invoice, invoice[N], wallet, credit_note, subscription, preview, error") unless key.to_s.match?(EXPECT_KEY)
 
         if key == "invoices"
           invalid!("expect.invoices", "must be a non-negative integer count") unless value.is_a?(Integer) && value >= 0

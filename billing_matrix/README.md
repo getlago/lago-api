@@ -88,6 +88,24 @@ with the `math:` that justifies it — and only then execute. If the two disagre
 conclusion is that the code is wrong, not the row. An expectation copied from observed
 output documents a bug instead of catching it.
 
+## The daily run and the ledger
+
+`.github/workflows/billing-matrix-daily.yml` runs the whole suite every morning against a
+fresh `lago_matrix_test`, then hands `results.json` to `billing_matrix/ledger.rb`, which
+diffs today's verdicts against `ledger.yml` and reports only what changed — a row that went
+red, a pinned finding that went green, a canary that stopped failing.
+
+The ledger is never committed to `main` by the workflow. Changes are pushed to the
+`billing-matrix/ledger` branch and opened as a pull request, amended in place while it
+stays open, so a status change is reviewed before it becomes the record.
+
+Nothing reaches Slack until two repository secrets exist: `SLACK_BOT_TOKEN` (a bot token
+with `chat:write`) and `SLACK_DM_USER_ID` (the channel or user id the report is posted to).
+Without them the suite still runs and the PR still opens, but the daily report and the
+exit-2 / exit-3 alarms are silent — check the Actions log, not your DMs. `workflow_dispatch`
+with `dry_run: true` runs everything and prints the report without committing, opening a
+PR, or posting.
+
 ## Known issues
 
 **One unreproduced flake.** During Phase 0, a single run saw

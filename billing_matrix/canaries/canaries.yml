@@ -43,27 +43,6 @@
     passes, no row can trust its invoice count — which is how a missing invoice or a
     duplicated one would go unnoticed.
 
-- id: canary/zero-valued-reducer-field
-  area: canary
-  canary: {guards: a reducer field whose real value is 0 is still observed and compared}
-  setup:
-    plan: {code: p_canary_absent, interval: monthly, amount_cents: 5000, pay_in_advance: false}
-    customer: {external_id: cust_canary_absent}
-  timeline:
-    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary_absent, plan_code: p_canary_absent}
-    - {at: 2026-04-01, do: perform_billing}
-  expect:
-    invoices: 1
-    invoice:
-      progressive_billing_credit_amount_cents: 1
-  math: >-
-    Nothing here produces a progressive billing credit, so the field is 0 — present and
-    zero, not absent. Asserting 1¢ must fail. If this row passes, a reducer that should
-    have fired but contributed nothing would read as correct, which is how several
-    progressive-billing defects stayed invisible in the old suite.
-    (The separate "expected but absent" path is guarded by canary/fee-identity, where the
-    observed value really is nil.)
-
 - id: canary/fee-identity
   area: canary
   canary: {guards: fees matched by content identity, not by array position}
@@ -82,3 +61,44 @@
     The only fee is a subscription fee. Claiming a charge fee of the same amount must
     fail. If this row passes, fees are being matched on amount alone and a fee of the
     wrong type — or attributed to the wrong charge — would read as correct.
+
+- id: canary/absent-entity
+  area: canary
+  canary: {guards: an entity asserted but never produced is a mismatch, not a skip}
+  setup:
+    plan: {code: p_canary_absent, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_canary_absent}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary_absent, plan_code: p_canary_absent}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice[2]:
+      total_amount_cents: 5000
+  math: >-
+    One period billed once is one invoice, so there is no invoice[2] and Observe emits no
+    key for it. Comparison must report the missing key as a mismatch. If this row passes,
+    a key present in `expected` and absent from `observed` is being skipped, and every
+    invoice[2], credit_note and wallet assertion in the corpus would read green when the
+    entity was never created at all.
+
+- id: canary/fee-field
+  area: canary
+  canary: {guards: field comparison on a fee already matched by identity}
+  setup:
+    plan: {code: p_canary_fee_field, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_canary_fee_field}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_canary_fee_field, plan_code: p_canary_fee_field}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees:
+        - {fee_type: subscription, amount_cents: 5001}
+  math: >-
+    The only fee is a 5000¢ subscription fee, so fee_type matches it by identity and the
+    row reaches the per-field comparison, where 5001¢ must fail. canary/fee-identity cannot
+    guard this: its fee_type is wrong, so it fails one step earlier, on identity. If this row
+    passes, a matched fee's fields are no longer compared and every fees: amount_cents /
+    units assertion in the suite asserts only that a fee of that type exists.
