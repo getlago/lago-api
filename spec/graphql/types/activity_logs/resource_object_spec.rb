@@ -1,0 +1,138 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Types::ActivityLogs::ResourceObject do
+  subject { described_class }
+
+  it "has the correct graphql name" do
+    expect(subject.graphql_name).to eq("ActivityLogResourceObject")
+  end
+
+  it "includes the correct possible types" do
+    expect(subject.possible_types).to contain_exactly(
+      Types::BillableMetrics::Object,
+      Types::Plans::Object,
+      Types::CatalogPlans::Object,
+      Types::Customers::Object,
+      Types::Invoices::Object,
+      Types::CreditNotes::Object,
+      Types::BillingEntities::Object,
+      Types::Subscriptions::Object,
+      Types::Wallets::Object,
+      Types::Coupons::Object,
+      Types::PaymentRequests::Object,
+      Types::Entitlement::FeatureObject,
+      Types::PaymentReceipts::Object,
+      Types::ProductCategories::Object,
+      Types::Products::Object,
+      Types::ProductFilters::Object,
+      Types::RateCards::Object,
+      Types::Quotes::Object,
+      Types::OrderForms::Object,
+      Types::Orders::Object
+    )
+  end
+
+  describe ".resolve_type" do
+    let(:billable_metric) { create(:billable_metric) }
+    let(:plan) { create(:plan) }
+    let(:catalog_plan) { create(:catalog_plan) }
+    let(:customer) { create(:customer) }
+    let(:invoice) { create(:invoice) }
+    let(:credit_note) { create(:credit_note) }
+    let(:billing_entity) { create(:billing_entity) }
+    let(:subscription) { create(:subscription) }
+    let(:wallet) { create(:wallet) }
+    let(:coupon) { create(:coupon) }
+    let(:payment_request) { create(:payment_request) }
+    let(:feature) { create(:feature) }
+    let(:product_category) { create(:product_category) }
+    let(:product) { create(:product) }
+    let(:product_filter) { create(:product_filter) }
+    let(:rate_card) { create(:rate_card) }
+    let(:quote) { create(:quote) }
+    let(:order_form) { create(:order_form) }
+    let(:order) { create(:order) }
+
+    it "returns Types::BillableMetrics::Object for BillableMetric objects" do
+      expect(subject.resolve_type(billable_metric, {})).to eq(Types::BillableMetrics::Object)
+    end
+
+    it "returns Types::Plans::Object for Plan objects" do
+      expect(subject.resolve_type(plan, {})).to eq(Types::Plans::Object)
+    end
+
+    it "returns Types::CatalogPlans::Object for CatalogPlan objects" do
+      expect(subject.resolve_type(catalog_plan, {})).to eq(Types::CatalogPlans::Object)
+    end
+
+    it "returns Types::Customers::Object for Customer objects" do
+      expect(subject.resolve_type(customer, {})).to eq(Types::Customers::Object)
+    end
+
+    it "returns Types::Invoices::Object for Invoice objects" do
+      expect(subject.resolve_type(invoice, {})).to eq(Types::Invoices::Object)
+    end
+
+    it "returns Types::CreditNotes::Object for CreditNote objects" do
+      expect(subject.resolve_type(credit_note, {})).to eq(Types::CreditNotes::Object)
+    end
+
+    it "returns Types::BillingEntities::Object for BillingEntity objects" do
+      expect(subject.resolve_type(billing_entity, {})).to eq(Types::BillingEntities::Object)
+    end
+
+    it "returns Types::Subscriptions::Object for Subscription objects" do
+      expect(subject.resolve_type(subscription, {})).to eq(Types::Subscriptions::Object)
+    end
+
+    it "returns Types::Wallets::Object for Wallet objects" do
+      expect(subject.resolve_type(wallet, {})).to eq(Types::Wallets::Object)
+    end
+
+    it "returns Types::Coupons::Object for Coupon objects" do
+      expect(subject.resolve_type(coupon, {})).to eq(Types::Coupons::Object)
+    end
+
+    it "raises an error for unexpected types" do
+      expect { subject.resolve_type("Unexpected", {}) }.to raise_error(StandardError)
+    end
+
+    it "returns Types::PaymentRequests::Object for PaymentRequest objects" do
+      expect(subject.resolve_type(payment_request, {})).to eq(Types::PaymentRequests::Object)
+    end
+
+    it "returns Types::Entitlement::FeatureObject for Feature objects" do
+      expect(subject.resolve_type(feature, {})).to eq(Types::Entitlement::FeatureObject)
+    end
+
+    it "returns Types::ProductCategories::Object for ProductCategory objects" do
+      expect(subject.resolve_type(product_category, {})).to eq(Types::ProductCategories::Object)
+    end
+
+    it "returns Types::Products::Object for Product objects" do
+      expect(subject.resolve_type(product, {})).to eq(Types::Products::Object)
+    end
+
+    it "returns Types::ProductFilters::Object for ProductFilter objects" do
+      expect(subject.resolve_type(product_filter, {})).to eq(Types::ProductFilters::Object)
+    end
+
+    it "returns Types::RateCards::Object for RateCard objects" do
+      expect(subject.resolve_type(rate_card, {})).to eq(Types::RateCards::Object)
+    end
+
+    it "returns Types::Quotes::Object for Quote objects" do
+      expect(subject.resolve_type(quote, {})).to eq(Types::Quotes::Object)
+    end
+
+    it "returns Types::OrderForms::Object for OrderForm objects" do
+      expect(subject.resolve_type(order_form, {})).to eq(Types::OrderForms::Object)
+    end
+
+    it "returns Types::Orders::Object for Order objects" do
+      expect(subject.resolve_type(order, {})).to eq(Types::Orders::Object)
+    end
+  end
+end

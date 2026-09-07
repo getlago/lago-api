@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob do
+  it_behaves_like "a configurable queue", "alerts", "SIDEKIQ_ALERTS" do
+    let(:arguments) { create(:subscription_activity).id }
+  end
+
+  describe "queue routing" do
+    let(:subscription_activity) { create(:subscription_activity) }
+
+    context "when the organization is targeted for the dedicated queue" do
+      before { stub_const("Utils::DedicatedWorkerConfig::ORGANIZATION_IDS", [subscription_activity.organization_id]) }
+
+      it "routes the retry re-enqueue to the dedicated queue" do
+        expect { described_class.perform_later(subscription_activity.id, 2) }
+          .to have_enqueued_job(described_class).on_queue("dedicated_alerts")
+      end
+    end
+  end
+
+  describe "#perform" do
+    let(:subscription_activity) { create(:subscription_activity) }
+    let(:subscription_activity_id) { subscription_activity.id }
+
+    before do
+      allow(UsageMonitoring::ProcessSubscriptionActivityService).to receive(:call!)
+    end
+
+    it "calls the ProcessSubscriptionActivityService with the subscription activity" do
+      described_class.perform_now(subscription_activity_id)
+      expect(UsageMonitoring::ProcessSubscriptionActivityService).to have_received(:call!).with(subscription_activity:)
+    end
+
+    context "when the subscription activity does not exist" do
+      let(:subscription_activity_id) { 9_999_999_999_999 }
+
+      it "does not call the ProcessSubscriptionActivityService" do
+        expect(UsageMonitoring::ProcessSubscriptionActivityService).not_to have_received(:call!)
+        described_class.perform_now(subscription_activity_id)
+      end
+    end
+
+    context "when ProcessSubscriptionActivityService raises" do
+      before do
+        allow(UsageMonitoring::ProcessSubscriptionActivityService).to receive(:call!).and_raise(BaseService::ThrottlingError)
+      end
+
+      it "re-enqueues the job" do
+        described_class.perform_now(subscription_activity_id)
+        expect(described_class).to have_been_enqueued.with(subscription_activity_id, 2)
+      end
+
+      context "when the max retries is reached" do
+        it "removes the SubscriptionActivity" do
+          begin
+            described_class.perform_now(subscription_activity_id, 4)
+          rescue BaseService::ThrottlingError => _e
+          end
+          expect(described_class).not_to have_been_enqueued
+          expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        end
+      end
+    end
+  end
+end

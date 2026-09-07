@@ -1,0 +1,47 @@
+postgres_enriched_events:
+  description: "Turn on events pre-enrichement for organizations using the PG event store"
+  owners: ["@vincent-pochet"]
+
+enriched_events_aggregation:
+  description: "Use the enriched events store for aggregation queries in ClickHouse"
+  owners: ["@vincent-pochet"]
+
+wallet_traceability:
+  description: "Enable wallet traceability on newly created wallets"
+  owners: ["@groyoh", "@D1353L"]
+
+payment_gated_subscriptions:
+  description: "Enable payment-gated subscription activation rules"
+  owners: ["@osmarluz", "@ancorcruz"]
+
+order_forms:
+  description: "Enable quotes, order forms and orders"
+  owners: ["@murparreira", "@toommz", "@rinasergeeva"]
+
+stripe_shared_payment_token:
+  description: "Use Stripe Shared Payment Token for agent-initiated payments when no other payment method is attached"
+  owners: ["@ancorcruz"]
+
+fixed_charge_usage_delta_migration:
+  description: "Count fees from discarded recurring usage charges as already-paid units when computing pay-in-advance fixed charge deltas (temporary bridge for usage-to-fixed-charge migrations)"
+  owners: ["@osmarluz"]
+
+multi_connection:
+  description: "Allow organizations to configure multiple connections of the same type per customer"
+  owners: ["@lovrocolic", "@mariohd"]
+
+lazy_charge_usage_cache:
+  description: "Validate the charge usage cache lazily at read time (compare cache creation time to the last event) instead of expiring it on every event reception"
+  owners: ["@vincent-pochet"]
+
+product_catalog:
+  description: "Use the product catalog (billing v2): product_categories, products, rate cards and plan rate phases"
+  owners: ["@rsempe"]
+
+skip_credit_invoice_auto_payment_delay:
+  description: "Trigger the auto-payment of credit invoices (wallet top-ups) immediately instead of delaying it behind a possible hosted checkout payment"
+  owners: ["@brunomiguelpinto"]
+
+account_tree:
+  description: "Enable the account tree - hierarchy based attributed usage below the customer"
+  owners: ["@lovrocolic"]

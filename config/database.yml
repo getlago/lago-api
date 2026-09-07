@@ -1,0 +1,148 @@
+default: &default
+  adapter: postgresql
+  variables:
+    statement_timeout: <%= ENV.fetch("LAGO_DATABASE_STATEMENT_TIMEOUT", ":default") %>
+    idle_in_transaction_session_timeout: <%= ENV.fetch("LAGO_DATABASE_IDLE_TX_TIMEOUT", ":default") %>
+    lock_timeout: <%= ENV.fetch("LAGO_DATABASE_LOCK_TIMEOUT", ":default") %>
+
+# URL contract
+#   DATABASE_URL       — direct connection to the physical database.
+#                        Always present. In envs without a connection pooler
+#                        this is also the URL every query uses.
+#   DATABASE_PROXY_URL — pooler / RDS Proxy URL. Optional. When set, becomes
+#                        the default connection for `:writing` and `:events`;
+#                        `:direct` still connects via DATABASE_URL to bypass
+#                        the pooler for statements that would session-pin
+#                        (>16 KB — see Subscriptions::OrganizationBillingService).
+# When only DATABASE_URL is set, every role points at it — the `:direct`
+# role is effectively a no-op.
+
+development:
+  primary:
+    <<: *default
+    host: db
+    username: lago
+    password: changeme
+    database: lago
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
+    port: 5432
+  direct:
+    <<: *default
+    host: db
+    username: lago
+    password: changeme
+    database: lago
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
+    port: 5432
+    database_tasks: false
+  events:
+    <<: *default
+    host: db
+    username: lago
+    password: changeme
+    database: lago
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
+    port: 5432
+  clickhouse:
+    adapter: clickhouse
+    database: default
+    host: clickhouse
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
+    port: 8123
+    username: default
+    password: default
+    migrations_paths: db/clickhouse_migrate
+    debug: true
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
+    schema_dump: false
+
+test:
+  primary:
+    <<: *default
+    url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+    schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> structure.sql <% end %>
+  direct:
+    <<: *default
+    url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+    database_tasks: false
+    schema_dump: false
+  events:
+    <<: *default
+    url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+    schema_dump: false
+  clickhouse:
+    adapter: clickhouse
+    database: <%= ENV.fetch('LAGO_CLICKHOUSE_DATABASE', 'default_test') %>
+    host: <%= ENV.fetch('LAGO_CLICKHOUSE_HOST', 'clickhouse') %>
+    port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
+    username: <%= ENV.fetch('LAGO_CLICKHOUSE_USERNAME', 'default') %>
+    password: <%= ENV.fetch('LAGO_CLICKHOUSE_PASSWORD', 'default') %>
+    migrations_paths: db/clickhouse_migrate
+    debug: true
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
+    schema_dump: false
+
+staging:
+  primary:
+    <<: *default
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
+  direct:
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    database_tasks: false
+  events:
+    <<: *default
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].blank? %>
+    database_tasks: false
+  clickhouse:
+    adapter: clickhouse
+    database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
+    host: <%= ENV['LAGO_CLICKHOUSE_HOST'] %>
+    port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
+    username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
+    password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
+    migrations_paths: db/clickhouse_migrate
+    debug: false
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
+
+production:
+  primary:
+    <<: *default
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    # RDS Proxy for Postgres session-pins on prepared statements, so
+    # this must be off whenever the primary role goes through a pooler.
+    # When DATABASE_PROXY_URL is unset, fall back to the previous
+    # DATABASE_PREPARED_STATEMENTS knob (default true).
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+  direct:
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    database_tasks: false
+  events:
+    <<: *default
+    url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    database_tasks: false
+  clickhouse:
+    adapter: clickhouse
+    database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
+    host: <%= ENV['LAGO_CLICKHOUSE_HOST'] %>
+    port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
+    password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
+    ssl: <%= ENV.fetch('LAGO_CLICKHOUSE_SSL', false) %>
+    migrations_paths: db/clickhouse_migrate
+    debug: false
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>

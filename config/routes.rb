@@ -1,0 +1,96 @@
+# frozen_string_literal: true
+
+Rails.application.routes.draw do
+  if ENV["LAGO_SIDEKIQ_WEB"] == "true"
+    mount Sidekiq::Web, at: "/sidekiq" if defined?(Sidekiq::Web)
+    mount Sidekiq::Prometheus::Exporter, at: "/sidekiq/prometheus/metrics" if defined? Sidekiq::Prometheus::Exporter
+  end
+  mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
+  mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
+  mount Yabeda::Prometheus::Exporter, at: "/metrics"
+  mount ActionCable.server, at: "/cable"
+
+  post "/graphql", to: "graphql#execute"
+
+  # Health Check status
+  get "/health", to: "application#health"
+  get "/ready", to: "application#ready"
+
+  namespace :data_api do
+    namespace :v1 do
+      resources :charges, only: [] do
+        post :forecasted_usage_amount, on: :member
+        post :bulk_forecasted_usage_amount, on: :collection
+      end
+    end
+  end
+
+  namespace :api do
+    namespace :v1 do
+      draw(:shared_api)
+    end
+
+    # Drawn first so catalog routes win recognition; everything else on /api/v2
+    # falls through to v1.
+    namespace :v2 do
+      resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
+      end
+      resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
+      resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
+      end
+      resources :plans, param: :code, code: /.*/, only: %i[index show create update] do
+        resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards" do
+          scope module: :plan_rate_cards do
+            resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
+          end
+        end
+        draw(:plan_nested_api)
+      end
+      # The constraint mirrors v1: without it, an external id containing a
+      # dot is truncated at the format separator.
+      resources :contracts, only: %i[index show create], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
+          scope module: :contract_rate_cards do
+            resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
+          end
+        end
+      end
+    end
+
+    namespace :v2, module: :v1 do
+      draw(:shared_api)
+    end
+  end
+  resources :webhooks, only: [] do
+    post "stripe/:organization_id", to: "webhooks#stripe", on: :collection, as: :stripe
+
+    post "cashfree/:organization_id", to: "webhooks#cashfree", on: :collection, as: :cashfree
+    post "flutterwave/:organization_id", to: "webhooks#flutterwave", on: :collection, as: :flutterwave
+    post "gocardless/:organization_id", to: "webhooks#gocardless", on: :collection, as: :gocardless
+    post "adyen/:organization_id", to: "webhooks#adyen", on: :collection, as: :adyen
+    post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
+  end
+
+  namespace :admin do
+    resources :memberships, only: %i[create]
+    resources :organizations, only: %i[update create]
+    resources :invoices do
+      post :regenerate, on: :member
+    end
+  end
+
+  if Rails.env.development?
+    namespace :dev_tools do
+      get "/invoices/:id", to: "invoices#show"
+      get "/payment_receipts/:id", to: "payment_receipts#show"
+    end
+  end
+
+  match "*unmatched" => "application#not_found",
+    :via => %i[get post put delete patch],
+    :constraints => lambda { |req|
+      req.path.exclude?("rails/active_storage")
+    }
+end

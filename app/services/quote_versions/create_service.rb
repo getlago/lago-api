@@ -1,0 +1,45 @@
+# frozen_string_literal: true
+
+module QuoteVersions
+  class CreateService < BaseService
+    include OrderForms::Premium
+
+    attr_reader :quote, :params
+
+    Result = BaseResult[:quote_version]
+
+    def initialize(quote:, params: {})
+      @quote = quote
+      @params = params
+      super
+    end
+
+    def call
+      return result.not_found_failure!(resource: "quote") unless quote
+      return result.forbidden_failure! unless order_forms_enabled?(quote.organization)
+      return result.forbidden_failure!(code: "active_version_exists") if active_version_exists?
+
+      quote_version = quote.versions.new(
+        organization: quote.organization,
+        **params.slice(:billing_items, :content, :currency, :billing_entity_id)
+      )
+
+      validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)
+      return result if validator && !validator.valid?
+
+      quote_version.save!
+      result.quote_version = quote_version
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.forbidden_failure!(code: "active_version_exists")
+    end
+
+    private
+
+    def active_version_exists?
+      quote.versions.where(status: %w[draft approved]).exists?
+    end
+  end
+end
