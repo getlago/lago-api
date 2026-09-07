@@ -331,6 +331,63 @@ RSpec.describe Invoices::AdvanceChargesService do
       end
     end
 
+    context "when re-expanded subscriptions belong to different billing entities" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      let(:charge) do
+        create(
+          :charge,
+          plan:,
+          billable_metric:,
+          prorated: true,
+          pay_in_advance: true,
+          invoiceable: false,
+          regroup_paid_fees: "invoice",
+          properties: {amount: "1"}
+        )
+      end
+
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at
+        )
+      end
+
+      # Same external_id as `subscription` (an upgrade rotation), so the re-expansion
+      # by external_id pulls it in alongside `subscription` despite a different entity.
+      let(:subscription_2) do
+        create(
+          :subscription,
+          external_id: subscription.external_id,
+          customer:,
+          status: :terminated,
+          terminated_at: Time.current,
+          started_at: Time.current - 1.year,
+          plan:,
+          billing_entity: other_billing_entity
+        )
+      end
+
+      before do
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription:, amount_cents: 100, taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription: subscription_2, amount_cents: 200, taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+      end
+
+      it "creates a separate advance-charges invoice per billing entity" do
+        expect { invoice_service.call }
+          .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
+
+        invoices = Invoice.where(invoice_type: :advance_charges)
+        expect(invoices.map(&:billing_entity)).to match_array([customer.billing_entity, other_billing_entity])
+      end
+    end
+
     context "when re-expanded subscriptions share the same purchase order number" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 

@@ -94,12 +94,14 @@ module Invoices
     end
 
     # NOTE: The re-expanded subscription set (matched by external_id) can span several
-    #       purchase order numbers — e.g. a terminated and an active subscription sharing
-    #       an external_id after an upgrade. Each PO must produce its own invoice.
+    #       currencies, billing entities and purchase order numbers — e.g. a terminated and an
+    #       active subscription sharing an external_id after an upgrade. An invoice holds one of
+    #       each, so every (currency, billing entity, PO) must produce its own invoice.
     def create_group_invoices
-      subscriptions.group_by(&:purchase_order_number).values.filter_map do |subscriptions_group|
-        create_group_invoice(subscriptions_group)
-      end
+      subscriptions
+        .group_by { |sub| [sub.plan.amount_currency, sub.applicable_billing_entity_id, sub.purchase_order_number] }
+        .values
+        .filter_map { |subscriptions_group| create_group_invoice(subscriptions_group) }
     end
 
     def create_group_invoice(subscriptions_group)
@@ -142,10 +144,10 @@ module Invoices
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
-        currency:,
+        currency: subscriptions_group.first&.plan&.amount_currency || currency,
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true,
-        billing_entity: initial_subscriptions.first&.billing_entity || customer.billing_entity,
+        billing_entity: subscriptions_group.first&.billing_entity || customer.billing_entity,
         purchase_order_number: subscriptions_group.first&.purchase_order_number
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
