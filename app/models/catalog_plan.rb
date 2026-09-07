@@ -12,6 +12,13 @@ class CatalogPlan < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :coupon_targets
+  has_many :coupons, through: :coupon_targets
+  has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+  has_many :entitlements, class_name: "Entitlement::Entitlement", dependent: :destroy
+  has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
+
   validates :name, presence: true
   validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
