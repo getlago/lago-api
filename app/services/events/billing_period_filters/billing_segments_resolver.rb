@@ -70,7 +70,7 @@ module Events
       def event_store
         @event_store ||= Events::Stores::StoreFactory.new_instance(
           organization:,
-          subscription: contract,
+          context: Events::Stores::EventContext.from(contract:),
           boundaries: {
             from_datetime: target_segments.map(&:started_at).min,
             to_datetime: target_segments.map(&:ended_at).max
