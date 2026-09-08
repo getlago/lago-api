@@ -126,7 +126,10 @@ namespace :events do
   #   lago exec api bundle exec rails events:recover_pay_in_advance_fees \
   #     ORGANIZATION_ID=<uuid> FROM=2026-08-22T00:00:00Z TO=2026-08-24T00:00:00Z [DRY_RUN=false]
   #
-  # FROM/TO bound the event ingestion time, as [FROM, TO). DRY_RUN defaults to true (report only).
+  # FROM/TO bound the event timestamp, as [FROM, TO), which is the period a pay-in-advance fee is
+  # billed against. An event ingested during an outage but timestamped outside the window is
+  # therefore out of scope; widen FROM to reach backdated ones.
+  # DRY_RUN defaults to true (report only).
   desc "Recover pay-in-advance fees for events that were never post-processed"
   task recover_pay_in_advance_fees: :environment do
     prefix = "events:recover_pay_in_advance_fees"
@@ -167,173 +170,190 @@ namespace :events do
 
     codes = charges_by_plan_and_code.keys.map(&:last).uniq
 
-    # Not narrowed on subscription external ids: that would bind one parameter per subscription, and
-    # the per-event lookup below discards those events anyway.
-    scope = organization.events.where(created_at: from...to, code: codes)
+    # The bounds mirror `Events::Common#subscription`: a subscription starting after the window, or
+    # terminated before it, cannot cover an event timestamped inside it.
+    subscriptions_scope = organization.subscriptions
+      .where(plan_id: charges_by_plan_and_code.keys.map(&:first).uniq)
+      .where(started_at: ..to)
+      .where("terminated_at IS NULL OR terminated_at >= ?", from)
 
     recovered = 0
     invoices_to_create = 0
     not_due = 0
     scanned = 0
+    processed = 0
     skipped = []
     tainted_subscriptions = Set.new
     started_at = Time.current
-    total = scope.count
 
     puts "#{prefix} [#{mode}]"
     puts "Organization: #{organization.id}"
-    puts "Ingested in:  [#{from.iso8601}, #{to.iso8601})"
-    puts "Candidates:   #{total} event(s) on #{codes.size} pay-in-advance metric code(s)"
+    puts "Timestamped:  [#{from.iso8601}, #{to.iso8601})"
+    puts "Metrics:      #{codes.size} pay-in-advance metric code(s)"
     puts "=" * 80
 
-    # Cursored on (created_at, id) so the scan follows index_events_on_organization_id_and_created_at.
-    # The default primary-key cursor would paginate on a random uuid, re-sorting the whole remaining
-    # window on every batch.
-    scope.in_batches(of: batch_size, cursor: [:created_at, :id], order: :asc, load: true) do |events_in_batch|
-      # Printed every batch so a long run is visibly progressing rather than possibly stuck.
-      scanned += events_in_batch.size
-      puts "  ... #{scanned}/#{total} scanned in #{(Time.current - started_at).round(1)}s, " \
-        "at #{events_in_batch.last.created_at.iso8601}, #{recovered} to recover, #{skipped.size} skipped"
+    last_external_id = nil
 
-      # `group_by` preserves the SQL order, so `covering.first` below is what
-      # `Events::Common#subscription` resolves to.
+    subscriptions_scope.in_batches(of: batch_size, cursor: [:external_id, :id], order: :asc) do |relation|
+      batch_external_ids = relation.pluck(:external_id).uniq
+      batch_external_ids.shift if batch_external_ids.first == last_external_id
+      last_external_id = batch_external_ids.last if batch_external_ids.any?
+
       subscriptions_by_external_id = organization.subscriptions
-        .where(external_id: events_in_batch.map(&:external_subscription_id).uniq)
+        .where(external_id: batch_external_ids)
         .order(Arel.sql("terminated_at DESC NULLS FIRST, started_at DESC"))
         .group_by(&:external_id)
 
-      candidates = events_in_batch.filter_map do |event|
-        covering = subscriptions_by_external_id.fetch(event.external_subscription_id, []).select do |candidate|
-          # `started_at` is nil until activation, and NULLS FIRST sorts those first. SQL drops them
-          # because the comparison is NULL; the same has to happen here.
-          next false if candidate.started_at.nil?
+      batch_external_ids.each do |external_id|
+        processed += 1
 
-          candidate.started_at.floor(3) <= event.timestamp &&
-            (candidate.terminated_at.nil? || candidate.terminated_at.floor(3) >= event.timestamp)
+        if (processed % 250).zero?
+          puts "  ... #{processed} subscription(s), #{scanned} event(s) scanned " \
+            "in #{(Time.current - started_at).round(1)}s, #{recovered} to recover, #{skipped.size} skipped"
         end
 
-        # Two resolutions disagree in production and both matter: the gate in
-        # `Events::PostProcessService#subscriptions` excludes incomplete subscriptions and decides
-        # whether a fee is created at all, while `Events::Common#subscription` ignores status and
-        # decides which plan's charges the replay bills.
-        replayed = covering.first
-        eligible = covering.find { |candidate| !candidate.incomplete? }
+        # Ordered as `Events::Common#subscription` does, so `covering.first` below is what it resolves.
+        subscriptions = subscriptions_by_external_id.fetch(external_id, [])
 
-        if eligible.nil?
-          reason = if replayed
-            "its only subscriptions are incomplete, which `Events::PostProcessService` skips, " \
-              "so no fee was created at ingestion either"
+        events = organization.events.where(external_subscription_id: external_id, code: codes, timestamp: from...to)
+
+        events.in_batches(of: batch_size, cursor: [:timestamp, :id], order: :asc, load: true) do |events_in_batch|
+          scanned += events_in_batch.size
+
+          candidates = events_in_batch.filter_map do |event|
+            covering = subscriptions.select do |candidate|
+              # `started_at` is nil until activation, and NULLS FIRST sorts those first. SQL drops them
+              # because the comparison is NULL; the same has to happen here.
+              next false if candidate.started_at.nil?
+
+              candidate.started_at.floor(3) <= event.timestamp &&
+                (candidate.terminated_at.nil? || candidate.terminated_at.floor(3) >= event.timestamp)
+            end
+
+            # Two resolutions disagree in production and both matter: the gate in
+            # `Events::PostProcessService#subscriptions` excludes incomplete subscriptions and decides
+            # whether a fee is created at all, while `Events::Common#subscription` ignores status and
+            # decides which plan's charges the replay bills.
+            replayed = covering.first
+            eligible = covering.find { |candidate| !candidate.incomplete? }
+
+            if eligible.nil?
+              reason = if replayed
+                "its only subscriptions are incomplete, which `Events::PostProcessService` skips, " \
+                  "so no fee was created at ingestion either"
+              else
+                "no subscription covers its timestamp; a replay would create no fee"
+              end
+              skipped << [event.transaction_id, event.external_subscription_id, reason]
+              next
+            end
+
+            if replayed != eligible
+              skipped << [event.transaction_id, event.external_subscription_id,
+                "the subscription the replay would bill (#{replayed.id}) is not the one post-processing " \
+                "would have used (#{eligible.id}); recover it by hand"]
+              next
+            end
+
+            charges = charges_by_plan_and_code[[eligible.plan_id, event.code]]
+            if charges.blank?
+              not_due += 1
+              next
+            end
+
+            # The replay bills whatever the plan carries now, so a charge added after the event was
+            # ingested would be billed for a period it did not cover.
+            if charges.any? { |charge| charge.created_at > event.created_at }
+              skipped << [event.transaction_id, event.external_subscription_id,
+                "its plan gained a pay-in-advance charge after the event was ingested, so a replay " \
+                "would bill more than the original would have"]
+              next
+            end
+
+            billable_metric = charges.first.billable_metric
+            unless billable_metric.count_agg? ||
+                billable_metric.custom_agg? ||
+                event.properties[billable_metric.field_name].present?
+              not_due += 1
+              next
+            end
+
+            subscription = eligible
+
+            [event, subscription, charges, billable_metric]
+          end
+          next if candidates.empty?
+
+          transaction_ids = candidates.map { |event, _, _, _| event.transaction_id }
+
+          # No invoice_id filter: `Fee.from_organization_pay_in_advance` scopes to `invoice_id: nil` and
+          # would miss fees already billed.
+          charged_ids_by_transaction_id = Fee
+            .where(
+              organization_id: organization.id,
+              pay_in_advance: true,
+              original_fee_id: nil,
+              pay_in_advance_event_transaction_id: transaction_ids
+            )
+            .pluck(:pay_in_advance_event_transaction_id, :charge_id)
+            .group_by(&:first)
+            .transform_values { |rows| rows.map(&:last) }
+
+          # Every index on `pay_in_advance_event_transaction_id` is partial on `deleted_at IS NULL`, so
+          # including discarded fees in the query above would make all of them unusable.
+          uncharged = transaction_ids - charged_ids_by_transaction_id.keys
+          discarded_transaction_ids = if uncharged.empty?
+            Set.new
           else
-            "no subscription covers its timestamp; a replay would create no fee"
+            Fee.with_discarded
+              .where.not(deleted_at: nil)
+              .where(
+                organization_id: organization.id,
+                pay_in_advance: true,
+                original_fee_id: nil,
+                pay_in_advance_event_transaction_id: uncharged
+              )
+              .distinct
+              .pluck(:pay_in_advance_event_transaction_id)
+              .to_set
           end
-          skipped << [event.transaction_id, event.external_subscription_id, reason]
-          next
-        end
 
-        if replayed != eligible
-          skipped << [event.transaction_id, event.external_subscription_id,
-            "the subscription the replay would bill (#{replayed.id}) is not the one post-processing " \
-            "would have used (#{eligible.id}); recover it by hand"]
-          next
-        end
+          candidates.each do |event, subscription, charges, billable_metric|
+            charged_ids = charged_ids_by_transaction_id[event.transaction_id]
 
-        charges = charges_by_plan_and_code[[eligible.plan_id, event.code]]
-        if charges.blank?
-          not_due += 1
-          next
-        end
+            if charged_ids.present?
+              missing = charges.map(&:id) - charged_ids
+              if missing.any?
+                skipped << [event.transaction_id, event.external_subscription_id,
+                  "charges #{missing.join(", ")} have no fee while others do, and " \
+                  "`Events::PayInAdvanceService` skips the whole event once any fee exists"]
+              end
+              next
+            end
 
-        # The replay bills whatever the plan carries now, so a charge added after the event was
-        # ingested would be billed for a period it did not cover.
-        if charges.any? { |charge| charge.created_at > event.created_at }
-          skipped << [event.transaction_id, event.external_subscription_id,
-            "its plan gained a pay-in-advance charge after the event was ingested, so a replay " \
-            "would bill more than the original would have"]
-          next
-        end
+            # The guard indexes ignore discarded rows, so a fee that was voided on purpose would look
+            # exactly like a missing one.
+            if discarded_transaction_ids.include?(event.transaction_id)
+              skipped << [event.transaction_id, event.external_subscription_id,
+                "its fees are all discarded, so they were either voided on purpose or already " \
+                "regenerated; check before recovering it by hand"]
+              next
+            end
 
-        billable_metric = charges.first.billable_metric
-        unless billable_metric.count_agg? ||
-            billable_metric.custom_agg? ||
-            event.properties[billable_metric.field_name].present?
-          not_due += 1
-          next
-        end
+            # `Events::PayInAdvanceService` enqueues one `Invoices::CreatePayInAdvanceChargeJob` per
+            # invoiceable charge, and each mints its own invoice, so the blast radius is a count of
+            # charges rather than of events.
+            invoiceable_charges = charges.count(&:invoiceable?)
+            recovered += 1
+            invoices_to_create += invoiceable_charges
+            tainted_subscriptions << subscription.id unless billable_metric.count_agg?
 
-        subscription = eligible
+            puts "  RECOVER #{event.transaction_id} subscription=#{event.external_subscription_id} " \
+              "code=#{event.code} invoiceable_charges=#{invoiceable_charges}"
 
-        [event, subscription, charges, billable_metric]
-      end
-      next if candidates.empty?
-
-      transaction_ids = candidates.map { |event, _, _, _| event.transaction_id }
-
-      # No invoice_id filter: `Fee.from_organization_pay_in_advance` scopes to `invoice_id: nil` and
-      # would miss fees already billed.
-      charged_ids_by_transaction_id = Fee
-        .where(
-          organization_id: organization.id,
-          pay_in_advance: true,
-          original_fee_id: nil,
-          pay_in_advance_event_transaction_id: transaction_ids
-        )
-        .pluck(:pay_in_advance_event_transaction_id, :charge_id)
-        .group_by(&:first)
-        .transform_values { |rows| rows.map(&:last) }
-
-      # Every index on `pay_in_advance_event_transaction_id` is partial on `deleted_at IS NULL`, so
-      # including discarded fees in the query above would make all of them unusable.
-      uncharged = transaction_ids - charged_ids_by_transaction_id.keys
-      discarded_transaction_ids = if uncharged.empty?
-        Set.new
-      else
-        Fee.with_discarded
-          .where.not(deleted_at: nil)
-          .where(
-            organization_id: organization.id,
-            pay_in_advance: true,
-            original_fee_id: nil,
-            pay_in_advance_event_transaction_id: uncharged
-          )
-          .distinct
-          .pluck(:pay_in_advance_event_transaction_id)
-          .to_set
-      end
-
-      candidates.each do |event, subscription, charges, billable_metric|
-        charged_ids = charged_ids_by_transaction_id[event.transaction_id]
-
-        if charged_ids.present?
-          missing = charges.map(&:id) - charged_ids
-          if missing.any?
-            skipped << [event.transaction_id, event.external_subscription_id,
-              "charges #{missing.join(", ")} have no fee while others do, and " \
-              "`Events::PayInAdvanceService` skips the whole event once any fee exists"]
+            Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json) unless dry_run
           end
-          next
         end
-
-        # The guard indexes ignore discarded rows, so a fee that was voided on purpose would look
-        # exactly like a missing one.
-        if discarded_transaction_ids.include?(event.transaction_id)
-          skipped << [event.transaction_id, event.external_subscription_id,
-            "its fees are all discarded, so they were either voided on purpose or already " \
-            "regenerated; check before recovering it by hand"]
-          next
-        end
-
-        # `Events::PayInAdvanceService` enqueues one `Invoices::CreatePayInAdvanceChargeJob` per
-        # invoiceable charge, and each mints its own invoice, so the blast radius is a count of
-        # charges rather than of events.
-        invoiceable_charges = charges.count(&:invoiceable?)
-        recovered += 1
-        invoices_to_create += invoiceable_charges
-        tainted_subscriptions << subscription.id unless billable_metric.count_agg?
-
-        puts "  RECOVER #{event.transaction_id} subscription=#{event.external_subscription_id} " \
-          "code=#{event.code} invoiceable_charges=#{invoiceable_charges}"
-
-        Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json) unless dry_run
       end
     end
 
