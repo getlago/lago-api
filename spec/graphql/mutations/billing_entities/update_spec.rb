@@ -231,6 +231,16 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       expect(billing_entity.reload.payment_term).to be_nil
     end
 
+    it "clears both fields when null is sent alongside a legacy alias" do
+      billing_entity.update!(payment_term: {term_type: "net", days: 30}, net_payment_term: 30)
+
+      response = update_payment_term(nil, netPaymentTerm: 20)
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateBillingEntity", "paymentTerm")).to be_nil
+      expect(billing_entity.reload).to have_attributes(payment_term: nil, net_payment_term: nil)
+    end
+
     it "rejects an invalid payment term" do
       result = update_payment_term({termType: "day_of_month", dayOfMonth: 32})
 
