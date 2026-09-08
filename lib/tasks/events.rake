@@ -132,6 +132,8 @@ namespace :events do
   # DRY_RUN defaults to true (report only).
   desc "Recover pay-in-advance fees for events that were never post-processed"
   task recover_pay_in_advance_fees: :environment do
+    $stdout.sync = true
+
     prefix = "events:recover_pay_in_advance_fees"
     batch_size = (ENV["BATCH_SIZE"] || 1000).to_i
     organization = Organization.find(ENV.fetch("ORGANIZATION_ID"))
@@ -156,24 +158,22 @@ namespace :events do
     # while the replay creates nothing, because `Events::Common#billable_metric` resolves nothing.
     # Discarded *plans* are deliberately kept: `Plans::DestroyService` does not discard the charges,
     # so those events are still recoverable.
-    charges_by_plan_and_code = Charge.pay_in_advance
+    pay_in_advance_charges = Charge.pay_in_advance
       .where(organization_id: organization.id)
       .joins(:billable_metric)
       .where(billable_metrics: {deleted_at: nil})
-      .includes(:billable_metric)
-      .group_by { |charge| [charge.plan_id, charge.billable_metric.code] }
 
-    if charges_by_plan_and_code.empty?
+    codes = pay_in_advance_charges.distinct.pluck("billable_metrics.code")
+
+    if codes.empty?
       puts "#{prefix} - Organization #{organization.id} has no pay-in-advance charge."
       next
     end
 
-    codes = charges_by_plan_and_code.keys.map(&:last).uniq
-
     # The bounds mirror `Events::Common#subscription`: a subscription starting after the window, or
     # terminated before it, cannot cover an event timestamped inside it.
     subscriptions_scope = organization.subscriptions
-      .where(plan_id: charges_by_plan_and_code.keys.map(&:first).uniq)
+      .where(plan_id: pay_in_advance_charges.select(:plan_id))
       .where(started_at: ..to)
       .where("terminated_at IS NULL OR terminated_at >= ?", from)
 
@@ -203,6 +203,14 @@ namespace :events do
         .where(external_id: batch_external_ids)
         .order(Arel.sql("terminated_at DESC NULLS FIRST, started_at DESC"))
         .group_by(&:external_id)
+
+      # Every plan of the batch, not only the ones the scope matched: `eligible` below is resolved
+      # among all the subscriptions sharing an external id, and a plan carrying no pay-in-advance
+      # charge has to resolve to an empty list rather than be missing.
+      charges_by_plan_and_code = pay_in_advance_charges
+        .where(plan_id: subscriptions_by_external_id.values.flatten.map(&:plan_id).uniq)
+        .includes(:billable_metric)
+        .group_by { |charge| [charge.plan_id, charge.billable_metric.code] }
 
       batch_external_ids.each do |external_id|
         processed += 1
