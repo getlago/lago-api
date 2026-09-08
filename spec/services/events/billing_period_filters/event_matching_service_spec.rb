@@ -56,7 +56,7 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
         :event,
         organization_id: organization.id,
         code: billable_metric.code,
-        properties: {"payment_method" => "virtual_card"}
+        properties: {"payment_method" => "card"}
       )
     end
     let(:product_filter) { create(:product_filter, organization:, product:) }
@@ -65,9 +65,20 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
       create(:product_filter_value, value: nil, billable_metric_filter: payment_method, product_filter:)
     end
 
-    it "matches a nil product filter value when the event carries the key" do
+    it "expands a nil product filter value to the configured values" do
       expect(service_result.matching_filters).to eq([product_filter])
       expect(service_result.filter).to eq(product_filter)
+    end
+
+    ["virtual_card", nil, ""].each do |value|
+      context "when the event value is #{value.inspect}" do
+        before { event.properties = {"payment_method" => value} }
+
+        it "does not match the product filter" do
+          expect(service_result.matching_filters).to be_empty
+          expect(service_result.filter).to be_nil
+        end
+      end
     end
 
     context "when the event does not carry the key" do

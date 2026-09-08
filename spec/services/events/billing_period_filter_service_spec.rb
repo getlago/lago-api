@@ -145,7 +145,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: nil)
           end
 
-          it "matches any event carrying the key" do
+          it "matches an event with a configured value for the key" do
             result = filter_result
 
             expect(result).to be_success

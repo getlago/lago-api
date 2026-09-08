@@ -17,7 +17,7 @@ module Events
         end
 
         def filter_values(filter)
-          filter.to_h
+          filter.to_h_with_all_values
         end
 
         def filter_match_values(filter)
@@ -28,8 +28,8 @@ module Events
           filter.to_h.keys.size
         end
 
-        def all_filter_values?(_filter, _key)
-          false
+        def all_filter_values?(filter, key)
+          filter.to_h[key] == [nil]
         end
 
         delegate :target_key, to: :product

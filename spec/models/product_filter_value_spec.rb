@@ -23,7 +23,7 @@ RSpec.describe ProductFilterValue do
         expect(product_filter_value).to be_valid
       end
 
-      it "is valid without a value (key-only selection matches any value)" do
+      it "is valid without a value (key-only selection selects all configured values)" do
         product_filter_value.value = nil
         expect(product_filter_value).to be_valid
       end

@@ -39,6 +39,15 @@ class ProductFilter < ApplicationRecord
       (result[filter_value.billable_metric_filter.key] ||= []) << filter_value.value
     end.freeze
   end
+
+  def to_h_with_all_values
+    @to_h_with_all_values ||= values.each_with_object({}) do |filter_value, result|
+      metric_filter = filter_value.billable_metric_filter
+      values = filter_value.value.nil? ? metric_filter.values : [filter_value.value]
+
+      (result[metric_filter.key] ||= []).concat(values)
+    end.freeze
+  end
 end
 
 # == Schema Information

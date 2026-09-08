@@ -26,11 +26,7 @@ module Events
 
       def matches?(filter)
         target_filter.filter_values(filter).all? do |key, values|
-          if applicable_event_properties.key?(key)
-            values.include?(nil) || applicable_event_properties[key].to_s.in?(values.map(&:to_s))
-          else
-            false
-          end
+          applicable_event_properties.key?(key) && applicable_event_properties[key].to_s.in?(values.map(&:to_s))
         end
       end
 
