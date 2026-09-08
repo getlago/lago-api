@@ -7,20 +7,20 @@ class PlanRateCard < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  belongs_to :plan
+  belongs_to :catalog_plan
   belongs_to :rate_card
 
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
 
-  validates :rate_card_id, uniqueness: {scope: :plan_id, conditions: -> { where(deleted_at: nil) }}
+  validates :rate_card_id, uniqueness: {scope: :catalog_plan_id, conditions: -> { where(deleted_at: nil) }}
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
 
   default_scope -> { kept }
 
   def edit_error_code
-    "plan_locked" if plan.attached_to_subscriptions?
+    "plan_locked" if catalog_plan.attached_to_contracts?
   end
 end
 
@@ -34,20 +34,23 @@ end
 #  units           :decimal(, )
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
+#  catalog_plan_id :uuid
 #  organization_id :uuid             not null
-#  plan_id         :uuid             not null
+#  plan_id         :uuid
 #  rate_card_id    :uuid             not null
 #
 # Indexes
 #
-#  index_plan_rate_cards_on_deleted_at                (deleted_at)
-#  index_plan_rate_cards_on_organization_id           (organization_id)
-#  index_plan_rate_cards_on_plan_id                   (plan_id)
-#  index_plan_rate_cards_on_plan_id_and_rate_card_id  (plan_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
-#  index_plan_rate_cards_on_rate_card_id              (rate_card_id)
+#  index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id  (catalog_plan_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_plan_rate_cards_on_deleted_at                        (deleted_at)
+#  index_plan_rate_cards_on_organization_id                   (organization_id)
+#  index_plan_rate_cards_on_plan_id                           (plan_id)
+#  index_plan_rate_cards_on_plan_id_and_rate_card_id          (plan_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_plan_rate_cards_on_rate_card_id                      (rate_card_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (catalog_plan_id => catalog_plans.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_id => plans.id)
 #  fk_rails_...  (rate_card_id => rate_cards.id)

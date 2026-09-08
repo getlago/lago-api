@@ -10,8 +10,7 @@ module V2
         code: model.code,
         description: model.description,
         currency: model.currency,
-        # Rate cards attach to catalog plans in a later slice; until then it is always 0.
-        applied_rate_cards_count: 0,
+        applied_rate_cards_count: model.applied_rate_cards.size,
         created_at: model.created_at.iso8601
       }
     end

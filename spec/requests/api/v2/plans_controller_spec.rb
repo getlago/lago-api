@@ -108,12 +108,14 @@ RSpec.describe Api::V2::PlansController do
 
     it "lists the organization catalog plans" do
       create(:catalog_plan)
+      create_list(:plan_rate_card, 2, organization:, catalog_plan:)
 
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
       expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
+      expect(json[:plans].first[:applied_rate_cards_count]).to eq(2)
       expect(json[:plans].first).not_to have_key(:interval)
       expect(json[:meta][:total_count]).to eq(1)
     end
@@ -145,14 +147,13 @@ RSpec.describe Api::V2::PlansController do
     end
   end
 
-  # A plan created through this surface is a CatalogPlan, while the nested
-  # applied_rate_cards routes still resolve their parent as a legacy Plan. Until
-  # a later slice repoints the pricing tables onto CatalogPlan, attaching a rate
-  # card to a plan born here cleanly reports the parent as not found.
+  # A plan created through this surface is a CatalogPlan, and the nested
+  # applied_rate_cards routes resolve their parent from catalog_plans too, so
+  # the create-then-attach flow works end to end.
   describe "attaching a rate card to a catalog plan" do
-    let(:rate_card) { create(:rate_card, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, currency: "USD") }
 
-    it "does not find the parent plan yet" do
+    it "attaches the rate card to the plan created here" do
       post_with_token(organization, "/api/v2/plans", {plan: {name: "Growth", code: "growth", currency: "USD"}})
       expect(response).to have_http_status(:success)
 
@@ -162,7 +163,9 @@ RSpec.describe Api::V2::PlansController do
         {applied_rate_card: {rate_card_code: rate_card.code}}
       )
 
-      expect(response).to be_not_found_error("plan")
+      expect(response).to have_http_status(:success)
+      expect(json[:applied_rate_card][:plan_code]).to eq("growth")
+      expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
     end
   end
 end

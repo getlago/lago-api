@@ -7,7 +7,7 @@ module Api
 
       def create
         result = ::PlanRateCards::CreateService.call(
-          plan: find_plan,
+          catalog_plan: find_catalog_plan,
           params: create_params.to_h.deep_symbolize_keys
         )
 
@@ -52,7 +52,7 @@ module Api
       end
 
       def index
-        return not_found_error(resource: "plan") unless find_plan
+        return not_found_error(resource: "plan") unless find_catalog_plan
 
         result = ::PlanRateCardsQuery.call(
           organization: current_organization,
@@ -66,7 +66,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.plan_rate_cards.includes(:plan, :rate_card, :rate_phases),
+              result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases),
               ::V1::PlanRateCardSerializer,
               collection_name: "applied_rate_cards",
               meta: pagination_metadata(result.plan_rate_cards)
@@ -79,15 +79,15 @@ module Api
 
       private
 
-      def find_plan
-        current_organization.plans.parents.find_by(code: params[:plan_code])
+      def find_catalog_plan
+        current_organization.catalog_plans.find_by(code: params[:plan_code])
       end
 
       def find_plan_rate_card
-        plan = find_plan
-        return nil unless plan
+        catalog_plan = find_catalog_plan
+        return nil unless catalog_plan
 
-        plan.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
+        catalog_plan.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
       end
 
       def create_params

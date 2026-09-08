@@ -22,15 +22,12 @@ class Plan < ApplicationRecord
   has_many :fixed_charges, dependent: :destroy
   has_many :add_ons, through: :fixed_charges
   has_many :subscriptions
-  has_many :contracts
   has_many :customers, through: :subscriptions
   has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :invoices, through: :subscriptions
   has_many :usage_thresholds
-  has_many :applied_rate_cards, class_name: "PlanRateCard"
-  has_many :products, through: :applied_rate_cards
 
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -91,10 +88,10 @@ class Plan < ApplicationRecord
     !pay_in_advance
   end
 
-  # A catalog plan is subscribed through contracts, a legacy plan through
-  # subscriptions; either attachment freezes the plan.
+  # A legacy plan is frozen once it has subscriptions. Catalog plans live in
+  # their own table and freeze on contracts (CatalogPlan#attached_to_contracts?).
   def attached_to_subscriptions?
-    subscriptions.exists? || contracts.exists?
+    subscriptions.exists?
   end
 
   def has_trial?

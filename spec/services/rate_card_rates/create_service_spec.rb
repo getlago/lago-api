@@ -174,11 +174,11 @@ RSpec.describe RateCardRates::CreateService do
     end
   end
 
-  context "when the card is on a plan that has subscriptions" do
+  context "when the card is on a plan that has contracts" do
     before do
-      plan = create(:plan, organization:)
-      create(:plan_rate_card, organization:, plan:, rate_card:)
-      create(:subscription, plan:, organization:)
+      catalog_plan = create(:catalog_plan, organization:)
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+      create(:contract, catalog_plan:, organization:)
     end
 
     it "appends the rate" do

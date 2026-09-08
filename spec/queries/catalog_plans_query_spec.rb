@@ -18,6 +18,12 @@ RSpec.describe CatalogPlansQuery do
     expect(result.catalog_plans).to match_array([catalog_plan])
   end
 
+  it "preloads applied_rate_cards so the collection avoids a count per plan" do
+    create(:plan_rate_card, organization:, catalog_plan:)
+
+    expect(result.catalog_plans.first.association(:applied_rate_cards)).to be_loaded
+  end
+
   context "with a search term" do
     let(:search_term) { "grow" }
 

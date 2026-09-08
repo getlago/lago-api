@@ -19,6 +19,15 @@ module CatalogPlans
     def call
       return result.not_found_failure!(resource: "plan") unless catalog_plan
 
+      # The currency is fixed once anything prices against the plan — plan-level
+      # rate cards, or a contract (whose fees bill in the card currency and
+      # invoice in the plan currency). Changing it would desync already-attached
+      # cards from the currency they were validated against.
+      currency_change = params.key?(:currency) && params[:currency] != catalog_plan.currency
+      if currency_change && (catalog_plan.applied_rate_cards.exists? || catalog_plan.attached_to_contracts?)
+        return result.single_validation_failure!(field: :currency, error_code: "not_editable_with_applied_rate_cards")
+      end
+
       catalog_plan.name = params[:name] if params.key?(:name)
       catalog_plan.code = params[:code] if params.key?(:code)
       catalog_plan.description = params[:description] if params.key?(:description)

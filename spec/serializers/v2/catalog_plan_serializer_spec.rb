@@ -20,4 +20,10 @@ RSpec.describe V2::CatalogPlanSerializer do
       "created_at" => catalog_plan.created_at.iso8601
     )
   end
+
+  it "counts the plan's applied rate cards" do
+    create(:plan_rate_card, organization: catalog_plan.organization, catalog_plan:)
+
+    expect(result["plan"]["applied_rate_cards_count"]).to eq(1)
+  end
 end

@@ -17,8 +17,8 @@ RSpec.describe Resolvers::ContractResolver do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
-  let(:contract) { create(:contract, organization:, customer:, plan:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", currency: "EUR") }
+  let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
   let(:query) do
     <<~GQL
@@ -26,7 +26,7 @@ RSpec.describe Resolvers::ContractResolver do
         contract(id: $contractId) {
           id externalId status billingTime
           customer { id }
-          plan { id }
+          plan { id code name currency }
           appliedRateCards { id rateCard { id } effectiveDate }
           appliedRateCardsCount
         }
@@ -45,7 +45,12 @@ RSpec.describe Resolvers::ContractResolver do
 
     expect(response["id"]).to eq(contract.id)
     expect(response["customer"]["id"]).to eq(customer.id)
-    expect(response["plan"]["id"]).to eq(plan.id)
+    expect(response["plan"]).to eq(
+      "id" => catalog_plan.id,
+      "code" => "premium",
+      "name" => catalog_plan.name,
+      "currency" => "EUR"
+    )
     expect(response["appliedRateCards"].sole["id"]).to eq(card.id)
     expect(response["appliedRateCardsCount"]).to eq(1)
   end

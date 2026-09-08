@@ -12,6 +12,9 @@ class CatalogPlan < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :applied_rate_cards, class_name: "PlanRateCard"
+  has_many :contracts
+
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
@@ -24,6 +27,12 @@ class CatalogPlan < ApplicationRecord
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
 
   default_scope -> { kept }
+
+  # A catalog plan is subscribed through contracts; any attachment freezes its
+  # pricing (its rate cards can no longer be edited).
+  def attached_to_contracts?
+    contracts.exists?
+  end
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

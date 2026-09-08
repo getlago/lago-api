@@ -36,7 +36,7 @@ module Api
         )
 
         if result.success?
-          contracts = result.contracts.includes(:plan, :customer)
+          contracts = result.contracts.includes(:catalog_plan, :customer)
 
           # One grouped query instead of one COUNT per row in the serializer.
           applied_rate_cards_counts = ContractRateCard.current_and_scheduled

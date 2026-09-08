@@ -10,7 +10,7 @@ RSpec.describe PlanRateCard do
   describe "associations" do
     it do
       expect(plan_rate_card).to belong_to(:organization)
-      expect(plan_rate_card).to belong_to(:plan)
+      expect(plan_rate_card).to belong_to(:catalog_plan)
       expect(plan_rate_card).to belong_to(:rate_card)
       expect(plan_rate_card).to have_many(:rate_phases).order(:position)
       expect(plan_rate_card).to have_one(:product).through(:rate_card)
@@ -18,26 +18,26 @@ RSpec.describe PlanRateCard do
   end
 
   describe "validations" do
-    describe "uniqueness of (plan, rate_card)" do
-      it "rejects a duplicate plan / rate_card pair" do
+    describe "uniqueness of (catalog_plan, rate_card)" do
+      it "rejects a duplicate catalog_plan / rate_card pair" do
         existing = create(:plan_rate_card)
         duplicate = build(
           :plan_rate_card,
           organization: existing.organization,
-          plan: existing.plan,
+          catalog_plan: existing.catalog_plan,
           rate_card: existing.rate_card
         )
         duplicate.valid?
         expect(duplicate.errors.where(:rate_card_id, :taken)).to be_present
       end
 
-      it "allows a different rate_card on the same plan" do
+      it "allows a different rate_card on the same catalog_plan" do
         existing = create(:plan_rate_card)
         other_card = create(:rate_card, organization: existing.organization)
         sibling = build(
           :plan_rate_card,
           organization: existing.organization,
-          plan: existing.plan,
+          catalog_plan: existing.catalog_plan,
           rate_card: other_card
         )
         expect(sibling).to be_valid
@@ -57,13 +57,13 @@ RSpec.describe PlanRateCard do
   end
 
   describe "#edit_error_code" do
-    it "is nil while the plan has no subscriptions" do
+    it "is nil while the plan has no contracts" do
       expect(create(:plan_rate_card).edit_error_code).to be_nil
     end
 
-    it "is plan_locked once the plan has subscriptions" do
+    it "is plan_locked once the plan has contracts" do
       card = create(:plan_rate_card)
-      create(:subscription, plan: card.plan)
+      create(:contract, organization: card.organization, catalog_plan: card.catalog_plan)
 
       expect(card.edit_error_code).to eq("plan_locked")
     end

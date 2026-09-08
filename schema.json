@@ -8987,7 +8987,7 @@
               "args": [],
               "type": {
                 "kind": "OBJECT",
-                "name": "Plan",
+                "name": "CatalogPlan",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -66030,18 +66030,6 @@
                   "type": {
                     "kind": "SCALAR",
                     "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "productCategoryId",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ID",
                     "ofType": null
                   },
                   "defaultValue": null,

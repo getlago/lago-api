@@ -88,15 +88,13 @@ class RateCard < ApplicationRecord
     %w[name code]
   end
 
-  # The card bills someone once it belongs to a plan that has contracts or is
-  # attached directly to a contract. From that point the billed timeline
+  # The card bills someone once it belongs to a catalog plan that has contracts
+  # or is attached directly to a contract. From that point the billed timeline
   # freezes — card fields, active and past rates — and price changes go
-  # through appended rates. The Subscription check stays for catalog plans
-  # subscribed through v1 before contracts existed.
+  # through appended rates.
   def attached_to_subscriptions?
     contract_applied_rate_cards.exists? ||
-      Contract.where(plan_id: plan_applied_rate_cards.select(:plan_id)).exists? ||
-      Subscription.where(plan_id: plan_applied_rate_cards.select(:plan_id)).exists?
+      Contract.where(catalog_plan_id: plan_applied_rate_cards.select(:catalog_plan_id)).exists?
   end
 
   # The active rate is the latest effective rate; later rates are pending and

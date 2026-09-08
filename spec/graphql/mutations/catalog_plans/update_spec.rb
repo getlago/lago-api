@@ -31,6 +31,19 @@ RSpec.describe Mutations::CatalogPlans::Update do
 
   it_behaves_like "requires permission", "plans:update"
 
+  context "when the plan holds rate card attachments" do
+    let(:catalog_plan) { create(:catalog_plan, organization:, currency: "EUR") }
+    let(:input) { {id: catalog_plan.id, currency: "USD"} }
+
+    before { create(:plan_rate_card, organization:, catalog_plan:) }
+
+    it "reports the frozen currency under the input field name" do
+      error = result.dig("errors", 0, "extensions", "details")
+
+      expect(error["currency"]).to eq(["not_editable_with_applied_rate_cards"])
+    end
+  end
+
   it "updates the plan" do
     expect(result["data"]["updateCatalogPlan"]["name"]).to eq("Renamed")
     expect(catalog_plan.reload.name).to eq("Renamed")
