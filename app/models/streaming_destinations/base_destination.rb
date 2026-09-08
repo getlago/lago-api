@@ -8,7 +8,7 @@ module StreamingDestinations
 
     self.table_name = "streaming_destinations"
 
-    EVENT_TYPES = %w[customer_usage.refreshed].freeze
+    EVENT_TYPES = %w[customer_usage.refreshed.v1].freeze
 
     belongs_to :organization
 

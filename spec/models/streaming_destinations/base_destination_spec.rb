@@ -7,6 +7,12 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "EVENT_TYPES" do
+    it "versions every event type, so a breaking payload change can ship as a new type" do
+      expect(described_class::EVENT_TYPES).to all(match(/\.v\d+\z/))
+    end
+  end
+
   describe "associations" do
     it do
       expect(destination).to belong_to(:organization)
@@ -27,7 +33,7 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
       end
 
       it "rejects an unknown event type" do
-        destination = build(:kinesis_destination, event_types: ["customer_usage.refresed"])
+        destination = build(:kinesis_destination, event_types: ["customer_usage.refresed.v1"])
 
         expect(destination).not_to be_valid
         expect(destination.errors.where(:event_types, :inclusion)).to be_present
@@ -35,18 +41,18 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
 
       it "rejects an event type already claimed by another destination of the organization" do
         organization = create(:organization)
-        create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed"])
+        create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"])
 
-        destination = build(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed"])
+        destination = build(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"])
 
         expect(destination).not_to be_valid
         expect(destination.errors.where(:event_types, :taken)).to be_present
       end
 
       it "allows the same event type on another organization" do
-        create(:kinesis_destination, event_types: ["customer_usage.refreshed"])
+        create(:kinesis_destination, event_types: ["customer_usage.refreshed.v1"])
 
-        expect(build(:kinesis_destination, event_types: ["customer_usage.refreshed"])).to be_valid
+        expect(build(:kinesis_destination, event_types: ["customer_usage.refreshed.v1"])).to be_valid
       end
 
       it "does not conflict with itself on update" do
@@ -59,24 +65,24 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
 
   describe ".for_event" do
     let(:organization) { create(:organization) }
-    let!(:destination) { create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed"]) }
+    let!(:destination) { create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"]) }
 
     it "returns a destination whose event_types contain the event type" do
-      expect(described_class.for_event(organization, "customer_usage.refreshed")).to eq([destination])
+      expect(described_class.for_event(organization, "customer_usage.refreshed.v1")).to eq([destination])
     end
 
     it "does not return a destination without the event type" do
       destination.update_column(:event_types, ["wallet.updated"]) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(described_class.for_event(organization, "customer_usage.refreshed")).to be_empty
+      expect(described_class.for_event(organization, "customer_usage.refreshed.v1")).to be_empty
     end
 
     it "does not return another organization's destination" do
-      expect(described_class.for_event(create(:organization), "customer_usage.refreshed")).to be_empty
+      expect(described_class.for_event(create(:organization), "customer_usage.refreshed.v1")).to be_empty
     end
 
     it "is the only lookup that works, find_by on the array column raises" do
-      expect { described_class.find_by(event_types: "customer_usage.refreshed") }
+      expect { described_class.find_by(event_types: "customer_usage.refreshed.v1") }
         .to raise_error(ActiveRecord::StatementInvalid, /malformed array literal/)
     end
   end
