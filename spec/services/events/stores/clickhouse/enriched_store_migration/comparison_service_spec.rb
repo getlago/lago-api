@@ -133,14 +133,12 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
       it "does not alter the organization state" do
         original_flags = organization.feature_flags.dup
         original_dedup = organization.clickhouse_deduplication_enabled
-        original_pre_filter = organization.pre_filter_events
 
         service.call
         organization.reload
 
         expect(organization.feature_flags).to eq(original_flags)
         expect(organization.clickhouse_deduplication_enabled).to eq(original_dedup)
-        expect(organization.pre_filter_events).to eq(original_pre_filter)
       end
     end
 
@@ -161,14 +159,12 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
       it "does not alter the organization state" do
         original_flags = organization.feature_flags.dup
         original_dedup = organization.clickhouse_deduplication_enabled
-        original_pre_filter = organization.pre_filter_events
 
         service.call
         organization.reload
 
         expect(organization.feature_flags).to eq(original_flags)
         expect(organization.clickhouse_deduplication_enabled).to eq(original_dedup)
-        expect(organization.pre_filter_events).to eq(original_pre_filter)
       end
     end
 
@@ -189,14 +185,12 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
       it "does not alter the organization state" do
         original_flags = organization.feature_flags.dup
         original_dedup = organization.clickhouse_deduplication_enabled
-        original_pre_filter = organization.pre_filter_events
 
         service.call
         organization.reload
 
         expect(organization.feature_flags).to eq(original_flags)
         expect(organization.clickhouse_deduplication_enabled).to eq(original_dedup)
-        expect(organization.pre_filter_events).to eq(original_pre_filter)
       end
     end
   end

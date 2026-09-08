@@ -84,12 +84,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         .with(resolver: an_instance_of(Events::BillingPeriodFilters::BillingSegmentsResolver))
     end
 
-    context "without billing segments when event pre-filtering is enabled" do
+    context "without billing segments" do
       subject(:filter_result) do
         described_class.for_billing_segments!(contract:, billing_segments: [])
       end
-
-      let(:organization) { create(:organization, pre_filter_events: true) }
 
       it "succeeds with no filter targets" do
         result = filter_result
@@ -140,17 +138,6 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_result
 
           expect(result.filter_targets[product.target_key][product_filter.id]).to be_present
-        end
-
-        context "when event pre-filtering is enabled" do
-          let(:organization) { create(:organization, pre_filter_events: true) }
-
-          it "matches the product filter using raw event properties" do
-            result = filter_result
-
-            expect(result).to be_success
-            expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [product_filter.id]})
-          end
         end
 
         context "when the product filter selects the key only" do
@@ -454,17 +441,6 @@ RSpec.describe Events::BillingPeriodFilterService do
 
             expect(result).to be_success
             expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [charge_filter.id]})
-          end
-
-          context "when event pre-filtering is enabled" do
-            let(:organization) { create(:organization, pre_filter_events: true) }
-
-            it "matches only the charge filter selected by raw event properties" do
-              result = filter_result
-
-              expect(result).to be_success
-              expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [charge_filter.id]})
-            end
           end
         end
 
