@@ -374,6 +374,43 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
       end
     end
 
+    context "when the negotiated tiers are written in the camelCase of the payload" do
+      let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+      let(:charge_override) do
+        super().merge(
+          "chargeModel" => nil,
+          "properties" => {
+            "graduatedRanges" => [
+              {"fromValue" => 0, "toValue" => 1000, "perUnitAmount" => "0.005", "flatAmount" => "0"},
+              {"fromValue" => 1001, "toValue" => nil, "perUnitAmount" => "0.002", "flatAmount" => "0"}
+            ]
+          }
+        )
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated tiers are written in the snake_case of the charge model" do
+      let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+      let(:charge_override) do
+        super().merge(
+          "chargeModel" => nil,
+          "properties" => {
+            "graduated_ranges" => [
+              {"from_value" => 0, "to_value" => nil, "per_unit_amount" => "0.005", "flat_amount" => "0"}
+            ]
+          }
+        )
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the charge override carries no properties" do
       let(:charge_override) { super().except("properties") }
 
@@ -528,6 +565,24 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::BusinessValidato
 
     context "when the negotiated fixed charge properties are valid" do
       let(:fixed_charge_override) { super().merge("properties" => {"amount" => "42"}) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the negotiated fixed charge tiers are written in the camelCase of the payload" do
+      let(:fixed_charge) { create(:fixed_charge, :graduated, plan:) }
+      let(:fixed_charge_override) do
+        super().merge(
+          "properties" => {
+            "graduatedRanges" => [
+              {"fromValue" => 0, "toValue" => 10, "perUnitAmount" => "5", "flatAmount" => "200"},
+              {"fromValue" => 11, "toValue" => nil, "perUnitAmount" => "1", "flatAmount" => "300"}
+            ]
+          }
+        )
+      end
 
       it "is valid" do
         expect(validator).to be_valid

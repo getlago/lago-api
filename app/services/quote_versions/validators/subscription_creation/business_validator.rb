@@ -161,8 +161,11 @@ module QuoteVersions
           quoted_charge_model != chargeable.charge_model
         end
 
+        # The quoted payload is written in its own camelCase while the charge models read their
+        # properties in snake_case, so the negotiated hash is underscored here and, identically, where
+        # the override is applied. See Orders::SubscriptionCreation::ExecuteService#charge_overrides.
         def validate_charge_properties(charge_override, charge, index, charge_index)
-          properties = charge_override["properties"]
+          properties = Utils::ChargeProperties.underscore_keys(charge_override["properties"])
           return if properties.nil?
 
           field = plan_field(index, "overrides.charges.#{charge_index}.properties")
@@ -226,7 +229,7 @@ module QuoteVersions
         # before saving, and FixedCharge requires them to be present, so an override drafted for
         # another model filters down to nothing and takes the fixed charge with it.
         def validate_fixed_charge_properties(fixed_charge_override, fixed_charge, index, fixed_charge_index)
-          properties = fixed_charge_override["properties"]
+          properties = Utils::ChargeProperties.underscore_keys(fixed_charge_override["properties"])
           return if properties.nil?
 
           field = plan_field(index, "overrides.fixedCharges.#{fixed_charge_index}.properties")

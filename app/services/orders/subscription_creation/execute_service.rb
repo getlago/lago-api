@@ -133,11 +133,16 @@ module Orders
       end
 
       # chargeModel is not forwarded: Charges::OverrideService cannot switch models and ignores it.
+      #
+      # The properties are written in the payload's own camelCase and land verbatim on the duplicated
+      # charge, which reads them in snake_case. Underscoring them here is what the business validator
+      # approved, and skipping it would leave the charge invalid: Plans::OverrideService ignores the
+      # override services' results, so it would drop from the plan and bill nothing at all.
       def charge_overrides(item, plan)
         Array(item.dig("overrides", "charges")).map do |override|
           {
             id: charge_id!(item, plan, override["billableMetricCode"]),
-            properties: override["properties"],
+            properties: Utils::ChargeProperties.underscore_keys(override["properties"]),
             min_amount_cents: override["minAmountCents"],
             invoice_display_name: override["invoiceDisplayName"]
           }.compact
@@ -149,7 +154,7 @@ module Orders
           {
             id: fixed_charge_id!(item, plan, override["addOnCode"]),
             units: override["units"],
-            properties: override["properties"],
+            properties: Utils::ChargeProperties.underscore_keys(override["properties"]),
             invoice_display_name: override["invoiceDisplayName"]
           }.compact
         end
