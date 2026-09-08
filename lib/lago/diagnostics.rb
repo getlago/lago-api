@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "lago/smtp_config"
+
 module Lago
   # Prints a diagnostic report for self-hosted deployments.
   #
@@ -568,10 +570,6 @@ module Lago
     def smtp
       section("8. SMTP") do
         enabled = ENV["LAGO_SMTP_ADDRESS"].present?
-        authentication = ENV.fetch("LAGO_SMTP_AUTHENTICATION", "login").presence
-        starttls_enabled = ActiveModel::Type::Boolean.new.cast(
-          ENV.fetch("LAGO_SMTP_ENABLE_STARTTLS_AUTO", true).presence || true
-        )
 
         output.puts "  Enabled        : #{enabled}"
         if enabled
@@ -584,9 +582,23 @@ module Lago
           setting("Port", "LAGO_SMTP_PORT")
           setting("Domain", "LAGO_SMTP_DOMAIN")
           setting("Username", "LAGO_SMTP_USERNAME")
-          fact("Authentication", ENV["LAGO_SMTP_USERNAME"].present? ? (authentication || "plain") : "none")
-          fact("STARTTLS", starttls_enabled ? "enabled" : "disabled")
+          fact("Authentication", authentication_fact)
+          fact("STARTTLS", SmtpConfig.starttls_auto? ? "enabled" : "disabled")
         end
+      end
+    end
+
+    # An unsupported LAGO_SMTP_AUTHENTICATION is only rejected by net-smtp when
+    # the first email is delivered, so it is called out here instead.
+    def authentication_fact
+      authentication = SmtpConfig.authentication
+
+      if authentication.nil?
+        "none"
+      elsif SmtpConfig.authentication_supported?
+        authentication
+      else
+        "#{authentication} (invalid - delivery will fail)"
       end
     end
 

@@ -3,6 +3,7 @@
 require "active_support/core_ext/integer/time"
 require "opentelemetry/sdk"
 require "lago/redis_config_builder"
+require "lago/smtp_config"
 
 Rails.application.configure do
   config.middleware.use(ActionDispatch::Cookies)
@@ -80,12 +81,10 @@ Rails.application.configure do
       address: ENV["LAGO_SMTP_ADDRESS"],
       port: ENV["LAGO_SMTP_PORT"],
       domain: ENV["LAGO_SMTP_DOMAIN"],
-      user_name: ENV["LAGO_SMTP_USERNAME"],
-      password: ENV["LAGO_SMTP_PASSWORD"],
-      authentication: ENV.fetch("LAGO_SMTP_AUTHENTICATION", "login").presence,
-      enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(
-        ENV.fetch("LAGO_SMTP_ENABLE_STARTTLS_AUTO", true).presence || true
-      )
+      user_name: Lago::SmtpConfig.authenticated? ? ENV["LAGO_SMTP_USERNAME"] : nil,
+      password: Lago::SmtpConfig.authenticated? ? ENV["LAGO_SMTP_PASSWORD"] : nil,
+      authentication: Lago::SmtpConfig.authentication,
+      enable_starttls_auto: Lago::SmtpConfig.starttls_auto?
     }
   end
 end

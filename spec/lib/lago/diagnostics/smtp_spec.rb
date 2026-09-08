@@ -7,7 +7,8 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   subject(:smtp_settings) { application.config.action_mailer.smtp_settings }
 
   let(:application) { Class.new(Rails::Application).instance }
-  let(:environment) { {} }
+  let(:credentials) { {"LAGO_SMTP_USERNAME" => "smtp-user", "LAGO_SMTP_PASSWORD" => "smtp-password"} }
+  let(:environment) { credentials }
   let(:output) { StringIO.new }
   let(:diagnostics) { described_class.new(output:) }
   let(:smtp_report) do
@@ -16,7 +17,10 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   end
 
   around do |example|
-    env_keys = %w[LAGO_SMTP_ADDRESS LAGO_SMTP_AUTHENTICATION LAGO_SMTP_ENABLE_STARTTLS_AUTO LAGO_SMTP_USERNAME]
+    env_keys = %w[
+      LAGO_SMTP_ADDRESS LAGO_SMTP_AUTHENTICATION LAGO_SMTP_ENABLE_STARTTLS_AUTO
+      LAGO_SMTP_USERNAME LAGO_SMTP_PASSWORD
+    ]
     previous_environment = env_keys.index_with { |key| ENV[key] }
 
     env_keys.each { |key| ENV.delete(key) }
@@ -41,48 +45,74 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   end
 
   context "when the SMTP security variables are absent" do
-    let(:environment) { {"LAGO_SMTP_USERNAME" => "smtp-user"} }
-
     it "keeps authentication and STARTTLS enabled" do
-      expect(smtp_settings).to include(authentication: "login", enable_starttls_auto: true)
+      expect(smtp_settings).to include(authentication: "login", user_name: "smtp-user", enable_starttls_auto: true)
 
-      expect(smtp_report).to match(/Authentication\s+: login/)
-      expect(smtp_report).to match(/STARTTLS\s+: enabled/)
+      expect(smtp_report).to match(/Authentication\s+: login$/)
+      expect(smtp_report).to match(/STARTTLS\s+: enabled$/)
     end
   end
 
   context "when SMTP authentication is explicitly empty" do
-    let(:environment) { {"LAGO_SMTP_AUTHENTICATION" => "", "LAGO_SMTP_USERNAME" => "smtp-user"} }
+    let(:environment) { credentials.merge("LAGO_SMTP_AUTHENTICATION" => "") }
 
-    it "reports the default authentication used on the wire" do
-      expect(smtp_settings[:authentication]).to be_nil
-      expect(smtp_report).to match(/Authentication\s+: plain/)
+    it "disables authentication and drops the credentials" do
+      expect(smtp_settings).to include(authentication: nil, user_name: nil, password: nil)
+      expect(smtp_report).to match(/Authentication\s+: none$/)
     end
   end
 
-  context "when the SMTP username is absent" do
-    let(:environment) { {"LAGO_SMTP_AUTHENTICATION" => ""} }
+  context "when SMTP authentication is set to none" do
+    let(:environment) { credentials.merge("LAGO_SMTP_AUTHENTICATION" => "none") }
 
-    it "reports authentication as disabled" do
-      expect(smtp_report).to match(/Authentication\s+: none/)
+    it "disables authentication and drops the credentials" do
+      expect(smtp_settings).to include(authentication: nil, user_name: nil, password: nil)
+      expect(smtp_report).to match(/Authentication\s+: none$/)
+    end
+  end
+
+  context "when SMTP authentication is set to disabled" do
+    let(:environment) { credentials.merge("LAGO_SMTP_AUTHENTICATION" => "DISABLED") }
+
+    it "disables authentication regardless of the casing" do
+      expect(smtp_settings).to include(authentication: nil, user_name: nil, password: nil)
+      expect(smtp_report).to match(/Authentication\s+: none$/)
+    end
+  end
+
+  context "when SMTP authentication is set to another supported method" do
+    let(:environment) { credentials.merge("LAGO_SMTP_AUTHENTICATION" => "cram_md5") }
+
+    it "keeps the requested method" do
+      expect(smtp_settings).to include(authentication: "cram_md5", user_name: "smtp-user")
+      expect(smtp_report).to match(/Authentication\s+: cram_md5$/)
+    end
+  end
+
+  context "when SMTP authentication is not supported by net-smtp" do
+    let(:environment) { credentials.merge("LAGO_SMTP_AUTHENTICATION" => "lgoin") }
+
+    it "reports the value as invalid" do
+      expect(smtp_settings[:authentication]).to eq("lgoin")
+      expect(smtp_report).to match(/Authentication\s+: lgoin \(invalid - delivery will fail\)$/)
     end
   end
 
   context "when STARTTLS is explicitly disabled" do
-    let(:environment) { {"LAGO_SMTP_ENABLE_STARTTLS_AUTO" => "false"} }
+    let(:environment) { credentials.merge("LAGO_SMTP_ENABLE_STARTTLS_AUTO" => "false") }
 
     it "disables STARTTLS" do
       expect(smtp_settings[:enable_starttls_auto]).to be(false)
-      expect(smtp_report).to match(/STARTTLS\s+: disabled/)
+      expect(smtp_report).to match(/STARTTLS\s+: disabled$/)
     end
   end
 
   context "when the STARTTLS variable is empty" do
-    let(:environment) { {"LAGO_SMTP_ENABLE_STARTTLS_AUTO" => ""} }
+    let(:environment) { credentials.merge("LAGO_SMTP_ENABLE_STARTTLS_AUTO" => "") }
 
     it "keeps STARTTLS enabled" do
       expect(smtp_settings[:enable_starttls_auto]).to be(true)
-      expect(smtp_report).to match(/STARTTLS\s+: enabled/)
+      expect(smtp_report).to match(/STARTTLS\s+: enabled$/)
     end
   end
 end
