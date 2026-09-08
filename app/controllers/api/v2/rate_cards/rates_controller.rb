@@ -19,7 +19,7 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.rate_card_rates,
-              ::V1::RateCardRateSerializer,
+              ::V2::RateCardRateSerializer,
               collection_name: "rates",
               meta: pagination_metadata(result.rate_card_rates)
             )
@@ -96,7 +96,7 @@ module Api
         end
 
         def render_rate(rate)
-          render(json: ::V1::RateCardRateSerializer.new(rate, root_name: "rate"))
+          render(json: ::V2::RateCardRateSerializer.new(rate, root_name: "rate"))
         end
 
         def resource_name

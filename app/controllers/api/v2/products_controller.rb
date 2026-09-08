@@ -101,7 +101,7 @@ module Api
             json: ::CollectionSerializer.new(
               # Preloaded so filters_count reads the loaded association.
               result.products.includes(:filters),
-              ::V1::ProductSerializer,
+              ::V2::ProductSerializer,
               collection_name: "products",
               meta: pagination_metadata(result.products)
             )
@@ -156,7 +156,7 @@ module Api
       end
 
       def render_product(product)
-        render(json: ::V1::ProductSerializer.new(product, root_name: "product"))
+        render(json: ::V2::ProductSerializer.new(product, root_name: "product"))
       end
 
       def render_item_error(result)
