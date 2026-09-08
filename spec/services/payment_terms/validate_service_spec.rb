@@ -68,7 +68,7 @@ RSpec.describe PaymentTerms::ValidateService do
       [{payment_term: {term_type: "due_on_receipt"}, net_payment_term: 30}, false],
       [{payment_term: {term_type: "end_of_month"}, net_payment_term: 0}, false]
     ].each do |params, valid|
-      it "#{valid ? 'accepts' : 'rejects'} #{params.inspect}" do
+      it "#{valid ? "accepts" : "rejects"} #{params.inspect}" do
         validator = described_class.new(result, **params)
 
         expect(validator.valid?).to eq(valid)
