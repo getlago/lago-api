@@ -105,6 +105,17 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         expect(invoice.payment_due_date).to eq(invoice.issuing_date + 60.days)
       end
 
+      it "calculates a non-net snapshot from the new issuing date" do
+        voided_invoice.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+        customer.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+
+        invoice = regenerate_result.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(invoice.net_payment_term).to be_nil
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date.end_of_month)
+      end
+
       it "derives a net term from the integer alias of a pre-feature voided invoice" do
         voided_invoice.update!(payment_term: nil, net_payment_term: 30, payment_term_source: nil)
 
