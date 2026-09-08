@@ -48,9 +48,9 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store_class:, metered_item:, context:, boundaries:, filters: {}, bypass_aggregation: false)
+      def initialize(event_store:, metered_item:, context:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
-        @event_store_class = event_store_class
+        @event_store = event_store
         @metered_item = metered_item
         @context = context
 
@@ -131,7 +131,7 @@ module BillableMetrics
 
       protected
 
-      attr_accessor :event_store_class,
+      attr_accessor :event_store,
         :metered_item,
         :context,
         :filters,
@@ -147,26 +147,6 @@ module BillableMetrics
       delegate :billable_metric, to: :metered_item
 
       delegate :customer, to: :context
-
-      def event_store
-        @event_store ||= event_store_class.new(
-          code: billable_metric.code,
-          context:,
-          boundaries:,
-          filters:,
-          deduplicate: deduplicate?
-        )
-      end
-
-      def deduplicate?
-        override = Events::Stores::StoreFactory.override
-        return override[:deduplicate] if override
-
-        organization = context&.organization
-        return false unless organization
-
-        organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
-      end
 
       def from_datetime
         boundaries[:from_datetime]

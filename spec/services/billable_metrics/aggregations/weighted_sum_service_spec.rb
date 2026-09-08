@@ -5,14 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: false do
   subject(:aggregator) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       metered_item:,
-      context: Events::Stores::EventContext.from(subscription:),
-      boundaries: {
-        from_datetime:,
-        to_datetime:,
-        charges_duration:
-      },
+      context:,
+      boundaries:,
       filters:,
       bypass_aggregation:
     )
@@ -31,6 +27,11 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         timestamp: to_datetime
       )
     )
+  end
+  let(:boundaries) { {from_datetime:, to_datetime:, charges_duration:} }
+  let(:context) { Events::Stores::EventContext.from(subscription:) }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, context:, boundaries:, filters:)
   end
   let(:bypass_aggregation) { false }
   let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }

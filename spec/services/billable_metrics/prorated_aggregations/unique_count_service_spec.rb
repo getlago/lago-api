@@ -5,14 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transaction: false do
   subject(:unique_count_service) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       metered_item:,
-      context: Events::Stores::EventContext.from(subscription:),
-      boundaries: {
-        from_datetime:,
-        to_datetime:,
-        charges_duration: 31
-      },
+      context:,
+      boundaries:,
       filters:
     )
   end
@@ -30,6 +26,11 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
         timestamp: to_datetime
       )
     )
+  end
+  let(:boundaries) { {from_datetime:, to_datetime:, charges_duration: 31} }
+  let(:context) { Events::Stores::EventContext.from(subscription:) }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, context:, boundaries:, filters:)
   end
   let(:filters) { {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
@@ -1060,14 +1061,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
     context "when aggregation is bypassed" do
       subject(:unique_count_service) do
         described_class.new(
-          event_store_class:,
+          event_store:,
           metered_item:,
-          context: Events::Stores::EventContext.from(subscription:),
-          boundaries: {
-            from_datetime:,
-            to_datetime:,
-            charges_duration: 31
-          },
+          context:,
+          boundaries:,
           filters:,
           bypass_aggregation: true
         )
@@ -1098,14 +1095,10 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
     context "when aggregation is bypassed and metric is recurring" do
       subject(:unique_count_service) do
         described_class.new(
-          event_store_class:,
+          event_store:,
           metered_item:,
-          context: Events::Stores::EventContext.from(subscription:),
-          boundaries: {
-            from_datetime:,
-            to_datetime:,
-            charges_duration: 31
-          },
+          context:,
+          boundaries:,
           filters:,
           bypass_aggregation: true
         )

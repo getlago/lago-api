@@ -110,4 +110,33 @@ RSpec.describe Events::Stores::EventContext do
         .to raise_error(NotImplementedError, "contract-backed event contexts do not have charge durations yet")
     end
   end
+
+  describe "#==" do
+    let(:subscription) { create(:subscription) }
+
+    it "is equal to another context wrapping the same record" do
+      sibling = described_class.from(subscription:)
+
+      expect(described_class.from(subscription:)).to eq(sibling)
+    end
+
+    it "is not equal to a context wrapping another record" do
+      expect(described_class.from(subscription:)).not_to eq(described_class.from(subscription: create(:subscription)))
+    end
+
+    it "is not equal to a context wrapping a contract" do
+      expect(described_class.from(subscription:)).not_to eq(described_class.from(contract: create(:contract)))
+    end
+
+    it "is not equal to the record it wraps" do
+      expect(described_class.from(subscription:)).not_to eq(subscription)
+    end
+
+    it "hashes with the record, so equal contexts collapse in a hash" do
+      contexts = {described_class.from(subscription:) => :first}
+      contexts[described_class.from(subscription:)] = :second
+
+      expect(contexts.values).to eq([:second])
+    end
+  end
 end
