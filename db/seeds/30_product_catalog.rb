@@ -100,10 +100,10 @@ unless ProductCategory.exists?(organization:, code: "cloud_platform")
 
   # Seed a catalog plan for the offer. Rate cards attach to catalog plans in a
   # later slice, so the plan is seeded on its own for now.
-  CatalogPlans::CreateService.call!(
+  CatalogPlans::CreateService.call!({
     organization_id: organization.id,
     name: "Growth",
     code: "growth",
     currency: "USD"
-  )
+  })
 end
