@@ -109,6 +109,37 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(overridden_plan.charges.sole.properties["amount"]).to eq("30")
       end
 
+      context "when the negotiated tiers are written in the camelCase of the payload" do
+        let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+        let(:plan_overrides) do
+          super().merge(
+            "charges" => [
+              super()["charges"].sole.merge(
+                "properties" => {
+                  "graduatedRanges" => [
+                    {"fromValue" => 0, "toValue" => 1000, "perUnitAmount" => "0.005", "flatAmount" => "0"},
+                    {"fromValue" => 1001, "toValue" => nil, "perUnitAmount" => "0.002", "flatAmount" => "0"}
+                  ]
+                }
+              )
+            ]
+          )
+        end
+
+        it "bills the negotiated tiers" do
+          execute_service.call
+
+          overridden_charge = customer.subscriptions.sole.plan.charges.sole
+          expect(overridden_charge.parent_id).to eq(charge.id)
+          expect(overridden_charge.properties["graduated_ranges"]).to eq(
+            [
+              {"from_value" => 0, "to_value" => 1000, "per_unit_amount" => "0.005", "flat_amount" => "0"},
+              {"from_value" => 1001, "to_value" => nil, "per_unit_amount" => "0.002", "flat_amount" => "0"}
+            ]
+          )
+        end
+      end
+
       context "when the override reprices the plan in another currency" do
         let(:plan_overrides) { super().merge("amountCurrency" => "USD") }
         let(:quote_version) do

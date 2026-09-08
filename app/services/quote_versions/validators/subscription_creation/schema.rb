@@ -250,7 +250,10 @@ module QuoteVersions
                             # NOTE: chargeModel is stored for the execution flow to consume,
                             # Charges::OverrideService cannot switch models yet. properties is
                             # deliberately only type-checked: its shape per charge model is
-                            # validated where the override is applied, not here.
+                            # validated where the override is applied, not here. Its keys are
+                            # submitted in the camelCase of the payload and underscored by
+                            # Utils::ChargeProperties wherever they are read, since the charge
+                            # models themselves know them in snake_case.
                             "chargeModel" => {
                               "type" => %w[string null],
                               "enum" => [*CHARGE_MODELS, nil],
