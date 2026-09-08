@@ -100,10 +100,12 @@ unless ProductCategory.exists?(organization:, code: "cloud_platform")
 
   # Seed a catalog plan for the offer. Rate cards attach to catalog plans in a
   # later slice, so the plan is seeded on its own for now.
-  CatalogPlans::CreateService.call!(
+  # CreateService takes the attributes as a single positional hash (it mirrors
+  # the controller's permitted params), so pass them wrapped, not as keywords.
+  CatalogPlans::CreateService.call!({
     organization_id: organization.id,
     name: "Growth",
     code: "growth",
     currency: "USD"
-  )
+  })
 end
