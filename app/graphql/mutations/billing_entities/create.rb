@@ -16,6 +16,10 @@ module Mutations
       type Types::BillingEntities::Object
 
       def resolve(**args)
+        if args[:payment_term]
+          args[:payment_term] = args[:payment_term].to_h
+        end
+
         result = ::BillingEntities::CreateService.call(
           organization: current_organization,
           params: args

@@ -47,6 +47,7 @@ module Types
 
       field :expected_finalization_date, GraphQL::Types::ISO8601Date, null: false
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: false, method: :snapshotted_payment_term
       field :payment_due_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_overdue, Boolean, null: false
 
