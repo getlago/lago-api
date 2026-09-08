@@ -37,7 +37,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       service.call
 
       expect(StreamingDestinations::BaseDestination)
-        .to have_received(:for_event).with(organization, "customer_usage.refreshed")
+        .to have_received(:for_event).with(organization, "customer_usage.refreshed.v1")
     end
 
     it "partitions on the customer's external id" do
@@ -88,8 +88,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
 
       it "carries the identifiers a consumer needs" do
         expect(envelope).to include(
-          schema_version: described_class::SCHEMA_VERSION,
-          event_type: "customer_usage.refreshed",
+          event_type: "customer_usage.refreshed.v1",
           object_type: "customer_usage",
           organization_id: organization.id,
           customer_external_id: customer.external_id,

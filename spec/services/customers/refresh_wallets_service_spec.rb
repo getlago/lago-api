@@ -109,7 +109,7 @@ RSpec.describe Customers::RefreshWalletsService do
 
         it "enqueues the delivery" do
           expect { result }.to have_enqueued_job(DeliverEventJob)
-            .with("customer_usage.refreshed", customer)
+            .with("customer_usage.refreshed.v1", customer)
         end
 
         it "enqueues nothing when the wrapping transaction rolls back" do

@@ -5,9 +5,8 @@ module EventDestinations
     class RefreshedService < BaseService
       Result = BaseResult
 
-      EVENT_TYPE = "customer_usage.refreshed"
+      EVENT_TYPE = "customer_usage.refreshed.v1"
       OBJECT_TYPE = "customer_usage"
-      SCHEMA_VERSION = 1
 
       def initialize(object:)
         @customer = object
@@ -78,7 +77,6 @@ module EventDestinations
 
       def envelope(subscription, usage)
         {
-          schema_version: SCHEMA_VERSION,
           event_id: SecureRandom.uuid_v7,
           event_type: EVENT_TYPE,
           object_type: OBJECT_TYPE,

@@ -12,21 +12,21 @@ RSpec.describe DeliverEventJob, type: :job do
   it "calls the service registered for the event type" do
     allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call)
 
-    described_class.perform_now("customer_usage.refreshed", customer)
+    described_class.perform_now("customer_usage.refreshed.v1", customer)
 
     expect(EventDestinations::CustomerUsage::RefreshedService).to have_received(:call).with(object: customer)
   end
 
   it "raises on an unregistered event type" do
-    expect { described_class.perform_now("customer_usage.imagined", customer) }.to raise_error(KeyError)
+    expect { described_class.perform_now("customer_usage.imagined.v1", customer) }.to raise_error(KeyError)
   end
 
   describe "uniqueness" do
     it "locks per customer and event type" do
-      key = described_class.new("customer_usage.refreshed", customer).lock_key
+      key = described_class.new("customer_usage.refreshed.v1", customer).lock_key
 
-      expect(described_class.new("customer_usage.refreshed", customer).lock_key).to eq(key)
-      expect(described_class.new("customer_usage.refreshed", create(:customer)).lock_key).not_to eq(key)
+      expect(described_class.new("customer_usage.refreshed.v1", customer).lock_key).to eq(key)
+      expect(described_class.new("customer_usage.refreshed.v1", create(:customer)).lock_key).not_to eq(key)
     end
 
     it "releases the enqueue lock before executing, so a refresh landing mid-delivery can still be queued" do
@@ -35,7 +35,7 @@ RSpec.describe DeliverEventJob, type: :job do
 
     it "drops a delivery that overlaps a running one, emitting no record" do
       allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call)
-      job = described_class.new("customer_usage.refreshed", customer)
+      job = described_class.new("customer_usage.refreshed.v1", customer)
       contend_on_runtime_lock(job)
 
       job.perform_now
@@ -46,7 +46,7 @@ RSpec.describe DeliverEventJob, type: :job do
     it "runs when no other delivery for the customer holds the runtime lock" do
       allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call)
 
-      described_class.new("customer_usage.refreshed", customer).perform_now
+      described_class.new("customer_usage.refreshed.v1", customer).perform_now
 
       expect(EventDestinations::CustomerUsage::RefreshedService).to have_received(:call).with(object: customer)
     end
