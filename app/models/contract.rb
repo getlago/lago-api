@@ -6,6 +6,7 @@
 # own `subscriptions` table; the two engines never share rows.
 class Contract < ApplicationRecord
   include BillingPeriodDateDiff
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include Terminatable
 
@@ -21,18 +22,24 @@ class Contract < ApplicationRecord
     anniversary: "anniversary"
   }.freeze
 
+  PAYMENT_METHOD_TYPES = {provider: "provider", manual: "manual"}.freeze
+
   belongs_to :organization
   # with_discarded: a terminated contract must still resolve its customer and
   # catalog plan after they are discarded — history, serializers and invoices
   # read through these associations.
   belongs_to :customer, -> { with_discarded }
   belongs_to :catalog_plan, -> { with_discarded }, optional: true
+  belongs_to :billing_entity, optional: true
+  belongs_to :payment_method, optional: true
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :billing_segments
+  has_many :invoices, -> { distinct }, through: :billing_segments
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
+  enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
 
   LIVE_STATUSES = %w[pending active].freeze
 
@@ -71,6 +78,14 @@ class Contract < ApplicationRecord
     catalog_plan&.currency || customer.currency || organization.default_currency
   end
 
+  def billing_entity
+    super || customer&.billing_entity
+  end
+
+  def applicable_billing_entity_id
+    billing_entity_id || customer&.billing_entity_id
+  end
+
   # The billing lifecycle a rate card inherits when attached: it starts on the
   # contract's start day (customer-local) and shares its anchor and clock. An
   # explicit anchor overrides the default.
@@ -97,36 +112,45 @@ end
 # Table name: contracts
 # Database name: primary
 #
-#  id                  :uuid             not null, primary key
-#  billing_anchor_date :date
-#  billing_time        :enum             default("calendar"), not null
-#  canceled_at         :datetime
-#  ended_at            :datetime
-#  name                :string
-#  started_at          :datetime
-#  status              :enum             default("pending"), not null
-#  terminated_at       :datetime
-#  created_at          :datetime         not null
-#  updated_at          :datetime         not null
-#  catalog_plan_id     :uuid
-#  customer_id         :uuid             not null
-#  external_id         :string           not null
-#  organization_id     :uuid             not null
-#  plan_id             :uuid
+#  id                    :uuid             not null, primary key
+#  billing_anchor_date   :date
+#  billing_time          :enum             default("calendar"), not null
+#  canceled_at           :datetime
+#  consolidate_invoice   :boolean          default(TRUE), not null
+#  ended_at              :datetime
+#  name                  :string
+#  payment_method_type   :enum             default("provider"), not null
+#  purchase_order_number :string
+#  started_at            :datetime
+#  status                :enum             default("pending"), not null
+#  terminated_at         :datetime
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  billing_entity_id     :uuid
+#  catalog_plan_id       :uuid
+#  customer_id           :uuid             not null
+#  external_id           :string           not null
+#  organization_id       :uuid             not null
+#  payment_method_id     :uuid
+#  plan_id               :uuid
 #
 # Indexes
 #
+#  index_contracts_on_billing_entity_id                (billing_entity_id)
 #  index_contracts_on_catalog_plan_id                  (catalog_plan_id)
 #  index_contracts_on_customer_id                      (customer_id)
 #  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                  (organization_id)
 #  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
+#  index_contracts_on_payment_method_id                (payment_method_id)
 #  index_contracts_on_plan_id                          (plan_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (catalog_plan_id => catalog_plans.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
