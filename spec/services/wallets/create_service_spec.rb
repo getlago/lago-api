@@ -78,7 +78,8 @@ RSpec.describe Wallets::CreateService do
           metadata: nil,
           name: nil,
           priority: nil,
-          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation
+          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation,
+          purchase_order_number: nil
         }
       })
     end
@@ -161,6 +162,19 @@ RSpec.describe Wallets::CreateService do
       it "returns an error" do
         expect(service_result).not_to be_success
         expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        super().merge(purchase_order_number: "a" * 256)
+      end
+
+      it "returns a validation error" do
+        expect { service_result }.not_to change(Wallet, :count)
+
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
       end
     end
 
@@ -348,20 +362,6 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "when customer already has a different currency" do
-      let(:customer_currency) { "USD" }
-
-      it "returns a currency mismatch error" do
-        expect(service_result).not_to be_success
-        expect(service_result.error.messages[:currency]).to eq(["currencies_does_not_match"])
-      end
-
-      it "does not update the customer currency" do
-        service_result
-        expect(customer.reload.currency).to eq("USD")
-      end
-    end
-
     context "when customer already has the same currency" do
       let(:customer_currency) { "EUR" }
 
@@ -378,9 +378,7 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "when multi currency is enabled" do
-      before { organization.update!(feature_flags: ["multi_currency"]) }
-
+    context "when the wallet currency can differ from the customer currency" do
       context "when customer does not have a currency" do
         let(:customer_currency) { nil }
 
@@ -505,6 +503,7 @@ RSpec.describe Wallets::CreateService do
           }
         ]
       end
+      let(:fixed_rule) { {interval: "monthly", method: "fixed", trigger: "interval"} }
       let(:params) do
         {
           name: "New Wallet",
@@ -527,6 +526,109 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.name).to eq("New Wallet")
         expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
+      end
+
+      context "when a fixed rule pays more than the wallet max top-up limit" do
+        let(:rules) { [fixed_rule.merge(paid_credits: "100.0")] }
+
+        it "rejects the wallet creation" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
+        end
+
+        context "when the rule ignores top-up limits" do
+          let(:rules) { [super().first.merge(ignore_paid_top_up_limits: true)] }
+
+          it "creates the wallet and the rule" do
+            expect { service_result }.to change(Wallet, :count).by(1)
+
+            expect(service_result).to be_success
+            expect(service_result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          end
+        end
+      end
+
+      context "when a fixed rule only grants credits (no paid amount)" do
+        let(:rules) { [fixed_rule.merge(paid_credits: "0", granted_credits: "50.0")] }
+
+        it "creates the wallet, since there is no paid amount to limit-check" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+
+          expect(service_result).to be_success
+          expect(service_result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+        end
+      end
+
+      context "when the customer currency has a different subunit than the request default" do
+        let(:params) { super().except(:currency) }
+        let(:customer_currency) { "JPY" }
+        let(:rules) { [fixed_rule.merge(paid_credits: "200.0")] }
+
+        it "checks the limit in the customer currency, not the EUR default" do
+          # max 5000 cents is 50 credits in EUR but 5000 in JPY (subunit 1); 200 is within
+          expect { service_result }.to change(Wallet, :count).by(1)
+
+          expect(service_result).to be_success
+          expect(service_result.wallet.currency).to eq("JPY")
+        end
+      end
+
+      context "when wallet and recurring transaction rule have purchase order numbers" do
+        let(:params) do
+          super().merge(purchase_order_number: "PO-WALLET")
+        end
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              purchase_order_number: "PO-RULE"
+            }
+          ]
+        end
+
+        it "persists both purchase order numbers and enqueues the initial top-up with the rule value" do
+          expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+            organization_id: organization.id,
+            params: hash_including(purchase_order_number: "PO-RULE")
+          )
+
+          wallet = service_result.wallet.reload
+          expect(wallet.purchase_order_number).to eq("PO-WALLET")
+          expect(wallet.recurring_transaction_rules.sole.purchase_order_number).to eq("PO-RULE")
+        end
+      end
+
+      context "when recurring transaction rule purchase order number is blank" do
+        let(:params) do
+          super().merge(purchase_order_number: "PO-WALLET")
+        end
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              purchase_order_number: "   "
+            }
+          ]
+        end
+
+        it "enqueues the initial top-up with the wallet purchase order number" do
+          expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+            organization_id: organization.id,
+            params: hash_including(purchase_order_number: "PO-WALLET")
+          )
+        end
       end
 
       context "when recurring transaction rule has transaction_name" do
@@ -1016,10 +1118,6 @@ RSpec.describe Wallets::CreateService do
     context "when multi_entity_billing is enabled" do
       let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
 
-      before do
-        organization.update!(feature_flags: ["multi_entity_billing"])
-      end
-
       context "when billing_entity_code is provided" do
         let(:params) do
           {
@@ -1188,32 +1286,6 @@ RSpec.describe Wallets::CreateService do
           wallet = service_result.wallet
           expect(wallet.billing_entity_id).to eq(billing_entity.id)
         end
-      end
-    end
-
-    context "when multi_entity_billing is not enabled" do
-      let(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
-
-      let(:params) do
-        {
-          name: "New Wallet",
-          customer:,
-          organization_id: organization.id,
-          currency: "EUR",
-          rate_amount: "1.00",
-          paid_credits: "0.00",
-          granted_credits: "0.00",
-          billing_entity_code: "be_code"
-        }
-      end
-
-      before { billing_entity }
-
-      it "does not assign the billing entity even if code is provided" do
-        expect(service_result).to be_success
-
-        wallet = service_result.wallet
-        expect(wallet.billing_entity_id).to be_nil
       end
     end
 

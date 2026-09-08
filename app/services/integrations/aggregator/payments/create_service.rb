@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module Payments
       class CreateService < Integrations::Aggregator::Invoices::BaseService
+        Result = BaseResult[:payment_id, :external_id]
+
         def initialize(payment:)
           @payment = payment
 

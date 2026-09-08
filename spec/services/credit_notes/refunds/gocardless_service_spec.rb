@@ -50,7 +50,6 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
           "currency" => "chf",
           "status" => "paid"
         ))
-      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     it "creates a gocardless refund" do
@@ -77,7 +76,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     it "call SegmentTrackJob" do
       gocardless_service.create
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "refund_status_changed",
         properties: {
@@ -214,6 +213,23 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
         expect(result.credit_note).to be_succeeded
       end
     end
+
+    context "when the provider was disconnected and reconnected" do
+      let(:reconnected_provider) { create(:gocardless_provider, organization:, code: "gocardless_reconnected") }
+      let(:reconnected_customer) { create(:gocardless_customer, customer:, payment_provider: reconnected_provider) }
+
+      before do
+        gocardless_customer.discard!
+        reconnected_customer
+      end
+
+      it "attaches the refund to the provider customer that holds the payment" do
+        result = gocardless_service.create
+
+        expect(result).to be_success
+        expect(result.refund.payment_provider_customer_id).to eq(gocardless_customer.id)
+      end
+    end
   end
 
   describe "#update_status" do
@@ -242,14 +258,12 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     end
 
     it "calls SegmentTrackJob" do
-      allow(SegmentTrackJob).to receive(:perform_later)
-
       gocardless_service.update_status(
         provider_refund_id: refund.provider_refund_id,
         status: "paid"
       )
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "refund_status_changed",
         properties: {

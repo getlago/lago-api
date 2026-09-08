@@ -2,6 +2,8 @@
 
 module CustomerPortal
   class CustomerUpdateService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args
@@ -14,6 +16,7 @@ module CustomerPortal
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+        original_searchable_values = customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS)
 
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
         customer.name = args[:name] if args.key?(:name)
@@ -42,6 +45,10 @@ module CustomerPortal
 
         customer.save!
         customer.reload
+
+        if customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS) != original_searchable_values
+          Customers::RefreshInvoicesSearchTermsJob.perform_after_commit(customer.id)
+        end
 
         tax_codes = []
         # This service does not return a 'result' object but a string

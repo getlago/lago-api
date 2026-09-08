@@ -7,7 +7,7 @@ RSpec.describe Subscriptions::OrganizationBillingJob do
 
   describe ".perform" do
     let(:organization) { create(:organization, api_keys: []) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Subscriptions::OrganizationBillingService::Result.new }
 
     it "calls the subscriptions biller service" do
       allow(Subscriptions::OrganizationBillingService).to receive(:call!)

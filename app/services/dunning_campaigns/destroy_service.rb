@@ -2,6 +2,8 @@
 
 module DunningCampaigns
   class DestroyService < BaseService
+    Result = BaseResult[:dunning_campaign]
+
     def initialize(dunning_campaign:)
       @dunning_campaign = dunning_campaign
 

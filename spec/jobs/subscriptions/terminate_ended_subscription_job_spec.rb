@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
   let(:subscription) { create(:subscription) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Subscriptions::TerminateService::Result.new }
 
   before do
     allow(Subscriptions::TerminateService).to receive(:call!).and_call_original
@@ -22,7 +22,7 @@ RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
 
     context "when the service returns a failure" do
       let(:result) do
-        BaseService::Result.new.not_found_failure!(resource: "subscription")
+        Subscriptions::TerminateService::Result.new.not_found_failure!(resource: "subscription")
       end
 
       it "raises a FailedResult error" do

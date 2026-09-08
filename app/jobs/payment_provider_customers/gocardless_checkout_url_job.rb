@@ -10,8 +10,7 @@ module PaymentProviderCustomers
     retry_on ActiveJob::DeserializationError
 
     def perform(gocardless_customer)
-      result = PaymentProviderCustomers::GocardlessService.new(gocardless_customer).generate_checkout_url
-      result.raise_if_error!
+      PaymentProviderCustomers::GocardlessService.call!(:generate_checkout_url, gocardless_customer)
     end
   end
 end

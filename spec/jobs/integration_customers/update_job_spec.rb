@@ -7,7 +7,7 @@ RSpec.describe IntegrationCustomers::UpdateJob do
 
   let(:integration) { create(:netsuite_integration) }
   let(:integration_customer) { create(:netsuite_customer, integration:) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { IntegrationCustomers::UpdateService::Result.new }
   let(:integration_customer_params) do
     {
       sync_with_provider: true

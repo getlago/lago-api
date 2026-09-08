@@ -61,7 +61,8 @@ module Fees
       fixed_charge
         .fees
         .where(subscription:)
-        .joins(:invoice).where.not(invoices: {status: :voided})
+        .where("fees.units > 0 OR fees.amount_cents > 0")
+        .joins(:invoice).where.not(invoices: {status: %i[voided deleted]})
         .where(
           "date_trunc('second', (properties->>'fixed_charges_from_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
           boundaries[:fixed_charges_from_datetime]&.iso8601(3)
@@ -172,9 +173,8 @@ module Fees
       aggregation_result = aggregator.call
 
       ChargeModels::Factory.new_instance(
-        chargeable: fixed_charge,
+        pricing_structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge),
         aggregation_result:,
-        properties: fixed_charge.properties,
         period_ratio: calculate_period_ratio,
         calculate_projected_usage: false
       ).apply
@@ -255,7 +255,7 @@ module Fees
       return false unless fixed_charge.pay_in_advance?
       return false unless fixed_charge.prorated?
       return false unless subscription.previous_subscription
-      return false if subscription.invoices.count > 1
+      return false if subscription.invoices.where.not(status: :deleted).count > 1
       fixed_charge.matching_fixed_charge_prev_subscription(subscription).present?
     end
 

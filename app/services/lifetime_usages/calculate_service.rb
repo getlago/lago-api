@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class CalculateService < BaseService
+    Result = BaseResult[:lifetime_usage]
+
     def initialize(lifetime_usage:, current_usage: nil)
       @lifetime_usage = lifetime_usage
       @current_usage = current_usage
@@ -42,11 +44,15 @@ module LifetimeUsages
         .where(canceled_at: nil)
         .select(:id)
 
-      invoices = organization.invoices.subscription
+      invoice_ids = organization.invoices.subscription
         .where(status: %i[finalized draft])
         .joins(:invoice_subscriptions)
         .where(invoice_subscriptions: {subscription_id: subscription_ids})
-      invoices.sum { |invoice| invoice.fees.charge.sum(:amount_cents) }
+        .select(:id)
+
+      organization.fees.charge
+        .where(invoice_id: invoice_ids, subscription_id: subscription_ids)
+        .sum(:amount_cents)
     end
 
     def calculate_current_usage_amount_cents
@@ -57,7 +63,8 @@ module LifetimeUsages
       @current_usage ||= Invoices::CustomerUsageService.call(
         customer: subscription.customer,
         subscription: subscription,
-        apply_taxes: false
+        apply_taxes: false,
+        with_cache: true
       ).usage
     end
 

@@ -101,6 +101,19 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
     end
   end
 
+  context "when the subscription is no longer active" do
+    let(:premium_integrations) { %w[lifetime_usage] }
+
+    before { subscription.mark_as_terminated! }
+
+    it "does not call CustomerUsageService or process the alert" do
+      service.call
+
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call!)
+      expect(::UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+    end
+  end
+
   context "when CustomerUsageService fails" do
     let(:premium_integrations) { %w[lifetime_usage] }
     let(:usage_error) { BaseService::ServiceFailure.new(nil, code: "test_error", error_message: "something went wrong") }

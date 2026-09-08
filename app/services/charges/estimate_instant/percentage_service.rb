@@ -3,6 +3,8 @@
 module Charges
   module EstimateInstant
     class PercentageService < BaseService
+      Result = BaseResult[:units, :amount]
+
       def initialize(properties:, units:)
         @properties = properties
         @units = units

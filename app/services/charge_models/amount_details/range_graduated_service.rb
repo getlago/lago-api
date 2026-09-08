@@ -35,7 +35,7 @@ module ChargeModels
       end
 
       def flat_unit_amount
-        @flat_unit_amount ||= units.zero? ? BigDecimal(0) : BigDecimal(range[:flat_amount])
+        @flat_unit_amount ||= BigDecimal(range[:flat_amount])
       end
 
       def per_unit_amount
@@ -47,11 +47,7 @@ module ChargeModels
       end
 
       def total_with_flat_amount
-        @total_with_flat_amount ||= if total_units.zero?
-          per_unit_total_amount
-        else
-          per_unit_total_amount + flat_unit_amount
-        end
+        @total_with_flat_amount ||= per_unit_total_amount + flat_unit_amount
       end
 
       # NOTE: compute how many units to bill in the range

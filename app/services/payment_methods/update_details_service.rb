@@ -2,6 +2,8 @@
 
 module PaymentMethods
   class UpdateDetailsService < BaseService
+    Result = BaseResult[:payment_method]
+
     def initialize(payment_method:, insert: {}, delete: {})
       @payment_method = payment_method
       @insert = insert.with_indifferent_access

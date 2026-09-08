@@ -19,21 +19,16 @@ module QuoteVersions
       return result.forbidden_failure! unless order_forms_enabled?(quote.organization)
       return result.forbidden_failure!(code: "active_version_exists") if active_version_exists?
 
-      quote_version = quote.versions.create!(
+      quote_version = quote.versions.new(
         organization: quote.organization,
-        **params.slice(
-          :billing_items,
-          :content,
-          :currency,
-          :start_date,
-          :end_date
-        )
+        **params.slice(:billing_items, :content, :currency, :billing_entity_id)
       )
 
+      validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)
+      return result if validator && !validator.valid?
+
+      quote_version.save!
       result.quote_version = quote_version
-
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.created", quote_version)
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

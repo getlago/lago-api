@@ -6,6 +6,8 @@ module PaymentRequests
       include Customers::PaymentProviderFinder
       include Updatable
 
+      Result = BaseResult[:payable, :payment, :payment_provider]
+
       def initialize(payable:, payment_provider: nil, payment_method_params: {})
         @payable = payable
         @provider = payment_provider&.to_sym
@@ -47,17 +49,15 @@ module PaymentRequests
           payable_payment_status: "pending"
         )
 
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          payment.payment_method_id = determine_payment_method&.id
-          payment.save!
-        end
+        payment.payment_method_id = determine_payment_method&.id
+        payment.save!
 
         result.payment = payment
 
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
           provider:,
           payment:,
-          reference: "#{payable.billing_entity.name} - Overdue invoices",
+          reference: payment_reference,
           metadata: {
             lago_customer_id: payable.customer_id,
             lago_payable_id: payable.id,
@@ -75,8 +75,17 @@ module PaymentRequests
 
         result
       rescue Invoices::Payments::AlreadyPaidError
-        # The payment request was settled by another payment so we can drop the unused pending payment
-        result.payment&.destroy if result.payment&.provider_payment_id.nil?
+        # The payment request was settled by another payment so we can drop the unused pending payment.
+        #
+        # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
+        # pending/processing provider payment exists per payable) and may have already advanced it by
+        # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
+        # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
+        # and orphan the PaymentReceipts::CreateJob already enqueued for it.
+        persisted_payment = result.payment && Payment.find_by(id: result.payment.id)
+        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
+          persisted_payment.destroy
+        end
         result.payment = nil
         result
       rescue BaseService::ServiceFailure => e
@@ -163,6 +172,18 @@ module PaymentRequests
             error_code: payment_result.error_code
           }
         })
+      end
+
+      # Mirrors the checkout-link description built by PaymentRequests::Payments::StripeService,
+      # so both payment paths expose the same reference to the provider.
+      def payment_reference
+        reference = "#{payable.billing_entity.name} - Overdue invoices"
+
+        if payable.invoices.one?
+          "#{reference}: #{payable.invoices.first.number}"
+        else
+          reference
+        end
       end
 
       def processing_payment

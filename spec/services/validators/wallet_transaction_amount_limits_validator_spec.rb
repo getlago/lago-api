@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Validators::WalletTransactionAmountLimitsValidator do
-  let(:result) { BaseService::LegacyResult.new }
+  let(:result) { BaseResult.new }
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents:, paid_top_up_max_amount_cents:) }
   let(:paid_top_up_min_amount_cents) { 5_00 }
   let(:paid_top_up_max_amount_cents) { 100_00 }

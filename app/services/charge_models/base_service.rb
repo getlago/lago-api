@@ -21,11 +21,14 @@ module ChargeModels
       new(...).apply
     end
 
-    def initialize(charge:, aggregation_result:, properties:, period_ratio: nil, calculate_projected_usage: false)
+    def initialize(pricing_structure:, aggregation_result:, period_ratio: nil, calculate_projected_usage: false)
+      unless pricing_structure.is_a?(ChargeModels::PricingStructure)
+        raise NotImplementedError, "Pricing structure: #{pricing_structure.class.name} is not implemented"
+      end
+
       super(nil)
-      @charge = charge
+      @pricing_structure = pricing_structure
       @aggregation_result = aggregation_result
-      @properties = properties
       @period_ratio = period_ratio
       @calculate_projected_usage = calculate_projected_usage
     end
@@ -54,19 +57,23 @@ module ChargeModels
 
     protected
 
-    attr_accessor :charge, :aggregation_result, :properties, :period_ratio, :calculate_projected_usage
+    attr_accessor :pricing_structure, :aggregation_result, :period_ratio, :calculate_projected_usage
 
     delegate :units, to: :result
     delegate :grouped_by, to: :aggregation_result
 
+    def properties
+      pricing_structure.properties
+    end
+
     def projected_units
-      return BigDecimal("0") if units.nil? || units.zero?
+      return BigDecimal(0) if units.nil? || units.zero?
 
       begin
-        (period_ratio > 0) ? (units / BigDecimal(period_ratio.to_s)).round(2) : BigDecimal("0")
+        (period_ratio > 0) ? (units / BigDecimal(period_ratio.to_s)).round(2) : BigDecimal(0)
       rescue => e
         Rails.logger.error "Error calculating projected_units in #{self.class}: #{e.message}"
-        BigDecimal("0")
+        BigDecimal(0)
       end
     end
 

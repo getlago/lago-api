@@ -7,7 +7,7 @@ RSpec.describe Subscriptions::TerminateJob do
   let(:timestamp) { Time.zone.now.to_i }
 
   let(:subscription_service) { instance_double(Subscriptions::TerminateService) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Subscriptions::TerminateService::Result.new }
 
   it "calls the subscription service" do
     allow(Subscriptions::TerminateService).to receive(:new)
@@ -25,7 +25,7 @@ RSpec.describe Subscriptions::TerminateJob do
 
   context "when result is a failure" do
     let(:result) do
-      BaseService::Result.new.not_found_failure!(resource: "subscription")
+      Subscriptions::TerminateService::Result.new.not_found_failure!(resource: "subscription")
     end
 
     it "raises an error" do

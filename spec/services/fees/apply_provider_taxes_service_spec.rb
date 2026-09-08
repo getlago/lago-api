@@ -17,13 +17,12 @@ RSpec.describe Fees::ApplyProviderTaxesService do
   let(:precise_coupons_amount_cents) { 0 }
 
   let(:fee_taxes) do
-    OpenStruct.new(
+    build(:tax_result,
       tax_amount_cents: 170,
       tax_breakdown: [
-        OpenStruct.new(name: "tax 2", type: "type2", rate: "0.12", tax_amount: 120),
-        OpenStruct.new(name: "tax 3", type: "type3", rate: "0.05", tax_amount: 50)
-      ]
-    )
+        build(:tax_breakdown_item, name: "tax 2", type: "type2", rate: "0.12", tax_amount: 120),
+        build(:tax_breakdown_item, name: "tax 3", type: "type3", rate: "0.05", tax_amount: 50)
+      ])
   end
 
   before do
@@ -46,13 +45,12 @@ RSpec.describe Fees::ApplyProviderTaxesService do
 
       context "when there is tax deduction" do
         let(:fee_taxes) do
-          OpenStruct.new(
+          build(:tax_result,
             tax_amount_cents: 136,
             tax_breakdown: [
-              OpenStruct.new(name: "tax 2", type: "type2", rate: "0.12", tax_amount: 96),
-              OpenStruct.new(name: "tax 3", type: "type3", rate: "0.05", tax_amount: 40)
-            ]
-          )
+              build(:tax_breakdown_item, name: "tax 2", type: "type2", rate: "0.12", tax_amount: 96),
+              build(:tax_breakdown_item, name: "tax 3", type: "type3", rate: "0.05", tax_amount: 40)
+            ])
         end
 
         it "creates applied_taxes based on the provider taxes" do
@@ -75,10 +73,9 @@ RSpec.describe Fees::ApplyProviderTaxesService do
 
       context "when taxes are paid by the seller" do
         let(:fee_taxes) do
-          OpenStruct.new(
+          build(:tax_result,
             tax_amount_cents: 0,
-            tax_breakdown: [OpenStruct.new(name: "Tax", type: "tax", rate: "0.00", tax_amount: 0)]
-          )
+            tax_breakdown: [build(:tax_breakdown_item, name: "Tax", type: "tax", rate: "0.00", tax_amount: 0)])
         end
 
         it "does not create applied_taxes" do
@@ -119,12 +116,11 @@ RSpec.describe Fees::ApplyProviderTaxesService do
       special_rules.each do |applied_rule|
         context "when tax provider returned specific rule applied to fees - #{applied_rule[:expected_name]}" do
           let(:fee_taxes) do
-            OpenStruct.new(
+            build(:tax_result,
               tax_amount_cents: 0,
               tax_breakdown: [
-                OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type], rate: "0.00", tax_amount: 0)
-              ]
-            )
+                build(:tax_breakdown_item, name: applied_rule[:expected_name], type: applied_rule[:received_type], rate: "0.00", tax_amount: 0)
+              ])
           end
 
           it "creates applied_taxes based on the provider rules" do

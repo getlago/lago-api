@@ -152,6 +152,21 @@ RSpec.describe ExecutionErrorResponder do
       end
     end
 
+    context "when the service result is a LockAcquisitionFailure" do
+      let(:error) do
+        BaseService::LockAcquisitionFailure.new(
+          result,
+          code: "lock_acquisition_failed",
+          error_message: "Failed to acquire lock"
+        )
+      end
+
+      it "returns an unprocessable entity error" do
+        expect(subject).to be_a(GraphQL::ExecutionError)
+        expect(subject.extensions).to eq({status: 422, code: "lock_acquisition_failed"})
+      end
+    end
+
     context "when the service result is an unknown failure" do
       let(:error) { BaseService::UnknownTaxFailure.new(result, code: "unknown_tax", error_message: "error") }
 

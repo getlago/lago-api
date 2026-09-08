@@ -4,6 +4,8 @@ module Integrations
   module Hubspot
     module Companies
       class DeployPropertiesService < Integrations::Aggregator::BaseService
+        Result = BaseResult[:response]
+
         VERSION = 1
 
         def action_path

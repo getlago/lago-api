@@ -63,6 +63,33 @@ RSpec.describe "templates/invoices/v4/self_billed.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    context "with a purchase order number" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :self_billed,
+          :with_purchase_order_number,
+          customer:,
+          organization:,
+          number: "LAGO-202509-SB-001",
+          payment_due_date: Date.parse("2025-09-15"),
+          issuing_date: Date.parse("2025-09-01"),
+          invoice_type: :one_off,
+          total_amount_cents: 50000,
+          currency: "USD",
+          fees_amount_cents: 50000,
+          sub_total_excluding_taxes_amount_cents: 50000,
+          sub_total_including_taxes_amount_cents: 50000,
+          coupons_amount_cents: 0
+        )
+      end
+
+      it "renders the purchase order number under the invoice number" do
+        expect(rendered_template).to include("Purchase Order Number")
+        expect(rendered_template).to include("PO-123")
+      end
+    end
   end
 
   context "with subscription invoice" do

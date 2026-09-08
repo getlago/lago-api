@@ -10,6 +10,10 @@ RSpec.describe Invoices::CreateAllPayInAdvanceFixedChargesJob do
   let(:timestamp) { Time.current.to_i }
   let(:fixed_charge) { nil }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [plan, timestamp] }
+  end
+
   describe "#perform" do
     let(:subscription) { create(:subscription, :active, plan:) }
     let(:pending_subscription) { create(:subscription, :pending, plan:) }

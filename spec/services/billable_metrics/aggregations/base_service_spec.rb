@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
   describe ".null_result" do
     subject(:null_result) { described_class.null_result(result, **args) }
 
-    let(:result) { BaseService::Result.new }
+    let(:result) { described_class::Result.new }
     let(:args) { {} }
 
     context "without keyword arguments" do
@@ -80,7 +80,7 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
       described_class.new(
         event_store_class: Events::Stores::PostgresStore,
         charge:,
-        subscription:,
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: {from_datetime: Time.current, to_datetime: Time.current},
         filters:
       )

@@ -3,14 +3,20 @@
 module PaymentProviderCustomers
   class MoneyhashService < BaseService
     include Customers::PaymentProviderFinder
+    include TypedResults
 
-    def initialize(moneyhash_customer = nil)
+    RESULTS = {
+      create: BaseResult[:moneyhash_customer, :checkout_url],
+      update: BaseResult,
+      generate_checkout_url: BaseResult[:checkout_url],
+      update_payment_method: BaseResult[:moneyhash_customer, :payment_method],
+      delete_payment_method: BaseResult[:moneyhash_customer]
+    }.freeze
+
+    private
+
+    def create(moneyhash_customer)
       @moneyhash_customer = moneyhash_customer
-
-      super(nil)
-    end
-
-    def create
       result.moneyhash_customer = moneyhash_customer
       return result if moneyhash_customer.provider_customer_id?
       moneyhash_result = create_moneyhash_customer
@@ -28,17 +34,19 @@ module PaymentProviderCustomers
       )
       deliver_success_webhook
       result.moneyhash_customer = moneyhash_customer
-      checkout_url_result = generate_checkout_url
+      checkout_url_result = generate_checkout_url(moneyhash_customer)
       return result unless checkout_url_result.success?
       result.checkout_url = checkout_url_result.checkout_url
       result
     end
 
-    def update
+    def update(moneyhash_customer)
+      @moneyhash_customer = moneyhash_customer
       result
     end
 
-    def generate_checkout_url(send_webhook: true)
+    def generate_checkout_url(moneyhash_customer, send_webhook: true)
+      @moneyhash_customer = moneyhash_customer
       return result.not_found_failure!(resource: "moneyhash_payment_provider") unless moneyhash_payment_provider
       return result.not_found_failure!(resource: "moneyhash_customer") unless moneyhash_customer
 
@@ -69,22 +77,20 @@ module PaymentProviderCustomers
       moneyhash_customer.payment_method_id = payment_method_id
       moneyhash_customer.save!
 
-      if moneyhash_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-        find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
-          customer: moneyhash_customer.customer,
-          payment_provider_customer: moneyhash_customer,
-          provider_method_id: payment_method_id,
-          params: {provider_payment_methods: ["card"]},
-          set_as_default: true
-        )
-        result.payment_method = find_or_create_result.payment_method
+      find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
+        customer: moneyhash_customer.customer,
+        payment_provider_customer: moneyhash_customer,
+        provider_method_id: payment_method_id,
+        params: {provider_payment_methods: ["card"]},
+        set_as_default: true
+      )
+      result.payment_method = find_or_create_result.payment_method
 
-        if card_details.present? && result.payment_method.present?
-          PaymentMethods::UpdateDetailsService.call(
-            payment_method: result.payment_method,
-            insert: card_details
-          )
-        end
+      if card_details.present? && result.payment_method.present?
+        PaymentMethods::UpdateDetailsService.call(
+          payment_method: result.payment_method,
+          insert: card_details
+        )
       end
 
       result.moneyhash_customer = moneyhash_customer
@@ -102,18 +108,14 @@ module PaymentProviderCustomers
         moneyhash_customer.save!
       end
 
-      if moneyhash_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-        payment_method = moneyhash_customer.customer.payment_methods.find_by(provider_method_id: payment_method_id)
-        PaymentMethods::DestroyService.call(payment_method:) if payment_method
-      end
+      payment_method = moneyhash_customer.customer.payment_methods.find_by(provider_method_id: payment_method_id)
+      PaymentMethods::DestroyService.call(payment_method:) if payment_method
 
       result.moneyhash_customer = moneyhash_customer
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
-
-    private
 
     attr_accessor :moneyhash_customer
 

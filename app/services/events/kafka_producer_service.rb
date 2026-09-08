@@ -29,7 +29,6 @@ module Events
     def build_message(event)
       {
         topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
-        key: "#{organization.id}-#{event.external_subscription_id}",
         payload: build_payload(event).to_json
       }
     end
@@ -46,7 +45,7 @@ module Events
         # NOTE: Default value to 0.0 is required for clickhouse parsing
         precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
         properties: event.properties,
-        ingested_at: Time.zone.now.iso8601[...-1],
+        ingested_at: Time.zone.now.iso8601(3)[...-1],
         source: EVENT_SOURCE,
         source_metadata: {
           api_post_processed: !organization.clickhouse_events_store?

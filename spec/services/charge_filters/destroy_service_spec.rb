@@ -6,7 +6,7 @@ RSpec.describe ChargeFilters::DestroyService do
   subject(:service) { described_class.call(charge_filter:) }
 
   let(:charge) { create(:standard_charge) }
-  let(:charge_filter) { create(:charge_filter, charge:) }
+  let(:charge_filter) { create(:charge_filter, charge:, code: "card_location_domestic_9f2a1c7b") }
 
   let(:card_location_filter) do
     create(
@@ -62,19 +62,19 @@ RSpec.describe ChargeFilters::DestroyService do
         filter_value
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(ChargeFilters::CascadeJob).to receive(:perform_later)
       end
 
       it "triggers filter-level cascade via ChargeFilters::CascadeJob" do
         service
 
-        expect(ChargeFilters::CascadeJob).to have_received(:perform_later).with(
+        expect(ChargeFilters::CascadeJob).to have_been_enqueued.with(
           charge.id,
           "destroy",
           hash_including("card_location"),
           nil,
           nil,
-          nil
+          nil,
+          "card_location_domestic_9f2a1c7b"
         )
       end
     end
@@ -88,13 +88,12 @@ RSpec.describe ChargeFilters::DestroyService do
         filter_value
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
       end
 
       it "does not trigger cascade update" do
         service
 
-        expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+        expect(ChargeFilters::CascadeJob).not_to have_been_enqueued
       end
     end
   end

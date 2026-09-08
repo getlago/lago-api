@@ -80,7 +80,7 @@ fr:
     prepaid_credits: Crédit(s) prépayé(s)
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
     progressive_billing_credit: Usage déjà facturé
-    purchase_order_number: Numéro de bon de commande
+    purchase_order_number: Nº de bon de commande
     quarter: trimestre
     quarterly: trimestriellement
     reached_usage_threshold: Cette facturation progressive est générée car votre usage cumulé a atteint %{usage_amount}, dépassant le seuil de %{threshold_amount}.

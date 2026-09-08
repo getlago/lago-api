@@ -3,6 +3,8 @@
 module Customers
   module Metadata
     class UpdateService < BaseService
+      Result = BaseResult[:customer]
+
       def initialize(customer:, params:)
         @customer = customer
         @params = params

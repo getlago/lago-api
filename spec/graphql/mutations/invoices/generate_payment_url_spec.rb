@@ -20,7 +20,7 @@ RSpec.describe Mutations::Invoices::GeneratePaymentUrl do
   end
 
   let(:service_result) do
-    result = BaseService::Result.new
+    result = Invoices::Payments::GeneratePaymentUrlService::Result.new
     result.payment_url = "https://payment.example.com/pay/123"
     result
   end
@@ -72,7 +72,7 @@ RSpec.describe Mutations::Invoices::GeneratePaymentUrl do
 
   context "when service returns an error" do
     let(:service_result) do
-      result = BaseService::Result.new
+      result = Invoices::Payments::GeneratePaymentUrlService::Result.new
       result.single_validation_failure!(error_code: "no_linked_payment_provider")
       result
     end
@@ -98,7 +98,7 @@ RSpec.describe Mutations::Invoices::GeneratePaymentUrl do
 
     context "when error is ThirdPartyFailure" do
       let(:service_result) do
-        result = BaseService::Result.new
+        result = Invoices::Payments::GeneratePaymentUrlService::Result.new
         result.third_party_failure!(third_party: "stripe", error_code: 500, error_message: "Hummm, there's an error!")
         result
       end

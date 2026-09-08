@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 class Subscription < ApplicationRecord
+  include BillingPeriodDateDiff
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include RansackUuidSearch
+  include Terminatable
+  include ConnectionResolvable
 
   self.ignored_columns += %w[incompleted_at cancelation_reason]
 
@@ -18,6 +22,7 @@ class Subscription < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
   has_many :integration_resources, as: :syncable
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :fees
   has_many :daily_usages
   has_many :usage_thresholds
@@ -58,7 +63,7 @@ class Subscription < ApplicationRecord
     :incomplete
   ].freeze
 
-  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout", manual: "manual"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -165,6 +170,12 @@ class Subscription < ApplicationRecord
     plan.yearly_amount_cents > next_subscription.plan.yearly_amount_cents
   end
 
+  # The anchor a rate card inherits when it is created without one: the
+  # subscription's explicit anchor, else the day the subscription started.
+  def effective_billing_anchor_date
+    billing_anchor_date || (started_at || subscription_at)&.to_date
+  end
+
   def trial_end_date
     return unless plan.has_trial?
 
@@ -222,6 +233,11 @@ class Subscription < ApplicationRecord
 
   def downgrade_plan_date
     return unless next_subscription
+    # Downgrades compare plan-level amounts and land at the end of the current
+    # period, neither of which product-catalog plans have: their price and their
+    # billing cycles live on the rate cards.
+    return if plan.product_catalog?
+
     if next_subscription.active? && downgraded?
       return next_subscription.started_at&.to_date
     end
@@ -239,35 +255,8 @@ class Subscription < ApplicationRecord
     name.presence || plan.invoice_name
   end
 
-  # When upgrade, we want to bill one day less since date of the upgrade will be
-  # included in the first invoice for the new plan
-  def date_diff_with_timezone(from_datetime, to_datetime)
-    number_od_days = Utils::Datetime.date_diff_with_timezone(
-      from_datetime,
-      to_datetime,
-      customer.applicable_timezone
-    )
-
-    return number_od_days unless terminated? && upgraded?
-
-    number_od_days -= 1
-
-    number_od_days.negative? ? 0 : number_od_days
-  end
-
   def should_sync_hubspot_subscription?
     customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_subscriptions }
-  end
-
-  def terminated_at?(timestamp)
-    return false unless terminated?
-    return false if terminated_at.nil? || timestamp.nil?
-
-    # TODO: should be cleaned up to only use Time
-    timestamp = timestamp.to_time if [Date, DateTime, String].include?(timestamp.class)
-    timestamp = Time.zone.at(timestamp) if timestamp.is_a?(Integer)
-
-    terminated_at.round <= timestamp.round
   end
 
   # TODO: Apply this method in CreateInvoiceSubscriptionService
@@ -335,6 +324,7 @@ end
 #
 #  id                           :uuid             not null, primary key
 #  activated_at                 :datetime
+#  billing_anchor_date          :date
 #  billing_time                 :integer          default("calendar"), not null
 #  canceled_at                  :datetime
 #  cancellation_reason          :enum
@@ -346,6 +336,7 @@ end
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
 #  progressive_billing_disabled :boolean          default(FALSE), not null
+#  purchase_order_number        :string
 #  skip_daily_usage             :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections :boolean          default(FALSE), not null
 #  started_at                   :datetime
@@ -365,6 +356,7 @@ end
 #
 # Indexes
 #
+#  idx_on_organization_id_external_id_gin_trgm_ops_fb8058a497  (organization_id,external_id) USING gin
 #  idx_on_organization_id_subscription_at_created_at_id        (organization_id,subscription_at DESC NULLS LAST,created_at DESC,id)
 #  index_pending_active_subscriptions_on_plan_id_and_status    (plan_id,status) WHERE (status = ANY (ARRAY[0, 1]))
 #  index_subscriptions_on_billing_entity_id                    (billing_entity_id)
@@ -374,6 +366,7 @@ end
 #  index_subscriptions_on_last_received_event_on               (last_received_event_on)
 #  index_subscriptions_on_last_received_event_on_null          (id) WHERE (last_received_event_on IS NULL)
 #  index_subscriptions_on_organization_id                      (organization_id)
+#  index_subscriptions_on_organization_id_name_gin_trgm_ops    (organization_id,name) USING gin
 #  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)

@@ -44,5 +44,15 @@ RSpec.describe V1::Entitlement::PlanEntitlementSerializer do
         }}
       )
     end
+
+    context "when a privilege is discarded" do
+      before { privilege.discard! }
+
+      it "does not serialize values of the discarded privilege" do
+        result = subject.serialize
+
+        expect(result[:privileges].map { |p| p[:code] }).to contain_exactly("bool", "str", "opt")
+      end
+    end
   end
 end

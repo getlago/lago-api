@@ -2,33 +2,34 @@
 
 FactoryBot.define do
   sequence :adyen_payments_response do
-    OpenStruct.new(
-      status: 200,
-      response: {
+    Adyen::AdyenResult.new(
+      {
         "additionalData" => {
           "recurringProcessingModel" => "UnscheduledCardOnFile"
         },
         "pspReference" => SecureRandom.uuid,
         "resultCode" => "Authorised",
         "merchantReference" => SecureRandom.uuid
-      }
+      }.to_json,
+      {},
+      200
     )
   end
 
   sequence :adyen_payments_error_response do
-    OpenStruct.new(
-      status: 422,
-      response: {
+    Adyen::AdyenResult.new(
+      {
         "errorType" => "validation",
         "message" => "There are no payment methods available for the given parameters."
-      }
+      }.to_json,
+      {},
+      422
     )
   end
 
   sequence :adyen_payment_links_response do
-    OpenStruct.new(
-      status: 200,
-      response: {
+    Adyen::AdyenResult.new(
+      {
         "amount" => {
           "currency" => "EUR",
           "value" => 0
@@ -43,24 +44,26 @@ FactoryBot.define do
         "id" => SecureRandom.uuid,
         "status" => "active",
         "url" => "https://test.adyen.link/test"
-      }
+      }.to_json,
+      {},
+      200
     )
   end
 
   sequence :adyen_payment_links_error_response do
-    OpenStruct.new(
-      status: 422,
-      response: {
+    Adyen::AdyenResult.new(
+      {
         "errorType" => "validation",
         "message" => "There are no payment methods available for the given parameters."
-      }
+      }.to_json,
+      {},
+      422
     )
   end
 
   sequence :adyen_payment_methods_response do
-    OpenStruct.new(
-      status: 200,
-      response: {
+    Adyen::AdyenResult.new(
+      {
         "paymentMethods" => [
           {
             "brands" => %w[amex bcmc cartebancaire mc visa visadankort],
@@ -83,7 +86,9 @@ FactoryBot.define do
             "type" => "scheme"
           }
         ]
-      }
+      }.to_json,
+      {},
+      200
     )
   end
 end

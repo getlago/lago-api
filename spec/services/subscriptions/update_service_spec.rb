@@ -9,9 +9,6 @@ RSpec.describe Subscriptions::UpdateService do
   let(:subscription) { create(:subscription) }
 
   describe "#call" do
-    let(:subscription_at) { "2022-07-07T00:00:00Z" }
-    let(:ending_at) { Time.current.beginning_of_day + 1.month }
-
     let(:params) do
       {
         name: "new name",
@@ -19,9 +16,26 @@ RSpec.describe Subscriptions::UpdateService do
         subscription_at:
       }
     end
+    let(:ending_at) { Time.current.beginning_of_day + 1.month }
+    let(:subscription_at) { "2022-07-07T00:00:00Z" }
 
     before do
       subscription
+    end
+
+    context "when the organization uses the product catalog", :premium do
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+      let(:params) { {plan_overrides: {amount_cents: 5000}} }
+
+      it "rejects plan overrides" do
+        result = update_service.call
+
+        expect(result).to be_failure
+        expect(result.error.messages[:plan_overrides]).to eq(["legacy_billing_disabled"])
+      end
     end
 
     context "when subscription is incomplete" do
@@ -32,6 +46,89 @@ RSpec.describe Subscriptions::UpdateService do
 
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("subscription_incomplete")
+      end
+    end
+
+    context "with purchase_order_number" do
+      let(:params) { {purchase_order_number: "PO-123"} }
+
+      %i[pending active].each do |status|
+        context "when subscription is #{status}" do
+          let(:subscription) { create(:subscription, status:) }
+
+          it "updates the purchase_order_number" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.purchase_order_number).to eq("PO-123")
+          end
+        end
+      end
+
+      %i[terminated canceled].each do |status|
+        context "when subscription is #{status}" do
+          let(:subscription) { create(:subscription, status:) }
+
+          it "returns a not allowed error and does not update" do
+            result = update_service.call
+
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("purchase_order_number_not_editable")
+            expect(subscription.reload.purchase_order_number).to be_nil
+          end
+        end
+      end
+
+      context "when subscription is terminated and the value is unchanged" do
+        let(:subscription) { create(:subscription, status: :terminated, purchase_order_number: "PO-123") }
+        let(:params) { {purchase_order_number: "PO-123", name: "new name"} }
+
+        it "updates the other fields" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.name).to eq("new name")
+          expect(result.subscription.purchase_order_number).to eq("PO-123")
+        end
+      end
+
+      context "when subscription is terminated and the value only differs by normalization" do
+        let(:subscription) { create(:subscription, status: :terminated, purchase_order_number: "PO-123") }
+        let(:params) { {purchase_order_number: "  PO-123  "} }
+
+        it "does not return a not allowed error" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.purchase_order_number).to eq("PO-123")
+        end
+      end
+
+      context "when subscription is terminated without a purchase_order_number and the value is blank" do
+        let(:subscription) { create(:subscription, status: :terminated) }
+        let(:params) { {purchase_order_number: "", name: "new name"} }
+
+        it "updates the other fields" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.name).to eq("new name")
+          expect(result.subscription.purchase_order_number).to be_nil
+        end
+      end
+
+      context "when subscription is terminated and the value changes" do
+        let(:subscription) { create(:subscription, status: :terminated, purchase_order_number: "PO-123") }
+        let(:params) { {purchase_order_number: "PO-456", name: "new name"} }
+
+        it "returns a not allowed error and does not update the other fields" do
+          result = update_service.call
+
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("purchase_order_number_not_editable")
+          expect(subscription.reload.purchase_order_number).to eq("PO-123")
+          expect(subscription.reload.name).not_to eq("new name")
+        end
       end
     end
 
@@ -287,10 +384,52 @@ RSpec.describe Subscriptions::UpdateService do
     context "when subscription is starting in the future" do
       let(:subscription) { create(:subscription, :pending) }
 
-      it "does not produce activity log" do
+      it "does not produce the subscription.updated activity log" do
         update_service.call
 
-        expect(Utils::ActivityLog).not_to have_received(:produce)
+        expect(Utils::ActivityLog).not_to have_produced("subscription.updated").after_commit.with(subscription)
+      end
+
+      context "when subscription_at is moved to today" do
+        let(:subscription) { create(:subscription, :pending, subscription_at: 1.week.from_now) }
+        let(:params) { {subscription_at: Time.current.iso8601} }
+
+        it "activates the subscription" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+        end
+
+        it "sends the subscription.started webhook" do
+          expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.started", subscription)
+        end
+
+        it "sends the subscription.updated webhook" do
+          expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
+        end
+
+        it "produces the subscription.started activity log" do
+          update_service.call
+
+          expect(Utils::ActivityLog).to have_produced("subscription.started").after_commit.with(subscription)
+        end
+      end
+
+      context "when subscription_at is moved to another future date" do
+        let(:subscription) { create(:subscription, :pending, subscription_at: 1.week.from_now) }
+        let(:params) { {subscription_at: 2.weeks.from_now.iso8601} }
+
+        it "keeps the subscription pending" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_pending
+        end
+
+        it "does not send any webhook" do
+          expect { update_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
       end
 
       context "when subscription is pay_in_advance" do
@@ -1364,8 +1503,6 @@ RSpec.describe Subscriptions::UpdateService do
       let(:new_billing_entity) { create(:billing_entity, organization:) }
 
       context "with multi_entity_billing feature flag enabled" do
-        before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
         context "with billing_entity_id" do
           let(:params) { {billing_entity_id: new_billing_entity.id} }
 
@@ -1526,37 +1663,6 @@ RSpec.describe Subscriptions::UpdateService do
               expect(result.error.resource).to eq("billing_entity")
               expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
             end
-          end
-        end
-      end
-
-      context "with multi_entity_billing feature flag disabled" do
-        let(:params) { {billing_entity_id: new_billing_entity.id} }
-
-        it "silently ignores billing_entity_id" do
-          update_service.call
-
-          expect(subscription.reload.billing_entity_id).to be_nil
-        end
-
-        it "returns success" do
-          expect(update_service.call).to be_success
-        end
-
-        context "when the subscription already has a billing_entity attached" do
-          let(:current_entity) { create(:billing_entity, organization:) }
-          let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
-
-          it "leaves billing_entity_id unchanged when an id is sent" do
-            update_service.call
-
-            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
-          end
-
-          it "leaves billing_entity_id unchanged when nil is sent" do
-            described_class.new(subscription:, params: {billing_entity_id: nil}).call
-
-            expect(subscription.reload.billing_entity_id).to eq(current_entity.id)
           end
         end
       end

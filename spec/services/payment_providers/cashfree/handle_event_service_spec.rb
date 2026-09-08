@@ -8,7 +8,7 @@ RSpec.describe PaymentProviders::Cashfree::HandleEventService do
   let(:organization) { create(:organization) }
 
   let(:payment_service) { instance_double(Invoices::Payments::CashfreeService) }
-  let(:service_result) { BaseService::Result.new }
+  let(:service_result) { PaymentProviders::Cashfree::Webhooks::PaymentLinkEventService::Result.new }
 
   let(:event_json) do
     path = Rails.root.join("spec/fixtures/cashfree/payment_link_event_payment.json")

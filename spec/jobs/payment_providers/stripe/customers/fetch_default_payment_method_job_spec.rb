@@ -22,5 +22,32 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob
         .to have_received(:call!)
         .with(provider_customer:)
     end
+
+    context "when the service raises BaseService::LockAcquisitionFailure" do
+      before do
+        allow(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodService)
+          .to receive(:call!)
+          .and_raise(BaseService::LockAcquisitionFailure.new(nil, code: "lock_acquisition_failed", error_message: "Failed to acquire lock"))
+      end
+
+      it "retries the job instead of dying" do
+        expect do
+          described_class.perform_now(provider_customer)
+        end.to have_enqueued_job(described_class)
+      end
+    end
+
+    context "when the service raises ActiveRecord::Deadlocked" do
+      before do
+        allow(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodService)
+          .to receive(:call!).and_raise(ActiveRecord::Deadlocked)
+      end
+
+      it "retries the job instead of dying" do
+        expect do
+          described_class.perform_now(provider_customer)
+        end.to have_enqueued_job(described_class)
+      end
+    end
   end
 end

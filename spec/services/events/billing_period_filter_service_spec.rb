@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Events::BillingPeriodFilterService do
-  subject(:filter_service) { described_class.new(subscription:, boundaries:) }
+  subject(:filter_result) { described_class.for_charges!(subscription:, boundaries:) }
 
   shared_examples "recurring billable metric filtering" do
     let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
@@ -25,10 +25,10 @@ RSpec.describe Events::BillingPeriodFilterService do
       let(:started_at) { boundaries.charges_from_datetime }
 
       it "returns empty hash" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
     end
 
@@ -48,10 +48,16 @@ RSpec.describe Events::BillingPeriodFilterService do
       before { invoice_subscription }
 
       it "returns only charge/filter pairs from previous fees" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({recurring_charge.id => [charge_filter.id]})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({recurring_charge.target_key => [charge_filter.id]})
+      end
+
+      it "seeds the carried-over usage with the period start" do
+        result = filter_result
+
+        expect(result.filter_targets[recurring_charge.target_key][charge_filter.id]).to eq(boundaries.charges_from_datetime)
       end
     end
 
@@ -70,10 +76,10 @@ RSpec.describe Events::BillingPeriodFilterService do
       before { invoice_subscription }
 
       it "returns empty hash" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
     end
 
@@ -94,10 +100,10 @@ RSpec.describe Events::BillingPeriodFilterService do
       before { invoice_subscription }
 
       it "returns empty hash" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
     end
 
@@ -137,10 +143,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns current charge with nil filter" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({recurring_charge.target_key => [nil]})
         end
       end
 
@@ -163,10 +169,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns current charge with nil filter" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({recurring_charge.target_key => [nil]})
         end
       end
 
@@ -189,10 +195,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns empty hash" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -211,10 +217,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns all current filter IDs plus nil" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.filter_targets.transform_values(&:keys)).to match({recurring_charge.target_key => contain_exactly(charge_filter.id, nil)})
         end
       end
 
@@ -234,10 +240,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns all current filter IDs plus nil" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.filter_targets.transform_values(&:keys)).to match({recurring_charge.target_key => contain_exactly(charge_filter.id, nil)})
         end
       end
 
@@ -265,10 +271,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         before { fee }
 
         it "picks up fees from the entire chain" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.filter_targets.transform_values(&:keys)).to match({recurring_charge.target_key => contain_exactly(charge_filter.id, nil)})
         end
 
         context "when previous fees have no units" do
@@ -284,20 +290,20 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns empty hash" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({})
           end
         end
       end
 
       context "when no previous fees exist for recurring BMs" do
         it "returns empty hash" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -325,10 +331,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns all current filter IDs plus nil" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to match({recurring_charge.id => contain_exactly(charge_filter.id, nil)})
+          expect(result.filter_targets.transform_values(&:keys)).to match({recurring_charge.target_key => contain_exactly(charge_filter.id, nil)})
         end
       end
     end
@@ -352,10 +358,10 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "excludes the discarded filter from results" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
     end
   end
@@ -395,15 +401,24 @@ RSpec.describe Events::BillingPeriodFilterService do
 
   before { charge }
 
+  describe ".for_charges!" do
+    it "runs through the class-level service entrypoint" do
+      allow(described_class).to receive(:call!).and_call_original
+
+      filter_result
+
+      expect(described_class).to have_received(:call!)
+        .with(resolver: an_instance_of(Events::BillingPeriodFilters::ChargesResolver))
+    end
+  end
+
   describe "#call" do
     context "when relying on event codes" do
-      before { organization.enable_feature_flag!(:event_property_combinations) }
-
       it "returns the filtered charge_ids" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
 
       context "with events matching the boundaries" do
@@ -428,10 +443,17 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({charge.id => [nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil]})
+        end
+
+        it "returns the last seen timestamp per charge/filter" do
+          result = filter_result
+
+          expect(result.filter_targets[charge.target_key].keys).to eq([nil])
+          expect(result.filter_targets[charge.target_key][nil]).to be_present
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -440,10 +462,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           before { charge_2 }
 
           it "returns filtered charges" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil], charge_2.target_key => [nil]})
           end
         end
 
@@ -465,10 +487,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns charges and filters for all billable metrics with matching events" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil], charge_2.target_key => [nil]})
           end
         end
 
@@ -485,10 +507,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           before { charge_filter2 }
 
           it "returns the filters that the events can match" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, charge_filter2.id)})
+            expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => contain_exactly(charge_filter.id, charge_filter2.id)})
           end
         end
 
@@ -509,10 +531,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           before { charge_filter_us_value }
 
           it "returns only the filters that received matching events" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [charge_filter.id]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [charge_filter.id]})
           end
         end
 
@@ -537,10 +559,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns the default filter for the unmatched usage" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, nil)})
+            expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => contain_exactly(charge_filter.id, nil)})
           end
         end
       end
@@ -562,10 +584,63 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns recurring charge_ids even without events" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({recurring_charge.target_key => [charge_filter.id, nil]})
+        end
+
+        it "seeds every recurring bucket with the period start when there are no events" do
+          result = filter_result
+
+          expect(result.filter_targets[recurring_charge.target_key][charge_filter.id]).to eq(boundaries.charges_from_datetime)
+          expect(result.filter_targets[recurring_charge.target_key][nil]).to eq(boundaries.charges_from_datetime)
+        end
+
+        context "with events in the period" do
+          before do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              timestamp: boundaries.charges_from_datetime + 5.days,
+              code: recurring_billable_metric.code,
+              properties: {"region" => "eu"}
+            )
+          end
+
+          it "refreshes the matching bucket's last_seen_at while leaving the unmatched bucket seeded" do
+            result = filter_result
+
+            expect(result).to be_success
+            expect(result.filter_targets[recurring_charge.target_key].keys).to match_array([charge_filter.id, nil])
+            expect(result.filter_targets[recurring_charge.target_key][charge_filter.id]).to be > boundaries.charges_from_datetime
+            expect(result.filter_targets[recurring_charge.target_key][nil]).to eq(boundaries.charges_from_datetime)
+          end
+        end
+
+        context "with a backdated event ingested for a prior period" do
+          before do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              timestamp: boundaries.charges_from_datetime - 10.days,
+              code: recurring_billable_metric.code,
+              properties: {"region" => "eu"}
+            )
+          end
+
+          it "refreshes the matching bucket's last_seen_at from the backdated event's ingestion time" do
+            result = filter_result
+
+            expect(result).to be_success
+            expect(result.filter_targets[recurring_charge.target_key].keys).to match_array([charge_filter.id, nil])
+            # The event's business timestamp is out of the period, but it was ingested now, so
+            # the recurring bucket must reflect it to invalidate the lazy usage cache.
+            expect(result.filter_targets[recurring_charge.target_key][charge_filter.id]).to be > boundaries.charges_from_datetime
+            expect(result.filter_targets[recurring_charge.target_key][nil]).to eq(boundaries.charges_from_datetime)
+          end
         end
       end
 
@@ -581,10 +656,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -600,10 +675,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -611,48 +686,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
 
-        filter_service.call
+        filter_result
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
-          .with(codes: [billable_metric.code], filter_keys: [])
-      end
-
-      context "when the event_property_combinations feature flag is disabled" do
-        let(:charge_filter) { create(:charge_filter, charge:) }
-        let(:billable_metric_filter) do
-          create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
-        end
-        let(:charge_filter_value) do
-          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
-        end
-
-        let(:charge_filter_us) { create(:charge_filter, charge:) }
-        let(:charge_filter_us_value) do
-          create(:charge_filter_value, charge_filter: charge_filter_us, billable_metric_filter:, values: ["us"])
-        end
-
-        before do
-          organization.disable_feature_flag!(:event_property_combinations)
-
-          charge_filter_value
-          charge_filter_us_value
-
-          create(
-            :event,
-            organization_id: organization.id,
-            external_subscription_id: subscription.external_id,
-            timestamp: boundaries.charges_from_datetime + 5.days,
-            code: billable_metric.code,
-            properties: {"region" => "eu"}
-          )
-        end
-
-        it "falls back to every filter of the charges that received events" do
-          result = filter_service.call
-
-          expect(result).to be_success
-          expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id, charge_filter_us.id, nil)})
-        end
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
       end
     end
 
@@ -662,10 +699,10 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "returns filtered charges" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
 
       context "with events matching the boundaries" do
@@ -712,10 +749,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         before { events }
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({charge.id => [nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil]})
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -762,10 +799,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns filtered charges" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil], charge_2.target_key => [nil]})
           end
         end
 
@@ -797,10 +834,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns charges and filters for all billable metrics with matching events" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil], charge_2.target_key => [nil]})
           end
         end
 
@@ -817,10 +854,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           before { charge_filter2 }
 
           it "returns charges and filters for all billable metrics with matching events" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id)})
+            expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => contain_exactly(charge_filter.id)})
           end
 
           context "when events matches the default bucket" do
@@ -863,10 +900,10 @@ RSpec.describe Events::BillingPeriodFilterService do
             before { charge_filter }
 
             it "returns charges and filters for all billable metrics with matching events" do
-              result = filter_service.call
+              result = filter_result
 
               expect(result).to be_success
-              expect(result.charges).to match({charge.id => [nil]})
+              expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => [nil]})
             end
           end
         end
@@ -899,10 +936,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -927,10 +964,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
     end
@@ -941,10 +978,10 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "returns filtered charges" do
-        result = filter_service.call
+        result = filter_result
 
         expect(result).to be_success
-        expect(result.charges).to eq({})
+        expect(result.filter_targets.transform_values(&:keys)).to eq({})
       end
 
       context "with events matching the boundaries" do
@@ -986,10 +1023,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         before { enriched_events }
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({charge.id => [nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil]})
         end
 
         context "with multiple charges for the same billable_metric" do
@@ -1017,10 +1054,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns filtered charges" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil], charge_2.target_key => [nil]})
           end
         end
 
@@ -1071,10 +1108,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "returns charges and filters for all billable metrics with matching events" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil], charge_2.target_key => [nil]})
           end
         end
 
@@ -1091,10 +1128,10 @@ RSpec.describe Events::BillingPeriodFilterService do
           before { charge_filter2 }
 
           it "returns charges and filters for all billable metrics with matching events" do
-            result = filter_service.call
+            result = filter_result
 
             expect(result).to be_success
-            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id)})
+            expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => contain_exactly(charge_filter.id)})
           end
 
           context "when events matches the default bucket" do
@@ -1122,10 +1159,10 @@ RSpec.describe Events::BillingPeriodFilterService do
             before { charge_filter }
 
             it "returns charges and filters for all billable metrics with matching events" do
-              result = filter_service.call
+              result = filter_result
 
               expect(result).to be_success
-              expect(result.charges).to match({charge.id => [nil]})
+              expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => [nil]})
             end
           end
         end
@@ -1133,6 +1170,44 @@ RSpec.describe Events::BillingPeriodFilterService do
 
       context "with recurring billable metric" do
         it_behaves_like "recurring billable metric filtering"
+
+        context "with a backdated event ingested for a prior period" do
+          let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+          let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
+
+          let(:backdated_event) do
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: recurring_billable_metric.code,
+              timestamp: boundaries.charges_from_datetime - 10.days
+            )
+          end
+
+          let(:backdated_enriched_event) do
+            create(
+              :enriched_event,
+              event: backdated_event,
+              subscription:,
+              value: 12,
+              decimal_value: 12.0,
+              charge: recurring_charge,
+              charge_filter_id: nil
+            )
+          end
+
+          before { backdated_enriched_event }
+
+          it "includes the recurring charge with a last_seen_at from the backdated ingestion time" do
+            result = filter_result
+
+            expect(result).to be_success
+            # The enriched event's business timestamp is out of the period, but it was ingested
+            # now, so the recurring bucket must reflect it to invalidate the lazy usage cache.
+            expect(result.filter_targets[recurring_charge.target_key][nil]).to be > boundaries.charges_from_datetime
+          end
+        end
       end
 
       context "with unknown charges" do
@@ -1167,10 +1242,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -1204,10 +1279,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         before { enriched_events }
 
         it "returns filtered charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -1240,10 +1315,10 @@ RSpec.describe Events::BillingPeriodFilterService do
         before { enriched_events }
 
         it "returns empty charges" do
-          result = filter_service.call
+          result = filter_result
 
           expect(result).to be_success
-          expect(result.charges).to eq({})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({})
         end
       end
 
@@ -1251,9 +1326,127 @@ RSpec.describe Events::BillingPeriodFilterService do
         event_store = instance_double(Events::Stores::PostgresStore, distinct_charges_and_filters: [])
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
 
-        filter_service.call
+        filter_result
 
-        expect(event_store).to have_received(:distinct_charges_and_filters).with(codes: [billable_metric.code])
+        expect(event_store).to have_received(:distinct_charges_and_filters)
+          .with(codes: [billable_metric.code], with_last_seen_at: true)
+      end
+    end
+
+    context "when last_seen_at is not requested" do
+      subject(:filter_result) do
+        described_class.for_charges!(subscription:, boundaries:, with_last_seen_at: false)
+      end
+
+      let(:default_result) { described_class.for_charges!(subscription:, boundaries:) }
+
+      before do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          timestamp: boundaries.charges_from_datetime + 5.days,
+          code: billable_metric.code
+        )
+      end
+
+      it "returns the same charges and filters as when it is requested" do
+        result = filter_result
+
+        expect(result).to be_success
+        expect(result.filter_targets.transform_values(&:keys)).to eq(default_result.filter_targets.transform_values(&:keys))
+      end
+
+      it "returns no timestamp" do
+        result = filter_result
+
+        expect(result.filter_targets[charge.target_key]).to eq({nil => nil})
+      end
+
+      it "does not request the aggregate from the event store" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_result
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: false)
+      end
+
+      context "when the organization pre-filters events" do
+        let(:organization) { create(:organization, pre_filter_events: true) }
+
+        it "does not request the aggregate from the event store" do
+          event_store = instance_double(Events::Stores::PostgresStore, distinct_charges_and_filters: [])
+          allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+          filter_result
+
+          expect(event_store).to have_received(:distinct_charges_and_filters)
+            .with(codes: [billable_metric.code], with_last_seen_at: false)
+        end
+      end
+    end
+
+    context "when codes restrict the lookup" do
+      subject(:filter_result) do
+        described_class.for_charges!(subscription:, boundaries:, codes: [billable_metric.code])
+      end
+
+      let(:billable_metric_2) { create(:billable_metric, organization:) }
+      let(:charge_2) { create(:standard_charge, plan:, billable_metric: billable_metric_2) }
+
+      before do
+        charge_2
+
+        [billable_metric, billable_metric_2].each do |metric|
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            timestamp: boundaries.charges_from_datetime + 5.days,
+            code: metric.code
+          )
+        end
+      end
+
+      it "returns only the charges of the requested codes" do
+        result = filter_result
+
+        expect(result).to be_success
+        expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [nil]})
+      end
+
+      it "queries the event store for the requested codes only" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        filter_result
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code], filter_keys: [], with_last_seen_at: true)
+      end
+
+      # A code outside of the plan matches no event of the subscription, so it is forwarded as is
+      # rather than intersected away: dropping it would remove the charge from the result and bill
+      # it as zero units instead of surfacing the unknown code.
+      it "forwards a code that is not part of the plan" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        described_class.for_charges!(subscription:, boundaries:, codes: [billable_metric.code, "unknown_code"])
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations)
+          .with(codes: [billable_metric.code, "unknown_code"], filter_keys: [], with_last_seen_at: true)
+      end
+
+      it "still seeds recurring charges left out of the codes" do
+        recurring_metric = create(:sum_billable_metric, :recurring, organization:)
+        recurring_charge = create(:standard_charge, plan:, billable_metric: recurring_metric)
+
+        result = filter_result
+
+        expect(result.filter_targets[recurring_charge.target_key]).to eq({nil => boundaries.charges_from_datetime})
       end
     end
   end

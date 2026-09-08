@@ -57,12 +57,11 @@ module Integrations
               elsif fee.subscription?
                 subscription_item
               end
-              mapped_item ||= empty_struct
 
               {
                 "item_key" => fee.item_key,
                 "item_id" => fee.id || fee.item_id,
-                "item_code" => mapped_item.external_id,
+                "item_code" => mapped_item&.external_id,
                 "unit" => fee.units,
                 "amount" => item_amount(fee)
               }
@@ -71,10 +70,6 @@ module Integrations
             private
 
             attr_reader :customer, :integration_customer, :invoice, :fees
-
-            def empty_struct
-              @empty_struct ||= OpenStruct.new
-            end
 
             def item_amount(fee)
               amount = fee.sub_total_excluding_taxes_amount_cents&.to_i&.fdiv(subunit_to_unit(fee))

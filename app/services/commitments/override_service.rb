@@ -2,6 +2,8 @@
 
 module Commitments
   class OverrideService < BaseService
+    Result = BaseResult[:commitment]
+
     def initialize(commitment:, params:)
       @commitment = commitment
       @params = params

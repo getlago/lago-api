@@ -6,6 +6,8 @@ require "forwardable"
 module DataExports
   module Csv
     class BaseCsvService < ::BaseService
+      Result = BaseResult[:csv_file]
+
       extend Forwardable
 
       def call

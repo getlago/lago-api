@@ -149,6 +149,10 @@ module Integrations
 
             output
           end
+
+          def invoice_url
+            invoice.web_url
+          end
         end
       end
     end

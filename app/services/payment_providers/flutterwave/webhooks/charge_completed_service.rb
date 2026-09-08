@@ -30,7 +30,8 @@ module PaymentProviders
           payable = find_payable
           return result unless payable
 
-          payment_service_class.new(payable:).update_payment_status(
+          payment_service_class.call!(
+            :update_payment_status,
             organization_id:,
             status: verified_transaction[:status],
             amount_cents: verified_amount_cents(verified_transaction),
@@ -39,7 +40,7 @@ module PaymentProviders
               status: verified_transaction[:status],
               metadata: build_metadata(verified_transaction)
             )
-          ).raise_if_error!
+          )
 
           result
         end

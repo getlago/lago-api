@@ -55,7 +55,12 @@ module Api
               ),
               ::V1::FeeSerializer,
               collection_name: "fees",
-              meta: pagination_metadata(result.fees),
+              meta: pagination_metadata(
+                result.fees,
+                key: "fees",
+                organization_id: current_organization.id,
+                params: index_filters.merge(page: params[:page], per_page: params[:per_page])
+              ),
               includes: %i[applied_taxes]
             )
           )

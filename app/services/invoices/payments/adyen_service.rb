@@ -5,21 +5,24 @@ module Invoices
     class AdyenService < BaseService
       include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
+      include TypedResults
 
       PROVIDER_NAME = "Adyen"
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url]
+      }.freeze
 
-        super
-      end
+      private
 
-      def update_payment_status(provider_payment_id:, status:, amount_cents: nil, metadata: {})
+      def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment = if metadata[:payment_type] == "one-time"
-          create_payment(provider_payment_id:, amount_cents:, metadata:)
+          create_payment(organization_id:, provider_payment_id:, amount_cents:, metadata:)
         else
           Payment.find_by(provider_payment_id:)
         end
+        return result unless result.success?
         return result.not_found_failure!(resource: "adyen_payment") unless payment
 
         result.payment = payment
@@ -43,7 +46,8 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
         res = client.checkout.payment_links_api.payment_links(
           Lago::Adyen::Params.new(payment_url_params(payment_intent)).to_h,
           headers: {"Idempotency-Key" => payment_intent.id}
@@ -61,14 +65,15 @@ module Invoices
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.msg)
       end
 
-      private
-
       attr_accessor :invoice
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(provider_payment_id:, metadata:, amount_cents: nil)
-        @invoice = Invoice.find(metadata[:lago_invoice_id])
+      def create_payment(organization_id:, provider_payment_id:, metadata:, amount_cents: nil)
+        # NOTE: Invoice does not belong to this lago organization
+        #       It means the same Adyen credentials are used for multiple organizations
+        @invoice = Invoice.find_by(id: metadata[:lago_invoice_id], organization_id:)
+        return result.not_found_failure!(resource: "invoice") unless invoice
 
         increment_payment_attempts
 
@@ -126,6 +131,8 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+        @invoice = result.invoice
+
         params = {
           payment_status:,
           ready_for_payment_processing: payment_status.to_sym != :succeeded

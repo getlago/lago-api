@@ -5,7 +5,15 @@ require "rails_helper"
 RSpec.describe Mutations::QuoteVersions::Approve do
   let(:required_permission) { "quotes:approve" }
   let(:membership) { create(:membership) }
-  let(:quote_version) { create(:quote_version, organization: membership.organization) }
+  let(:quote) { create(:quote, organization: membership.organization) }
+  let(:quote_version) do
+    create(
+      :quote_version,
+      :with_subscription_creation_billing_items,
+      quote:,
+      organization: membership.organization
+    )
+  end
 
   let(:input) do
     {
@@ -93,6 +101,35 @@ RSpec.describe Mutations::QuoteVersions::Approve do
     end
   end
 
+  context "with an expiresAt the deal no longer covers", :premium do
+    let(:quote_version) do
+      create(
+        :quote_version,
+        :with_subscription_creation_billing_items,
+        quote:,
+        organization: membership.organization,
+        plan_end_date: "2027-01-01"
+      )
+    end
+
+    # The signing window has to close strictly before the deal expires, so the plan's own ending day
+    # is already too late.
+    let(:input) { {id: quote_version.id, expiresAt: Time.utc(2027, 1, 1).end_of_day.iso8601} }
+
+    it "returns a validation error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {expiresAt: ["after_deal_expiration"]})
+      expect(quote_version.reload.status).to eq("draft")
+    end
+  end
+
   context "when quote version is not found", :premium do
     let(:input) { {id: "00000000-0000-0000-0000-000000000000"} }
 
@@ -122,6 +159,24 @@ RSpec.describe Mutations::QuoteVersions::Approve do
       )
 
       expect_graphql_error(result:, message: "Unprocessable Entity", details: {status: ["not_approvable"]})
+    end
+  end
+
+  context "when the quote lock cannot be acquired", :premium do
+    before do
+      allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+    end
+
+    it "returns an unprocessable entity error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+
+      expect_unprocessable_entity(result, details: {base: ["concurrency_conflict"]})
     end
   end
 end

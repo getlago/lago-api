@@ -2,6 +2,10 @@
 
 module Invoices
   class SubscriptionService < BaseService
+    Result = BaseResult[:invoice, :non_invoiceable_fees]
+
+    ACTIVATION_BILLING_REASONS = %i[subscription_starting upgrading].freeze
+
     def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
@@ -21,17 +25,33 @@ module Invoices
     end
 
     def call
+      if activation_billing?
+        with_subscription_locks { perform_call }
+      else
+        perform_call
+      end
+    end
+
+    private
+
+    def perform_call
       return result if active_subscriptions.empty? && recurring
 
       if mixed_billing_entities?
         return result.validation_failure!(errors: {billing_entity: ["mixed_billing_entities"]})
       end
 
+      if mixed_purchase_order_numbers?
+        return result.validation_failure!(errors: {purchase_order_number: ["mixed_purchase_order_numbers"]})
+      end
+
       create_generating_invoice unless invoice
       invoice.status = :open if subscription_gated?
       result.invoice = invoice
 
-      fee_result = ActiveRecord::Base.transaction do
+      # Activation billing runs inside the lock's transaction, so this needs its own
+      # savepoint to keep rolling partial fees back when it fails.
+      fee_result = ActiveRecord::Base.transaction(requires_new: true) do
         context = grace_period? ? :draft : :finalize
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
@@ -106,13 +126,11 @@ module Invoices
       raise unless invoicing_reason.to_sym == :subscription_periodic
 
       result
-    rescue ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
     end
-
-    private
 
     attr_accessor :subscriptions,
       :timestamp,
@@ -122,6 +140,35 @@ module Invoices
       :currency,
       :invoice,
       :skip_charges
+
+    # Cancelling a gated subscription takes the same lock, so holding it here orders the two:
+    # cancellation either finds the gating invoice and closes it, or refuses until it exists.
+    def with_subscription_locks
+      ActiveRecord::Base.transaction do
+        lock_subscriptions!
+        yield
+      end
+    end
+
+    def lock_subscriptions!
+      subscription_ids = subscriptions.map(&:id)
+
+      if subscription_ids.empty?
+        return
+      end
+
+      locked_subscriptions = Subscription
+        .where(id: subscription_ids)
+        .order(:id)
+        .lock
+        .index_by(&:id)
+
+      self.subscriptions = subscriptions.map { |subscription| locked_subscriptions.fetch(subscription.id) }
+    end
+
+    def activation_billing?
+      skip_charges && ACTIVATION_BILLING_REASONS.include?(invoicing_reason.to_sym)
+    end
 
     def active_subscriptions
       @active_subscriptions ||= subscriptions.select(&:active?)
@@ -152,7 +199,8 @@ module Invoices
         invoicing_reason:,
         currency:,
         datetime: Time.zone.at(timestamp),
-        skip_charges:
+        skip_charges:,
+        purchase_order_number: subscriptions.first&.purchase_order_number
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
@@ -176,6 +224,10 @@ module Invoices
 
     def mixed_billing_entities?
       subscriptions.map(&:applicable_billing_entity_id).uniq.many?
+    end
+
+    def mixed_purchase_order_numbers?
+      subscriptions.map(&:purchase_order_number).uniq.many?
     end
 
     def set_invoice_generated_status

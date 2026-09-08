@@ -133,7 +133,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
           )
         end
         let(:true_up_result) do
-          BaseService::Result.new.tap do |r|
+          Commitments::Minimum::CalculateTrueUpFeeService::Result.new.tap do |r|
             r.amount_cents = 500
             r.precise_amount_cents = 500.0
           end

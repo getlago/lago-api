@@ -19,6 +19,7 @@ module InvoiceIndex
     :payment_status,
     :payment_statuses,
     :per_page,
+    :purchase_order_number,
     :search_term,
     :self_billed,
     :settlements,
@@ -52,6 +53,7 @@ module InvoiceIndex
         payment_dispute_lost: params[:payment_dispute_lost],
         payment_overdue: params[:payment_overdue],
         payment_status: params[:payment_status] || params[:payment_statuses],
+        purchase_order_number: params[:purchase_order_number],
         settlements: params[:settlements],
         self_billed: params[:self_billed],
         status: params[:status] || params[:statuses]
@@ -59,39 +61,42 @@ module InvoiceIndex
     )
 
     if result.success?
-      invoices = Invoice.preload_offset_amounts(
-        result.invoices.includes(
-          :metadata,
-          :applied_taxes,
-          :billing_entity,
-          :applied_usage_thresholds,
-          customer: [
-            :billing_entity,
+      # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
+      ApplicationRecord.connected_to(role: :direct) do
+        invoices = Invoice.preload_offset_amounts(
+          result.invoices.includes(
             :metadata,
-            :stripe_customer,
-            :gocardless_customer,
-            :cashfree_customer,
-            :adyen_customer,
-            :moneyhash_customer,
-            {integration_customers: :integration}
-          ]
+            :applied_taxes,
+            :billing_entity,
+            :applied_usage_thresholds,
+            customer: [
+              :billing_entity,
+              :metadata,
+              :stripe_customer,
+              :gocardless_customer,
+              :cashfree_customer,
+              :adyen_customer,
+              :moneyhash_customer,
+              {integration_customers: :integration}
+            ]
+          )
         )
-      )
 
-      render(
-        json: ::CollectionSerializer.new(
-          invoices,
-          ::V1::InvoiceSerializer,
-          collection_name: "invoices",
-          meta: pagination_metadata(
+        render(
+          json: ::CollectionSerializer.new(
             invoices,
-            key: "invoices",
-            organization_id: current_organization.id,
-            params: params.permit(*WHITELIST)
-          ),
-          includes: %i[customer integration_customers metadata applied_taxes]
+            ::V1::InvoiceSerializer,
+            collection_name: "invoices",
+            meta: pagination_metadata(
+              invoices,
+              key: "invoices",
+              organization_id: current_organization.id,
+              params: params.permit(*WHITELIST)
+            ),
+            includes: %i[customer integration_customers metadata applied_taxes]
+          )
         )
-      )
+      end
     else
       render_error_response(result)
     end

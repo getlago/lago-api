@@ -7,7 +7,7 @@ RSpec.describe Integrations::Hubspot::Contacts::DeployPropertiesJob do
     subject(:deploy_properties_job) { described_class }
 
     let(:integration) { create(:hubspot_integration) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Integrations::Hubspot::Contacts::DeployPropertiesService::Result.new }
 
     before do
       allow(Integrations::Hubspot::Contacts::DeployPropertiesService).to receive(:call).and_return(result)

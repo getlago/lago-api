@@ -2,6 +2,8 @@
 
 module CreditNotes
   class VoidService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(credit_note:)
       @credit_note = credit_note
 

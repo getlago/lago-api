@@ -23,24 +23,30 @@ module QuoteVersions
           quote_version.reload
           next result.single_validation_failure!(field: :status, error_code: "not_approvable") unless approvable?
 
+          validator = QuoteVersions::Validators.for(result, quote_version:, scope: :approve)
+          next result if validator && !validator.valid?
+
           quote_version.update!(
             status: :approved,
             approved_at: Time.current,
             mention_variables: ComputeMentionVariablesService.call!(quote_version:).mention_variables
           )
 
+          SendWebhookJob.perform_after_commit("quote.approved", quote_version)
+          Utils::ActivityLog.produce_after_commit(quote_version, "quote.approved")
+
           result.order_form = OrderForms::CreateService.call!(quote_version:, expires_at:).order_form
           result.quote_version = quote_version
         end
       end
 
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.approved", quote_version)
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue BaseService::ValidationFailure => e
-      e.result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

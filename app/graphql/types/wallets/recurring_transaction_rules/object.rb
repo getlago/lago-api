@@ -19,6 +19,7 @@ module Types
         field :paid_credits, String, null: false
         field :payment_method, Types::PaymentMethods::Object
         field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
+        field :purchase_order_number, String, null: true
         field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
         field :skip_invoice_custom_sections, Boolean
         field :started_at, GraphQL::Types::ISO8601DateTime, null: true

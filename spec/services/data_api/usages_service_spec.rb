@@ -87,6 +87,29 @@ RSpec.describe DataApi::UsagesService do
         end
       end
     end
+
+    context "when the data api returns a transient error before succeeding" do
+      let(:query) { {time_granularity: "daily", start_of_period_dt: Date.current - 30.days} }
+
+      before do
+        call_count = 0
+        stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/")
+          .with(query:)
+          .to_return do
+            call_count += 1
+            if call_count == 1
+              {status: 500, body: "transient error", headers: {}}
+            else
+              {status: 200, body: body_response, headers: {}}
+            end
+          end
+      end
+
+      it "retries and returns usages" do
+        expect(service_call).to be_success
+        expect(service_call.usages.count).to eq(3)
+      end
+    end
   end
 
   describe "#filtered_params" do

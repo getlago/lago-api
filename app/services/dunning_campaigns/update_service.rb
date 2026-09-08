@@ -2,6 +2,8 @@
 
 module DunningCampaigns
   class UpdateService < BaseService
+    Result = BaseResult[:dunning_campaign]
+
     def initialize(organization:, dunning_campaign:, params:)
       @dunning_campaign = dunning_campaign
       @organization = organization

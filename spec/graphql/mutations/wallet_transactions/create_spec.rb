@@ -22,6 +22,7 @@ RSpec.describe Mutations::WalletTransactions::Create do
           priority
           source
           name
+          purchaseOrderNumber
           invoiceRequiresSuccessfulPayment
           transactionStatus
           transactionType
@@ -45,6 +46,7 @@ RSpec.describe Mutations::WalletTransactions::Create do
       grantedCredits: "15.00",
       invoiceRequiresSuccessfulPayment: true,
       priority: 25,
+      purchaseOrderNumber: "PO-123",
       metadata: [
         {
           key: "fixed",

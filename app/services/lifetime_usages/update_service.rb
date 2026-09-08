@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class UpdateService < BaseService
+    Result = BaseResult[:lifetime_usage]
+
     def initialize(lifetime_usage:, params:)
       @lifetime_usage = lifetime_usage
       @params = params

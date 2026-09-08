@@ -24,10 +24,6 @@ RSpec.describe AddOns::CreateService do
       }
     end
 
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     it "creates an add-on" do
       expect { create_service.call }
         .to change(AddOn, :count).by(1)
@@ -39,7 +35,7 @@ RSpec.describe AddOns::CreateService do
     it "calls SegmentTrackJob" do
       add_on = create_service.call.add_on
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "add_on_created",
         properties: {

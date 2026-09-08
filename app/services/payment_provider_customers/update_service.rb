@@ -2,6 +2,8 @@
 
 module PaymentProviderCustomers
   class UpdateService < BaseService
+    Result = BaseResult
+
     attr_reader :customer
 
     def initialize(customer)
@@ -11,9 +13,8 @@ module PaymentProviderCustomers
     end
 
     def call
-      result = PaymentProviderCustomers::Factory.new_instance(provider_customer: customer.provider_customer).update
-      result.raise_if_error!
-      result
+      provider_customer = customer.provider_customer
+      PaymentProviderCustomers::Factory.for(provider_customer).call!(:update, provider_customer)
     end
   end
 end

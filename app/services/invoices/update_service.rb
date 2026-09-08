@@ -2,6 +2,8 @@
 
 module Invoices
   class UpdateService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, params:, webhook_notification: false)
       @invoice = invoice
       @params = params

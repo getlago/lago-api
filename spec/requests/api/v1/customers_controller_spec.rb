@@ -23,6 +23,27 @@ RSpec.describe Api::V1::CustomersController do
 
     include_examples "requires API permission", "customer", "write"
 
+    context "when firstname and lastname contain null bytes" do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo\u0000Bar",
+          firstname: "\u0000",
+          lastname: "\u0000",
+          currency: "EUR"
+        }
+      end
+
+      it "strips the null bytes instead of returning a 500" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:name]).to eq("FooBar")
+        expect(json[:customer][:firstname]).to eq("")
+        expect(json[:customer][:lastname]).to eq("")
+      end
+    end
+
     it "returns a success" do
       subject
 
@@ -315,6 +336,52 @@ RSpec.describe Api::V1::CustomersController do
           subject
           expect(response).to have_http_status(:success)
           expect(json[:customer][:email]).to eq("foobar@example.com")
+        end
+      end
+    end
+
+    context "with a unicode local-part in email" do
+      let(:external_id) { SecureRandom.uuid }
+      let(:create_params) do
+        {
+          external_id:,
+          name: "Foo Bar Inc.",
+          email: "joão.silva@example.com"
+        }
+      end
+
+      it "creates the customer and preserves the email" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:email]).to eq("joão.silva@example.com")
+      end
+
+      context "when the customer already exists" do
+        before { create(:customer, organization:, external_id:, email: "ascii@example.com") }
+
+        it "updates the email" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer][:email]).to eq("joão.silva@example.com")
+        end
+      end
+
+      context "when the email is malformed" do
+        let(:create_params) do
+          {
+            external_id:,
+            name: "Foo Bar Inc.",
+            email: "joão.silva@"
+          }
+        end
+
+        it "returns an unprocessable_entity" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:email]).to include("invalid_email_format")
         end
       end
     end

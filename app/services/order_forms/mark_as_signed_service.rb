@@ -16,11 +16,6 @@ module OrderForms
       super
     end
 
-    activity_loggable(
-      action: "order_form.signed",
-      record: -> { order_form }
-    )
-
     def call
       return result.not_found_failure!(resource: "order_form") unless order_form
       return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)
@@ -43,7 +38,11 @@ module OrderForms
           order_form.signed_document.attach(attachment) if attachment
           order_form.save!
 
-          result.order = Order.create!(
+          SendWebhookJob.perform_after_commit("order_form.signed", order_form)
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.signed")
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.file_uploaded") if attachment
+
+          order = Order.create!(
             organization: order_form.organization,
             customer: order_form.customer,
             order_form:,
@@ -51,8 +50,10 @@ module OrderForms
             execute_at:
           )
 
-          # TODO: Enqueue Orders::ExecuteOrderJob.perform_after_commit(result.order) when execution_mode == "execute_in_lago"
+          SendWebhookJob.perform_after_commit("order.created", order)
+          Utils::ActivityLog.produce_after_commit(order, "order.created")
 
+          result.order = order
           result.order_form = order_form
         end
       end
@@ -62,6 +63,8 @@ module OrderForms
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
       result.single_validation_failure!(field: :order_form_id, error_code: "value_already_exist")
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private
@@ -73,6 +76,9 @@ module OrderForms
       return if result.failure?
 
       validate_execute_at(execute_at:)
+      return if result.failure?
+
+      validate_deal_expiration(execute_at:, quote_version: order_form.quote_version)
     end
 
     def signed_document_attachment

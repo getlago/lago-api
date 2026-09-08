@@ -2,6 +2,8 @@
 
 module Invoices
   class RefreshDraftService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:, context: :refresh)
       @invoice = invoice
       @subscription_ids = invoice.subscriptions.pluck(:id)

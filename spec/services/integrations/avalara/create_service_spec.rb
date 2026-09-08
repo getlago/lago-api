@@ -51,7 +51,6 @@ RSpec.describe Integrations::Avalara::CreateService do
       context "when avalara premium integration is present" do
         before do
           organization.update!(premium_integrations: ["avalara"])
-          allow(Integrations::Avalara::FetchCompanyIdJob).to receive(:perform_later)
         end
 
         context "without validation errors" do
@@ -76,7 +75,7 @@ RSpec.describe Integrations::Avalara::CreateService do
             service_call
 
             integration = Integrations::AvalaraIntegration.order(:created_at).last
-            expect(Integrations::Avalara::FetchCompanyIdJob).to have_received(:perform_later).with(integration:)
+            expect(Integrations::Avalara::FetchCompanyIdJob).to have_been_enqueued.with(integration:)
           end
 
           it_behaves_like "produces a security log", "integration.created" do

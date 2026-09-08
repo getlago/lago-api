@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Events::PostProcessJob do
-  let(:result) { BaseService::Result.new }
+  let(:result) { Events::PostProcessService::Result.new }
 
   let(:event) do
     create(:event)

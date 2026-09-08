@@ -2,6 +2,8 @@
 
 module Commitments
   class CalculateProratedCoefficientService < BaseService
+    Result = BaseResult[:proration_coefficient]
+
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription
@@ -42,7 +44,7 @@ module Commitments
 
       days = Utils::Datetime.date_diff_with_timezone(
         all_invoice_subscriptions.first.from_datetime,
-        subscription.terminated? ? subscription.terminated_at : invoice_subscription.to_datetime,
+        ending_at,
         subscription.customer.applicable_timezone
       )
 
@@ -53,6 +55,16 @@ module Commitments
       )
 
       days / days_total.to_f
+    end
+
+    # NOTE: A subscription terminated as DOWNGRADE will have `terminated_at` after the end of the latest
+    # billing period. Counting up to `terminated_at` would then charge more than the full commitment.
+    def ending_at
+      if subscription.terminated?
+        [subscription.terminated_at, dates_service.end_of_period].min
+      else
+        invoice_subscription.to_datetime
+      end
     end
   end
 end

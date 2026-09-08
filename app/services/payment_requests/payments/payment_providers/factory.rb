@@ -4,8 +4,8 @@ module PaymentRequests
   module Payments
     module PaymentProviders
       class Factory
-        def self.new_instance(payable:)
-          service_class(payable.customer&.payment_provider).new(payable)
+        def self.for(payable)
+          service_class(payable.customer&.payment_provider)
         end
 
         def self.service_class(payment_provider)

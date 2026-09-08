@@ -2,6 +2,8 @@
 
 module Invoices
   class ApplyInvoiceCustomSectionsService < BaseService
+    Result = BaseResult[:applied_sections]
+
     def initialize(invoice:, resources: [], custom_section_ids: [])
       @invoice = invoice
       @customer = invoice.customer

@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class UsageThresholdsCompletionService < BaseService
+    Result = BaseResult[:usage_thresholds]
+
     def initialize(lifetime_usage:)
       @lifetime_usage = lifetime_usage
       @usage_thresholds = lifetime_usage.subscription.applicable_usage_thresholds

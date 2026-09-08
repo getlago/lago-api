@@ -115,6 +115,18 @@ RSpec.describe Subscriptions::Dates::YearlyService do
         end
       end
 
+      context "when subscription date on 29/02 of a leap year" do
+        let(:subscription_at) { Time.zone.parse("29 Feb 2020") }
+        let(:billing_at) { Time.zone.parse("28 Feb 2025") }
+
+        # The period being billed is the one that opened on the leap day. Resolving the base date from
+        # `billing_date - 1.year` alone lands on 28 Feb 2024, one day before that anniversary, and
+        # would walk the period back a further year.
+        it "returns the leap day of the previous period" do
+          expect(result).to eq("2024-02-29 00:00:00 UTC")
+        end
+      end
+
       context "when subscription is just terminated" do
         before { subscription.mark_as_terminated!("1 Feb 2022") }
 
@@ -222,8 +234,18 @@ RSpec.describe Subscriptions::Dates::YearlyService do
         let(:subscription_at) { Time.zone.parse("29 Feb 2020") }
         let(:billing_at) { Time.zone.parse("01 Mar 2022") }
 
-        it "returns the previous month last day" do
-          expect(result).to eq("2022-02-28 23:59:59 UTC")
+        # The anniversary clamps to 28 Feb in a common year, so the period ends on the 27th. Both
+        # ends used to land on the 28th, putting that day in two periods.
+        it "returns the day before the anniversary" do
+          expect(result).to eq("2022-02-27 23:59:59 UTC")
+        end
+
+        context "when billing on the clamped anniversary of a common year" do
+          let(:billing_at) { Time.zone.parse("28 Feb 2025") }
+
+          it "closes the period that opened on the leap day" do
+            expect(result).to eq("2025-02-27 23:59:59 UTC")
+          end
         end
       end
 
@@ -894,6 +916,42 @@ RSpec.describe Subscriptions::Dates::YearlyService do
     end
   end
 
+  describe "#fixed_charges_period_to_datetime" do
+    subject(:result) { date_service.fixed_charges_period_to_datetime }
+
+    let(:billing_time) { :calendar }
+
+    context "when billing charges monthly but not fixed charges" do
+      before { plan.update!(bill_charges_monthly: true) }
+
+      context "when the cycle bills fixed charges (first period)" do
+        let(:billing_at) { Time.zone.parse("01 Jan 2022") }
+
+        it "returns the fixed-charges period end, like fixed_charges_to_datetime" do
+          expect(result).to eq(date_service.fixed_charges_to_datetime)
+          expect(result.to_s).to eq("2021-12-31 23:59:59 UTC")
+        end
+      end
+
+      context "when the cycle does not bill fixed charges (charges-only run)" do
+        let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+        it "still returns the period end even though fixed_charges_to_datetime is nil" do
+          expect(date_service.fixed_charges_to_datetime).to be_nil
+          expect(result.to_s).to eq("2021-12-31 23:59:59 UTC")
+        end
+      end
+    end
+
+    context "when subscription is not yet started" do
+      let(:started_at) { nil }
+
+      it "returns nil" do
+        expect(result).to be_nil
+      end
+    end
+  end
+
   describe "next_end_of_period" do
     let(:result) { date_service.next_end_of_period.to_s }
 
@@ -1025,6 +1083,40 @@ RSpec.describe Subscriptions::Dates::YearlyService do
 
         it "returns the price of single day" do
           expect(result).to eq(plan.amount_cents.fdiv(366))
+        end
+      end
+
+      context "when subscription date on 29/02 of a leap year" do
+        let(:subscription_at) { Time.zone.parse("29 Feb 2020") }
+        let(:billing_at) { Time.zone.parse("28 Feb 2025") }
+
+        # The period runs from 29 Feb 2024 to 27 Feb 2025, which is 365 days and not the 366 days of
+        # the leap year it starts in.
+        it "returns the price of single day of the computed period" do
+          expect(result).to eq(plan.amount_cents.fdiv(365))
+        end
+      end
+
+      # NOTE: a subscription created by an upgrade inherits the anniversary of the one it replaces, so it
+      #       starts in the middle of its first period. The termination and trial fees pass the boundary
+      #       start, which is clamped to `started_at`, and must still be prorated on the whole period.
+      context "when subscription started in the middle of a period" do
+        let(:result) { date_service.single_day_price(optional_from_date: started_at.to_date) }
+
+        let(:subscription_at) { Time.zone.parse("01 Jan 2024") }
+        let(:started_at) { Time.zone.parse("10 Oct 2024") }
+        let(:billing_at) { Time.zone.parse("01 Nov 2024") }
+
+        it "returns the price of single day of the whole period" do
+          expect(result).to eq(plan.amount_cents.fdiv(366))
+        end
+
+        context "when the anniversary is not the first day of the year" do
+          let(:subscription_at) { Time.zone.parse("15 Mar 2024") }
+
+          it "returns the price of single day of the whole period" do
+            expect(result).to eq(plan.amount_cents.fdiv(365))
+          end
         end
       end
     end

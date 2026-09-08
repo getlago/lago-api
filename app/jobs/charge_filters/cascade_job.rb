@@ -4,7 +4,7 @@ module ChargeFilters
   class CascadeJob < ApplicationJob
     queue_as :default
 
-    def perform(charge_id, action, filter_values, old_properties, new_properties, invoice_display_name)
+    def perform(charge_id, action, filter_values, old_properties, new_properties, invoice_display_name, parent_code = nil)
       charge = Charge.find_by(id: charge_id)
       return unless charge
 
@@ -14,7 +14,8 @@ module ChargeFilters
         filter_values:,
         old_properties:,
         new_properties:,
-        invoice_display_name:
+        invoice_display_name:,
+        parent_code:
       )
     end
   end

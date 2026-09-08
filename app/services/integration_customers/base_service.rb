@@ -2,6 +2,8 @@
 
 module IntegrationCustomers
   class BaseService < BaseService
+    Result = BaseResult[:integration_customer]
+
     def initialize(params:, integration:)
       @params = params
       @integration = integration
@@ -36,6 +38,10 @@ module IntegrationCustomers
 
     def external_customer_id
       @external_customer_id ||= params[:external_customer_id]
+    end
+
+    def code
+      @code ||= params[:code]
     end
   end
 end

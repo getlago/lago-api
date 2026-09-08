@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
   subject(:create_job) { described_class }
 
   let(:invoice) { create(:invoice) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssociationService::Result.new }
 
   before do
     allow(Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssociationService)

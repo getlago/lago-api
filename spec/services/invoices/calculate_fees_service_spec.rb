@@ -119,7 +119,6 @@ RSpec.describe Invoices::CalculateFeesService do
     fixed_charge
     fixed_charge_event
 
-    allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
     allow(Credits::ProgressiveBillingService).to receive(:call).and_call_original
   end
@@ -185,7 +184,8 @@ RSpec.describe Invoices::CalculateFeesService do
             invoice_service.call
 
             expect(AdjustedFee).to have_received(:matching_charge_boundaries)
-            expect(Fees::ChargeService).to have_received(:call!).with(hash_including(skip_adjusted_fees: false))
+            expect(Fees::ChargeService).to have_received(:call!)
+              .with(hash_including(options: have_attributes(skip_adjusted_fees: false)))
           end
         end
 
@@ -196,7 +196,8 @@ RSpec.describe Invoices::CalculateFeesService do
             invoice_service.call
 
             expect(AdjustedFee).to have_received(:matching_charge_boundaries).once
-            expect(Fees::ChargeService).to have_received(:call!).with(hash_including(skip_adjusted_fees: true))
+            expect(Fees::ChargeService).to have_received(:call!)
+              .with(hash_including(options: have_attributes(skip_adjusted_fees: true)))
           end
         end
 

@@ -53,7 +53,7 @@ RSpec.describe LifetimeUsages::CheckThresholdsService, transaction: false do
     end
 
     context "when there is tax provider error" do
-      let(:error_result) { BaseService::Result.new.unknown_tax_failure!(code: "tax_error", message: "") }
+      let(:error_result) { Invoices::ProgressiveBillingService::Result.new.unknown_tax_failure!(code: "tax_error", message: "") }
 
       before do
         allow(Invoices::ProgressiveBillingService).to receive(:call).and_return(error_result)

@@ -18,6 +18,10 @@ RSpec.describe Customers::ViesCheckJob do
     allow_any_instance_of(Valvat).to receive(:exists?).and_return(vies_response) # rubocop:disable RSpec/AnyInstance
   end
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [customer] }
+  end
+
   it "calls the ViesCheckService" do
     allow(Customers::ViesCheckService).to receive(:call).and_call_original
 
@@ -110,6 +114,42 @@ RSpec.describe Customers::ViesCheckJob do
     it "does not enqueue invoice finalization" do
       expect { described_class.perform_now(customer) }
         .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob)
+    end
+  end
+
+  # Regression guard for the uniqueness strategy. The job re-enqueues itself for
+  # the same customer from inside perform (schedule_retry). With
+  # `until_and_while_executing` the enqueue lock is released before perform runs,
+  # so the self-reschedule is allowed. If the strategy is switched to
+  # `until_executed`, the enqueue lock is still held during perform and the retry
+  # is dropped, which this test detects.
+  describe "self-reschedule under the real uniqueness lock" do
+    let(:customer) { create(:customer, tax_identification_number: "IE6388047V") }
+
+    around do |example|
+      # Run against the real lock manager (the suite defaults to test_mode! where
+      # locks are no-ops) so the enqueue lock is actually taken and released.
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    before do
+      # Force the VIES check to fail so schedule_retry fires with a delayed retry.
+      allow_any_instance_of(Valvat).to receive(:exists?).and_raise(Valvat::Timeout.new("Timeout", "dummy")) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "re-enqueues the retry for the same customer from inside perform" do
+      # Running only the ViesCheckJob due now executes the initial job (releasing
+      # the enqueue lock in before_perform) while leaving the delayed retry
+      # enqueued. `only:` also skips the customer.vies_check webhook job the
+      # service enqueues, and `at:` avoids running (and recursing on) the retry,
+      # which is scheduled with a wait of at least 5 minutes.
+      expect do
+        perform_enqueued_jobs(only: described_class, at: Time.current) do
+          described_class.perform_later(customer)
+        end
+      end.to have_enqueued_job(described_class).with(customer)
     end
   end
 end

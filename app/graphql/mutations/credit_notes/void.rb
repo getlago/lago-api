@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(id:)
         result = ::CreditNotes::VoidService.new(
-          credit_note: current_organization.credit_notes.find_by(id:)
+          credit_note: current_organization.credit_notes.not_deleted.find_by(id:)
         ).call
 
         result.success? ? result.credit_note : result_error(result)

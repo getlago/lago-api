@@ -48,7 +48,7 @@ RSpec.describe Plans::UpdateAmountService do
       let(:pending_subscription) do
         create(:subscription, plan:, status: :pending, previous_subscription_id: subscription.id)
       end
-      let(:plan_upgrade_result) { BaseService::Result.new }
+      let(:plan_upgrade_result) { Subscriptions::PlanUpgradeService::Result.new }
 
       before do
         allow(Subscriptions::PlanUpgradeService)
@@ -101,7 +101,7 @@ RSpec.describe Plans::UpdateAmountService do
 
       context "when subscription upgrade fails" do
         let(:plan_upgrade_result) do
-          BaseService::Result.new.validation_failure!(
+          Subscriptions::PlanUpgradeService::Result.new.validation_failure!(
             errors: {billing_time: ["value_is_invalid"]}
           )
         end

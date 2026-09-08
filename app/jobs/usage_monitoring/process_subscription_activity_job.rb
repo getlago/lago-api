@@ -2,7 +2,13 @@
 
 module UsageMonitoring
   class ProcessSubscriptionActivityJob < ApplicationJob
-    queue_as :default
+    queue_as do
+      Utils::DedicatedWorkerConfig.queue_for(
+        SubscriptionActivity.where(id: arguments.first).pick(:organization_id),
+        dedicated: Utils::DedicatedWorkerConfig::DEDICATED_ALERTS_QUEUE,
+        default: ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ALERTS"]) ? :alerts : :default
+      )
+    end
 
     def perform(subscription_activity_id, attempt = 1)
       subscription_activity = SubscriptionActivity.find_by(id: subscription_activity_id)

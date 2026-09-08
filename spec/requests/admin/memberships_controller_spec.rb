@@ -17,7 +17,8 @@ RSpec.describe Admin::MembershipsController, type: [:request, :admin] do
     it "creates a membership" do
       admin_post(
         "/admin/memberships",
-        create_params
+        create_params,
+        admin_headers
       )
 
       expect(response).to have_http_status(:success)

@@ -28,11 +28,14 @@ module Subscriptions
         compute_to_date(compute_charges_from_date)
       end
 
+      # NOTE: `from_date` is not necessarily the beginning of the period: on a subscription resulting
+      #       from an upgrade, it is clamped to `started_at` while the anniversary is inherited from the
+      #       previous subscription. The duration is the one of the whole period, so it is measured from
+      #       the beginning of the period holding `from_date`.
       def compute_duration(from_date:)
-        return Time.days_in_month(from_date.month, from_date.year) if calendar?
+        period_start = compute_previous_beginning_of_period(from_date.to_date)
 
-        next_month_date = compute_to_date(from_date)
-        (next_month_date.to_date + 1.day - from_date.to_date).to_i
+        (compute_to_date(period_start).to_date + 1.day - period_start).to_i
       end
 
       alias_method :compute_charges_duration, :compute_duration

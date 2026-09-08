@@ -7,9 +7,7 @@ module PaymentProviderCustomers
     retry_on ActiveJob::DeserializationError
 
     def perform(moneyhash_customer)
-      result = PaymentProviderCustomers::MoneyhashService.new(moneyhash_customer).create
-
-      result.raise_if_error!
+      PaymentProviderCustomers::MoneyhashService.call!(:create, moneyhash_customer)
     end
   end
 end

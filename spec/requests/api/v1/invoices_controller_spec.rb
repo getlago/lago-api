@@ -146,7 +146,6 @@ RSpec.describe Api::V1::InvoicesController do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
-        organization.enable_feature_flag!(:multi_entity_billing)
         create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
       end
 
@@ -202,25 +201,6 @@ RSpec.describe Api::V1::InvoicesController do
         end
       end
     end
-
-    context "when multi_entity_billing feature flag is disabled" do
-      let(:other_billing_entity) { create(:billing_entity, organization:) }
-      let(:create_params) do
-        {
-          external_customer_id: customer_external_id,
-          currency: "EUR",
-          billing_entity_code: other_billing_entity.code,
-          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
-        }
-      end
-
-      it "ignores billing_entity_code and falls back to the customer's billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
-      end
-    end
   end
 
   describe "PUT /api/v1/invoices/:id" do
@@ -252,6 +232,17 @@ RSpec.describe Api::V1::InvoicesController do
         subject
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when invoice is voided" do
+      let(:invoice) { create(:invoice, :voided, customer:, organization:) }
+
+      it "returns a method not allowed error and does not update the invoice" do
+        expect { subject }.not_to change { invoice.reload.payment_status }
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("update_on_voided_invoice")
       end
     end
 
@@ -470,6 +461,22 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when the result set exceeds the graphql cap" do
+      before do
+        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
+        create(:invoice, customer:, organization:)
+        create(:invoice, customer:, organization:)
+      end
+
+      it "still returns the exact total count" do
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta]).not_to have_key(:total_count_capped)
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
@@ -678,6 +685,70 @@ RSpec.describe Api::V1::InvoicesController do
     end
   end
 
+  describe "DELETE /api/v1/invoices/:id" do
+    subject { delete_with_token(organization, "/api/v1/invoices/#{invoice_id}") }
+
+    let(:invoice) { create(:invoice, status:, customer:, organization:) }
+    let(:invoice_id) { invoice.id }
+    let(:status) { :draft }
+
+    before { invoice }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    context "when the invoice is a draft" do
+      it "marks the invoice as deleted" do
+        expect { subject }.to change { invoice.reload.status }.from("draft").to("deleted")
+      end
+
+      it "returns the deleted invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        expect(json[:invoice][:status]).to eq("deleted")
+      end
+    end
+
+    context "when the invoice does not exist" do
+      let(:invoice_id) { SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when the invoice is not a draft" do
+      let(:status) { :finalized }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("not_deletable")
+      end
+    end
+
+    context "when the invoice is already deleted" do
+      let(:status) { :deleted }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when invoices belongs to another organization" do
+      let(:invoice) { create(:invoice, status: :draft) }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe "POST /api/v1/invoices/:id/lose_dispute" do
     subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/lose_dispute") }
 
@@ -761,21 +832,15 @@ RSpec.describe Api::V1::InvoicesController do
 
       context "with /#{route}" do
         context "without generated pdf" do
-          before do
-            allow(Invoices::GeneratePdfJob).to receive(:perform_later)
-          end
-
           it "calls generate pdf async" do
             subject
 
-            expect(Invoices::GeneratePdfJob).to have_received(:perform_later)
+            expect(Invoices::GeneratePdfJob).to have_been_enqueued
           end
         end
 
         context "when generated pdf" do
           before do
-            allow(Invoices::GeneratePdfJob).to receive(:perform_later)
-
             invoice.file.attach(
               io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
               filename: "invoice.pdf",
@@ -786,7 +851,7 @@ RSpec.describe Api::V1::InvoicesController do
           it "does not regenerate" do
             subject
 
-            expect(Invoices::GeneratePdfJob).not_to have_received(:perform_later)
+            expect(Invoices::GeneratePdfJob).not_to have_been_enqueued
           end
         end
 
@@ -812,21 +877,15 @@ RSpec.describe Api::V1::InvoicesController do
     include_examples "requires API permission", "invoice", "write"
 
     context "without generated pdf" do
-      before do
-        allow(Invoices::GenerateXmlJob).to receive(:perform_later)
-      end
-
       it "calls generate pdf async" do
         subject
 
-        expect(Invoices::GenerateXmlJob).to have_received(:perform_later)
+        expect(Invoices::GenerateXmlJob).to have_been_enqueued
       end
     end
 
     context "with generated pdf" do
       before do
-        allow(Invoices::GenerateXmlJob).to receive(:perform_later)
-
         invoice.xml_file.attach(
           io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
           filename: "invoice.xml",
@@ -837,7 +896,7 @@ RSpec.describe Api::V1::InvoicesController do
       it "does not regenerate" do
         subject
 
-        expect(Invoices::GenerateXmlJob).not_to have_received(:perform_later)
+        expect(Invoices::GenerateXmlJob).not_to have_been_enqueued
       end
     end
 
@@ -861,7 +920,7 @@ RSpec.describe Api::V1::InvoicesController do
 
     before do
       allow(Invoices::Payments::RetryService).to receive(:new).and_return(retry_service)
-      allow(retry_service).to receive(:call).and_return(BaseService::Result.new)
+      allow(retry_service).to receive(:call).and_return(Invoices::Payments::RetryService::Result.new)
     end
 
     include_examples "requires API permission", "invoice", "write"
@@ -885,10 +944,8 @@ RSpec.describe Api::V1::InvoicesController do
       it "calls retry service" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(retry_service).to have_received(:call)
-        end
+        expect(response).to have_http_status(:success)
+        expect(retry_service).to have_received(:call)
       end
     end
 
@@ -918,7 +975,7 @@ RSpec.describe Api::V1::InvoicesController do
     let!(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
     let(:retry_service) { instance_double(Invoices::RetryService) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::RetryService::Result.new }
 
     before do
       result.invoice = invoice
@@ -961,7 +1018,7 @@ RSpec.describe Api::V1::InvoicesController do
 
     let!(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Invoices::SyncSalesforceIdService::Result.new }
 
     before do
       result.invoice = invoice
@@ -1177,8 +1234,6 @@ RSpec.describe Api::V1::InvoicesController do
           }
         end
 
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
         it "creates a preview invoice under the requested billing entity" do
           subject
 
@@ -1203,8 +1258,6 @@ RSpec.describe Api::V1::InvoicesController do
             billing_entity_code: billing_entity.code
           }
         end
-
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
 
         it "stamps the invoice with the requested billing entity" do
           subject

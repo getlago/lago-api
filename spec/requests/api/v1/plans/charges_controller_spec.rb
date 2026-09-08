@@ -274,14 +274,13 @@ RSpec.describe Api::V1::Plans::ChargesController do
 
       before do
         create(:subscription, plan: child_plan, status: :active)
-        allow(Charges::CreateChildrenJob).to receive(:perform_later)
       end
 
       it "triggers cascade creation to children" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(Charges::CreateChildrenJob).to have_received(:perform_later)
+        expect(Charges::CreateChildrenJob).to have_been_enqueued
       end
     end
 
@@ -458,14 +457,13 @@ RSpec.describe Api::V1::Plans::ChargesController do
       before do
         create(:subscription, plan: child_plan, status: :active)
         child_charge
-        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
       end
 
       it "passes cascade_updates to the service" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+        expect(Charges::UpdateChildrenJob).to have_been_enqueued
       end
     end
 
@@ -615,16 +613,13 @@ RSpec.describe Api::V1::Plans::ChargesController do
       let(:child_plan) { create(:plan, organization:, parent: plan) }
       let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
 
-      before do
-        child_charge
-        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
-      end
+      before { child_charge }
 
       it "cascades the deletion to children" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
+        expect(Charges::DestroyChildrenJob).to have_been_enqueued.with(charge.id)
       end
     end
   end

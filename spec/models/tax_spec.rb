@@ -12,10 +12,40 @@ RSpec.describe Tax do
 
   it { is_expected.to have_many(:billing_entities_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:billing_entities).through(:billing_entities_taxes) }
+  it { is_expected.to have_many(:catalog_plans).through(:plans_taxes) }
 
   it { expect(described_class).to be_soft_deletable }
 
   it_behaves_like "paper_trail traceable"
+
+  describe "Scopes" do
+    describe ".applied_to_billing_entity" do
+      let(:billing_entity) { tax.organization.default_billing_entity }
+      let(:other_tax) { create(:tax, organization: tax.organization) }
+
+      before do
+        create(:billing_entity_applied_tax, tax:, billing_entity:)
+        other_tax
+      end
+
+      it "returns only the taxes applied to the given billing entity" do
+        expect(described_class.applied_to_billing_entity(billing_entity)).to eq([tax])
+      end
+    end
+
+    describe ".applied_to_organization" do
+      let(:applied_tax) { create(:tax, organization: tax.organization, applied_to_organization: true) }
+
+      before do
+        tax
+        applied_tax
+      end
+
+      it "returns only the taxes flagged as applied to the organization" do
+        expect(described_class.applied_to_organization).to eq([applied_tax])
+      end
+    end
+  end
 
   describe "customers_count" do
     let(:customer) { create(:customer, organization: tax.organization) }

@@ -8,6 +8,8 @@ RSpec.describe LagoHttpClient::Client do
   let(:url) { "http://example.com/api/v1/example" }
   let(:client_options) { {} }
 
+  before { stub_const("#{described_class}::RETRY_BACKOFF_RANGE", 0.0..0.0) }
+
   describe "#initialize" do
     it "parses the URL into a URI" do
       expect(client.uri).to eq URI("http://example.com/api/v1/example")
@@ -523,8 +525,8 @@ RSpec.describe LagoHttpClient::Client do
         stub_request(:post, url).to_raise(Net::OpenTimeout)
       end
 
-      it "raises NoMethodError due to nil response" do
-        expect { client.post({}, []) }.to raise_error(NoMethodError)
+      it "re-raises the original error after exhausting retries" do
+        expect { client.post({}, []) }.to raise_error(Net::OpenTimeout)
       end
     end
 
@@ -547,6 +549,142 @@ RSpec.describe LagoHttpClient::Client do
 
       it "raises the error immediately" do
         expect { client.post({}, []) }.to raise_error(Net::OpenTimeout)
+      end
+    end
+
+    context "with retry_on_transient_errors enabled" do
+      let(:client_options) { {retry_on_transient_errors: true} }
+
+      context "when the response is a 500 then succeeds" do
+        before do
+          call_count = 0
+          stub_request(:post, url).to_return do
+            call_count += 1
+            if call_count == 1
+              {body: "transient error", status: 500}
+            else
+              {body: "{}", status: 200}
+            end
+          end
+        end
+
+        it "retries and returns the parsed body" do
+          expect(client.post({}, [])).to eq({})
+        end
+      end
+
+      context "when the response is a 503 on every call" do
+        before do
+          stub_request(:post, url).to_return(body: "unavailable", status: 503)
+        end
+
+        it "raises an HttpError after exhausting retries" do
+          expect { client.post({}, []) }.to raise_error(LagoHttpClient::HttpError) do |error|
+            expect(error.error_code).to eq "503"
+          end
+        end
+      end
+
+      context "when a transient exception occurs then succeeds" do
+        before do
+          call_count = 0
+          stub_request(:post, url).to_return do
+            call_count += 1
+            if call_count == 1
+              raise Net::OpenTimeout
+            else
+              {body: "{}", status: 200}
+            end
+          end
+        end
+
+        it "retries and returns the parsed body" do
+          expect(client.post({}, [])).to eq({})
+        end
+      end
+
+      context "when an SSL error occurs then succeeds" do
+        before do
+          call_count = 0
+          stub_request(:post, url).to_return do
+            call_count += 1
+            if call_count == 1
+              raise OpenSSL::SSL::SSLError
+            else
+              {body: "{}", status: 200}
+            end
+          end
+        end
+
+        it "retries and returns the parsed body" do
+          expect(client.post({}, [])).to eq({})
+        end
+      end
+
+      context "when the response is a 4xx" do
+        it "raises an HttpError without retrying" do
+          stub = stub_request(:post, url).to_return(body: "Error", status: 422)
+
+          expect { client.post({}, []) }.to raise_error(LagoHttpClient::HttpError) do |error|
+            expect(error.error_code).to eq "422"
+          end
+          expect(stub).to have_been_requested.once
+        end
+      end
+
+      context "when a transient exception occurs on every call" do
+        let(:call_count) { {value: 0} }
+
+        before do
+          counter = call_count
+          stub_request(:post, url).to_return do
+            counter[:value] += 1
+            raise Errno::ECONNRESET
+          end
+        end
+
+        # Exception-path exhaustion goes through the `is_a?` branch of
+        # `transient_exception?`, distinct from the `retries_on.include?` branch.
+        it "re-raises the original error after exhausting retries" do
+          expect { client.post({}, []) }.to raise_error(Errno::ECONNRESET)
+        end
+
+        it "attempts exactly MAX_RETRIES_ATTEMPTS times" do
+          expect { client.post({}, []) }.to raise_error(Errno::ECONNRESET)
+          expect(call_count[:value]).to eq(described_class::MAX_RETRIES_ATTEMPTS)
+        end
+      end
+
+      context "when a retryable status is returned on every call" do
+        it "attempts exactly MAX_RETRIES_ATTEMPTS times" do
+          stub = stub_request(:post, url).to_return(body: "unavailable", status: 503)
+
+          expect { client.post({}, []) }.to raise_error(LagoHttpClient::HttpError)
+          expect(stub).to have_been_requested.times(described_class::MAX_RETRIES_ATTEMPTS)
+        end
+      end
+
+      context "when a non-transient exception occurs" do
+        before do
+          stub_request(:post, url).to_raise(ArgumentError)
+        end
+
+        # ArgumentError is neither in retries_on nor TRANSIENT_ERROR_CLASSES,
+        # so it must propagate immediately even with the flag enabled.
+        it "raises the error immediately without retrying" do
+          expect { client.post({}, []) }.to raise_error(ArgumentError)
+        end
+      end
+    end
+
+    context "with retry_on_transient_errors disabled (default)" do
+      let(:client_options) { {} }
+
+      it "raises an HttpError without retrying on a 500" do
+        stub = stub_request(:post, url).to_return(body: "Error", status: 500)
+
+        expect { client.post({}, []) }.to raise_error(LagoHttpClient::HttpError)
+        expect(stub).to have_been_requested.once
       end
     end
   end

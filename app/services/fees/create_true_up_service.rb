@@ -2,6 +2,8 @@
 
 module Fees
   class CreateTrueUpService < BaseService
+    Result = BaseResult[:true_up_fee]
+
     def initialize(fee:, used_amount_cents:, used_precise_amount_cents:)
       @fee = fee
       @used_amount_cents = used_amount_cents

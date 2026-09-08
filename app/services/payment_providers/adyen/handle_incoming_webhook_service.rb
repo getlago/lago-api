@@ -3,6 +3,8 @@
 module PaymentProviders
   module Adyen
     class HandleIncomingWebhookService < BaseService
+      Result = BaseResult[:event]
+
       def initialize(organization_id:, body:, code: nil)
         @organization_id = organization_id
         @body = body
@@ -25,7 +27,7 @@ module PaymentProviders
         validator = ::Adyen::Utils::HmacValidator.new
         hmac_key = payment_provider_result.payment_provider.hmac_key
 
-        if hmac_key && !validator.valid_notification_hmac?(body, hmac_key)
+        if hmac_key.blank? || !validator.valid_notification_hmac?(body, hmac_key)
           return result.service_failure!(code: "webhook_error", message: "Invalid signature")
         end
 

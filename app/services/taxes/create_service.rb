@@ -2,6 +2,8 @@
 
 module Taxes
   class CreateService < BaseService
+    Result = BaseResult[:tax]
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params

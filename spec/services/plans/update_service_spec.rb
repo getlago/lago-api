@@ -152,6 +152,20 @@ RSpec.describe Plans::UpdateService do
       applied_tax
     end
 
+    context "when the plan is a catalog plan" do
+      let(:plan) { create(:plan, organization:, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil) }
+
+      it "rejects legacy pricing fields and accepts the others" do
+        result = described_class.call(plan:, params: {amount_cents: 100})
+        expect(result).to be_failure
+        expect(result.error.messages[:amount_cents]).to eq(["legacy_billing_disabled"])
+
+        result = described_class.call(plan:, params: {name: "Renamed"})
+        expect(result).to be_success
+        expect(plan.reload.name).to eq("Renamed")
+      end
+    end
+
     it "updates a plan" do
       result = plans_service.call
 
@@ -485,7 +499,7 @@ RSpec.describe Plans::UpdateService do
             amount_currency: "EUR"
           }
         end
-        let(:plan_upgrade_result) { BaseService::Result.new }
+        let(:plan_upgrade_result) { Subscriptions::PlanUpgradeService::Result.new }
 
         before do
           allow(Subscriptions::PlanUpgradeService)
@@ -545,7 +559,7 @@ RSpec.describe Plans::UpdateService do
 
         context "when subscription upgrade fails" do
           let(:plan_upgrade_result) do
-            BaseService::Result.new.validation_failure!(
+            Subscriptions::PlanUpgradeService::Result.new.validation_failure!(
               errors: {billing_time: ["value_is_invalid"]}
             )
           end
@@ -1818,6 +1832,34 @@ RSpec.describe Plans::UpdateService do
 
         expect(result).to be_success
         expect(result.plan.metadata.value).to eq("existing" => "value")
+      end
+    end
+  end
+
+  context "when the plan has applied rate cards" do
+    let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+
+    before { create(:plan_rate_card, organization:, plan:) }
+
+    context "when changing the amount_currency" do
+      let(:update_args) { {amount_currency: "USD"} }
+
+      it "returns a validation failure" do
+        result = plans_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:amount_currency]).to eq(["not_editable_with_applied_rate_cards"])
+      end
+    end
+
+    context "when resending the unchanged amount_currency" do
+      let(:update_args) { {amount_currency: "EUR", name: "After"} }
+
+      it "is allowed" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.name).to eq("After")
       end
     end
   end

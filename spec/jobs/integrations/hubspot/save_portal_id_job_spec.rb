@@ -8,7 +8,7 @@ RSpec.describe Integrations::Hubspot::SavePortalIdJob do
 
     let(:service) { instance_double(Integrations::Hubspot::SavePortalIdService) }
     let(:integration) { create(:hubspot_integration) }
-    let(:result) { BaseService::Result.new }
+    let(:result) { Integrations::Hubspot::SavePortalIdService::Result.new }
 
     before do
       allow(Integrations::Hubspot::SavePortalIdService).to receive(:call).and_return(result)

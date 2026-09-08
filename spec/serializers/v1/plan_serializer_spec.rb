@@ -159,6 +159,16 @@ RSpec.describe ::V1::PlanSerializer do
         ]
       })
     end
+
+    context "when the entitlement feature is discarded" do
+      before { feature.discard! }
+
+      it "does not serialize the orphaned entitlement" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["plan"]["entitlements"]).to be_empty
+      end
+    end
   end
 
   context "when plan has fixed charges" do

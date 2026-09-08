@@ -10,6 +10,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
   let(:payment_request) { create(:payment_request, organization:) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
   let(:event_json) { payload.to_json }
+  let(:update_payment_status_result) { Invoices::Payments::FlutterwaveService::RESULTS.fetch(:update_payment_status).new }
 
   let(:payload) do
     {
@@ -92,14 +93,12 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
   describe "#call" do
     context "when transaction status is successful" do
       let(:http_client) { instance_double(LagoHttpClient::Client) }
-      let(:payment_service) { instance_double(Invoices::Payments::FlutterwaveService) }
 
       before do
         invoice
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
-        allow(Invoices::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status).and_return(instance_double("BaseService::Result", raise_if_error!: nil))
+        allow(Invoices::Payments::FlutterwaveService).to receive(:call).and_return(update_payment_status_result)
       end
 
       it "verifies the transaction and updates payment status" do
@@ -112,14 +111,14 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
             "Accept" => "application/json"
           }
         )
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call)
         expect(result).to be_success
       end
 
       it "builds correct metadata" do
         charge_completed_service.call
 
-        expect(payment_service).to have_received(:update_payment_status) do |args|
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call) do |method, args|
           metadata = args[:flutterwave_payment].metadata
           expect(metadata[:lago_invoice_id]).to eq(invoice.id)
           expect(metadata[:lago_payable_type]).to eq("Invoice")
@@ -133,8 +132,8 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       it "passes amount_cents converted from major units as a dedicated kwarg" do
         charge_completed_service.call
 
-        expect(payment_service).to have_received(:update_payment_status).with(
-          hash_including(amount_cents: 1_000_000)
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call).with(
+          :update_payment_status, hash_including(amount_cents: 1_000_000)
         )
       end
     end
@@ -242,13 +241,13 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       before do
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(failed_response)
-        allow(Invoices::Payments::FlutterwaveService).to receive(:new)
+        allow(Invoices::Payments::FlutterwaveService).to receive(:call)
       end
 
       it "does not update payment status" do
         result = charge_completed_service.call
 
-        expect(Invoices::Payments::FlutterwaveService).not_to have_received(:new)
+        expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
         expect(result).to be_success
       end
     end
@@ -276,14 +275,14 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "Connection failed", "https://api.flutterwave.com"))
         allow(Rails.logger).to receive(:error)
-        allow(Invoices::Payments::FlutterwaveService).to receive(:new)
+        allow(Invoices::Payments::FlutterwaveService).to receive(:call)
       end
 
       it "logs the error and does not update payment status" do
         result = charge_completed_service.call
 
         expect(Rails.logger).to have_received(:error).with("Error verifying Flutterwave transaction: HTTP 500 - URI: https://api.flutterwave.com.\nError: Connection failed\nResponse headers: {}")
-        expect(Invoices::Payments::FlutterwaveService).not_to have_received(:new)
+        expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
         expect(result).to be_success
       end
     end
@@ -333,21 +332,20 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       end
 
       let(:http_client) { instance_double(LagoHttpClient::Client) }
-      let(:payment_service) { instance_double(PaymentRequests::Payments::FlutterwaveService) }
 
       before do
         payment_request
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
-        allow(PaymentRequests::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status).and_return(instance_double("BaseService::Result", raise_if_error!: nil))
+        allow(PaymentRequests::Payments::FlutterwaveService).to receive(:call).and_return(update_payment_status_result)
       end
 
       it "uses the PaymentRequest service" do
         charge_completed_service.call
 
-        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:new).with(payable: payment_request)
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:call).with(
+          :update_payment_status, hash_including(organization_id: organization.id, status: "successful")
+        )
       end
     end
 
@@ -417,7 +415,6 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       end
 
       let(:http_client) { instance_double(LagoHttpClient::Client) }
-      let(:payment_service) { instance_double(Invoices::Payments::FlutterwaveService) }
       let(:verification_response_usd) do
         {
           "status" => "success",
@@ -436,14 +433,13 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         invoice
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response_usd)
-        allow(Invoices::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status).and_return(instance_double("BaseService::Result", raise_if_error!: nil))
+        allow(Invoices::Payments::FlutterwaveService).to receive(:call).and_return(update_payment_status_result)
       end
 
       it "handles decimal amounts correctly" do
         charge_completed_service.call
 
-        expect(payment_service).to have_received(:update_payment_status) do |args|
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call) do |method, args|
           metadata = args[:flutterwave_payment].metadata
           expect(metadata[:amount]).to eq(100.50)
           expect(metadata[:currency]).to eq("USD")
@@ -478,20 +474,18 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       end
 
       let(:http_client) { instance_double(LagoHttpClient::Client) }
-      let(:payment_service) { instance_double(Invoices::Payments::FlutterwaveService) }
 
       before do
         invoice
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
-        allow(Invoices::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
-        allow(payment_service).to receive(:update_payment_status).and_return(instance_double("BaseService::Result", raise_if_error!: nil))
+        allow(Invoices::Payments::FlutterwaveService).to receive(:call).and_return(update_payment_status_result)
       end
 
       it "processes the webhook normally" do
         result = charge_completed_service.call
 
-        expect(payment_service).to have_received(:update_payment_status)
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call)
         expect(result).to be_success
       end
     end

@@ -8,8 +8,6 @@ module Resolvers
 
         description "Query invoice collections of a customer portal user"
 
-        argument :months, Integer, required: false
-
         argument :expire_cache, Boolean, required: false
 
         type Types::Analytics::InvoiceCollections::Object.collection_type, null: false

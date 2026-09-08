@@ -5,12 +5,32 @@ require "rails_helper"
 RSpec.describe Plans::DestroyService do
   subject(:destroy_service) { described_class.new(plan:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:, pending_deletion: true) }
+  let(:organization) { membership.organization }
+  let(:membership) { create(:membership) }
 
   before do
     plan
+  end
+
+  describe "catalog plan attachments" do
+    it "discards the applied rate cards, their phases and overrides" do
+      organization = create(:organization, feature_flags: ["product_catalog"])
+      plan = create(:plan, :product_catalog, organization:, pending_deletion: true)
+      product = create(:product, organization:)
+      rate_card = create(:rate_card, organization:, product:, currency: plan.amount_currency)
+      entry = plan.applied_rate_cards.create!(organization:, rate_card:, units: 1)
+      override = create(:rate_override, organization:)
+      phase = create(:rate_phase, organization:, plan_rate_card: entry, position: 1, rate_override: override)
+
+      result = described_class.call(plan:)
+
+      expect(result).to be_success
+      expect(entry.reload).to be_discarded
+      expect(phase.reload).to be_discarded
+      expect(override.reload).to be_discarded
+      expect(rate_card.reload).not_to be_attached_to_plan_or_subscription
+    end
   end
 
   describe "#call" do

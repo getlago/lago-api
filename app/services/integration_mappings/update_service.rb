@@ -2,6 +2,8 @@
 
 module IntegrationMappings
   class UpdateService < BaseService
+    Result = BaseResult[:integration_mapping]
+
     def initialize(integration_mapping:, params:)
       @integration_mapping = integration_mapping
       @params = params

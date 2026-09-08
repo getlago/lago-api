@@ -16,7 +16,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
   let(:provider_method_id) { "pm_from_payment_method" }
   let(:payment_method_id) { "pm_from_provider_customer" }
   let(:stripe_result) do
-    result = BaseService::Result.new
+    result = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService::Result.new
     result.payment_method_id = "pm_from_stripe"
     result
   end
@@ -30,7 +30,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
       let(:payment_method) { nil }
       let(:payment_method_id) { nil }
       let(:stripe_result) do
-        result = BaseService::Result.new
+        result = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService::Result.new
         result.payment_method_id = nil
         result
       end
@@ -58,10 +58,43 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         expect(result.stripe_payment_intent).to be(payment_intent)
       end
 
+      it "holds the funds whatever the payment method type is" do
+        subject.call
+
+        expect(::Stripe::PaymentIntent).to have_received(:create).with(
+          hash_including(capture_method: "manual"),
+          anything
+        )
+      end
+
+      it "does not restrict the manual capture to cards" do
+        subject.call
+
+        expect(::Stripe::PaymentIntent).to have_received(:create).with(
+          hash_excluding(:payment_method_options),
+          anything
+        )
+      end
+
       it "cancels the payment intent later" do
         subject.call
 
         expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued
+      end
+
+      context "when consent collection is enabled on the provider" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider: create(:stripe_provider, require_terms_of_service_consent: true), customer:, payment_method_id:)
+        end
+
+        it "does not add consent collection to the payment intent" do
+          subject.call
+
+          expect(::Stripe::PaymentIntent).to have_received(:create).with(
+            hash_excluding(:consent_collection),
+            anything
+          )
+        end
       end
     end
   end

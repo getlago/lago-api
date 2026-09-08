@@ -50,6 +50,7 @@ class Charge < ApplicationRecord
   validates :charge_model, :code, presence: true
 
   validate :validate_code_unique
+  validate :validate_plan_pricing_type
   validate :charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
@@ -95,6 +96,10 @@ class Charge < ApplicationRecord
     return false unless applied_pricing_unit && another_charge.applied_pricing_unit
 
     applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
+  end
+
+  def target_key
+    "charge-#{id}"
   end
 
   # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
@@ -192,6 +197,13 @@ class Charge < ApplicationRecord
 
     errors.add(:accepts_target_wallet, :feature_unavailable) unless organization.events_targeting_wallets_enabled?
   end
+
+  # Model-level so no caller can bypass it: a catalog plan never carries chargeables.
+  def validate_plan_pricing_type
+    return unless plan&.product_catalog?
+
+    errors.add(:plan, :legacy_billing_disabled)
+  end
 end
 
 # == Schema Information
@@ -224,6 +236,7 @@ end
 #  idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb   (plan_id,billable_metric_id,pay_in_advance) WHERE (deleted_at IS NULL)
 #  index_charges_on_accepts_target_wallet                        (accepts_target_wallet) WHERE (accepts_target_wallet = true)
 #  index_charges_on_billable_metric_id                           (billable_metric_id) WHERE (deleted_at IS NULL)
+#  index_charges_on_billable_metric_id_all                       (billable_metric_id)
 #  index_charges_on_deleted_at                                   (deleted_at)
 #  index_charges_on_organization_id                              (organization_id)
 #  index_charges_on_parent_id                                    (parent_id)

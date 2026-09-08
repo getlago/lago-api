@@ -3,6 +3,8 @@
 module Wallets
   module RecurringTransactionRules
     class ValidateService < BaseService
+      Result = BaseResult
+
       def initialize(params:)
         @params = params
         super

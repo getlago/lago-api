@@ -2,6 +2,8 @@
 
 module UsageMonitoring
   class TriggeredAlert < ApplicationRecord
+    KINDS = {triggered: "triggered", resolved: "resolved", seeded: "seeded"}.freeze
+
     belongs_to :organization
     belongs_to :subscription, optional: true
     belongs_to :wallet, optional: true
@@ -9,6 +11,8 @@ module UsageMonitoring
       -> { with_discarded },
       foreign_key: "usage_monitoring_alert_id",
       class_name: "UsageMonitoring::Alert"
+
+    enum :kind, KINDS, validate: true
   end
 end
 
@@ -20,6 +24,9 @@ end
 #  id                        :uuid             not null, primary key
 #  crossed_thresholds        :jsonb
 #  current_value             :decimal(30, 5)   not null
+#  fully_resolved            :boolean
+#  in_alarm_thresholds       :jsonb
+#  kind                      :enum             default("triggered"), not null
 #  previous_value            :decimal(30, 5)   not null
 #  triggered_at              :datetime         not null
 #  created_at                :datetime         not null

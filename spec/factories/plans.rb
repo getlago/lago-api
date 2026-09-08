@@ -15,5 +15,12 @@ FactoryBot.define do
     trait :pay_in_advance do
       pay_in_advance { true }
     end
+
+    trait :product_catalog do
+      pricing_type { "product_catalog" }
+      interval { nil }
+      amount_cents { nil }
+      pay_in_advance { nil }
+    end
   end
 end

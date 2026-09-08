@@ -49,12 +49,21 @@ module EInvoices
               xml["ram"].CountryID customer.country
             end
           end
+          if purchase_order_number.present?
+            xml["ram"].BuyerOrderReferencedDocument do
+              xml["ram"].IssuerAssignedID purchase_order_number
+            end
+          end
         end
       end
 
       private
 
       attr_accessor :options
+
+      def purchase_order_number
+        resource.try(:purchase_order_number)
+      end
 
       def render_tax_registration?
         options && !!options.tax_registration

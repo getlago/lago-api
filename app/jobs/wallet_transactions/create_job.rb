@@ -5,6 +5,8 @@ module WalletTransactions
     queue_as "high_priority"
     unique :until_executed, on_conflict: :log
 
+    AUTOMATIC_SOURCES = %w[threshold interval].freeze
+
     # ActiveRecord::StaleObjectError is handled in WalletTransactions::CreateFromParamsService
 
     def perform(organization_id:, params:, unique_transaction: false)
@@ -21,12 +23,18 @@ module WalletTransactions
       unique_transaction = args[:unique_transaction]
 
       if unique_transaction
-        [
-          org_id,
-          params[:wallet_id],
-          params[:paid_credits],
-          params[:granted_credits]
-        ]
+        source = params[:source].to_s
+
+        if AUTOMATIC_SOURCES.include?(source)
+          [org_id, params[:wallet_id], source]
+        else
+          [
+            org_id,
+            params[:wallet_id],
+            params[:paid_credits],
+            params[:granted_credits]
+          ]
+        end
       else
         # Return a unique value for each job to effectively disable uniqueness
         # when unique_transaction is false

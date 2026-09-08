@@ -7,7 +7,7 @@ class Payment < ApplicationRecord
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
   belongs_to :organization
-  belongs_to :customer, -> { with_discarded }, optional: true
+  belongs_to :customer, -> { with_discarded }
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
@@ -85,6 +85,10 @@ class Payment < ApplicationRecord
     payment_provider&.payment_type
   end
 
+  def gated_subscription_activation?
+    payable.subscription_payment_gated?
+  end
+
   def method_display_name
     return nil if provider_payment_method_data.blank?
 
@@ -148,7 +152,7 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
-#  customer_id                  :uuid
+#  customer_id                  :uuid             not null
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid

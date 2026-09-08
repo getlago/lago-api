@@ -65,7 +65,6 @@ RSpec.describe Mutations::FixedCharges::Update, type: :graphql do
     before do
       create(:subscription, plan: child_plan, status: :active)
       child_fixed_charge
-      allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
     end
 
     it "passes cascade_updates to the service" do
@@ -87,7 +86,7 @@ RSpec.describe Mutations::FixedCharges::Update, type: :graphql do
         }
       )
 
-      expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later)
+      expect(FixedCharges::UpdateChildrenJob).to have_been_enqueued
     end
   end
 

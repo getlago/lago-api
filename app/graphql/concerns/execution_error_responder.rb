@@ -78,6 +78,12 @@ module ExecutionErrorResponder
       forbidden_error(code: service_result.error.code)
     when BaseService::ThirdPartyFailure
       third_party_failure(messages: service_result.error.message)
+    when BaseService::LockAcquisitionFailure
+      execution_error(
+        error: "Unprocessable Entity",
+        status: 422,
+        code: service_result.error.code
+      )
     else
       execution_error(
         error: "Internal error",

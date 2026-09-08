@@ -18,10 +18,10 @@ module Customers
         payment_provider_result.payment_provider
       end
 
-      def payment_provider_customer(customer)
-        return nil unless customer
+      def payment_provider_customer(payment)
+        return nil unless payment
 
-        PaymentProviderCustomers::BaseCustomer.with_discarded.find_by(customer_id: customer.id)
+        PaymentProviderCustomers::BaseCustomer.with_discarded.find_by(id: payment.payment_provider_customer_id)
       end
     end
   end

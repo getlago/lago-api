@@ -36,51 +36,22 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCancelledService d
       payment_method
     end
 
-    context "when feature flag is enabled" do
-      before do
-        organization.enable_feature_flag!(:multiple_payment_methods)
-      end
-
-      it "destroys the payment method for the customer" do
-        expect { mandate_cancelled_service.call }.to change(PaymentMethod, :count).by(-1)
-      end
-
-      it "returns a successful result with the destroyed payment method" do
-        result = mandate_cancelled_service.call
-
-        expect(result).to be_success
-        expect(result.payment_method).to be_present
-        expect(result.payment_method.provider_method_id).to eq(mandate_id)
-      end
-
-      it "clears the gocardless customer provider_mandate_id" do
-        mandate_cancelled_service.call
-
-        expect(gocardless_customer.reload.provider_mandate_id).to be_nil
-      end
+    it "destroys the payment method for the customer" do
+      expect { mandate_cancelled_service.call }.to change(PaymentMethod, :count).by(-1)
     end
 
-    context "when feature flag is disabled" do
-      before do
-        organization.update!(feature_flags: [])
-      end
+    it "returns a successful result with the destroyed payment method" do
+      result = mandate_cancelled_service.call
 
-      it "does not destroy any payment method" do
-        expect { mandate_cancelled_service.call }.not_to change(PaymentMethod, :count)
-      end
+      expect(result).to be_success
+      expect(result.payment_method).to be_present
+      expect(result.payment_method.provider_method_id).to eq(mandate_id)
+    end
 
-      it "returns a successful result without payment method" do
-        result = mandate_cancelled_service.call
+    it "clears the gocardless customer provider_mandate_id" do
+      mandate_cancelled_service.call
 
-        expect(result).to be_success
-        expect(result.payment_method).to be_nil
-      end
-
-      it "does not clear the gocardless customer provider_mandate_id" do
-        mandate_cancelled_service.call
-
-        expect(gocardless_customer.reload.provider_mandate_id).not_to be_nil
-      end
+      expect(gocardless_customer.reload.provider_mandate_id).to be_nil
     end
 
     context "when payment method is not found" do

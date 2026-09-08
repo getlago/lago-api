@@ -3,6 +3,8 @@
 module CreditNotes
   module ProviderTaxes
     class ReportService < BaseService
+      Result = BaseResult[:credit_note]
+
       def initialize(credit_note:)
         @credit_note = credit_note
 

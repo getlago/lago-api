@@ -2,6 +2,8 @@
 
 module Commitments
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(commitment:, tax_codes:)
       @commitment = commitment
       @tax_codes = tax_codes

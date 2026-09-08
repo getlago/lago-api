@@ -21,17 +21,15 @@ RSpec.describe Charges::UpdateChildrenJob do
   before do
     child_plan1
     child_plan2
+    child_charge
     subscription
     subscription2
-    allow(Charges::UpdateChildrenBatchJob)
-      .to receive(:perform_later)
-      .with(child_ids: [child_charge.id], params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:)
-      .and_call_original
   end
 
   it "calls the batch jobs" do
     described_class.perform_now(params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:)
 
-    expect(Charges::UpdateChildrenBatchJob).to have_received(:perform_later).once
+    expect(Charges::UpdateChildrenBatchJob).to have_been_enqueued.once
+      .with(child_ids: [child_charge.id], params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:)
   end
 end

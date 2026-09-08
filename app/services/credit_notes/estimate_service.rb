@@ -2,6 +2,8 @@
 
 module CreditNotes
   class EstimateService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(invoice:, items:)
       @invoice = invoice
       @items = items

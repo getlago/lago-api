@@ -13,7 +13,6 @@ class Invoice < ApplicationRecord
   COUPON_BEFORE_VAT_VERSION = 3
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
-  # before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
@@ -31,6 +30,11 @@ class Invoice < ApplicationRecord
   has_many :plans, through: :subscriptions
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
+  has_many :invoice_connections, dependent: :destroy
+  has_one :payment_connection, -> { where(category: :payment) }, class_name: "InvoiceConnection"
+  has_one :tax_connection, -> { where(category: :tax) }, class_name: "InvoiceConnection"
+  has_one :accounting_connection, -> { where(category: :accounting) }, class_name: "InvoiceConnection"
+  has_one :crm_connection, -> { where(category: :crm) }, class_name: "InvoiceConnection"
   has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
   has_many :invoice_settlements, foreign_key: :target_invoice_id
 
@@ -94,7 +98,7 @@ class Invoice < ApplicationRecord
   }.freeze
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
-  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6}.freeze
+  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6, deleted: 8}.freeze
   MANUALLY_PAYABLE_INVOICE_STATUS = %i[finalized open].freeze
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
   GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
@@ -115,9 +119,14 @@ class Invoice < ApplicationRecord
     state :failed
     state :closed
     state :pending
+    state :deleted
 
     event :finalize do
       transitions from: :draft, to: :finalized
+    end
+
+    event :mark_as_deleted do
+      transitions from: :draft, to: :deleted
     end
 
     event :void do
@@ -168,22 +177,26 @@ class Invoice < ApplicationRecord
 
   # Batch-loads offset_amount_cents for a collection of invoices in a single query,
   # caching the result on each instance to avoid N+1 queries during serialization.
+  # Wrapped in :direct — invoices.map(&:id) fires the eager-load, which exceeds
+  # RDS Proxy's 16 KB pin threshold under the index endpoints' .includes(...) chain.
   def self.preload_offset_amounts(invoices)
     return unless invoices
 
-    invoice_ids = invoices.map(&:id).compact
+    ApplicationRecord.connected_to(role: :direct) do
+      invoice_ids = invoices.map(&:id).compact
 
-    offset_amounts = CreditNote
-      .where(invoice_id: invoice_ids)
-      .finalized
-      .group(:invoice_id)
-      .sum(:offset_amount_cents)
+      offset_amounts = CreditNote
+        .where(invoice_id: invoice_ids)
+        .finalized
+        .group(:invoice_id)
+        .sum(:offset_amount_cents)
 
-    invoices.each do |invoice|
-      invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
+      invoices.each do |invoice|
+        invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
+      end
+
+      invoices
     end
-
-    invoices
   end
 
   def payment_invoices
@@ -218,6 +231,14 @@ class Invoice < ApplicationRecord
     )
 
     File.join(ENV["LAGO_API_URL"], blob_path)
+  end
+
+  def web_url
+    return if invisible?
+
+    front_url = Rails.application.config.lago_front_url
+
+    URI.join(front_url, "/#{organization.slug}/customer/#{customer_id}/", "invoice/#{id}/overview").to_s
   end
 
   def fee_total_amount_cents
@@ -291,7 +312,7 @@ class Invoice < ApplicationRecord
     service.new(
       event_store_class: Events::Stores::StoreFactory.store_class(organization:),
       charge: fee.charge,
-      subscription: fee.subscription,
+      context: Events::Stores::EventContext.from(subscription: fee.subscription),
       boundaries: {
         from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
         to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
@@ -499,7 +520,7 @@ class Invoice < ApplicationRecord
     return I18n.t("invoice.self_billed.document_name") if self_billed?
     return I18n.t("invoice.prepaid_credit_invoice") if credit?
 
-    if TAX_INVOICE_LABEL_COUNTRIES.include?(organization.country)
+    if TAX_INVOICE_LABEL_COUNTRIES.include?(billing_entity.country)
       return I18n.t("invoice.paid_tax_invoice") if advance_charges?
       return I18n.t("invoice.document_tax_name")
     end
@@ -702,6 +723,8 @@ end
 #  payment_due_date                        :date
 #  payment_overdue                         :boolean          default(FALSE)
 #  payment_status                          :integer          default("pending"), not null
+#  payment_term                            :jsonb
+#  payment_term_source                     :string
 #  prepaid_credit_amount_cents             :bigint           default(0), not null
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
@@ -709,6 +732,7 @@ end
 #  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
+#  search_terms                            :text
 #  self_billed                             :boolean          default(FALSE), not null
 #  skip_automatic_payment                  :boolean
 #  skip_charges                            :boolean          default(FALSE), not null
@@ -744,7 +768,9 @@ end
 #  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
+#  index_invoices_on_organization_id_lower_purchase_order_number   (organization_id, lower((purchase_order_number)::text))
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
+#  index_invoices_on_organization_id_search_terms_gin_trgm_ops     (organization_id,search_terms) USING gin
 #  index_invoices_on_payment_due_date                              (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL))
 #  index_invoices_on_payment_method_id                             (payment_method_id)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)

@@ -55,6 +55,7 @@ module Types
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
       field :progressive_billing_disabled, Boolean
+      field :purchase_order_number, String, null: true
 
       field :activated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :activation_rules, [Types::Subscriptions::ActivationRuleType], null: false
@@ -85,6 +86,8 @@ module Types
       end
 
       def period_end_date
+        return if object.plan.product_catalog?
+
         ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time)
           .next_end_of_period
       end
@@ -96,11 +99,11 @@ module Types
       end
 
       def current_billing_period_started_at
-        dates_service.charges_from_datetime
+        dates_service&.charges_from_datetime
       end
 
       def current_billing_period_ending_at
-        dates_service.charges_to_datetime
+        dates_service&.charges_to_datetime
       end
 
       def charges
@@ -124,7 +127,11 @@ module Types
         end
       end
 
+      # Billing periods derive from the plan interval, which product-catalog
+      # plans don't have: their rate cards each carry their own billing cycle.
       def dates_service
+        return if object.plan.product_catalog?
+
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time, current_usage: true)
       end
     end

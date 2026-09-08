@@ -46,6 +46,7 @@ module CreditNoteIndex
         credit_status: params[:credit_status],
         currency: params[:currency],
         invoice_number: params[:invoice_number],
+        purchase_order_number: params[:purchase_order_number],
         issuing_date_from: (Date.iso8601(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
         issuing_date_to: (Date.iso8601(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
         reason: params[:reason],
@@ -56,15 +57,18 @@ module CreditNoteIndex
     )
 
     if result.success?
-      render(
-        json: ::CollectionSerializer.new(
-          result.credit_notes,
-          ::V1::CreditNoteSerializer,
-          collection_name: "credit_notes",
-          meta: pagination_metadata(result.credit_notes),
-          includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
+      # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
+      ApplicationRecord.connected_to(role: :direct) do
+        render(
+          json: ::CollectionSerializer.new(
+            result.credit_notes,
+            ::V1::CreditNoteSerializer,
+            collection_name: "credit_notes",
+            meta: pagination_metadata(result.credit_notes),
+            includes: [:items, :applied_taxes, :error_details, {customer: [:integration_customers]}]
+          )
         )
-      )
+      end
     else
       render_error_response(result)
     end

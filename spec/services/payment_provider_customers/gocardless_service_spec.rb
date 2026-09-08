@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::GocardlessService do
-  subject(:gocardless_service) { described_class.new(gocardless_customer) }
-
   let(:customer) { create(:customer, organization:) }
   let(:gocardless_provider) { create(:gocardless_provider) }
   let(:organization) { gocardless_provider.organization }
@@ -17,7 +15,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
     create(:gocardless_customer, customer:, provider_customer_id: nil)
   end
 
-  describe ".create" do
+  describe ".call(:create)" do
     before do
       allow(GoCardlessPro::Client).to receive(:new)
         .and_return(gocardless_client)
@@ -29,7 +27,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
 
     context "when all customer details are present" do
       it "creates a customer with company_name, given_name, and family_name" do
-        gocardless_service.create
+        described_class.call(:create, gocardless_customer)
         expect(gocardless_customers_service).to have_received(:create).with(
           hash_including(
             params: {
@@ -44,14 +42,14 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
     end
 
     it "creates the gocardless customer" do
-      result = gocardless_service.create
+      result = described_class.call(:create, gocardless_customer)
 
       expect(gocardless_customers_service).to have_received(:create)
       expect(result.gocardless_customer.provider_customer_id).to eq("123")
     end
 
     it "delivers a success webhook" do
-      gocardless_service.create
+      described_class.call(:create, gocardless_customer)
 
       expect(gocardless_customers_service).to have_received(:create)
       expect(SendWebhookJob).to have_been_enqueued
@@ -59,7 +57,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
     end
 
     it "triggers checkout job" do
-      gocardless_service.create
+      described_class.call(:create, gocardless_customer)
 
       expect(gocardless_customers_service).to have_received(:create)
       expect(PaymentProviderCustomers::GocardlessCheckoutUrlJob).to have_been_enqueued
@@ -72,7 +70,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
       end
 
       it "does not call gocardless API" do
-        gocardless_service.create
+        described_class.call(:create, gocardless_customer)
 
         expect(gocardless_customers_service).not_to have_received(:create)
       end
@@ -83,7 +81,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
         allow(GoCardlessPro::Client).to receive(:new)
           .and_raise(GoCardlessPro::ApiError.new({"message" => "error"}))
 
-        expect { gocardless_service.create }
+        expect { described_class.call(:create, gocardless_customer) }
           .to raise_error(GoCardlessPro::ApiError)
 
         expect(SendWebhookJob).to have_been_enqueued
@@ -99,13 +97,13 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
     end
   end
 
-  describe "#update" do
+  describe ".call(:update)" do
     it "returns result" do
-      expect(gocardless_service.update).to be_a(BaseService::Result)
+      expect(described_class.call(:update, gocardless_customer)).to be_a(BaseResult)
     end
   end
 
-  describe ".generate_checkout_url" do
+  describe ".call(:generate_checkout_url)" do
     before do
       allow(GoCardlessPro::Client).to receive(:new)
         .and_return(gocardless_client)
@@ -121,14 +119,14 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
     end
 
     it "receives billing request flow response" do
-      gocardless_service.generate_checkout_url
+      described_class.call(:generate_checkout_url, gocardless_customer)
 
       expect(gocardless_billing_request_service).to have_received(:create)
       expect(gocardless_billing_request_flow_service).to have_received(:create)
     end
 
     it "delivers a webhook with checkout url" do
-      gocardless_service.generate_checkout_url
+      described_class.call(:generate_checkout_url, gocardless_customer)
 
       expect(gocardless_billing_request_service).to have_received(:create)
       expect(gocardless_billing_request_flow_service).to have_received(:create)
@@ -138,7 +136,11 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
   end
 
   describe "#success_redirect_url" do
-    subject(:success_redirect_url) { gocardless_service.__send__(:success_redirect_url) }
+    subject(:success_redirect_url) do
+      service = described_class.new
+      service.instance_variable_set(:@gocardless_customer, gocardless_customer)
+      service.__send__(:success_redirect_url)
+    end
 
     context "when payment provider has success redirect url" do
       it "returns payment provider's success redirect url" do

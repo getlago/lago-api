@@ -4,6 +4,13 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise]
+
+        # Adyen rejects the whole payment when `reference` overflows this limit, so a
+        # long billing entity name would turn a dunning retry into a hard failure.
+        # https://docs.adyen.com/api-explorer/Checkout/latest/post/payments
+        REFERENCE_MAX_LENGTH = 80
+
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference
@@ -93,7 +100,7 @@ module PaymentProviders
               currency: payment.amount_currency.upcase,
               value: payment.amount_cents
             },
-            reference: reference,
+            reference: truncated_reference,
             paymentMethod: {
               type: "scheme",
               storedPaymentMethodId: payment_method_id
@@ -107,12 +114,20 @@ module PaymentProviders
           prms
         end
 
+        # Callers append the invoice number to the END of the reference
+        # (PaymentRequests::Payments::CreateService#payment_reference and
+        # Invoices::Payments::CreateService#payment_reference), so when a long
+        # billing entity name pushes us past the limit we drop the head and keep
+        # the tail -- the invoice number is what reconciliation needs (BIL-371).
+        def truncated_reference
+          ref = reference.to_s
+          return ref if ref.length <= REFERENCE_MAX_LENGTH
+
+          ref.last(REFERENCE_MAX_LENGTH)
+        end
+
         def payment_method_id
-          if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment.payment_method&.provider_method_id
-          else
-            provider_customer.payment_method_id
-          end
+          payment.payment_method&.provider_method_id || provider_customer.payment_method_id
         end
 
         def prepare_failed_result(error, reraise: false)

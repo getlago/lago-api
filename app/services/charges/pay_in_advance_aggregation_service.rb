@@ -2,6 +2,8 @@
 
 module Charges
   class PayInAdvanceAggregationService < BaseService
+    Result = BaseResult
+
     def initialize(charge:, boundaries:, properties:, event:, charge_filter: nil)
       @charge = charge
       @boundaries = boundaries
@@ -15,7 +17,7 @@ module Charges
     def call
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         charge:,
-        subscription:,
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,

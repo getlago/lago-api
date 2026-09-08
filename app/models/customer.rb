@@ -8,6 +8,7 @@ class Customer < ApplicationRecord
   include OrganizationTimezone
   include BillingEntityTimezone
   include Discard::Model
+  include NullByteSanitizable
 
   self.discard_column = :deleted_at
 
@@ -37,6 +38,15 @@ class Customer < ApplicationRecord
     align_with_finalization_date: "align_with_finalization_date"
   }.freeze
 
+  SEARCHABLE_CUSTOMER_FIELDS = %w[
+    name
+    firstname
+    lastname
+    legal_name
+    external_id
+    email
+  ].freeze
+
   attribute :finalize_zero_amount_invoice, :integer
   enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
@@ -54,6 +64,7 @@ class Customer < ApplicationRecord
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
+  has_many :contracts
   has_many :events
   has_many :invoices
   has_many :applied_coupons
@@ -147,6 +158,7 @@ class Customer < ApplicationRecord
   validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
+  validates :name, length: {maximum: 255}, if: :name_changed?
   validates :external_id,
     presence: true,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
@@ -168,10 +180,12 @@ class Customer < ApplicationRecord
 
   ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
 
-  ADDRESS_FIELDS.each do |attribute|
-    # NOTE: Null byte injection. Prevent 500 errors.
-    normalizes attribute, with: ->(value) { value.delete("\u0000").presence }
-  end
+  # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
+  # Address fields keep the historical blank -> nil behavior; identity/free-text
+  # fields are only stripped so existing empty-string values are preserved.
+  sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
+  sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
+    :phone, :url, :logo_url, :tax_identification_number
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -364,6 +378,29 @@ class Customer < ApplicationRecord
     anrok_customer || avalara_customer
   end
 
+  def payment_connection(code = nil)
+    return payment_provider_customers.by_code(code).first if code.present?
+
+    payment_provider_customers.find_by(is_default: true)
+  end
+
+  # The customer's default integration connection for a category (tax / accounting / crm).
+  def integration_connection(category)
+    integration_customers.where(category:).find_by(is_default: true)
+  end
+
+  def payment_connection_status
+    connection = payment_connection
+
+    if connection.nil?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:not_connected]
+    elsif connection.manual?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:manual]
+    else
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:connected]
+    end
+  end
+
   def address_changed?
     ADDRESS_FIELDS.any? { |field| send(:"#{field}_changed?") }
   end
@@ -412,6 +449,7 @@ end
 #  payment_provider                             :string
 #  payment_provider_code                        :string
 #  payment_receipt_counter                      :bigint           default(0), not null
+#  payment_term                                 :jsonb
 #  phone                                        :string
 #  shipping_address_line1                       :string
 #  shipping_address_line2                       :string

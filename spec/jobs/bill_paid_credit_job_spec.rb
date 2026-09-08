@@ -7,7 +7,7 @@ RSpec.describe BillPaidCreditJob do
   let(:timestamp) { Time.current.to_i }
 
   let(:invoice_service) { instance_double(Invoices::PaidCreditService) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::PaidCreditService::Result.new }
 
   let(:invoice) { nil }
 
@@ -25,7 +25,7 @@ RSpec.describe BillPaidCreditJob do
 
   context "when result is a failure" do
     let(:result) do
-      BaseService::Result.new.single_validation_failure!(error_code: "error")
+      Invoices::PaidCreditService::Result.new.single_validation_failure!(error_code: "error")
     end
 
     it "raises an error" do

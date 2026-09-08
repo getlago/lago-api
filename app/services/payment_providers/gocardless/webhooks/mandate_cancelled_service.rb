@@ -17,7 +17,6 @@ module PaymentProviders
           payment_method = find_payment_method_by_mandate
 
           return result unless payment_method
-          return result unless payment_provider.organization.feature_flag_enabled?(:multiple_payment_methods)
 
           gocardless_customer = payment_method.payment_provider_customer
           result.gocardless_customer = gocardless_customer

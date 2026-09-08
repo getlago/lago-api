@@ -17,6 +17,7 @@ module Integrations
                 "properties" => {
                   "lago_invoice_id" => invoice.id,
                   "lago_invoice_number" => invoice.number,
+                  "lago_invoice_purchase_order_number" => invoice.purchase_order_number,
                   "lago_invoice_issuing_date" => formatted_date(invoice.issuing_date),
                   "lago_invoice_payment_due_date" => formatted_date(invoice.payment_due_date),
                   "lago_invoice_payment_overdue" => invoice.payment_overdue,
@@ -27,7 +28,8 @@ module Integrations
                   "lago_invoice_total_amount" => total_amount,
                   "lago_invoice_total_due_amount" => total_due_amount,
                   "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
-                  "lago_invoice_file_url" => invoice.file_url
+                  "lago_invoice_file_url" => invoice.file_url,
+                  "lago_invoice_url" => invoice_url
                 }
               }
             }
@@ -45,6 +47,7 @@ module Integrations
                 "properties" => {
                   "lago_invoice_id" => invoice.id,
                   "lago_invoice_number" => invoice.number,
+                  "lago_invoice_purchase_order_number" => invoice.purchase_order_number,
                   "lago_invoice_issuing_date" => formatted_date(invoice.issuing_date),
                   "lago_invoice_payment_due_date" => formatted_date(invoice.payment_due_date),
                   "lago_invoice_payment_overdue" => invoice.payment_overdue,
@@ -55,7 +58,8 @@ module Integrations
                   "lago_invoice_total_amount" => total_amount,
                   "lago_invoice_total_due_amount" => total_due_amount,
                   "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
-                  "lago_invoice_file_url" => invoice.file_url
+                  "lago_invoice_file_url" => invoice.file_url,
+                  "lago_invoice_url" => invoice_url
                 }
               }
             }

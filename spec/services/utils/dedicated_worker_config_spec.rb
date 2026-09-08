@@ -41,6 +41,22 @@ RSpec.describe Utils::DedicatedWorkerConfig do
     end
   end
 
+  describe ".queue_for" do
+    before { stub_const("#{described_class}::ORGANIZATION_IDS", %w[org-1]) }
+
+    it "returns the dedicated queue for a listed organization" do
+      expect(described_class.queue_for("org-1", dedicated: :dedicated_alerts, default: :alerts)).to eq(:dedicated_alerts)
+    end
+
+    it "returns the default queue for an unlisted organization" do
+      expect(described_class.queue_for("org-2", dedicated: :dedicated_alerts, default: :alerts)).to eq(:alerts)
+    end
+
+    it "returns the default queue for a blank organization" do
+      expect(described_class.queue_for(nil, dedicated: :dedicated_alerts, default: :alerts)).to eq(:alerts)
+    end
+  end
+
   describe ".refresh_interval" do
     around do |example|
       previous = ENV["LAGO_DEDICATED_REFRESH_INTERVAL_SECONDS"]

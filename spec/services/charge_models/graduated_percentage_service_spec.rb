@@ -5,15 +5,14 @@ require "rails_helper"
 RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
   subject(:apply_graduated_percentage_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
 
   let(:aggregation_result) do
-    BaseService::Result.new.tap do |r|
+    BillableMetrics::Aggregations::BaseService::Result.new.tap do |r|
       r.aggregation = aggregation
       r.count = aggregation_count
     end
@@ -51,24 +50,44 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
     let(:aggregation) { 0 }
     let(:aggregation_count) { 0 }
 
-    it "does not apply the flat amount" do
-      expect(apply_graduated_percentage_service.amount).to eq(0)
+    it "applies the flat amount from the first tier" do
+      expect(apply_graduated_percentage_service.amount).to eq(200)
       expect(apply_graduated_percentage_service.unit_amount).to eq(0)
       expect(apply_graduated_percentage_service.amount_details).to eq(
         {
           graduated_percentage_ranges: [
             {
-              flat_unit_amount: 0,
+              flat_unit_amount: 200,
               from_value: 0,
               to_value: 10,
               per_unit_total_amount: "0.0",
-              total_with_flat_amount: 0,
+              total_with_flat_amount: 200,
               rate: 1.0,
               units: "0.0"
             }
           ]
         }
       )
+    end
+
+    context "when first tier flat amount is zero" do
+      let(:charge) do
+        create(
+          :graduated_percentage_charge,
+          properties: {
+            graduated_percentage_ranges: [
+              {from_value: 0, to_value: 0.01, flat_amount: "0", rate: "0"},
+              {from_value: 0.01, to_value: 10, flat_amount: "200", rate: "1"},
+              {from_value: 11, to_value: nil, flat_amount: "300", rate: "2"}
+            ]
+          }
+        )
+      end
+
+      it "returns zero amount" do
+        expect(apply_graduated_percentage_service.amount).to eq(0)
+        expect(apply_graduated_percentage_service.unit_amount).to eq(0)
+      end
     end
   end
 

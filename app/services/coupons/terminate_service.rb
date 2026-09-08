@@ -2,6 +2,8 @@
 
 module Coupons
   class TerminateService < BaseService
+    Result = BaseResult[:coupon]
+
     def self.terminate_all_expired
       Coupon
         .active

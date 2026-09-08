@@ -22,6 +22,8 @@ RSpec.describe UsageMonitoring::Alert do
       expect(subject).to have_many(:thresholds).class_name("UsageMonitoring::AlertThreshold")
         .with_foreign_key(:usage_monitoring_alert_id).dependent(:delete_all)
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
+        .with_foreign_key(:usage_monitoring_alert_id).conditions(kind: "triggered")
+      expect(subject).to have_many(:all_triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
         .with_foreign_key(:usage_monitoring_alert_id)
     end
   end

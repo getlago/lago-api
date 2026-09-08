@@ -46,6 +46,7 @@ describe "Dunning Campaign v1", :premium do
   before do
     stub_pdf_generation
     stripe_customer
+    create(:payment_method, payment_provider_customer: stripe_customer, provider_method_id: stripe_pm_id, is_default: true)
     dunning_campaign_threshold
 
     stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}")

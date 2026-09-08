@@ -148,7 +148,7 @@ RSpec.describe Invoices::RefreshDraftService do
 
         subscription2.mark_as_terminated!
 
-        allow(Invoices::CalculateFeesService).to receive(:call).and_return(BaseService::Result.new)
+        allow(Invoices::CalculateFeesService).to receive(:call).and_return(Invoices::CalculateFeesService::Result.new)
 
         invoice.update!(created_at: started_at)
       end
@@ -188,6 +188,36 @@ RSpec.describe Invoices::RefreshDraftService do
     it "recalculates progressive billing amount" do
       expect { refresh_service.call }
         .to change { invoice.reload.progressive_billing_credit_amount_cents }.from(1239000).to(0)
+    end
+
+    context "when the subscription purchase order number changed after draft creation" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          organization:,
+          subscription_at: started_at,
+          started_at:,
+          created_at: started_at,
+          purchase_order_number: "PO-UPDATED"
+        )
+      end
+
+      let(:invoice) do
+        create(
+          :invoice,
+          status:,
+          organization:,
+          customer:,
+          purchase_order_number: "PO-ORIGINAL"
+        )
+      end
+
+      it "keeps the draft invoice purchase order number" do
+        refresh_service.call
+
+        expect(invoice.reload.purchase_order_number).to eq("PO-ORIGINAL")
+      end
     end
 
     it_behaves_like "applies invoice_custom_sections" do

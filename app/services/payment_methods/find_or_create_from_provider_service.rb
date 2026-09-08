@@ -19,7 +19,7 @@ module PaymentMethods
 
       payment_method = find_payment_method || create_from_provider
 
-      SetAsDefaultService.call(payment_method:) if set_as_default?
+      SetAsDefaultService.call(payment_method:).raise_if_error! if set_as_default?
 
       result.payment_method = payment_method
       result

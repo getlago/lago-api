@@ -2,6 +2,8 @@
 
 module Invoices
   class FinalizeService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(invoice:)
       @invoice = invoice
       super
@@ -16,6 +18,8 @@ module Invoices
       end
 
       invoice.finalized!
+
+      Invoices::RefreshSearchTermsService.call!(invoice:)
 
       result.invoice = invoice
       result

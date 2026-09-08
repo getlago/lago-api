@@ -22,8 +22,15 @@ RSpec.describe Organization do
       expect(subject).to have_many(:billing_entities).conditions(archived_at: nil)
       expect(subject).to have_many(:all_billing_entities).class_name("BillingEntity")
       expect(subject).to have_many(:pricing_units)
+      expect(subject).to have_many(:product_categories)
+      expect(subject).to have_many(:products)
+      expect(subject).to have_many(:product_filters)
+      expect(subject).to have_many(:rate_cards)
+      expect(subject).to have_many(:rate_card_rates)
+      expect(subject).to have_many(:catalog_plans)
       expect(subject).to have_many(:customers)
       expect(subject).to have_many(:subscriptions)
+      expect(subject).to have_many(:contracts)
       expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
       expect(subject).to have_many(:credit_notes)
       expect(subject).to have_many(:invoices)
@@ -58,6 +65,8 @@ RSpec.describe Organization do
       expect(subject).to have_many(:pending_vies_checks)
       expect(subject).to have_many(:order_forms)
       expect(subject).to have_many(:orders)
+      expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
+        .conditions(kind: "triggered")
     end
   end
 

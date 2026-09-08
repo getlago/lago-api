@@ -29,6 +29,7 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
 
     before do
       allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
+      allow(Invoices::ComputeAmountsFromFees).to receive(:call).and_call_original
 
       invoice_subscription
       fee
@@ -47,6 +48,30 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
       preview_service.call
 
       expect(Fees::ApplyTaxesService).to have_received(:call!).at_least(:once).with(fee:)
+    end
+
+    it "does not apply provider taxes" do
+      preview_service.call
+
+      expect(Invoices::ComputeAmountsFromFees).to have_received(:call).with(
+        invoice: be_a(Invoice),
+        provider_taxes: nil
+      )
+    end
+
+    context "when the customer has a tax customer" do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        allow(Invoices::ApplyProviderTaxesService).to receive(:call!)
+      end
+
+      it "does not apply provider taxes" do
+        preview_service.call
+
+        expect(Invoices::ApplyProviderTaxesService).not_to have_received(:call!)
+      end
     end
 
     context "with multiple fees" do

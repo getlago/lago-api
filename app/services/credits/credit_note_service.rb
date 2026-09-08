@@ -2,6 +2,8 @@
 
 module Credits
   class CreditNoteService < BaseService
+    Result = BaseResult[:credits]
+
     def initialize(invoice:, context: nil)
       @invoice = invoice
       @context = context
@@ -18,7 +20,7 @@ module Credits
         apply_credits
       else
         ActiveRecord::Base.transaction do
-          CreditNotes::LockService.new(customer:).call do
+          Customers::LockService.call(customer:, scope: :credit_note) do
             apply_credits
           end
         end

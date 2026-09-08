@@ -5,14 +5,17 @@ module PaymentRequests
     class FlutterwaveService < BaseService
       include Customers::PaymentProviderFinder
       include Updatable
+      include TypedResults
 
-      def initialize(payable = nil)
+      RESULTS = {
+        generate_payment_url: BaseResult[:payment_url],
+        update_payment_status: BaseResult[:payment, :payable]
+      }.freeze
+
+      private
+
+      def generate_payment_url(payable)
         @payable = payable
-
-        super(nil)
-      end
-
-      def call
         result.payment_url = payment_url
         result
       rescue LagoHttpClient::HttpError => e
@@ -29,8 +32,9 @@ module PaymentRequests
         end
         return result.not_found_failure!(resource: "flutterwave_payment") unless payment
 
+        @payable = payment.payable
         result.payment = payment
-        result.payable = payment.payable
+        result.payable = @payable
         return result if payment.payable.payment_succeeded?
 
         payment.status = status
@@ -52,8 +56,6 @@ module PaymentRequests
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
       end
-
-      private
 
       attr_reader :payable
 

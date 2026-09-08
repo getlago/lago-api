@@ -8,6 +8,7 @@ module Api
 
         def index
           entitlements = current_organization.entitlements
+            .joins(:feature)
             .where(plan: plan)
             .includes(:feature, values: :privilege)
 

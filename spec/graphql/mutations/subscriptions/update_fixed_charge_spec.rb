@@ -94,6 +94,17 @@ RSpec.describe Mutations::Subscriptions::UpdateFixedCharge, :premium do
     end
   end
 
+  context "when subscription is incomplete" do
+    let(:subscription) { create(:subscription, :incomplete, organization:, plan:) }
+
+    it "returns a validation error" do
+      result = subject
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
+      expect(result["errors"].first["extensions"]["details"]["base"]).to eq(["subscription_incomplete"])
+    end
+  end
+
   context "when subscription already has plan override" do
     let(:overridden_plan) { create(:plan, organization:, parent: plan) }
     let(:subscription) { create(:subscription, organization:, plan: overridden_plan) }

@@ -19,6 +19,7 @@ class InvoicesQuery < BaseQuery
     :metadata,
     :partially_paid,
     :positive_due_amount,
+    :purchase_order_number,
     :self_billed,
     :subscription_id,
     :settlements
@@ -27,6 +28,15 @@ class InvoicesQuery < BaseQuery
   def call
     return result unless validate_filters.success?
 
+    result.invoices = invoices
+    result
+  rescue BaseService::FailedResult
+    result
+  end
+
+  private
+
+  def invoices
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
@@ -43,23 +53,17 @@ class InvoicesQuery < BaseQuery
     invoices = with_metadata(invoices) if filters.metadata.present?
     invoices = with_partially_paid(invoices) unless filters.partially_paid.nil?
     invoices = with_positive_due_amount(invoices) unless filters.positive_due_amount.nil?
+    invoices = with_purchase_order_number(invoices) if filters.purchase_order_number.present?
     invoices = with_self_billed(invoices) unless filters.self_billed.nil?
     invoices = with_subscription_id(invoices) if filters.subscription_id.present?
     invoices = with_settlements(invoices) if valid_settlements.present?
 
     invoices = paginate(invoices)
-    invoices = apply_consistent_ordering(
+    apply_consistent_ordering(
       invoices,
       default_order: {issuing_date: :desc, created_at: :desc}
     )
-
-    result.invoices = invoices
-    result
-  rescue BaseService::FailedResult
-    result
   end
-
-  private
 
   def filters_contract
     @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
@@ -69,45 +73,20 @@ class InvoicesQuery < BaseQuery
     scope = organization.invoices
     return scope if search_term.blank?
 
-    scope = scope.with(matching_customers: matching_customers) if search_customers?
-    scope
-      .with(matching_invoices: matching_invoices)
-      .where("invoices.id IN (SELECT id FROM matching_invoices)")
+    search_terms_scope(scope)
+  end
+
+  def search_terms_scope(scope)
+    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
+    column = search_customers? ? "invoices.search_terms" : "invoices.number"
+
+    return scope.where("#{column} ILIKE ?", escaped_term) unless search_term.match?(BaseQuery::UUID_REGEX)
+
+    scope.where("#{column} ILIKE :term OR invoices.id = :id", term: escaped_term, id: search_term)
   end
 
   def search_customers?
     filters.customer_id.blank? && filters.customer_external_id.blank?
-  end
-
-  def matching_customers
-    escaped_term = "%#{Customer.sanitize_sql_like(search_term)}%"
-
-    organization.customers
-      .where(
-        "customers.name ILIKE :term OR customers.firstname ILIKE :term " \
-        "OR customers.lastname ILIKE :term OR customers.external_id ILIKE :term " \
-        "OR customers.email ILIKE :term",
-        term: escaped_term
-      )
-      .select(:id)
-  end
-
-  def matching_invoices
-    escaped_term = "%#{Invoice.sanitize_sql_like(search_term)}%"
-    search_base = organization.invoices
-
-    branches = [
-      search_base.where("invoices.number ILIKE ?", escaped_term).select(:id)
-    ]
-
-    branches << search_base.where(id: search_term).select(:id) if search_term.match?(BaseQuery::UUID_REGEX)
-
-    if search_customers?
-      branches << search_base.where("invoices.customer_id IN (SELECT id FROM matching_customers)").select(:id)
-    end
-
-    union_sql = branches.map(&:to_sql).join(" UNION ")
-    Invoice.unscoped.from("(#{union_sql}) AS invoices").select(:id)
   end
 
   def with_billing_entity_ids(scope)
@@ -132,6 +111,12 @@ class InvoicesQuery < BaseQuery
 
   def with_invoice_type(scope)
     scope.where(invoice_type: filters.invoice_type)
+  end
+
+  def with_purchase_order_number(scope)
+    # NOTE: case-insensitive match; organization_id (from base scope) + lower() hit
+    # index_invoices_on_organization_id_lower_purchase_order_number.
+    scope.where("lower(invoices.purchase_order_number) = lower(?)", filters.purchase_order_number)
   end
 
   def with_status(scope)

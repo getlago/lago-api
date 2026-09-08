@@ -11,6 +11,7 @@ module Types
       argument :name, String, required: false
       argument :success_redirect_url, String, required: false
 
+      argument :require_terms_of_service_consent, Boolean, required: false
       argument :supports_3ds, Boolean, required: false
     end
   end

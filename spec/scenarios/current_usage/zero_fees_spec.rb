@@ -81,7 +81,7 @@ describe "Current usage zero fees Scenarios" do
         billable_metric:,
         properties: {
           graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+            {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "0"},
             {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
           ]
         }
@@ -157,7 +157,7 @@ describe "Current usage zero fees Scenarios" do
         billable_metric:,
         properties: {
           volume_ranges: [
-            {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+            {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
             {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
           ]
         }
@@ -185,7 +185,7 @@ describe "Current usage zero fees Scenarios" do
         billable_metric:,
         properties: {
           graduated_percentage_ranges: [
-            {from_value: 0, to_value: 10, rate: "1", flat_amount: "100"},
+            {from_value: 0, to_value: 10, rate: "1", flat_amount: "0"},
             {from_value: 11, to_value: nil, rate: "0.5", flat_amount: "50"}
           ]
         }
@@ -216,7 +216,7 @@ describe "Current usage zero fees Scenarios" do
         billable_metric: sum_metric,
         properties: {
           graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "100"},
+            {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "0"},
             {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "50"}
           ]
         }
@@ -467,6 +467,125 @@ describe "Current usage zero fees Scenarios" do
           expect(second_filter[:amount_cents]).to eq(first_filter[:amount_cents])
           expect(second_filter[:values]).to eq(first_filter[:values])
         end
+      end
+    end
+  end
+
+  context "with charge filters pre-filtering" do
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa]) }
+
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}) }
+    let(:europe_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+    let(:usa_filter) { create(:charge_filter, charge:, properties: {amount: "50"}) }
+
+    before do
+      create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ["europe"])
+      create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ["usa"])
+    end
+
+    context "with zero events" do
+      it "returns zero fees for all filters and catch-all" do
+        fetch_current_usage(customer:)
+
+        customer_usage = json[:customer_usage]
+        expect_zero_customer_usage(customer_usage)
+        expect(customer_usage[:charges_usage].count).to eq(1)
+
+        charge_usage = customer_usage[:charges_usage].first
+        expect_zero_charge_usage(charge_usage, charge_model: "standard")
+
+        filters = charge_usage[:filters]
+        expect(filters.count).to eq(3)
+        filters.each { |filter| expect_zero_filter(filter) }
+
+        filter_values = filters.map { |f| f[:values] }
+        expect(filter_values).to match_array([{region: ["europe"]}, {region: ["usa"]}, nil])
+      end
+    end
+
+    context "when some filters have usage" do
+      it "returns non-zero fees for matching filters and zero fees for the others" do
+        create_event(
+          {
+            code: billable_metric.code,
+            external_subscription_id: customer.external_id,
+            properties: {region: "europe"}
+          }
+        )
+        create_event(
+          {
+            code: billable_metric.code,
+            external_subscription_id: customer.external_id,
+            properties: {region: "unknown"}
+          }
+        )
+
+        fetch_current_usage(customer:)
+
+        customer_usage = json[:customer_usage]
+        expect(customer_usage[:amount_cents]).to eq(3000)
+        expect(customer_usage[:charges_usage].count).to eq(1)
+
+        charge_usage = customer_usage[:charges_usage].first
+        expect(charge_usage[:units]).to eq("2.0")
+        expect(charge_usage[:events_count]).to eq(2)
+        expect(charge_usage[:amount_cents]).to eq(3000)
+
+        filters = charge_usage[:filters]
+        expect(filters.count).to eq(3)
+
+        europe = filters.find { |f| f[:values] == {region: ["europe"]} }
+        expect(europe[:units]).to eq("1.0")
+        expect(europe[:total_aggregated_units]).to eq("1.0")
+        expect(europe[:events_count]).to eq(1)
+        expect(europe[:amount_cents]).to eq(2000)
+
+        usa = filters.find { |f| f[:values] == {region: ["usa"]} }
+        expect_zero_filter(usa)
+
+        catch_all = filters.find { |f| f[:values].nil? }
+        expect(catch_all[:units]).to eq("1.0")
+        expect(catch_all[:events_count]).to eq(1)
+        expect(catch_all[:amount_cents]).to eq(1000)
+      end
+    end
+
+    context "with recurring billable metric" do
+      let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:) }
+
+      it "keeps computing all filters even without events in the current period" do
+        create_event(
+          {
+            code: billable_metric.code,
+            external_subscription_id: customer.external_id,
+            properties: {region: "europe", item_id: "item_1"}
+          }
+        )
+
+        travel_to(DateTime.new(2024, 4, 10))
+
+        fetch_current_usage(customer:)
+
+        customer_usage = json[:customer_usage]
+        expect(customer_usage[:amount_cents]).to eq(2000)
+        expect(customer_usage[:charges_usage].count).to eq(1)
+
+        charge_usage = customer_usage[:charges_usage].first
+        expect(charge_usage[:units]).to eq("1.0")
+        expect(charge_usage[:amount_cents]).to eq(2000)
+
+        filters = charge_usage[:filters]
+        expect(filters.count).to eq(3)
+
+        europe = filters.find { |f| f[:values] == {region: ["europe"]} }
+        expect(europe[:units]).to eq("1.0")
+        expect(europe[:amount_cents]).to eq(2000)
+
+        usa = filters.find { |f| f[:values] == {region: ["usa"]} }
+        expect_zero_filter(usa)
+
+        catch_all = filters.find { |f| f[:values].nil? }
+        expect_zero_filter(catch_all)
       end
     end
   end

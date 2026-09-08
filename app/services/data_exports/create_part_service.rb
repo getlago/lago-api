@@ -2,6 +2,8 @@
 
 module DataExports
   class CreatePartService < BaseService
+    Result = BaseResult[:data_export_part]
+
     def initialize(data_export:, object_ids:, index:)
       @data_export = data_export
       @object_ids = object_ids

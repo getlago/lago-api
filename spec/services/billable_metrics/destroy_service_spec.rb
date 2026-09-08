@@ -14,7 +14,6 @@ RSpec.describe BillableMetrics::DestroyService do
   before do
     charge
 
-    allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
     allow(Invoices::RefreshDraftService).to receive(:call)
   end
 
@@ -42,12 +41,6 @@ RSpec.describe BillableMetrics::DestroyService do
     it "enqueues a BillableMetricFilters::DestroyAllJob" do
       expect { destroy_service.call }
         .to have_enqueued_job(BillableMetricFilters::DestroyAllJob).with(billable_metric.id)
-    end
-
-    it "enqueues a BillableMetrics::DeleteEventsJob" do
-      expect do
-        destroy_service.call
-      end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
     end
 
     it "enqueues a billable_metric.deleted webhook" do

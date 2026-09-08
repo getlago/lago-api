@@ -16,6 +16,8 @@ module Fees
     end
 
     def call
+      return skip_missing_subscription if subscription.nil?
+
       fees = []
 
       ActiveRecord::Base.transaction(**isolation_mode) do
@@ -46,6 +48,24 @@ module Fees
     end
 
     private
+
+    def skip_missing_subscription
+      # NOTE: `event.subscription` is nil when the subscription was terminated before the
+      # event's timestamp (e.g. enqueued while active, terminated before the job ran).
+      message = "Fees::CreatePayInAdvanceService skipped: no active subscription for event"
+      context = {
+        organization_id: event.organization_id,
+        external_subscription_id: event.external_subscription_id,
+        charge_id: charge.id,
+        event_transaction_id: event.transaction_id,
+        event_timestamp: billing_at.iso8601
+      }
+
+      Rails.logger.warn("#{message} #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
+
+      result.fees = []
+      result
+    end
 
     attr_reader :charge, :event, :billing_at, :estimate
 

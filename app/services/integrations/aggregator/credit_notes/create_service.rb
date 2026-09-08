@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module CreditNotes
       class CreateService < Integrations::Aggregator::Invoices::BaseService
+        Result = BaseResult[:credit_note_id, :external_id]
+
         def initialize(credit_note:)
           @credit_note = credit_note
 

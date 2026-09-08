@@ -48,8 +48,8 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
 
     let(:legacy_usage) { SubscriptionUsage.new(fees: [legacy_fee]) }
     let(:enriched_usage) { SubscriptionUsage.new(fees: [enriched_fee]) }
-    let(:legacy_result) { BaseService::LegacyResult.new.tap { |r| r.usage = legacy_usage } }
-    let(:enriched_result) { BaseService::LegacyResult.new.tap { |r| r.usage = enriched_usage } }
+    let(:legacy_result) { BaseResult[:usage].new.tap { |r| r.usage = legacy_usage } }
+    let(:enriched_result) { BaseResult[:usage].new.tap { |r| r.usage = enriched_usage } }
 
     before do
       allow(Invoices::CustomerUsageService).to receive(:call)
@@ -146,7 +146,7 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
 
     context "when legacy computation fails" do
       let(:legacy_result) do
-        BaseService::LegacyResult.new.tap { |r| r.service_failure!(code: "legacy_error", message: "legacy computation broke") }
+        BaseResult.new.tap { |r| r.service_failure!(code: "legacy_error", message: "legacy computation broke") }
       end
 
       it "returns the original error" do
@@ -174,7 +174,7 @@ RSpec.describe Events::Stores::Clickhouse::EnrichedStoreMigration::ComparisonSer
 
     context "when enriched computation fails" do
       let(:enriched_result) do
-        BaseService::LegacyResult.new.tap { |r| r.service_failure!(code: "enriched_error", message: "enriched computation broke") }
+        BaseResult.new.tap { |r| r.service_failure!(code: "enriched_error", message: "enriched computation broke") }
       end
 
       it "returns the original error" do

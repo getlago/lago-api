@@ -107,20 +107,13 @@ module Wallets
     end
 
     def valid_limitations?
-      limitation_result = BaseService::Result.new
-      limitation_result.billable_metrics = result.billable_metrics
-      limitation_result.billable_metric_identifiers = result.billable_metric_identifiers
-
-      return true if Wallets::ValidateLimitationsService.new(limitation_result, **args).valid?
+      return true if Wallets::ValidateLimitationsService.new(result, **args).valid?
 
       add_error(field: :applies_to, error_code: "invalid_limitations")
     end
 
     def valid_payment_method?
-      pm_result = BaseService::Result.new
-      pm_result.payment_method = result.payment_method
-
-      return true if PaymentMethods::ValidateService.new(pm_result, **args).valid?
+      return true if PaymentMethods::ValidateService.new(result, **args).valid?
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
     end

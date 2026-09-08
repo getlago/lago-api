@@ -67,10 +67,9 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
         customer = create(:customer, :with_hubspot_integration)
         plan = create(:plan, trial_period: 10, pay_in_advance: true)
         subscription = create(:subscription, customer:, plan:, started_at: 15.days.ago)
-        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
         service.call
         expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
-          .to have_received(:perform_later).with(subscription: subscription)
+          .to have_been_enqueued.with(subscription: subscription)
       end
     end
 

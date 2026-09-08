@@ -34,6 +34,18 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         subscription
       end
 
+      context "when subscription is incomplete" do
+        let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
+
+        it "returns a validation error without applying the change" do
+          result = nil
+          expect { result = service.call }.not_to change(Plan, :count)
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
+        end
+      end
+
       it "creates a plan override" do
         expect { service.call }.to change(Plan, :count).by(1)
 

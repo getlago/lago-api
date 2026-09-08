@@ -11,6 +11,8 @@ module PaymentProviders
         end
       end
 
+      unique :until_executed, on_conflict: :log
+
       def perform(organization: nil, payment_provider: nil, events_json: nil, event_json: nil)
         # NOTE: temporary keeps both events_json and event_json to avoid errors during the deployment
         if events_json.present?

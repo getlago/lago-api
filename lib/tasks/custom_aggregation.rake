@@ -14,7 +14,7 @@ namespace :custom_aggregation do
     # Intial state
     previous_state = {total_units: BigDecimal("0"), amount: BigDecimal("0")}
     # Event list - TODO: change me
-    events = [OpenStruct.new(properties: {})]
+    events = [Data.define(:properties).new(properties: {})]
 
     amount = 0
 

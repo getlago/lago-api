@@ -5,6 +5,16 @@ require "rails_helper"
 RSpec.describe FixedCharge do
   subject { build(:fixed_charge) }
 
+  describe "plan pricing type validation" do
+    it "rejects a fixed charge on a product-catalog plan" do
+      plan = create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
+      fixed_charge = build(:fixed_charge, plan:, organization: plan.organization)
+
+      expect(fixed_charge).not_to be_valid
+      expect(fixed_charge.errors.where(:plan, :legacy_billing_disabled)).to be_present
+    end
+  end
+
   it_behaves_like "paper_trail traceable"
 
   it { expect(described_class).to be_soft_deletable }

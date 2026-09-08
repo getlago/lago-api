@@ -73,14 +73,17 @@ module Fees
     def amount_result
       return @amount_result if defined?(@amount_result)
 
-      aggregation_result = BaseService::Result.new
+      aggregation_result = BillableMetrics::Aggregations::BaseService::Result.new
       aggregation_result.aggregation = adjusted_fee.units
       aggregation_result.current_usage_units = adjusted_fee.units
       aggregation_result.full_units_number = adjusted_fee.units
       aggregation_result.count = 0
 
       @amount_result = ChargeModels::Factory
-        .new_instance(chargeable: fixed_charge, aggregation_result:, properties:)
+        .new_instance(
+          pricing_structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge).with(properties:),
+          aggregation_result:
+        )
         .apply
     end
 

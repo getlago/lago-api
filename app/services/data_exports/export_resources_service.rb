@@ -2,6 +2,8 @@
 
 module DataExports
   class ExportResourcesService < BaseService
+    Result = BaseResult[:data_export, :data_export_parts]
+
     EXPIRED_FAILURE_MESSAGE = "Data Export already expired"
     PROCESSED_FAILURE_MESSAGE = "Data Export already processed"
     DEFAULT_BATCH_SIZE = 20

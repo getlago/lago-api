@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::MoneyhashService do
-  subject(:moneyhash_service) { described_class.new(invoice) }
-
   let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription, payment_status: :pending) }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -18,7 +16,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
 
   let(:payment_url_response) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/checkout_url_response.json"))) }
 
-  describe "#update_payment_status" do
+  describe ".call(:update_payment_status)" do
     before do
       intent_processed_json["data"]["intent"]["custom_fields"]["lago_payable_id"] = invoice.id
 
@@ -27,7 +25,8 @@ RSpec.describe Invoices::Payments::MoneyhashService do
     end
 
     it "creates a payment and updates the invoice payment status" do
-      result = moneyhash_service.update_payment_status(
+      result = described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         provider_payment_id: intent_processed_json.dig("data", "intent_id"),
         status: "SUCCESSFUL",
@@ -44,7 +43,8 @@ RSpec.describe Invoices::Payments::MoneyhashService do
 
     it "enqueues a SendWebhookJob for payment.succeeded" do
       expect do
-        moneyhash_service.update_payment_status(
+        described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: intent_processed_json.dig("data", "intent_id"),
           status: "SUCCESSFUL",
@@ -55,7 +55,8 @@ RSpec.describe Invoices::Payments::MoneyhashService do
 
     context "when amount_cents kwarg is provided" do
       it "records the Payment with that amount, not the invoice total" do
-        result = moneyhash_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: intent_processed_json.dig("data", "intent_id"),
           status: "SUCCESSFUL",
@@ -69,7 +70,8 @@ RSpec.describe Invoices::Payments::MoneyhashService do
 
     context "when amount_cents kwarg is not provided" do
       it "falls back to the invoice's total amount" do
-        result = moneyhash_service.update_payment_status(
+        result = described_class.call(
+          :update_payment_status,
           organization_id: organization.id,
           provider_payment_id: intent_processed_json.dig("data", "intent_id"),
           status: "SUCCESSFUL",
@@ -81,7 +83,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
     end
   end
 
-  describe "#generate_payment_url" do
+  describe ".call(:generate_payment_url)" do
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
     let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
@@ -97,7 +99,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
     end
 
     it "generates the payment url" do
-      result = moneyhash_service.generate_payment_url(payment_intent)
+      result = described_class.call(:generate_payment_url, invoice, payment_intent)
       expect(result).to be_success
       expect(result.payment_url).to eq("#{payment_url_response.dig("data", "embed_url")}?lago_request=generate_payment_url")
     end

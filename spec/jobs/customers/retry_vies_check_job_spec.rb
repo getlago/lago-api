@@ -5,11 +5,12 @@ require "rails_helper"
 RSpec.describe Customers::RetryViesCheckJob do
   let(:customer) { create(:customer) }
 
-  it "finds the customer by ID and delegates to ViesCheckJob" do
-    allow(Customers::ViesCheckJob).to receive(:perform_now)
+  it "finds the customer by ID and runs the VIES check" do
+    result = Customers::ViesCheckService::Result.new.service_failure!(code: "vies_error", message: "VIES check failed")
+    allow(Customers::ViesCheckService).to receive(:call).and_return(result)
 
     described_class.perform_now(customer.id)
 
-    expect(Customers::ViesCheckJob).to have_received(:perform_now).with(customer)
+    expect(Customers::ViesCheckService).to have_received(:call).with(customer:)
   end
 end

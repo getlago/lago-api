@@ -19,47 +19,58 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
       expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
     end
 
-    context "with multiple_payment_methods feature flag" do
-      before do
-        organization.enable_feature_flag!(:multiple_payment_methods)
+    context "without payment_method" do
+      it "creates a new one with provider_method_id" do
+        expect(customer.payment_methods.count).to eq(0)
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        expect(result.payment_method.is_default).to be_truthy
+        expect(customer.payment_methods.count).to eq(1)
       end
 
-      context "without payment_method" do
-        it "creates a new one with provider_method_id" do
-          expect(customer.payment_methods.count).to eq(0)
-          result = update_service.call
+      context "when the default flip fails" do
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_old") }
 
-          expect(result).to be_success
-          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
-          expect(result.payment_method.is_default).to be_truthy
-          expect(customer.payment_methods.count).to eq(1)
-        end
-      end
-
-      context "with existing payment_method" do
         before do
-          create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: payment_method_id, is_default: false)
+          allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::Deadlocked)
         end
 
-        it "set as default" do
-          result = update_service.call
-
-          expect(result).to be_success
-          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
-          expect(result.payment_method.is_default).to be_truthy
+        it "keeps the already saved settings, to be reconciled by the retry" do
+          expect { update_service.call }.to raise_error(ActiveRecord::Deadlocked)
+          expect(stripe_customer.reload.payment_method_id).to eq(payment_method_id)
         end
       end
 
-      context "when payment_method_id is nil" do
-        let(:payment_method_id) { nil }
+      context "when the advisory lock cannot be acquired" do
+        before do
+          allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+        end
 
-        it "does not create a PaymentMethod" do
-          expect { update_service.call }.not_to change(PaymentMethod, :count)
+        it "propagates the error so the job can retry" do
+          expect { update_service.call }.to raise_error(BaseService::LockAcquisitionFailure)
         end
       end
     end
 
-    context "without multiple_payment_methods feature flag" do
+    context "with existing payment_method" do
+      before do
+        create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: payment_method_id, is_default: false)
+      end
+
+      it "set as default" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        expect(result.payment_method.is_default).to be_truthy
+      end
+    end
+
+    context "when payment_method_id is nil" do
+      let(:payment_method_id) { nil }
+
       it "does not create a PaymentMethod" do
         expect { update_service.call }.not_to change(PaymentMethod, :count)
       end

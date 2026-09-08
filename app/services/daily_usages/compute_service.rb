@@ -2,6 +2,8 @@
 
 module DailyUsages
   class ComputeService < BaseService
+    Result = BaseResult[:daily_usage]
+
     def initialize(subscription:, timestamp:)
       @subscription = subscription
       @timestamp = timestamp
@@ -41,8 +43,6 @@ module DailyUsages
       end
 
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
     end
 
     private

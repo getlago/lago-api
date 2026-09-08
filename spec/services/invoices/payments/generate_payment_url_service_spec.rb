@@ -105,7 +105,6 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       let(:provider) { "cashfree" }
       let(:code) { "cashfree_1" }
 
-      let(:payment_provider_service) { instance_double(Invoices::Payments::CashfreeService) }
       let(:payment_provider) { create(:cashfree_provider, code:, organization:) }
       let!(:provider_customer) { create(:cashfree_customer, payment_provider:, customer:) }
 
@@ -124,10 +123,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
 
       before do
         allow(Invoices::Payments::CashfreeService)
-          .to receive(:new)
-          .and_return(payment_provider_service)
-
-        allow(payment_provider_service).to receive(:generate_payment_url)
+          .to receive(:call)
           .and_return(error_result)
       end
 
@@ -153,8 +149,6 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
     end
 
     context "when provider service return an error" do
-      let(:payment_provider_service) { instance_double(Invoices::Payments::StripeService) }
-
       let(:error_result) do
         described_class::Result.new.tap do |result|
           result.fail_with_error!(
@@ -169,10 +163,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
 
       before do
         allow(Invoices::Payments::StripeService)
-          .to receive(:new)
-          .and_return(payment_provider_service)
-
-        allow(payment_provider_service).to receive(:generate_payment_url)
+          .to receive(:call)
           .and_return(error_result)
       end
 

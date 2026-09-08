@@ -2,15 +2,28 @@
 
 require "net/http/post/multipart"
 require "event_stream_parser"
+require "openssl"
 
 module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
     MAX_RETRIES_ATTEMPTS = 3
+    RETRYABLE_HTTP_STATUSES = [500, 502, 503, 504].freeze
+    TRANSIENT_ERROR_CLASSES = [
+      OpenSSL::SSL::SSLError,
+      Net::OpenTimeout,
+      Net::ReadTimeout,
+      EOFError,
+      Errno::ECONNRESET,
+      Errno::ECONNREFUSED,
+      Errno::ETIMEDOUT,
+      Errno::EHOSTUNREACH
+    ].freeze
+    RETRY_BACKOFF_RANGE = (0.25..0.5)
 
-    attr_reader :uri, :retries_on
+    attr_reader :uri, :retries_on, :retry_on_transient_errors
 
-    def initialize(url, open_timeout: nil, read_timeout: nil, write_timeout: nil, retries_on: [])
+    def initialize(url, open_timeout: nil, read_timeout: nil, write_timeout: nil, retries_on: [], retry_on_transient_errors: false)
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
       @http_client.open_timeout = open_timeout if open_timeout.present?
@@ -18,6 +31,7 @@ module LagoHttpClient
       @http_client.write_timeout = write_timeout if write_timeout.present?
       @http_client.use_ssl = true if uri.scheme == "https"
       @retries_on = retries_on
+      @retry_on_transient_errors = retry_on_transient_errors
     end
 
     def post(body, headers)
@@ -133,19 +147,42 @@ module LagoHttpClient
     def request(req, params = nil)
       attempt = 0
 
-      response = begin
+      begin
         attempt += 1
-        http_client.request(req, params)
+        response = http_client.request(req, params)
+        raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+        response
       rescue => e
-        if retries_on.include?(e.class)
-          retry if attempt < MAX_RETRIES_ATTEMPTS
-        else
-          raise
+        if retryable?(e) && attempt < MAX_RETRIES_ATTEMPTS
+          backoff
+          retry
         end
-      end
 
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-      response
+        raise
+      end
+    end
+
+    # An error is retryable when its class was explicitly opted in through
+    # `retries_on:`, or when `retry_on_transient_errors` is enabled and the error
+    # is a known transient failure (a connection-level exception or a transient
+    # HTTP status such as 502/503).
+    def retryable?(error)
+      return true if retries_on.include?(error.class)
+      return false unless retry_on_transient_errors
+
+      transient_exception?(error) || transient_http_error?(error)
+    end
+
+    def transient_exception?(error)
+      TRANSIENT_ERROR_CLASSES.any? { |klass| error.is_a?(klass) }
+    end
+
+    def transient_http_error?(error)
+      error.is_a?(::LagoHttpClient::HttpError) && RETRYABLE_HTTP_STATUSES.include?(error.error_code.to_i)
+    end
+
+    def backoff
+      sleep(rand(RETRY_BACKOFF_RANGE))
     end
   end
 end

@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 class Wallet < ApplicationRecord
+  include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include Currencies
+  include ConnectionResolvable
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -14,9 +16,10 @@ class Wallet < ApplicationRecord
 
   has_many :wallet_targets
   has_many :billable_metrics, through: :wallet_targets
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
 
   has_many :alerts, class_name: "UsageMonitoring::Alert"
-  has_many :triggered_alerts, class_name: "UsageMonitoring::TriggeredAlert"
+  has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -156,6 +159,7 @@ end
 #  paid_top_up_min_amount_cents        :bigint
 #  payment_method_type                 :enum             default("provider"), not null
 #  priority                            :integer          default(50), not null
+#  purchase_order_number               :string
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null

@@ -27,6 +27,16 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
       end
     end
 
+    context "when the advisory lock cannot be acquired" do
+      before do
+        allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "raises a lock acquisition failure" do
+        expect { create_service.call }.to raise_error(BaseService::LockAcquisitionFailure)
+      end
+    end
+
     context "with payment_provider_id" do
       let(:payment_provider_id) { create(:stripe_provider).id }
 

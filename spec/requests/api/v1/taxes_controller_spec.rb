@@ -103,6 +103,18 @@ RSpec.describe Api::V1::TaxesController do
       expect(json[:tax][:code]).to eq(tax.code)
     end
 
+    context "when the tax is applied to the default billing entity" do
+      let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+      it "returns applied_to_organization true with the billing entity code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:tax][:applied_to_organization]).to eq(true)
+        expect(json[:tax][:applied_to_billing_entities_codes]).to eq([organization.default_billing_entity.code])
+      end
+    end
+
     context "when tax does not exist" do
       let(:tax_code) { SecureRandom.uuid }
 
@@ -157,6 +169,21 @@ RSpec.describe Api::V1::TaxesController do
       expect(json[:taxes].count).to eq(1)
       expect(json[:taxes].first[:lago_id]).to eq(tax.id)
       expect(json[:taxes].first[:code]).to eq(tax.code)
+    end
+
+    context "when the tax is applied to the default billing entity" do
+      subject { get_with_token(organization, "/api/v1/taxes") }
+
+      let!(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+      it "returns applied_to_organization true with the billing entity code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        tax_json = json[:taxes].find { |t| t[:lago_id] == tax.id }
+        expect(tax_json[:applied_to_organization]).to eq(true)
+        expect(tax_json[:applied_to_billing_entities_codes]).to eq([organization.default_billing_entity.code])
+      end
     end
 
     context "with pagination" do

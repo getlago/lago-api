@@ -25,12 +25,14 @@ RSpec.describe PaymentProviders::StripeService do
           code:,
           name:,
           success_redirect_url:,
-          supports_3ds: true
+          supports_3ds: true,
+          require_terms_of_service_consent: true
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
           .with(result.stripe_provider)
         expect(result.stripe_provider.supports_3ds).to be(true)
+        expect(result.stripe_provider.require_terms_of_service_consent).to be(true)
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 
@@ -124,6 +126,38 @@ RSpec.describe PaymentProviders::StripeService do
             success_redirect_url:
           )
         end
+      end
+    end
+
+    context "when consent collection changes on an existing provider" do
+      let(:stripe_provider) do
+        create(:stripe_provider, organization:, code:, name:, secret_key: "secret", require_terms_of_service_consent: false)
+      end
+
+      before { stripe_provider }
+
+      it "enqueues a job to expire the connection's payment intents" do
+        stripe_service.create_or_update(
+          id: stripe_provider.id,
+          organization_id: organization.id,
+          code:,
+          name:,
+          require_terms_of_service_consent: true
+        )
+
+        expect(PaymentProviders::Stripe::ExpirePaymentIntentsJob).to have_been_enqueued.with(stripe_provider)
+      end
+
+      it "does not enqueue the job when the value is unchanged" do
+        stripe_service.create_or_update(
+          id: stripe_provider.id,
+          organization_id: organization.id,
+          code:,
+          name:,
+          require_terms_of_service_consent: false
+        )
+
+        expect(PaymentProviders::Stripe::ExpirePaymentIntentsJob).not_to have_been_enqueued
       end
     end
 

@@ -5,14 +5,13 @@ require "rails_helper"
 Rspec.describe ChargeModels::CustomService do
   subject(:apply_custom_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:aggregation) { 10 }
   let(:total_aggregated_units) { nil }
   let(:full_units_number) { BigDecimal("10.0") }

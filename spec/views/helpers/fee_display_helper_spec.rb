@@ -45,6 +45,72 @@ RSpec.describe FeeDisplayHelper do
     end
   end
 
+  describe ".should_display_subscription_fee?" do
+    subject { helper.should_display_subscription_fee?(invoice_subscription) }
+
+    let(:invoice) { create(:invoice) }
+    let(:subscription) { create(:subscription) }
+
+    let(:invoice_subscription) do
+      create(:invoice_subscription, invoice:, subscription:)
+    end
+
+    context "when invoice_subscription is blank" do
+      let(:invoice_subscription) { nil }
+
+      it { is_expected.to be false }
+    end
+
+    context "when the invoice is progressive billing" do
+      before { allow(invoice).to receive(:progressive_billing?).and_return(true) }
+
+      it { is_expected.to be false }
+    end
+
+    context "when there is no charge fee and no fixed charge fee" do
+      before do
+        create(:fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 0)
+      end
+
+      it "displays the subscription fee even when it is zero" do
+        expect(subject).to be true
+      end
+    end
+
+    context "when there is a positive usage charge fee and a zero subscription fee" do
+      before do
+        create(:charge_fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 500)
+        create(:fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 0)
+      end
+
+      it "hides the zero subscription fee" do
+        expect(subject).to be false
+      end
+    end
+
+    context "when there is a positive fixed charge fee and a zero subscription fee" do
+      before do
+        create(:fixed_charge_fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 500)
+        create(:fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 0)
+      end
+
+      it "hides the zero subscription fee" do
+        expect(subject).to be false
+      end
+    end
+
+    context "when there is a positive fixed charge fee and a positive subscription fee" do
+      before do
+        create(:fixed_charge_fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 500)
+        create(:fee, subscription_id: subscription.id, invoice_id: invoice.id, amount_cents: 300)
+      end
+
+      it "displays the subscription fee" do
+        expect(subject).to be true
+      end
+    end
+  end
+
   describe ".grouped_by_display" do
     let(:charge) { create(:standard_charge, properties:) }
     let(:fee) { create(:fee, charge:, fee_type: "charge", grouped_by:, total_aggregated_units: 10) }

@@ -6,7 +6,7 @@ RSpec.describe ::V1::EventErrorSerializer do
   subject(:serializer) { described_class.new(event_error, root_name: "event_error") }
 
   let(:event_error) do
-    OpenStruct.new(
+    Webhooks::Events::ErrorService::EventError.new(
       error: {transaction_id: ["value_already_exist"]},
       event: create(:received_event)
     )

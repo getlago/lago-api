@@ -103,6 +103,54 @@ RSpec.describe WalletTransactionsQuery do
     end
   end
 
+  context "when filtering by metadata" do
+    let(:wallet_transaction_first) { create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "alpha"}]) }
+    let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "beta"}]) }
+    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, metadata: []) }
+
+    let(:filters) { {metadata: {"site_id" => "alpha"}} }
+
+    it "returns only the transaction tagged with that key and value" do
+      expect(returned_ids).to eq([wallet_transaction_first.id])
+    end
+
+    context "with several key/value pairs" do
+      let(:wallet_transaction_first) do
+        create(:wallet_transaction, wallet:, metadata: [{"key" => "site_id", "value" => "alpha"}, {"key" => "tier", "value" => "pro"}])
+      end
+      let(:filters) { {metadata: {"site_id" => "alpha", "tier" => "pro"}} }
+
+      it "requires every pair to match (containment)" do
+        expect(returned_ids).to eq([wallet_transaction_first.id])
+      end
+    end
+
+    context "when no transaction carries the pair" do
+      let(:filters) { {metadata: {"site_id" => "missing"}} }
+
+      it "returns nothing" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when the filter value is blank" do
+      let(:filters) { {metadata: {"site_id" => ""}} }
+
+      it "carries no constraint rather than matching empty values" do
+        expect(returned_ids.count).to eq(3)
+      end
+    end
+
+    context "when the stored value is a number" do
+      let(:wallet_transaction_first) { create(:wallet_transaction, wallet:, metadata: [{"key" => "count", "value" => 100}]) }
+      let(:filters) { {metadata: {"count" => "100"}} }
+
+      it "matches the numeric value against the string filter" do
+        expect(returned_ids).to eq([wallet_transaction_first.id])
+      end
+    end
+  end
+
   context "when transaction_status filter is present" do
     # Override outer context transactions to avoid interference
     let(:wallet_transaction_first) { nil }

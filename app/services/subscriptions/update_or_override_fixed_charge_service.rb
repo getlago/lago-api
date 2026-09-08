@@ -20,6 +20,7 @@ module Subscriptions
     def call
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "subscription") unless subscription
+      return result.single_validation_failure!(error_code: "subscription_incomplete") if subscription.incomplete?
       return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
 
       ActiveRecord::Base.transaction do

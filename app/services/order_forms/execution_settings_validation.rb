@@ -24,5 +24,14 @@ module OrderForms
 
       result.single_validation_failure!(field: :execute_at, error_code: "invalid_date")
     end
+
+    # The dates the deal is built on are only checked for futureness when it is approved, and the
+    # execution flow refuses them once past, so an execution scheduled after the earliest of them
+    # would fail instead of billing anything.
+    def validate_deal_expiration(execute_at:, quote_version:)
+      return if QuoteVersions::DealExpiration.covers?(quote_version, execute_at)
+
+      result.single_validation_failure!(field: :execute_at, error_code: "after_deal_expiration")
+    end
   end
 end

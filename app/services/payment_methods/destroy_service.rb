@@ -2,6 +2,8 @@
 
 module PaymentMethods
   class DestroyService < BaseService
+    Result = BaseResult[:payment_method]
+
     def initialize(payment_method:)
       @payment_method = payment_method
 

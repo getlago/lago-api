@@ -30,13 +30,13 @@ module Charges
       private
 
       def validate_billable_metric
-        return unless charge.billable_metric.latest_agg?
+        return unless charge.billable_metric&.latest_agg?
 
         add_error(field: :billable_metric, error_code: "invalid_value")
       end
 
       def ranges
-        properties["graduated_percentage_ranges"].map(&:with_indifferent_access)
+        (properties["graduated_percentage_ranges"] || []).map(&:with_indifferent_access)
       end
 
       def validate_rate_and_amounts(range)

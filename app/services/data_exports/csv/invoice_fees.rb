@@ -34,8 +34,8 @@ module DataExports
           fee_item_grouped_by
           subscription_external_id
           subscription_plan_code
-          fee_from_date_utc
-          fee_to_date_utc
+          fee_from_date
+          fee_to_date
           fee_amount_currency
           fee_units
           fee_precise_unit_amount
@@ -54,6 +54,8 @@ module DataExports
 
       def serialize_item(invoice, csv)
         serialized_invoice = invoice_serializer_klass.new(invoice).serialize
+        invoice_subscriptions = invoice.invoice_subscriptions.index_by(&:subscription_id)
+        timezone = invoice.customer.applicable_timezone
 
         invoice
           .fees
@@ -70,6 +72,12 @@ module DataExports
           .lazy
           .each do |fee|
             serialized_fee = fee_serializer_klass.new(fee).serialize
+            invoice_subscription = invoice_subscriptions[fee.subscription_id]
+
+            billing_period = if invoice_subscription || fee.add_on?
+              DataExports::Csv::ResolveFeeBillingPeriodService.call!(fee:, invoice_subscription:)
+            end
+            fee_from_date, fee_to_date = fee_period_dates(fee, billing_period, timezone)
 
             serialized_subscription = {
               external_id: fee.subscription&.external_id,
@@ -90,8 +98,8 @@ module DataExports
               serialized_fee.dig(:item, :grouped_by),
               serialized_subscription[:external_id],
               serialized_subscription[:plan_code],
-              serialized_fee[:from_date],
-              serialized_fee[:to_date],
+              fee_from_date,
+              fee_to_date,
               serialized_fee[:total_amount_currency],
               serialized_fee[:units],
               serialized_fee[:precise_unit_amount],
@@ -99,6 +107,22 @@ module DataExports
               serialized_fee[:total_amount_cents]
             ]
         end
+      end
+
+      def period_date(datetime, timezone)
+        datetime&.in_time_zone(timezone)&.to_date
+      end
+
+      def fee_period_dates(fee, billing_period, timezone)
+        datetimes = [billing_period&.from_datetime, billing_period&.to_datetime]
+
+        # Add-on periods use the UTC date of each timestamp.
+        # Unlike other fees, do not convert them to the customer timezone.
+        if fee.add_on?
+          return datetimes.map { |datetime| datetime&.to_date }
+        end
+
+        datetimes.map { |datetime| period_date(datetime, timezone) }
       end
 
       def collection

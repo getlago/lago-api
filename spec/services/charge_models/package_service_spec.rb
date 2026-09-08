@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::PackageService do
   subject(:apply_package_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
@@ -16,7 +15,7 @@ RSpec.describe ChargeModels::PackageService do
     aggregation_result.aggregation = aggregation
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:aggregation) { 121 }
 
   let(:charge) do

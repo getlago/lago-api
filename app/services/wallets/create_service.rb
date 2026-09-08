@@ -40,6 +40,7 @@ module Wallets
         status: :active,
         paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
         paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents],
+        purchase_order_number: params[:purchase_order_number],
         traceable: traceable?
       }
 
@@ -58,26 +59,29 @@ module Wallets
         attributes[:payment_method_id] = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
+      if params[:billing_entity_id].present? || params[:billing_entity_code].present?
         return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
         attributes[:billing_entity_id] = billing_entity.id
       end
 
       wallet = Wallet.new(attributes)
+      recurring_transaction_rule = nil
 
       ActiveRecord::Base.transaction do
-        if currency.present? && (!organization_flag_enabled?(:multi_currency) || customer.currency.blank?)
+        if currency.present? && customer.currency.blank?
           Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = organization_flag_enabled?(:multi_currency) ? (currency || wallet.customer.currency) : wallet.customer.currency
+        wallet.currency = currency || wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet
 
         if params[:recurring_transaction_rules].present?
-          Wallets::RecurringTransactionRules::CreateService.call!(wallet:, wallet_params: params)
+          recurring_transaction_rule = Wallets::RecurringTransactionRules::CreateService
+            .call!(wallet:, wallet_params: params)
+            .recurring_transaction_rule
         end
 
         if params[:invoice_custom_section].present?
@@ -97,7 +101,7 @@ module Wallets
 
       SendWebhookJob.perform_after_commit("wallet.created", wallet)
 
-      schedule_top_up(wallet)
+      schedule_top_up(wallet, recurring_transaction_rule)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -110,21 +114,24 @@ module Wallets
 
     attr_reader :params
 
-    def schedule_top_up(wallet)
+    def schedule_top_up(wallet, recurring_transaction_rule)
       return unless positive_amount?(paid_credits) || positive_amount?(granted_credits)
+
+      transaction_params = {
+        wallet_id: wallet.id,
+        paid_credits: paid_credits,
+        granted_credits: granted_credits,
+        source: :manual,
+        metadata: params[:transaction_metadata],
+        name: params[:transaction_name],
+        priority: params[:transaction_priority],
+        ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation],
+        purchase_order_number: recurring_transaction_rule&.resolved_purchase_order_number || wallet.purchase_order_number
+      }
 
       WalletTransactions::CreateJob.perform_after_commit(
         organization_id:,
-        params: {
-          wallet_id: wallet.id,
-          paid_credits: paid_credits,
-          granted_credits: granted_credits,
-          source: :manual,
-          metadata: params[:transaction_metadata],
-          name: params[:transaction_name],
-          priority: params[:transaction_priority],
-          ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
-        }
+        params: transaction_params
       )
     end
 

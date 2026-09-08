@@ -44,6 +44,28 @@ RSpec.describe Wallets::UpdateService do
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
+    context "when purchase_order_number is present" do
+      let(:params) do
+        super().merge(purchase_order_number: "PO-WALLET-123")
+      end
+
+      it "updates the wallet purchase order number" do
+        expect(result).to be_success
+        expect(result.wallet.reload.purchase_order_number).to eq("PO-WALLET-123")
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        super().merge(purchase_order_number: "a" * 256)
+      end
+
+      it "returns a validation error" do
+        expect(result).to be_failure
+        expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+      end
+    end
+
     it "sends a `wallet.updated` webhook" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.updated", Wallet)
     end
@@ -196,6 +218,19 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when wallet is terminated" do
+      let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+      it "returns a validation failure and does not update the wallet" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:wallet_id]).to eq(["wallet_is_terminated"])
+
+        expect(wallet.reload.name).not_to eq("new name")
+        expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
     context "with invalid priority" do
       let(:priority) { 55 }
 
@@ -311,6 +346,71 @@ RSpec.describe Wallets::UpdateService do
           expect(rule.granted_credits).to eq(105.0)
 
           expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+
+      context "when editing existing rule purchase_order_number" do
+        let(:rules) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              purchase_order_number: "PO-RULE-123"
+            }
+          ]
+        end
+
+        it "updates the recurring rule purchase order number" do
+          expect(result).to be_success
+
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+          expect(rule.id).to eq(recurring_transaction_rule.id)
+          expect(rule.purchase_order_number).to eq("PO-RULE-123")
+        end
+      end
+
+      context "when replacing rule with purchase_order_number" do
+        let(:rules) do
+          [
+            {
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              purchase_order_number: "PO-REPLACEMENT-123"
+            }
+          ]
+        end
+
+        it "creates the replacement rule with the purchase order number" do
+          expect(result).to be_success
+
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+          expect(rule.id).not_to eq(recurring_transaction_rule.id)
+          expect(rule.purchase_order_number).to eq("PO-REPLACEMENT-123")
+        end
+      end
+
+      context "when recurring rule purchase_order_number is too long" do
+        let(:rules) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              purchase_order_number: "a" * 256
+            }
+          ]
+        end
+
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
         end
       end
 
@@ -897,10 +997,6 @@ RSpec.describe Wallets::UpdateService do
     context "when multi_entity_billing is enabled" do
       let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
 
-      before do
-        organization.update!(feature_flags: ["multi_entity_billing"])
-      end
-
       context "when billing_entity_code is provided" do
         let(:params) do
           {
@@ -1110,22 +1206,6 @@ RSpec.describe Wallets::UpdateService do
             expect(wallet.reload.billing_entity_id).to eq(current_entity.id)
           end
         end
-      end
-    end
-
-    context "when multi_entity_billing is not enabled" do
-      let(:params) do
-        {
-          id: wallet&.id,
-          billing_entity_code: "be_code"
-        }
-      end
-
-      before { create(:billing_entity, organization:, code: "be_code") }
-
-      it "does not assign the billing entity even if code is provided" do
-        expect(result).to be_success
-        expect(result.wallet.billing_entity_id).to be_nil
       end
     end
   end

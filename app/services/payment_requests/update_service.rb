@@ -2,6 +2,8 @@
 
 module PaymentRequests
   class UpdateService < BaseService
+    Result = BaseResult[:payable]
+
     def initialize(payable:, params:, webhook_notification: false)
       @payable = payable
       @params = params

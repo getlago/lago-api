@@ -19,12 +19,13 @@ module Wallets
 
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
+      return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
 
-      if organization_flag_enabled?(:multi_entity_billing) && billing_entity_param_sent?
+      if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
           return result.not_found_failure!(resource: "billing_entity")
         end
@@ -37,6 +38,7 @@ module Wallets
         wallet.code = params[:code] if params[:code]
         wallet.priority = params[:priority] if params[:priority]
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
+        wallet.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
@@ -46,7 +48,14 @@ module Wallets
           Wallets::RecurringTransactionRules::UpdateService.call!(wallet:, params: params[:recurring_transaction_rules])
         end
 
-        wallet.recurring_transaction_rules.find_each { |rule| validate_rule!(rule:) }
+        # NOTE: validate through the .active scope (fresh query) rather than
+        # the bare association: the activity-log middleware serializes the
+        # wallet BEFORE the update, caching recurring_transaction_rules with
+        # their pre-update values — iterating the cached target validated the
+        # STALE rule against the freshly assigned min/max bounds (false
+        # invalid_recurring_rule) and never the values just written. The scope
+        # also skips terminated rules, which must not block the update.
+        wallet.recurring_transaction_rules.active.find_each { |rule| validate_rule!(rule:) }
 
         if params.key?(:applies_to)
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)

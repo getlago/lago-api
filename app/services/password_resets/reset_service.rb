@@ -2,6 +2,8 @@
 
 module PasswordResets
   class ResetService < BaseService
+    Result = BaseResult
+
     def initialize(token:, new_password:)
       @token = token
       @new_password = new_password
@@ -25,8 +27,7 @@ module PasswordResets
         user.save!
 
         UsersService
-          .new
-          .login(user.email, new_password)
+          .call(:login, user.email, new_password)
           .tap { password_reset.destroy! }
       end
 

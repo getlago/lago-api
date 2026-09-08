@@ -22,14 +22,9 @@ RSpec.describe Quotes::CreateService do
       billing_items: {},
       content: "Test content",
       order_type: :subscription_creation,
-      owners: [owner.id],
-      currency: "USD",
-      start_date:,
-      end_date:
+      owners: [owner.id]
     }
   end
-  let(:start_date) { Date.new(2025, 2, 11) }
-  let(:end_date) { Date.new(2025, 3, 12) }
 
   describe ".call" do
     let(:result) { create_service.call }
@@ -50,15 +45,122 @@ RSpec.describe Quotes::CreateService do
           expect(result.quote.current_version.draft?).to eq(true)
           expect(result.quote.current_version.content).to eq("Test content")
           expect(result.quote.current_version.billing_items).to eq({})
-          expect(result.quote.current_version.currency).to eq("USD")
-          expect(result.quote.current_version.start_date).to eq(start_date)
-          expect(result.quote.current_version.end_date).to eq(end_date)
+          expect(result.quote.current_version.currency).to eq("EUR")
+        end
+      end
+
+      it "enqueues a quote.created webhook carrying the initial version" do
+        expect { create_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.created", QuoteVersion)
+      end
+
+      it "produces a quote.created activity log for the quote" do
+        expect(Utils::ActivityLog).to have_produced("quote.created").after_commit.with(result.quote)
+      end
+
+      it "does not produce a quote.version_created activity log for the initial version" do
+        result
+
+        expect(Utils::ActivityLog).not_to have_produced("quote.version_created")
+      end
+    end
+
+    context "when the customer has no currency", :premium do
+      let(:customer) { create(:customer, organization:, currency: nil) }
+
+      it "falls back to the billing entity default currency" do
+        expect(result).to be_success
+        expect(customer.billing_entity.default_currency).to eq("USD")
+        expect(result.quote.current_version.currency).to eq("USD")
+      end
+
+      context "when the quote names another billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:, default_currency: "EUR") }
+        let(:create_params) { super().merge(billing_entity_id: billing_entity.id) }
+
+        it "falls back to that entity's default currency" do
+          expect(result).to be_success
+          expect(result.quote.current_version.currency).to eq("EUR")
+        end
+      end
+    end
+
+    context "when the quote names a billing entity", :premium do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:create_params) { super().merge(billing_entity_id: billing_entity.id) }
+
+      it "pins it on the version" do
+        expect(result).to be_success
+        expect(result.quote.current_version.billing_entity_id).to eq(billing_entity.id)
+      end
+    end
+
+    context "when the quote names an unknown billing entity", :premium do
+      let(:create_params) { super().merge(billing_entity_id: "00000000-0000-0000-0000-000000000000") }
+
+      it "returns a validation failure from the version validator" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+      end
+
+      it "does not create the quote" do
+        expect { result }.not_to change(Quote, :count)
+      end
+    end
+
+    context "when the quote is one_off", :premium do
+      let(:add_on) { create(:add_on, organization:) }
+      let(:create_params) do
+        {
+          order_type: :one_off,
+          billing_items: {
+            "addOns" => [
+              {
+                "id" => add_on.id,
+                "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
+                "type" => "add_on",
+                "payload" => {
+                  "code" => add_on.code,
+                  "units" => 1,
+                  "unitAmountCents" => 10_000,
+                  "totalAmountCents" => 10_000
+                }
+              }
+            ]
+          }
+        }
+      end
+
+      it "creates the quote with its version" do
+        expect(result).to be_success
+        expect(result.quote.order_type).to eq("one_off")
+        expect(result.quote.current_version.billing_items).to eq(create_params[:billing_items])
+      end
+
+      context "when the payload is invalid" do
+        let(:create_params) do
+          {
+            order_type: :one_off,
+            billing_items: {
+              "addOns" => [{"id" => "not-a-uuid", "localId" => "l1", "type" => "add_on", "payload" => {}}]
+            }
+          }
+        end
+
+        it "returns a validation failure and persists nothing" do
+          expect { result }.not_to change(Quote, :count)
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({"billing_items.addOns.0.id": ["invalid_format"]})
         end
       end
     end
 
     context "when subscription is required and provided correctly", :premium do
-      let(:subscription) { create(:subscription, organization:, customer:) }
+      let(:plan) { create(:plan, organization:, amount_currency: "USD") }
+      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
       let(:create_params) do
         {
           billing_items: {},
@@ -72,6 +174,11 @@ RSpec.describe Quotes::CreateService do
         expect(result).to be_success
         expect(result.quote.subscription_id).to eq(subscription.id)
         expect(result.quote.order_type).to eq("subscription_amendment")
+      end
+
+      it "takes the currency from the subscription plan" do
+        expect(customer.currency).to eq("EUR")
+        expect(result.quote.current_version.currency).to eq("USD")
       end
     end
 
@@ -101,6 +208,23 @@ RSpec.describe Quotes::CreateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.message).to eq("subscription_not_found")
+      end
+    end
+
+    context "when the version creation fails with a non-validation failure", :premium do
+      before do
+        allow(QuoteVersions::CreateService).to receive(:call!)
+          .and_raise(BaseService::ForbiddenFailure.new(BaseResult.new, code: "active_version_exists"))
+      end
+
+      it "surfaces the failure instead of letting it escape" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("active_version_exists")
+      end
+
+      it "rolls the quote back" do
+        expect { result }.not_to change(Quote, :count)
       end
     end
 

@@ -3,6 +3,8 @@
 module PaymentProviders
   module Gocardless
     class HandleIncomingWebhookService < BaseService
+      Result = BaseResult[:events]
+
       def initialize(organization_id:, body:, signature:, code: nil)
         @organization_id = organization_id
         @body = body

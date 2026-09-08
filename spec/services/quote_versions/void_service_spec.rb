@@ -19,9 +19,38 @@ RSpec.describe QuoteVersions::VoidService do
           expect(result.quote_version.voided?).to eq(true)
           expect(result.quote_version.void_reason).to eq(reason)
           expect(result.quote_version.voided_at).to eq(Time.current)
-          expect(result.quote_version.share_token).to eq(nil)
           expect(result.quote_version.approved_at).to eq(nil)
         end
+      end
+
+      it "enqueues a quote.voided webhook" do
+        expect { void_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.voided", quote_version)
+      end
+
+      it "produces a quote.voided activity log" do
+        void_service.call
+
+        expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
+      end
+    end
+
+    context "when the version is superseded by a clone", :premium do
+      let(:reason) { "superseded" }
+
+      it "enqueues a quote.voided webhook for the superseded version" do
+        expect { void_service.call }
+          .to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("quote.voided", quote_version)
+
+        expect(quote_version.reload.void_reason).to eq("superseded")
+      end
+
+      it "produces a quote.voided activity log for the superseded version" do
+        void_service.call
+
+        expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
       end
     end
 
@@ -115,6 +144,18 @@ RSpec.describe QuoteVersions::VoidService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
       end
     end
   end

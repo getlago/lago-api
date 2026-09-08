@@ -7,6 +7,7 @@ module WalletTransactions
       valid_paid_credits_amount? if args[:paid_credits]
       valid_granted_credits_amount? if args[:granted_credits]
       valid_voided_credits_amount? if args[:voided_credits] && result.current_wallet
+      valid_voided_transaction? if args[:voided_transaction_id].present? && result.current_wallet
       valid_metadata? if args[:metadata]
       valid_name? if args[:name]
       valid_payment_method?
@@ -81,6 +82,24 @@ module WalletTransactions
         return add_error(field: :voided_credits, error_code: "insufficient_credits")
       end
 
+      true
+    end
+
+    def valid_voided_transaction?
+      # Targeting a specific grant relies on the per-transaction ledger, which only traceable wallets keep.
+      unless result.current_wallet.traceable?
+        return add_error(field: :voided_transaction_id, error_code: "wallet_not_traceable")
+      end
+
+      transaction = result.current_wallet.wallet_transactions.inbound.find_by(id: args[:voided_transaction_id])
+
+      return add_error(field: :voided_transaction_id, error_code: "wallet_transaction_not_found") unless transaction
+
+      if transaction.remaining_amount_cents.to_i <= 0
+        return add_error(field: :voided_transaction_id, error_code: "no_remaining_amount")
+      end
+
+      result.voided_wallet_transaction = transaction
       true
     end
 

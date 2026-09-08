@@ -176,7 +176,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
       context "when there is no fees" do
         let(:fee_subscription) { nil }
         let(:fee_charge) { nil }
-        let(:result) { BaseService::Result.new }
+        let(:result) { Invoices::ComputeAmountsFromFees::Result.new }
 
         before do
           allow(Invoices::ComputeAmountsFromFees).to receive(:call)
@@ -199,7 +199,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
 
       context "with zero amount invoice" do
         let(:fee_charge) { nil }
-        let(:result) { BaseService::Result.new }
+        let(:result) { Invoices::ComputeAmountsFromFees::Result.new }
         let(:fee_subscription) do
           create(
             :fee,
@@ -251,7 +251,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
     end
 
     context "when there is NO tax provider" do
-      let(:result) { BaseService::Result.new }
+      let(:result) { Invoices::ComputeAmountsFromFees::Result.new }
 
       before do
         allow(Invoices::ComputeAmountsFromFees).to receive(:call)

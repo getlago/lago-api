@@ -2,6 +2,8 @@
 
 module WebhookEndpoints
   class DestroyService < BaseService
+    Result = BaseResult[:webhook_endpoint]
+
     def initialize(webhook_endpoint:)
       @webhook_endpoint = webhook_endpoint
 

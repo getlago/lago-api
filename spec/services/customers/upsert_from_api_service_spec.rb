@@ -35,7 +35,6 @@ RSpec.describe Customers::UpsertFromApiService do
   end
 
   before do
-    allow(SendWebhookJob).to receive(:perform_later)
     allow(CurrentContext).to receive(:source).and_return("api")
   end
 
@@ -99,13 +98,17 @@ RSpec.describe Customers::UpsertFromApiService do
   it "calls SendWebhookJob with customer.created" do
     customer = result.customer
 
-    expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", customer)
+    expect(SendWebhookJob).to have_been_enqueued.with("customer.created", customer)
   end
 
   it "produces an activity log" do
     result = described_class.call(organization:, params: create_args)
 
     expect(Utils::ActivityLog).to have_produced("customer.created").after_commit.with(result.customer)
+  end
+
+  it "does not refresh the invoices search terms" do
+    expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
   end
 
   context "when organization has multiple billing entities" do
@@ -280,20 +283,10 @@ RSpec.describe Customers::UpsertFromApiService do
         create(:invoice, customer: customer)
       end
 
-      it "does not update the billing_entity of the customer" do
+      it "updates the billing_entity of the customer" do
         expect(result).to be_success
         expect(result.customer).to eq(customer)
-        expect(result.customer.billing_entity).to eq(billing_entity_2)
-      end
-
-      context "when multi_entity_billing feature flag is enabled" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
-        it "updates the billing_entity of the customer" do
-          expect(result).to be_success
-          expect(result.customer).to eq(customer)
-          expect(result.customer.billing_entity).to eq(billing_entity)
-        end
+        expect(result.customer.billing_entity).to eq(billing_entity)
       end
     end
 
@@ -630,13 +623,26 @@ RSpec.describe Customers::UpsertFromApiService do
     it "calls SendWebhookJob with customer.updated" do
       result
 
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", customer)
     end
 
     it "produces an activity log" do
       result = described_class.call(organization:, params: create_args)
 
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(result.customer)
+    end
+
+    it "refreshes the invoices search terms when a searchable field changes" do
+      expect { result }
+        .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+    end
+
+    context "when no searchable field changes" do
+      let(:create_args) { {external_id:, city: "Paris"} }
+
+      it "does not refresh the invoices search terms" do
+        expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+      end
     end
 
     context "with provider customer" do
@@ -843,11 +849,9 @@ RSpec.describe Customers::UpsertFromApiService do
         customer.update!(currency: subscription.plan.amount_currency)
       end
 
-      it "fails is we change the subscription" do
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:currency)
-        expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+      it "updates the customer currency (it is now a default preference)" do
+        expect(result).to be_success
+        expect(customer.reload.currency).to eq("CAD")
       end
     end
 
@@ -1042,16 +1046,17 @@ RSpec.describe Customers::UpsertFromApiService do
 
         before { payment_method }
 
-        it "removes the payment provider from customer" do
+        it "removes the payment provider and its code from customer" do
           expect(result).to be_success
 
           expect(result.customer.payment_provider).to be_nil
+          expect(result.customer.payment_provider_code).to be_nil
         end
 
-        it "does not discard the provider customer" do
+        it "discards the provider customer" do
           expect(result).to be_success
 
-          expect(stripe_customer.reload).not_to be_discarded
+          expect(stripe_customer.reload).to be_discarded
         end
 
         it "discards the old provider customer's payment methods" do
@@ -1126,14 +1131,12 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
-          # NOTE: This describes a scenario with incorrect behavior that currently exists.
-          #       The new provider customer does not get created and the previous one is not discarded
-          it "does not create the gocardless provider customer" do
+          it "creates the gocardless provider customer" do
             expect(result).to be_success
 
             expect(result.customer.payment_provider).to eq("gocardless")
             expect(result.customer.payment_provider_code).to eq("gocardless_1")
-            expect(result.customer.provider_customer).to be_nil
+            expect(result.customer.provider_customer).to be_present
           end
 
           it "does not discard the provider customer" do
@@ -1142,10 +1145,10 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(stripe_customer.reload).not_to be_discarded
           end
 
-          it "does not discard the old provider customer's payment methods" do
+          it "discards the old provider customer's payment methods" do
             expect(result).to be_success
 
-            expect(payment_method.reload).not_to be_discarded
+            expect(payment_method.reload).to be_discarded
           end
         end
       end
@@ -1262,14 +1265,6 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
-          # NOTE: This bypasses an issue with the check:
-          #
-          #       if customer.provider_customer&.provider_customer_id
-          #         PaymentProviderCustomers::UpdateService.call(customer)
-          #       end
-          #
-          #       Since customer is not reloaded, it still checks the previous provider_customer state,
-          #       which has a provider_customer_id
           before do
             allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
           end
@@ -1280,6 +1275,16 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(result.customer.payment_provider).to eq("stripe")
             expect(result.customer.payment_provider_code).to eq("stripe_2")
             expect(result.customer.provider_customer.provider_customer_id).to be_nil
+          end
+
+          # NOTE: the customer is reloaded after create_or_update_provider_customer,
+          #       so the provider_customer_id check reflects the cleared id and the
+          #       provider update service is not triggered on a stale object.
+          it "does not call the payment provider update service" do
+            allow(PaymentProviderCustomers::UpdateService).to receive(:call)
+
+            expect(result).to be_success
+            expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call)
           end
 
           it "does not discard the provider customer" do

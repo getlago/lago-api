@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module Taxes
       class BaseService < Integrations::Aggregator::BaseService
+        Result = BaseResult[:fees, :succeeded_id, :invoice_id]
+
         SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed jurisHasNoTax].freeze
         CUSTOMER_ADDRESS_INVALID = "customerAddressCouldNotResolve"
         OUT_OF_MEMORY_ERROR = "function_runtime_out_of_memory"

@@ -69,6 +69,106 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "with a plan-limited coupon" do
+      let(:coupon) do
+        create(:coupon, organization:, coupon_type: :percentage, limited_plans: true, percentage_rate: 100)
+      end
+
+      before do
+        tax
+        create(:coupon_plan, coupon:, plan:)
+        create(:applied_coupon, coupon:, customer:, percentage_rate: 100)
+      end
+
+      it "calculates taxes from the discounted fee amount" do
+        invoice = regenerate_result.invoice
+
+        expect(invoice).to have_attributes(
+          fees_amount_cents: 50_500,
+          coupons_amount_cents: 50_500,
+          sub_total_excluding_taxes_amount_cents: 0,
+          taxes_amount_cents: 0,
+          total_amount_cents: 0,
+          payment_status: "succeeded"
+        )
+      end
+    end
+
+    context "with the purchase order number" do
+      before { voided_invoice.update!(purchase_order_number: "PO-ORIGINAL") }
+
+      context "when no purchase_order_number is provided" do
+        it "inherits the value from the voided invoice" do
+          expect(regenerate_result.invoice.purchase_order_number).to eq("PO-ORIGINAL")
+        end
+
+        it "writes the inherited value to the search terms" do
+          invoice = regenerate_result.invoice.reload
+
+          expect(invoice.search_terms).to include("PO-ORIGINAL")
+          expect(invoice.search_terms).to include(invoice.number)
+        end
+      end
+
+      context "when a purchase_order_number is provided" do
+        it "stores the normalized provided value on the regenerated invoice" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "  PO-EDITED  "
+          )
+
+          expect(result.invoice.purchase_order_number).to eq("PO-EDITED")
+        end
+
+        it "writes the provided value to the search terms" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "  PO-EDITED  "
+          )
+
+          expect(result.invoice.reload.search_terms).to include("PO-EDITED")
+        end
+      end
+
+      context "when a blank purchase_order_number is provided" do
+        it "clears the value on the regenerated invoice" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "   "
+          )
+
+          expect(result.invoice.purchase_order_number).to be_nil
+        end
+
+        it "keeps the voided invoice value out of the search terms" do
+          result = Invoices::RegenerateFromVoidedService.call!(
+            voided_invoice:, fees_params:, purchase_order_number: "   "
+          )
+
+          expect(result.invoice.reload.search_terms).not_to include("PO-ORIGINAL")
+        end
+      end
+
+      context "when the regenerated invoice is closed instead of finalized" do
+        let(:fees_params) do
+          [
+            {
+              id: original_fee.id,
+              subscription_id: subscription.id,
+              units: 10,
+              unit_amount_cents: 0
+            }
+          ]
+        end
+
+        before { customer.update!(finalize_zero_amount_invoice: :skip) }
+
+        it "writes the purchase order number to the search terms" do
+          invoice = regenerate_result.invoice.reload
+
+          expect(invoice).to be_closed
+          expect(invoice.search_terms).to include("PO-ORIGINAL")
+        end
+      end
+    end
+
     context "when voided fee has pay_in_advance_event_transaction_id" do
       before do
         original_fee.update!(pay_in_advance_event_transaction_id: "txn_123", pay_in_advance: true)
@@ -148,7 +248,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           create(:invoice, :voided, invoice_type: :one_off, customer:, organization:, currency: "EUR")
         end
         let(:original_fee) do
-          create(:one_off_fee, invoice: voided_invoice, add_on:, amount_cents: 1000, unit_amount_cents: 1000)
+          create(:one_off_fee, invoice: voided_invoice, add_on:, subscription:, amount_cents: 1000, unit_amount_cents: 1000)
         end
         let(:fees_params) do
           [{id: original_fee.id, units: 2, unit_amount_cents: 1000}]
@@ -172,6 +272,72 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
 
         it "does not create invoice_subscriptions on the regenerated invoice" do
           expect(regenerate_result.invoice.invoice_subscriptions).to be_empty
+        end
+      end
+    end
+
+    describe "issuing_date and payment_due_date" do
+      let(:regeneration_date) { DateTime.new(2023, 3, 10) }
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          invoice_grace_period: 30,
+          net_payment_term: 30,
+          subscription_invoice_issuing_date_anchor:,
+          subscription_invoice_issuing_date_adjustment:
+        )
+      end
+
+      let(:voided_invoice) do
+        original_invoice
+        travel_to(DateTime.new(2023, 2, 1)) { perform_billing }
+        subscription.invoices.order(:created_at).last.tap { |invoice| invoice.update!(status: :voided) }
+      end
+
+      let(:fees_params) do
+        voided_invoice.fees.map { |fee| {id: fee.id, subscription_id: fee.subscription_id, units: fee.units} }
+      end
+
+      before { voided_invoice }
+
+      shared_examples "an invoice issued at the regeneration date" do
+        it "ignores the voided invoice dates and the grace period" do
+          expect(voided_invoice.issuing_date).to eq(voided_issuing_date)
+
+          travel_to(regeneration_date) do
+            invoice = regenerate_result.invoice
+
+            expect(invoice.issuing_date).to eq(regeneration_date.to_date)
+            expect(invoice.payment_due_date).to eq(regeneration_date.to_date + 30.days)
+          end
+        end
+      end
+
+      context "when aligning the issuing date with the finalization date" do
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+        let(:voided_issuing_date) { Date.new(2023, 3, 3) }
+
+        it_behaves_like "an invoice issued at the regeneration date"
+      end
+
+      context "when keeping the anchor" do
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        context "with the next_period_start anchor" do
+          let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+          let(:voided_issuing_date) { Date.new(2023, 2, 1) }
+
+          it_behaves_like "an invoice issued at the regeneration date"
+        end
+
+        context "with the current_period_end anchor" do
+          let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+          let(:voided_issuing_date) { Date.new(2023, 1, 31) }
+
+          it_behaves_like "an invoice issued at the regeneration date"
         end
       end
     end
@@ -368,6 +534,62 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         expect(regenerated_fee.units).to eq 3
         expect(regenerated_fee.unit_amount_cents).to eq original_fee.unit_amount_cents
         expect(regenerated_fee.amount_cents).to eq 3 * original_fee.unit_amount_cents
+      end
+    end
+
+    context "when a plan charge was soft deleted" do
+      let(:parent_charge) { create(:standard_charge, plan:, organization:) }
+      let(:charge) do
+        create(
+          :graduated_charge,
+          plan:,
+          organization:,
+          parent: parent_charge,
+          code: "client_files_count_2",
+          invoice_display_name: "Active files",
+          properties: {
+            graduated_ranges: [
+              {from_value: 0, to_value: 1, flat_amount: "0", per_unit_amount: "0"},
+              {from_value: 2, to_value: nil, flat_amount: "0", per_unit_amount: "2.37"}
+            ]
+          }
+        )
+      end
+
+      let(:original_invoice) do
+        travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
+        invoice = subscription.invoices.first
+
+        invoice.update!(status: :finalized, voided_at: nil, voided_invoice_id: nil)
+        invoice
+      end
+
+      let(:fees_params) do
+        [
+          {
+            id: original_fee.id,
+            subscription_id: subscription.id,
+            units: original_fee.units
+          },
+          {
+            charge_id: charge.id,
+            subscription_id: subscription.id,
+            units: 2
+          }
+        ]
+      end
+
+      before do
+        original_invoice
+        charge.discard!
+      end
+
+      it "raises a not found error" do
+        expect(voided_invoice).to be_finalized
+        expect(voided_invoice.voided_at).to be_nil
+        expect(voided_invoice.voided_invoice_id).to be_nil
+
+        expect { regenerate_result }.to raise_error(BaseService::NotFoundFailure, "charge_not_found")
       end
     end
 

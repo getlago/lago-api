@@ -2,6 +2,8 @@
 
 module Integrations
   class UpdateService < BaseService
+    Result = BaseResult[:integration]
+
     # Guarantees security logging for integration updates.
     # Subclasses are unaware of the logging — the only requirement
     # is that `result.integration` is set upon the successful `call`.

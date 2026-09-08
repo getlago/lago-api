@@ -8,7 +8,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
   let(:started_at) { Time.zone.parse("2024-04-23 10:02:03") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
   let(:subscription) do
-    create(:subscription, created_at: started_at, started_at:, ending_at:)
+    create(:subscription, created_at: started_at, started_at:, ending_at:, purchase_order_number: "PO-123")
   end
 
   let(:includes) { %i[customer plan entitlements] }
@@ -34,6 +34,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "status" => subscription.status,
           "billing_time" => subscription.billing_time,
           "created_at" => "2024-04-23T10:02:03Z",
+          "purchase_order_number" => "PO-123",
           "ending_at" => ending_at.iso8601,
           "trial_ended_at" => nil,
           "started_at" => "2024-04-23T10:02:03.000Z",
@@ -282,6 +283,21 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "timeout_hours" => activation_rule.timeout_hours,
           "status" => activation_rule.status
         )
+      )
+    end
+  end
+
+  context "when the plan uses the product catalog" do
+    let(:plan) { create(:plan, pricing_type: "product_catalog") }
+    let(:subscription) { create(:subscription, plan:, created_at: started_at, started_at:, ending_at:) }
+
+    it "serializes without plan-level billing period dates" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]).to include(
+        "plan_code" => plan.code,
+        "current_billing_period_started_at" => nil,
+        "current_billing_period_ending_at" => nil
       )
     end
   end

@@ -89,6 +89,26 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    context "when the post processing jobs cannot be enqueued" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(Redis::CannotConnectError.new("no connection"))
+      end
+
+      it "does not keep any of the events" do
+        expect { create_batch_service.call }.to raise_error(Redis::CannotConnectError)
+          .and(not_change(Event, :count))
+      end
+
+      it "does not produce the events on kafka" do
+        allow(Events::KafkaProducerService).to receive(:call!).and_call_original
+
+        expect { create_batch_service.call }.to raise_error(Redis::CannotConnectError)
+
+        expect(Events::KafkaProducerService).not_to have_received(:call!)
+      end
+    end
+
     context "when no events are provided" do
       let(:events_params) { build_params(count: 0) }
 
@@ -261,7 +281,7 @@ RSpec.describe Events::CreateBatchService do
     end
 
     context "with an expression configured on the billable metric" do
-      let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "concat(event.properties.foo, '-bar')") }
+      let(:billable_metric) { create(:sum_billable_metric, code:, organization:, field_name: "result", expression: "concat(event.properties.foo, '-bar')") }
 
       before do
         billable_metric
@@ -339,7 +359,7 @@ RSpec.describe Events::CreateBatchService do
               expected_params = events_params[:events][index]
 
               expect(message[:topic]).to eq("raw_events")
-              expect(message[:key]).to eq("#{organization.id}-#{external_subscription_id}")
+              expect(message).not_to have_key(:key)
 
               payload = JSON.parse(message[:payload])
               expect(payload["organization_id"]).to eq(organization.id)
@@ -349,7 +369,7 @@ RSpec.describe Events::CreateBatchService do
               expect(payload["precise_total_amount_cents"]).to eq(precise_total_amount_cents)
               expect(payload["properties"]).to eq(expected_params[:properties].stringify_keys)
               expect(payload["timestamp"]).to eq(timestamp.to_s)
-              expect(payload["ingested_at"]).to eq(Time.zone.now.iso8601[...-1])
+              expect(payload["ingested_at"]).to eq(Time.zone.now.iso8601(3)[...-1])
               expect(payload["source"]).to eq("http_ruby")
               expect(payload["source_metadata"]).to eq({"api_post_processed" => true})
             end

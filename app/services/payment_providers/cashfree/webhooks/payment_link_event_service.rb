@@ -15,7 +15,8 @@ module PaymentProviders
           return result unless LINK_STATUS_ACTIONS.include?(link_status)
           return result if provider_payment_id.nil?
 
-          payment_service_class.new.update_payment_status(
+          payment_service_class.call!(
+            :update_payment_status,
             organization_id: organization.id,
             status: link_status,
             amount_cents: link_amount_paid_cents,
@@ -24,7 +25,7 @@ module PaymentProviders
               status: link_status,
               metadata: event.dig("data", "link_notes").to_h.symbolize_keys || {}
             )
-          ).raise_if_error!
+          )
         end
 
         private

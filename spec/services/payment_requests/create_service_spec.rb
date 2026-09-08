@@ -68,6 +68,21 @@ RSpec.describe PaymentRequests::CreateService, :premium do
       end
     end
 
+    context "when the invoices are deleted" do
+      before do
+        first_invoice.update!(status: :deleted)
+        second_invoice.update!(status: :deleted)
+      end
+
+      it "returns not found failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("invoice")
+      end
+    end
+
     context "when invoices are not overdue" do
       before { first_invoice.update!(payment_overdue: false) }
 

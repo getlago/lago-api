@@ -12,11 +12,6 @@ module OrderForms
       super
     end
 
-    activity_loggable(
-      action: "order_form.voided",
-      record: -> { order_form }
-    )
-
     def call
       return result.not_found_failure!(resource: "order_form") unless order_form
       return result.forbidden_failure! unless order_forms_enabled?(order_form.organization)
@@ -32,6 +27,9 @@ module OrderForms
             void_reason: :manual
           )
 
+          SendWebhookJob.perform_after_commit("order_form.voided", order_form)
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.voided")
+
           QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_voided)
 
           result.order_form = order_form
@@ -39,6 +37,8 @@ module OrderForms
       end
 
       result
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

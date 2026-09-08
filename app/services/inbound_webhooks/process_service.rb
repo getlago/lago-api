@@ -7,6 +7,8 @@ module InboundWebhooks
       moneyhash: PaymentProviders::Moneyhash::HandleIncomingWebhookService
     }
 
+    Result = BaseResult[:inbound_webhook]
+
     def initialize(inbound_webhook:)
       @inbound_webhook = inbound_webhook
 

@@ -9,8 +9,8 @@ module Resolvers
 
     description "Query invoices"
 
-    argument :amount_from, Integer, required: false
-    argument :amount_to, Integer, required: false
+    argument :amount_from, GraphQL::Types::BigInt, required: false
+    argument :amount_to, GraphQL::Types::BigInt, required: false
     argument :billing_entity_ids, [ID], required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
@@ -25,13 +25,14 @@ module Resolvers
     argument :payment_overdue, Boolean, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
     argument :positive_due_amount, Boolean, required: false
+    argument :purchase_order_number, String, required: false
     argument :search_term, String, required: false
     argument :self_billed, Boolean, required: false
     argument :settlements, [Types::Invoices::SettlementTypeEnum], required: false
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
     argument :subscription_id, ID, required: false
 
-    type Types::Invoices::Object.collection_type, null: false
+    type Types::Invoices::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata), null: false
 
     def resolve( # rubocop:disable Metrics/ParameterLists
       amount_from: nil,
@@ -50,6 +51,7 @@ module Resolvers
       partially_paid: nil,
       positive_due_amount: nil,
       payment_status: nil,
+      purchase_order_number: nil,
       search_term: nil,
       self_billed: nil,
       status: nil,
@@ -75,6 +77,7 @@ module Resolvers
           payment_overdue:,
           payment_status:,
           positive_due_amount:,
+          purchase_order_number:,
           self_billed:,
           status:,
           settlements:,
@@ -84,16 +87,21 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      Invoice.preload_offset_amounts(
-        result.invoices.preload(
+      invoices = result.invoices.without_count.extend(BaseQuery::CappedTotalCount)
+
+      ActiveRecord::Associations::Preloader.new(
+        records: invoices.to_a,
+        associations: [
           :fees,
           :regenerated_invoice,
           :error_details,
           :billing_entity,
           :customer_payments,
           {customer: :billing_entity}
-        )
-      )
+        ]
+      ).call
+
+      Invoice.preload_offset_amounts(invoices)
     end
   end
 end

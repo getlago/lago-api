@@ -2,6 +2,8 @@
 
 module InvoiceCustomSections
   class AttachToResourceService < BaseService
+    Result = BaseResult
+
     def initialize(resource:, params:)
       super
 

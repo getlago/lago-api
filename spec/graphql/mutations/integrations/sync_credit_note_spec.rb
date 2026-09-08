@@ -34,7 +34,7 @@ RSpec.describe Mutations::Integrations::SyncCreditNote do
   let(:service) { instance_double(Integrations::Aggregator::CreditNotes::CreateService) }
 
   let(:result) do
-    r = BaseService::Result.new
+    r = Integrations::Aggregator::CreditNotes::CreateService::Result.new
     r.credit_note_id = credit_note.id
     r
   end

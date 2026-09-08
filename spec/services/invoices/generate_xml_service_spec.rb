@@ -12,7 +12,7 @@ RSpec.describe Invoices::GenerateXmlService do
   let(:einvoicing) { true }
   let(:blank_xml_path) { Rails.root.join("spec/fixtures/blank.xml") }
   let(:fake_xml) { "<xml>content</xml>" }
-  let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+  let(:create_xml_result) { EInvoices::Invoices::Ubl::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
   let(:xml_service) { EInvoices::Invoices::Ubl::CreateService }
 
   before do
@@ -76,7 +76,7 @@ RSpec.describe Invoices::GenerateXmlService do
         it "results in error" do
           result = described_class.call(invoice:, context:)
 
-          expect(result.success).to be_falsey
+          expect(result).not_to be_success
           expect(result.error.error_code).to eq("invoice_not_found")
         end
       end
@@ -87,7 +87,7 @@ RSpec.describe Invoices::GenerateXmlService do
         it "results in error" do
           result = described_class.call(invoice:, context:)
 
-          expect(result.success).to be_falsey
+          expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
           expect(result.error.code).to eq("is_draft")
         end

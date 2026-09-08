@@ -5,6 +5,10 @@ require "rails_helper"
 describe Clock::CreateIntervalWalletTransactionsJob, job: true do
   subject(:interval_wallet_transactions_job) { described_class }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     before { allow(Wallets::CreateIntervalWalletTransactionsService).to receive(:call) }
 

@@ -75,14 +75,13 @@ RSpec.describe SendWebhookJob do
 
       before do
         allow(Webhooks::Invoices::CreatedService).to receive(:new)
-        allow(SendHttpWebhookJob).to receive(:perform_later)
       end
 
       it "calls the webhook invoice service" do
         webhook = create(:webhook, webhook_endpoint: create(:webhook_endpoint, organization:))
         send_webhook_job.perform_now("invoice.created", invoice, {}, webhook.id)
 
-        expect(SendHttpWebhookJob).to have_received(:perform_later).with(webhook)
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
         expect(Webhooks::Invoices::CreatedService).not_to have_received(:new)
       end
     end
@@ -740,6 +739,54 @@ RSpec.describe SendWebhookJob do
       it_behaves_like "a webhook service",
         "billable_metric.deleted",
         Webhooks::BillableMetrics::DeletedService
+    end
+
+    context "with quote webhooks" do
+      let(:object) { create(:quote_version, organization:) }
+
+      it_behaves_like "a webhook service",
+        "quote.created",
+        Webhooks::Quotes::CreatedService
+
+      it_behaves_like "a webhook service",
+        "quote.approved",
+        Webhooks::Quotes::ApprovedService
+
+      it_behaves_like "a webhook service",
+        "quote.voided",
+        Webhooks::Quotes::VoidedService
+    end
+
+    context "with order form webhooks" do
+      let(:object) { create(:order_form, organization:) }
+
+      it_behaves_like "a webhook service",
+        "order_form.created",
+        Webhooks::OrderForms::CreatedService
+
+      it_behaves_like "a webhook service",
+        "order_form.signed",
+        Webhooks::OrderForms::SignedService
+
+      it_behaves_like "a webhook service",
+        "order_form.expired",
+        Webhooks::OrderForms::ExpiredService
+
+      it_behaves_like "a webhook service",
+        "order_form.voided",
+        Webhooks::OrderForms::VoidedService
+    end
+
+    context "with order webhooks" do
+      let(:object) { create(:order, organization:) }
+
+      it_behaves_like "a webhook service",
+        "order.created",
+        Webhooks::Orders::CreatedService
+
+      it_behaves_like "a webhook service",
+        "order.executed",
+        Webhooks::Orders::ExecutedService
     end
 
     context "when webhook_type is dunning_campaign.finished" do

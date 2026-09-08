@@ -4,6 +4,8 @@ module PaymentProviders
   module Stripe
     module Webhooks
       class CustomerUpdatedService < BaseService
+        Result = BaseResult[:payment_method, :stripe_customer]
+
         def call
           unless stripe_customer
             return result if deleted_stripe_customer.present?

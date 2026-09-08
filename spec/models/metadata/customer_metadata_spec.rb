@@ -45,4 +45,14 @@ RSpec.describe Metadata::CustomerMetadata do
       it { expect(metadata).not_to be_valid }
     end
   end
+
+  describe "normalizations" do
+    let(:key) { "he\u0000llo" }
+    let(:value) { "wo\u0000rld" }
+
+    it "strips null bytes from key and value" do
+      expect(metadata.key).to eq("hello")
+      expect(metadata.value).to eq("world")
+    end
+  end
 end

@@ -20,7 +20,7 @@ class Credit < ApplicationRecord
   scope :progressive_billing_invoice_kind, -> { where.not(progressive_billing_invoice_id: nil) }
   # Closed invoices (gated subscriptions that failed payment or timed out) never produced
   # value for the customer; their credits are released back to the source like voided ones.
-  scope :active, -> { joins(:invoice).where.not(invoices: {status: %i[voided closed]}) }
+  scope :active, -> { joins(:invoice).where.not(invoices: {status: %i[voided closed deleted]}) }
   scope :voided, -> { joins(:invoice).where(invoices: {status: :voided}) }
 
   def item_id

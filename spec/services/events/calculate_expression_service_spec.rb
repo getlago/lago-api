@@ -12,7 +12,7 @@ RSpec.describe Events::CalculateExpressionService do
     let(:properties) { {"left" => "1", "right" => "2"} }
     let(:expression) { nil }
     let(:field_name) { "result" }
-    let(:billable_metric) { create(:billable_metric, organization: organization, code: code, field_name: field_name, expression: expression) }
+    let(:billable_metric) { create(:sum_billable_metric, organization: organization, code: code, field_name: field_name, expression: expression) }
 
     before do
       billable_metric

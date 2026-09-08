@@ -3,6 +3,8 @@
 module Invoices
   module ProviderTaxes
     class PullTaxesAndApplyService < BaseService
+      Result = BaseResult[:invoice]
+
       def initialize(invoice:)
         @invoice = invoice
 

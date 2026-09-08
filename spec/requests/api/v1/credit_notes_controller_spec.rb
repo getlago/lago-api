@@ -178,6 +178,15 @@ RSpec.describe Api::V1::CreditNotesController do
       end
     end
 
+    context "when credit note is deleted" do
+      let(:credit_note) { create(:credit_note, :deleted, invoice:, customer:) }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
     context "with metadata" do
       before do
         create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
@@ -709,6 +718,15 @@ RSpec.describe Api::V1::CreditNotesController do
       it "returns an unprocessable entity error" do
         subject
         expect(response).to have_http_status(:method_not_allowed)
+      end
+    end
+
+    context "when credit note is deleted" do
+      let(:credit_note) { create(:credit_note, :deleted, invoice:, customer:) }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
       end
     end
   end

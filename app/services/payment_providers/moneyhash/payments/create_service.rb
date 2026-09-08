@@ -4,6 +4,8 @@ module PaymentProviders
   module Moneyhash
     module Payments
       class CreateService < BaseService
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
+
         include ::Customers::PaymentProviderFinder
 
         def initialize(payment:, reference:, metadata:)
@@ -26,6 +28,8 @@ module PaymentProviders
 
           result.payment = payment
           result
+        rescue LagoHttpClient::HttpError => e
+          prepare_failed_result(e, reraise: true)
         end
 
         private
@@ -74,8 +78,6 @@ module PaymentProviders
 
           response = client.post_with_response(payment_params, headers)
           JSON.parse(response.body)
-        rescue LagoHttpClient::HttpError => e
-          prepare_failed_result(e, reraise: true)
         end
 
         def client
@@ -87,11 +89,7 @@ module PaymentProviders
         end
 
         def moneyhash_payment_method_id
-          if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment.payment_method&.provider_method_id
-          else
-            provider_customer.payment_method_id
-          end
+          payment.payment_method&.provider_method_id || provider_customer.payment_method_id
         end
 
         def prepare_failed_result(error, reraise: false)

@@ -10,8 +10,8 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:invite_token) { invite.token }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
-  let(:okta_token_response) { OpenStruct.new(body: {access_token: "access_token"}) }
-  let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
+  let(:okta_token_response) { {"access_token" => "access_token"} }
+  let(:okta_userinfo_response) { {"email" => "foo@bar.com"} }
   let(:code) { "code" }
   let(:state) { SecureRandom.uuid }
 
@@ -37,7 +37,7 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
       expect(result.token).to be_present
       expect(invite.reload).to be_accepted
 
-      decoded = Auth::TokenService.decode(token: result.token)
+      decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
     end
 
@@ -99,7 +99,7 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
     end
 
     context "when okta userinfo email is different from the state one" do
-      let(:okta_userinfo_response) { OpenStruct.new({email: "foo@test.com"}) }
+      let(:okta_userinfo_response) { {"email" => "foo@test.com"} }
 
       it "returns error" do
         result = service.call

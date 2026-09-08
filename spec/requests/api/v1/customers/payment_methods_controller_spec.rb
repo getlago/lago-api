@@ -128,6 +128,22 @@ RSpec.describe Api::V1::Customers::PaymentMethodsController do
         expect(payment_method3.reload.is_default).to eq(false)
       end
     end
+
+    context "when the advisory lock cannot be acquired" do
+      let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false) }
+
+      before do
+        allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns an unprocessable entity error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("lock_acquisition_failed")
+        expect(payment_method.reload.is_default).to eq(false)
+      end
+    end
   end
 
   describe "DELETE /api/v1/customers/:external_id/payment_methods/:id" do

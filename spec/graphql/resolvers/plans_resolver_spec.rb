@@ -77,4 +77,40 @@ RSpec.describe Resolvers::PlansResolver do
       expect(plans_response["metadata"]["totalCount"]).to eq(2)
     end
   end
+
+  context "when filtering by product_category_id" do
+    let(:product_category) { create(:product_category, organization:) }
+    let(:other_plan) { create(:plan, organization:) }
+    let(:query) do
+      <<~GQL
+        query($productCategoryId: ID!) {
+          plans(limit: 5, productCategoryId: $productCategoryId) {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      other_plan
+      item = create(:product, organization:, product_category:)
+      rate_card = create(:rate_card, organization:, product: item)
+      create(:plan_rate_card, organization:, plan:, rate_card:)
+    end
+
+    it "returns only the plans linked to the product_category" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {productCategoryId: product_category.id}
+      )
+
+      plans_response = result["data"]["plans"]
+      expect(plans_response["collection"].map { |p| p["id"] }).to eq([plan.id])
+      expect(plans_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end

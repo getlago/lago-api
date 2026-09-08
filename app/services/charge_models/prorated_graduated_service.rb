@@ -25,7 +25,7 @@ module ChargeModels
       prorated_sum = 0
       result_amount = 0
 
-      return 0 if units.zero?
+      return result_with_flat_amount(0, 0, 0) if units.zero?
 
       # Calculate total prorated value inside the tier. The goal is to iterate over both arrays (prorated and full)
       # and determine which prorated events goes into certain tier. Full units sum determines tier while
@@ -110,7 +110,7 @@ module ChargeModels
     private
 
     def result_with_flat_amount(result, total_full_units, max_full_units)
-      return 0 if units.zero? || total_full_units.negative?
+      return 0 if total_full_units.negative?
 
       flat_amount = 0
       result = 0 if result.negative?

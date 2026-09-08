@@ -7,6 +7,10 @@ describe Clock::ExpireIncompleteSubscriptionsJob, job: true do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, pay_in_advance: true) }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     let(:expirable_subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }
     let(:non_expirable_pending_subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }

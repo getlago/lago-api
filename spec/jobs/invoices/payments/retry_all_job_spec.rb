@@ -6,7 +6,7 @@ RSpec.describe Invoices::Payments::RetryAllJob do
   subject(:retry_all_job) { described_class }
 
   let(:retry_batch_service) { instance_double(Invoices::Payments::RetryBatchService) }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::Payments::RetryBatchService::Result.new }
   let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, organization:) }
 

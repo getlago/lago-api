@@ -70,4 +70,30 @@ RSpec.describe Mutations::Invoices::Update do
       )
     end
   end
+
+  context "when invoice is voided" do
+    let(:invoice) { create(:invoice, :voided, organization:) }
+
+    it "returns a method not allowed error and does not update the invoice" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: invoice.id,
+            paymentStatus: "succeeded"
+          }
+        }
+      )
+
+      expect_graphql_error(
+        result:,
+        message: "Method Not Allowed"
+      )
+      expect(result["errors"].first["extensions"]["code"]).to eq("update_on_voided_invoice")
+      expect(invoice.reload.payment_status).not_to eq("succeeded")
+    end
+  end
 end

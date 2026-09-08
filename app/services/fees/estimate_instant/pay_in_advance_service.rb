@@ -3,6 +3,8 @@
 module Fees
   module EstimateInstant
     class PayInAdvanceService < BaseService
+      Result = BaseResult[:fees]
+
       def initialize(organization:, params:)
         @event = Event.new(
           organization_id: organization.id,

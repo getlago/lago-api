@@ -46,8 +46,6 @@ RSpec.describe Customers::UpdateService do
     let(:account_type) { "customer" }
 
     it "updates a customer and calls SendWebhookJob" do
-      allow(SendWebhookJob).to receive(:perform_later)
-
       result = customers_service.call
       updated_customer = result.customer
       expect(updated_customer.name).to eq(update_args[:name])
@@ -60,13 +58,26 @@ RSpec.describe Customers::UpdateService do
 
       shipping_address = update_args[:shipping_address]
       expect(updated_customer.shipping_city).to eq(shipping_address[:city])
-      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", updated_customer)
     end
 
     it "produces an activity log" do
       described_class.call(customer:, args: update_args)
 
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
+    end
+
+    it "refreshes the invoices search terms when a searchable field changes" do
+      expect { customers_service.call }
+        .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+    end
+
+    context "when no searchable field changes" do
+      let(:update_args) { {id: customer.id, net_payment_term: 8} }
+
+      it "does not refresh the invoices search terms" do
+        expect { customers_service.call }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+      end
     end
 
     context "with email containing unicode lookalike characters" do
@@ -117,20 +128,10 @@ RSpec.describe Customers::UpdateService do
           create(:subscription, customer:)
         end
 
-        it "does not update the billing entity" do
+        it "updates the billing entity" do
           result = customers_service.call
           expect(result).to be_success
-          expect(result.customer.billing_entity).to eq(billing_entity)
-        end
-
-        context "when multi_entity_billing feature flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_entity_billing) }
-
-          it "updates the billing entity" do
-            result = customers_service.call
-            expect(result).to be_success
-            expect(result.customer.billing_entity).to eq(billing_entity_2)
-          end
+          expect(result.customer.billing_entity).to eq(billing_entity_2)
         end
       end
     end
@@ -306,13 +307,11 @@ RSpec.describe Customers::UpdateService do
           }
         end
 
-        it "fails" do
+        it "updates the currency" do
           result = customers_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+          expect(result).to be_success
+          expect(result.customer.currency).to eq("CAD")
         end
       end
     end
@@ -334,7 +333,7 @@ RSpec.describe Customers::UpdateService do
         allow(PaymentProviderCustomers::UpdateService)
           .to receive(:call)
           .with(customer)
-          .and_return(BaseService::Result.new)
+          .and_return(PaymentProviderCustomers::UpdateService::Result.new)
       end
 
       it "creates a payment provider customer" do
@@ -399,7 +398,7 @@ RSpec.describe Customers::UpdateService do
             customer.update!(payment_provider: "stripe")
           end
 
-          it "removes the provider customer id" do
+          it "discards the provider customer" do
             result = customers_service.call
 
             expect(result).to be_success
@@ -408,8 +407,7 @@ RSpec.describe Customers::UpdateService do
             expect(result_customer.id).to eq(customer.id)
             expect(result_customer.payment_provider).to be_nil
 
-            expect(result_customer.stripe_customer).to eq(stripe_customer)
-            expect(result_customer.stripe_customer.provider_customer_id).to be_nil
+            expect(stripe_customer.reload).to be_discarded
           end
         end
       end
@@ -454,13 +452,11 @@ RSpec.describe Customers::UpdateService do
         expect(customer.payment_provider_code).to be_nil
       end
 
-      # NOTE: This describes a scenario with incorrect behavior that currently exists.
-      #       The previous provider customer is not discarded
-      it "does not discard the provider customer" do
+      it "discards the provider customer" do
         result = customers_service.call
 
         expect(result).to be_success
-        expect(stripe_customer.reload).not_to be_discarded
+        expect(stripe_customer.reload).to be_discarded
       end
 
       it "discards the payment methods" do
@@ -468,6 +464,25 @@ RSpec.describe Customers::UpdateService do
 
         expect(result).to be_success
         expect(payment_method.reload).to be_discarded
+      end
+
+      context "when a non-nil payment_provider_code is still provided" do
+        let(:update_args) do
+          {
+            id: customer.id,
+            organization_id: organization.id,
+            payment_provider: nil,
+            provider_customer: nil,
+            payment_provider_code:
+          }
+        end
+
+        it "wipes out the payment_provider_code" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.payment_provider_code).to be_nil
+        end
       end
     end
 

@@ -61,7 +61,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -79,7 +79,8 @@ module Invoices
         invoice_type: :progressive_billing,
         currency: subscription.plan.amount_currency,
         datetime: Time.zone.at(timestamp),
-        billing_entity: subscription.billing_entity || subscription.customer.billing_entity
+        billing_entity: subscription.billing_entity || subscription.customer.billing_entity,
+        purchase_order_number: subscription.purchase_order_number
       ) do |invoice|
         CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :progressive_billing)
@@ -91,16 +92,15 @@ module Invoices
     end
 
     def create_fees
-      filters = event_filters(subscription, boundaries).charges
+      filters = event_filters(subscription, boundaries).filter_targets
 
       charges.find_each do |charge|
         Fees::ChargeService.call!(
           invoice:,
-          charge:,
+          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
           subscription:,
-          context: :finalize,
-          boundaries:,
-          filtered_aggregations: filters[charge.id] || []
+          options: Fees::ChargeService::Options.new(context: :finalize),
+          filtered_aggregations: filters[charge.target_key]&.keys || []
         )
       end
     end
@@ -163,8 +163,8 @@ module Invoices
     end
 
     def event_filters(subscription, boundaries)
-      Events::BillingPeriodFilterService.call!(
-        subscription:, boundaries:
+      Events::BillingPeriodFilterService.for_charges!(
+        subscription:, boundaries:, with_last_seen_at: false
       )
     end
   end

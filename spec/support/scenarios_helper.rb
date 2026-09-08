@@ -129,9 +129,9 @@ module ScenariosHelper
     end
   end
 
-  def delete_plan_charge_filter(plan, charge_code, filter_id, **kwargs)
+  def delete_plan_charge_filter(plan, charge_code, filter_id, params = {}, **kwargs)
     api_call(**kwargs) do
-      delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters/#{filter_id}")
+      delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters/#{filter_id}", {filter: params})
     end
   end
 
@@ -395,7 +395,8 @@ module ScenariosHelper
 
   def setup_stripe_for(customer:)
     stripe_provider = create(:stripe_provider, organization:)
-    create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    stripe_customer = create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    create(:payment_method, payment_provider_customer: stripe_customer, is_default: true)
     customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
   end
 

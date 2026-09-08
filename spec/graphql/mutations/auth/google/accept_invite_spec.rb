@@ -3,12 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::Google::AcceptInvite do
-  let(:google_service) { instance_double(Auth::GoogleService) }
   let(:user) { create(:user) }
   let(:invite) { create(:invite) }
 
   let(:accept_invite_result) do
-    result = BaseService::Result.new
+    result = Auth::GoogleService::RESULTS.fetch(:accept_invite).new
     result.user = user
     result.token = "token"
     result
@@ -29,8 +28,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
   end
 
   before do
-    allow(Auth::GoogleService).to receive(:new).and_return(google_service)
-    allow(google_service).to receive(:accept_invite).and_return(accept_invite_result)
+    allow(Auth::GoogleService).to receive(:call).with(:accept_invite, "code", invite.token).and_return(accept_invite_result)
   end
 
   it "returns token and user" do
@@ -54,7 +52,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
 
   context "when invite email and google email are different" do
     let(:accept_invite_result) do
-      result = BaseService::Result.new
+      result = Auth::GoogleService::RESULTS.fetch(:accept_invite).new
       result.single_validation_failure!(error_code: "invite_email_mistmatch")
       result
     end
@@ -80,7 +78,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
 
   context "when invite does not exist" do
     let(:accept_invite_result) do
-      result = BaseService::Result.new
+      result = Auth::GoogleService::RESULTS.fetch(:accept_invite).new
       result.not_found_failure!(resource: "invite")
       result
     end

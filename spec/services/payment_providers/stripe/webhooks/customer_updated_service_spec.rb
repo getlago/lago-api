@@ -30,10 +30,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService do
         expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
       end
 
-      context "with multiple_payment_methods feature flag" do
+      context "when the customer has a payment method" do
         before do
           create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: "pm_updateMe")
-          organization.enable_feature_flag!(:multiple_payment_methods)
         end
 
         it "updates the associated customer payment method" do

@@ -7,13 +7,14 @@ class TaxesQuery < BaseQuery
   DEFAULT_ORDER = "name"
 
   def call
-    taxes = base_scope.result
-    taxes = paginate(taxes)
-    taxes = taxes.order(order)
-    taxes = apply_consistent_ordering(taxes)
+    taxes = base_scope.result.preload(:billing_entities)
 
     taxes = with_auto_generated(taxes) if filters.auto_generated.present?
     taxes = with_applied_to_organization(taxes) unless filters.applied_to_organization.nil?
+
+    taxes = paginate(taxes)
+    taxes = taxes.order(order)
+    taxes = apply_consistent_ordering(taxes)
 
     result.taxes = taxes
     result
@@ -44,12 +45,11 @@ class TaxesQuery < BaseQuery
   end
 
   def with_applied_to_organization(scope)
+    applied = scope.applied_to_billing_entity(organization.default_billing_entity)
     if filters.applied_to_organization
-      scope.joins(:billing_entities_taxes)
-        .where(billing_entities_taxes: {billing_entity_id: organization.default_billing_entity.id})
+      applied
     else
-      scope.where.not(id: scope.joins(:billing_entities_taxes)
-        .where(billing_entities_taxes: {billing_entity_id: organization.default_billing_entity.id}))
+      scope.where.not(id: applied)
     end
   end
 end

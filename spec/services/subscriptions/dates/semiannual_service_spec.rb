@@ -151,7 +151,9 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
           let(:billing_at) { Time.zone.parse("27 Feb 2022") }
           let(:subscription_at) { Time.zone.parse("28 Feb 2021") }
 
-          before { subscription.mark_as_terminated!("25 Feb 2022") }
+          # The enclosing context already terminated the subscription, and mark_as_terminated! sets
+          # terminated_at with ||=, so it has to be assigned to move it earlier than billing_at.
+          before { subscription.update!(terminated_at: Time.zone.parse("25 Feb 2022")) }
 
           it "returns the previous half year last day" do
             expect(result).to eq("2021-08-28 00:00:00 UTC")
@@ -165,8 +167,10 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
         let(:billing_at) { Time.zone.parse("30 Apr 2021") }
         let(:subscription_at) { Time.zone.parse("31 Jan 2021") }
 
-        it "returns the current day" do
-          expect(result).to eq("2021-04-30 00:00:00 UTC")
+        # April is not a billing month here (January and July are), so 30 Apr belongs to the period
+        # opened in January. It used to open a period of its own, sliding the cycle monthly.
+        it "returns the anniversary of the period covering that day" do
+          expect(result).to eq("2021-01-31 00:00:00 UTC")
         end
       end
 
@@ -917,6 +921,43 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
     end
   end
 
+  describe "#fixed_charges_period_to_datetime" do
+    subject(:result) { date_service.fixed_charges_period_to_datetime }
+
+    let(:billing_time) { :calendar }
+
+    context "when billing charges monthly but not fixed charges" do
+      before { plan.update!(bill_charges_monthly: true) }
+
+      context "when the cycle bills fixed charges (first period)" do
+        let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+        it "returns the fixed-charges period end, like fixed_charges_to_datetime" do
+          expect(result).to eq(date_service.fixed_charges_to_datetime)
+          expect(result.to_s).to eq("2022-06-30 23:59:59 UTC")
+        end
+      end
+
+      context "when the cycle does not bill fixed charges (charges-only run)" do
+        let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+        it "still returns the period end even though fixed_charges_to_datetime is nil" do
+          expect(date_service.fixed_charges_to_datetime).to be_nil
+          expect(result.to_s).to eq("2021-12-31 23:59:59 UTC")
+        end
+      end
+    end
+
+    context "when subscription is not yet started" do
+      let(:started_at) { nil }
+      let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+      it "returns nil" do
+        expect(result).to be_nil
+      end
+    end
+  end
+
   describe "next_end_of_period" do
     let(:result) { date_service.next_end_of_period.to_s }
 
@@ -942,25 +983,25 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
       let(:billing_at) { Time.zone.parse("07 May 2022") }
 
       it "returns the end of the billing month" do
-        expect(result).to eq("2022-11-01 23:59:59 UTC")
+        expect(result).to eq("2022-08-01 23:59:59 UTC")
       end
 
       context "with customer timezone" do
         let(:timezone) { "America/New_York" }
 
         it "takes customer timezone into account" do
-          expect(result).to eq("2022-11-01 03:59:59 UTC")
+          expect(result).to eq("2022-08-01 03:59:59 UTC")
         end
       end
 
       context "when end of billing month is in next year" do
         let(:billing_at) { Time.zone.parse("02 Nov 2021") }
 
-        it { expect(result).to eq("2022-05-01 23:59:59 UTC") }
+        it { expect(result).to eq("2022-02-01 23:59:59 UTC") }
       end
 
       context "when date is the end of the period" do
-        let(:billing_at) { Time.zone.parse("01 May 2022") }
+        let(:billing_at) { Time.zone.parse("01 Feb 2022") }
 
         it "returns the date" do
           expect(result).to eq(billing_at.utc.end_of_day.to_s)
@@ -1045,6 +1086,21 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
           expect(result).to eq(plan.amount_cents.fdiv(182))
         end
       end
+
+      # NOTE: a subscription created by an upgrade inherits the anniversary of the one it replaces, so it
+      #       starts in the middle of its first period. The termination and trial fees pass the boundary
+      #       start, which is clamped to `started_at`, and must still be prorated on the whole period.
+      context "when subscription started in the middle of a period" do
+        let(:result) { date_service.single_day_price(optional_from_date: started_at.to_date) }
+
+        let(:subscription_at) { Time.zone.parse("01 Jan 2024") }
+        let(:started_at) { Time.zone.parse("20 Sep 2024") }
+        let(:billing_at) { Time.zone.parse("01 Oct 2024") }
+
+        it "returns the price of single day of the whole period" do
+          expect(result).to eq(plan.amount_cents.fdiv(184))
+        end
+      end
     end
 
     context "when billing_time is anniversary" do
@@ -1062,6 +1118,21 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
 
         it "returns the month duration" do
           expect(result).to eq(plan.amount_cents.fdiv(181))
+        end
+      end
+
+      # NOTE: a subscription created by an upgrade inherits the anniversary of the one it replaces, so it
+      #       starts in the middle of its first period. The termination and trial fees pass the boundary
+      #       start, which is clamped to `started_at`, and must still be prorated on the whole period.
+      context "when subscription started in the middle of a period" do
+        let(:result) { date_service.single_day_price(optional_from_date: started_at.to_date) }
+
+        let(:subscription_at) { Time.zone.parse("15 Jan 2024") }
+        let(:started_at) { Time.zone.parse("20 Sep 2024") }
+        let(:billing_at) { Time.zone.parse("01 Oct 2024") }
+
+        it "returns the price of single day of the whole period" do
+          expect(result).to eq(plan.amount_cents.fdiv(184))
         end
       end
     end

@@ -16,6 +16,12 @@ RSpec.describe Invoices::CreateGeneratingService do
   let(:recurring) { false }
 
   describe "call" do
+    it "populates the search terms" do
+      result = create_service.call
+
+      expect(result.invoice.reload.search_terms).to include(result.invoice.number, customer.name)
+    end
+
     it "creates an invoice" do
       result = create_service.call
 
@@ -58,6 +64,19 @@ RSpec.describe Invoices::CreateGeneratingService do
 
         expect(result).to be_success
         expect(result.invoice.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when purchase_order_number is passed" do
+      subject(:create_service) do
+        described_class.new(customer:, invoice_type:, currency:, datetime:, purchase_order_number: "PO-123")
+      end
+
+      it "stamps the purchase order number on the invoice" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.purchase_order_number).to eq("PO-123")
       end
     end
 

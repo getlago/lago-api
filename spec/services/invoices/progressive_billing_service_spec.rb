@@ -31,8 +31,6 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
   end
 
   before do
-    allow(SegmentTrackJob).to receive(:perform_later)
-
     tax
     charge
     event
@@ -93,6 +91,24 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
 
           expect(invoice.billing_entity).to eq(other_billing_entity)
         end
+      end
+    end
+
+    context "when the subscription has a purchase order number" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          started_at: timestamp - 1.week,
+          purchase_order_number: "PO-SUB-123"
+        )
+      end
+
+      it "copies it to the invoice" do
+        invoice = create_service.call.invoice
+
+        expect(invoice.purchase_order_number).to eq("PO-SUB-123")
       end
     end
 
@@ -278,7 +294,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
     it "calls SegmentTrackJob" do
       invoice = create_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -318,9 +334,9 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       context "with a failed to acquire lock error" do
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
-            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+            .to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
 
-          expect { create_service.call }.to raise_error(Customers::FailedToAcquireLock)
+          expect { create_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
       end
     end

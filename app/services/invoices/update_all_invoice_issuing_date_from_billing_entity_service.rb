@@ -2,6 +2,8 @@
 
 module Invoices
   class UpdateAllInvoiceIssuingDateFromBillingEntityService < BaseService
+    Result = BaseResult
+
     def initialize(billing_entity:, previous_issuing_date_settings:)
       @billing_entity = billing_entity
       @previous_issuing_date_settings = previous_issuing_date_settings

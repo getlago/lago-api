@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::DynamicService do
   subject(:apply_dynamic_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
@@ -17,7 +16,7 @@ RSpec.describe ChargeModels::DynamicService do
     aggregation_result.precise_total_amount_cents = precise_total_amount_cents
   end
 
-  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
 
   let(:charge) { create(:dynamic_charge) }
 

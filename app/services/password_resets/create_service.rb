@@ -2,6 +2,8 @@
 
 module PasswordResets
   class CreateService < BaseService
+    Result = BaseResult[:id]
+
     def initialize(user:)
       @user = user
 

@@ -2,6 +2,8 @@
 
 module Memberships
   class RevokeService < BaseService
+    Result = BaseResult[:membership]
+
     def initialize(user:, membership:)
       @user = user
       @membership = membership

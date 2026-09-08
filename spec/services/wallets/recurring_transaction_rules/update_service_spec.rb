@@ -42,6 +42,48 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       )
     end
 
+    context "when purchase_order_number is present" do
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "weekly",
+            paid_credits: "105",
+            granted_credits: "105",
+            purchase_order_number: "PO-RULE-123"
+          }
+        ]
+      end
+
+      it "updates the existing rule purchase order number" do
+        rule = result.wallet.reload.recurring_transaction_rules.active.sole
+
+        expect(rule.id).to eq(recurring_transaction_rule.id)
+        expect(rule.purchase_order_number).to eq("PO-RULE-123")
+      end
+    end
+
+    context "when purchase_order_number is too long" do
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "weekly",
+            paid_credits: "105",
+            granted_credits: "105",
+            purchase_order_number: "a" * 256
+          }
+        ]
+      end
+
+      it "returns a validation error" do
+        expect(result).to be_failure
+        expect(result.error.messages[:purchase_order_number]).to eq(["value_is_too_long"])
+      end
+    end
+
     context "when updating an inactive rule" do
       let(:params) do
         [
@@ -109,6 +151,29 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
           payment_method_type: "manual"
         )
         expect(rule.id).not_to eq(recurring_transaction_rule.id)
+      end
+
+      context "when purchase_order_number is present" do
+        let(:params) do
+          [
+            {
+              granted_credits: "105",
+              interval: "weekly",
+              method: "target",
+              paid_credits: "105",
+              target_ongoing_balance: "300",
+              trigger: "interval",
+              purchase_order_number: "PO-REPLACEMENT-123"
+            }
+          ]
+        end
+
+        it "creates the replacement rule with the purchase order number" do
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+
+          expect(rule.id).not_to eq(recurring_transaction_rule.id)
+          expect(rule.purchase_order_number).to eq("PO-REPLACEMENT-123")
+        end
       end
     end
 

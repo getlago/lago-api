@@ -30,7 +30,6 @@ RSpec.describe Invoices::CreateOneOffService do
     before do
       tax
 
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
       CurrentContext.source = "api"
     end
@@ -141,7 +140,7 @@ RSpec.describe Invoices::CreateOneOffService do
     it "calls SegmentTrackJob" do
       invoice = described_class.call(**args).invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -170,16 +169,34 @@ RSpec.describe Invoices::CreateOneOffService do
       end
     end
 
-    it "enqueues a SendWebhookJob" do
+    it "enqueues a SendWebhookJob after commit" do
       expect do
         described_class.call(**args)
-      end.to have_enqueued_job(SendWebhookJob)
+      end.to have_enqueued_job_after_commit(SendWebhookJob)
     end
 
-    it "enqueues GenerateDocumentsJob with email false" do
+    it "enqueues GenerateDocumentsJob with email false after commit" do
       expect do
         described_class.call(**args)
-      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
+      end.to have_enqueued_job_after_commit(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
+    end
+
+    context "when an add-on is soft-deleted" do
+      before { add_on_first.discard! }
+
+      it "is not found by default" do
+        result = described_class.call(**args)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+      end
+
+      it "is billed when with_discarded_add_ons is true" do
+        result = described_class.call(**args.merge(with_discarded_add_ons: true))
+
+        expect(result).to be_success
+        expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
+      end
     end
 
     context "when there is tax provider integration" do
@@ -336,13 +353,11 @@ RSpec.describe Invoices::CreateOneOffService do
     context "when currency does not match" do
       let(:currency) { "NOK" }
 
-      it "fails" do
+      it "creates the invoice (currency is a default preference)" do
         result = described_class.call(**args)
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:currency)
-        expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+        expect(result).to be_success
+        expect(result.invoice.currency).to eq("NOK")
       end
     end
 
@@ -438,7 +453,6 @@ RSpec.describe Invoices::CreateOneOffService do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
-        organization.enable_feature_flag!(:multi_entity_billing)
         create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
       end
 
@@ -495,18 +509,6 @@ RSpec.describe Invoices::CreateOneOffService do
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq("billing_entity_not_found")
         end
-      end
-    end
-
-    context "when multi_entity_billing feature flag is disabled" do
-      let(:other_billing_entity) { create(:billing_entity, organization:) }
-      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, billing_entity_id: other_billing_entity.id} }
-
-      it "ignores the billing_entity param and falls back to the customer's billing entity" do
-        result = described_class.call(**args)
-
-        expect(result).to be_success
-        expect(result.invoice.billing_entity).to eq(customer.billing_entity)
       end
     end
 

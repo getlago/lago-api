@@ -7,7 +7,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
     described_class.new(
       event_store_class:,
       charge:,
-      subscription:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries: {
         from_datetime:,
         to_datetime:
@@ -298,6 +298,19 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
         result = count_service.per_event_aggregation(include_event_value: true)
 
         expect(result.event_aggregation).to eq([1, 1, 1, 1, 1])
+      end
+    end
+
+    context "when aggregation is bypassed" do
+      let(:bypass_aggregation) { true }
+
+      it "returns an empty aggregation without querying the event store" do
+        allow(Events::Stores::PostgresStore).to receive(:new).and_call_original
+
+        result = count_service.per_event_aggregation
+
+        expect(result.event_aggregation).to eq([])
+        expect(Events::Stores::PostgresStore).not_to have_received(:new)
       end
     end
   end

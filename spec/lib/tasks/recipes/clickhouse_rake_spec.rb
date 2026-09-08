@@ -30,7 +30,7 @@ RSpec.describe "recipes:clickhouse:enable_clickhouse_events_store", clickhouse: 
 
     results = amount_cents_per_call.map do |cents|
       fees = cents.nil? ? [] : [Fee.new(amount_cents: cents)]
-      BaseService::LegacyResult.new.tap { |r| r.usage = SubscriptionUsage.new(fees:) }
+      BaseResult[:usage].new.tap { |r| r.usage = SubscriptionUsage.new(fees:) }
     end
     stub.and_return(*results)
   end

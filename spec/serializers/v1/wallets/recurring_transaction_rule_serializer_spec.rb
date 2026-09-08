@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
   subject(:serializer) { described_class.new(recurring_transaction_rule, root_name: "recurring_transaction_rule") }
 
-  let(:recurring_transaction_rule) { create(:recurring_transaction_rule) }
+  let(:recurring_transaction_rule) { create(:recurring_transaction_rule, :with_purchase_order_number) }
 
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
@@ -27,6 +27,7 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       "invoice_requires_successful_payment" => recurring_transaction_rule.invoice_requires_successful_payment,
       "transaction_metadata" => recurring_transaction_rule.transaction_metadata,
       "transaction_name" => "Recurring Transaction Rule",
+      "purchase_order_number" => recurring_transaction_rule.purchase_order_number,
       "ignore_paid_top_up_limits" => recurring_transaction_rule.ignore_paid_top_up_limits,
       "applied_invoice_custom_sections" => recurring_transaction_rule.applied_invoice_custom_sections
     )

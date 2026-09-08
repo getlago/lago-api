@@ -7,7 +7,7 @@ RSpec.describe InboundWebhooks::ProcessService do
 
   let(:inbound_webhook) { create :inbound_webhook, source: webhook_source }
   let(:webhook_source) { "stripe" }
-  let(:handle_incoming_webhook_service_result) { BaseService::Result.new }
+  let(:handle_incoming_webhook_service_result) { PaymentProviders::Stripe::HandleIncomingWebhookService::Result.new }
 
   before do
     allow(PaymentProviders::Stripe::HandleIncomingWebhookService)

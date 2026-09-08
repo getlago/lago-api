@@ -84,11 +84,43 @@ RSpec.describe Customer do
         expect(described_class.normalize_value_for(field, "")).to be_nil
       end
     end
+
+    it "strips null bytes from identity and free-text attributes" do
+      normalized_customer = build(
+        :customer,
+        name: "Foo\u0000Bar",
+        firstname: "Jo\u0000hn",
+        lastname: "Do\u0000e",
+        legal_name: "Foo\u0000Corp",
+        legal_number: "12\u000034",
+        phone: "555\u00000199",
+        url: "https://ex\u0000ample.test",
+        logo_url: "https://ex\u0000ample.test/l.png",
+        tax_identification_number: "FR\u000012345"
+      )
+
+      expect(normalized_customer.name).to eq("FooBar")
+      expect(normalized_customer.firstname).to eq("John")
+      expect(normalized_customer.lastname).to eq("Doe")
+      expect(normalized_customer.legal_name).to eq("FooCorp")
+      expect(normalized_customer.legal_number).to eq("1234")
+      expect(normalized_customer.phone).to eq("5550199")
+      expect(normalized_customer.url).to eq("https://example.test")
+      expect(normalized_customer.logo_url).to eq("https://example.test/l.png")
+      expect(normalized_customer.tax_identification_number).to eq("FR12345")
+    end
+
+    it "keeps empty identity values as empty strings (not nil)" do
+      normalized_customer = build(:customer, firstname: "\u0000", lastname: "\u0000")
+
+      expect(normalized_customer.firstname).to eq("")
+      expect(normalized_customer.lastname).to eq("")
+    end
   end
 
   describe "validations" do
     subject(:customer) do
-      described_class.new(organization:, external_id:)
+      described_class.new(organization:, external_id:, billing_entity:)
     end
 
     let(:external_id) { SecureRandom.uuid }
@@ -118,6 +150,21 @@ RSpec.describe Customer do
 
       customer.timezone = "America/Guadeloupe"
       expect(customer).not_to be_valid
+    end
+
+    it "validates the name length" do
+      customer.name = "a" * 255
+      expect(customer).to be_valid
+
+      customer.name = "a" * 256
+      expect(customer).not_to be_valid
+    end
+
+    it "does not validate the name length when the name is unchanged" do
+      customer.save
+      customer.update_column(:name, "a" * 256) # rubocop:disable Rails/SkipsModelValidations
+      customer.timezone = "Europe/Paris"
+      expect(customer).to be_valid
     end
 
     describe "of email" do
@@ -622,6 +669,34 @@ RSpec.describe Customer do
       it "returns the gocardless provider customer object" do
         expect(customer.provider_customer).to eq(gocardless_customer)
       end
+    end
+  end
+
+  describe "#payment_connection_status" do
+    subject { customer.payment_connection_status }
+
+    let(:customer) { create(:customer, organization:) }
+
+    context "when the customer has no payment connection" do
+      it { is_expected.to eq("not_connected") }
+    end
+
+    context "when no payment connection is default" do
+      before { create(:stripe_customer, customer:, is_default: false) }
+
+      it { is_expected.to eq("not_connected") }
+    end
+
+    context "when a provider connection is default" do
+      before { create(:stripe_customer, customer:, is_default: true) }
+
+      it { is_expected.to eq("connected") }
+    end
+
+    context "when the manual connection is default" do
+      before { create(:manual_payment_provider_customer, customer:, is_default: true) }
+
+      it { is_expected.to eq("manual") }
     end
   end
 
@@ -1376,6 +1451,37 @@ RSpec.describe Customer do
       it "returns nil" do
         expect(customer.tax_customer).to eq(nil)
       end
+    end
+  end
+
+  describe "#payment_connection" do
+    let(:customer) { create(:customer) }
+    let!(:default_connection) { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
+    let!(:other_connection) { create(:gocardless_customer, customer:, code: "gc") }
+
+    it "returns the default connection when no code is given" do
+      expect(customer.payment_connection).to eq(default_connection)
+    end
+
+    it "returns the connection matching the given code" do
+      expect(customer.payment_connection("gc")).to eq(other_connection)
+    end
+
+    it "returns nil for an unknown code" do
+      expect(customer.payment_connection("unknown")).to be_nil
+    end
+  end
+
+  describe "#integration_connection" do
+    let(:customer) { create(:customer) }
+    let!(:default_connection) { create(:netsuite_customer, customer:, is_default: true) }
+
+    it "returns the default connection of the category" do
+      expect(customer.integration_connection("accounting")).to eq(default_connection)
+    end
+
+    it "returns nil when no connection is default in the category" do
+      expect(customer.integration_connection("crm")).to be_nil
     end
   end
 

@@ -7,6 +7,24 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
     subject(:payload) { described_class.new(integration_customer:, invoice:).body }
 
     it_behaves_like "an integration payload", :xero do
+      let(:invoice) do
+        invoice = create(
+          :invoice,
+          customer:,
+          organization:,
+          billing_entity:,
+          coupons_amount_cents: 200,
+          prepaid_credit_amount_cents: 300,
+          progressive_billing_credit_amount_cents: 100,
+          credit_notes_amount_cents: 500,
+          taxes_amount_cents: 300,
+          purchase_order_number: "PO-123",
+          issuing_date: DateTime.new(2024, 7, 8)
+        )
+        create(:invoice_subscription, invoice:, subscription:)
+        invoice
+      end
+
       def build_expected_payload(mapping_codes)
         [
           {
@@ -15,6 +33,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
             "issuing_date" => "2024-07-08T00:00:00Z",
             "payment_due_date" => "2024-07-08T00:00:00Z",
             "number" => invoice.number,
+            "reference" => "PO-123",
             "currency" => "EUR",
             "type" => "ACCREC",
             "fees" => [

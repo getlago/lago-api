@@ -10,6 +10,10 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
   let!(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
   let!(:subscription3) { create(:subscription, ending_at: nil) }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     it "enqueues a TerminateEndedSubscriptionJob for matching subscriptions" do
       current_date = Time.current + 2.months
@@ -23,6 +27,22 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
           .not_to have_been_enqueued.with(subscription2)
         expect(Subscriptions::TerminateEndedSubscriptionJob)
           .not_to have_been_enqueued.with(subscription3)
+      end
+    end
+
+    context "with subscriptions ending on a nearby day" do
+      let!(:subscription_ending_the_day_before) { create(:subscription, ending_at: ending_at - 1.day) }
+      let!(:subscription_ending_the_day_after) { create(:subscription, ending_at: ending_at + 1.day) }
+
+      it "does not enqueue them" do
+        travel_to(ending_at) do
+          described_class.perform_now
+
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription_ending_the_day_before)
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription_ending_the_day_after)
+        end
       end
     end
 
@@ -45,6 +65,36 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
             .not_to have_been_enqueued.with(subscription2)
           expect(Subscriptions::TerminateEndedSubscriptionJob)
             .not_to have_been_enqueued.with(subscription3)
+        end
+      end
+    end
+
+    context "with a customer timezone far ahead of UTC" do
+      let(:ending_at) { DateTime.parse("2022-10-20 12:00:00") }
+
+      before { subscription1.customer.update!(timezone: "Pacific/Auckland") }
+
+      it "enqueues subscriptions ending on the same local day but hours apart in UTC" do
+        travel_to(DateTime.parse("2022-10-21 00:30:00")) do
+          described_class.perform_now
+
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .to have_been_enqueued.with(subscription1)
+        end
+      end
+    end
+
+    context "with a customer timezone far behind UTC" do
+      let(:ending_at) { DateTime.parse("2022-10-21 00:30:00") }
+
+      before { subscription1.customer.update!(timezone: "Pacific/Midway") }
+
+      it "enqueues subscriptions ending on the same local day but on the next UTC day" do
+        travel_to(DateTime.parse("2022-10-20 12:00:00")) do
+          described_class.perform_now
+
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .to have_been_enqueued.with(subscription1)
         end
       end
     end

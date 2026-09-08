@@ -40,9 +40,25 @@ module Events
         end
       end
 
-      def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      # NOTE: result of a prorated_sum aggregation. Unlike AggregationResult it also
+      #       carries the raw, non-prorated value alongside the events count
+      ProratedAggregationResult = Data.define(
+        :value,           # non-prorated sum
+        :prorated_value,  # prorated sum (value * ratio)
+        :events_count
+      )
+
+      # NOTE: grouped variant of ProratedAggregationResult.
+      GroupedProratedAggregationResult = Data.define(
+        :groups,
+        :value,
+        :prorated_value,
+        :events_count
+      )
+
+      def initialize(context:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
-        @subscription = subscription
+        @context = context
         @boundaries = boundaries
 
         @filters = filters
@@ -87,8 +103,8 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
-        nil
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+        []
       end
 
       def prorated_events_values(total_duration)
@@ -197,16 +213,12 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+      attr_accessor :code, :context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
 
-      delegate :customer, to: :subscription
+      delegate :customer, to: :context
 
       def period_duration
-        @period_duration ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?
-        ).charges_duration_in_days
+        @period_duration ||= context.charges_duration_at(to_datetime + 1.day)
       end
 
       def build_aggregation_result(row)
@@ -226,6 +238,26 @@ module Events
         AggregationResult.new(
           value: row && row["value"],
           events_count: with_count ? (row && row["events_count"]).to_i : nil
+        )
+      end
+
+      # NOTE: Build a ProratedAggregationResult from the raw query columns. Mirrors
+      #       build_aggregation_result but also carries the prorated value.
+      def build_prorated_aggregation_result(row)
+        ProratedAggregationResult.new(
+          value: row["value"] || 0,
+          prorated_value: row["prorated_value"] || 0,
+          events_count: row["events_count"].presence&.to_i
+        )
+      end
+
+      # NOTE: grouped variant of build_prorated_aggregation_result.
+      def build_grouped_prorated_aggregation_result(groups:, value:, prorated_value:, events_count:)
+        GroupedProratedAggregationResult.new(
+          groups:,
+          value: value || 0,
+          prorated_value: prorated_value || 0,
+          events_count: events_count.presence&.to_i
         )
       end
 

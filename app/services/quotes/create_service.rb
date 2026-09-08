@@ -32,16 +32,22 @@ module Quotes
           subscription:,
           **params.slice(:order_type)
         )
-        initialize_version!(quote:)
+        quote_version = initialize_version!(quote:)
         add_owners!(quote:)
+
+        SendWebhookJob.perform_after_commit("quote.created", quote_version)
+        # The webhook needs the version for its payload; the activity log records the quote, whose
+        # number, order type and owners are what a reader looks for on a creation entry.
+        Utils::ActivityLog.produce_after_commit(quote, "quote.created")
+
         result.quote = quote
       end
-
-      # TODO: SendWebhookJob.perform_after_commit("quote.created", quote)
 
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
@@ -64,14 +70,23 @@ module Quotes
     def initialize_version!(quote:)
       QuoteVersions::CreateService.call!(
         quote: quote,
-        params: params.slice(
-          :billing_items,
-          :content,
-          :currency,
-          :start_date,
-          :end_date
-        )
-      )
+        params: params.slice(:billing_items, :content, :billing_entity_id).merge(currency: deal_currency)
+      ).quote_version
+    end
+
+    # The deal currency follows the billing object when there is one, and only then the customer's
+    # own default. It stays editable on the draft through QuoteVersions::UpdateService.
+    def deal_currency
+      return subscription.plan_amount_currency if subscription
+
+      customer.currency.presence || issuing_billing_entity.default_currency
+    end
+
+    # The entity the deal is issued by, which is the one whose default currency the quote should
+    # fall back to. An unknown id is left to the version validator to report, so the fallback simply
+    # keeps the customer's own entity here.
+    def issuing_billing_entity
+      organization.billing_entities.find_by(id: params[:billing_entity_id]) || customer.billing_entity
     end
 
     def add_owners!(quote:)

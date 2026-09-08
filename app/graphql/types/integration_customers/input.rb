@@ -7,6 +7,7 @@ module Types
 
       argument :id, ID, required: false
 
+      argument :code, String, required: false
       argument :external_customer_id, String, required: false
       argument :integration_code, String, required: false
       argument :integration_id, ID, required: false

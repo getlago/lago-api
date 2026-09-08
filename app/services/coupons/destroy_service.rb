@@ -2,6 +2,8 @@
 
 module Coupons
   class DestroyService < BaseService
+    Result = BaseResult[:coupon]
+
     def initialize(coupon:)
       @coupon = coupon
       super

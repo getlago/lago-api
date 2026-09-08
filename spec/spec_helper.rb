@@ -7,6 +7,7 @@ KnapsackPro::Adapters::RSpecAdapter.bind
 
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV["RAILS_ENV"] = "test"
+
 require_relative "../config/environment"
 
 # Explicitly require monkey patches after loading dependencies.

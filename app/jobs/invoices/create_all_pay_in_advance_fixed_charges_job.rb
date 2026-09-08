@@ -13,6 +13,8 @@ module Invoices
       end
     end
 
+    unique :until_executed, on_conflict: :log
+
     def perform(plan, timestamp, fixed_charge = nil)
       subscriptions = plan.subscriptions.active
       if fixed_charge

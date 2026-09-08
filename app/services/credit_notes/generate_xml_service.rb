@@ -2,6 +2,8 @@
 
 module CreditNotes
   class GenerateXmlService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(credit_note:, context: nil)
       @credit_note = credit_note
       @context = context

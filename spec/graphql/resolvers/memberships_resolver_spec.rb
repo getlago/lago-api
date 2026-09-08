@@ -53,6 +53,81 @@ RSpec.describe Resolvers::MembershipsResolver do
     expect(result["data"]["memberships"]["metadata"]["adminCount"]).to eq(1)
   end
 
+  describe "filters" do
+    let(:admin_role) { create(:role, :admin) }
+    let(:finance_role) { create(:role, :finance) }
+
+    # The current user's own membership is pinned here: the default factory email is random
+    # and could otherwise match the search terms exercised below.
+    let(:membership) { create(:membership, roles: %i[manager], user: create(:user, email: "manager@lago.test")) }
+
+    let(:query) do
+      <<~GQL
+        query($searchTerm: String, $roleIds: [ID!]) {
+          memberships(limit: 5, searchTerm: $searchTerm, roleIds: $roleIds) {
+            collection { id }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:admin_membership) do
+      create(:membership, organization:, role: admin_role, user: create(:user, email: "jane.doe@example.com"))
+    end
+
+    let(:finance_membership) do
+      create(:membership, organization:, role: finance_role, user: create(:user, email: "john.doe@example.com"))
+    end
+
+    let(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables:
+      )
+    end
+
+    before do
+      admin_membership
+      finance_membership
+    end
+
+    context "with a search term" do
+      let(:variables) { {searchTerm: "jane"} }
+
+      it "returns the memberships matching the user email" do
+        memberships_response = result["data"]["memberships"]
+
+        expect(memberships_response["collection"].map { it["id"] }).to eq([admin_membership.id])
+        expect(memberships_response["metadata"]["totalCount"]).to eq(1)
+      end
+    end
+
+    context "with role ids" do
+      let(:variables) { {roleIds: [finance_role.id]} }
+
+      it "returns the memberships holding one of the roles" do
+        memberships_response = result["data"]["memberships"]
+
+        expect(memberships_response["collection"].map { it["id"] }).to eq([finance_membership.id])
+        expect(memberships_response["metadata"]["totalCount"]).to eq(1)
+      end
+    end
+
+    context "with both a search term and role ids" do
+      let(:variables) { {searchTerm: "doe", roleIds: [admin_role.id]} }
+
+      it "returns the memberships matching every filter" do
+        memberships_response = result["data"]["memberships"]
+
+        expect(memberships_response["collection"].map { it["id"] }).to eq([admin_membership.id])
+        expect(memberships_response["metadata"]["totalCount"]).to eq(1)
+      end
+    end
+  end
+
   describe "traversal attack attempt" do
     let!(:other_org) { create(:organization) }
 

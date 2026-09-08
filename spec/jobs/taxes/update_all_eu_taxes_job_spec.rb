@@ -7,6 +7,10 @@ RSpec.describe Taxes::UpdateAllEuTaxesJob do
 
   let(:organization) { create(:organization, eu_tax_management: true) }
 
+  it_behaves_like "a unique job" do
+    let(:job_args) { [] }
+  end
+
   describe ".perform" do
     it "enqueues a job for organization with EU Tax Management" do
       create(:organization, eu_tax_management: false)

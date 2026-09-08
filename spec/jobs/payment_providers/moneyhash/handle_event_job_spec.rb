@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Moneyhash::HandleEventJob do
-  let(:result) { BaseService::Result.new }
+  let(:result) { PaymentProviders::Moneyhash::HandleEventService::Result.new }
   let(:organization) { create(:organization) }
 
   let(:moneyhash_event) { {} }

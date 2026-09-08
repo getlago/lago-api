@@ -5,10 +5,21 @@ require "rails_helper"
 RSpec.describe Plans::OverrideService do
   subject(:override_service) { described_class.new(plan: parent_plan, params:, subscription:) }
 
+  let(:organization) { membership.organization }
+  let(:membership) { create(:membership) }
   let(:subscription) { nil }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  describe "product catalog gating", :premium do
+    it "rejects overriding any plan of a catalog organization" do
+      organization = create(:organization, feature_flags: ["product_catalog"])
+      legacy_plan = create(:plan, organization:)
+
+      result = described_class.call(plan: legacy_plan, params: {amount_cents: 100})
+
+      expect(result).to be_failure
+      expect(result.error.messages[:plan_overrides]).to eq(["legacy_billing_disabled"])
+    end
+  end
 
   describe "#call", :premium do
     let(:parent_plan) { create(:plan, organization:) }
@@ -109,7 +120,6 @@ RSpec.describe Plans::OverrideService do
       charge
       fixed_charge
       usage_threshold
-      allow(SegmentTrackJob).to receive(:perform_later)
       filter_value
     end
 
@@ -153,7 +163,7 @@ RSpec.describe Plans::OverrideService do
     it "calls SegmentTrackJob" do
       plan = override_service.call.plan
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "plan_created",
         properties: {
@@ -255,6 +265,13 @@ RSpec.describe Plans::OverrideService do
       it "returns error" do
         expect { override_service.call }.not_to change(Plan, :count)
         expect(override_service.call).not_to be_success
+      end
+
+      it "returns the service's own result exposing plan" do
+        result = override_service.call
+
+        expect(result).to be_a(described_class::Result)
+        expect(result.plan).to be_nil
       end
     end
 

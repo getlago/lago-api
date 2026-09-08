@@ -1,14 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.configure do |config|
-  config.before(:each, type: :admin) do
-    allow(Google::Auth::IDTokens)
-      .to receive(:verify_oidc)
-      .and_return({email: "test@getlago.com"})
-  end
-end
-
 module AdminHelper
+  ADMIN_API_KEY = "admin-api-key"
+
   def admin_put(path, params = {}, headers = {})
     apply_headers(headers)
     put(path, params: params.to_json, headers:)
@@ -19,10 +13,8 @@ module AdminHelper
     post(path, params: params.to_json, headers:)
   end
 
-  def admin_post_without_bearer(path, params = {}, headers = {})
-    apply_headers(headers)
-    headers.delete("Authorization")
-    post(path, params: params.to_json, headers:)
+  def admin_headers(api_key = ADMIN_API_KEY)
+    {"X-Admin-API-Key" => api_key}
   end
 
   def json
@@ -36,6 +28,12 @@ module AdminHelper
   def apply_headers(headers)
     headers["Content-Type"] = "application/json"
     headers["Accept"] = "application/json"
-    headers["Authorization"] = "Bearer 123456"
+  end
+end
+
+RSpec.configure do |config|
+  config.before(:each, type: :admin) do
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("ADMIN_API_KEY").and_return(AdminHelper::ADMIN_API_KEY)
   end
 end

@@ -19,6 +19,7 @@ require:
   - ./dev/cops/lago_premium_around_cop.rb
   - ./dev/cops/active_job_perform_all_later_cop.rb
   - ./dev/cops/stub_perform_all_later_cop.rb
+  - ./dev/cops/no_expect_receive_on_job_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -36,6 +37,10 @@ AllCops:
     - "log/**/*"
 
 Lago/LagoPremiumAround:
+  Include:
+    - "spec/**/*.rb"
+
+Lago/NoExpectReceiveOnJob:
   Include:
     - "spec/**/*.rb"
 
@@ -168,6 +173,7 @@ GraphQL/ExtractInputType:
     - "app/graphql/mutations/applied_coupons/create.rb"
     - "app/graphql/mutations/credit_notes/create.rb"
     - "app/graphql/mutations/invites/accept.rb"
+    - "app/graphql/mutations/invoices/regenerate_from_voided.rb"
     - "app/graphql/mutations/plans/create.rb"
     - "app/graphql/mutations/plans/update.rb"
     - "app/graphql/mutations/register_user.rb"

@@ -37,7 +37,7 @@ module BillableMetrics
 
       def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
         if apply_aggregation && grouped_by_keys.present?
-          result.aggregations = [null_result(BaseService::Result.new, grouped_by_keys: grouped_by_keys)]
+          result.aggregations = [null_result(Result.new, grouped_by_keys: grouped_by_keys)]
         else
           result.grouped_by = grouped_by_keys.index_with { nil } if grouped_by_keys
           result.aggregation = 0
@@ -48,11 +48,11 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
+      def initialize(event_store_class:, charge:, context:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
         @event_store_class = event_store_class
         @charge = charge
-        @subscription = subscription
+        @context = context
 
         @filters = filters
         @charge_filter = filters[:charge_filter]
@@ -112,8 +112,12 @@ module BillableMetrics
       #   Used only for in advance billing
       def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
         PerEventAggregationResult.new.tap do |result|
-          result.event_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
-            compute_per_event_aggregation(exclude_event:, include_event_value:)
+          result.event_aggregation = if should_bypass_aggregation?
+            []
+          else
+            event_store.with_grouped_by_values(grouped_by_values) do
+              compute_per_event_aggregation(exclude_event:, include_event_value:)
+            end
           end
         end
       end
@@ -129,7 +133,7 @@ module BillableMetrics
 
       attr_accessor :event_store_class,
         :charge,
-        :subscription,
+        :context,
         :filters,
         :charge_filter,
         :event,
@@ -142,12 +146,12 @@ module BillableMetrics
 
       delegate :billable_metric, to: :charge
 
-      delegate :customer, to: :subscription
+      delegate :customer, to: :context
 
       def event_store
         @event_store ||= event_store_class.new(
           code: billable_metric.code,
-          subscription:,
+          context:,
           boundaries:,
           filters:,
           deduplicate: deduplicate?
@@ -158,7 +162,7 @@ module BillableMetrics
         override = Events::Stores::StoreFactory.override
         return override[:deduplicate] if override
 
-        organization = subscription&.organization
+        organization = context&.organization
         return false unless organization
 
         organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
@@ -226,7 +230,7 @@ module BillableMetrics
       def find_cached_aggregation(with_from_datetime:, with_to_datetime:, grouped_by: nil)
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: subscription.external_id)
+          .where(external_subscription_id: context.external_id)
           .where(charge_id: charge.id)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)

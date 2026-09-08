@@ -18,13 +18,17 @@ module PaymentMethods
       end
 
       ActiveRecord::Base.transaction do
-        payment_method.customer.payment_methods.where.not(id: payment_method.id).update_all(is_default: false) # rubocop:disable Rails/SkipsModelValidations
-        payment_method.update!(is_default: true)
+        Customers::LockService.call(customer: payment_method.customer, scope: :payment_method) do
+          payment_method.customer.payment_methods.where.not(id: payment_method.id).update_all(is_default: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          payment_method.update!(is_default: true)
+        end
       end
 
       result.payment_method = payment_method
 
       result
+    rescue BaseLockService::FailedToAcquireLock => e
+      result.lock_acquisition_failure!(message: e.message, error: e)
     end
 
     private

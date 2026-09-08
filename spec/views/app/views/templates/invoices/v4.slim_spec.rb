@@ -75,6 +75,30 @@ RSpec.describe "templates/invoices/v4.slim" do
   end
 
   context "when invoice_type is credit" do
+    context "with a purchase order number" do
+      let(:invoice) do
+        build_stubbed(
+          :invoice,
+          :credit,
+          :with_purchase_order_number,
+          organization: organization,
+          billing_entity: billing_entity,
+          customer: customer,
+          number: "LAGO-202509-001",
+          payment_due_date: Date.parse("2025-09-04"),
+          issuing_date: Date.parse("2025-09-04"),
+          total_amount_cents: 1050,
+          currency: "USD",
+          fees: [fee]
+        )
+      end
+
+      it "renders the purchase order number under the invoice number" do
+        expect(rendered_template).to include("Purchase Order Number")
+        expect(rendered_template).to include("PO-123")
+      end
+    end
+
     context "when wallet transaction has a name" do
       let(:wallet_transaction_name) { "Wallet Transaction Name" }
 
@@ -611,6 +635,22 @@ RSpec.describe "templates/invoices/v4.slim" do
 
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
+    end
+
+    context "when a fixed charge fee has zero units and a positive amount" do
+      before do
+        arrears_fixed_charge_fee.update!(units: 0, unit_amount_cents: 0, precise_unit_amount: 0)
+      end
+
+      it "renders the fee line" do
+        fee_row = Nokogiri::HTML.fragment(rendered_template).css("tr.fee").find do |row|
+          row.text.include?("Standard Pay in Arrears Fixed Charge Fee")
+        end
+
+        expect(fee_row.css("td").map { |cell| cell.text.squish }).to eq(
+          ["Standard Pay in Arrears Fixed Charge Fee", "0", "$0.00", "0.0%", "$85.00"]
+        )
+      end
     end
   end
 

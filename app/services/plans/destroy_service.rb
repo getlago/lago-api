@@ -34,6 +34,13 @@ module Plans
       plan.entitlements.update_all(deleted_at: Time.current)
       # rubocop:enable Rails/SkipsModelValidations
 
+      # A kept attachment keeps its rate card frozen.
+      plan.applied_rate_cards.find_each do |entry|
+        RateOverride.where(id: entry.rate_phases.filter_map(&:rate_override_id)).discard_all!
+        entry.rate_phases.discard_all!
+      end
+      plan.applied_rate_cards.discard_all!
+
       plan.pending_deletion = false
       plan.discard!
 

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe DunningCampaigns::ProcessAttemptJob do
-  let(:result) { BaseService::Result.new }
+  let(:result) { DunningCampaigns::ProcessAttemptService::Result.new }
   let(:customer) { build :customer }
   let(:dunning_campaign_threshold) { build :dunning_campaign_threshold }
   let(:billing_entity) { build :billing_entity }

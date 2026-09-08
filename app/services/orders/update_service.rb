@@ -41,6 +41,8 @@ module Orders
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       e.result
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private
@@ -60,6 +62,9 @@ module Orders
       return if result.failure?
 
       validate_execute_at(execute_at: params[:execute_at])
+      return if result.failure?
+
+      validate_deal_expiration(execute_at: effective_execute_at, quote_version: order.quote_version)
     end
   end
 end

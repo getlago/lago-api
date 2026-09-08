@@ -2,6 +2,8 @@
 
 module Fees
   class SubscriptionService < BaseService
+    Result = BaseResult[:fee]
+
     def initialize(invoice:, subscription:, boundaries:, context: nil)
       @invoice = invoice
       @subscription = subscription
@@ -129,7 +131,7 @@ module Fees
 
     def should_compute_upgraded_amount?
       return false unless subscription.previous_subscription_id?
-      return false if subscription.invoices.count > 1
+      return false if subscription.invoices.where.not(status: :deleted).count > 1
 
       subscription.previous_subscription.upgraded?
     end

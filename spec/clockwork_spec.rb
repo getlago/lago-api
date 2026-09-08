@@ -265,6 +265,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:execute_scheduled_orders" do
+    let(:job) { "schedule:execute_scheduled_orders" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:30:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:30:00") }
+
+    it "enqueues an execute scheduled orders job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ExecuteScheduledOrdersJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:clean_inbound_webhooks" do
     let(:job) { "schedule:clean_inbound_webhooks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }

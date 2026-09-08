@@ -380,8 +380,6 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
           let(:other_billing_entity) { create(:billing_entity, organization:) }
 
           context "when multi_entity_billing flag is enabled" do
-            before { organization.enable_feature_flag!(:multi_entity_billing) }
-
             context "when the billing entity differs from the customer default" do
               let(:billing_entity) { other_billing_entity }
 
@@ -398,15 +396,6 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
                 expect(result).to be_success
                 expect(subject.first.billing_entity_id).to be_nil
               end
-            end
-          end
-
-          context "when multi_entity_billing flag is disabled" do
-            let(:billing_entity) { other_billing_entity }
-
-            it "leaves the built subscription's billing_entity_id nil" do
-              expect(result).to be_success
-              expect(subject.first.billing_entity_id).to be_nil
             end
           end
         end

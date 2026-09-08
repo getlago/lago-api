@@ -8,7 +8,7 @@ RSpec.describe BillSubscriptionJob do
 
   let(:invoice) { nil }
   let(:invoicing_reason) { :subscription_starting }
-  let(:result) { BaseService::Result.new }
+  let(:result) { Invoices::SubscriptionService::Result.new }
 
   before do
     allow(Invoices::SubscriptionService).to receive(:call)
@@ -25,7 +25,7 @@ RSpec.describe BillSubscriptionJob do
 
     context "when result is a failure" do
       let(:result) do
-        result = BaseService::Result.new
+        result = Invoices::SubscriptionService::Result.new
         result.invoice = invoice
         result.single_validation_failure!(error_code: "error")
       end
@@ -166,7 +166,7 @@ RSpec.describe BillSubscriptionJob do
 
   describe "retry_on" do
     [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
+      [BaseLockService::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
       [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
       [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15]
     ].each do |error, attempts|
