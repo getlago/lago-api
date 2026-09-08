@@ -252,11 +252,24 @@ RSpec.describe ChargeModels::PercentageService do
     let(:per_transaction_min_amount) { "1.75" }
 
     let(:subscription) { create(:subscription, organization:, plan:) }
+    let(:metered_item) do
+      Fees::ChargeService::MeteredItem.from_charge(
+        charge:,
+        boundaries: BillingPeriodBoundaries.new(
+          from_datetime: subscription.started_at,
+          to_datetime: subscription.started_at.end_of_month,
+          charges_from_datetime: subscription.started_at,
+          charges_to_datetime: subscription.started_at.end_of_month,
+          charges_duration: subscription.started_at.end_of_month.day - subscription.started_at.day + 1,
+          timestamp: subscription.started_at.end_of_month
+        )
+      )
+    end
 
     let(:aggregator) do
       BillableMetrics::Aggregations::SumService.new(
         event_store_class:,
-        charge:,
+        metered_item:,
         context: Events::Stores::EventContext.from(subscription:),
         boundaries: nil
       )

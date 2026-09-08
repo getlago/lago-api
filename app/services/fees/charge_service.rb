@@ -433,7 +433,7 @@ module Fees
       aggregate = filtered_aggregations.include?(selected_metered_item.charge_filter&.id) unless filtered_aggregations.nil?
 
       BillableMetrics::AggregationFactory.new_instance(
-        charge: selected_metered_item.charge,
+        metered_item: selected_metered_item,
         current_usage: options.current_usage?,
         context: Events::Stores::EventContext.from(subscription:),
         boundaries: {

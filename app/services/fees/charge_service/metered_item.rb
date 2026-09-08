@@ -15,6 +15,8 @@ module Fees
       end
 
       delegate :charge,
+        :charge_id,
+        :dynamic?,
         :charge_filter,
         :billable_metric,
         :organization_id,

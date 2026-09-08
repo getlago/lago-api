@@ -6,7 +6,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
   subject(:sum_service) do
     described_class.new(
       event_store_class:,
-      charge:,
+      metered_item:,
       context: Events::Stores::EventContext.from(subscription:),
       boundaries: {
         from_datetime:,
@@ -18,6 +18,19 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime: from_datetime,
+        charges_to_datetime: to_datetime,
+        charges_duration: 31,
+        timestamp: to_datetime
+      )
+    )
+  end
   let(:filters) { {event: pay_in_advance_event, grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription, started_at: Time.zone.parse("2022-12-01 00:00:00")) }
@@ -830,7 +843,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
       subject(:sum_service) do
         described_class.new(
           event_store_class:,
-          charge:,
+          metered_item:,
           context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime:,
@@ -870,7 +883,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
       subject(:sum_service) do
         described_class.new(
           event_store_class:,
-          charge:,
+          metered_item:,
           context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime:,

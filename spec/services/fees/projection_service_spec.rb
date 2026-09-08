@@ -137,7 +137,7 @@ RSpec.describe Fees::ProjectionService do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          charge: charge,
+          metered_item: have_attributes(charge:, charge_filter: nil),
           context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
@@ -201,7 +201,7 @@ RSpec.describe Fees::ProjectionService do
 
     context "with charge filter" do
       let(:charge_filter) do
-        create(:charge_filter, properties: {"amount" => "1000"})
+        create(:charge_filter, charge:, properties: {"amount" => "1000"})
       end
 
       let(:filter_service_result) do
@@ -223,7 +223,7 @@ RSpec.describe Fees::ProjectionService do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          charge: charge,
+          metered_item: have_attributes(charge:, charge_filter:),
           context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
