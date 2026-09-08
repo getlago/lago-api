@@ -97,6 +97,10 @@ class RateCard < ApplicationRecord
       Contract.where(catalog_plan_id: plan_applied_rate_cards.select(:catalog_plan_id)).exists?
   end
 
+  def ordered_rates
+    rates.order(:effective_from)
+  end
+
   # The active rate is the latest effective rate; later rates are pending and
   # earlier ones have been superseded (terminated).
   def active_rate
