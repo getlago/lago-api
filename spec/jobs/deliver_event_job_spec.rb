@@ -53,13 +53,13 @@ RSpec.describe DeliverEventJob, type: :job do
 
     it "logs the drop in the shape the monitors match on" do
       allow(Rails.logger).to receive(:info)
-      job = described_class.new("customer_usage.refreshed", customer)
+      job = described_class.new("customer_usage.refreshed.v1", customer)
       contend_on_runtime_lock(job)
 
       job.perform_now
 
       expect(Rails.logger).to have_received(:info).with(
-        a_string_matching(/outcome=superseded event_type=customer_usage.refreshed customer_id=#{customer.id}/)
+        a_string_matching(/outcome=superseded event_type=customer_usage\.refreshed\.v1 customer_id=#{customer.id}/)
       )
     end
   end
