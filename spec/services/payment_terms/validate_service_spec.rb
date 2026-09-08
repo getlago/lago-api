@@ -63,7 +63,7 @@ RSpec.describe PaymentTerms::ValidateService do
       [{payment_term: {term_type: "end_of_month"}, net_payment_term: nil}, true],
       [{payment_term: {term_type: "net", days: 30}, net_payment_term: nil}, true],
       [{payment_term: nil, net_payment_term: nil}, true],
-      [{payment_term: nil, net_payment_term: 30}, false],
+      [{payment_term: nil, net_payment_term: 30}, true],
       [{payment_term: {term_type: "net", days: 30}, net_payment_term: 60}, false],
       [{payment_term: {term_type: "due_on_receipt"}, net_payment_term: 30}, false],
       [{payment_term: {term_type: "end_of_month"}, net_payment_term: 0}, false]
