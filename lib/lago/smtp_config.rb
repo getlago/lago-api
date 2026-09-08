@@ -5,6 +5,8 @@ require "active_support/core_ext/object/blank"
 
 module Lago
   module SmtpConfig
+    DEFAULT_AUTHENTICATION = "login"
+
     DISABLED_AUTHENTICATIONS = ["none", "disabled"].freeze
 
     # Methods net-smtp can actually perform. Any other value raises
@@ -13,9 +15,10 @@ module Lago
 
     class << self
       def authentication
-        value = ENV.fetch("LAGO_SMTP_AUTHENTICATION", "login").to_s.strip
+        value = ENV.fetch("LAGO_SMTP_AUTHENTICATION", DEFAULT_AUTHENTICATION).to_s.strip.presence ||
+          DEFAULT_AUTHENTICATION
 
-        if value.blank? || DISABLED_AUTHENTICATIONS.include?(value.downcase)
+        if DISABLED_AUTHENTICATIONS.include?(value.downcase)
           nil
         else
           value
@@ -24,6 +27,14 @@ module Lago
 
       def authenticated?
         !authentication.nil?
+      end
+
+      def user_name
+        authenticated? ? ENV["LAGO_SMTP_USERNAME"] : nil
+      end
+
+      def password
+        authenticated? ? ENV["LAGO_SMTP_PASSWORD"] : nil
       end
 
       def authentication_supported?

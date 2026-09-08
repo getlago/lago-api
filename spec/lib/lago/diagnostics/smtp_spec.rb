@@ -56,9 +56,9 @@ RSpec.describe Lago::Diagnostics, "#smtp" do
   context "when SMTP authentication is explicitly empty" do
     let(:environment) { credentials.merge("LAGO_SMTP_AUTHENTICATION" => "") }
 
-    it "disables authentication and drops the credentials" do
-      expect(smtp_settings).to include(authentication: nil, user_name: nil, password: nil)
-      expect(smtp_report).to match(/Authentication\s+: none$/)
+    it "keeps the default authentication and the credentials" do
+      expect(smtp_settings).to include(authentication: "login", user_name: "smtp-user", password: "smtp-password")
+      expect(smtp_report).to match(/Authentication\s+: login$/)
     end
   end
 

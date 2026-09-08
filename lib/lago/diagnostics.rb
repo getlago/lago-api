@@ -588,8 +588,10 @@ module Lago
       end
     end
 
-    # An unsupported LAGO_SMTP_AUTHENTICATION is only rejected by net-smtp when
-    # the first email is delivered, so it is called out here instead.
+    # net-smtp authenticates whenever a user name is present, with PLAIN as the
+    # default method, so a disabled method only takes effect without one. An
+    # unsupported method is rejected when the first email is delivered rather
+    # than at boot, so it is called out here instead.
     def authentication_fact
       authentication = SmtpConfig.authentication
 

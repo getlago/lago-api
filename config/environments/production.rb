@@ -81,8 +81,8 @@ Rails.application.configure do
       address: ENV["LAGO_SMTP_ADDRESS"],
       port: ENV["LAGO_SMTP_PORT"],
       domain: ENV["LAGO_SMTP_DOMAIN"],
-      user_name: Lago::SmtpConfig.authenticated? ? ENV["LAGO_SMTP_USERNAME"] : nil,
-      password: Lago::SmtpConfig.authenticated? ? ENV["LAGO_SMTP_PASSWORD"] : nil,
+      user_name: Lago::SmtpConfig.user_name,
+      password: Lago::SmtpConfig.password,
       authentication: Lago::SmtpConfig.authentication,
       enable_starttls_auto: Lago::SmtpConfig.starttls_auto?
     }
