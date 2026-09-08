@@ -317,4 +317,20 @@ RSpec.describe BillingSegments::ScheduleService do
       expect(card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
     end
   end
+
+  context "with an existing transaction", transaction: false do
+    it "rolls back the customer's partial production even when the caller commits" do
+      other_rate_card = create(:rate_card, organization:)
+      create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card,
+        next_billing_at: timestamp, id: "ffffffff-ffff-ffff-ffff-ffffffffffff")
+
+      ActiveRecord::Base.transaction do
+        expect(result).to be_failure
+      end
+
+      expect(BillingSegment.count).to eq(0)
+      expect(result.billing_segments).to eq([])
+      expect(card.reload.next_billing_at).to eq(timestamp)
+    end
+  end
 end

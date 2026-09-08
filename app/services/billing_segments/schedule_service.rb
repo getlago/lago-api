@@ -14,7 +14,7 @@ module BillingSegments
       result.billing_segments = []
 
       customer.with_advisory_lock!("billing_segments_schedule_customer_#{customer.id}") do
-        ActiveRecord::Base.transaction do
+        ActiveRecord::Base.transaction(requires_new: true) do
           due_rate_cards.each { |card| schedule(card) }
         end
       end
