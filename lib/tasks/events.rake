@@ -186,13 +186,10 @@ namespace :events do
     tainted_subscriptions = Set.new
     started_at = Time.current
 
-    total_subscriptions = subscriptions_scope.distinct.count(:external_id)
-
     puts "#{prefix} [#{mode}]"
-    puts "Organization:  #{organization.id}"
-    puts "Timestamped:   [#{from.iso8601}, #{to.iso8601})"
-    puts "Metrics:       #{codes.size} pay-in-advance metric code(s)"
-    puts "Subscriptions: #{total_subscriptions} external id(s) on a plan carrying one"
+    puts "Organization: #{organization.id}"
+    puts "Timestamped:  [#{from.iso8601}, #{to.iso8601})"
+    puts "Metrics:      #{codes.size} pay-in-advance metric code(s)"
     puts "=" * 80
 
     last_external_id = nil
@@ -210,8 +207,8 @@ namespace :events do
       batch_external_ids.each do |external_id|
         processed += 1
 
-        if (processed % 250).zero? || processed == total_subscriptions
-          puts "  ... #{processed}/#{total_subscriptions} subscription(s), #{scanned} event(s) scanned " \
+        if (processed % 250).zero?
+          puts "  ... #{processed} subscription(s), #{scanned} event(s) scanned " \
             "in #{(Time.current - started_at).round(1)}s, #{recovered} to recover, #{skipped.size} skipped"
         end
 
