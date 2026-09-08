@@ -73,6 +73,47 @@ RSpec.describe Fees::ApplyProviderTaxesToStandaloneFeesService do
       end
     end
 
+    context "when a charge is split over several fees that are not persisted" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+      let(:group_key) { "charge_#{charge.id}" }
+
+      let(:fee1) do
+        build(:charge_fee, organization:, charge:, amount_cents: 1000, precise_amount_cents: 1000, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+      end
+      let(:fee2) do
+        build(:charge_fee, organization:, charge:, amount_cents: 500, precise_amount_cents: 500, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+      end
+
+      let(:body) do
+        {
+          succeededInvoices: [{
+            id: "inv_123",
+            fees: [
+              {item_key: group_key, item_id: group_key, item_code: "code_1", amount_cents: 1500,
+               tax_amount_cents: 150, tax_breakdown: [{name: "VAT", rate: "0.10", tax_amount: 150, type: "tax"}]}
+            ]
+          }],
+          failedInvoices: []
+        }.to_json
+      end
+
+      before do
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it "splits the group taxes over the fees" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(fee1.taxes_amount_cents).to eq(100)
+        expect(fee2.taxes_amount_cents).to eq(50)
+        expect(fees.sum(&:taxes_amount_cents)).to eq(150)
+      end
+    end
+
     context "when provider returns a failure" do
       before do
         allow(lago_client).to receive(:post_with_response)

@@ -22,6 +22,10 @@ module Invoices
 
           fee.save! if invoice.persisted?
         end
+
+        if should_apply_provider_taxes?
+          Fees::ReconcileGroupedProviderTaxesService.call!(fees: invoice.fees, provider_taxes:)
+        end
       end
 
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)

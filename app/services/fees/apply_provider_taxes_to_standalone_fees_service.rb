@@ -19,11 +19,10 @@ module Fees
       return result unless taxes_result.success?
 
       fees.each do |fee|
-        item_id = fee.id || fee.item_id
-        fee_taxes = taxes_result.fees.find { |item| item.item_id == item_id }
-
-        Fees::ApplyProviderTaxesService.call!(fee:, fee_taxes:)
+        Fees::ApplyProviderTaxesService.call!(fee:, fee_taxes: fee_taxes(fee, taxes_result.fees))
       end
+
+      Fees::ReconcileGroupedProviderTaxesService.call!(fees:, provider_taxes: taxes_result.fees)
 
       result
     end
@@ -33,6 +32,13 @@ module Fees
     attr_reader :customer, :fees, :currency
 
     FakeInvoice = Data.define(:id, :issuing_date, :currency, :customer, :billing_entity)
+
+    # NOTE: Fees of a charge split by filters share one item_id when they are not persisted,
+    #       since it falls back to the billable metric. item_key stays unique either way.
+    def fee_taxes(fee, provider_taxes)
+      provider_taxes.find { |item| item.item_key == fee.item_key } ||
+        provider_taxes.find { |item| item.item_id == (fee.id || fee.item_id) }
+    end
 
     def fake_invoice
       FakeInvoice.new(

@@ -485,6 +485,78 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             end
 
+            context "with provider taxes on a charge split by grouped_by" do
+              let(:integration) { create(:anrok_integration, organization:) }
+              let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+              let(:requested_line_items) { [] }
+              let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+              let(:charge) do
+                create(
+                  :standard_charge,
+                  plan:,
+                  billable_metric:,
+                  properties: {amount: "12.66", grouped_by: ["region"]}
+                )
+              end
+              let(:events) do
+                %w[us eu].map do |region|
+                  create(
+                    :event,
+                    organization:,
+                    subscription:,
+                    customer:,
+                    code: billable_metric.code,
+                    timestamp: timestamp + 10.hours,
+                    properties: {region:}
+                  )
+                end
+              end
+
+              before do
+                create(
+                  :netsuite_collection_mapping,
+                  integration:,
+                  mapping_type: :fallback_item,
+                  settings: {external_id: "1", external_account_code: "11", external_name: ""}
+                )
+                create(:anrok_customer, integration:, customer:)
+                customer.reload
+
+                stub_request(:post, endpoint).to_return do |request|
+                  line_items = JSON.parse(request.body).first["fees"]
+                  requested_line_items.concat(line_items)
+
+                  taxed = line_items.map do |item|
+                    tax_amount = (item["amount_cents"] * 0.1).round
+
+                    item.merge(
+                      "tax_amount_cents" => tax_amount,
+                      "tax_breakdown" => [
+                        {"name" => "GST", "rate" => "0.10", "tax_amount" => tax_amount, "type" => "tax"}
+                      ]
+                    )
+                  end
+
+                  {body: {succeededInvoices: [{id: "inv_123", fees: taxed}], failedInvoices: []}.to_json}
+                end
+              end
+
+              it "sends the charge as one line item and taxes each of its fees", transaction: false do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+
+                  charge_line_items = requested_line_items.select { |item| item["amount_cents"] == 2532 }
+                  expect(charge_line_items.map { |item| item["item_key"] }).to eq(["charge_#{charge.id}"])
+
+                  charge_fees = result.invoice.fees.select { |fee| fee.charge_id == charge.id }
+                  expect(charge_fees.size).to eq(2)
+                  expect(charge_fees.sum(&:taxes_amount_cents)).to eq(253)
+                end
+              end
+            end
+
             context "with charge filters" do
               let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
 

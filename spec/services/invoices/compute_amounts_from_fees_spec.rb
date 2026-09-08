@@ -145,6 +145,26 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       invoice.credits.destroy_all
     end
 
+    def three_jurisdiction_taxes(charge, sub_total:, tax_amount_cents:, per_jurisdiction:)
+      build(
+        :tax_result,
+        item_id: "charge_#{charge.id}",
+        item_code: "metric_code",
+        amount_cents: sub_total,
+        tax_amount_cents:,
+        tax_breakdown: ["State tax", "County tax", "City tax"].map do |name|
+          build(:tax_breakdown_item, name:, type: "tax", rate: "0.025", tax_amount: per_jurisdiction)
+        end
+      )
+    end
+
+    def jurisdiction_amounts(fees)
+      fees
+        .flat_map { |fee| fee.reload.applied_taxes.to_a }
+        .group_by(&:tax_name)
+        .transform_values { |taxes| taxes.sum(&:amount_cents) }
+    end
+
     it "creates fee and invoice applied taxes and calculate totals" do
       described_class.new(invoice:, provider_taxes: [fee_taxes]).call
 
@@ -158,6 +178,212 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       expect(invoice.sub_total_including_taxes_amount_cents).to eq(272)
       expect(invoice.taxes_rate).to eq(80)
       expect(invoice.total_amount_cents).to eq(272)
+    end
+
+    context "when the provider taxed a charge as a whole" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+
+      let(:fee1) { create(:charge_fee, invoice:, charge:, amount_cents: 333, precise_amount_cents: 333) }
+      let(:fee2) { create(:charge_fee, invoice:, charge:, amount_cents: 333, precise_amount_cents: 333) }
+      let(:fee3) { create(:charge_fee, invoice:, charge:, amount_cents: 334, precise_amount_cents: 334) }
+      let(:charge_fees) { [fee1, fee2, fee3] }
+
+      let(:group) do
+        Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup.new(charge_id: charge.id, fees: charge_fees)
+      end
+      let(:group_taxes) do
+        build(
+          :tax_result,
+          item_id: "charge_#{charge.id}",
+          item_code: "metric_code",
+          amount_cents: 1000,
+          tax_amount_cents: 100,
+          tax_breakdown: [build(:tax_breakdown_item, name: "VAT", type: "tax", rate: "0.10", tax_amount: 100)]
+        )
+      end
+
+      before { fee3 }
+
+      it "taxes every fee of the charge" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(charge_fees.map { |fee| fee.reload.applied_taxes.count }).to eq([1, 1, 1])
+        expect(charge_fees.map(&:taxes_rate)).to eq([10, 10, 10])
+      end
+
+      it "settles the rounding difference on the fee that lost the most to it" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(charge_fees.map { |fee| fee.reload.taxes_amount_cents }).to eq([33, 33, 34])
+        expect(invoice.fees.reload.sum(&:taxes_amount_cents)).to eq(100)
+      end
+    end
+
+    context "when the provider taxed a charge across several jurisdictions" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+
+      let(:fee1) { create(:charge_fee, invoice:, charge:, amount_cents: 268, precise_amount_cents: 268) }
+      let(:fee_two) { create(:charge_fee, invoice:, charge:, amount_cents: 25, precise_amount_cents: 25) }
+      let(:charge_fees) { [fee1, fee_two] }
+
+      let(:group) do
+        Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup.new(charge_id: charge.id, fees: charge_fees)
+      end
+      let(:group_taxes) do
+        build(
+          :tax_result,
+          item_id: "charge_#{charge.id}",
+          item_code: "metric_code",
+          amount_cents: 293,
+          tax_amount_cents: 24,
+          tax_breakdown: [
+            build(:tax_breakdown_item, name: "State tax", type: "tax", rate: "0.06", tax_amount: 18),
+            build(:tax_breakdown_item, name: "City tax", type: "tax", rate: "0.02", tax_amount: 6)
+          ]
+        )
+      end
+
+      before { fee_two }
+
+      it "keeps the invoice tax equal to the tax of its fees and to the provider amount" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(charge_fees.sum { |fee| fee.reload.taxes_amount_cents }).to eq(24)
+        expect(invoice.taxes_amount_cents).to eq(24)
+      end
+
+      it "keeps every invoice tax line equal to the fee lines of that jurisdiction" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(invoice.applied_taxes.map { |tax| [tax.tax_name, tax.amount_cents] })
+          .to eq([["State tax", 18], ["City tax", 6]])
+      end
+    end
+
+    context "when a three-jurisdiction charge is split into fifty fees" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+
+      let(:fee1) { charge_fees.first }
+      let(:charge_fees) do
+        Array.new(50) { create(:charge_fee, invoice:, charge:, amount_cents: 100, precise_amount_cents: 100) }
+      end
+
+      let(:group) do
+        Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup.new(charge_id: charge.id, fees: charge_fees)
+      end
+      let(:group_taxes) { three_jurisdiction_taxes(charge, sub_total: 5000, tax_amount_cents: 375, per_jurisdiction: 125) }
+
+      it "books every fee tax as the sum of its own jurisdiction lines" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        mismatched = charge_fees.reject do |fee|
+          fee.reload.applied_taxes.sum(&:amount_cents) == fee.taxes_amount_cents
+        end
+
+        expect(mismatched).to be_empty
+      end
+
+      it "keeps the charge total equal to the amount the provider returned" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(charge_fees.sum { |fee| fee.reload.taxes_amount_cents }).to eq(375)
+        expect(invoice.taxes_amount_cents).to eq(375)
+      end
+
+      it "keeps every jurisdiction equal to its breakdown amount" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(jurisdiction_amounts(charge_fees)).to eq({"State tax" => 125, "County tax" => 125, "City tax" => 125})
+      end
+    end
+
+    context "when a three-jurisdiction charge is split into two fees" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+
+      let(:fee1) { create(:charge_fee, invoice:, charge:, amount_cents: 100, precise_amount_cents: 100) }
+      let(:fee_two) { create(:charge_fee, invoice:, charge:, amount_cents: 100, precise_amount_cents: 100) }
+      let(:charge_fees) { [fee1, fee_two] }
+
+      let(:group) do
+        Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup.new(charge_id: charge.id, fees: charge_fees)
+      end
+      let(:group_taxes) { three_jurisdiction_taxes(charge, sub_total: 200, tax_amount_cents: 15, per_jurisdiction: 5) }
+
+      before { fee_two }
+
+      it "keeps the charge total equal to the amount the provider returned" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(charge_fees.map { |fee| fee.reload.taxes_amount_cents }.sum).to eq(15)
+        expect(invoice.taxes_amount_cents).to eq(15)
+      end
+
+      it "keeps every jurisdiction equal to its breakdown amount" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(jurisdiction_amounts(charge_fees)).to eq({"State tax" => 5, "County tax" => 5, "City tax" => 5})
+      end
+
+      it "books every fee tax as the sum of its own jurisdiction lines" do
+        described_class.new(invoice:, provider_taxes: group.split_taxes(group_taxes)).call
+
+        expect(charge_fees.map { |fee| fee.reload.applied_taxes.sum(&:amount_cents) }).to eq([9, 6])
+        expect(charge_fees.map(&:taxes_amount_cents)).to eq([9, 6])
+      end
+    end
+
+    context "when the taxed fees belong to no group" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+
+      let(:fee1) { create(:charge_fee, invoice:, charge:, amount_cents: 100, precise_amount_cents: 100) }
+      let(:add_on_fee) { create(:add_on_fee, invoice:, amount_cents: 100, precise_amount_cents: 100) }
+
+      let(:ungrouped_taxes) do
+        [fee1, add_on_fee].map do |fee|
+          build(
+            :tax_result,
+            item_key: fee.item_key,
+            item_id: fee.id,
+            item_code: "metric_code",
+            amount_cents: 100,
+            tax_amount_cents: 8,
+            tax_breakdown: [
+              build(:tax_breakdown_item, name: "State tax", type: "tax", rate: "0.025", tax_amount: 2.5),
+              build(:tax_breakdown_item, name: "County tax", type: "tax", rate: "0.025", tax_amount: 2.5),
+              build(:tax_breakdown_item, name: "City tax", type: "tax", rate: "0.025", tax_amount: 2.5)
+            ]
+          )
+        end
+      end
+
+      before { add_on_fee }
+
+      it "rounds each fee tax once over its jurisdictions" do
+        described_class.new(invoice:, provider_taxes: ungrouped_taxes).call
+
+        expect([fee1, add_on_fee].map { |fee| fee.reload.taxes_amount_cents }).to eq([8, 8])
+        expect(jurisdiction_amounts([fee1, add_on_fee]))
+          .to eq({"State tax" => 6, "County tax" => 6, "City tax" => 6})
+      end
+
+      it "rounds the invoice tax once over its fees" do
+        described_class.new(invoice:, provider_taxes: ungrouped_taxes).call
+
+        amounts = invoice.applied_taxes.to_h { |tax| [tax.tax_name, tax.amount_cents] }
+
+        expect(amounts).to eq({"State tax" => 5, "County tax" => 5, "City tax" => 5})
+        expect(invoice.taxes_amount_cents).to eq(15)
+      end
     end
 
     context "when provider taxes are not provided" do

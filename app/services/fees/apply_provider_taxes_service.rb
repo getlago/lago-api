@@ -35,7 +35,11 @@ module Fees
         )
         fee.applied_taxes << applied_tax
 
-        tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * taxes_base_rate * tax_rate).fdiv(100)
+        # NOTE: A charge priced as one line item by the provider comes back with an amount already
+        #       allocated across its fees so the group total stays exact; recomputing it from this
+        #       fee's sub-total would round it a second time.
+        tax_amount_cents = tax.allocated_amount_cents ||
+          (fee.sub_total_excluding_taxes_amount_cents * taxes_base_rate * tax_rate).fdiv(100)
         tax_precise_amount_cents = (fee.sub_total_excluding_taxes_precise_amount_cents * taxes_base_rate * tax_rate).fdiv(100.to_d)
 
         applied_tax.amount_cents = tax_amount_cents.round
