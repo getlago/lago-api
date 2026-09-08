@@ -1207,6 +1207,21 @@ type CatalogPlan {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+CatalogPlanCollection type
+"""
+type CatalogPlanCollection {
+  """
+  A collection of paginated CatalogPlanCollection
+  """
+  collection: [CatalogPlan!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type Charge {
   appliedPricingUnit: AppliedPricingUnit
   billableMetric: BillableMetric!
@@ -11643,6 +11658,21 @@ type Query {
     """
     billingEntityId: ID!
   ): TaxCollection!
+
+  """
+  Query a single catalog plan of an organization
+  """
+  catalogPlan(
+    """
+    Uniq ID of the catalog plan
+    """
+    id: ID!
+  ): CatalogPlan
+
+  """
+  Query catalog plans of an organization
+  """
+  catalogPlans(limit: Int, page: Int, searchTerm: String): CatalogPlanCollection!
 
   """
   Query a single contract of an organization
