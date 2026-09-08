@@ -41,6 +41,7 @@ charges:
 contracts:
   view:
   create:
+  update:
 coupons:
   view:
     - finance

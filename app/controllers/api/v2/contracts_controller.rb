@@ -18,6 +18,21 @@ module Api
         end
       end
 
+      def update
+        contract = current_organization.contracts.live_by_external_id(params[:external_id])
+
+        result = ::Contracts::UpdateService.call(
+          contract:,
+          params: update_params.to_h.deep_symbolize_keys
+        )
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id)
         # Accept both ?status=pending and ?status[]=pending — strong params
@@ -98,6 +113,19 @@ module Api
         params.require(:contract).permit(
           :external_customer_id,
           :external_id,
+          :name,
+          :plan_code,
+          :billing_time,
+          :billing_anchor_date,
+          :started_at,
+          :ended_at
+        )
+      end
+
+      # external_customer_id and external_id are set at creation and address the
+      # contract; the rest are the editable authoring fields.
+      def update_params
+        params.require(:contract).permit(
           :name,
           :plan_code,
           :billing_time,

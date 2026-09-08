@@ -38,6 +38,7 @@ module Types
     field :create_contract, mutation: Mutations::Contracts::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
     field :update_charge, mutation: Mutations::Charges::Update
+    field :update_contract, mutation: Mutations::Contracts::Update
 
     field :create_charge_filter, mutation: Mutations::ChargeFilters::Create
     field :destroy_charge_filter, mutation: Mutations::ChargeFilters::Destroy

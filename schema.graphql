@@ -9737,6 +9737,16 @@ type Mutation {
   ): ChargeFilter
 
   """
+  Updates a pending contract
+  """
+  updateContract(
+    """
+    Parameters for UpdateContract
+    """
+    input: UpdateContractInput!
+  ): Contract
+
+  """
   Update an existing coupon
   """
   updateCoupon(
@@ -10724,6 +10734,7 @@ enum PermissionEnum {
   charges_delete
   charges_update
   contracts_create
+  contracts_update
   contracts_view
   coupons_attach
   coupons_create
@@ -10862,6 +10873,7 @@ type Permissions {
   chargesDelete: Boolean!
   chargesUpdate: Boolean!
   contractsCreate: Boolean!
+  contractsUpdate: Boolean!
   contractsView: Boolean!
   couponsAttach: Boolean!
   couponsCreate: Boolean!
@@ -14752,6 +14764,28 @@ input UpdateCatalogPlanInput {
   id: ID!
   invoiceDisplayName: String
   name: String
+}
+
+"""
+Update contract input arguments
+"""
+input UpdateContractInput {
+  billingAnchorDate: ISO8601Date
+  billingTime: ContractBillingTimeEnum
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  endedAt: ISO8601DateTime
+
+  """
+  External id of the contract to update
+  """
+  externalId: String!
+  name: String
+  planCode: String
+  startedAt: ISO8601DateTime
 }
 
 """
