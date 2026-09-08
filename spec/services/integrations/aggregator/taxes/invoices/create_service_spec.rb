@@ -100,6 +100,40 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
     ]
   end
 
+  shared_context "with a charge split over two fees" do
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:plan) { create(:plan, organization:) }
+    let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+    let(:group_key) { "charge_#{charge.id}" }
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        charge:,
+        units: 1,
+        amount_cents: 300,
+        precise_amount_cents: 300,
+        created_at: current_time - 1.second
+      )
+    end
+    let(:charge_fee_two) do
+      create(
+        :charge_fee,
+        invoice:,
+        charge:,
+        units: 2,
+        amount_cents: 700,
+        precise_amount_cents: 700,
+        created_at: current_time
+      )
+    end
+
+    before do
+      charge_fee
+      charge_fee_two
+    end
+  end
+
   before do
     integration_customer
     integration_collection_mapping1
@@ -185,6 +219,79 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             service_call
 
             expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
+        end
+
+        context "when a charge is split over several fees" do
+          include_context "with a charge split over two fees"
+
+          let(:requested_line_items) { [] }
+          let(:body) do
+            {
+              succeededInvoices: [{
+                id: "inv_123",
+                fees: [
+                  {item_key: fee_add_on.item_key, item_id: fee_add_on.id, item_code: "m1", amount_cents: 200,
+                   tax_amount_cents: 20, tax_breakdown: [{name: "VAT", rate: "0.10", tax_amount: 20, type: "tax"}]},
+                  {item_key: fee_add_on_two.item_key, item_id: fee_add_on_two.id, item_code: "1", amount_cents: 200,
+                   tax_amount_cents: 20, tax_breakdown: [{name: "VAT", rate: "0.10", tax_amount: 20, type: "tax"}]},
+                  {item_key: group_key, item_id: group_key, item_code: "1", amount_cents: 1000,
+                   tax_amount_cents: 100, tax_breakdown: [{name: "VAT", rate: "0.10", tax_amount: 100, type: "tax"}]}
+                ]
+              }],
+              failedInvoices: []
+            }.to_json
+          end
+
+          before do
+            stub_request(:post, endpoint).with(headers:).to_return do |request|
+              requested_line_items.concat(JSON.parse(request.body).first["fees"])
+
+              {status: response_status, body:}
+            end
+          end
+
+          it "sends the charge as a single line item" do
+            service_call
+
+            expect(requested_line_items.size).to eq(3)
+            expect(requested_line_items).to include(
+              "item_key" => group_key, "item_id" => group_key, "item_code" => "1", "amount_cents" => 1000
+            )
+          end
+
+          it "spreads the charge taxes back over its fees" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.map(&:item_id))
+              .to match_array([fee_add_on.id, fee_add_on_two.id, charge_fee.id, charge_fee_two.id])
+          end
+
+          it "splits the charge amounts over its fees" do
+            fee_taxes = service_call.fees.index_by(&:item_id)
+
+            expect(fee_taxes[charge_fee.id]).to have_attributes(
+              amount_cents: 300,
+              tax_amount_cents: 30,
+              group_key: group_key,
+              group_tax_amount_cents: 100
+            )
+            expect(fee_taxes[charge_fee_two.id]).to have_attributes(
+              amount_cents: 700,
+              tax_amount_cents: 70,
+              group_key: group_key,
+              group_tax_amount_cents: 100
+            )
+            expect(fee_taxes.values_at(charge_fee.id, charge_fee_two.id).map { |item| item.tax_breakdown.sole.tax_amount })
+              .to eq([30, 70])
+          end
+
+          it "leaves the fees sent on their own untouched" do
+            add_on_fee_taxes = service_call.fees.reject(&:group_key)
+
+            expect(add_on_fee_taxes.map(&:tax_amount_cents)).to eq([20, 20])
+            expect(add_on_fee_taxes.map(&:item_id)).to match_array([fee_add_on.id, fee_add_on_two.id])
           end
         end
       end
@@ -280,6 +387,39 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             service_call
 
             expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
+        end
+
+        context "when a charge is split over several fees" do
+          include_context "with a charge split over two fees"
+
+          let(:requested_line_items) { [] }
+
+          before do
+            stub_request(:post, endpoint).with(headers:).to_return do |request|
+              requested_line_items.concat(JSON.parse(request.body).first["fees"])
+
+              {status: response_status, body:}
+            end
+          end
+
+          it "sums the units and the amount of the charge fees" do
+            service_call
+
+            expect(requested_line_items.size).to eq(3)
+            expect(requested_line_items).to include(
+              "item_key" => group_key, "item_id" => group_key, "item_code" => "1", "unit" => "3.0", "amount" => "10.0"
+            )
+          end
+
+          context "when the invoice is voided" do
+            before { invoice.voided! }
+
+            it "negates the summed amount" do
+              service_call
+
+              expect(requested_line_items).to include(hash_including("item_id" => group_key, "amount" => "-10.0"))
+            end
           end
         end
 
