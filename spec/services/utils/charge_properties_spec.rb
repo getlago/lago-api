@@ -37,8 +37,6 @@ RSpec.describe Utils::ChargeProperties do
         .to eq({"free_units" => 10, "package_size" => 100})
     end
 
-    # The customer defined those keys for their own aggregation, renaming them would change what it
-    # reads at billing time.
     it "keeps the keys the customer defined inside custom_properties" do
       properties = {"customProperties" => {"myOwnKey" => {"nestedKey" => "value"}}}
 

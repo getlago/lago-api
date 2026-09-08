@@ -161,9 +161,6 @@ module QuoteVersions
           quoted_charge_model != chargeable.charge_model
         end
 
-        # The quoted payload is written in its own camelCase while the charge models read their
-        # properties in snake_case, so the negotiated hash is underscored here and, identically, where
-        # the override is applied. See Orders::SubscriptionCreation::ExecuteService#charge_overrides.
         def validate_charge_properties(charge_override, charge, index, charge_index)
           properties = Utils::ChargeProperties.underscore_keys(charge_override["properties"])
           return if properties.nil?

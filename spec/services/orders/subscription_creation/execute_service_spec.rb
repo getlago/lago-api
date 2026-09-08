@@ -109,10 +109,6 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(overridden_plan.charges.sole.properties["amount"]).to eq("30")
       end
 
-      # The charge models know their properties in snake_case, so tiers negotiated in the camelCase
-      # of the payload have to reach the override plan underscored. Left as submitted they would fail
-      # Charge#validate_charge_model_properties, and Plans::OverrideService ignores that: the charge
-      # would silently drop off the plan and the subscription would bill nothing for it.
       context "when the negotiated tiers are written in the camelCase of the payload" do
         let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
         let(:plan_overrides) do
