@@ -16,6 +16,10 @@ module Mutations
       type Types::Subscriptions::Object
 
       def resolve(entitlements: nil, **args)
+        if args[:payment_term]
+          args[:payment_term] = args[:payment_term].to_h
+        end
+
         subscription = current_organization.subscriptions.find_by(id: args[:id])
         result = ::Subscriptions::UpdateService.call(subscription:, params: args)
 

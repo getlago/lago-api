@@ -8,6 +8,7 @@ module Types
       field :billing_entity_id, ID, null: true
       field :customer, Types::Customers::Object, null: false
       field :external_id, String, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :id, ID, null: false
       field :plan, Types::Plans::Object, null: false
 

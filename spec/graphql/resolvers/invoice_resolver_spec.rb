@@ -476,4 +476,39 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data.dig("fees", 0, "presentationBreakdowns")).to eq([])
     end
   end
+
+  context "with payment_term" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          invoice(id: $id) {
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    it "returns the frozen term rather than the current customer term" do
+      invoice.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+      customer.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+
+      response = execute_query(query:, variables: {id: invoice.id})
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "invoice", "paymentTerm")).to eq(
+        "termType" => "end_of_month", "days" => nil, "dayOfMonth" => nil, "monthOffset" => nil
+      )
+    end
+
+    it "derives the term from the invoice alias for historical invoices" do
+      invoice.update!(payment_term: nil, net_payment_term: 30)
+
+      response = execute_query(query:, variables: {id: invoice.id})
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "invoice", "paymentTerm")).to eq(
+        "termType" => "net", "days" => 30, "dayOfMonth" => nil, "monthOffset" => nil
+      )
+    end
+  end
 end
