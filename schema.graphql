@@ -1528,7 +1528,7 @@ type ContractAppliedRateCard {
   effectiveDate: ISO8601Date!
   endedDate: ISO8601Date
   id: ID!
-  nextBillingAt: ISO8601DateTime!
+  nextBillingAt: ISO8601DateTime
   product: Product!
   rateCard: RateCard!
   ratePhases: [RatePhase!]!

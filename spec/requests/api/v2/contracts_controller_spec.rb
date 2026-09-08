@@ -128,6 +128,15 @@ RSpec.describe Api::V2::ContractsController do
       expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(card.id)
     end
 
+    it "returns an exhausted billing clock as null" do
+      create(:contract_rate_card, organization:, contract:, next_billing_at: nil)
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:applied_rate_cards].sole[:next_billing_at]).to be_nil
+    end
+
     context "when the external id contains a dot" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "contract.2026-01") }
 

@@ -19,6 +19,23 @@ RSpec.describe ContractRateCard do
   end
 
   describe "Scopes" do
+    describe ".due_for_billing" do
+      it "selects due active cards, including ended attachments with final billing outstanding" do
+        due = create(:contract_rate_card, next_billing_at: 1.hour.ago)
+        ended = create(:contract_rate_card, effective_date: 2.days.ago.to_date,
+          ended_date: 1.day.ago.to_date, next_billing_at: 1.hour.ago)
+        create(:contract_rate_card, next_billing_at: 1.hour.from_now)
+        create(:contract_rate_card, next_billing_at: nil)
+        create(:contract_rate_card, next_billing_at: 1.hour.ago).discard!
+        %i[pending canceled terminated].each do |status|
+          contract = create(:contract, status:)
+          create(:contract_rate_card, organization: contract.organization, contract:, next_billing_at: 1.hour.ago)
+        end
+
+        expect(described_class.due_for_billing(Time.current)).to match_array([due, ended])
+      end
+    end
+
     describe ".current_and_scheduled" do
       it "keeps open and upcoming attachments, hides ended ones" do
         open_card = create(:contract_rate_card)
@@ -58,7 +75,7 @@ RSpec.describe ContractRateCard do
 
   describe "validations" do
     it { is_expected.to validate_presence_of(:billing_anchor_date) }
-    it { is_expected.to validate_presence_of(:next_billing_at) }
+    it { is_expected.to allow_value(nil).for(:next_billing_at) }
     it { is_expected.to validate_presence_of(:effective_date) }
     it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0).allow_nil }
 

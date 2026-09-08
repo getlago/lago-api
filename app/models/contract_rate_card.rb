@@ -16,7 +16,6 @@ class ContractRateCard < ApplicationRecord
   has_many :billing_segments
 
   validates :billing_anchor_date, presence: true
-  validates :next_billing_at, presence: true
   validates :effective_date, presence: true
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_date: nil) }}
@@ -24,6 +23,12 @@ class ContractRateCard < ApplicationRecord
   validate :validate_effective_before_ended
 
   default_scope -> { kept }
+
+  # Ended attachments may still have a final segment to produce. A nil clock marks
+  # a fully scheduled attachment; pending and canceled contracts never produce rows.
+  scope :due_for_billing, ->(timestamp) {
+    joins(:contract).merge(Contract.active).where(next_billing_at: ..timestamp)
+  }
 
   # The window is day-grained and the end inclusive: the card still bills on
   # its ended_date, charges stop after it. Ended attachments are history;
@@ -68,7 +73,7 @@ end
 #  deleted_at          :datetime
 #  effective_date      :date             not null
 #  ended_date          :date
-#  next_billing_at     :datetime         not null
+#  next_billing_at     :datetime
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
@@ -81,6 +86,7 @@ end
 #  index_active_contract_rate_cards_on_contract_and_card  (contract_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
 #  index_contract_rate_cards_on_contract_id               (contract_id)
 #  index_contract_rate_cards_on_deleted_at                (deleted_at)
+#  index_contract_rate_cards_on_due_billing               (next_billing_at) WHERE ((deleted_at IS NULL) AND (next_billing_at IS NOT NULL))
 #  index_contract_rate_cards_on_next_billing_at           (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
 #  index_contract_rate_cards_on_organization_id           (organization_id)
 #  index_contract_rate_cards_on_rate_card_id              (rate_card_id)

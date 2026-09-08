@@ -27,7 +27,7 @@ RSpec.describe Resolvers::ContractResolver do
           id externalId status billingTime
           customer { id }
           plan { id code name currency }
-          appliedRateCards { id rateCard { id } effectiveDate }
+          appliedRateCards { id rateCard { id } effectiveDate nextBillingAt }
           appliedRateCardsCount
         }
       }
@@ -61,5 +61,12 @@ RSpec.describe Resolvers::ContractResolver do
     it "returns a not found error" do
       expect_graphql_error(result: execution, message: "Resource not found")
     end
+  end
+
+  it "returns an exhausted billing clock as null" do
+    create(:contract_rate_card, organization:, contract:, next_billing_at: nil)
+
+    expect(execution["errors"]).to be_nil
+    expect(execution["data"]["contract"]["appliedRateCards"].sole["nextBillingAt"]).to be_nil
   end
 end
