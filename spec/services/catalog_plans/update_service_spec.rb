@@ -71,4 +71,21 @@ RSpec.describe CatalogPlans::UpdateService do
       expect(result.catalog_plan.reload.name).to eq("Renamed")
     end
   end
+
+  context "when changing the currency of a plan attached to a contract with direct rate cards" do
+    let(:catalog_plan) { create(:catalog_plan, currency: "EUR") }
+    let(:params) { {currency: "USD"} }
+
+    before do
+      customer = create(:customer, organization: catalog_plan.organization)
+      contract = create(:contract, organization: catalog_plan.organization, customer:, catalog_plan:)
+      create(:contract_rate_card, organization: catalog_plan.organization, contract:)
+    end
+
+    it "rejects the change even without plan-level rate cards" do
+      expect(catalog_plan.applied_rate_cards).to be_empty
+      expect(result).not_to be_success
+      expect(result.error.messages[:currency]).to eq(["not_editable_with_applied_rate_cards"])
+    end
+  end
 end
