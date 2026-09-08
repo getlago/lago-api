@@ -10,26 +10,18 @@ module Events
         @with_last_seen_at = with_last_seen_at
       end
 
-      private
-
-      attr_reader :contract, :billing_segments, :codes, :with_last_seen_at
-
-      delegate :organization, to: :contract
-
-      def filter_targets_from_events
+      def filter_targets
         return {} if target_segments.empty?
         return {} if metric_codes.empty?
 
         super
       end
 
-      def filter_targets_from_pre_enriched_events
-        # TODO: Store contract/product/product-filter identities during enrichment and expose a
-        # contract-scoped store lookup, including recurring history and ingestion timestamps.
-        # Charge/filter IDs cannot be mapped safely to product filters. Historical fee carry-forward
-        # also needs product/filter fee links and defined contract replacement semantics.
-        raise NotImplementedError, "Pre-enriched billing segment filtering requires product-aware enrichment and store lookups"
-      end
+      private
+
+      attr_reader :contract, :billing_segments, :codes, :with_last_seen_at
+
+      delegate :organization, to: :contract
 
       def filter_target_for(billing_segment)
         Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)

@@ -4,16 +4,6 @@ module Events
   module BillingPeriodFilters
     class BaseResolver
       def filter_targets
-        if organization.pre_filter_events?
-          filter_targets_from_pre_enriched_events
-        else
-          filter_targets_from_events
-        end
-      end
-
-      private
-
-      def filter_targets_from_events
         combinations = event_values_with_history do |**options|
           event_store.distinct_codes_and_property_combinations(filter_keys: billable_metric_filter_keys, **options)
         end
@@ -24,6 +14,8 @@ module Events
           result: recurring_event_filter_targets
         )
       end
+
+      private
 
       def event_values_with_history
         values = yield(codes: non_recurring_metric_codes, with_last_seen_at:)
