@@ -905,8 +905,6 @@ DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_i
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_rate_override_id;
-DROP INDEX IF EXISTS public.index_billing_segments_on_rate_card_rate_id;
-DROP INDEX IF EXISTS public.index_billing_segments_on_pricing_unit_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_invoice_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_customer_id;
@@ -8357,20 +8355,6 @@ CREATE INDEX index_billing_segments_on_organization_id ON public.billing_segment
 
 
 --
--- Name: index_billing_segments_on_pricing_unit_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_billing_segments_on_pricing_unit_id ON public.billing_segments USING btree (pricing_unit_id);
-
-
---
--- Name: index_billing_segments_on_rate_card_rate_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_billing_segments_on_rate_card_rate_id ON public.billing_segments USING btree (rate_card_rate_id);
-
-
---
 -- Name: index_billing_segments_on_rate_override_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14920,6 +14904,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260908180522'),
 ('20260905223042'),
 ('20260905223041'),
 ('20260904173416'),
