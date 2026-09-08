@@ -9,8 +9,8 @@ RSpec.describe PlanRateCardsQuery, type: :query do
   let(:pagination) { nil }
   let(:filters) { {} }
 
-  let(:plan) { create(:plan, organization:) }
-  let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let!(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
   let!(:other_plan_rate_card) { create(:plan_rate_card, organization:) }
 
   it "returns all plan products of the organization" do
@@ -19,7 +19,7 @@ RSpec.describe PlanRateCardsQuery, type: :query do
   end
 
   context "when filtering by plan_id" do
-    let(:filters) { {plan_id: plan.id} }
+    let(:filters) { {plan_id: catalog_plan.id} }
 
     it "returns only the plan's products" do
       expect(result.plan_rate_cards).to eq([plan_rate_card])
@@ -27,7 +27,7 @@ RSpec.describe PlanRateCardsQuery, type: :query do
   end
 
   context "when filtering by plan_code" do
-    let(:filters) { {plan_code: plan.code} }
+    let(:filters) { {plan_code: catalog_plan.code} }
 
     it "returns only the plan's products" do
       expect(result.plan_rate_cards).to eq([plan_rate_card])

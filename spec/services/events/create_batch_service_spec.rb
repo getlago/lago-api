@@ -89,6 +89,26 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    context "when the post processing jobs cannot be enqueued" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(Redis::CannotConnectError.new("no connection"))
+      end
+
+      it "does not keep any of the events" do
+        expect { create_batch_service.call }.to raise_error(Redis::CannotConnectError)
+          .and(not_change(Event, :count))
+      end
+
+      it "does not produce the events on kafka" do
+        allow(Events::KafkaProducerService).to receive(:call!).and_call_original
+
+        expect { create_batch_service.call }.to raise_error(Redis::CannotConnectError)
+
+        expect(Events::KafkaProducerService).not_to have_received(:call!)
+      end
+    end
+
     context "when no events are provided" do
       let(:events_params) { build_params(count: 0) }
 

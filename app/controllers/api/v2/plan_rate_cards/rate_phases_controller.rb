@@ -60,8 +60,8 @@ module Api
 
         def plan_rate_card
           @plan_rate_card ||= begin
-            plan = current_organization.plans.parents.find_by(code: params[:plan_code])
-            plan&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
+            catalog_plan = current_organization.catalog_plans.find_by(code: params[:plan_code])
+            catalog_plan&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
           end
         end
 

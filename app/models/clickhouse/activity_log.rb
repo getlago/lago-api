@@ -22,11 +22,12 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
-    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard].freeze
+    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard].freeze
 
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
       plan: "Plan",
+      catalog_plan: "CatalogPlan",
       customer: "Customer",
       invoice: "Invoice",
       credit_note: "CreditNote",

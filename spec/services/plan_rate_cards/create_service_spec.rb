@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe PlanRateCards::CreateService do
-  subject(:result) { described_class.call(plan:, params:) }
+  subject(:result) { described_class.call(catalog_plan:, params:) }
 
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   let(:params) { {rate_card_code: rate_card.code, units: "10"} }
@@ -15,7 +15,7 @@ RSpec.describe PlanRateCards::CreateService do
     expect { result }.to change(PlanRateCard, :count).by(1)
 
     plan_rate_card = result.plan_rate_card
-    expect(plan_rate_card.plan).to eq(plan)
+    expect(plan_rate_card.catalog_plan).to eq(catalog_plan)
     expect(plan_rate_card.rate_card).to eq(rate_card)
     expect(plan_rate_card.units).to eq(10)
   end
@@ -30,7 +30,7 @@ RSpec.describe PlanRateCards::CreateService do
   end
 
   context "when the plan already prices the whole item" do
-    before { create(:plan_rate_card, organization:, plan:, rate_card: create(:rate_card, organization:, product: rate_card.product)) }
+    before { create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:, product: rate_card.product)) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
@@ -43,7 +43,7 @@ RSpec.describe PlanRateCards::CreateService do
     let(:filter) { create(:product_filter, organization:, product:) }
     let(:rate_card) { create(:rate_card, organization:, product:, product_filter: filter) }
 
-    before { create(:plan_rate_card, organization:, plan:, rate_card: create(:rate_card, organization:, product:, product_filter: filter)) }
+    before { create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:, product:, product_filter: filter)) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
@@ -55,7 +55,7 @@ RSpec.describe PlanRateCards::CreateService do
     before do
       filter = create(:product_filter, organization:, product: rate_card.product)
       scoped_card = create(:rate_card, organization:, product: rate_card.product, product_filter: filter)
-      create(:plan_rate_card, organization:, plan:, rate_card: scoped_card)
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card: scoped_card)
     end
 
     it "creates the entry" do
@@ -71,15 +71,6 @@ RSpec.describe PlanRateCards::CreateService do
 
       expect(result).not_to be_success
       expect(result.error.messages[:currency]).to eq(["currency_does_not_match"])
-    end
-  end
-
-  context "when the plan is a legacy plan" do
-    let(:plan) { create(:plan, organization:) }
-
-    it "rejects the attachment" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:plan]).to eq(["legacy_plan"])
     end
   end
 
@@ -130,7 +121,7 @@ RSpec.describe PlanRateCards::CreateService do
   end
 
   context "when the plan is missing" do
-    let(:plan) { nil }
+    let(:catalog_plan) { nil }
 
     it "returns a not found failure" do
       expect(result).not_to be_success
@@ -147,8 +138,8 @@ RSpec.describe PlanRateCards::CreateService do
     end
   end
 
-  context "when the plan has subscriptions" do
-    before { create(:subscription, plan:, organization:) }
+  context "when the plan has contracts" do
+    before { create(:contract, catalog_plan:, organization:) }
 
     it "forbids adding a rate card" do
       expect(result).not_to be_success

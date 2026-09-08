@@ -4,30 +4,34 @@ module RatePhases
   class ReplaceService < BaseService
     Result = BaseResult[:rate_phases]
 
-    def initialize(plan_rate_card:, phases_params:)
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [])
       @plan_rate_card = plan_rate_card
+      @contract_rate_card = contract_rate_card
       @phases_params = Array.wrap(phases_params).map { |phase| phase.to_h.with_indifferent_access }
       super
     end
 
     def call
-      return result.not_found_failure!(resource: "applied_rate_card") unless plan_rate_card
+      return result.not_found_failure!(resource: "applied_rate_card") unless applied_rate_card
 
       sequence_failure = validate_sequence
       return sequence_failure if sequence_failure
 
-      # The lock covers the plan_locked? read too, so a subscription attaching
-      # concurrently cannot slip past the guard mid-replace.
-      plan_rate_card.with_lock do
-        if plan_locked?
-          return result.single_validation_failure!(field: :rate_phases, error_code: "plan_locked")
+      # The lock covers the edit check too, so a contract activating (or a plan
+      # gaining a subscription) concurrently cannot slip past the guard
+      # mid-replace.
+      applied_rate_card.with_lock do
+        if (blocked = applied_rate_card.edit_error_code)
+          return result.single_validation_failure!(field: :rate_phases, error_code: blocked)
         end
 
         discard_existing_phases
 
         result.rate_phases = ordered_params.map do |phase|
-          plan_rate_card.rate_phases.create!(
+          applied_rate_card.rate_phases.create!(
             organization:,
+            plan_rate_card:,
+            contract_rate_card:,
             code: phase[:code],
             position: phase[:position],
             name: phase[:name],
@@ -46,29 +50,29 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :phases_params
+    attr_reader :plan_rate_card, :contract_rate_card, :phases_params
+
+    def applied_rate_card
+      plan_rate_card || contract_rate_card
+    end
 
     def organization
-      plan_rate_card.organization
+      applied_rate_card.organization
     end
 
     def discard_existing_phases
-      existing_phases = plan_rate_card.rate_phases.to_a
+      existing_phases = applied_rate_card.rate_phases.to_a
       RateOverride.where(id: existing_phases.filter_map(&:rate_override_id)).discard_all!
-      plan_rate_card.rate_phases.discard_all!
+      applied_rate_card.rate_phases.discard_all!
     end
 
     def build_override(phase)
       return if phase[:rate_override].nil?
 
       RateOverrides::CreateService.call(
-        rate_card: plan_rate_card.rate_card,
+        rate_card: applied_rate_card.rate_card,
         params: phase[:rate_override]
       ).raise_if_error!.rate_override
-    end
-
-    def plan_locked?
-      plan_rate_card.plan.attached_to_subscriptions?
     end
 
     def ordered_params

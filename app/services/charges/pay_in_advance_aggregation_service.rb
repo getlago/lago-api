@@ -16,8 +16,8 @@ module Charges
 
     def call
       aggregator = BillableMetrics::AggregationFactory.new_instance(
-        charge:,
-        subscription:,
+        metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, charge_filter:, properties:),
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,

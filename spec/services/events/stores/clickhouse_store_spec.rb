@@ -63,7 +63,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       subject(:event_store) do
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by: nil,
@@ -147,7 +147,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
   # deduplicated rows; non-deduplicated counts must not use `FINAL`.
   describe "#count_query" do
     subject(:event_store) do
-      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
+      described_class.new(code: billable_metric.code, context: Events::Stores::EventContext.from(subscription:), boundaries:, filters:, deduplicate:)
     end
 
     let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
@@ -243,7 +243,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
   # identical data, across re-enrichment duplicates and boundary edges.
   describe "#count fast-path equivalence with the CTE-based query" do
     subject(:event_store) do
-      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
+      described_class.new(code: billable_metric.code, context: Events::Stores::EventContext.from(subscription:), boundaries:, filters: {}, deduplicate: true)
     end
 
     let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
@@ -331,7 +331,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     def event_store_for(boundary_transaction_id, deduplicate:)
       described_class.new(
         code: billable_metric.code,
-        subscription:,
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: {
           from_datetime: subscription.started_at.beginning_of_day,
           to_datetime: subscription.started_at.end_of_month.end_of_day,

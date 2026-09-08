@@ -56,6 +56,47 @@ RSpec.describe Events::CreateService do
       expect { create_service.call }.to have_enqueued_job(Events::PostProcessJob)
     end
 
+    context "when the post processing job cannot be enqueued" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(Redis::CannotConnectError.new("no connection"))
+      end
+
+      # `index_unique_transaction_id` has no `deleted_at` predicate, so keeping the event would
+      # answer the caller's retry with `value_already_exist` forever.
+      it "does not keep the event" do
+        expect { create_service.call }.to raise_error(Redis::CannotConnectError)
+          .and(not_change(Event, :count))
+      end
+
+      context "when kafka is configured", :capture_kafka_messages do
+        before do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+          ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
+        end
+
+        it "does not produce the event on kafka" do
+          expect { create_service.call }.to raise_error(Redis::CannotConnectError)
+
+          expect(karafka_producer).not_to have_received(:produce_many_async)
+        end
+      end
+    end
+
+    # `ActiveJob::SerializationError` is an `ArgumentError`, which must not be reported to the
+    # caller as an invalid timestamp.
+    context "when the job cannot be serialized" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(ActiveJob::SerializationError.new("unserializable"))
+      end
+
+      it "surfaces the failure instead of blaming the payload" do
+        expect { create_service.call }.to raise_error(ActiveJob::SerializationError)
+          .and(not_change(Event, :count))
+      end
+    end
+
     context "when event already exists" do
       let(:existing_event) do
         create(

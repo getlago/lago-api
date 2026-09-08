@@ -98,16 +98,18 @@ unless ProductCategory.exists?(organization:, code: "cloud_platform")
     }
   )
 
-  # Assign the rate card to a plan so the catalog is wired into an offer.
-  plan = Plans::CreateService.call!({
+  # Assign the rate card to a catalog plan so the catalog is wired into an offer.
+  # CreateService takes the attributes as a single positional hash (it mirrors
+  # the controller's permitted params), so pass them wrapped, not as keywords.
+  catalog_plan = CatalogPlans::CreateService.call!({
     organization_id: organization.id,
     name: "Growth",
     code: "growth",
-    amount_currency: "USD"
-  }).plan
+    currency: "USD"
+  }).catalog_plan
 
   PlanRateCards::CreateService.call!(
-    plan:,
+    catalog_plan:,
     params: {rate_card_code: rate_card.code}
   )
 end

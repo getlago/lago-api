@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module V2
-  class PlanSerializer < ModelSerializer
+  class CatalogPlanSerializer < ModelSerializer
     def serialize
       {
         lago_id: model.id,
@@ -9,7 +9,7 @@ module V2
         invoice_display_name: model.invoice_display_name,
         code: model.code,
         description: model.description,
-        currency: model.amount_currency,
+        currency: model.currency,
         applied_rate_cards_count: model.applied_rate_cards.size,
         created_at: model.created_at.iso8601
       }

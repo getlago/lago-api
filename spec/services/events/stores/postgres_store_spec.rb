@@ -59,7 +59,7 @@ RSpec.describe Events::Stores::PostgresStore do
     let(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        subscription:,
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: {
           from_datetime: subscription.started_at.beginning_of_day,
           to_datetime: Time.current.end_of_day
@@ -109,7 +109,7 @@ RSpec.describe Events::Stores::PostgresStore do
       def store_for(event)
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -142,7 +142,7 @@ RSpec.describe Events::Stores::PostgresStore do
 
         event_store = described_class.new(
           code: billable_metric.code,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -167,7 +167,7 @@ RSpec.describe Events::Stores::PostgresStore do
       let(:event_store) do
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries: {
             from_datetime: datetime,
             to_datetime: datetime,
@@ -196,7 +196,7 @@ RSpec.describe Events::Stores::PostgresStore do
     let(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        subscription:,
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: {
           from_datetime: started_at,
           to_datetime: started_at.end_of_month.end_of_day,

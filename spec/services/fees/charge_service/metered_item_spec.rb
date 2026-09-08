@@ -80,12 +80,22 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item.properties).to eq(charge.properties)
       expect(metered_item.pricing_structure).to be_a(ChargeModels::PricingStructure)
       expect(metered_item).to have_attributes(
+        charge_id: charge.id,
+        dynamic?: false,
         charge_filter: nil,
         pay_in_advance?: false,
         prorated?: false,
         invoiceable?: true,
         applied_pricing_unit: nil
       )
+    end
+  end
+
+  describe "#dynamic?" do
+    it "reflects the backing charge's pricing model" do
+      charge.charge_model = "dynamic"
+
+      expect(metered_item).to be_dynamic
     end
   end
 

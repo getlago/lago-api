@@ -20,6 +20,8 @@ module Fees
 
       delegate :charge,
         :billing_segment,
+        :charge_id,
+        :dynamic?,
         :charge_filter,
         :product_filter,
         :billable_metric,

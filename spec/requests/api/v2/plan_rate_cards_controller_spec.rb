@@ -4,13 +4,13 @@ require "rails_helper"
 
 RSpec.describe Api::V2::PlanRateCardsController do
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   describe "POST /api/v2/plans/:plan_code/applied_rate_cards" do
     subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/applied_rate_cards", {applied_rate_card: create_params}) }
 
-    let(:plan_code) { plan.code }
+    let(:plan_code) { catalog_plan.code }
     let(:create_params) do
       {rate_card_code: rate_card.code, units: "10"}
     end
@@ -22,7 +22,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to be_present
-      expect(json[:applied_rate_card][:plan_code]).to eq(plan.code)
+      expect(json[:applied_rate_card][:plan_code]).to eq(catalog_plan.code)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
       expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
     end
@@ -51,8 +51,8 @@ RSpec.describe Api::V2::PlanRateCardsController do
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards" do
     subject { get_with_token(organization, "/api/v2/plans/#{plan_code}/applied_rate_cards") }
 
-    let(:plan_code) { plan.code }
-    let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+    let(:plan_code) { catalog_plan.code }
+    let!(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
     before { create(:plan_rate_card, organization:) }
 
@@ -78,7 +78,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
   context "with a nested rate_phases sequence" do
     subject do
-      post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
+      post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
         rate_card_code: rate_card.code,
         units: "1",
         rate_phases: [
@@ -98,7 +98,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
     context "when the list is explicitly empty" do
       subject do
-        post_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards", {applied_rate_card: {
+        post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
           rate_card_code: rate_card.code, rate_phases: []
         }})
       end
@@ -113,9 +113,9 @@ RSpec.describe Api::V2::PlanRateCardsController do
   end
 
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards/:code" do
-    subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
+    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
 
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
     include_examples "requires API permission", "plan_rate_card", "read"
 
@@ -127,7 +127,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
     end
 
     context "when it does not exist" do
-      subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/unknown") }
+      subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/unknown") }
 
       it "returns a not found error" do
         subject
@@ -138,9 +138,9 @@ RSpec.describe Api::V2::PlanRateCardsController do
   end
 
   describe "PUT /api/v2/plans/:plan_code/applied_rate_cards/:code" do
-    subject { put_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: {units: "12"}}) }
+    subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: {units: "12"}}) }
 
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, units: 5) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, units: 5) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
@@ -151,8 +151,8 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(json[:applied_rate_card][:units]).to eq("12.0")
     end
 
-    context "when the plan has subscriptions" do
-      before { create(:subscription, plan:, organization:) }
+    context "when the plan has contracts" do
+      before { create(:contract, catalog_plan:, organization:) }
 
       it "returns a validation error" do
         subject
@@ -162,7 +162,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
     end
 
     context "when it does not exist" do
-      subject { put_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/unknown", {applied_rate_card: {units: "12"}}) }
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/unknown", {applied_rate_card: {units: "12"}}) }
 
       it "returns a not found error" do
         subject
@@ -173,9 +173,9 @@ RSpec.describe Api::V2::PlanRateCardsController do
   end
 
   describe "DELETE /api/v2/plans/:plan_code/applied_rate_cards/:code" do
-    subject { delete_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
+    subject { delete_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
 
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
@@ -183,11 +183,11 @@ RSpec.describe Api::V2::PlanRateCardsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(plan.reload.applied_rate_cards).to be_empty
+      expect(catalog_plan.reload.applied_rate_cards).to be_empty
     end
 
-    context "when the plan has subscriptions" do
-      before { create(:subscription, plan:, organization:) }
+    context "when the plan has contracts" do
+      before { create(:contract, catalog_plan:, organization:) }
 
       it "returns a validation error" do
         subject

@@ -17,13 +17,13 @@ RSpec.describe Mutations::Contracts::Create do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
 
   let(:input) do
     {
       externalCustomerId: customer.external_id,
       externalId: "contract-1",
-      planCode: plan.code
+      planCode: catalog_plan.code
     }
   end
 
@@ -45,7 +45,7 @@ RSpec.describe Mutations::Contracts::Create do
   it_behaves_like "requires permission", "contracts:create"
 
   it "creates a contract and materializes the plan's rate cards" do
-    create(:plan_rate_card, organization:, plan:, rate_card: create(:rate_card, organization:))
+    create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:))
 
     result_data = execution["data"]["createContract"]
 
@@ -53,7 +53,7 @@ RSpec.describe Mutations::Contracts::Create do
     expect(result_data["externalId"]).to eq("contract-1")
     expect(result_data["status"]).to eq("active")
     expect(result_data["billingTime"]).to eq("calendar")
-    expect(result_data["plan"]["id"]).to eq(plan.id)
+    expect(result_data["plan"]["id"]).to eq(catalog_plan.id)
     expect(result_data["appliedRateCardsCount"]).to eq(1)
   end
 

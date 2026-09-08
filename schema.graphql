@@ -72,7 +72,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -1192,6 +1192,36 @@ type CashfreeProvider {
   successRedirectUrl: String
 }
 
+"""
+A product-catalog plan
+"""
+type CatalogPlan {
+  code: String!
+  createdAt: ISO8601DateTime!
+  currency: CurrencyEnum!
+  description: String
+  id: ID!
+  invoiceDisplayName: String
+  name: String!
+  organization: Organization
+  updatedAt: ISO8601DateTime!
+}
+
+"""
+CatalogPlanCollection type
+"""
+type CatalogPlanCollection {
+  """
+  A collection of paginated CatalogPlanCollection
+  """
+  collection: [CatalogPlan!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type Charge {
   appliedPricingUnit: AppliedPricingUnit
   billableMetric: BillableMetric!
@@ -1482,7 +1512,7 @@ type Contract {
   externalId: String!
   id: ID!
   name: String
-  plan: Plan
+  plan: CatalogPlan
   startedAt: ISO8601DateTime
   status: ContractStatusEnum!
   terminatedAt: ISO8601DateTime
@@ -3134,6 +3164,7 @@ input CreateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [PaymentProviderCustomerInput!]
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -3687,6 +3718,7 @@ input CreateRateCardInput {
   proration: Boolean
   rates: [RateCardRateInput!]
   regroupPaidFees: RateCardRegroupPaidFeesEnum
+  taxCodes: [String!]
   walletTargetable: Boolean
 }
 
@@ -4801,12 +4833,12 @@ type Customer {
   activityLogs: [ActivityLog!]
   addressLine1: String
   addressLine2: String
-  anrokCustomer: AnrokCustomer
+  anrokCustomer: AnrokCustomer @deprecated(reason: "Use integrationCustomers instead")
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
   appliedDunningCampaign: DunningCampaign
-  avalaraCustomer: AvalaraCustomer
+  avalaraCustomer: AvalaraCustomer @deprecated(reason: "Use integrationCustomers instead")
   billingConfiguration: CustomerBillingConfiguration
   billingEntity: BillingEntity!
 
@@ -4820,6 +4852,11 @@ type Customer {
   Invoice custom sections manually configured for the customer
   """
   configurableInvoiceCustomSections: [InvoiceCustomSection!]
+
+  """
+  Payment connection status derived from the customer's default payment connection
+  """
+  connectionStatus: PaymentProviderConnectionStatusEnum!
   country: CountryCode
   createdAt: ISO8601DateTime!
   creditNotes: [CreditNote!]
@@ -4873,8 +4910,9 @@ type Customer {
   Define if the customer has custom invoice custom sections selection
   """
   hasOverwrittenInvoiceCustomSectionsSelection: Boolean
-  hubspotCustomer: HubspotCustomer
+  hubspotCustomer: HubspotCustomer @deprecated(reason: "Use integrationCustomers instead")
   id: ID!
+  integrationCustomers: [IntegrationCustomer!]!
   invoiceGracePeriod: Int
   invoices: [Invoice!]
   lastDunningCampaignAttempt: Int!
@@ -4886,7 +4924,7 @@ type Customer {
   metadata: [CustomerMetadata!]
   name: String
   netPaymentTerm: Int
-  netsuiteCustomer: NetsuiteCustomer
+  netsuiteCustomer: NetsuiteCustomer @deprecated(reason: "Use integrationCustomers instead")
 
   """
   Overdue balance per currency
@@ -4894,9 +4932,10 @@ type Customer {
   overdueBalances: [CustomerOverdueBalance!]!
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [ProviderCustomer!]!
   phone: String
-  providerCustomer: ProviderCustomer
-  salesforceCustomer: SalesforceCustomer
+  providerCustomer: ProviderCustomer @deprecated(reason: "Use paymentProviderCustomers instead")
+  salesforceCustomer: SalesforceCustomer @deprecated(reason: "Use integrationCustomers instead")
   sequentialId: String!
   shippingAddress: CustomerAddress
 
@@ -4921,7 +4960,7 @@ type Customer {
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String
-  xeroCustomer: XeroCustomer
+  xeroCustomer: XeroCustomer @deprecated(reason: "Use integrationCustomers instead")
   zipcode: String
 }
 
@@ -6561,6 +6600,7 @@ input ExportFinanceAssistantResultInput {
 Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
+  account_tree
   enriched_events_aggregation
   fixed_charge_usage_delta_migration
   lazy_charge_usage_cache
@@ -8184,7 +8224,7 @@ type Mutation {
     Parameters for CreateCatalogPlan
     """
     input: CreateCatalogPlanInput!
-  ): Plan
+  ): CatalogPlan
 
   """
   Creates a new Charge for a Plan
@@ -9674,7 +9714,7 @@ type Mutation {
     Parameters for UpdateCatalogPlan
     """
     input: UpdateCatalogPlanInput!
-  ): Plan
+  ): CatalogPlan
 
   """
   Updates an existing Charge
@@ -10580,6 +10620,22 @@ type PaymentProviderCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum PaymentProviderConnectionStatusEnum {
+  connected
+  manual
+  not_connected
+}
+
+input PaymentProviderCustomerInput {
+  code: String
+  id: ID
+  paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
+  providerCustomerId: ID
+  providerPaymentMethods: [ProviderPaymentMethodsEnum!]
+  syncWithProvider: Boolean
 }
 
 """
@@ -11604,6 +11660,21 @@ type Query {
   ): TaxCollection!
 
   """
+  Query a single catalog plan of an organization
+  """
+  catalogPlan(
+    """
+    Uniq ID of the catalog plan
+    """
+    id: ID!
+  ): CatalogPlan
+
+  """
+  Query catalog plans of an organization
+  """
+  catalogPlans(limit: Int, page: Int, searchTerm: String): CatalogPlanCollection!
+
+  """
   Query a single contract of an organization
   """
   contract(
@@ -12181,7 +12252,7 @@ type Query {
   """
   Query plans of an organization
   """
-  plans(limit: Int, page: Int, productCategoryId: ID, searchTerm: String, withDeleted: Boolean): PlanCollection!
+  plans(limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): PlanCollection!
 
   """
   Query the pricing unit
@@ -12615,6 +12686,7 @@ type RateCard {
   proration: Boolean!
   ratesCount: Int!
   regroupPaidFees: RateCardRegroupPaidFeesEnum!
+  taxes: [Tax!]!
   updatedAt: ISO8601DateTime!
   walletTargetable: Boolean
 }
@@ -13018,6 +13090,11 @@ enum ResourceTypeEnum {
   BillingEntity
   """
   billing_entity
+
+  """
+  CatalogPlan
+  """
+  catalog_plan
 
   """
   Coupon
@@ -14753,6 +14830,7 @@ input UpdateCustomerInput {
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
+  paymentProviderCustomers: [PaymentProviderCustomerInput!]
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -15338,6 +15416,7 @@ input UpdateRateCardInput {
   name: String
   proration: Boolean
   regroupPaidFees: RateCardRegroupPaidFeesEnum
+  taxCodes: [String!]
   walletTargetable: Boolean
 }
 

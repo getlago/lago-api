@@ -54,6 +54,9 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:netsuite_customer).of_type("NetsuiteCustomer")
     expect(subject).to have_field(:salesforce_customer).of_type("SalesforceCustomer")
     expect(subject).to have_field(:provider_customer).of_type("ProviderCustomer")
+    expect(subject).to have_field(:payment_provider_customers).of_type("[ProviderCustomer!]!")
+    expect(subject).to have_field(:connection_status).of_type("PaymentProviderConnectionStatusEnum!")
+    expect(subject).to have_field(:integration_customers).of_type("[IntegrationCustomer!]!")
     expect(subject).to have_field(:subscriptions).of_type("[Subscription!]!")
     expect(subject).to have_field(:xero_customer).of_type("XeroCustomer")
 
@@ -220,6 +223,66 @@ RSpec.describe Types::Customers::Object do
     context "when the customer has no finalized credit notes" do
       it "returns an empty array" do
         expect(execute).to eq([])
+      end
+    end
+  end
+
+  describe "paymentProviderCustomers list" do
+    let(:required_permission) { "customers:view" }
+    let(:membership) { create(:membership) }
+    let(:organization) { membership.organization }
+    let(:customer) { create(:customer, organization:) }
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customer(id: $customerId) {
+            connectionStatus
+            paymentProviderCustomers { id code isDefault }
+          }
+        }
+      GQL
+    end
+
+    def execute
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      ).dig("data", "customer")
+    end
+
+    context "when the customer has no payment connection" do
+      it "returns an empty list and not_connected status" do
+        data = execute
+
+        expect(data["connectionStatus"]).to eq("not_connected")
+        expect(data["paymentProviderCustomers"]).to be_empty
+      end
+    end
+
+    context "when the customer has a default provider connection" do
+      before { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
+
+      it "returns the real connection" do
+        data = execute
+
+        expect(data["connectionStatus"]).to eq("connected")
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["stripe_eu"])
+      end
+    end
+
+    context "when the customer has a persisted manual connection" do
+      before { create(:manual_payment_provider_customer, customer:, is_default: true) }
+
+      it "returns the persisted manual row without duplicating it" do
+        data = execute
+
+        expect(data["connectionStatus"]).to eq("manual")
+        expect(data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
+        expect(data["paymentProviderCustomers"].first["isDefault"]).to be(true)
       end
     end
   end

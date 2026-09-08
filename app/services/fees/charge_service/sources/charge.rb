@@ -13,6 +13,7 @@ module Fees
         end
 
         delegate :billable_metric,
+          :dynamic?,
           :pay_in_advance?,
           :prorated?,
           :invoiceable?,
@@ -20,6 +21,8 @@ module Fees
           :organization_id,
           :presentation_group_keys_values,
           to: :charge
+
+        delegate :id, to: :charge, prefix: true
 
         def with_charge_filter(charge_filter, properties: nil)
           self.class.new(
