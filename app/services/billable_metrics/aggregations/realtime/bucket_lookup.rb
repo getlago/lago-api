@@ -9,11 +9,8 @@ module BillableMetrics
       # anywhere. No buckets in the window returns nil/[], which makes the
       # aggregator fall back to the events-store path.
       #
-      # The window start is floored to its bucket wall: period boundaries
-      # land on bucket walls for every real timezone (offsets are multiples
-      # of 15 minutes), so the floor is exact except for subscriptions
-      # starting or terminating at a mid-bucket time, which share at most
-      # 15 minutes of events with the neighbour period.
+      # The window start is floored to its bucket wall, see
+      # RealtimeUsage.bucket_floor.
       module BucketLookup
         BucketTotals = Struct.new(:units, :events_count)
 
@@ -83,8 +80,7 @@ module BillableMetrics
             boundaries[:charges_from_datetime] || boundaries[:from_datetime]
           end
 
-          # Time#change resets sec/usec cascadingly below :min.
-          @bucket_window_from = from&.change(min: from.min - from.min % 15)
+          @bucket_window_from = RealtimeUsage.bucket_floor(from)
         end
 
         def bucket_window_to

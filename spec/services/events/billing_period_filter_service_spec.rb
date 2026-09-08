@@ -1439,5 +1439,124 @@ RSpec.describe Events::BillingPeriodFilterService do
         expect(result.charges[recurring_charge.id]).to eq({nil => boundaries.charges_from_datetime})
       end
     end
+
+    context "when serving realtime charges from the usage buckets", clickhouse: {clean_before: true}, transaction: false do
+      subject(:filter_service) { described_class.new(subscription:, boundaries:, current_usage: true) }
+
+      let(:organization) { create(:organization, clickhouse_events_store: true, pre_filter_events: true) }
+      let(:event_store) { instance_double(Events::Stores::ClickhouseStore, distinct_charges_and_filters: []) }
+
+      def insert_bucket(charge_id:, charge_filter_id: "")
+        bucket = boundaries.charges_from_datetime + 1.hour
+
+        Clickhouse::UsageBucket.insert_all([
+          {
+            bucket:,
+            organization_id: organization.id,
+            subscription_id: subscription.id,
+            customer_id: customer.id,
+            plan_id: plan.id,
+            code: billable_metric.code,
+            charge_id:,
+            charge_filter_id:,
+            grouped_by: "{}",
+            aggregation_type: "count",
+            events_count: 1,
+            units: 1,
+            last_event_at: bucket,
+            last_ingested_at: bucket
+          }
+        ])
+      end
+
+      before { allow(RealtimeUsage).to receive(:enabled?).and_return(true) }
+
+      context "with buckets covering the charge" do
+        before { insert_bucket(charge_id: charge.id) }
+
+        it "returns the charge from the buckets" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges.transform_values(&:keys)).to eq({charge.id => [nil]})
+        end
+
+        # last_seen_at only drives the lazy charge cache, which
+        # Invoices::CustomerUsageService disables for realtime-eligible charges.
+        it "does not report a last_seen_at" do
+          expect(filter_service.call.charges[charge.id]).to eq({nil => nil})
+        end
+
+        it "does not query the events store" do
+          allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+          filter_service.call
+
+          expect(event_store).not_to have_received(:distinct_charges_and_filters)
+        end
+      end
+
+      context "with a bucket on a charge filter" do
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
+        let(:billable_metric_filter) do
+          create(:billable_metric_filter, billable_metric:, key: "region", values: ["eu"])
+        end
+
+        before do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+          insert_bucket(charge_id: charge.id, charge_filter_id: charge_filter.id)
+        end
+
+        it "returns the filter from the buckets" do
+          result = filter_service.call
+
+          expect(result.charges.transform_values(&:keys)).to eq({charge.id => [charge_filter.id]})
+        end
+      end
+
+      # A RisingWave gap must behave like the realtime aggregators, which fall back to the events
+      # store on an empty window: dropping the charge instead would bill it as zero units.
+      context "when no bucket covers the charge" do
+        it "falls back to the events store" do
+          allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+          filter_service.call
+
+          expect(event_store).to have_received(:distinct_charges_and_filters)
+            .with(codes: [billable_metric.code], with_last_seen_at: true)
+        end
+      end
+
+      context "when the charge is not realtime eligible" do
+        let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
+
+        before { insert_bucket(charge_id: charge.id) }
+
+        it "falls back to the events store" do
+          allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+          filter_service.call
+
+          expect(event_store).to have_received(:distinct_charges_and_filters)
+            .with(codes: [billable_metric.code], with_last_seen_at: true)
+        end
+      end
+
+      context "when the caller is not computing current usage" do
+        subject(:filter_service) { described_class.new(subscription:, boundaries:) }
+
+        before { insert_bucket(charge_id: charge.id) }
+
+        it "falls back to the events store" do
+          allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+          filter_service.call
+
+          expect(event_store).to have_received(:distinct_charges_and_filters)
+            .with(codes: [billable_metric.code], with_last_seen_at: true)
+        end
+      end
+    end
   end
 end

@@ -269,7 +269,10 @@ module Invoices
         subscription:,
         boundaries:,
         codes: filtered_metric_codes,
-        with_last_seen_at: charge_cache_enabled?
+        with_last_seen_at: charge_cache_enabled?,
+        # The only path that aggregates realtime-eligible charges from the usage
+        # buckets, so the only one that may resolve their filters from there too.
+        current_usage: true
       )
     end
 

@@ -4,11 +4,16 @@ module Events
   class BillingPeriodFilterService < BaseService
     Result = BaseResult[:charges]
 
-    def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
+    # current_usage mirrors BillableMetrics::AggregationFactory: it is the only context where
+    # realtime-eligible charges are aggregated from the RisingWave-fed usage buckets, so it is
+    # also the only context where their charge/filter set may be read from there. Invoicing and
+    # preview keep resolving everything from the events store.
+    def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true, current_usage: false)
       @subscription = subscription
       @boundaries = boundaries
       @codes = codes
       @with_last_seen_at = with_last_seen_at
+      @current_usage = current_usage
       super
     end
 
@@ -26,7 +31,7 @@ module Events
 
     private
 
-    attr_reader :subscription, :boundaries, :codes, :with_last_seen_at
+    attr_reader :subscription, :boundaries, :codes, :with_last_seen_at, :current_usage
 
     delegate :plan, :organization, to: :subscription
 
@@ -155,7 +160,10 @@ module Events
     # returned when the event lookup covers their code.
     # Shape: { charge_id => { filter_id => last_seen_at } } (nil filter is the default bucket).
     def charges_and_filters_from_pre_enriched_events
-      values = event_store.distinct_charges_and_filters(codes: non_recurring_plan_codes, with_last_seen_at:)
+      values = realtime_charges_and_filters
+      if events_store_codes.any?
+        values += event_store.distinct_charges_and_filters(codes: events_store_codes, with_last_seen_at:)
+      end
 
       # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
       # for prior periods
@@ -191,6 +199,93 @@ module Events
       end
 
       result
+    end
+
+    # [charge_id, charge_filter_id, last_seen_at] triples for the realtime-eligible charges, read
+    # from the RisingWave-fed 15-minute buckets (Clickhouse::UsageBucket) instead of the events
+    # store. The buckets already hold one row per (charge, filter, group, 15 minutes), which is the
+    # exact grain this lookup needs, so it costs a handful of rows where the equivalent
+    # events_enriched_expanded query has to aggregate every event of the period.
+    #
+    # last_seen_at is nil by design. It only drives the lazy charge cache, and
+    # Invoices::CustomerUsageService disables that cache for realtime-eligible charges, so nothing
+    # reads it here. Returning the buckets' last_ingested_at instead would put the API ingest clock
+    # and ClickHouse's enriched_at into the same comparison the cache makes across reads, which is
+    # how a cached entry would end up either stale forever or never valid.
+    def realtime_charges_and_filters
+      @realtime_charges_and_filters ||= if realtime_charges.empty?
+        []
+      else
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          ::Clickhouse::UsageBucket.final
+            .where(
+              organization_id: subscription.organization_id,
+              subscription_id: subscription.id,
+              charge_id: realtime_charges.map(&:id)
+            )
+            .where("bucket >= ? AND bucket <= ?", bucket_window_from, bucket_window_to)
+            .group(:charge_id, :charge_filter_id)
+            .pluck(:charge_id, Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("NULL"))
+        end
+      end
+    end
+
+    # Charges whose current usage is served from the buckets. Eligibility is per charge, and a
+    # recurring metric is never eligible, so this only ever covers non-recurring codes and the
+    # recurring lookup is left on the events store.
+    def realtime_charges
+      @realtime_charges ||= if current_usage && RealtimeUsage.enabled?
+        non_recurring_charges.select { RealtimeUsage.eligible_charge?(it) }
+      else
+        []
+      end
+    end
+
+    def non_recurring_charges
+      @non_recurring_charges ||= plan.charges
+        .joins(:billable_metric)
+        .where(billable_metrics: {code: non_recurring_plan_codes})
+        .includes(:billable_metric)
+        .to_a
+    end
+
+    # Non-recurring codes the events store still has to resolve: everything not fully covered by
+    # the buckets. Codes outside the plan have no charge to cover them, so they stay here too.
+    def events_store_codes
+      @events_store_codes ||= non_recurring_plan_codes - bucket_served_codes
+    end
+
+    # A code is served by the buckets only when every one of its charges is realtime-eligible AND
+    # returned at least one bucket row. Both halves matter:
+    #
+    #  * one ineligible charge on the code and the events store has to run anyway, and it returns
+    #    the eligible charges of that code as well, so nothing is lost by leaving the code here;
+    #  * no bucket row for an eligible charge means the same empty window that makes the realtime
+    #    aggregators fall back to the events store (see BucketLookup). Without this fallback a
+    #    RisingWave gap would drop the charge from filtered_aggregations and Fees::ChargeService
+    #    would hydrate a zero-units fee, hiding usage the fallback aggregation does find.
+    #
+    # Bucket rows for a code that ends up here are still returned: #record merges the two sources
+    # by (charge, filter) and the events store's last_seen_at wins over the nil above.
+    def bucket_served_codes
+      covered_charge_ids = realtime_charges_and_filters.map(&:first).to_set
+
+      if covered_charge_ids.empty?
+        []
+      else
+        non_recurring_charges
+          .group_by { it.billable_metric.code }
+          .select { |_code, charges| charges.all? { covered_charge_ids.include?(it.id) } }
+          .keys
+      end
+    end
+
+    def bucket_window_from
+      @bucket_window_from ||= RealtimeUsage.bucket_floor(period_start)
+    end
+
+    def bucket_window_to
+      boundaries.charges_to_datetime || Time.current
     end
 
     def recurring_charges_and_filters
