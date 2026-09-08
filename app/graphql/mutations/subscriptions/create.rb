@@ -16,6 +16,10 @@ module Mutations
       type Types::Subscriptions::Object
 
       def resolve(entitlements: nil, **args)
+        if args[:payment_term]
+          args[:payment_term] = args[:payment_term].to_h
+        end
+
         customer = current_organization.customers.find_by(id: args[:customer_id])
         plan = current_organization.plans.find_by(id: args[:plan_id])
 
