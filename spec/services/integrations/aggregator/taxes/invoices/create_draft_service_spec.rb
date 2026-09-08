@@ -149,6 +149,114 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           end
         end
 
+        context "when a charge is split over several fees" do
+          let(:billable_metric) { create(:billable_metric, organization:) }
+          let(:plan) { create(:plan, organization:) }
+          let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+          let(:charge_id) { charge.id }
+          let(:charge_fee) do
+            create(
+              :charge_fee,
+              invoice:,
+              charge:,
+              amount_cents: 300,
+              precise_amount_cents: 300,
+              created_at: current_time - 1.second
+            )
+          end
+          let(:charge_fee_two) do
+            create(
+              :charge_fee,
+              invoice:,
+              charge:,
+              amount_cents: 700,
+              precise_amount_cents: 700,
+              created_at: current_time
+            )
+          end
+          let(:requested_line_items) { [] }
+          let(:body) do
+            {
+              succeededInvoices: [{
+                id: "inv_123",
+                fees: [
+                  {item_key: charge_id, item_id: charge_id, item_code: "1", amount_cents: 1000,
+                   tax_amount_cents: 100, tax_breakdown: [{name: "VAT", rate: "0.10", tax_amount: 100, type: "tax"}]}
+                ]
+              }],
+              failedInvoices: []
+            }.to_json
+          end
+
+          before do
+            charge_fee
+            charge_fee_two
+
+            stub_request(:post, endpoint).with(headers:).to_return do |request|
+              requested_line_items.concat(JSON.parse(request.body).first["fees"])
+
+              {status: response_status, body:}
+            end
+          end
+
+          it "sends the charge as a single line item" do
+            service_call
+
+            expect(requested_line_items.size).to eq(3)
+            expect(requested_line_items).to include(
+              "item_key" => charge_id, "item_id" => charge_id, "item_code" => "1", "amount_cents" => 1000
+            )
+          end
+
+          it "spreads the charge taxes back over its fees" do
+            result = service_call
+
+            expect(result).to be_success
+
+            fee_taxes = result.fees.index_by(&:item_id)
+
+            expect(fee_taxes[charge_fee.id])
+              .to have_attributes(tax_amount_cents: 30, charge_id:)
+            expect(fee_taxes[charge_fee_two.id])
+              .to have_attributes(tax_amount_cents: 70, charge_id:)
+          end
+        end
+
+        context "when a charge has a single fee" do
+          let(:billable_metric) { create(:billable_metric, organization:) }
+          let(:plan) { create(:plan, organization:) }
+          let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+          let(:charge_fee) do
+            create(
+              :charge_fee,
+              invoice:,
+              charge:,
+              amount_cents: 300,
+              precise_amount_cents: 300,
+              created_at: current_time - 1.second
+            )
+          end
+          let(:requested_line_items) { [] }
+
+          before do
+            charge_fee
+
+            stub_request(:post, endpoint).with(headers:).to_return do |request|
+              requested_line_items.concat(JSON.parse(request.body).first["fees"])
+
+              {status: response_status, body:}
+            end
+          end
+
+          it "sends it under its own identity" do
+            service_call
+
+            expect(requested_line_items).to include(
+              "item_key" => charge_fee.item_key, "item_id" => charge_fee.id, "item_code" => "1", "amount_cents" => 300
+            )
+          end
+        end
+
         context "when no fee has an amount" do
           let(:fee_add_on) do
             create(

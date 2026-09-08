@@ -4,7 +4,15 @@ FactoryBot.define do
   factory :tax_result, class: "Integrations::Aggregator::Taxes::TaxResult" do
     skip_create
     initialize_with do
-      new(item_key:, item_id:, item_code:, amount_cents:, tax_amount_cents:, tax_breakdown:)
+      new(
+        item_key:,
+        item_id:,
+        item_code:,
+        amount_cents:,
+        tax_amount_cents:,
+        tax_breakdown:,
+        charge_id:
+      )
     end
 
     item_key { nil }
@@ -13,6 +21,7 @@ FactoryBot.define do
     amount_cents { nil }
     tax_amount_cents { nil }
     tax_breakdown { [] }
+    charge_id { nil }
   end
 
   factory :tax_breakdown_item, class: "Integrations::Aggregator::Taxes::TaxResult::TaxBreakdownItem" do
