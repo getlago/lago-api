@@ -318,6 +318,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           :customer,
           organization:,
           invoice_grace_period: 30,
+          payment_term: {term_type: "net", days: 30},
           net_payment_term: 30,
           subscription_invoice_issuing_date_anchor:,
           subscription_invoice_issuing_date_adjustment:
