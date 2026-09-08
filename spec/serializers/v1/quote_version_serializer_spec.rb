@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::QuoteVersionSerializer do
   subject(:serializer) { described_class.new(quote_version, root_name: "quote_version", includes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:quote_version) { create(:quote_version, :approved) }
   let(:includes) { [] }
   let(:result) { JSON.parse(serializer.to_json) }

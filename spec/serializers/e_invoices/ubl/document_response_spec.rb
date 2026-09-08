@@ -9,7 +9,9 @@ RSpec.describe EInvoices::Ubl::DocumentResponse do
     end
   end
 
-  let(:invoice) { create(:invoice) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice) }
   let(:response) do
     described_class::Response.new(
       code: described_class::PAID,

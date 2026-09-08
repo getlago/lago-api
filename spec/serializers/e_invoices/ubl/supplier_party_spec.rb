@@ -10,9 +10,6 @@ RSpec.describe EInvoices::Ubl::SupplierParty do
   end
 
   let(:options) { described_class::Options.new }
-  let(:resource) { invoice }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:, billing_entity:, invoice_type:) }
   let(:invoice_type) { :subscription }
   let(:billing_entity) do
@@ -27,8 +24,12 @@ RSpec.describe EInvoices::Ubl::SupplierParty do
       country: "BR",
       tax_identification_number: "BR987654321")
   end
-
   let(:root) { "//cac:AccountingSupplierParty/cac:Party" }
+  let(:resource) { invoice }
+  let(:membership) { create(:membership) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   before { invoice }
 

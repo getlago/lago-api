@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe ::V1::WalletSerializer do
   subject(:serializer) { described_class.new(wallet, root_name: "wallet", includes: %i[limitations recurring_transaction_rules applied_invoice_custom_sections]) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:wallet) { create(:wallet, :with_purchase_order_number, :with_top_up_limits, allowed_fee_types: %w[charge]) }
   let(:recurring_transaction_rule) { create(:recurring_transaction_rule, :with_purchase_order_number, wallet:) }
   let(:wallet_target) { create(:wallet_target, wallet:) }

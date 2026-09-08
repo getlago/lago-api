@@ -11,7 +11,11 @@ RSpec.describe EInvoices::Ubl::SenderParty do
 
   let(:resource) { create(:payment, customer:) }
   let(:customer) { create(:customer, billing_entity:) }
-  let(:billing_entity) do
+  let(:root) { "//cac:SenderParty" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:invoice) { create_default(:invoice) }
+  let_it_be(:billing_entity) do
     create(
       :billing_entity,
       code: "test_be",
@@ -25,8 +29,6 @@ RSpec.describe EInvoices::Ubl::SenderParty do
       email: "lago-be@test.com"
     )
   end
-
-  let(:root) { "//cac:SenderParty" }
 
   before { resource }
 
