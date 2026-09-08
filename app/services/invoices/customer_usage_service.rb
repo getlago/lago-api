@@ -4,6 +4,10 @@ module Invoices
   class CustomerUsageService < BaseService
     Result = BaseResult[:invoice, :usage, :fees_taxes]
 
+    # Recurring metrics of these types set use_from_boundary to false, so they aggregate all history
+    # up to the upper boundary whatever lower boundary they are given.
+    LIFETIME_BY_DEFAULT_AGGREGATIONS = %w[sum_agg unique_count_agg].freeze
+
     def initialize(
       customer:,
       subscription:,
@@ -132,7 +136,7 @@ module Invoices
         charge:,
         to_datetime: boundaries.charges_to_datetime,
         cache: charge_cache_enabled?,
-        full_usage: usage_filters.full_usage,
+        full_usage: usage_filters.full_usage && !lifetime_by_default?(charge),
         last_seen_at: applied_filters
       )
 
@@ -156,6 +160,21 @@ module Invoices
           )
         )
         .fees
+    end
+
+    # A recurring sum or unique count aggregates all history whatever lower boundary it is given, so
+    # its full usage is the number the ordinary current period entry already holds. Only the cache
+    # key changes: the window it is computed over is irrelevant to the result.
+    #
+    # Pay in advance is excluded because find_cached_aggregation is scoped by the lower boundary,
+    # and prorated because the period ratio is applied to it.
+    def lifetime_by_default?(charge)
+      return false unless usage_filters.full_usage
+      return false if calculate_projected_usage || max_timestamp
+      return false if charge.pay_in_advance? || charge.prorated?
+
+      metric = charge.billable_metric
+      metric.recurring? && LIFETIME_BY_DEFAULT_AGGREGATIONS.include?(metric.aggregation_type)
     end
 
     def boundaries
