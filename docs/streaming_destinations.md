@@ -4,7 +4,7 @@ A streaming destination is a row that says where an organization's events should
 organization has no row, nothing is delivered and nothing is logged. That presence check is the
 whole gate: there is no feature flag, no environment variable, and no API.
 
-Today one event type exists, `customer_usage.refreshed`, produced on every wallet refresh, and
+Today one event type exists, `customer_usage.refreshed.v1`, produced on every wallet refresh, and
 one destination type, Kinesis.
 
 ## Creating one
@@ -39,7 +39,7 @@ organization = Organization.find("<organization uuid>")
 
 StreamingDestinations::KinesisDestination.create!(
   organization:,
-  event_types: ["customer_usage.refreshed"],
+  event_types: ["customer_usage.refreshed.v1"],
   settings: {
     stream_arn: "arn:aws:kinesis:eu-west-1:123456789012:stream/<stream name>",
     region: "eu-west-1",
@@ -62,6 +62,13 @@ credential, such as a Kafka SASL password.
 `event_types` is validated against the known list, so a typo is rejected at creation rather than
 producing a row that quietly never matches. An organization cannot have two destinations claiming
 the same event type, because the lookup would then be ambiguous.
+
+Every event type ends in a version. A breaking change to a payload ships as a new type, say
+`customer_usage.refreshed.v2`, rather than as a new shape under the old name. The two are
+different event types, so they do not overlap, and one organization can hold a destination for
+each: the old stream keeps receiving v1 while a consumer moves to v2, then the v1 row is deleted.
+The version is not repeated anywhere else in the record, the `event_type` field is the only
+statement of it.
 
 > The overlap rule is enforced in the model, not in the database. Postgres has no GiST operator
 > class for `varchar[]`, so the exclusion constraint the design called for cannot be created, and
