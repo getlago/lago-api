@@ -7,6 +7,12 @@ class Plan < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  # pricing_type is retired: product-catalog plans now live in the catalog_plans
+  # table, so every plans row is legacy. The column is dropped in a follow-up
+  # release; ignore it until then.
+  # TODO: drop the pricing_type column, then remove this ignore.
+  self.ignored_columns += %w[pricing_type]
+
   belongs_to :organization
   belongs_to :parent, class_name: "Plan", optional: true
 
@@ -47,22 +53,17 @@ class Plan < ApplicationRecord
     semiannual
   ].freeze
 
-  PRICING_TYPES = {legacy: "legacy", product_catalog: "product_catalog"}.freeze
-
-  enum :pricing_type, PRICING_TYPES, validate: true
   enum :interval, INTERVALS, validate: {allow_nil: true}
 
   monetize :amount_cents, allow_nil: true
 
   validates :name, :code, presence: true
   validates :amount_currency, inclusion: {in: currency_list}
-  # Legacy plans price at the plan level; product-catalog plans price through
-  # their products, so the plan-level billing fields are optional for them.
   # A blank interval keeps the historical "value_is_invalid" error (the enum used
   # to reject nil as an out-of-range value) rather than a "value_is_mandatory" one.
-  validates :interval, presence: {message: "value_is_invalid"}, unless: :product_catalog?
-  validates :amount_cents, presence: true, unless: :product_catalog?
-  validates :pay_in_advance, inclusion: {in: [true, false]}, unless: :product_catalog?
+  validates :interval, presence: {message: "value_is_invalid"}
+  validates :amount_cents, presence: true
+  validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
 
   default_scope -> { kept }
@@ -176,7 +177,6 @@ end
 #  name                       :string           not null
 #  pay_in_advance             :boolean          default(FALSE)
 #  pending_deletion           :boolean          default(FALSE), not null
-#  pricing_type               :enum             default("legacy"), not null
 #  trial_period               :float
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null

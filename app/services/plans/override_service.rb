@@ -16,7 +16,7 @@ module Plans
       return result.forbidden_failure! unless License.premium?
 
       # Per-customer pricing on the catalog is a ContractRateCard.
-      if plan.product_catalog? || plan.organization.product_catalog_enabled?
+      if plan.organization.product_catalog_enabled?
         return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
       end
 

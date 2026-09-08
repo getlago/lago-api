@@ -30,10 +30,6 @@ RSpec.describe Plan do
     expect(subject).to have_many(:entitlement_values).through(:entitlements).source(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
 
     expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS).validating(allowing_nil: true)
-    expect(subject).to define_enum_for(:pricing_type)
-      .with_values(Plan::PRICING_TYPES)
-      .backed_by_column_of_type(:enum)
-      .validating
   end
 
   describe "Clickhouse associations", clickhouse: true do
@@ -49,16 +45,6 @@ RSpec.describe Plan do
 
       plan.pay_in_advance = true
       expect(plan).to be_valid
-    end
-
-    context "with a product_catalog plan" do
-      subject(:plan) do
-        build(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
-      end
-
-      it "does not require the plan-level billing fields" do
-        expect(plan).to be_valid
-      end
     end
 
     context "with a legacy plan" do
