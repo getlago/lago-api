@@ -2,7 +2,7 @@
 
 class PlansQuery < BaseQuery
   Result = BaseResult[:plans]
-  Filters = BaseFilters[:with_deleted, :include_pending_deletion, :pricing_type]
+  Filters = BaseFilters[:with_deleted, :include_pending_deletion]
 
   def call
     plans = base_scope.result
@@ -20,7 +20,6 @@ class PlansQuery < BaseQuery
 
   def base_scope
     scope = Plan.parents.where(organization:)
-    scope = scope.where(pricing_type: filters.pricing_type) if filters.pricing_type.present?
     scope.ransack(search_params)
   end
 

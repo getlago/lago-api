@@ -97,6 +97,62 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "#duration_in_days" do
+    subject(:segment) { described_class.new(customer:, started_at:, ended_at:) }
+
+    let(:timezone) { "UTC" }
+    let(:customer) { build(:customer, timezone:) }
+    let(:started_at) { Time.zone.parse("2026-09-01") }
+    let(:ended_at) { Time.zone.parse("2026-09-30").end_of_day }
+
+    it "returns the inclusive segment duration" do
+      expect(segment.duration_in_days).to eq(30)
+    end
+
+    context "with a mid-day rate change" do
+      let(:cut) { Time.zone.parse("2026-06-16 09:30:00") }
+
+      context "when before the change" do
+        let(:started_at) { Time.zone.parse("2026-06-01") }
+        let(:ended_at) { described_class.inclusive_end(cut) }
+
+        it "includes the split day containing its midnight" do
+          expect(segment.duration_in_days).to eq(16)
+        end
+      end
+
+      context "when after the change" do
+        let(:started_at) { cut }
+        let(:ended_at) { described_class.inclusive_end(Time.zone.parse("2026-07-01")) }
+
+        it "excludes the split day assigned to the previous segment" do
+          expect(segment.duration_in_days).to eq(14)
+        end
+      end
+    end
+
+    context "with daylight saving time" do
+      let(:timezone) { "Europe/Paris" }
+      let(:zone) { ActiveSupport::TimeZone[timezone] }
+      let(:started_at) { zone.parse("2026-03-01") }
+      let(:ended_at) { described_class.inclusive_end(zone.parse("2026-04-01")) }
+
+      it "counts local midnights across daylight saving time" do
+        expect(segment.duration_in_days).to eq(31)
+      end
+    end
+
+    context "with a non-UTC customer timezone" do
+      let(:timezone) { "Asia/Tokyo" }
+      let(:started_at) { Time.zone.parse("2026-08-31 15:00:00") }
+      let(:ended_at) { Time.zone.parse("2026-09-30 14:59:59") }
+
+      it "counts days in the customer timezone" do
+        expect(segment.duration_in_days).to eq(30)
+      end
+    end
+  end
+
   describe "#rate_properties" do
     let(:rate_card_rate) { build_stubbed(:rate_card_rate, rate_properties: {"amount" => "10.00"}) }
     let(:billing_segment) { described_class.new(rate_card_rate:, rate_properties: {"amount" => "10.00"}) }
@@ -174,8 +230,8 @@ RSpec.describe BillingSegment do
         rate_card_rate: create(:rate_card_rate, organization: contract_rate_card.organization, rate_card: contract_rate_card.rate_card),
         cycle_started_at:
       }
-      first = create(:billing_segment, **attributes, started_at: cycle_started_at, ended_at: cut - Rational(1, 1_000_000))
-      second = create(:billing_segment, **attributes, started_at: cut, ended_at: Time.zone.parse("2026-10-01") - Rational(1, 1_000_000))
+      first = create(:billing_segment, **attributes, started_at: cycle_started_at, ended_at: described_class.inclusive_end(cut))
+      second = create(:billing_segment, **attributes, started_at: cut, ended_at: described_class.inclusive_end(Time.zone.parse("2026-10-01")))
 
       expect(described_class.where(contract_rate_card:, cycle_started_at:)).to match_array([first, second])
     end

@@ -23,6 +23,7 @@ module Types
     field :preview_adjusted_fee, mutation: Mutations::AdjustedFees::Preview
 
     field :create_catalog_plan, mutation: Mutations::CatalogPlans::Create
+    field :destroy_catalog_plan, mutation: Mutations::CatalogPlans::Destroy
     field :update_catalog_plan, mutation: Mutations::CatalogPlans::Update
 
     field :create_plan, mutation: Mutations::Plans::Create
@@ -38,6 +39,7 @@ module Types
     field :create_contract, mutation: Mutations::Contracts::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
     field :update_charge, mutation: Mutations::Charges::Update
+    field :update_contract, mutation: Mutations::Contracts::Update
 
     field :create_charge_filter, mutation: Mutations::ChargeFilters::Create
     field :destroy_charge_filter, mutation: Mutations::ChargeFilters::Destroy

@@ -15,7 +15,7 @@ FactoryBot.define do
     billing_at { Time.current }
     cycle_started_at { Time.current.beginning_of_day }
     started_at { cycle_started_at }
-    ended_at { cycle_started_at + 1.month - Rational(1, 1_000_000) }
+    ended_at { BillingSegment.inclusive_end(cycle_started_at + 1.month) }
     status { :pending }
   end
 end

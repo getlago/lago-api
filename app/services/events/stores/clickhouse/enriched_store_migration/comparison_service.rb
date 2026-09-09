@@ -58,11 +58,10 @@ module Events
             ActiveRecord::Base.transaction do
               if enriched
                 organization.enable_feature_flag!(:enriched_events_aggregation)
-                organization.update!(clickhouse_deduplication_enabled: deduplicate, pre_filter_events: true)
               else
                 organization.disable_feature_flag!(:enriched_events_aggregation)
-                organization.update!(clickhouse_deduplication_enabled: deduplicate)
               end
+              organization.update!(clickhouse_deduplication_enabled: deduplicate)
               organization.reload
 
               usage_result = Invoices::CustomerUsageService.call(

@@ -35,7 +35,7 @@ module Subscriptions
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
-      if params.key?(:plan_overrides) && (plan.product_catalog? || plan.organization.product_catalog_enabled?)
+      if params.key?(:plan_overrides) && plan.organization.product_catalog_enabled?
         return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
       end
 

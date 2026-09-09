@@ -49,7 +49,12 @@ class Contract < ApplicationRecord
   scope :live, -> { where(status: LIVE_STATUSES) }
 
   def self.live_by_external_id(external_id)
-    live.order(started_at: :desc, created_at: :desc).find_by(external_id:)
+    # Prefer the pending (editable) contract over an active sibling — the
+    # editable target every consumer wants; started_at/created_at then breaks
+    # ties deterministically within a status.
+    live.where(external_id:)
+      .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
+      .first
   end
 
   validates :external_id, presence: true
@@ -72,14 +77,20 @@ class Contract < ApplicationRecord
     pending?
   end
 
+  # Error code for an edit blocked by the pending-only rule; nil when allowed.
+  # Mirrors ContractRateCard#edit_error_code.
+  def edit_error_code
+    "contract_locked" unless editable?
+  end
+
   # The currency fees bill in: the plan's when there is one, otherwise the
   # customer's (a plan-less contract), falling back to the organization default.
   def currency
     catalog_plan&.currency || customer.currency || organization.default_currency
   end
 
-  def billing_entity
-    super || customer&.billing_entity
+  def applicable_billing_entity
+    billing_entity || customer&.billing_entity
   end
 
   def applicable_billing_entity_id
@@ -132,7 +143,6 @@ end
 #  external_id           :string           not null
 #  organization_id       :uuid             not null
 #  payment_method_id     :uuid
-#  plan_id               :uuid
 #
 # Indexes
 #
@@ -143,7 +153,6 @@ end
 #  index_contracts_on_organization_id                  (organization_id)
 #  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
 #  index_contracts_on_payment_method_id                (payment_method_id)
-#  index_contracts_on_plan_id                          (plan_id)
 #
 # Foreign Keys
 #
@@ -152,5 +161,4 @@ end
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_method_id => payment_methods.id)
-#  fk_rails_...  (plan_id => plans.id)
 #
