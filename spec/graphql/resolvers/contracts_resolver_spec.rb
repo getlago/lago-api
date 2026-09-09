@@ -99,4 +99,24 @@ RSpec.describe Resolvers::ContractsResolver do
       expect(counts.sum).to eq(2)
     end
   end
+
+  context "when a rate card has exhausted its billing schedule" do
+    let(:query) do
+      <<~GQL
+        query {
+          contracts(limit: 5, status: [active]) {
+            collection { id appliedRateCards { id nextBillingAt } }
+          }
+        }
+      GQL
+    end
+
+    it "returns the card with a null next billing date" do
+      card = create(:contract_rate_card, organization:, contract: active_contract, next_billing_at: nil)
+
+      expect(execution["errors"]).to be_nil
+      expect(execution["data"]["contracts"]["collection"].sole["appliedRateCards"])
+        .to eq([{"id" => card.id, "nextBillingAt" => nil}])
+    end
+  end
 end
