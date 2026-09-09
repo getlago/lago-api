@@ -35,7 +35,12 @@ module UsageMonitoring
 
     def evaluate(current, now)
       crossed_threshold_values = alert.find_thresholds_crossed(current)
-      record_trigger(crossed_threshold_values, current, now) if crossed_threshold_values.present?
+
+      if crossed_threshold_values.present?
+        record_trigger(crossed_threshold_values, current, now)
+      else
+        record_resolution(current, now)
+      end
 
       alert.previous_value = current
     end
@@ -44,8 +49,7 @@ module UsageMonitoring
       triggered_alert = TriggeredAlert.create!(
         alert:,
         organization: alert.organization,
-        subscription:,
-        wallet:,
+        alertable:,
         current_value: current,
         previous_value: alert.previous_value,
         crossed_thresholds: alert.formatted_crossed_thresholds(crossed_threshold_values),
@@ -55,12 +59,26 @@ module UsageMonitoring
       after_commit { SendWebhookJob.perform_later("alert.triggered", triggered_alert) }
     end
 
-    def subscription
-      alertable if alertable.is_a?(Subscription)
-    end
+    def record_resolution(current, now)
+      recovered_values = alert.find_thresholds_recovered(current)
+      return if recovered_values.empty?
 
-    def wallet
-      alertable if alertable.is_a?(Wallet)
+      recorded = alert.recorded_alarm_codes
+      announced = alert.opted_in_thresholds.filter { recovered_values.include?(it.value) && recorded.include?(it.code) }
+      return if announced.empty?
+
+      TriggeredAlert.create!(
+        alert:,
+        organization: alert.organization,
+        alertable:,
+        kind: :resolved,
+        current_value: current,
+        previous_value: alert.previous_value,
+        crossed_thresholds: alert.formatted_crossed_thresholds(announced.map(&:value)),
+        in_alarm_thresholds: alert.in_alarm_threshold_codes(current),
+        fully_resolved: alert.fully_resolved?(current),
+        triggered_at: now
+      )
     end
   end
 end
