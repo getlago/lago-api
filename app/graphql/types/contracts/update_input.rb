@@ -9,8 +9,7 @@ module Types
       argument :external_id, String, required: true, description: "External id of the contract to update"
 
       argument :name, String, required: false
-      # Optional by design: a plan-less contract prices through directly
-      # attached rate cards. Changing it re-materialises the rate cards.
+      # Optional: a plan-less contract prices through directly attached cards.
       argument :plan_code, String, required: false
 
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false

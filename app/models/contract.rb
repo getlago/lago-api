@@ -42,11 +42,9 @@ class Contract < ApplicationRecord
   scope :live, -> { where(status: LIVE_STATUSES) }
 
   def self.live_by_external_id(external_id)
-    # Prefer the pending (editable) contract when a replacement coexists with an
-    # active one: every consumer — update, rate-card authoring, the detail read
-    # — wants the editable target, and resolving to the active sibling would
-    # wrongly report it locked. The started_at/created_at tie-break keeps the
-    # pick deterministic within a status.
+    # Prefer the pending (editable) contract over an active sibling — the
+    # editable target every consumer wants; started_at/created_at then breaks
+    # ties deterministically within a status.
     live.where(external_id:)
       .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
       .first
@@ -72,10 +70,8 @@ class Contract < ApplicationRecord
     pending?
   end
 
-  # The error code an authoring edit fails with once the contract is no longer
-  # editable (active, terminated or canceled). Mirrors
-  # ContractRateCard#edit_error_code so both authoring surfaces speak the same
-  # vocabulary; nil when the edit is allowed.
+  # Error code for an edit blocked by the pending-only rule; nil when allowed.
+  # Mirrors ContractRateCard#edit_error_code.
   def edit_error_code
     "contract_locked" unless editable?
   end

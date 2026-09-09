@@ -27,16 +27,14 @@ module Contracts
         return result.not_found_failure!(resource: "plan")
       end
 
-      # Date columns: a malformed value would silently cast to nil instead of
-      # failing, so formats are rejected explicitly.
+      # Reject malformed dates explicitly — they would otherwise cast to nil.
       %i[billing_anchor_date started_at ended_at].each do |field|
         if params[field].present? && !Utils::Datetime.valid_format?(params[field])
           return result.single_validation_failure!(field:, error_code: "value_is_invalid")
         end
       end
 
-      # A window that already closed cannot be set: nothing would ever
-      # terminate it, leaving a zombie active contract.
+      # A window that already closed would never terminate — reject it.
       if params[:ended_at].present? && ended_at_in_customer_timezone <= Time.current
         return result.single_validation_failure!(field: :ended_at, error_code: "already_ended")
       end
@@ -52,10 +50,9 @@ module Contracts
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
         contract.save!
 
-        # The materialised cards belong to the old plan; a plan change re-derives
-        # them from the new one (or leaves the contract plan-less). Tear each
-        # card down through the destroy service so its soft-deletable phases and
-        # overrides are discarded too — a bare discard_all! would orphan them.
+        # Replace the old plan's materialised cards. The destroy service also
+        # discards each card's soft-deletable phases and overrides, which a bare
+        # discard_all! would orphan.
         if plan_changed
           contract.applied_rate_cards.to_a.each do |card|
             ContractRateCards::DestroyService.call!(contract_rate_card: card)
@@ -85,9 +82,7 @@ module Contracts
       @catalog_plan = params[:plan_code].present? ? organization.catalog_plans.find_by(code: params[:plan_code]) : nil
     end
 
-    # Read through the CustomerTimezone suffix: a naive datetime means the
-    # customer's wall clock, and an explicit offset is respected. Nil when
-    # the param is absent.
+    # Raw source values for the CustomerTimezone *_in_customer_timezone readers.
     def started_at
       params[:started_at].presence
     end
