@@ -23,6 +23,7 @@ RSpec.describe Resolvers::CatalogPlanResolver do
       query($catalogPlanId: ID!) {
         catalogPlan(id: $catalogPlanId) {
           id code name currency
+          appliedRateCardsCount contractsCount attachedToContracts
         }
       }
     GQL
@@ -39,8 +40,26 @@ RSpec.describe Resolvers::CatalogPlanResolver do
       "id" => catalog_plan.id,
       "code" => "growth",
       "name" => "Growth",
-      "currency" => "EUR"
+      "currency" => "EUR",
+      "appliedRateCardsCount" => 0,
+      "contractsCount" => 0,
+      "attachedToContracts" => false
     )
+  end
+
+  context "when the plan has rate cards and contracts" do
+    before do
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:))
+      create(:contract, organization:, catalog_plan:)
+    end
+
+    it "exposes the counts and the frozen flag" do
+      expect(result["data"]["catalogPlan"]).to include(
+        "appliedRateCardsCount" => 1,
+        "contractsCount" => 1,
+        "attachedToContracts" => true
+      )
+    end
   end
 
   context "when the catalog plan belongs to another organization" do
