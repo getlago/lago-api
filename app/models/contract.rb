@@ -9,6 +9,12 @@ class Contract < ApplicationRecord
   include PaperTrailTraceable
   include Terminatable
 
+  # plan_id is superseded by catalog_plan_id (contracts only ever pointed at
+  # catalog plans). The column is dropped in a follow-up release; ignore it
+  # until then.
+  # TODO: drop the plan_id column, then remove this ignore.
+  self.ignored_columns += %w[plan_id]
+
   STATUSES = {
     pending: "pending",
     active: "active",
@@ -112,7 +118,6 @@ end
 #  customer_id         :uuid             not null
 #  external_id         :string           not null
 #  organization_id     :uuid             not null
-#  plan_id             :uuid
 #
 # Indexes
 #
