@@ -4050,17 +4050,17 @@ RSpec.describe Fees::ChargeService, :premium do
         let(:filtered_aggregations) { [eu_charge_filter.id] }
 
         it "does not compute matching and ignored filters for bypassed aggregations" do
-          allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+          allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
 
           result = charge_subscription_service.call
           expect(result).to be_success
 
-          expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-            .with(charge:, filter: eu_charge_filter)
-          expect(ChargeFilters::MatchingAndIgnoredService).not_to have_received(:call)
-            .with(charge:, filter: us_charge_filter)
-          expect(ChargeFilters::MatchingAndIgnoredService).not_to have_received(:call)
-            .with(charge:, filter: asia_charge_filter)
+          expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+            .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: eu_charge_filter))
+          expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).not_to have_received(:call)
+            .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: us_charge_filter))
+          expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).not_to have_received(:call)
+            .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: asia_charge_filter))
         end
       end
 
@@ -4122,17 +4122,17 @@ RSpec.describe Fees::ChargeService, :premium do
           let(:filtered_aggregations) { [eu_charge_filter.id] }
 
           it "computes matching and ignored filters for all filters" do
-            allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+            allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
 
             result = charge_subscription_service.call
             expect(result).to be_success
 
-            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-              .with(charge:, filter: eu_charge_filter)
-            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-              .with(charge:, filter: us_charge_filter)
-            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-              .with(charge:, filter: asia_charge_filter)
+            expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: eu_charge_filter))
+            expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: us_charge_filter))
+            expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: asia_charge_filter))
           end
         end
       end

@@ -213,7 +213,7 @@ RSpec.describe Fees::ProjectionService do
       end
 
       before do
-        allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call)
+        allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call)
           .and_return(filter_service_result)
       end
 

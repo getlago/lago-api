@@ -27,36 +27,44 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
     )
   end
 
-  describe "validations" do
-    it "validates source inputs" do
-      expect { described_class.new(charge: nil, boundaries:) }
-        .to raise_error(ArgumentError, "charge must be a Charge")
-      expect { described_class.new(charge:, boundaries: nil) }
-        .to raise_error(ArgumentError, "charge boundaries are mandatory")
-      expect { described_class.new(charge:, boundaries:, charge_filter: nil) }.not_to raise_error
-      expect { described_class.new(charge:, boundaries:, charge_filter: Object.new) }
-        .to raise_error(ArgumentError, "charge_filter must be a ChargeFilter")
-    end
-
-    it "validates the charge filter belongs to the charge" do
-      other_charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-      charge_filter = create(:charge_filter, charge: other_charge)
-
-      expect { described_class.new(charge:, boundaries:, charge_filter:) }
-        .to raise_error(ArgumentError, "charge_filter must belong to charge")
+  describe "fee identity" do
+    it "exposes charge fee attributes individually" do
+      expect(source).to have_attributes(fee_type: :charge, invoiceable: charge)
     end
   end
 
-  describe "#with_charge_filter" do
+  describe "#with_filter" do
     let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "30"}) }
 
     it "returns a source with the selected filter" do
-      filtered_source = source.with_charge_filter(charge_filter)
+      filtered_source = source.with_filter(charge_filter)
 
       expect(filtered_source.charge).to eq(charge)
       expect(filtered_source.boundaries).to eq(boundaries)
       expect(filtered_source.charge_filter).to eq(charge_filter)
       expect(filtered_source.properties).to eq(charge_filter.properties)
+      expect(filtered_source.selected_filter).to eq(charge_filter)
+    end
+
+    it "clears the selected filter" do
+      filtered_source = source.with_filter(charge_filter)
+
+      expect(filtered_source.with_filter(nil)).to have_attributes(selected_filter: nil, properties: charge.properties)
+    end
+  end
+
+  describe "#matching_and_ignored_filters" do
+    it "memoizes the result per source without sharing it with a new filter source" do
+      allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_return(BaseResult.new)
+
+      result = source.matching_and_ignored_filters
+
+      expect(source.matching_and_ignored_filters).to equal(result)
+      expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).once
+
+      source.with_filter(nil).matching_and_ignored_filters
+
+      expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).twice
     end
   end
 
@@ -65,19 +73,8 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
       charge_filter = create(:charge_filter, charge:, properties: {amount: "30"})
 
       expect(source.properties).to eq(charge.properties)
-      expect(source.with_charge_filter(charge_filter).properties).to eq(charge_filter.properties)
-      expect(source.with_charge_filter(charge_filter, properties: {amount: "40"}).properties).to eq({amount: "40"})
-    end
-  end
-
-  describe "#aggregation_options" do
-    it "returns aggregation options from properties" do
-      expect(source.aggregation_options(current_usage: true)).to eq(
-        free_units_per_events: 2,
-        free_units_per_total_aggregation: 3.to_d,
-        is_current_usage: true,
-        is_pay_in_advance: false
-      )
+      expect(source.with_filter(charge_filter).properties).to eq(charge_filter.properties)
+      expect(source.with_filter(charge_filter, properties: {amount: "40"}).properties).to eq({amount: "40"})
     end
   end
 

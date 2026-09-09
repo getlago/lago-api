@@ -78,7 +78,7 @@ module Fees
 
       # NOTE: Create a fee for each filters defined on the charge.
       metered_item.charge.filters.each do |charge_filter|
-        filter_metered_item = metered_item.with_charge_filter(charge_filter)
+        filter_metered_item = metered_item.with_filter(charge_filter)
         init_fees(selected_metered_item: filter_metered_item)
       end
 
@@ -89,7 +89,7 @@ module Fees
       )
 
       init_fees(
-        selected_metered_item: metered_item.with_charge_filter(
+        selected_metered_item: metered_item.with_filter(
           charge_filter,
           properties: metered_item.charge.properties
         )

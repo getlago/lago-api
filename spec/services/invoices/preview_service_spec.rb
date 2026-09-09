@@ -513,7 +513,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               end
 
               it "only aggregates the filters that received usage", transaction: false do
-                allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+                allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
 
                 result = travel_to(timestamp) { preview_service.call }
 
@@ -521,9 +521,9 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
 
                 # The filters without usage and the default bucket are not aggregated, so their
                 # exclusions are never serialized into the store query.
-                expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-                  .with(charge:, filter: eu_charge_filter).once
-                expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call).once
+                expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+                  .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: eu_charge_filter)).once
+                expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).once
 
                 charge_fees = result.invoice.fees.select { |fee| fee.charge_id == charge.id }
                 expect(charge_fees.map(&:charge_filter_id)).to eq([eu_charge_filter.id])

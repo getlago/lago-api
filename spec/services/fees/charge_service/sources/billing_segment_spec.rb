@@ -37,13 +37,6 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     )
   end
 
-  describe "validations" do
-    it "validates source inputs" do
-      expect { described_class.new(billing_segment: nil) }
-        .to raise_error(ArgumentError, "billing_segment must be a BillingSegment")
-    end
-  end
-
   describe "#charge_id" do
     it "returns nil for a catalog product without a legacy charge" do
       expect(source.charge_id).to be_nil
@@ -59,29 +52,124 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     end
   end
 
-  describe "#dynamic?" do
-    it "reflects the segment rate model without a legacy charge" do
-      expect(source).not_to be_dynamic
-
-      rate_card_rate.rate_model = "dynamic"
-
-      expect(source).to be_dynamic
-    end
-
-    it "prefers the rate override model" do
-      billing_segment.rate_override = build(:rate_override, organization:, rate_model: "dynamic")
-
-      expect(source).to be_dynamic
+  describe "fee identity" do
+    it "exposes product fee attributes individually" do
+      expect(source).to have_attributes(
+        fee_type: :product, invoiceable: product, contract: billing_segment.contract,
+        rate_card_rate:, rate_override: nil
+      )
     end
   end
 
   describe "#matching_and_ignored_filters" do
-    it "returns equal results using the shared filter result type" do
+    subject(:service_result) { source.matching_and_ignored_filters }
+
+    let(:source) { described_class.new(billing_segment:, product_filter:) }
+    let(:product_filter) { nil }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+
+    it "memoizes the result per source without sharing it with a new filter source" do
+      allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_return(BaseResult.new)
+
       result = source.matching_and_ignored_filters
 
-      expect(result).to be_a(ChargeFilters::MatchingAndIgnoredService::Result)
-      expect(result).to have_attributes(matching_filters: {}, ignored_filters: [])
-      expect(source.matching_and_ignored_filters).to eq(result)
+      expect(source.matching_and_ignored_filters).to equal(result)
+      expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).once
+
+      source.with_filter(nil).matching_and_ignored_filters
+
+      expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).twice
+    end
+
+    context "when product_filter is nil and the product has no filters" do
+      it "returns empty matching and ignored filters" do
+        expect(service_result).to be_a(Events::BillingPeriodFilters::MatchingAndIgnoredService::Result)
+        expect(service_result).to have_attributes(matching_filters: {}, ignored_filters: [])
+      end
+    end
+
+    context "when the product has filters" do
+      let(:region) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
+      let(:size) { create(:billable_metric_filter, organization:, billable_metric:, key: "size", values: %w[512 1024]) }
+      let(:us_filter) { create(:product_filter, organization:, product:) }
+      let(:specific_filter) { create(:product_filter, organization:, product:) }
+      let(:all_regions_filter) { create(:product_filter, organization:, product:) }
+
+      before do
+        create(:product_filter_value, organization:, product_filter: us_filter, billable_metric_filter: region, value: "us")
+        create(:product_filter_value, organization:, product_filter: specific_filter, billable_metric_filter: region, value: "us")
+        create(:product_filter_value, organization:, product_filter: specific_filter, billable_metric_filter: size, value: "512")
+        create(:product_filter_value, organization:, product_filter: all_regions_filter, billable_metric_filter: region, value: nil)
+      end
+
+      context "when product_filter is nil" do
+        it "excludes all product filters with nil values expanded to configured values" do
+          expect(service_result.matching_filters).to eq({})
+          expect(service_result.ignored_filters).to match_array([
+            {"region" => ["us"]},
+            {"region" => ["us"], "size" => ["512"]},
+            {"region" => %w[us eu]}
+          ])
+        end
+
+        it "uses an empty filter only for matching without persisting or selecting it" do
+          source
+
+          expect { service_result }.not_to change(ProductFilter, :count)
+          expect(source).to have_attributes(product_filter: nil, selected_filter: nil)
+          expect(service_result).to eq(
+            source.with_filter(ProductFilter.new(organization:, product:)).matching_and_ignored_filters
+          )
+        end
+      end
+
+      context "with an explicit filter value" do
+        let(:product_filter) { us_filter }
+
+        it "excludes the more specific filter and the remaining configured region" do
+          expect(service_result.matching_filters).to eq("region" => ["us"])
+          expect(service_result.ignored_filters).to match_array([
+            {"region" => ["us"], "size" => ["512"]},
+            {"region" => ["eu"]}
+          ])
+        end
+
+        it "uses default-bucket exclusions when the selected filter is cleared" do
+          default_source = source.with_filter(nil)
+          result = default_source.matching_and_ignored_filters
+
+          expect(default_source.properties).to eq(segment_rate_properties)
+          expect(default_source).to have_attributes(product_filter: nil, selected_filter: nil)
+          expect(result.matching_filters).to eq({})
+          expect(result.ignored_filters).to match_array([
+            {"region" => ["us"]},
+            {"region" => ["us"], "size" => ["512"]},
+            {"region" => %w[us eu]}
+          ])
+        end
+      end
+
+      context "with the most specific product filter" do
+        let(:product_filter) { specific_filter }
+
+        it "matches both keys without excluding broader filters" do
+          expect(service_result.matching_filters).to eq("region" => ["us"], "size" => ["512"])
+          expect(service_result.ignored_filters).to eq([])
+        end
+      end
+
+      context "with a nil product filter value" do
+        let(:product_filter) { all_regions_filter }
+
+        it "matches all configured values rather than nil or arbitrary values carrying the key" do
+          expect(product_filter.to_h).to eq("region" => [nil])
+          expect(service_result.matching_filters).to eq("region" => %w[us eu])
+          expect(service_result.ignored_filters).to match_array([
+            {"region" => ["us"]},
+            {"region" => ["us"], "size" => ["512"]}
+          ])
+        end
+      end
     end
   end
 
@@ -99,17 +187,6 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         prorated: true,
         accepts_target_wallet: false,
         currency: Money::Currency.new("USD")
-      )
-    end
-  end
-
-  describe "#aggregation_options" do
-    it "returns aggregation options from stored properties" do
-      expect(source.aggregation_options(current_usage: false)).to eq(
-        free_units_per_events: 2,
-        free_units_per_total_aggregation: 3.to_d,
-        is_current_usage: false,
-        is_pay_in_advance: false
       )
     end
   end

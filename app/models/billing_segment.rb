@@ -45,6 +45,12 @@ class BillingSegment < ApplicationRecord
     rate_override || rate_card_rate
   end
 
+  # The shared matcher expects a filter object for the default bucket, not nil.
+  # This mirrors the empty ChargeFilter in app/services/fees/charge_service.rb:85-95.
+  def empty_product_filter
+    ProductFilter.new(organization:, product: contract_rate_card.rate_card.product)
+  end
+
   def duration_in_days
     Billing::Days.between(
       started_at,
