@@ -50,6 +50,34 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
     expect(result[:charges_usage].first.keys).not_to include(:filters, :grouped_usage, :presentation_breakdowns)
   end
 
+  describe "datetime formatting" do
+    it "passes strings through untouched" do
+      expect(result[:from_datetime]).to eq("2026-09-01T00:00:00Z")
+      expect(result[:issuing_date]).to eq("2026-09-30")
+    end
+
+    context "when the usage carries time objects instead of strings" do
+      let(:usage) do
+        SubscriptionUsage.new(
+          from_datetime: Time.utc(2026, 9, 1).in_time_zone("UTC"),
+          to_datetime: Time.utc(2026, 9, 30, 23, 59, 59).in_time_zone("UTC"),
+          issuing_date: Date.new(2026, 9, 30),
+          currency: "EUR",
+          amount_cents: 1500,
+          total_amount_cents: 1500,
+          taxes_amount_cents: 0,
+          fees: []
+        )
+      end
+
+      it "formats them, so the wire shape does not depend on what the caller passed" do
+        expect(result[:from_datetime]).to eq("2026-09-01T00:00:00Z")
+        expect(result[:to_datetime]).to eq("2026-09-30T23:59:59Z")
+        expect(result[:issuing_date]).to eq("2026-09-30")
+      end
+    end
+  end
+
   it "carries no taxes, since usage is computed without them" do
     expect(result.keys).not_to include(:taxes_amount_cents, :total_amount_cents)
   end

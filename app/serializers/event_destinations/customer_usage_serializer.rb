@@ -4,9 +4,9 @@ module EventDestinations
   class CustomerUsageSerializer < ModelSerializer
     def serialize
       {
-        from_datetime: model.from_datetime,
-        to_datetime: model.to_datetime,
-        issuing_date: model.issuing_date,
+        from_datetime: iso8601(model.from_datetime),
+        to_datetime: iso8601(model.to_datetime),
+        issuing_date: iso8601(model.issuing_date),
         currency: model.currency,
         amount_cents: model.amount_cents,
         credits: credits,
@@ -16,6 +16,10 @@ module EventDestinations
     end
 
     private
+
+    def iso8601(value)
+      value.respond_to?(:iso8601) ? value.iso8601 : value
+    end
 
     def wallet
       options[:wallet]
