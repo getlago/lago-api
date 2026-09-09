@@ -71,7 +71,7 @@ module EventDestinations
 
         producer.produce(
           data: envelope(subscription, usage_result.usage),
-          partition_key: destination.partition_key_for(customer:, subscription:)
+          partition_key: destination.partition_key_for(customer:)
         )
       end
 

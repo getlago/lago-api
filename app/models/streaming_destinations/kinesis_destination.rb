@@ -19,7 +19,7 @@ module StreamingDestinations
       EventDestinations::KinesisProducer.new(destination: self)
     end
 
-    def partition_key_for(customer:, subscription:)
+    def partition_key_for(customer:)
       case partition_key
       when PARTITION_KEY_CUSTOMER_EXTERNAL_ID
         customer.external_id&.slice(0, PARTITION_KEY_MAX_LENGTH)

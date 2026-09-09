@@ -28,7 +28,7 @@ module StreamingDestinations
       raise NotImplementedError
     end
 
-    def partition_key_for(customer:, subscription:)
+    def partition_key_for(customer:)
       nil
     end
 
