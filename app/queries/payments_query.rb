@@ -124,9 +124,10 @@ class PaymentsQuery < BaseQuery
   end
 
   def filter_by_customer(scope)
-    external_customer_id = filters.external_customer_id
-
-    scope.joins(:customer).where("customers.external_id = :external_customer_id", external_customer_id:)
+    # Resolve the customer first so the planner starts from one customer_id instead of a join.
+    # Discarded customers stay reachable, as with the belongs_to scope on Payment.
+    customer_id = organization.customers.with_discarded.where(external_id: filters.external_customer_id).pick(:id)
+    scope.where(customer_id:)
   end
 
   def filter_by_invoice(scope)
@@ -159,7 +160,13 @@ class PaymentsQuery < BaseQuery
   end
 
   def with_receipt_number(scope)
-    scope.joins(:payment_receipt).where("LOWER(payment_receipts.number) = LOWER(?)", filters.receipt_number)
+    # Semi-join on payment_receipts scoped by organization: the receipt is looked up through
+    # (organization_id, lower(number)) and the outer query becomes a primary-key lookup,
+    # instead of walking every payment of the organization and probing receipts per row.
+    receipts = PaymentReceipt.where(organization_id: organization.id)
+      .where("lower(payment_receipts.number) = lower(?)", filters.receipt_number)
+      .select(:payment_id)
+    scope.where(id: receipts)
   end
 
   def with_created_at_range(scope)
@@ -172,33 +179,39 @@ class PaymentsQuery < BaseQuery
 
   def with_payment_provider_type(scope)
     types = Array(filters.payment_provider_type).map { |type| "PaymentProviders::#{type.camelize}Provider" }
-    scope.where(payment_provider_id: PaymentProviders::BaseProvider.unscoped.where(type: types).select(:id))
+    # Resolve provider ids first, scoped to the organization. Deleted providers are kept because
+    # historical payments still reference them. An empty list short-circuits to no rows.
+    provider_ids = PaymentProviders::BaseProvider.unscoped.where(organization_id: organization.id, type: types).pluck(:id)
+    scope.where(payment_provider_id: provider_ids)
   end
 
   def with_payment_method_type(scope)
-    scope.joins("LEFT JOIN payment_methods ON payment_methods.id = payments.payment_method_id")
-      .where(
-        "COALESCE(NULLIF(payments.provider_payment_method_data->>'type', ''), payment_methods.provider_method_type) IN (?)",
-        Array(filters.payment_method_type)
-      )
+    types = Array(filters.payment_method_type)
+    # The jsonb type wins when present; otherwise fall back to the saved (non-deleted) payment
+    # method. Two plain predicates instead of a COALESCE across a join.
+    fallback_ids = PaymentMethod.where(organization_id: organization.id, provider_method_type: types).select(:id)
+    scope.where(
+      "payments.provider_payment_method_data->>'type' IN (:types) " \
+      "OR (NULLIF(payments.provider_payment_method_data->>'type', '') IS NULL AND payments.payment_method_id IN (:fallback_ids))",
+      types:, fallback_ids:
+    )
   end
 
   def with_invoice_number(scope)
-    scope.where(<<~SQL.squish, number: filters.invoice_number, organization_id: organization.id)
-      EXISTS (
-        SELECT 1 FROM invoices
-        WHERE invoices.organization_id = :organization_id
-          AND LOWER(invoices.number) = LOWER(:number)
-          AND (
-            (payments.payable_type = 'Invoice' AND invoices.id = payments.payable_id)
-            OR (payments.payable_type = 'PaymentRequest' AND EXISTS (
-              SELECT 1 FROM invoices_payment_requests
-              WHERE invoices_payment_requests.payment_request_id = payments.payable_id
-                AND invoices_payment_requests.invoice_id = invoices.id
-            ))
-          )
-      )
-    SQL
+    # Resolve the invoice ids first (organization-scoped, case-insensitive), then reach the
+    # payments through index_payments_on_payable_type_and_payable_id on both payable paths.
+    # The ids are passed as literals: with sub-selects the planner turns the OR into hashed
+    # SubPlans evaluated against every payment of the organization. No DISTINCT needed:
+    # a payment has one payable.
+    invoice_ids = organization.invoices.where("lower(invoices.number) = lower(?)", filters.invoice_number).pluck(:id)
+    return scope.none if invoice_ids.empty?
+
+    request_ids = PaymentRequest::AppliedInvoice.where(invoice_id: invoice_ids).pluck(:payment_request_id)
+    scope.where(
+      "(payments.payable_type = 'Invoice' AND payments.payable_id IN (:invoice_ids)) " \
+      "OR (payments.payable_type = 'PaymentRequest' AND payments.payable_id IN (:request_ids))",
+      invoice_ids:, request_ids: request_ids.presence || [nil]
+    )
   end
 
   def with_payment_type(scope)

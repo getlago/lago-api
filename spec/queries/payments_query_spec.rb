@@ -182,7 +182,7 @@ RSpec.describe PaymentsQuery do
 
   context "when filtering by external_customer_id" do
     let(:filters) { {external_customer_id: customer.external_id} }
-    let(:customer) { create(:customer) }
+    let(:customer) { create(:customer, organization:) }
     let(:new_invoice) { create(:invoice, organization:, customer:) }
     let(:new_payment) { create(:payment, payable: new_invoice) }
 
@@ -374,6 +374,7 @@ RSpec.describe PaymentsQuery do
     before do
       payment_one.update!(payment_provider: create(:gocardless_provider, organization:))
       payment_two.update!(payment_provider: nil)
+      payment_three.update!(payment_provider: create(:stripe_provider, organization:))
     end
 
     it "maps API names to provider STI types" do
@@ -480,6 +481,31 @@ RSpec.describe PaymentsQuery do
 
     it "matches payment requests" do
       expect(returned_ids).to eq([payment_three.id])
+    end
+  end
+
+  context "with every filter set" do
+    let(:filters) do
+      {
+        external_customer_id: payment_one.customer.external_id, currency: "EUR", payment_status: %w[failed pending],
+        amount_from: 100, amount_to: 10_000, receipt_number: "RCPT-1", created_at_from: "2026-01-01", created_at_to: "2026-01-31",
+        payment_provider_type: %w[stripe], payment_method_type: %w[card], invoice_number: "INV-1",
+        payment_type: %w[provider], payable_type: %w[Invoice]
+      }
+    end
+    let(:search_term) { "term" }
+
+    # Tripwire for the shapes that defeat the payments indexes on large organizations.
+    # Plan shapes are not asserted (too brittle on a tiny dataset); the SQL text is.
+    it "keeps the generated SQL indexable" do
+      sql = result.payments.to_sql
+
+      expect(sql).not_to include("DISTINCT")
+      # A function around an indexed payments column disables index_payments_by_cursor and any amount index.
+      expect(sql).not_to match(/\w+\(\s*"?payments"?\."?(created_at|amount_cents)"?\s*\)/i)
+      # Receipts and invoices are resolved through organization-scoped sub-selects, never joined.
+      expect(sql).not_to match(/JOIN\s+"?(payment_receipts|invoices|payment_methods|customers)"?/i)
+      expect(sql.scan("lower(").count).to eq(sql.scan(/lower\((payment_receipts|invoices)\.number\)/).count * 2)
     end
   end
 
