@@ -19,12 +19,17 @@ module CatalogPlans
     def call
       return result.not_found_failure!(resource: "plan") unless catalog_plan
 
-      # The currency is fixed once anything prices against the plan — plan-level
-      # rate cards, or a contract (whose fees bill in the card currency and
-      # invoice in the plan currency). Changing it would desync already-attached
-      # cards from the currency they were validated against.
-      currency_change = params.key?(:currency) && params[:currency] != catalog_plan.currency
-      if currency_change && (catalog_plan.applied_rate_cards.exists? || catalog_plan.attached_to_contracts?)
+      # A contract prices against the plan by reference — it serializes the
+      # plan_code through the association (so the code must stay stable) and its
+      # fees invoice in the plan currency. Once a contract is attached both are
+      # frozen; name, description and invoice display name stay editable.
+      if catalog_plan.attached_to_contracts? && (code_change_requested? || currency_change_requested?)
+        return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
+      end
+
+      # Plan-level rate cards freeze the currency too, before any contract: the
+      # cards were validated against it and changing it would desync them.
+      if currency_change_requested? && catalog_plan.applied_rate_cards.exists?
         return result.single_validation_failure!(field: :currency, error_code: "not_editable_with_applied_rate_cards")
       end
 
@@ -45,5 +50,13 @@ module CatalogPlans
     private
 
     attr_reader :catalog_plan, :params, :send_webhook
+
+    def code_change_requested?
+      params.key?(:code) && params[:code] != catalog_plan.code
+    end
+
+    def currency_change_requested?
+      params.key?(:currency) && params[:currency] != catalog_plan.currency
+    end
   end
 end
