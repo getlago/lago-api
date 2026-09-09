@@ -84,6 +84,15 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { it[:lago_id] }).to eq([contract_rate_card.id])
     end
+
+    it "serializes an exhausted billing schedule" do
+      contract_rate_card.update!(next_billing_at: nil)
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:applied_rate_cards].sole[:next_billing_at]).to be_nil
+    end
   end
 
   describe "GET /api/v2/contracts/:external_id/applied_rate_cards/:code" do

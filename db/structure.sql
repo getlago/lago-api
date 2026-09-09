@@ -2631,7 +2631,7 @@ CREATE TABLE public.contract_rate_cards (
     contract_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
-    next_billing_at timestamp without time zone NOT NULL,
+    next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
     ended_date date,
     units numeric,
@@ -14877,6 +14877,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260911144853'),
 ('20260910151708'),
 ('20260910095513'),
+('20260909154904'),
 ('20260909103355'),
 ('20260908222044'),
 ('20260908211313'),
@@ -16007,4 +16008,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
