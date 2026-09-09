@@ -82,6 +82,7 @@ RSpec.describe Invoices::Payments::AdyenService do
       let(:service_call) do
         described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "Authorised"
         )
@@ -93,6 +94,7 @@ RSpec.describe Invoices::Payments::AdyenService do
         expect do
           described_class.call(
             :update_payment_status,
+            organization_id: organization.id,
             provider_payment_id: "ch_123456",
             status: "Authorised"
           )
@@ -128,6 +130,7 @@ RSpec.describe Invoices::Payments::AdyenService do
           expect do
             described_class.call(
               :update_payment_status,
+              organization_id: organization.id,
               provider_payment_id: "ch_123456",
               status: "Refused"
             )
