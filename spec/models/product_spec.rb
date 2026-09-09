@@ -97,4 +97,12 @@ RSpec.describe Product do
       expect(product.attached_to_plan_or_subscription?).to be(true)
     end
   end
+
+  describe "#target_key" do
+    let(:product) { build_stubbed(:product) }
+
+    it "returns a stable product aggregation key" do
+      expect(product.target_key).to eq("product-#{product.id}")
+    end
+  end
 end

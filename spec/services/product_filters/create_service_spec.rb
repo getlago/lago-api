@@ -72,12 +72,28 @@ RSpec.describe ProductFilters::CreateService do
       }
     end
 
-    it "creates the filter matching any value of the key" do
+    it "creates the filter selecting all configured values of the key" do
       expect { result }.to change(ProductFilterValue, :count).by(1)
 
       value = result.product_filter.values.sole
       expect(value.billable_metric_filter).to eq(region_filter)
       expect(value.value).to be_nil
+      expect(result.product_filter.to_h).to eq("region" => [nil])
+      expect(result.product_filter.to_h_with_all_values).to eq("region" => %w[us eu])
+    end
+
+    context "when value is explicitly nil" do
+      before { params[:values] = [{key: region_filter.key, value: nil}] }
+
+      it "creates the filter selecting all configured values of the key" do
+        expect { result }.to change(ProductFilter, :count).by(1)
+          .and change(ProductFilterValue, :count).by(1)
+
+        expect(result).to be_success
+        expect(result.product_filter.values.sole.billable_metric_filter).to eq(region_filter)
+        expect(result.product_filter.values.sole.value).to be_nil
+        expect(result.product_filter.to_h_with_all_values).to eq("region" => %w[us eu])
+      end
     end
   end
 
