@@ -144,12 +144,12 @@ RSpec.describe Resolvers::PaymentsResolver do
       <<~GQL
         query($paymentStatus: [PayablePaymentStatusEnum!], $amountFrom: BigInt, $amountTo: BigInt,
           $receiptNumber: String, $createdAtFrom: ISO8601Date, $createdAtTo: ISO8601Date,
-          $paymentProviderType: [ProviderTypeEnum!], $paymentMethodType: [PaymentProviderMethodTypeEnum!],
+          $paymentProviderType: [ProviderTypeEnum!],
           $invoiceNumber: String, $paymentType: [PaymentTypeEnum!], $payableType: [PayableTypeEnum!],
           $searchTerm: String, $currency: CurrencyEnum, $invoiceId: ID, $page: Int) {
           payments(paymentStatus: $paymentStatus, amountFrom: $amountFrom, amountTo: $amountTo,
             receiptNumber: $receiptNumber, createdAtFrom: $createdAtFrom, createdAtTo: $createdAtTo,
-            paymentProviderType: $paymentProviderType, paymentMethodType: $paymentMethodType,
+            paymentProviderType: $paymentProviderType,
             invoiceNumber: $invoiceNumber, paymentType: $paymentType, payableType: $payableType,
             searchTerm: $searchTerm, currency: $currency, invoiceId: $invoiceId, page: $page, limit: 1) {
             collection { id amountCents }
@@ -178,7 +178,6 @@ RSpec.describe Resolvers::PaymentsResolver do
       {createdAtFrom: "2026-09-01", createdAtTo: "2026-09-07"},
       {createdAtTo: "2026-09-04"},
       {paymentProviderType: ["gocardless"]},
-      {paymentMethodType: ["sepa_debit"]},
       {invoiceNumber: "filter-invoice"},
       {paymentType: ["manual"]},
       {searchTerm: "Filter transfer"},
@@ -211,7 +210,7 @@ RSpec.describe Resolvers::PaymentsResolver do
 
     [
       {paymentStatus: ["unknown"]}, {paymentProviderType: ["unknown"]},
-      {paymentMethodType: ["unknown"]}, {paymentType: ["unknown"]}, {payableType: ["unknown"]},
+      {paymentType: ["unknown"]}, {payableType: ["unknown"]},
       {amountFrom: "-1"}, {amountTo: "-1"}, {amountFrom: "500", amountTo: "100"},
       {amountFrom: "9223372036854775808"}, {receiptNumber: "x" * 256},
       {invoiceNumber: "x" * 256}, {invoiceId: "invalid"}, {createdAtFrom: "2026-02-30"}

@@ -20,7 +20,6 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :payable_type, [Types::Payments::PayableTypeEnum], required: false
-    argument :payment_method_type, [Types::Payments::PaymentMethodTypeEnum], required: false
     argument :payment_provider_type, [Types::PaymentProviders::ProviderTypeEnum], required: false
     argument :payment_status, [Types::Payments::PayablePaymentStatusEnum], required: false
     argument :payment_type, [Types::Payments::PaymentTypeEnum], required: false

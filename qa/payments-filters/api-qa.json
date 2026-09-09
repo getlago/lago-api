@@ -284,30 +284,6 @@
     "ids_match": true
   },
   {
-    "request": "GET /api/v1/payments?payment_method_type%5B%5D=card&payment_method_type%5B%5D=sepa_debit",
-    "status": 200,
-    "count": 5,
-    "ids_match": true
-  },
-  {
-    "request": "GET /api/v1/customers/cust_1/payments?payment_method_type%5B%5D=card&payment_method_type%5B%5D=sepa_debit",
-    "status": 200,
-    "count": 0,
-    "ids_match": true
-  },
-  {
-    "request": "GraphQL payments",
-    "variables": {
-      "paymentMethodType": [
-        "card",
-        "sepa_debit"
-      ]
-    },
-    "status": 200,
-    "count": 5,
-    "ids_match": true
-  },
-  {
     "request": "GET /api/v1/payments?currency=EUR",
     "status": 200,
     "count": 15,
@@ -444,13 +420,13 @@
     "ids_match": true
   },
   {
-    "request": "GET /api/v1/payments?payment_status%5B%5D=succeeded&payment_method_type%5B%5D=card&payment_method_type%5B%5D=us_bank_account&currency=EUR&search_term=pi_3",
+    "request": "GET /api/v1/payments?payment_status%5B%5D=succeeded&currency=EUR&search_term=pi_3",
     "status": 200,
-    "count": 3,
+    "count": 5,
     "ids_match": true
   },
   {
-    "request": "GET /api/v1/customers/cust_1/payments?payment_status%5B%5D=succeeded&payment_method_type%5B%5D=card&payment_method_type%5B%5D=us_bank_account&currency=EUR&search_term=pi_3",
+    "request": "GET /api/v1/customers/cust_1/payments?payment_status%5B%5D=succeeded&currency=EUR&search_term=pi_3",
     "status": 200,
     "count": 0,
     "ids_match": true
@@ -462,14 +438,10 @@
         "succeeded"
       ],
       "currency": "EUR",
-      "paymentMethodType": [
-        "card",
-        "us_bank_account"
-      ],
       "searchTerm": "pi_3"
     },
     "status": 200,
-    "count": 3,
+    "count": 5,
     "ids_match": true
   },
   {
@@ -485,11 +457,6 @@
   },
   {
     "request": "GET /api/v1/payments?payment_provider_type=bogus",
-    "status": 422,
-    "validation_error": true
-  },
-  {
-    "request": "GET /api/v1/payments?payment_method_type=bogus",
     "status": 422,
     "validation_error": true
   },

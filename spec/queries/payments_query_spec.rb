@@ -390,39 +390,6 @@ RSpec.describe PaymentsQuery do
     end
   end
 
-  context "with payment method type" do
-    let(:filters) { {payment_method_type: %w[card sepa_debit]} }
-    let(:method) { create(:payment_method, organization:, provider_method_type: "sepa_debit") }
-
-    before do
-      payment_one.update!(provider_payment_method_data: {type: "card"})
-      payment_two.update!(provider_payment_method_data: {}, payment_method: method)
-      payment_three.update!(provider_payment_method_data: {type: "link"}, payment_method: method)
-    end
-
-    it "uses JSON first and falls back to the associated method" do
-      expect(returned_ids).to match_array([payment_one.id, payment_two.id])
-    end
-
-    [nil, ""].each do |empty_type|
-      context "when JSON type is #{empty_type.inspect}" do
-        before { payment_two.update!(provider_payment_method_data: {type: empty_type}) }
-
-        it "falls back for an empty JSON type" do
-          expect(returned_ids).to match_array([payment_one.id, payment_two.id])
-        end
-      end
-    end
-
-    context "when neither source supplies a method" do
-      before { payment_two.update!(payment_method: nil) }
-
-      it "does not match" do
-        expect(returned_ids).to eq([payment_one.id])
-      end
-    end
-  end
-
   context "with invoice number" do
     let(:filters) { {invoice_number: "lag-1234-001-002"} }
 
@@ -489,7 +456,7 @@ RSpec.describe PaymentsQuery do
       {
         external_customer_id: payment_one.customer.external_id, currency: "EUR", payment_status: %w[failed pending],
         amount_from: 100, amount_to: 10_000, receipt_number: "RCPT-1", created_at_from: "2026-01-01", created_at_to: "2026-01-31",
-        payment_provider_type: %w[stripe], payment_method_type: %w[card], invoice_number: "INV-1",
+        payment_provider_type: %w[stripe], invoice_number: "INV-1",
         payment_type: %w[provider], payable_type: %w[Invoice]
       }
     end

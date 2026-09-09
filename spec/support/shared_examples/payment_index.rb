@@ -78,8 +78,6 @@ RSpec.shared_examples "a payment index endpoint" do
       {created_at_from: "2026-09-01", created_at_to: "2026-09-07"},
       {payment_provider_type: "stripe"},
       {payment_provider_type: ["stripe"]},
-      {payment_method_type: "card"},
-      {payment_method_type: %w[card sepa_debit]},
       {currency: "USD"},
       {invoice_number: "qa-invoice"},
       {payment_type: "manual"},
@@ -152,7 +150,7 @@ RSpec.shared_examples "a payment index endpoint" do
 
     [
       {payment_status: "bogus"}, {payment_statuses: ["bogus"]},
-      {payment_provider_type: ["bogus"]}, {payment_method_type: ["bogus"]},
+      {payment_provider_type: ["bogus"]},
       {payment_type: "bogus"}, {payable_type: "bogus"}, {currency: "XYZ"},
       {amount_from: "-1"}, {amount_to: "-1"}, {amount_from: "1.5"},
       {amount_from: "9223372036854775808"}, {amount_from: "500", amount_to: "100"},

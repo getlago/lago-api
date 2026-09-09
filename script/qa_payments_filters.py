@@ -1,11 +1,12 @@
 """Verify REST and GraphQL against seed_payments_filters.rb's local manifest.
 
 Run on the host with Python 3.9+: python3 script/qa_payments_filters.py
-The dev API must listen on 127.0.0.1:3000. No credentials enter the report.
+The dev API must listen on 127.0.0.1:3000 (override with LAGO_API_URL). No credentials enter the report.
 """
 
 import datetime as dt
 import json
+import os
 from pathlib import Path
 import urllib.error
 import urllib.parse
@@ -14,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = "http://127.0.0.1:3000"
+BASE = os.environ.get("LAGO_API_URL", "http://127.0.0.1:3000")
 CREDENTIALS = json.loads((ROOT / "tmp/payments_filters_credentials.json").read_text())
 MANIFEST = json.loads((ROOT / "tmp/payments_filters_manifest.json").read_text())
 VISIBLE = [p for p in MANIFEST["payments"] if p["visible"]]
@@ -24,7 +25,7 @@ TYPES = {
     "payment_status": "[PayablePaymentStatusEnum!]",
     "amount_from": "BigInt", "amount_to": "BigInt",
     "receipt_number": "String", "created_at_from": "ISO8601Date", "created_at_to": "ISO8601Date",
-    "payment_provider_type": "[ProviderTypeEnum!]", "payment_method_type": "[PaymentProviderMethodTypeEnum!]",
+    "payment_provider_type": "[ProviderTypeEnum!]",
     "currency": "CurrencyEnum", "invoice_number": "String", "external_customer_id": "ID",
     "invoice_id": "ID", "payment_type": "[PaymentTypeEnum!]", "payable_type": "[PayableTypeEnum!]",
     "search_term": "String",
@@ -137,11 +138,11 @@ CASES = [
     {"receipt_number": "rcpt-2026-0001"}, {"receipt_number": "missing"},
     {"created_at_from": "2026-09-01", "created_at_to": "2026-09-07"},
     {"payment_provider_type": ["stripe"]}, {"payment_provider_type": ["gocardless"]},
-    {"payment_method_type": ["card", "sepa_debit"]}, {"currency": "EUR"},
+    {"currency": "EUR"},
     {"invoice_number": "lag-1234-001-002"}, {"external_customer_id": "cust_1"},
     {"payment_type": "manual", "payable_type": "PaymentRequest"}, {"search_term": "pi_3"},
     {"payment_status": "succeeded", "currency": "EUR", "amount_from": "100", "created_at_from": "2026-09-01"},
-    {"payment_status": ["succeeded"], "currency": "EUR", "payment_method_type": ["card", "us_bank_account"], "search_term": "pi_3"},
+    {"payment_status": ["succeeded"], "currency": "EUR", "search_term": "pi_3"},
 ]
 for case in CASES:
     rest(case)
@@ -150,7 +151,7 @@ for case in CASES:
 rest({"created_at_from": "invalid", "created_at_to": "2026-02-30"})
 
 for params in [
-    {"payment_status": "bogus"}, {"payment_provider_type": "bogus"}, {"payment_method_type": "bogus"},
+    {"payment_status": "bogus"}, {"payment_provider_type": "bogus"},
     {"payment_type": "bogus"}, {"payable_type": "bogus"}, {"currency": "XYZ"},
     {"amount_from": "-1"}, {"amount_to": "-1"}, {"amount_from": "500", "amount_to": "100"},
     {"amount_from": "9223372036854775808"}, {"invoice_id": "invalid"},

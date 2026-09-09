@@ -88,7 +88,6 @@ RSpec.describe Queries::PaymentsQueryFiltersContract do
   {
     payment_status: Payment::PAYABLE_PAYMENT_STATUS,
     payment_provider_type: Customer::PAYMENT_PROVIDERS,
-    payment_method_type: PaymentMethod::PROVIDER_METHOD_TYPES,
     payment_type: Payment::PAYMENT_TYPES.keys.map(&:to_s),
     payable_type: Payment::PAYABLE_TYPES
   }.each do |field, values|

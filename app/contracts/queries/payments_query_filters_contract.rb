@@ -19,10 +19,6 @@ module Queries
         value(:string, included_in?: Customer::PAYMENT_PROVIDERS) |
           array(:string, included_in?: Customer::PAYMENT_PROVIDERS)
       end
-      optional(:payment_method_type).maybe do
-        value(:string, included_in?: PaymentMethod::PROVIDER_METHOD_TYPES) |
-          array(:string, included_in?: PaymentMethod::PROVIDER_METHOD_TYPES)
-      end
       optional(:payment_type).maybe do
         value(:string, included_in?: Payment::PAYMENT_TYPES.keys.map(&:to_s)) |
           array(:string, included_in?: Payment::PAYMENT_TYPES.keys.map(&:to_s))

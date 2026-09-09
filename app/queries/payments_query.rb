@@ -13,7 +13,6 @@ class PaymentsQuery < BaseQuery
     :created_at_from,
     :created_at_to,
     :payment_provider_type,
-    :payment_method_type,
     :invoice_number,
     :payment_type,
     :payable_type
@@ -116,7 +115,6 @@ class PaymentsQuery < BaseQuery
     scope = with_receipt_number(scope) if filters.receipt_number.present?
     scope = with_created_at_range(scope) if filters.created_at_from.present? || filters.created_at_to.present?
     scope = with_payment_provider_type(scope) if filters.payment_provider_type.present?
-    scope = with_payment_method_type(scope) if filters.payment_method_type.present?
     scope = with_invoice_number(scope) if filters.invoice_number.present?
     scope = with_payment_type(scope) if filters.payment_type.present?
     scope = with_payable_type(scope) if filters.payable_type.present?
@@ -183,18 +181,6 @@ class PaymentsQuery < BaseQuery
     # historical payments still reference them. An empty list short-circuits to no rows.
     provider_ids = PaymentProviders::BaseProvider.unscoped.where(organization_id: organization.id, type: types).pluck(:id)
     scope.where(payment_provider_id: provider_ids)
-  end
-
-  def with_payment_method_type(scope)
-    types = Array(filters.payment_method_type)
-    # The jsonb type wins when present; otherwise fall back to the saved (non-deleted) payment
-    # method. Two plain predicates instead of a COALESCE across a join.
-    fallback_ids = PaymentMethod.where(organization_id: organization.id, provider_method_type: types).select(:id)
-    scope.where(
-      "payments.provider_payment_method_data->>'type' IN (:types) " \
-      "OR (NULLIF(payments.provider_payment_method_data->>'type', '') IS NULL AND payments.payment_method_id IN (:fallback_ids))",
-      types:, fallback_ids:
-    )
   end
 
   def with_invoice_number(scope)
