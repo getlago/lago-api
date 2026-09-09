@@ -126,12 +126,10 @@ end
 #  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                  (organization_id)
 #  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
-#  index_contracts_on_plan_id                          (plan_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_plan_id => catalog_plans.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (plan_id => plans.id)
 #
