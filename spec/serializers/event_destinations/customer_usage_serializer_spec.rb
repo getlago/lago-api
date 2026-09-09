@@ -59,6 +59,10 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       expect(result[:credits]).to eq("15.0")
     end
 
+    it "names the wallet the conversion went through" do
+      expect(result[:wallet_id]).to eq(wallet.id)
+    end
+
     context "when the rate is not one credit per unit of currency" do
       let(:wallet) { create(:wallet, customer:, organization:, rate_amount: "0.5", currency: "EUR") }
 
@@ -73,6 +77,10 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       it "sends no credits rather than an unconvertible figure" do
         expect(result[:credits]).to be_nil
         expect(result[:amount_cents]).to eq(1500)
+      end
+
+      it "sends a null wallet_id, so a null credits is not a mystery" do
+        expect(result[:wallet_id]).to be_nil
       end
     end
 

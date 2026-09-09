@@ -10,6 +10,7 @@ module EventDestinations
         currency: model.currency,
         amount_cents: model.amount_cents,
         credits: credits,
+        wallet_id: wallet&.id,
         charges_usage: charges_usage
       }
     end
