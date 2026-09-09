@@ -7,12 +7,6 @@ class Plan < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  # pricing_type is retired: product-catalog plans now live in the catalog_plans
-  # table, so every plans row is legacy. The column is dropped in a follow-up
-  # release; ignore it until then.
-  # TODO: drop the pricing_type column, then remove this ignore.
-  self.ignored_columns += %w[pricing_type]
-
   belongs_to :organization
   belongs_to :parent, class_name: "Plan", optional: true
 
