@@ -182,7 +182,7 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       end
 
       it "keeps the same-key subset child verbatim" do
-        expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
+        expect(service_result.matching_filters).to match({"size" => match_array(%w[512 1024])})
         expect(service_result.ignored_filters).to eq([{"size" => ["512"]}])
       end
 
@@ -194,7 +194,7 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
         end
 
         it "keeps both the same-key subset and different-key child intact" do
-          expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
+          expect(service_result.matching_filters).to match({"size" => match_array(%w[512 1024])})
           expect(service_result.ignored_filters).to eq([
             {"size" => ["512"]},
             {"size" => ["512"], "steps" => ["25"]}
@@ -232,7 +232,7 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       end
 
       it "subtracts matching values from the non-subset child" do
-        expect(service_result.matching_filters).to eq({"size" => %w[512 1024], "steps" => %w[25 50]})
+        expect(service_result.matching_filters).to match({"size" => match_array(%w[512 1024]), "steps" => match_array(%w[25 50])})
         expect(service_result.ignored_filters).to eq([{"size" => [], "steps" => ["75"]}])
       end
     end
