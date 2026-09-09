@@ -183,4 +183,58 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
   end
+
+  describe "PUT /api/v2/contracts/:external_id" do
+    subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {contract: update_params}) }
+
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+    let(:update_params) { {name: "Renamed"} }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "updates the contract and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq(contract.external_id)
+      expect(json[:contract][:name]).to eq("Renamed")
+    end
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:update_params) { {plan_code: other_plan.code} }
+
+      it "re-materializes the rate cards from the new plan" do
+        rate_card = create(:rate_card, organization:)
+        create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card:, units: 4)
+
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:plan_code]).to eq(other_plan.code)
+        expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+      end
+    end
+
+    context "when the contract is already active" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+      it "returns an unprocessable entity error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:contract]).to eq(["contract_locked"])
+      end
+    end
+
+    context "when it does not exist" do
+      subject { put_with_token(organization, "/api/v2/contracts/unknown", {contract: update_params}) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
 end

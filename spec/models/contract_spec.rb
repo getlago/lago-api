@@ -112,6 +112,14 @@ RSpec.describe Contract do
     end
   end
 
+  describe "#edit_error_code" do
+    it "is nil while pending and contract_locked once no longer editable" do
+      expect(build(:contract, :pending).edit_error_code).to be_nil
+      expect(build(:contract, status: :active).edit_error_code).to eq("contract_locked")
+      expect(build(:contract, :terminated).edit_error_code).to eq("contract_locked")
+    end
+  end
+
   describe "#currency" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:, currency: "USD") }
@@ -178,6 +186,14 @@ RSpec.describe Contract do
         create(:contract, :terminated, organization:, external_id: "gone")
 
         expect(organization.contracts.live_by_external_id("gone")).to be_nil
+      end
+
+      it "prefers the pending replacement over its active sibling" do
+        active = create(:contract, organization:, external_id: "reused", started_at: 1.month.ago)
+        pending = create(:contract, :pending, organization:, external_id: "reused")
+
+        expect(organization.contracts.live_by_external_id("reused")).to eq(pending)
+        expect(active.reload.status).to eq("active")
       end
     end
   end
