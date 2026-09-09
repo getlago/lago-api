@@ -5,6 +5,13 @@
 class BillingSegment < ApplicationRecord
   include Currencies
 
+  MICROSECOND = Rational(1, 1_000_000)
+
+  # Schedule windows have exclusive ends; the database overlap constraint uses inclusive ends.
+  def self.inclusive_end(instant) = instant - MICROSECOND
+
+  def self.exclusive_end(instant) = instant + MICROSECOND
+
   STATUSES = {
     pending: "pending",
     processing: "processing",
@@ -121,8 +128,6 @@ end
 #  index_billing_segments_on_customer_id            (customer_id)
 #  index_billing_segments_on_invoice_id             (invoice_id)
 #  index_billing_segments_on_organization_id        (organization_id)
-#  index_billing_segments_on_pricing_unit_id        (pricing_unit_id)
-#  index_billing_segments_on_rate_card_rate_id      (rate_card_rate_id)
 #  index_billing_segments_on_rate_override_id       (rate_override_id)
 #
 # Foreign Keys

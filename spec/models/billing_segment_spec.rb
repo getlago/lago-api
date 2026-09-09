@@ -196,8 +196,8 @@ RSpec.describe BillingSegment do
         rate_card_rate: create(:rate_card_rate, organization: contract_rate_card.organization, rate_card: contract_rate_card.rate_card),
         cycle_started_at:
       }
-      first = create(:billing_segment, **attributes, started_at: cycle_started_at, ended_at: cut - Rational(1, 1_000_000))
-      second = create(:billing_segment, **attributes, started_at: cut, ended_at: Time.zone.parse("2026-10-01") - Rational(1, 1_000_000))
+      first = create(:billing_segment, **attributes, started_at: cycle_started_at, ended_at: described_class.inclusive_end(cut))
+      second = create(:billing_segment, **attributes, started_at: cut, ended_at: described_class.inclusive_end(Time.zone.parse("2026-10-01")))
 
       expect(described_class.where(contract_rate_card:, cycle_started_at:)).to match_array([first, second])
     end
