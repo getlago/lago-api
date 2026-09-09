@@ -85,6 +85,7 @@ class Customer < ApplicationRecord
   has_many :payment_methods, dependent: :destroy
   has_many :payment_requests, dependent: :destroy
   has_many :quantified_events
+  has_many :usage_attribution_values
   has_many :integration_customers,
     class_name: "IntegrationCustomers::BaseCustomer",
     dependent: :destroy

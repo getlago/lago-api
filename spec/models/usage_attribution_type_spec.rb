@@ -19,6 +19,18 @@ RSpec.describe UsageAttributionType do
       expect(usage_attribution_type).to belong_to(:organization)
       expect(usage_attribution_type).to belong_to(:parent).class_name("UsageAttributionType").optional
       expect(usage_attribution_type).to have_many(:children).class_name("UsageAttributionType").with_foreign_key(:parent_id).inverse_of(:parent)
+      expect(usage_attribution_type).to have_many(:usage_attribution_values)
+    end
+  end
+
+  describe "soft deleted associations" do
+    it "still resolves a discarded parent" do
+      organization = create(:organization)
+      parent = create(:usage_attribution_type, organization:)
+      child = create(:usage_attribution_type, organization:, parent:)
+      parent.discard!
+
+      expect(child.reload.parent).to eq(parent)
     end
   end
 
