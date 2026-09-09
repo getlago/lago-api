@@ -16,7 +16,7 @@ module StreamingDestinations
     validates :partition_key, inclusion: {in: PARTITION_KEYS}
 
     def producer
-      EventDestinations::KinesisProducer.new(destination: self)
+      Lago::Kinesis::Producer.new(destination: self)
     end
 
     def partition_key_for(customer:)

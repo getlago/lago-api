@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EventDestinations::KinesisProducer do
+RSpec.describe Lago::Kinesis::Producer do
   subject(:producer) { described_class.new(destination:) }
 
   let(:destination) { create(:kinesis_destination) }
