@@ -6,13 +6,12 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService do
   subject(:result) { described_class.call(lifetime_usage:) }
 
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:, current_usage_amount_cents:) }
-  let(:current_usage_amount_cents) { 0 }
-
   let(:plan) { create(:plan) }
-  let(:organization) { plan.organization }
-
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:) }
+  let(:current_usage_amount_cents) { 0 }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   def create_threshold(attached_to:, **factory_args)
     if attached_to == :subscription

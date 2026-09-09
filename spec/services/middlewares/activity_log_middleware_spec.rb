@@ -26,9 +26,14 @@ RSpec.describe Middlewares::ActivityLogMiddleware do
       attr_reader :subscription
     end
   end
-
   let(:subscription) { create(:subscription, name: "My Subscription") }
   let(:activity_loggable_after_commit) { false }
+
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   def test_service_with_activity_loggable(after_commit:, action_match_updated: false)
     expect(service_class).to use_middleware(described_class)

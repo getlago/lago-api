@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe OrderForms::MarkAsSignedService do
   subject(:service) { described_class.new(order_form:, signed_document:, execution_mode:, execute_at:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, customer:, organization:, order_type: :subscription_creation) }
   let(:order_form) { create(:order_form, customer:, organization:, quote:) }
   let(:signed_document) { nil }
@@ -38,6 +38,7 @@ RSpec.describe OrderForms::MarkAsSignedService do
       end
 
       context "when the order_forms feature flag is disabled" do
+        let(:customer) { create(:customer, organization:) }
         let(:organization) { create(:organization) }
 
         it "returns a forbidden failure" do
