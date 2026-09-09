@@ -77,17 +77,24 @@ statement of it.
 
 ## Verifying it before real usage flows
 
-```bash
-bundle exec rails "streaming_destinations:verify[<organization uuid>]"
+Enqueue one delivery by hand, from a console on any pod:
+
+```ruby
+customer = organization.customers.find_by!(external_id: "<external id>")
+
+DeliverEventJob.perform_later("customer_usage.refreshed.v1", customer)
 ```
 
-It prints the destination back, asks you to confirm the ARN's account against the organization,
-then delivers one customer's usage on demand and tells you what to look for. A line with
-`outcome=delivered` carrying a shard and a sequence number means the record landed. `outcome=dropped`
-means it did not, and the `error` field says why.
+Enqueue rather than run it inline. The job is pinned to the `streaming` queue, and only that
+worker holds an AWS identity allowed to assume the destination role, so a delivery run in a
+console process fails on credentials even when everything is configured correctly.
 
-Do this on a customer whose usage you can recognise, and confirm with whoever owns the stream
-that the record arrived on the stream you think you configured, not merely on some stream.
+Then read the **streaming worker's** logs. `outcome=delivered` with a shard and a sequence number
+means the record landed; `outcome=dropped` means it did not, and the `error` field says why.
+
+Pick a customer with an active subscription, whose usage you can recognise, and confirm with
+whoever owns the stream that the record arrived on the stream you think you configured, not merely
+on some stream.
 
 ## Changing or removing one
 
