@@ -5,6 +5,15 @@ module UsageMonitoring
     module CreateOrUpdateConcern
       extend ActiveSupport::Concern
 
+      CODE_UNIQUE_INDEXES = %w[
+        idx_alerts_code_unique_per_subscription
+        idx_alerts_code_unique_per_wallet
+      ].freeze
+
+      def duplicate_code_error?(exception)
+        CODE_UNIQUE_INDEXES.any? { |index| exception.message.include?(index) }
+      end
+
       def find_billable_metric_from_params!
         if params[:billable_metric]
           params[:billable_metric]
@@ -15,6 +24,14 @@ module UsageMonitoring
         end
       rescue ActiveRecord::RecordNotFound
         result.not_found_failure!(resource: "billable_metric")
+      end
+
+      def wallet_alert_code_taken?(wallet_id:, code:, alert_type:, excluding_id: nil)
+        return false if wallet_id.blank? || code.blank?
+
+        scope = organization.alerts.where(wallet_id:, code:).where.not(alert_type:)
+        scope = scope.where.not(id: excluding_id) if excluding_id
+        scope.exists?
       end
 
       def duplicate_threshold_values?(thresholds)

@@ -379,6 +379,41 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
       end
 
+      context "when the code is already used on the same wallet" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1") }
+
+        it "rejects it before reaching the database" do
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never builds the alert, so no insert is attempted" do
+          allow(UsageMonitoring::Alert).to receive(:new).and_call_original
+
+          expect(result).to be_failure
+          expect(UsageMonitoring::Alert).not_to have_received(:new)
+        end
+      end
+
+      context "when the same code is used on another wallet" do
+        before do
+          other = create(:wallet, organization:)
+          create(:wallet_credits_balance_alert, organization:, wallet: other, code: "wallet1")
+        end
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when a discarded alert holds the code" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
       context "when processing wallet alerts", :premium do
         it "enqueues ProcessWalletAlertsJob" do
           expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(wallet)
