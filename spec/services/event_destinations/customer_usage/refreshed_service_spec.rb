@@ -96,6 +96,14 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
         )
       end
 
+      it "emits the datetime formats the consumer parses" do
+        usage = envelope[:customer_usage]
+
+        expect(usage[:from_datetime]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/)
+        expect(usage[:to_datetime]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/)
+        expect(usage[:issuing_date]).to match(/\A\d{4}-\d{2}-\d{2}\z/)
+      end
+
       it "carries a UUIDv7 event id" do
         expect(envelope[:event_id]).to match(/\A[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-/)
       end
