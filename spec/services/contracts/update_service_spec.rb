@@ -87,6 +87,27 @@ RSpec.describe Contracts::UpdateService do
     end
   end
 
+  context "with a boolean date value" do
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, ended_at: 1.month.from_now) }
+    let(:params) { {ended_at: false} }
+
+    it "rejects it instead of silently clearing the end date" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:ended_at]).to eq(["value_is_invalid"])
+      expect(contract.reload.ended_at).to be_present
+    end
+  end
+
+  context "when clearing a date with an explicit null" do
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, ended_at: 1.month.from_now) }
+    let(:params) { {ended_at: nil} }
+
+    it "clears the end date" do
+      expect(result).to be_success
+      expect(contract.reload.ended_at).to be_nil
+    end
+  end
+
   context "when the end date is already in the past" do
     let(:params) { {ended_at: 1.day.ago.iso8601} }
 

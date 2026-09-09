@@ -27,9 +27,14 @@ module Contracts
         return result.not_found_failure!(resource: "plan")
       end
 
-      # Reject malformed dates explicitly — they would otherwise cast to nil.
+      # Reject malformed dates, but let an explicit null clear the field. A bare
+      # present? check would treat false or "" as absent, silently clearing the
+      # column instead of rejecting the bad value.
       %i[billing_anchor_date started_at ended_at].each do |field|
-        if params[field].present? && !Utils::Datetime.valid_format?(params[field])
+        next unless params.key?(field)
+        next if params[field].nil?
+
+        unless Utils::Datetime.valid_format?(params[field])
           return result.single_validation_failure!(field:, error_code: "value_is_invalid")
         end
       end
