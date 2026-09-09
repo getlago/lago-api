@@ -29,16 +29,15 @@ RSpec.describe StreamingDestinations::KinesisDestination, type: :model do
 
   describe "#partition_key_for" do
     let(:customer) { create(:customer, organization: destination.organization) }
-    let(:subscription) { create(:subscription, customer:) }
 
     it "resolves the configured strategy" do
-      expect(destination.partition_key_for(customer:, subscription:)).to eq(customer.external_id)
+      expect(destination.partition_key_for(customer:)).to eq(customer.external_id)
     end
 
     it "bounds the key to what Kinesis accepts, so a long external id still delivers" do
       customer.update!(external_id: "x" * 400)
 
-      key = destination.partition_key_for(customer:, subscription:)
+      key = destination.partition_key_for(customer:)
 
       expect(key.length).to eq(described_class::PARTITION_KEY_MAX_LENGTH)
       expect(customer.external_id).to start_with(key)
@@ -47,7 +46,7 @@ RSpec.describe StreamingDestinations::KinesisDestination, type: :model do
     it "raises on a strategy that was written past the validation" do
       destination.update_column(:settings, destination.settings.merge("partition_key" => "galaxy")) # rubocop:disable Rails/SkipsModelValidations
 
-      expect { destination.reload.partition_key_for(customer:, subscription:) }
+      expect { destination.reload.partition_key_for(customer:) }
         .to raise_error(ArgumentError, /galaxy/)
     end
   end
