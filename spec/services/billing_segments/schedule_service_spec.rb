@@ -89,6 +89,75 @@ RSpec.describe BillingSegments::ScheduleService do
     expect(card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
   end
 
+  context "without proration" do
+    let(:rate_card) { create(:rate_card, organization:, product:, proration: false) }
+
+    it "stores a full-price ratio even for a partial first period" do
+      segment = result.billing_segments.sole
+
+      expect(segment.duration_in_days).to eq(17)
+      expect(segment.proration_ratio).to eq(1)
+    end
+  end
+
+  context "with concurrent runs for the same customer", transaction: false do
+    it "persists each due segment once and advances the clock once" do
+      customer_id = customer.id
+      run_at = timestamp
+      ready = Queue.new
+      start = Queue.new
+
+      threads = Array.new(2) do
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ready << true
+            start.pop
+            described_class.call!(customer: Customer.find(customer_id), timestamp: run_at)
+          end
+        end
+      end
+
+      results = Timeout.timeout(10) do
+        2.times { ready.pop }
+        2.times { start << true }
+        threads.map(&:value)
+      end
+
+      expect(results.map { it.billing_segments.size }.sort).to eq([0, 1])
+      expect(card.billing_segments.count).to eq(1)
+      expect(card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+    ensure
+      threads&.each { it.kill if it.alive? }
+      threads&.each(&:join)
+    end
+  end
+
+  context "with a bounded introductory phase" do
+    let(:override) do
+      create(:rate_override, organization:, billing_interval_count: 1, billing_interval_unit: "week",
+        rate_properties: {"amount" => "3"})
+    end
+
+    before do
+      card.update!(billing_anchor_date: card.effective_date)
+      create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card,
+        position: 1, code: "intro", billing_interval_cycle_count: 2, rate_override: override)
+    end
+
+    it "resumes through a phase transition with the correct cadence and price" do
+      first = described_class.call!(customer:, timestamp: Time.utc(2026, 1, 22)).billing_segments.sole
+      later = described_class.call!(customer:, timestamp: Time.utc(2026, 2, 28)).billing_segments
+
+      expect([first, *later].map { [it.started_at, it.billing_at, it.rate_override_id] }).to eq([
+        [Time.utc(2026, 1, 15), Time.utc(2026, 1, 22), override.id],
+        [Time.utc(2026, 1, 22), Time.utc(2026, 1, 29), override.id],
+        [Time.utc(2026, 1, 29), Time.utc(2026, 2, 28), nil]
+      ])
+      expect(later.map(&:rate_properties)).to eq([{"amount" => "3"}, {"amount" => "10"}])
+      expect(card.reload.next_billing_at).to eq(Time.utc(2026, 3, 29))
+    end
+  end
+
   it "excludes other customers, unsigned contracts, discarded cards and future clocks" do
     card.update!(next_billing_at: Time.utc(2026, 3, 1))
     other_customer = create(:customer, organization:)
@@ -232,6 +301,29 @@ RSpec.describe BillingSegments::ScheduleService do
       expect(segment.proration_ratio).to be_within(1e-10).of(6.fdiv(31))
       expect(card.reload.next_billing_at).to be_nil
     end
+  end
+
+  it "recovers the final arrears segment when termination precedes the saved clock" do
+    described_class.call!(customer:, timestamp: Time.utc(2026, 1, 20))
+    expect(card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+    contract.update!(status: :terminated, ended_at: Time.utc(2026, 1, 25, 12))
+
+    segment = result.billing_segments.sole
+
+    expect(segment.billing_at).to eq(contract.ended_at)
+    expect(segment.ended_at).to eq(BillingSegment.inclusive_end(contract.ended_at))
+    expect(card.reload.next_billing_at).to be_nil
+  end
+
+  it "recovers an inclusive card end that precedes the saved clock" do
+    described_class.call!(customer:, timestamp: Time.utc(2026, 1, 20))
+    card.update!(ended_date: Date.new(2026, 1, 25))
+
+    segment = result.billing_segments.sole
+
+    expect(segment.billing_at).to eq(Time.utc(2026, 1, 26))
+    expect(segment.proration_ratio).to be_within(1e-10).of(11.fdiv(31))
+    expect(card.reload.next_billing_at).to be_nil
   end
 
   context "when the period crosses daylight saving time" do

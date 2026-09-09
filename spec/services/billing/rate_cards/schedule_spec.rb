@@ -143,6 +143,34 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
+  describe "an initial billing bound on a shortened schedule" do
+    let(:ends_at) { Time.utc(2022, 1, 25, 12) }
+
+    it "includes the final arrears segment when the clock still points to its original end" do
+      segment = schedule.segments_due_by(Time.utc(2022, 2, 1), billing_from: Time.utc(2022, 2, 1)).sole
+
+      expect(segment.started_at).to eq(starts_at)
+      expect(segment.ended_at).to eq(ends_at)
+      expect(segment.billing_at).to eq(ends_at)
+      expect(segment.proration_ratio).to eq(11.fdiv(31))
+    end
+
+    it "does not resurrect historical cycles before the initial billing bound" do
+      expect(schedule.segments_due_by(Time.utc(2022, 4, 1), billing_from: Time.utc(2022, 4, 1))).to eq([])
+    end
+
+    context "with a price change inside the final cycle" do
+      let(:rates) { [card_rate(Time.utc(2000, 1, 1)), card_rate(Time.utc(2022, 1, 20))] }
+
+      it "keeps the bound at the pricing segment rather than reopening the entire cycle" do
+        segments = schedule.segments_due_by(Time.utc(2022, 2, 1), billing_from: Time.utc(2022, 2, 1))
+
+        expect(segments.map(&:started_at)).to eq([Time.utc(2022, 1, 20)])
+        expect(segments.sole.ended_at).to eq(ends_at)
+      end
+    end
+  end
+
   describe "when a window falls due" do
     it "bills at the end of the cycle in arrears" do
       expect(schedule.segments_due_by(Time.utc(2022, 4, 1)).map(&:billing_at))
