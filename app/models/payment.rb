@@ -168,6 +168,7 @@ end
 #  index_payments_by_cursor                                        (organization_id,created_at DESC,id)
 #  index_payments_on_customer_id                                   (customer_id)
 #  index_payments_on_invoice_id                                    (invoice_id)
+#  index_payments_on_org_pending_processing_created_at             (organization_id,payable_payment_status,created_at DESC,id) WHERE (payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))
 #  index_payments_on_organization_id                               (organization_id)
 #  index_payments_on_organization_id_reference_gin_trgm_ops        (organization_id,reference) USING gin
 #  index_payments_on_payable_id_and_payable_type                   (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))

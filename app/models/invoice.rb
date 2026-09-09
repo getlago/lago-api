@@ -772,6 +772,7 @@ end
 #  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
+#  index_invoices_on_organization_id_lower_number                  (organization_id, lower((number)::text))
 #  index_invoices_on_organization_id_lower_purchase_order_number   (organization_id, lower((purchase_order_number)::text))
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
 #  index_invoices_on_organization_id_search_terms_gin_trgm_ops     (organization_id,search_terms) USING gin
