@@ -1,0 +1,29 @@
+-- case: amount_rare_from_p99 (count) phase: after selective: false
+-- filters: {"amount_from":80467} search_term: nil page: 1
+-- runs_ms: [2176.3, 1023.5, 613.1]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (payments.amount_cents >= 80467::bigint)
+
+Aggregate  (cost=13553567.02..13553567.03 rows=1 width=8) (actual time=1021.963..1021.964 rows=1 loops=1)
+  Buffers: shared hit=352469 read=23
+  I/O Timings: shared/local read=4.845
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13553501.19 rows=26331 width=0) (actual time=71.003..1017.210 rows=49567 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (amount_cents >= '80467'::bigint) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 4950433
+        Buffers: shared hit=352469 read=23
+        I/O Timings: shared/local read=4.845
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.006..0.006 rows=1 loops=47620)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=190457 read=23
+                I/O Timings: shared/local read=4.845
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.363 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.448 ms, Inlining 5.728 ms, Optimization 30.717 ms, Emission 34.510 ms, Total 72.403 ms
+Execution Time: 1023.533 ms
