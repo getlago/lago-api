@@ -719,6 +719,139 @@ RSpec.shared_examples "a wallet create endpoint" do
       end
     end
   end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+    let(:create_params) do
+      {
+        external_customer_id: customer.external_id,
+        rate_amount: "1",
+        name: "Wallet1",
+        currency: "EUR",
+        paid_credits: "10",
+        granted_credits: "10",
+        connections: {
+          payment: {code: "stripe_us"},
+          tax: {behavior: "skip"},
+          accounting: {code: "netsuite_main"},
+          crm: {behavior: "skip"}
+        }
+      }
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+      netsuite_connection
+    end
+
+    it "persists one connection per category" do
+      expect { subject }.to change(BillingObjectConnection, :count).by(4)
+
+      expect(response).to have_http_status(:success)
+
+      wallet = Wallet.find(json[:wallet][:lago_id])
+      expect(wallet.billing_object_connections.pluck(:category)).to match_array(%w[payment tax accounting crm])
+      expect(wallet.effective_payment_connection).to eq(stripe_connection)
+      expect(wallet.effective_accounting_connection).to eq(netsuite_connection)
+      expect(wallet.effective_tax_connection).to be_nil
+    end
+
+    it "keeps the top-level payment_method working alongside connections" do
+      create_params[:payment_method] = {payment_method_type: "provider", payment_method_id: payment_method.id}
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
+      expect(Wallet.find(json[:wallet][:lago_id]).billing_object_connections.count).to eq(4)
+    end
+
+    context "when a code does not resolve" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          connections: {payment: {code: "unknown_connection"}}
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:connections]).to include("connection_not_found")
+      end
+    end
+
+    context "when the behavior is invalid" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          connections: {payment: {behavior: "nonsense"}}
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:connections]).to include("invalid_connection_behavior")
+      end
+    end
+
+    context "when the multi_connection flag is disabled" do
+      before { organization.disable_feature_flag!(:multi_connection) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+
+    context "with connections on a recurring transaction rule", :premium do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          recurring_transaction_rules: [
+            {
+              trigger: "interval",
+              interval: "monthly",
+              connections: {payment: {code: "stripe_us"}}
+            }
+          ]
+        }
+      end
+
+      it "owns the connection by the rule, not the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_object_connections).to be_empty
+
+        rule = wallet.recurring_transaction_rules.sole
+        expect(rule.billing_object_connections.sole).to have_attributes(
+          category: "payment",
+          behavior: "specific",
+          payment_provider_customer_id: stripe_connection.id
+        )
+      end
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
@@ -1249,6 +1382,48 @@ RSpec.shared_examples "a wallet update endpoint" do
           expect(response).to be_not_found_error("billing_entity")
           expect(wallet.reload.billing_entity_id).to eq(initial_billing_entity.id)
         end
+      end
+    end
+  end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:update_params) { {name: "wallet1", connections: {payment: {code: "stripe_us"}}} }
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+    end
+
+    it "pins the connection on the wallet" do
+      expect { subject }.to change(BillingObjectConnection, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(wallet.reload.effective_payment_connection).to eq(stripe_connection)
+    end
+
+    context "when inherit is sent for a category that has an override" do
+      let(:update_params) { {name: "wallet1", connections: {payment: {behavior: "inherit"}}} }
+
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment", behavior: "skip")
+      end
+
+      it "clears the override so resolution falls back to the customer" do
+        expect { subject }.to change(BillingObjectConnection, :count).by(-1)
+
+        expect(response).to have_http_status(:success)
+        expect(wallet.reload.billing_object_connections).to be_empty
+      end
+    end
+
+    context "when the multi_connection flag is disabled" do
+      before { organization.disable_feature_flag!(:multi_connection) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
       end
     end
   end
