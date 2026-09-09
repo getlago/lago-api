@@ -69,6 +69,20 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
     end
   end
 
+  describe ".streams_event?" do
+    let(:organization) { create(:organization) }
+
+    it "is true when the organization has a destination for the event" do
+      create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"])
+
+      expect(described_class.streams_event?(organization, "customer_usage.refreshed.v1")).to be true
+    end
+
+    it "is false when it does not" do
+      expect(described_class.streams_event?(organization, "customer_usage.refreshed.v1")).to be false
+    end
+  end
+
   describe ".for_event" do
     let(:organization) { create(:organization) }
     let!(:destination) { create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"]) }

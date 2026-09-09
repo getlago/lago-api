@@ -50,9 +50,7 @@ module Customers
     def deliver_current_usage
       event_type = EventDestinations::CustomerUsage::RefreshedService::EVENT_TYPE
 
-      return unless StreamingDestinations::BaseDestination
-        .for_event(customer.organization, event_type)
-        .exists?
+      return unless StreamingDestinations::BaseDestination.streams_event?(customer.organization, event_type)
 
       DeliverEventJob.perform_after_commit(event_type, customer)
     end
