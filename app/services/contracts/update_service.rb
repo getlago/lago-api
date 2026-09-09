@@ -18,7 +18,10 @@ module Contracts
 
     def call
       return result.not_found_failure!(resource: "contract") unless contract
-      return result.single_validation_failure!(field: :contract, error_code: "contract_locked") unless contract.editable?
+
+      if (error_code = contract.edit_error_code)
+        return result.single_validation_failure!(field: :contract, error_code:)
+      end
 
       if params[:plan_code].present? && catalog_plan.nil?
         return result.not_found_failure!(resource: "plan")
@@ -50,9 +53,13 @@ module Contracts
         contract.save!
 
         # The materialised cards belong to the old plan; a plan change re-derives
-        # them from the new one (or leaves the contract plan-less).
+        # them from the new one (or leaves the contract plan-less). Tear each
+        # card down through the destroy service so its soft-deletable phases and
+        # overrides are discarded too — a bare discard_all! would orphan them.
         if plan_changed
-          contract.applied_rate_cards.discard_all!
+          contract.applied_rate_cards.to_a.each do |card|
+            ContractRateCards::DestroyService.call!(contract_rate_card: card)
+          end
           Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
         end
 

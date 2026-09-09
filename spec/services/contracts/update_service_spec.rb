@@ -47,9 +47,11 @@ RSpec.describe Contracts::UpdateService do
     let(:new_rate_card) { create(:rate_card, organization:) }
     let(:other_plan) { create(:catalog_plan, organization:) }
     let(:params) { {plan_code: other_plan.code} }
+    let(:old_card) { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:)) }
+    let(:old_phase) { create(:rate_phase, :contract_level, organization:, contract_rate_card: old_card) }
 
     before do
-      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:))
+      old_phase
       create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card: new_rate_card, units: 3)
     end
 
@@ -57,6 +59,13 @@ RSpec.describe Contracts::UpdateService do
       expect(result).to be_success
       expect(contract.reload.catalog_plan).to eq(other_plan)
       expect(contract.applied_rate_cards.sole).to have_attributes(rate_card: new_rate_card, units: 3)
+    end
+
+    it "discards the replaced cards along with their phases" do
+      result
+
+      expect(old_card.reload).to be_discarded
+      expect(old_phase.reload).to be_discarded
     end
   end
 
