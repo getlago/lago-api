@@ -129,7 +129,7 @@ run.call("insert customers", <<~SQL)
   INSERT INTO customers (id, organization_id, billing_entity_id, external_id, name, slug, sequential_id, currency, created_at, updated_at)
   SELECT gen_random_uuid(), o.organization_id, o.billing_entity_id,
          'perf-cust-' || o.idx || '-' || c, 'Perf Customer ' || o.idx || '-' || c,
-         o.prefix || '-' || lpad(c::text, 3, '0'), c, 'EUR',
+         o.prefix || '-' || lpad(c::text, greatest(3, length(c::text)), '0'), c, 'EUR',
          now() - interval '1 month' * #{MONTHS}, now()
   FROM perf_orgs o CROSS JOIN LATERAL generate_series(1, o.n_customers) AS c
 SQL
