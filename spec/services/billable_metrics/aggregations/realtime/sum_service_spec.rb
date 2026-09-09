@@ -2,10 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse: {clean_before: true}, transaction: false do
-  subject(:aggregation_result) { count_service.aggregate }
+RSpec.describe BillableMetrics::Aggregations::Realtime::SumService, clickhouse: {clean_before: true}, transaction: false do
+  subject(:aggregation_result) { sum_service.aggregate }
 
-  let(:count_service) do
+  let(:sum_service) do
     described_class.new(
       event_store_class: Events::Stores::PostgresStore,
       charge:,
@@ -17,11 +17,12 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
         to_datetime: charges_to,
         charges_duration: nil,
         max_timestamp: nil
-      }
+      },
+      prefetched_buckets:
     )
   end
 
-  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+  let(:billable_metric) { create(:sum_billable_metric) }
   let(:plan) { create(:plan, organization: billable_metric.organization) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:customer) { create(:customer, organization: billable_metric.organization) }
@@ -30,6 +31,7 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
   let(:charges_from) { Time.current.beginning_of_month }
   let(:charges_to) { Time.current.end_of_month }
   let(:bucket_time) { Time.current.beginning_of_month }
+  let(:prefetched_buckets) { nil }
 
   def insert_bucket(bucket:, events_count:, units:, grouped_by: "{}")
     Clickhouse::UsageBucket.insert_all([
@@ -43,7 +45,7 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
         charge_id: charge.id,
         charge_filter_id: "",
         grouped_by:,
-        aggregation_type: "count",
+        aggregation_type: "sum",
         events_count:,
         units:,
         last_event_at: bucket,
@@ -54,14 +56,16 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
 
   context "with buckets in the charges window" do
     before do
-      insert_bucket(bucket: bucket_time + 1.hour, events_count: 40, units: 40)
-      insert_bucket(bucket: bucket_time + 2.hours, events_count: 2, units: 2)
+      insert_bucket(bucket: bucket_time + 1.hour, events_count: 3, units: 40)
+      insert_bucket(bucket: bucket_time + 2.hours, events_count: 1, units: 2)
     end
 
-    it "serves the aggregation by summing the buckets" do
+    # sum aggregates units; count carries the event count, which is a different number here (the
+    # count aggregation is the one where they coincide).
+    it "serves the aggregation by summing the buckets' units" do
       expect(aggregation_result.aggregation).to eq(42)
-      expect(aggregation_result.count).to eq(42)
-      expect(aggregation_result.current_usage_units).to eq(42)
+      expect(aggregation_result.count).to eq(4)
+      expect(aggregation_result.pay_in_advance_aggregation).to eq(0)
     end
 
     context "when the buckets sit outside the charges window" do
@@ -74,6 +78,20 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
     end
   end
 
+  # units is Decimal(38, 26) in ClickHouse. A float round-trip anywhere on this path would show up
+  # as a rounding error on a customer's bill.
+  context "with fractional units" do
+    before do
+      insert_bucket(bucket: bucket_time + 1.hour, events_count: 1, units: BigDecimal("0.00000000000000000000000001"))
+      insert_bucket(bucket: bucket_time + 2.hours, events_count: 1, units: BigDecimal("0.00000000000000000000000002"))
+    end
+
+    it "keeps the full scale of the decimal" do
+      expect(aggregation_result.aggregation).to eq(BigDecimal("0.00000000000000000000000003"))
+      expect(aggregation_result.aggregation).to be_a(BigDecimal)
+    end
+  end
+
   context "without buckets" do
     it "falls back to the events store" do
       expect(aggregation_result.aggregation).to eq(0)
@@ -81,7 +99,7 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
   end
 
   context "with pricing group keys" do
-    let(:count_service) do
+    let(:sum_service) do
       described_class.new(
         event_store_class: Events::Stores::PostgresStore,
         charge:,
@@ -92,23 +110,24 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
           charges_duration: nil,
           max_timestamp: nil
         },
-        filters: {grouped_by: ["region"]}
+        filters: {grouped_by: ["region"]},
+        prefetched_buckets:
       )
     end
 
     context "with grouped buckets" do
       before do
-        insert_bucket(bucket: bucket_time + 1.hour, events_count: 4, units: 4, grouped_by: {region: "eu"}.to_json)
-        insert_bucket(bucket: bucket_time + 2.hours, events_count: 3, units: 3, grouped_by: {region: "eu"}.to_json)
-        insert_bucket(bucket: bucket_time + 1.hour, events_count: 3, units: 3, grouped_by: {region: "us"}.to_json)
+        insert_bucket(bucket: bucket_time + 1.hour, events_count: 2, units: 4, grouped_by: {region: "eu"}.to_json)
+        insert_bucket(bucket: bucket_time + 2.hours, events_count: 1, units: 3, grouped_by: {region: "eu"}.to_json)
+        insert_bucket(bucket: bucket_time + 1.hour, events_count: 1, units: 3, grouped_by: {region: "us"}.to_json)
       end
 
-      it "serves one aggregation per group by summing that group's buckets" do
+      it "serves one aggregation per group by summing that group's units" do
         groups = aggregation_result.aggregations.sort_by { |a| a.grouped_by["region"] }
 
         expect(groups.map(&:grouped_by)).to eq([{"region" => "eu"}, {"region" => "us"}])
         expect(groups.map(&:aggregation)).to eq([7, 3])
-        expect(groups.map(&:count)).to eq([7, 3])
+        expect(groups.map(&:count)).to eq([3, 1])
       end
     end
 
@@ -122,35 +141,28 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
   # Events::BillingPeriodFilterService reads the whole plan's window in one query and hands the
   # rows down, so the aggregator must not re-read ClickHouse per charge filter.
   describe "prefetched buckets" do
-    let(:count_service) do
-      described_class.new(
-        event_store_class: Events::Stores::PostgresStore,
-        charge:,
-        subscription:,
-        boundaries: {
-          from_datetime: charges_from,
-          to_datetime: charges_to,
-          charges_duration: nil,
-          max_timestamp: nil
-        },
-        prefetched_buckets:
-      )
-    end
-
     context "with prefetched totals" do
-      let(:prefetched_buckets) { {"{}" => [2, 42, BigDecimal(42)]} }
+      let(:prefetched_buckets) { {"{}" => [2, 4, BigDecimal(42)]} }
 
       it "serves the aggregation without querying ClickHouse" do
         expect(Clickhouse::UsageBucket).not_to receive(:final)
 
         expect(aggregation_result.aggregation).to eq(42)
-        expect(aggregation_result.count).to eq(42)
+        expect(aggregation_result.count).to eq(4)
       end
 
       it "prefers the prefetch over the stored buckets" do
-        insert_bucket(bucket: bucket_time + 1.hour, events_count: 999, units: 999)
+        insert_bucket(bucket: bucket_time + 1.hour, events_count: 1, units: 999)
 
         expect(aggregation_result.aggregation).to eq(42)
+      end
+    end
+
+    context "with fractional prefetched units" do
+      let(:prefetched_buckets) { {"{}" => [1, 1, BigDecimal("0.00000000000000000000000003")]} }
+
+      it "keeps the full scale of the decimal" do
+        expect(aggregation_result.aggregation).to eq(BigDecimal("0.00000000000000000000000003"))
       end
     end
 
@@ -172,58 +184,6 @@ RSpec.describe BillableMetrics::Aggregations::Realtime::CountService, clickhouse
 
       it "falls back to the events store" do
         expect(aggregation_result.aggregation).to eq(0)
-      end
-    end
-
-    context "when nothing was prefetched" do
-      let(:prefetched_buckets) { nil }
-
-      before { insert_bucket(bucket: bucket_time + 1.hour, events_count: 7, units: 7) }
-
-      it "queries ClickHouse as before" do
-        expect(aggregation_result.aggregation).to eq(7)
-      end
-    end
-
-    context "with pricing group keys" do
-      let(:count_service) do
-        described_class.new(
-          event_store_class: Events::Stores::PostgresStore,
-          charge:,
-          subscription:,
-          boundaries: {
-            from_datetime: charges_from,
-            to_datetime: charges_to,
-            charges_duration: nil,
-            max_timestamp: nil
-          },
-          filters: {grouped_by: ["region"]},
-          prefetched_buckets:
-        )
-      end
-
-      let(:prefetched_buckets) do
-        {
-          "{}" => [1, 100, BigDecimal(100)],
-          {region: "eu"}.to_json => [2, 7, BigDecimal(7)],
-          {region: "us"}.to_json => [1, 3, BigDecimal(3)]
-        }
-      end
-
-      it "serves one aggregation per group and ignores the ungrouped row" do
-        groups = aggregation_result.aggregations.sort_by { |a| a.grouped_by["region"] }
-
-        expect(groups.map(&:grouped_by)).to eq([{"region" => "eu"}, {"region" => "us"}])
-        expect(groups.map(&:aggregation)).to eq([7, 3])
-      end
-
-      # Stale attribution after a charge edit: the guard has to survive the prefetch path too.
-      context "when the prefetched group keys no longer match the charge" do
-        let(:prefetched_buckets) { {{country: "fr"}.to_json => [1, 7, BigDecimal(7)]} }
-
-        it "falls back to the events store" do
-          expect(aggregation_result.aggregations.first.aggregation).to eq(0)
-        end
       end
     end
   end

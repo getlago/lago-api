@@ -11,8 +11,20 @@ module BillableMetrics
       #
       # The window start is floored to its bucket wall, see
       # RealtimeUsage.bucket_floor.
+      #
+      # PREFETCH: Fees::ChargeService builds one aggregator per charge filter plus one for the
+      # default bucket, so querying here once per aggregator is an N+1 over a window that
+      # Events::BillingPeriodFilterService has already read in full. When it hands its rows down
+      # (`prefetched_buckets`, see BaseService#initialize) they are used instead of querying.
+      #
+      # A prefetch of {} is NOT the same as no prefetch: it means the batch read found no buckets
+      # for this charge filter, which has to produce the same nil/[] answer a query would have, so
+      # the aggregator falls back to the events store. nil means no batch ran and we query.
       module BucketLookup
         BucketTotals = Struct.new(:units, :events_count)
+
+        # grouped_by value the pipeline writes for a charge with no pricing group keys.
+        UNGROUPED = "{}"
 
         private
 
@@ -20,15 +32,22 @@ module BillableMetrics
           return @bucket_totals if defined?(@bucket_totals)
 
           @bucket_totals = nil
-          return nil if bucket_window_from.nil?
 
-          buckets, events_count, units = bucket_scope
-            .where(grouped_by: "{}")
-            .pick(Arel.sql("count(), sum(events_count), sum(units)"))
+          count, events_count, units = if prefetched_buckets
+            # nil when this charge filter is absent from the batch read, which destructures to
+            # three nils and lands on the no-buckets branch below.
+            prefetched_buckets[UNGROUPED]
+          elsif bucket_window_from
+            bucket_scope
+              .where(grouped_by: UNGROUPED)
+              .pick(Arel.sql("count(), sum(events_count), sum(units)"))
+          end
 
-          return nil if buckets.nil? || buckets.zero?
-
-          @bucket_totals = BucketTotals.new(BigDecimal(units.to_s), events_count)
+          if count.nil? || count.zero?
+            nil
+          else
+            @bucket_totals = BucketTotals.new(BigDecimal(units.to_s), events_count)
+          end
         end
 
         # Per-group totals for the aggregation scope, with the grouped_by
@@ -40,12 +59,19 @@ module BillableMetrics
           return @grouped_bucket_totals if defined?(@grouped_bucket_totals)
 
           @grouped_bucket_totals = []
-          return [] if bucket_window_from.nil?
 
-          rows = bucket_scope
-            .where.not(grouped_by: "{}")
-            .group(:grouped_by)
-            .pluck(Arel.sql("grouped_by, sum(events_count), sum(units)"))
+          rows = if prefetched_buckets
+            prefetched_buckets
+              .reject { |grouped_by_json, _totals| grouped_by_json == UNGROUPED }
+              .map { |grouped_by_json, (_count, events_count, units)| [grouped_by_json, events_count, units] }
+          elsif bucket_window_from
+            bucket_scope
+              .where.not(grouped_by: UNGROUPED)
+              .group(:grouped_by)
+              .pluck(Arel.sql("grouped_by, sum(events_count), sum(units)"))
+          else
+            []
+          end
 
           parsed = rows.map do |grouped_by_json, events_count, units|
             [BucketTotals.new(BigDecimal(units.to_s), events_count), JSON.parse(grouped_by_json)]

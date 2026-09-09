@@ -2,7 +2,7 @@
 
 module Events
   class BillingPeriodFilterService < BaseService
-    Result = BaseResult[:charges]
+    Result = BaseResult[:charges, :bucket_totals]
 
     # current_usage mirrors BillableMetrics::AggregationFactory: it is the only context where
     # realtime-eligible charges are aggregated from the RisingWave-fed usage buckets, so it is
@@ -24,8 +24,15 @@ module Events
     # charge/filter (created_at on PG, enriched_at on CH), used to lazily invalidate the cache.
     # It is nil when with_last_seen_at is disabled, which keeps a cached entry valid forever.
     # Recurring charges with no in-period event are seeded with the period start (see #period_start).
+    #
+    # result.bucket_totals carries the usage the realtime lookup already had to read, so the
+    # aggregators do not query it again per charge filter — see #bucket_totals for the shape and
+    # for why nil and {} mean different things. It is nil outside the realtime path.
     def call
       result.charges = charges_and_filters
+      # After charges_and_filters: on the realtime path that call memoizes #realtime_bucket_rows,
+      # so this reuses those rows rather than issuing a second query.
+      result.bucket_totals = bucket_totals
       result
     end
 
@@ -201,19 +208,26 @@ module Events
       result
     end
 
-    # [charge_id, charge_filter_id, last_seen_at] triples for the realtime-eligible charges, read
-    # from the RisingWave-fed 15-minute buckets (Clickhouse::UsageBucket) instead of the events
-    # store. The buckets already hold one row per (charge, filter, group, 15 minutes), which is the
-    # exact grain this lookup needs, so it costs a handful of rows where the equivalent
-    # events_enriched_expanded query has to aggregate every event of the period.
+    # One FINAL read over the RisingWave-fed 15-minute buckets covering EVERY realtime-eligible
+    # charge of the plan, at (charge, filter, group) grain. Two consumers:
     #
-    # last_seen_at is nil by design. It only drives the lazy charge cache, and
-    # Invoices::CustomerUsageService disables that cache for realtime-eligible charges, so nothing
-    # reads it here. Returning the buckets' last_ingested_at instead would put the API ingest clock
-    # and ClickHouse's enriched_at into the same comparison the cache makes across reads, which is
-    # how a cached entry would end up either stale forever or never valid.
-    def realtime_charges_and_filters
-      @realtime_charges_and_filters ||= if realtime_charges.empty?
+    #  * #realtime_charges_and_filters — which charge/filter pairs received usage;
+    #  * #bucket_totals — the summed usage itself, handed to the realtime aggregators through
+    #    Invoices::CustomerUsageService so BucketLookup does not re-query once per charge filter.
+    #
+    # Folding the second consumer in here is what removes an N+1: Fees::ChargeService builds one
+    # aggregator per charge filter plus one for the default bucket, and each used to issue its own
+    # FINAL query over this same window. Measured on staging (2026-09-09), those per-filter reads
+    # were 14,220 queries and 751 ClickHouse CPU-seconds against 2,844 for this one — 58% of the
+    # whole service's CPU, for rows this query already had to touch.
+    #
+    # grouped_by joins the GROUP BY because BucketLookup needs both shapes, and they are DISJOINT
+    # partitions rather than a rollup: #bucket_totals sums the '{}' rows, #grouped_bucket_totals
+    # reads the others. count() is carried because a zero count is the signal that makes an
+    # aggregator fall back to the events store, and it cannot be recovered from the sums (a bucket
+    # row with zero units is not the same as no bucket row).
+    def realtime_bucket_rows
+      @realtime_bucket_rows ||= if realtime_charges.empty?
         []
       else
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -224,10 +238,66 @@ module Events
               charge_id: realtime_charges.map(&:id)
             )
             .where("bucket >= ? AND bucket <= ?", bucket_window_from, bucket_window_to)
-            .group(:charge_id, :charge_filter_id)
-            .pluck(:charge_id, Arel.sql("nullIf(charge_filter_id, '')"), Arel.sql("NULL"))
+            .group(:charge_id, :charge_filter_id, :grouped_by)
+            .pluck(
+              :charge_id,
+              Arel.sql("nullIf(charge_filter_id, '')"),
+              :grouped_by,
+              Arel.sql("count()"),
+              Arel.sql("sum(events_count)"),
+              Arel.sql("sum(units)")
+            )
         end
       end
+    end
+
+    # [charge_id, charge_filter_id, last_seen_at] triples for the realtime-eligible charges, read
+    # from the RisingWave-fed 15-minute buckets (Clickhouse::UsageBucket) instead of the events
+    # store. The buckets already hold one row per (charge, filter, group, 15 minutes), which is the
+    # exact grain this lookup needs, so it costs a handful of rows where the equivalent
+    # events_enriched_expanded query has to aggregate every event of the period.
+    #
+    # uniq is required, not cosmetic: #realtime_bucket_rows groups by grouped_by as well, so a
+    # charge filter with several pricing groups yields one row per group and the callers here
+    # (which concatenate these triples with the event store's and iterate them) would otherwise see
+    # the pair repeated.
+    #
+    # last_seen_at is nil by design. It only drives the lazy charge cache, and
+    # Invoices::CustomerUsageService disables that cache for realtime-eligible charges, so nothing
+    # reads it here. Returning the buckets' last_ingested_at instead would put the API ingest clock
+    # and ClickHouse's enriched_at into the same comparison the cache makes across reads, which is
+    # how a cached entry would end up either stale forever or never valid.
+    def realtime_charges_and_filters
+      @realtime_charges_and_filters ||= realtime_bucket_rows
+        .map { |charge_id, filter_id, _grouped_by, _count, _events_count, _units| [charge_id, filter_id, nil] }
+        .uniq
+    end
+
+    # Prefetched bucket usage for the realtime aggregators, or nil when nothing was prefetched.
+    #
+    # Shape: { charge_id => { charge_filter_id => { grouped_by_json => [count, events_count, units] } } }
+    # charge_filter_id is nil for the default bucket, matching `charge_filter&.id` on the unsaved
+    # ChargeFilter that Fees::ChargeService#init_fees builds for it.
+    #
+    # nil vs {} is load-bearing all the way down to BucketLookup. nil means "no prefetch ran, query
+    # per charge filter as before" — every non-current_usage caller, and organizations that do not
+    # pre-filter events. An empty hash at any level means "the prefetch ran and this key has no
+    # buckets", which must reach the aggregator as the same no-buckets answer a direct query would
+    # have given, so it falls back to the events store instead of hydrating a zero-units fee.
+    def bucket_totals
+      if prefetch_bucket_totals?
+        realtime_bucket_rows.each_with_object({}) do |row, acc|
+          charge_id, filter_id, grouped_by, count, events_count, units = row
+          ((acc[charge_id] ||= {})[filter_id] ||= {})[grouped_by] = [count, events_count, units]
+        end
+      end
+    end
+
+    # Mirrors the branch #charges_and_filters takes: #realtime_bucket_rows is only ever populated
+    # on the pre-enriched path, so promising totals outside it would hand BucketLookup an empty
+    # hash ("no buckets") where it should be querying.
+    def prefetch_bucket_totals?
+      organization.pre_filter_events? && realtime_charges.any?
     end
 
     # Charges whose current usage is served from the buckets. Eligibility is per charge, and a

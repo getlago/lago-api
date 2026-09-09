@@ -26,7 +26,8 @@ module Fees
       usage_filters: UsageFilters::NONE,
       skip_adjusted_fees: false,
       plan: nil,
-      customer: nil
+      customer: nil,
+      bucket_totals: nil
     )
       @invoice = invoice
       @charge = charge
@@ -44,6 +45,12 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
+
+      # This charge's slice of the realtime usage buckets Events::BillingPeriodFilterService already
+      # read, keyed by charge filter id (nil for the default bucket): { filter_id => { grouped_by =>
+      # totals } }. Without it every charge filter re-reads the same ClickHouse window. nil means no
+      # prefetch; {} means prefetched and empty. See Realtime::BucketLookup.
+      @bucket_totals = bucket_totals
       @usage_filters = usage_filters
       @skip_adjusted_fees = skip_adjusted_fees
 
@@ -88,7 +95,8 @@ module Fees
     private
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
-      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :usage_filters
+      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :usage_filters,
+      :bucket_totals
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -456,8 +464,29 @@ module Fees
           max_timestamp: boundaries.max_timestamp
         },
         filters: aggregation_filters(charge_filter:, bypass_aggregation: !aggregate),
-        bypass_aggregation: !aggregate
+        bypass_aggregation: !aggregate,
+        prefetched_buckets: prefetched_buckets(charge_filter:)
       )
+    end
+
+    # This charge filter's prefetched bucket usage, or nil to let the aggregator query for itself.
+    #
+    # `bucket_totals && (... || {})` keeps the nil/{} distinction one level down: once a prefetch
+    # exists, a charge filter missing from it has genuinely no buckets and must not trigger a query
+    # whose answer is already known.
+    #
+    # max_timestamp is a hard opt-out. It moves the charges_to_datetime boundary per charge
+    # (Invoices::CustomerUsageService#charge_usage dups the boundaries for it), while the prefetch
+    # was read over the plan-wide window, so the rows would answer a different question than the
+    # one asked. BucketLookup keys its own window off charges_to_datetime and ignores
+    # max_timestamp today, so falling back here changes nothing about that pre-existing gap — it
+    # just refuses to widen it.
+    def prefetched_buckets(charge_filter:)
+      if boundaries.max_timestamp
+        nil
+      else
+        bucket_totals && (bucket_totals[charge_filter&.id] || {})
+      end
     end
 
     def persist_recurring_value(aggregation_results, charge_filter, breakdowns_by_group)

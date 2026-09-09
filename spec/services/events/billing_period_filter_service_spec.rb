@@ -1446,8 +1446,8 @@ RSpec.describe Events::BillingPeriodFilterService do
       let(:organization) { create(:organization, clickhouse_events_store: true, pre_filter_events: true) }
       let(:event_store) { instance_double(Events::Stores::ClickhouseStore, distinct_charges_and_filters: []) }
 
-      def insert_bucket(charge_id:, charge_filter_id: "")
-        bucket = boundaries.charges_from_datetime + 1.hour
+      def insert_bucket(charge_id:, charge_filter_id: "", grouped_by: "{}", events_count: 1, units: 1, offset: 1.hour)
+        bucket = boundaries.charges_from_datetime + offset
 
         Clickhouse::UsageBucket.insert_all([
           {
@@ -1459,10 +1459,10 @@ RSpec.describe Events::BillingPeriodFilterService do
             code: billable_metric.code,
             charge_id:,
             charge_filter_id:,
-            grouped_by: "{}",
+            grouped_by:,
             aggregation_type: "count",
-            events_count: 1,
-            units: 1,
+            events_count:,
+            units:,
             last_event_at: bucket,
             last_ingested_at: bucket
           }
@@ -1555,6 +1555,96 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           expect(event_store).to have_received(:distinct_charges_and_filters)
             .with(codes: [billable_metric.code], with_last_seen_at: true)
+        end
+      end
+
+      # The usage the realtime aggregators would otherwise re-read once per charge filter. The
+      # nil/{} distinction is what keeps a missing key from triggering a query whose answer this
+      # read already has — see Realtime::BucketLookup.
+      describe "bucket_totals" do
+        it "sums the buckets per charge, filter and group" do
+          insert_bucket(charge_id: charge.id, events_count: 2, units: 5)
+          insert_bucket(charge_id: charge.id, events_count: 3, units: 7, offset: 2.hours)
+
+          totals = filter_service.call.bucket_totals
+
+          expect(totals.keys).to eq([charge.id])
+          expect(totals[charge.id].keys).to eq([nil])
+          count, events_count, units = totals[charge.id][nil]["{}"]
+          expect(count).to eq(2)
+          expect(events_count).to eq(5)
+          expect(BigDecimal(units.to_s)).to eq(12)
+        end
+
+        # nil is the default bucket, matching `charge_filter&.id` on the unsaved ChargeFilter
+        # Fees::ChargeService#init_fees builds for it. Keying it as "" would miss every lookup.
+        context "with a bucket on a charge filter" do
+          let(:charge_filter) { create(:charge_filter, charge:) }
+
+          let(:billable_metric_filter) do
+            create(:billable_metric_filter, billable_metric:, key: "region", values: ["eu"])
+          end
+
+          before do
+            create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+            insert_bucket(charge_id: charge.id, charge_filter_id: charge_filter.id)
+            insert_bucket(charge_id: charge.id, charge_filter_id: "", offset: 2.hours)
+          end
+
+          it "keys the default bucket as nil and the filter by its id" do
+            totals = filter_service.call.bucket_totals
+
+            expect(totals[charge.id].keys).to contain_exactly(nil, charge_filter.id)
+          end
+        end
+
+        context "with grouped buckets" do
+          before do
+            insert_bucket(charge_id: charge.id, grouped_by: '{"region":"eu"}', events_count: 2, units: 4)
+            insert_bucket(charge_id: charge.id, grouped_by: '{"region":"us"}', events_count: 3, units: 6, offset: 2.hours)
+          end
+
+          it "keeps one entry per group" do
+            totals = filter_service.call.bucket_totals
+
+            expect(totals[charge.id][nil].keys).to contain_exactly('{"region":"eu"}', '{"region":"us"}')
+          end
+
+          # The grouped_by column joined the GROUP BY for bucket_totals, so the charge/filter pairs
+          # would repeat without the uniq in #realtime_charges_and_filters.
+          it "still reports the charge filter pair once" do
+            expect(filter_service.call.charges).to eq({charge.id => {nil => nil}})
+          end
+        end
+
+        context "when the caller is not computing current usage" do
+          subject(:filter_service) { described_class.new(subscription:, boundaries:) }
+
+          before { insert_bucket(charge_id: charge.id) }
+
+          it "is nil so the aggregators query as before" do
+            expect(filter_service.call.bucket_totals).to be_nil
+          end
+        end
+
+        context "when no charge is realtime eligible" do
+          let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
+
+          before { insert_bucket(charge_id: charge.id) }
+
+          it "is nil so the aggregators query as before" do
+            expect(filter_service.call.bucket_totals).to be_nil
+          end
+        end
+
+        # Prefetched-and-empty. It must stay a hash: the charge is eligible, the window was read,
+        # and the answer "no buckets" is already known.
+        context "when an eligible charge has no bucket" do
+          it "is an empty hash rather than nil" do
+            allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+            expect(filter_service.call.bucket_totals).to eq({})
+          end
         end
       end
     end

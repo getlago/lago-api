@@ -1008,5 +1008,95 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
     end
+
+    # Regression guard for the per-charge-filter N+1 against the realtime usage buckets.
+    # Fees::ChargeService builds one aggregator per charge filter plus one for the default bucket,
+    # and each used to issue its own FINAL read over the window that
+    # Events::BillingPeriodFilterService had already read in full.
+    context "when serving realtime charges from the usage buckets", clickhouse: {clean_before: true}, transaction: false do
+      let(:organization) do
+        membership.organization.tap { it.update!(clickhouse_events_store: true, pre_filter_events: true) }
+      end
+
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us apac])
+      end
+
+      # Three filters plus the default bucket: four aggregators, which used to be four queries.
+      let(:charge_filters) do
+        %w[eu us apac].map do |region|
+          create(:charge_filter, charge:, properties: {amount: "1.00"}).tap do |charge_filter|
+            create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: [region])
+          end
+        end
+      end
+
+      def insert_bucket(charge_filter_id:, events_count:)
+        # Inside the current month, which is the charges window for this monthly plan's current
+        # usage — a bucket outside it makes the aggregator fall back to the events store.
+        bucket = Time.current.beginning_of_month + 1.hour
+
+        Clickhouse::UsageBucket.insert_all([
+          {
+            bucket:,
+            organization_id: organization.id,
+            subscription_id: subscription.id,
+            customer_id: customer.id,
+            plan_id: plan.id,
+            code: billable_metric.code,
+            charge_id: charge.id,
+            charge_filter_id:,
+            grouped_by: "{}",
+            aggregation_type: "count",
+            events_count:,
+            units: events_count,
+            last_event_at: bucket,
+            last_ingested_at: bucket
+          }
+        ])
+      end
+
+      before do
+        allow(RealtimeUsage).to receive(:enabled?).and_return(true)
+
+        charge_filters.each_with_index do |charge_filter, index|
+          insert_bucket(charge_filter_id: charge_filter.id, events_count: index + 1)
+        end
+        insert_bucket(charge_filter_id: "", events_count: 10)
+      end
+
+      def bucket_query_count
+        count = 0
+        counter = ->(_name, _start, _finish, _id, payload) {
+          count += 1 if /FROM\s+usage_buckets_15m/i.match?(payload[:sql])
+        }
+
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { usage_service.call }
+
+        count
+      end
+
+      it "reads the buckets once for the whole plan" do
+        count = bucket_query_count
+
+        expect(count).to eq(1),
+          "expected a single usage_buckets_15m read for every charge filter, got #{count}"
+      end
+
+      it "serves each charge filter its own bucket usage" do
+        result = usage_service.call
+
+        expect(result).to be_success
+
+        units_by_filter = result.usage.fees.to_h { |fee| [fee.charge_filter&.id, fee.units] }
+
+        expect(units_by_filter[charge_filters[0].id]).to eq(1)
+        expect(units_by_filter[charge_filters[1].id]).to eq(2)
+        expect(units_by_filter[charge_filters[2].id]).to eq(3)
+        expect(units_by_filter[nil]).to eq(10)
+      end
+    end
   end
 end

@@ -48,11 +48,20 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
+      # prefetched_buckets is only read by the realtime aggregators (see
+      # BillableMetrics::Aggregations::Realtime::BucketLookup): pre-aggregated usage that
+      # Events::BillingPeriodFilterService already read for the whole plan, so those aggregators do
+      # not re-query ClickHouse once per charge filter. Accepted here rather than on the two
+      # subclasses because AggregationFactory splats its attributes into whichever aggregator the
+      # billable metric selects, so every class has to tolerate the keyword. nil (the default) and
+      # {} are different — {} means "prefetched, no buckets"; BucketLookup documents why.
+      def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false,
+        prefetched_buckets: nil)
         super(nil)
         @event_store_class = event_store_class
         @charge = charge
         @subscription = subscription
+        @prefetched_buckets = prefetched_buckets
 
         @filters = filters
         @charge_filter = filters[:charge_filter]
@@ -142,6 +151,7 @@ module BillableMetrics
         :grouped_by_values,
         :presentation_by,
         :bypass_aggregation,
+        :prefetched_buckets,
         :uniq_grouped_by_and_presentation_by
 
       delegate :billable_metric, to: :charge

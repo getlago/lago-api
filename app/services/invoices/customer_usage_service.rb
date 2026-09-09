@@ -119,14 +119,26 @@ module Invoices
 
     def compute_charge_fees
       fees = []
-      filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || {}) }
+      filter_result = event_filters(subscription, boundaries)
+      filters = filter_result.charges
+
+      # Realtime-eligible charges are aggregated from the usage buckets, which the filter lookup
+      # above already read for the whole plan in one query. Passing those rows down is what keeps
+      # Fees::ChargeService from re-reading the same ClickHouse window once per charge filter.
+      # nil (no realtime path) and {} (realtime, no buckets for this charge) are distinct — see
+      # Events::BillingPeriodFilterService#bucket_totals.
+      bucket_totals = filter_result.bucket_totals
+
+      charges.find_each do |c|
+        per_charge_buckets = bucket_totals && (bucket_totals[c.id] || {})
+        fees += charge_usage(c, filters[c.id] || {}, per_charge_buckets)
+      end
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
-    def charge_usage(charge, applied_filters)
+    def charge_usage(charge, applied_filters, bucket_totals = nil)
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
@@ -156,7 +168,8 @@ module Invoices
           # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
           skip_adjusted_fees: true,
           filtered_aggregations: applied_filters.keys,
-          usage_filters:
+          usage_filters:,
+          bucket_totals:
         )
         .fees
     end
