@@ -83,22 +83,7 @@ module Fees
 
       amount_result = apply_aggregation_and_charge_model
 
-      # Prevent trying to create a fee with negative units or amount.
-      if amount_result.units.negative? || amount_result.amount.negative?
-        amount_result.amount = amount_result.unit_amount = BigDecimal(0)
-        amount_result.full_units_number = amount_result.units = amount_result.total_aggregated_units = BigDecimal(0)
-      end
-
-      # TODO: add pricing units
-      pricing_unit_usage = nil
-      rounded_amount = amount_result.amount.round(currency.exponent)
-      amount_cents = rounded_amount * currency.subunit_to_unit
-      precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
-      unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
-      precise_unit_amount = amount_result.unit_amount
-
-      units = amount_result.full_units_number
-
+      deduction = Fees::AmountsService::Deduction.none
       if first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
         already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
         if already_paid_fee
@@ -107,18 +92,25 @@ module Fees
           # the proration is started, despite from-to boundaries are taking into account the whole
           already_paid_fee_prorated_days = ((already_paid_fee.properties["fixed_charges_to_datetime"].to_time -
                                              already_paid_fee.properties["timestamp"].to_time) / 1.day.in_seconds).ceil
-          # if previous fee was prorated for x days out of n, current is prorated for y days out of n,
-          # we need to find coefficient of proration for current period:
-          # prorated_for_current_period = already_paid_fee.amount_cents / x * y
-          # we devide by prev proration length to find price of one day, and mutiply by the current period length
-          prorated_for_current_period = (already_paid_fee.amount_cents * current_period_duration_days.to_f / already_paid_fee_prorated_days).round
-          amount_cents -= prorated_for_current_period
-          precise_amount_cents -= prorated_for_current_period.to_d
-
-          amount_cents = 0 if amount_cents < 0
-          precise_amount_cents = 0.0 if precise_amount_cents < 0
+          deduction = Fees::AmountsService::Deduction.new(
+            amount_cents: already_paid_fee.amount_cents,
+            billed_days: current_period_duration_days,
+            period_days: already_paid_fee_prorated_days
+          )
         end
       end
+
+      amount = Fees::AmountsService.call(
+        currency:,
+        charge_model_result: amount_result,
+        deduction:
+      ).amount
+
+      # Prevent trying to create a fee with negative units or amount.
+      if amount_result.units.negative? || amount_result.amount.negative?
+        amount_result.full_units_number = amount_result.units = amount_result.total_aggregated_units = BigDecimal(0)
+      end
+      units = amount_result.full_units_number
 
       new_fee = Fee.new(
         invoice:,
@@ -126,8 +118,11 @@ module Fees
         billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         fixed_charge:,
-        amount_cents:,
-        precise_amount_cents:,
+        amount_cents: amount.amount_cents,
+        precise_amount_cents: amount.precise_amount_cents,
+        unit_amount_cents: amount.unit_amount_cents,
+        precise_unit_amount: amount.precise_unit_amount,
+        pricing_unit_usage: amount.pricing_unit_usage,
         amount_currency: currency,
         fee_type: :fixed_charge,
         invoiceable_type: "FixedCharge",
@@ -138,10 +133,7 @@ module Fees
         payment_status: :pending,
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
-        unit_amount_cents:,
-        precise_unit_amount:,
         amount_details: amount_result.amount_details,
-        pricing_unit_usage:,
         pay_in_advance: fixed_charge.pay_in_advance?
       )
 

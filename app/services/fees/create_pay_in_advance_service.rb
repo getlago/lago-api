@@ -82,31 +82,19 @@ module Fees
 
       charge_model_result = apply_charge_model(aggregation_result:, properties:)
 
-      if charge.applied_pricing_unit
-        pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
-          amount: charge_model_result.amount / charge.pricing_unit.subunit_to_unit.to_d,
-          unit_amount: charge_model_result.unit_amount,
-          applied_pricing_unit: charge.applied_pricing_unit
-        )
-
-        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
-          .to_fiat_currency_cents(subscription.plan.amount.currency)
-          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
-      else
-        pricing_unit_usage = nil
-        amount_cents = charge_model_result.amount
-        precise_amount_cents = charge_model_result.precise_amount
-        unit_amount_cents = charge_model_result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
-        precise_unit_amount = charge_model_result.unit_amount
-      end
+      amount = Fees::AmountsService.call(
+        currency: subscription.plan.amount.currency,
+        charge_model_result:,
+        applied_pricing_unit: Fees::AmountsService::PricingUnit.from(charge.applied_pricing_unit)
+      ).amount
 
       fee = Fee.new(
         subscription:,
         charge:,
         organization_id: customer.organization_id,
         billing_entity_id: customer.billing_entity_id,
-        amount_cents:,
-        precise_amount_cents:,
+        amount_cents: amount.amount_cents,
+        precise_amount_cents: amount.precise_amount_cents,
         amount_currency: subscription.plan.amount_currency,
         fee_type: :charge,
         invoiceable: charge,
@@ -121,11 +109,11 @@ module Fees
         pay_in_advance: true,
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
-        unit_amount_cents:,
-        precise_unit_amount:,
+        unit_amount_cents: amount.unit_amount_cents,
+        precise_unit_amount: amount.precise_unit_amount,
         grouped_by: format_grouped_by,
         amount_details: charge_model_result.amount_details || {},
-        pricing_unit_usage:
+        pricing_unit_usage: amount.pricing_unit_usage
       )
 
       build_breakdowns_for_fee(fee:, presentation_breakdowns: remove_formated_grouped_by_keys(aggregation_result.pay_in_advance_breakdowns))

@@ -267,31 +267,15 @@ module Fees
         return adjustement_result.fee
       end
 
+      amount = Fees::AmountsService.call(
+        currency: selected_metered_item.currency,
+        charge_model_result: amount_result,
+        applied_pricing_unit: Fees::AmountsService::PricingUnit.from(selected_metered_item.applied_pricing_unit)
+      ).amount
+
       # Prevent trying to create a fee with negative units or amount.
       if amount_result.units.negative? || amount_result.amount.negative?
-        amount_result.amount = amount_result.unit_amount = BigDecimal(0)
         amount_result.full_units_number = amount_result.units = BigDecimal(0)
-      end
-
-      # NOTE: amount_result should be a BigDecimal, we need to round it
-      # to the currency decimals and transform it into currency cents
-      if selected_metered_item.applied_pricing_unit
-        pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
-          amount: amount_result.amount,
-          unit_amount: amount_result.unit_amount,
-          applied_pricing_unit: selected_metered_item.applied_pricing_unit
-        )
-
-        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
-          .to_fiat_currency_cents(selected_metered_item.currency)
-          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
-      else
-        pricing_unit_usage = nil
-        rounded_amount = amount_result.amount.round(selected_metered_item.currency.exponent)
-        amount_cents = rounded_amount * selected_metered_item.currency.subunit_to_unit
-        precise_amount_cents = amount_result.amount * selected_metered_item.currency.subunit_to_unit.to_d
-        unit_amount_cents = amount_result.unit_amount * selected_metered_item.currency.subunit_to_unit
-        precise_unit_amount = amount_result.unit_amount
       end
 
       units = if options.current_usage? && (selected_metered_item.pay_in_advance? || selected_metered_item.prorated?)
@@ -308,8 +292,11 @@ module Fees
         billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         charge: selected_metered_item.charge,
-        amount_cents:,
-        precise_amount_cents:,
+        amount_cents: amount.amount_cents,
+        precise_amount_cents: amount.precise_amount_cents,
+        unit_amount_cents: amount.unit_amount_cents,
+        precise_unit_amount: amount.precise_unit_amount,
+        pricing_unit_usage: amount.pricing_unit_usage,
         amount_currency: selected_metered_item.currency,
         fee_type: :charge,
         invoiceable_type: "Charge",
@@ -321,12 +308,9 @@ module Fees
         payment_status: :pending,
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
-        unit_amount_cents:,
-        precise_unit_amount:,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter: selected_metered_item.charge_filter&.persisted? ? selected_metered_item.charge_filter : nil,
-        pricing_unit_usage:
+        charge_filter: selected_metered_item.charge_filter&.persisted? ? selected_metered_item.charge_filter : nil
       )
 
       unless selected_metered_item.invoiceable?
