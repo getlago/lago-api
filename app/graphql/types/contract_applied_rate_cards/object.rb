@@ -18,7 +18,7 @@ module Types
       field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: false
       field :effective_date, GraphQL::Types::ISO8601Date, null: false
       field :ended_date, GraphQL::Types::ISO8601Date, null: true
-      field :next_billing_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :next_billing_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :rate_phases, [Types::RatePhases::Object], null: false
       field :rate_phases_count, Integer, null: false

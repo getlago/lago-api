@@ -2641,7 +2641,7 @@ CREATE TABLE public.contract_rate_cards (
     contract_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
-    next_billing_at timestamp without time zone NOT NULL,
+    next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
     ended_date date,
     units numeric,
@@ -14791,6 +14791,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260909154904'),
 ('20260908222044'),
 ('20260908211313'),
 ('20260908180522'),
