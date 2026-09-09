@@ -20,6 +20,10 @@ module StreamingDestinations
       where(organization:, active: true).where("event_types @> ARRAY[?]::varchar[]", event_type)
     }
 
+    def self.streams_event?(organization, event_type)
+      for_event(organization, event_type).exists?
+    end
+
     def producer
       raise NotImplementedError
     end
