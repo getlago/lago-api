@@ -18,6 +18,20 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      field :applied_rate_cards_count, Integer, null: false, description: "Number of rate cards priced on the plan"
+      # Any contract attachment freezes the plan's pricing; the UI disables
+      # editing and deletion off this flag.
+      field :attached_to_contracts, Boolean, null: false, method: :attached_to_contracts?
+      field :contracts_count, Integer, null: false, description: "Number of contracts on the plan"
+
+      def applied_rate_cards_count
+        object.applied_rate_cards.count
+      end
+
+      def contracts_count
+        object.contracts.count
+      end
     end
   end
 end
