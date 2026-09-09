@@ -46,7 +46,11 @@ class BillingSegment < ApplicationRecord
   end
 
   def duration_in_days
-    Utils::Datetime.date_diff_with_timezone(started_at, ended_at, customer.applicable_timezone)
+    Billing::Days.between(
+      started_at,
+      BillingSegment.exclusive_end(ended_at),
+      timezone: customer.applicable_timezone
+    )
   end
 
   def pricing_unit_conversion_rate

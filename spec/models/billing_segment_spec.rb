@@ -98,24 +98,58 @@ RSpec.describe BillingSegment do
   end
 
   describe "#duration_in_days" do
-    it "returns the inclusive segment duration" do
-      segment = described_class.new(
-        customer: build(:customer, timezone: "UTC"),
-        started_at: Time.zone.parse("2026-09-01"),
-        ended_at: Time.zone.parse("2026-09-30").end_of_day
-      )
+    subject(:segment) { described_class.new(customer:, started_at:, ended_at:) }
 
+    let(:timezone) { "UTC" }
+    let(:customer) { build(:customer, timezone:) }
+    let(:started_at) { Time.zone.parse("2026-09-01") }
+    let(:ended_at) { Time.zone.parse("2026-09-30").end_of_day }
+
+    it "returns the inclusive segment duration" do
       expect(segment.duration_in_days).to eq(30)
     end
 
-    it "counts days in the customer timezone" do
-      segment = described_class.new(
-        customer: build(:customer, timezone: "Asia/Tokyo"),
-        started_at: Time.zone.parse("2026-08-31 15:00:00"),
-        ended_at: Time.zone.parse("2026-09-30 14:59:59")
-      )
+    context "with a mid-day rate change" do
+      let(:cut) { Time.zone.parse("2026-06-16 09:30:00") }
 
-      expect(segment.duration_in_days).to eq(30)
+      context "when before the change" do
+        let(:started_at) { Time.zone.parse("2026-06-01") }
+        let(:ended_at) { described_class.inclusive_end(cut) }
+
+        it "includes the split day containing its midnight" do
+          expect(segment.duration_in_days).to eq(16)
+        end
+      end
+
+      context "when after the change" do
+        let(:started_at) { cut }
+        let(:ended_at) { described_class.inclusive_end(Time.zone.parse("2026-07-01")) }
+
+        it "excludes the split day assigned to the previous segment" do
+          expect(segment.duration_in_days).to eq(14)
+        end
+      end
+    end
+
+    context "with daylight saving time" do
+      let(:timezone) { "Europe/Paris" }
+      let(:zone) { ActiveSupport::TimeZone[timezone] }
+      let(:started_at) { zone.parse("2026-03-01") }
+      let(:ended_at) { described_class.inclusive_end(zone.parse("2026-04-01")) }
+
+      it "counts local midnights across daylight saving time" do
+        expect(segment.duration_in_days).to eq(31)
+      end
+    end
+
+    context "with a non-UTC customer timezone" do
+      let(:timezone) { "Asia/Tokyo" }
+      let(:started_at) { Time.zone.parse("2026-08-31 15:00:00") }
+      let(:ended_at) { Time.zone.parse("2026-09-30 14:59:59") }
+
+      it "counts days in the customer timezone" do
+        expect(segment.duration_in_days).to eq(30)
+      end
     end
   end
 

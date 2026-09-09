@@ -18,7 +18,8 @@ module Fees
           :proration_ratio,
           to: :billing_segment
 
-        delegate :charge, to: :product
+        delegate :charge, :charge_id, to: :product
+        delegate :dynamic?, to: :rate
 
         def charge_filter
           nil
@@ -51,6 +52,7 @@ module Fees
           ChargeModels::PricingStructure.from_billing_segment(billing_segment)
         end
 
+        # Segment proration is persisted by the billing schedule, not elapsed current usage.
         def period_ratio
           billing_segment.proration_ratio
         end
@@ -80,7 +82,7 @@ module Fees
         end
 
         def matching_and_ignored_filters
-          BaseResult[:matching_filters, :ignored_filters].new.tap do |result|
+          ChargeFilters::MatchingAndIgnoredService::Result.new.tap do |result|
             result.matching_filters = matching_filters
             result.ignored_filters = ignored_filters
           end

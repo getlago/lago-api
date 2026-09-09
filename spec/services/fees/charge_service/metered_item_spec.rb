@@ -60,6 +60,8 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       metered_item = described_class.from_billing_segment(billing_segment)
 
       expect(metered_item.billing_segment).to eq(billing_segment)
+      expect(metered_item.charge_id).to be_nil
+      expect(metered_item).not_to be_dynamic
       expect(metered_item.billable_metric).to eq(billable_metric)
       expect(metered_item.properties).to eq("amount" => "24")
       expect(metered_item.period_ratio).to eq(0.5)

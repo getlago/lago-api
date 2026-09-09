@@ -44,6 +44,47 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     end
   end
 
+  describe "#charge_id" do
+    it "returns nil for a catalog product without a legacy charge" do
+      expect(source.charge_id).to be_nil
+    end
+
+    context "with a legacy charge" do
+      let(:charge) { build_stubbed(:standard_charge) }
+      let(:product) { build(:product, organization:, billable_metric:, charge:) }
+
+      it "returns the linked charge ID" do
+        expect(source.charge_id).to eq(charge.id)
+      end
+    end
+  end
+
+  describe "#dynamic?" do
+    it "reflects the segment rate model without a legacy charge" do
+      expect(source).not_to be_dynamic
+
+      rate_card_rate.rate_model = "dynamic"
+
+      expect(source).to be_dynamic
+    end
+
+    it "prefers the rate override model" do
+      billing_segment.rate_override = build(:rate_override, organization:, rate_model: "dynamic")
+
+      expect(source).to be_dynamic
+    end
+  end
+
+  describe "#matching_and_ignored_filters" do
+    it "returns equal results using the shared filter result type" do
+      result = source.matching_and_ignored_filters
+
+      expect(result).to be_a(ChargeFilters::MatchingAndIgnoredService::Result)
+      expect(result).to have_attributes(matching_filters: {}, ignored_filters: [])
+      expect(source.matching_and_ignored_filters).to eq(result)
+    end
+  end
+
   describe "#properties" do
     it "uses the stored billing segment rate properties" do
       expect(source.properties).to eq(segment_rate_properties)
