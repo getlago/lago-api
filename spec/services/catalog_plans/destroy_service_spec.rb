@@ -33,6 +33,16 @@ RSpec.describe CatalogPlans::DestroyService do
     expect(SendWebhookJob).to have_been_enqueued.with("plan.deleted", catalog_plan)
   end
 
+  it "delivers the webhook once the plan is discarded" do
+    create(:webhook_endpoint, organization:)
+
+    # GlobalID resolves the now-discarded plan, so the queued job builds its
+    # payload rather than failing on the default-scoped lookup.
+    perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+    expect(Webhook.where(webhook_type: "plan.deleted")).to exist
+  end
+
   context "when the plan is attached to contracts" do
     before { create(:contract, organization:, catalog_plan:) }
 
