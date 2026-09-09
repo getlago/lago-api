@@ -9,11 +9,11 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:producer) { instance_double(EventDestinations::KinesisProducer, produce: nil) }
+  let(:producer) { instance_double(Lago::Kinesis::Producer, produce: nil) }
 
   before do
     subscription
-    allow(EventDestinations::KinesisProducer).to receive(:new).and_return(producer)
+    allow(Lago::Kinesis::Producer).to receive(:new).and_return(producer)
     allow(StreamingDestinations::BaseDestination).to receive(:for_event).and_call_original
   end
 

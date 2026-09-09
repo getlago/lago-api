@@ -23,7 +23,7 @@ RSpec.describe StreamingDestinations::KinesisDestination, type: :model do
 
   describe "#producer" do
     it "builds the producer for its own transport" do
-      expect(destination.producer).to be_a(EventDestinations::KinesisProducer)
+      expect(destination.producer).to be_a(Lago::Kinesis::Producer)
     end
   end
 
