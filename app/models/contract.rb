@@ -9,12 +9,6 @@ class Contract < ApplicationRecord
   include PaperTrailTraceable
   include Terminatable
 
-  # plan_id is superseded by catalog_plan_id (contracts only ever pointed at
-  # catalog plans). The column is dropped in a follow-up release; ignore it
-  # until then.
-  # TODO: drop the plan_id column, then remove this ignore.
-  self.ignored_columns += %w[plan_id]
-
   STATUSES = {
     pending: "pending",
     active: "active",
@@ -126,12 +120,10 @@ end
 #  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                  (organization_id)
 #  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
-#  index_contracts_on_plan_id                          (plan_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_plan_id => catalog_plans.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (plan_id => plans.id)
 #

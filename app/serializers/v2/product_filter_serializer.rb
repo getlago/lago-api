@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module V1
-  class ProductCategorySerializer < ModelSerializer
+module V2
+  class ProductFilterSerializer < ModelSerializer
     def serialize
       {
         lago_id: model.id,
@@ -9,10 +9,22 @@ module V1
         code: model.code,
         description: model.description,
         invoice_display_name: model.invoice_display_name,
-        products_count: model.products.size,
+        values: values,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
+    end
+
+    private
+
+    # options[:values] lets the destroy endpoint echo values discarded by the service
+    def values
+      (options[:values] || model.values).map do |value|
+        {
+          key: value.key,
+          value: value.value
+        }
+      end
     end
   end
 end

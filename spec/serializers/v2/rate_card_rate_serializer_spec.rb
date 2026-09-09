@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe V1::RateCardRateSerializer do
+RSpec.describe V2::RateCardRateSerializer do
   subject(:serializer) { described_class.new(rate, root_name: "rate") }
 
   let(:rate) { create(:rate_card_rate) }

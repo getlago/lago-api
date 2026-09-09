@@ -67,7 +67,7 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases),
-              ::V1::PlanRateCardSerializer,
+              ::V2::PlanRateCardSerializer,
               collection_name: "applied_rate_cards",
               meta: pagination_metadata(result.plan_rate_cards)
             )
@@ -124,7 +124,7 @@ module Api
       end
 
       def render_plan_rate_card(plan_rate_card)
-        render(json: ::V1::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card"))
+        render(json: ::V2::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card"))
       end
 
       def resource_name

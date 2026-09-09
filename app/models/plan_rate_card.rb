@@ -6,11 +6,6 @@ class PlanRateCard < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  # plan_id is superseded by catalog_plan_id (rows only ever pointed at catalog
-  # plans). The column is dropped in a follow-up release; ignore it until then.
-  # TODO: drop the plan_id column, then remove this ignore.
-  self.ignored_columns += %w[plan_id]
-
   belongs_to :organization
   belongs_to :catalog_plan
   belongs_to :rate_card
@@ -48,14 +43,11 @@ end
 #  index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id  (catalog_plan_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_plan_rate_cards_on_deleted_at                        (deleted_at)
 #  index_plan_rate_cards_on_organization_id                   (organization_id)
-#  index_plan_rate_cards_on_plan_id                           (plan_id)
-#  index_plan_rate_cards_on_plan_id_and_rate_card_id          (plan_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_plan_rate_cards_on_rate_card_id                      (rate_card_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_plan_id => catalog_plans.id)
 #  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (plan_id => plans.id)
 #  fk_rails_...  (rate_card_id => rate_cards.id)
 #

@@ -65,6 +65,24 @@ RSpec.describe ProductFilter do
       create(:product_filter_value, product_filter: filter, organization: filter.organization, billable_metric_filter: scheme, value: "visa")
 
       expect(filter.reload.to_h).to eq("region" => %w[us eu], "scheme" => %w[visa])
+      expect(filter.to_h_with_all_values).to eq("region" => %w[us eu], "scheme" => %w[visa])
+    end
+  end
+
+  describe "#to_h_with_all_values" do
+    it "expands nil to configured values without changing the raw hash" do
+      filter = create(:product_filter)
+      region = create(:billable_metric_filter, organization: filter.organization, key: "region", values: %w[us eu])
+      create(:product_filter_value, product_filter: filter, organization: filter.organization, billable_metric_filter: region, value: nil)
+
+      expect(filter.to_h).to eq("region" => [nil])
+      expect(filter.to_h_with_all_values).to eq("region" => %w[us eu])
+      expect(filter.to_h).to eq("region" => [nil])
+    end
+
+    it "returns empty raw and expanded hashes for a filter without values" do
+      expect(product_filter.to_h).to eq({})
+      expect(product_filter.to_h_with_all_values).to eq({})
     end
   end
 

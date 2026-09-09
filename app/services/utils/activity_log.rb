@@ -126,7 +126,10 @@ module Utils
     end
 
     def object_serialized
-      serializer = "V1::#{object.class.name}Serializer".constantize
+      name = "#{object.class.name}Serializer"
+      # V1-first so legacy records (Plan, Subscription, …) keep today's shape;
+      # catalog-only classes, whose serializers live under V2, fall through.
+      serializer = "V1::#{name}".safe_constantize || "V2::#{name}".constantize
       root_name = object.class.name.underscore.to_sym
 
       serializer.new(object, root_name:, includes: serializer_includes(root_name)).serialize

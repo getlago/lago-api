@@ -43,6 +43,10 @@ class Product < ApplicationRecord
     invoice_display_name.presence || name
   end
 
+  def target_key
+    "product-#{id}"
+  end
+
   private
 
   def validate_billable_metric_presence
