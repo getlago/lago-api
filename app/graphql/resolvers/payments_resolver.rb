@@ -26,7 +26,7 @@ module Resolvers
     argument :receipt_number, String, required: false
     argument :search_term, String, required: false
 
-    type Types::Payments::Object.collection_type, null: false
+    type Types::Payments::Object.collection_type(metadata_type: Types::Payments::CollectionMetadata), null: false
 
     def resolve(page: nil, limit: nil, search_term: nil, **filters)
       result = PaymentsQuery.call(
@@ -39,7 +39,11 @@ module Resolvers
         }
       )
 
-      result.success? ? result.payments : result_error(result)
+      return result_error(result) unless result.success?
+
+      # Counting every matching payment of a large organization is the slow half of the
+      # request; cap it like invoices do and let the client show "10,000+".
+      result.payments.without_count.extend(BaseQuery::CappedTotalCount)
     end
   end
 end

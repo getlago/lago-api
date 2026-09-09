@@ -10544,7 +10544,42 @@ type PaymentCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: PaymentCollectionMetadata!
+}
+
+"""
+Pagination metadata for a collection of payments
+"""
+type PaymentCollectionMetadata {
+  """
+  Current Page of loaded data
+  """
+  currentPage: Int!
+
+  """
+  True when another page follows, even when `totalCount` is capped
+  """
+  hasNextPage: Boolean!
+
+  """
+  The number of items per page
+  """
+  limitValue: Int!
+
+  """
+  The total number of items to be paginated
+  """
+  totalCount: Int!
+
+  """
+  True when `totalCount` hit the counting limit and is a lower bound, not the exact total
+  """
+  totalCountCapped: Boolean!
+
+  """
+  The total number of pages in the pagination
+  """
+  totalPages: Int!
 }
 
 type PaymentMethod {

@@ -225,4 +225,67 @@ RSpec.describe Resolvers::PaymentsResolver do
       end
     end
   end
+
+  describe "total count" do
+    let(:page) { 1 }
+    let(:query) do
+      <<~GQL
+        query {
+          payments(page: #{page}, limit: 1) {
+            collection { id }
+            metadata { currentPage totalCount totalPages totalCountCapped hasNextPage }
+          }
+        }
+      GQL
+    end
+
+    let(:metadata) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )["data"]["payments"]["metadata"]
+    end
+
+    it "returns the exact total" do
+      expect(metadata).to eq(
+        "currentPage" => 1,
+        "totalCount" => 2,
+        "totalPages" => 2,
+        "totalCountCapped" => false,
+        "hasNextPage" => true
+      )
+    end
+
+    context "when the result set exceeds the cap" do
+      before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1) }
+
+      it "caps the total and keeps advertising the next page" do
+        expect(metadata).to eq(
+          "currentPage" => 1,
+          "totalCount" => 1,
+          "totalPages" => 1,
+          "totalCountCapped" => true,
+          "hasNextPage" => true
+        )
+      end
+
+      context "when on the last page" do
+        let(:page) { 2 }
+
+        it "reports no next page" do
+          expect(metadata).to include("totalCountCapped" => true, "hasNextPage" => false)
+        end
+      end
+    end
+
+    context "when the results land exactly on the limit" do
+      before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 2) }
+
+      it "reports the total as exact" do
+        expect(metadata).to include("totalCount" => 2, "totalCountCapped" => false, "hasNextPage" => true)
+      end
+    end
+  end
 end
