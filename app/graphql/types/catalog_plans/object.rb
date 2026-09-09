@@ -22,15 +22,21 @@ module Types
       field :applied_rate_cards_count, Integer, null: false, description: "Number of rate cards priced on the plan"
       # Any contract attachment freezes the plan's pricing; the UI disables
       # editing and deletion off this flag.
-      field :attached_to_contracts, Boolean, null: false, method: :attached_to_contracts?
+      field :attached_to_contracts, Boolean, null: false
       field :contracts_count, Integer, null: false, description: "Number of contracts on the plan"
 
+      # Batched: a plan list resolves one grouped COUNT per association instead
+      # of a query per row. attached_to_contracts shares the contracts count.
       def applied_rate_cards_count
-        object.applied_rate_cards.count
+        dataloader.with(Sources::CountByForeignKey, PlanRateCard, :catalog_plan_id).load(object.id)
       end
 
       def contracts_count
-        object.contracts.count
+        dataloader.with(Sources::CountByForeignKey, Contract, :catalog_plan_id).load(object.id)
+      end
+
+      def attached_to_contracts
+        contracts_count.positive?
       end
     end
   end
