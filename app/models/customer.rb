@@ -58,14 +58,13 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
   before_save :ensure_slug
-  after_update :flag_invoices_for_search_reindex, if: -> { Lago::Meilisearch.indexing_enabled? && search_indexed_fields_changed? }
-  after_commit :enqueue_invoices_reindex_job, if: -> { @invoices_search_reindex_needed }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
+  has_many :contracts
   has_many :events
   has_many :invoices
   has_many :applied_coupons
@@ -379,6 +378,29 @@ class Customer < ApplicationRecord
     anrok_customer || avalara_customer
   end
 
+  def payment_connection(code = nil)
+    return payment_provider_customers.by_code(code).first if code.present?
+
+    payment_provider_customers.find_by(is_default: true)
+  end
+
+  # The customer's default integration connection for a category (tax / accounting / crm).
+  def integration_connection(category)
+    integration_customers.where(category:).find_by(is_default: true)
+  end
+
+  def payment_connection_status
+    connection = payment_connection
+
+    if connection.nil?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:not_connected]
+    elsif connection.manual?
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:manual]
+    else
+      PaymentProviderCustomers::BaseCustomer::CONNECTION_STATUSES[:connected]
+    end
+  end
+
   def address_changed?
     ADDRESS_FIELDS.any? { |field| send(:"#{field}_changed?") }
   end
@@ -391,22 +413,6 @@ class Customer < ApplicationRecord
     formatted_sequential_id = format("%03d", sequential_id)
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
-  end
-
-  # `deleted_at` is included because invoice documents embed customer fields
-  # only while the customer is kept: discarding must blank them, undiscarding
-  # must restore them.
-  def search_indexed_fields_changed?
-    (saved_changes.keys & (SEARCHABLE_CUSTOMER_FIELDS + ["deleted_at"])).any?
-  end
-
-  def flag_invoices_for_search_reindex
-    @invoices_search_reindex_needed = true
-  end
-
-  def enqueue_invoices_reindex_job
-    @invoices_search_reindex_needed = false
-    Customers::ReindexInvoicesJob.perform_later(id)
   end
 end
 
@@ -443,6 +449,7 @@ end
 #  payment_provider                             :string
 #  payment_provider_code                        :string
 #  payment_receipt_counter                      :bigint           default(0), not null
+#  payment_term                                 :jsonb
 #  phone                                        :string
 #  shipping_address_line1                       :string
 #  shipping_address_line2                       :string

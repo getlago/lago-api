@@ -11,7 +11,7 @@ class ProductCategory < ApplicationRecord
 
   has_many :products
   has_many :plan_applied_rate_cards, through: :products
-  has_many :subscription_applied_rate_cards, through: :products
+  has_many :contract_applied_rate_cards, through: :products
 
   validates :name, presence: true
   validates :code,

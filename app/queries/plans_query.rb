@@ -2,7 +2,7 @@
 
 class PlansQuery < BaseQuery
   Result = BaseResult[:plans]
-  Filters = BaseFilters[:with_deleted, :include_pending_deletion, :product_category_id]
+  Filters = BaseFilters[:with_deleted, :include_pending_deletion, :pricing_type]
 
   def call
     plans = base_scope.result
@@ -20,19 +20,8 @@ class PlansQuery < BaseQuery
 
   def base_scope
     scope = Plan.parents.where(organization:)
-    scope = with_product_category(scope)
+    scope = scope.where(pricing_type: filters.pricing_type) if filters.pricing_type.present?
     scope.ransack(search_params)
-  end
-
-  def with_product_category(scope)
-    return scope if filters.product_category_id.blank?
-
-    scope.where(
-      id: PlanRateCard
-        .joins(rate_card: :product)
-        .where(products: {product_category_id: filters.product_category_id})
-        .select(:plan_id)
-    )
   end
 
   def search_params

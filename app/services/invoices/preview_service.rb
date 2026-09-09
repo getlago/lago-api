@@ -62,15 +62,10 @@ module Invoices
     delegate :organization, to: :customer
 
     def billing_entity
-      @billing_entity ||= if multi_entity_billing_enabled?
-        first_subscription.billing_entity || customer.billing_entity
-      else
-        customer.billing_entity
-      end
+      @billing_entity ||= first_subscription.billing_entity || customer.billing_entity
     end
 
     def billing_entities_aligned?
-      return true unless multi_entity_billing_enabled?
       return true if subscriptions.size <= 1
 
       effective_entity_ids = subscriptions.map { |s| s.billing_entity_id || customer.billing_entity_id }.uniq
@@ -81,10 +76,6 @@ module Invoices
       end
 
       true
-    end
-
-    def multi_entity_billing_enabled?
-      organization.feature_flag_enabled?(:multi_entity_billing)
     end
 
     def fetch_context
@@ -99,13 +90,6 @@ module Invoices
       if subscription_currencies.uniq.count > 1
         result.single_validation_failure!(error_code: "subscription_currencies_does_not_match")
         return false
-      end
-
-      if customer.currency && customer.currency != subscription_currencies.first
-        unless organization.feature_flag_enabled?(:multi_currency)
-          result.single_validation_failure!(error_code: "customer_currency_does_not_match")
-          return false
-        end
       end
 
       true
@@ -212,26 +196,33 @@ module Invoices
 
       context = OpenTelemetry::Context.current
 
-      # The last-seen timestamps are only consumed by the lazy cache validation. Skip the extra
-      # query when the feature flag is off, as the middleware ignores last_seen_at in that case.
-      charge_filters = if subscription.organization.feature_flag_enabled?(:lazy_charge_usage_cache)
-        Events::BillingPeriodFilterService.call!(subscription:, boundaries:).charges
-      else
-        {}
-      end
+      # The pre-filtering also drives which filters run an event aggregation, so it is always
+      # resolved: without it every configured filter is aggregated and the default bucket excludes
+      # all of them inline, making the query grow with the pricing configuration until the store
+      # rejects it.
+      charge_filters = Events::BillingPeriodFilterService.for_charges!(subscription:, boundaries:).filter_targets
 
       invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
         OpenTelemetry::Context.with_current(context) do
           ActiveRecord::Base.connection_pool.with_connection do
+            applied_filters = charge_filters[charge.target_key] || {}
+
             cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
               subscription:,
               charge:,
               to_datetime: boundaries.charges_to_datetime,
-              last_seen_at: charge_filters[charge.id] || {}
+              last_seen_at: applied_filters
             )
 
             Fees::ChargeService
-              .call!(invoice:, charge:, subscription:, boundaries:, context: :invoice_preview, cache_middleware:)
+              .call!(
+                invoice:,
+                metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
+                subscription:,
+                cache_middleware:,
+                filtered_aggregations: applied_filters.keys,
+                options: Fees::ChargeService::Options.new(context: :invoice_preview)
+              )
               .fees
           end
         end

@@ -23,9 +23,16 @@ class Quote < ApplicationRecord
   has_many :quote_owners, dependent: :destroy
   has_many :owners, through: :quote_owners, source: :user, class_name: "User"
 
-  has_many :versions, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
-  has_one :current_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion"
+  # inverse_of is explicit because the ordering scope stops Rails inferring it, and QuoteVersion
+  # reaches the customer through the quote: without it every serialized version reloads its own.
+  has_many :versions, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion", inverse_of: :quote
+  has_one :current_version, -> { order(sequential_id: :desc) }, class_name: "QuoteVersion", inverse_of: :quote
   has_many :order_forms, through: :versions
+
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   has_many_attached :images
 

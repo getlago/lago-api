@@ -58,6 +58,24 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         expect(result.stripe_payment_intent).to be(payment_intent)
       end
 
+      it "holds the funds whatever the payment method type is" do
+        subject.call
+
+        expect(::Stripe::PaymentIntent).to have_received(:create).with(
+          hash_including(capture_method: "manual"),
+          anything
+        )
+      end
+
+      it "does not restrict the manual capture to cards" do
+        subject.call
+
+        expect(::Stripe::PaymentIntent).to have_received(:create).with(
+          hash_excluding(:payment_method_options),
+          anything
+        )
+      end
+
       it "cancels the payment intent later" do
         subject.call
 

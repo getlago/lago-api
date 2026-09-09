@@ -50,9 +50,13 @@ class Organization < ApplicationRecord
   has_many :product_categories
   has_many :products
   has_many :product_filters
+  has_many :rate_cards
+  has_many :rate_card_rates
+  has_many :catalog_plans
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
+  has_many :contracts
   has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
   has_many :credit_notes
@@ -201,6 +205,12 @@ class Organization < ApplicationRecord
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
+  end
+
+  # Product catalog (billing v2) is a rollout feature flag, not a license-gated
+  # premium integration: it is available to any organization, premium or not.
+  def product_catalog_enabled?
+    feature_flag_enabled?(:product_catalog)
   end
 
   def using_lifetime_usage?

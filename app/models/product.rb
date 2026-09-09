@@ -21,7 +21,7 @@ class Product < ApplicationRecord
   has_many :filters, class_name: "ProductFilter"
   has_many :rate_cards
   has_many :plan_applied_rate_cards, through: :rate_cards
-  has_many :subscription_applied_rate_cards, through: :rate_cards
+  has_many :contract_applied_rate_cards, through: :rate_cards
 
   enum :product_type, PRODUCT_TYPES, validate: true
 

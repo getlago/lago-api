@@ -22,11 +22,20 @@ module Types
     field :destroy_adjusted_fee, mutation: Mutations::AdjustedFees::Destroy
     field :preview_adjusted_fee, mutation: Mutations::AdjustedFees::Preview
 
+    field :create_catalog_plan, mutation: Mutations::CatalogPlans::Create
+    field :update_catalog_plan, mutation: Mutations::CatalogPlans::Update
+
     field :create_plan, mutation: Mutations::Plans::Create
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update
 
+    field :create_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Create
+    field :create_rate_phase, mutation: Mutations::RatePhases::Create
+    field :destroy_rate_phase, mutation: Mutations::RatePhases::Destroy
+    field :update_rate_phase, mutation: Mutations::RatePhases::Update
+
     field :create_charge, mutation: Mutations::Charges::Create
+    field :create_contract, mutation: Mutations::Contracts::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
     field :update_charge, mutation: Mutations::Charges::Update
 
@@ -264,6 +273,14 @@ module Types
     field :destroy_product_filter, mutation: Mutations::ProductFilters::Destroy
     field :update_product_filter, mutation: Mutations::ProductFilters::Update
 
+    field :create_rate_card, mutation: Mutations::RateCards::Create
+    field :destroy_rate_card, mutation: Mutations::RateCards::Destroy
+    field :update_rate_card, mutation: Mutations::RateCards::Update
+
+    field :create_rate_card_rate, mutation: Mutations::RateCardRates::Create
+    field :destroy_rate_card_rate, mutation: Mutations::RateCardRates::Destroy
+    field :update_rate_card_rate, mutation: Mutations::RateCardRates::Update
+
     field :create_role, mutation: Mutations::Roles::Create
     field :destroy_role, mutation: Mutations::Roles::Destroy
     field :update_role, mutation: Mutations::Roles::Update
@@ -285,6 +302,9 @@ module Types
 
     field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
+
+    field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken
+
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
   end
 end

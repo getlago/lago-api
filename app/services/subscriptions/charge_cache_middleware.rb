@@ -4,11 +4,12 @@ module Subscriptions
   class ChargeCacheMiddleware
     EMPTY_ARRAY = [].freeze
 
-    def initialize(subscription:, charge:, to_datetime:, cache: true, last_seen_at: nil)
+    def initialize(subscription:, charge:, to_datetime:, cache: true, full_usage: false, last_seen_at: nil)
       @subscription = subscription
       @charge = charge
       @to_datetime = to_datetime
       @cache = cache
+      @full_usage = full_usage
       @last_seen_at = last_seen_at || {}
     end
 
@@ -19,7 +20,7 @@ module Subscriptions
       # last_seen_at is the { filter_id => timestamp } bucket for the current charge.
       invalidate_if_older_than = last_seen_at[charge_filter&.id]
 
-      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, expires_in: cache_expiration, invalidate_if_older_than:) do
+      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, full_usage:, expires_in: cache_expiration, invalidate_if_older_than:) do
         yield
           .map do |fee|
             fee.attributes.merge(
@@ -52,7 +53,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :charge, :to_datetime, :cache, :last_seen_at
+    attr_reader :subscription, :charge, :to_datetime, :cache, :full_usage, :last_seen_at
 
     def cache_expiration
       return 0 unless to_datetime

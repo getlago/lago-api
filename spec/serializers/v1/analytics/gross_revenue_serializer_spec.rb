@@ -28,4 +28,36 @@ RSpec.describe ::V1::Analytics::GrossRevenueSerializer do
       }
     )
   end
+
+  context "when amount_cents is a BigDecimal" do
+    before { gross_revenue["amount_cents"] = BigDecimal("1000.0") }
+
+    it "serializes it as an integer" do
+      expect(result["gross_revenue"]["amount_cents"]).to be(1000)
+    end
+  end
+
+  context "when amount_cents is a float" do
+    before { gross_revenue["amount_cents"] = 1000.0 }
+
+    it "serializes it as an integer" do
+      expect(result["gross_revenue"]["amount_cents"]).to be(1000)
+    end
+  end
+
+  context "when amount_cents is nil" do
+    before { gross_revenue["amount_cents"] = nil }
+
+    it "serializes it as nil" do
+      expect(result["gross_revenue"]["amount_cents"]).to be_nil
+    end
+  end
+
+  context "when invoices_count is a BigDecimal" do
+    before { gross_revenue["invoices_count"] = BigDecimal("2.0") }
+
+    it "serializes it as an integer" do
+      expect(result["gross_revenue"]["invoices_count"]).to be(2)
+    end
+  end
 end

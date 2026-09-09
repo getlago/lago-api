@@ -23,7 +23,14 @@ RSpec.describe EmailArrayValidator do
     "example@s.example",
     "1234567890@example.com",
     "_______@example.com",
-    ["first.user@example.com", "second+user@example.com", "third_user@example.com"]
+
+    # Unicode local-part (RFC 6531 / EAI)
+    "with.uniçode@example.com",
+    "joão.silva@example.com",
+    "用户@example.com",
+
+    ["first.user@example.com", "second+user@example.com", "third_user@example.com"],
+    ["first.user@example.com", "joão.silva@example.com"]
   ].each do |email|
     context "when the email is #{email}" do
       let(:bcc_emails) { Array(email) }
@@ -36,9 +43,6 @@ RSpec.describe EmailArrayValidator do
   end
 
   [
-    # Unicode
-    "with.uniçode@example.com",
-
     # Missing @
     "userdomain.com",
     "user.domain.com",

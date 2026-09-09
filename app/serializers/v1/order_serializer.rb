@@ -3,13 +3,12 @@
 module V1
   class OrderSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         number: model.number,
         status: model.status,
         order_type: model.order_type,
         execution_mode: model.execution_mode,
-        billing_snapshot: model.billing_snapshot,
         currency: model.currency,
         executed_at: model.executed_at&.iso8601,
         execution_record:,
@@ -19,6 +18,11 @@ module V1
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
+
+      # billing_snapshot is a heavy blob mirroring the quote version billing items:
+      # render it for API responses, never in webhook payloads.
+      payload[:billing_snapshot] = model.billing_snapshot if include?(:billing_snapshot)
+      payload
     end
 
     private

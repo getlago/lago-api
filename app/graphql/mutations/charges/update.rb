@@ -3,6 +3,7 @@
 module Mutations
   module Charges
     class Update < BaseMutation
+      include ForbidsLegacyBilling
       include AuthenticableApiUser
       include RequiredOrganization
 

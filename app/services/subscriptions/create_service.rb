@@ -29,9 +29,16 @@ module Subscriptions
         ending_at: params[:ending_at],
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
-        subscription_type:
+        subscription_type:,
+        consolidate_invoice: params[:consolidate_invoice],
+        consolidate_invoice_provided: params.key?(:consolidate_invoice)
       )
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
+
+      if params.key?(:plan_overrides) && (plan.product_catalog? || plan.organization.product_catalog_enabled?)
+        return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
+      end
+
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
       # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`
@@ -140,7 +147,7 @@ module Subscriptions
         ending_at: params[:ending_at],
         purchase_order_number: params[:purchase_order_number],
         progressive_billing_disabled: params[:progressive_billing_disabled] || false,
-        consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : true,
+        consolidate_invoice: consolidate_invoice,
         billing_entity: resolve_billing_entity(organization: customer.organization, params:)
       )
 
@@ -180,7 +187,7 @@ module Subscriptions
     end
 
     def handle_past_subscription(new_subscription)
-      new_subscription.mark_as_active!(new_subscription.subscription_at)
+      new_subscription.mark_as_active!(started_at_for(new_subscription))
 
       EmitFixedChargeEventsService.call!(
         subscriptions: [new_subscription],
@@ -200,6 +207,24 @@ module Subscriptions
     def handle_future_subscription(new_subscription)
       new_subscription.pending!
       apply_activation_rules(new_subscription)
+    end
+
+    # NOTE: Backdating normally means "this subscription really started then, bill it from then".
+    #       But a previous subscription on the same external_id may have already invoiced part of that
+    #       window when it terminated. Clamping to that boundary honours the backdate as far back as
+    #       is safe, instead of re-opening a period the terminating invoice already closed.
+    def started_at_for(new_subscription)
+      [new_subscription.subscription_at, last_invoiced_termination_time].compact.max
+    end
+
+    # NOTE: A subscription terminated with `on_termination_invoice: skip` never billed its last
+    #       window, so it closes nothing and the backdated period must stay billable.
+    def last_invoiced_termination_time
+      customer.subscriptions
+        .terminated
+        .where(external_id:)
+        .where(on_termination_invoice: :generate)
+        .maximum(:terminated_at)
     end
 
     def upgrade_subscription
@@ -273,6 +298,12 @@ module Subscriptions
           units: entry[:units]
         )
       end
+    end
+
+    def consolidate_invoice
+      return true unless params.key?(:consolidate_invoice)
+
+      ActiveModel::Type::Boolean.new.cast(params[:consolidate_invoice])
     end
 
     def payment_method

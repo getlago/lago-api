@@ -19,8 +19,15 @@ RSpec.describe Regex do
       expect(Regex::EMAIL).to match("test@example.com")
     end
 
+    it "matches an email with a unicode local-part" do
+      expect(Regex::EMAIL).to match("joão.silva@example.com")
+      expect(Regex::EMAIL).to match("用户@example.com")
+    end
+
     it "does not match an invalid email" do
       expect(Regex::EMAIL).not_to match("test@example.com@invalid")
+      expect(Regex::EMAIL).not_to match("joão silva@example.com")
+      expect(Regex::EMAIL).not_to match("joão.silva@")
     end
   end
 

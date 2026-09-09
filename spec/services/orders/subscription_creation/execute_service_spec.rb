@@ -29,6 +29,8 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
       "subscriptionExternalId" => "sub_ext_42",
       "subscriptionName" => "Enterprise deal",
       "billingTime" => "anniversary",
+      "startDate" => Date.current.iso8601,
+      "endDate" => 1.year.from_now.to_date.iso8601,
       "charges" => [
         {
           "id" => charge.id,
@@ -60,8 +62,6 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.current,
-      end_date: 1.year.from_now.to_date,
       billing_items:
     )
   end
@@ -88,7 +88,7 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(subscription.external_id).to eq("sub_ext_42")
         expect(subscription.name).to eq("Enterprise deal")
         expect(subscription.billing_time).to eq("anniversary")
-        expect(subscription.ending_at.to_date).to eq(quote_version.end_date)
+        expect(subscription.ending_at.to_date).to eq(1.year.from_now.to_date)
 
         order.reload
         expect(order.executed?).to eq(true)
@@ -107,6 +107,78 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(overridden_plan.parent_id).to eq(plan.id)
         expect(overridden_plan.amount_cents).to eq(80_000)
         expect(overridden_plan.charges.sole.properties["amount"]).to eq("30")
+      end
+
+      context "when the negotiated tiers are written in the camelCase of the payload" do
+        let(:charge) { create(:graduated_charge, plan:, billable_metric:) }
+        let(:plan_overrides) do
+          super().merge(
+            "charges" => [
+              super()["charges"].sole.merge(
+                "properties" => {
+                  "graduatedRanges" => [
+                    {"fromValue" => 0, "toValue" => 1000, "perUnitAmount" => "0.005", "flatAmount" => "0"},
+                    {"fromValue" => 1001, "toValue" => nil, "perUnitAmount" => "0.002", "flatAmount" => "0"}
+                  ]
+                }
+              )
+            ]
+          )
+        end
+
+        it "bills the negotiated tiers" do
+          execute_service.call
+
+          overridden_charge = customer.subscriptions.sole.plan.charges.sole
+          expect(overridden_charge.parent_id).to eq(charge.id)
+          expect(overridden_charge.properties["graduated_ranges"]).to eq(
+            [
+              {"from_value" => 0, "to_value" => 1000, "per_unit_amount" => "0.005", "flat_amount" => "0"},
+              {"from_value" => 1001, "to_value" => nil, "per_unit_amount" => "0.002", "flat_amount" => "0"}
+            ]
+          )
+        end
+      end
+
+      context "when the override reprices the plan in another currency" do
+        let(:plan_overrides) { super().merge("amountCurrency" => "USD") }
+        let(:quote_version) do
+          create(:quote_version, :approved, quote:, organization:, currency: "USD", billing_items:)
+        end
+
+        it "bills the override plan in that currency" do
+          execute_service.call
+
+          overridden_plan = customer.subscriptions.sole.plan
+          expect(overridden_plan.parent_id).to eq(plan.id)
+          expect(overridden_plan.amount_currency).to eq("USD")
+        end
+      end
+
+      # The transports that trigger an execution set different sources, and the billing services
+      # resolve their input by code under api and by id otherwise. The snapshot must replay the
+      # same either way.
+      context "when triggered under the api source" do
+        before { CurrentContext.source = "api" }
+
+        it "creates the same subscription" do
+          expect { execute_service.call }.to change(Subscription, :count).by(1)
+
+          expect(customer.subscriptions.sole.external_id).to eq("sub_ext_42")
+          expect(order.reload.executed?).to eq(true)
+        end
+      end
+
+      # Approval no longer requires a start date, so this reaches execution: CreateService defaults the
+      # subscription date to the moment it runs.
+      context "when the plan states no start date" do
+        let(:plan_payload) { super().except("startDate") }
+
+        it "subscribes from now" do
+          execute_service.call
+
+          expect(customer.subscriptions.sole.subscription_at).to be_within(5.seconds).of(Time.current)
+        end
       end
 
       context "without overrides" do
@@ -267,12 +339,12 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         end
       end
 
-      context "when the payload carries dates" do
+      context "when the payload carries full datetimes" do
         let(:plan_payload) do
           super().merge("startDate" => 2.days.from_now.iso8601, "endDate" => 2.years.from_now.iso8601)
         end
 
-        it "uses them over the version dates" do
+        it "uses them as given" do
           execute_service.call
 
           subscription = customer.subscriptions.sole
@@ -286,31 +358,13 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           create(:customer, organization:, billing_entity:, currency: "EUR", timezone: "America/New_York")
         end
 
-        it "reads the version dates as calendar dates in the customer timezone" do
+        it "reads the quoted calendar dates in the customer timezone" do
           execute_service.call
 
           subscription = customer.subscriptions.sole
           timezone = customer.applicable_timezone
-          expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(quote_version.start_date)
-          expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(quote_version.end_date)
-        end
-
-        context "when the payload carries bare dates" do
-          let(:plan_payload) do
-            super().merge(
-              "startDate" => 3.days.from_now.to_date.iso8601,
-              "endDate" => 1.year.from_now.to_date.iso8601
-            )
-          end
-
-          it "reads them in the customer timezone too" do
-            execute_service.call
-
-            subscription = customer.subscriptions.sole
-            timezone = customer.applicable_timezone
-            expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(3.days.from_now.to_date)
-            expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(1.year.from_now.to_date)
-          end
+          expect(subscription.subscription_at.in_time_zone(timezone).to_date).to eq(Date.current)
+          expect(subscription.ending_at.in_time_zone(timezone).to_date).to eq(1.year.from_now.to_date)
         end
       end
 
@@ -471,6 +525,24 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
           expect(order.execution_record["applied_coupon_ids"]).to eq([applied_coupon.id])
         end
 
+        context "when the override applies the coupon in another currency" do
+          let(:billing_items) do
+            items = super()
+            items.merge(
+              "coupons" => [items["coupons"].sole.merge("overrides" => {"amountCents" => 15_000, "amountCurrency" => "USD"})]
+            )
+          end
+          let(:quote_version) do
+            create(:quote_version, :approved, quote:, organization:, currency: "USD", billing_items:)
+          end
+
+          it "grants it in that currency" do
+            execute_service.call
+
+            expect(customer.applied_coupons.sole.amount_currency).to eq("USD")
+          end
+        end
+
         context "when the coupon is discarded" do
           before { coupon.discard! }
 
@@ -485,6 +557,56 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
             expect(order.execution_record["errors"]).to eq(["coupon_not_found"])
           end
         end
+      end
+
+      context "when the deal names a billing entity" do
+        let(:issuing_entity) { create(:billing_entity, organization:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            quote:,
+            organization:,
+            currency: "EUR",
+            billing_items:,
+            billing_entity: issuing_entity
+          )
+        end
+
+        it "pins the subscription to it" do
+          execute_service.call
+
+          expect(customer.subscriptions.sole.billing_entity_id).to eq(issuing_entity.id)
+        end
+
+        context "with a wallet credit" do
+          let(:billing_items) do
+            super().merge(
+              "walletCredits" => [
+                {
+                  "localId" => "d9169d94-b322-4d70-a2b1-9e6a58e3f74a",
+                  "type" => "wallet_credit",
+                  "payload" => {"currency" => "EUR", "rateAmount" => "1", "paidCredits" => "100", "grantedCredits" => "10"}
+                }
+              ]
+            )
+          end
+
+          it "pins the wallet to it too" do
+            execute_service.call
+
+            expect(customer.wallets.sole.billing_entity_id).to eq(issuing_entity.id)
+          end
+        end
+      end
+
+      # NULL means "follow the customer at billing time", so nothing is frozen onto the records.
+      it "leaves the subscription inheriting the customer's entity when the deal names none" do
+        execute_service.call
+
+        expect(quote_version.billing_entity_id).to eq(nil)
+        expect(customer.subscriptions.sole.billing_entity_id).to eq(nil)
+        expect(customer.subscriptions.sole.billing_entity).to eq(billing_entity)
       end
 
       context "with a wallet credit" do
@@ -521,6 +643,18 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
 
           order.reload
           expect(order.execution_record["wallet_ids"]).to eq([wallet.id])
+        end
+
+        context "when triggered under the api source" do
+          before { CurrentContext.source = "api" }
+
+          it "creates the same wallet and limitation" do
+            expect { execute_service.call }.to change(Wallet, :count).by(1)
+
+            wallet = customer.wallets.sole
+            expect(wallet.allowed_fee_types).to eq(["charge"])
+            expect(wallet.billable_metrics).to eq([billable_metric])
+          end
         end
 
         context "with a recurring rule" do
@@ -607,6 +741,12 @@ RSpec.describe Orders::SubscriptionCreation::ExecuteService, :premium do
         expect(order.execution_record["execution_mode"]).to eq("order_only")
         expect(order.execution_record["subscription_ids"]).to eq([])
         expect(order.execution_record["errors"]).to eq([])
+      end
+
+      it "produces an order.executed activity log" do
+        execute_service.call
+
+        expect(Utils::ActivityLog).to have_produced("order.executed").after_commit.with(order)
       end
     end
 

@@ -279,8 +279,6 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
 
     let(:input) { {id: subscription.id, billingEntityId: new_billing_entity.id} }
 
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
     it "rebinds the subscription to the new billing entity" do
       result = subject
 

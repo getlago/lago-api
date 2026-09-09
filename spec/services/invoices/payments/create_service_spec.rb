@@ -425,6 +425,19 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when invoice is closed" do
+      before { invoice.closed! }
+
+      it "does not create a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when invoice amount is 0" do
       let(:invoice) do
         create(
@@ -862,6 +875,19 @@ RSpec.describe Invoices::Payments::CreateService do
         end
       end
 
+      context "when the organization skips the credit invoice auto-payment delay" do
+        before { organization.enable_feature_flag!(:skip_credit_invoice_auto_payment_delay) }
+
+        it "still delays a non-credit invoice" do
+          freeze_time do
+            expect { ApplicationRecord.transaction { create_service.call_async } }
+              .to have_enqueued_job(Invoices::Payments::CreateJob)
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+              .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+          end
+        end
+      end
+
       context "when it is not the first payment attempt (retry)" do
         before { invoice.update!(payment_attempts: 1) }
 
@@ -918,6 +944,17 @@ RSpec.describe Invoices::Payments::CreateService do
               .to have_enqueued_job(Invoices::Payments::CreateJob)
               .with(invoice:, payment_provider: :stripe, payment_method_params: {})
               .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+          end
+        end
+
+        context "when the organization skips the credit invoice auto-payment delay" do
+          before { organization.enable_feature_flag!(:skip_credit_invoice_auto_payment_delay) }
+
+          it "enqueues the payment immediately" do
+            expect { ApplicationRecord.transaction { create_service.call_async } }
+              .to have_enqueued_job(Invoices::Payments::CreateJob)
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+              .at(:no_wait)
           end
         end
       end

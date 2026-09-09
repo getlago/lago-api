@@ -22,7 +22,9 @@ RSpec.describe Subscriptions::ValidateService do
       on_termination_credit_note:,
       on_termination_invoice:,
       subscription:,
-      subscription_type:
+      subscription_type:,
+      consolidate_invoice:,
+      consolidate_invoice_provided:
     }
   end
 
@@ -30,6 +32,8 @@ RSpec.describe Subscriptions::ValidateService do
   let(:on_termination_invoice) { nil }
   let(:subscription) { nil }
   let(:subscription_type) { "create" }
+  let(:consolidate_invoice) { nil }
+  let(:consolidate_invoice_provided) { false }
 
   describe "#ending_at" do
     subject(:method_call) { validate_service.__send__(:ending_at) }
@@ -248,6 +252,25 @@ RSpec.describe Subscriptions::ValidateService do
 
     context "with valid on_termination_invoice skip" do
       let(:on_termination_invoice) { "skip" }
+
+      it "returns true" do
+        expect(validate_service).to be_valid
+      end
+    end
+
+    context "with invalid consolidate_invoice" do
+      let(:consolidate_invoice) { "null" }
+      let(:consolidate_invoice_provided) { true }
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:consolidate_invoice]).to eq(["invalid_value"])
+      end
+    end
+
+    context "with valid consolidate_invoice" do
+      let(:consolidate_invoice) { "false" }
+      let(:consolidate_invoice_provided) { true }
 
       it "returns true" do
         expect(validate_service).to be_valid

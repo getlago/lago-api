@@ -15,8 +15,6 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.parse("2026-01-01"),
-      end_date: Date.parse("2026-12-31"),
       billing_items:
     )
   end
@@ -29,7 +27,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
       "id" => plan.id,
       "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "type" => "plan",
-      "payload" => {"code" => plan.code}
+      "payload" => {"code" => plan.code, "startDate" => "2026-01-01", "endDate" => "2026-12-31"}
     }
   end
   let(:coupon_item) do
@@ -71,8 +69,6 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
           quote:,
           organization:,
           currency: "DOUBLOON",
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-12-31"),
           billing_items:
         )
       end
@@ -114,7 +110,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
               id: plan.id,
               localId: "3d08b2df-4e4c-4d58-b415-a525c1663735",
               type: "plan",
-              payload: {code: plan.code}
+              payload: {code: plan.code, startDate: "2026-01-01", endDate: "2026-12-31"}
             }
           ]
         }

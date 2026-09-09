@@ -8,6 +8,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
       %w[
         billable_metric
         plan
+        catalog_plan
         customer
         invoice
         credit_note
@@ -21,6 +22,10 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         product_category
         product
         product_filter
+        rate_card
+        quote
+        order_form
+        order
       ]
     )
   end

@@ -218,6 +218,19 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when wallet is terminated" do
+      let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+      it "returns a validation failure and does not update the wallet" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:wallet_id]).to eq(["wallet_is_terminated"])
+
+        expect(wallet.reload.name).not_to eq("new name")
+        expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
     context "with invalid priority" do
       let(:priority) { 55 }
 
@@ -984,10 +997,6 @@ RSpec.describe Wallets::UpdateService do
     context "when multi_entity_billing is enabled" do
       let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
 
-      before do
-        organization.update!(feature_flags: ["multi_entity_billing"])
-      end
-
       context "when billing_entity_code is provided" do
         let(:params) do
           {
@@ -1197,22 +1206,6 @@ RSpec.describe Wallets::UpdateService do
             expect(wallet.reload.billing_entity_id).to eq(current_entity.id)
           end
         end
-      end
-    end
-
-    context "when multi_entity_billing is not enabled" do
-      let(:params) do
-        {
-          id: wallet&.id,
-          billing_entity_code: "be_code"
-        }
-      end
-
-      before { create(:billing_entity, organization:, code: "be_code") }
-
-      it "does not assign the billing entity even if code is provided" do
-        expect(result).to be_success
-        expect(result.wallet.billing_entity_id).to be_nil
       end
     end
   end

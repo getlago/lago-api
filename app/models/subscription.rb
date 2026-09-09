@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
 class Subscription < ApplicationRecord
+  include BillingPeriodDateDiff
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include RansackUuidSearch
+  include Terminatable
+  include ConnectionResolvable
 
   self.ignored_columns += %w[incompleted_at cancelation_reason]
 
@@ -19,8 +22,8 @@ class Subscription < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
   has_many :integration_resources, as: :syncable
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :fees
-  has_many :applied_rate_cards, class_name: "SubscriptionRateCard"
   has_many :daily_usages
   has_many :usage_thresholds
   has_many :entitlements, class_name: "Entitlement::Entitlement"
@@ -60,7 +63,7 @@ class Subscription < ApplicationRecord
     :incomplete
   ].freeze
 
-  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout"}.freeze
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout", manual: "manual"}.freeze
 
   BILLING_TIME = %i[
     calendar
@@ -230,6 +233,11 @@ class Subscription < ApplicationRecord
 
   def downgrade_plan_date
     return unless next_subscription
+    # Downgrades compare plan-level amounts and land at the end of the current
+    # period, neither of which product-catalog plans have: their price and their
+    # billing cycles live on the rate cards.
+    return if plan.product_catalog?
+
     if next_subscription.active? && downgraded?
       return next_subscription.started_at&.to_date
     end
@@ -247,35 +255,8 @@ class Subscription < ApplicationRecord
     name.presence || plan.invoice_name
   end
 
-  # When upgrade, we want to bill one day less since date of the upgrade will be
-  # included in the first invoice for the new plan
-  def date_diff_with_timezone(from_datetime, to_datetime)
-    number_od_days = Utils::Datetime.date_diff_with_timezone(
-      from_datetime,
-      to_datetime,
-      customer.applicable_timezone
-    )
-
-    return number_od_days unless terminated? && upgraded?
-
-    number_od_days -= 1
-
-    number_od_days.negative? ? 0 : number_od_days
-  end
-
   def should_sync_hubspot_subscription?
     customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_subscriptions }
-  end
-
-  def terminated_at?(timestamp)
-    return false unless terminated?
-    return false if terminated_at.nil? || timestamp.nil?
-
-    # TODO: should be cleaned up to only use Time
-    timestamp = timestamp.to_time if [Date, DateTime, String].include?(timestamp.class)
-    timestamp = Time.zone.at(timestamp) if timestamp.is_a?(Integer)
-
-    terminated_at.round <= timestamp.round
   end
 
   # TODO: Apply this method in CreateInvoiceSubscriptionService

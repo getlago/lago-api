@@ -151,6 +151,7 @@ module Api
           integration_customers: [
             [
               :id,
+              :code,
               :external_customer_id,
               :integration_type,
               :integration_code,

@@ -4,7 +4,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   subject(:event_store) do
     described_class.new(
       code:,
-      subscription:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries:,
       filters: {
         grouped_by:,
@@ -824,7 +824,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         subject(:event_store) do
           described_class.new(
             code:,
-            subscription:,
+            context: Events::Stores::EventContext.from(subscription:),
             boundaries:,
             filters: {
               grouped_by:,
@@ -1580,7 +1580,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1645,7 +1645,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1705,7 +1705,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1768,7 +1768,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1833,7 +1833,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1900,7 +1900,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          context: Events::Stores::EventContext.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -2749,6 +2749,16 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
         end
       end
+
+      context "when the last seen timestamp is not requested" do
+        it "returns the same charges and filters without the timestamp" do
+          result = event_store.distinct_charges_and_filters(with_last_seen_at: false)
+
+          expect(result.map { |row| row[0..1] })
+            .to match_array(event_store.distinct_charges_and_filters.map { |row| row[0..1] })
+          expect(result.map(&:last)).to all(be_nil)
+        end
+      end
     end
   end
 
@@ -2796,6 +2806,23 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.distinct_codes_and_property_combinations(codes: [], filter_keys: %w[region provider])
 
           expect(result).to eq([])
+        end
+      end
+
+      context "when the last seen timestamp is not requested" do
+        it "returns the same combinations without the timestamp" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code],
+            filter_keys: %w[region provider],
+            with_last_seen_at: false
+          )
+
+          expect(result.map { |row| row[0..1] }).to match_array(
+            event_store
+              .distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+              .map { |row| row[0..1] }
+          )
+          expect(result.map(&:last)).to all(be_nil)
         end
       end
 

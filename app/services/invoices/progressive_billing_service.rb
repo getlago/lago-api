@@ -92,16 +92,15 @@ module Invoices
     end
 
     def create_fees
-      filters = event_filters(subscription, boundaries).charges
+      filters = event_filters(subscription, boundaries).filter_targets
 
       charges.find_each do |charge|
         Fees::ChargeService.call!(
           invoice:,
-          charge:,
+          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
           subscription:,
-          context: :finalize,
-          boundaries:,
-          filtered_aggregations: filters[charge.id]&.keys || []
+          options: Fees::ChargeService::Options.new(context: :finalize),
+          filtered_aggregations: filters[charge.target_key]&.keys || []
         )
       end
     end
@@ -164,8 +163,8 @@ module Invoices
     end
 
     def event_filters(subscription, boundaries)
-      Events::BillingPeriodFilterService.call!(
-        subscription:, boundaries:
+      Events::BillingPeriodFilterService.for_charges!(
+        subscription:, boundaries:, with_last_seen_at: false
       )
     end
   end

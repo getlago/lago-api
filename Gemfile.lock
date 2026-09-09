@@ -64,7 +64,7 @@ GEM
       erubi (~> 1.11)
       rails-dom-testing (~> 2.2)
       rails-html-sanitizer (~> 1.6)
-    active_storage_validations (3.0.4)
+    active_storage_validations (3.0.6)
       activejob (>= 6.1.4)
       activemodel (>= 6.1.4)
       activestorage (>= 6.1.4)
@@ -142,7 +142,7 @@ GEM
     base64 (0.3.0)
     bcrypt (3.1.22)
     benchmark (0.5.0)
-    bigdecimal (4.0.1)
+    bigdecimal (4.1.2)
     bootsnap (1.21.1)
       msgpack (~> 1.2)
     builder (3.3.0)
@@ -199,8 +199,8 @@ GEM
     diff-lcs (1.6.2)
     digest-crc (0.7.0)
       rake (>= 12.0.0, < 14.0.0)
-    discard (1.4.0)
-      activerecord (>= 4.2, < 9.0)
+    discard (2.0.0)
+      activerecord (>= 7.0, < 9.0)
     docile (1.4.1)
     dogstatsd-ruby (5.7.1)
     dotenv (3.2.0)
@@ -288,7 +288,7 @@ GEM
     google-cloud-core (1.8.0)
       google-cloud-env (>= 1.0, < 3.a)
       google-cloud-errors (~> 1.0)
-    google-cloud-env (2.3.1)
+    google-cloud-env (2.4.0)
       base64 (~> 0.2)
       faraday (>= 1.0, < 3.a)
     google-cloud-errors (1.5.0)
@@ -307,13 +307,13 @@ GEM
       rake (>= 13)
     googleapis-common-protos-types (1.22.0)
       google-protobuf (~> 4.26)
-    googleauth (1.16.2)
+    googleauth (1.17.3)
       faraday (>= 1.0, < 3.a)
       google-cloud-env (~> 2.2)
       google-logging-utils (~> 0.1)
       jwt (>= 1.4, < 4.0)
-      multi_json (~> 1.11)
       os (>= 0.9, < 2.0)
+      pstore (~> 0.1)
       signet (>= 0.16, < 2.a)
     graphiql-rails (1.10.5)
       railties
@@ -345,10 +345,6 @@ GEM
     highline (3.1.2)
       reline
     htmlbeautifier (1.4.3)
-    httparty (0.24.2)
-      csv
-      mini_mime (>= 1.0.0)
-      multi_xml (>= 0.5.2)
     httpclient (2.9.0)
       mutex_m
     httplog (1.8.0)
@@ -376,7 +372,7 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     jmespath (1.6.2)
-    json (2.21.1)
+    json (2.21.2)
     json_schemer (2.5.0)
       bigdecimal
       hana (~> 1.3)
@@ -435,9 +431,9 @@ GEM
       karafka-core (>= 2.5.0, < 2.6.0)
       roda (~> 3.69, >= 3.69)
       tilt (~> 2.0)
-    knapsack_pro (9.2.3)
-      logger
+    knapsack_pro (10.0.1)
       rake
+      thor (~> 1.4)
     language_server-protocol (3.17.0.5)
     libdatadog (33.0.0.1.0)
     libdatadog (33.0.0.1.0-aarch64-linux)
@@ -469,17 +465,13 @@ GEM
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
     lumberjack (1.4.2)
-    mail (2.9.0)
+    mail (2.9.1)
       logger
       mini_mime (>= 0.1.1)
       net-imap
       net-pop
       net-smtp
     marcel (1.2.1)
-    meilisearch (0.33.0)
-      httparty (~> 0.24)
-    meilisearch-rails (0.14.1)
-      meilisearch (~> 0.28)
     method_source (1.1.0)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
@@ -505,12 +497,12 @@ GEM
     nenv (0.3.0)
     net-http (0.9.1)
       uri (>= 0.11.1)
-    net-imap (0.6.4.1)
+    net-imap (0.6.6)
       date
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.2)
+    net-protocol (0.3.0)
       timeout
     net-smtp (0.5.1)
       net-protocol
@@ -742,6 +734,7 @@ GEM
     pry-byebug (3.12.0)
       byebug (~> 13.0)
       pry (>= 0.13, < 0.17)
+    pstore (0.2.1)
     psych (5.3.1)
       date
       stringio
@@ -749,7 +742,7 @@ GEM
     puma (7.2.1)
       nio4r (~> 2.0)
     racc (1.8.1)
-    rack (3.2.6)
+    rack (3.2.7)
     rack-cors (3.0.0)
       logger
       rack (>= 3.0.14)
@@ -950,11 +943,10 @@ GEM
       concurrent-ruby (>= 1.2.0)
       redis-prescription (~> 2.2)
       sidekiq (>= 6.5)
-    signet (0.21.0)
+    signet (0.22.0)
       addressable (~> 2.8)
       faraday (>= 0.17.5, < 3.a)
       jwt (>= 1.5, < 4.0)
-      multi_json (~> 1.10)
     simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
@@ -997,10 +989,10 @@ GEM
     stripe (6.5.0)
     strong_migrations (2.5.2)
       activerecord (>= 7.1)
-    super_diff (0.18.0)
-      attr_extras (>= 6.2.4)
-      diff-lcs
-      patience_diff
+    super_diff (0.19.0)
+      attr_extras (>= 6.2.4, < 8)
+      diff-lcs (~> 1.5)
+      patience_diff (~> 1.2)
     temple (0.10.4)
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
@@ -1103,7 +1095,7 @@ DEPENDENCIES
   datadog
   debug
   device_detector
-  discard (~> 1.2)
+  discard (~> 2.0)
   dogstatsd-ruby
   dotenv
   dry-validation
@@ -1113,7 +1105,7 @@ DEPENDENCIES
   fuubar
   gocardless_pro (~> 2.34)
   google-cloud-storage
-  googleauth (~> 1.16.2)
+  googleauth (~> 1.17.0)
   graphiql-rails
   graphql
   graphql-pagination
@@ -1127,12 +1119,12 @@ DEPENDENCIES
   karafka (~> 2.5.0)
   karafka-testing
   karafka-web (~> 0.11.3)
-  knapsack_pro (~> 9.0)
+  knapsack_pro (~> 10.0)
   lago-expression!
   lograge
   logstash-event
-  meilisearch-rails
   money-rails
+  multi_json
   multipart-post
   mutex_m
   newrelic_rpm
@@ -1179,7 +1171,7 @@ DEPENDENCIES
   standard
   stripe
   strong_migrations
-  super_diff (~> 0.18.0)
+  super_diff (~> 0.19.0)
   throttling
   timecop
   tzinfo-data
@@ -1194,7 +1186,7 @@ DEPENDENCIES
   yabeda-rails
 
 RUBY VERSION
-  ruby 4.0.2
+  ruby 4.0.6
 
 BUNDLED WITH
-  4.0.4
+  4.0.16

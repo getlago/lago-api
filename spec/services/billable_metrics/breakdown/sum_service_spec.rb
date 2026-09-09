@@ -6,8 +6,8 @@ RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
   subject(:service) do
     described_class.new(
       event_store_class:,
-      charge:,
-      subscription:,
+      metered_item:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries: {
         from_datetime:,
         to_datetime:,
@@ -21,6 +21,19 @@ RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime: from_datetime,
+        charges_to_datetime: to_datetime,
+        charges_duration: 31,
+        timestamp: to_datetime
+      )
+    )
+  end
 
   let(:subscription) do
     create(

@@ -70,7 +70,7 @@ RSpec.describe Orders::ExecuteService do
         end
       end
 
-      context "when the order type is not supported yet" do
+      context "when the order is a subscription_amendment" do
         let(:order_type) { :subscription_amendment }
         let(:quote) do
           create(
@@ -81,6 +81,18 @@ RSpec.describe Orders::ExecuteService do
             subscription: create(:subscription, organization:, customer:)
           )
         end
+
+        it "delegates to the subscription_amendment execute service" do
+          allow(Orders::SubscriptionAmendment::ExecuteService).to receive(:call).and_call_original
+
+          execute_service.call
+
+          expect(Orders::SubscriptionAmendment::ExecuteService).to have_received(:call).with(order:)
+        end
+      end
+
+      context "when the order type has no execute service" do
+        before { allow(order).to receive(:order_type).and_return("scheduled_amendment") }
 
         it "returns a validation failure" do
           result = execute_service.call

@@ -34,6 +34,9 @@ module IntegrationCustomers
 
     enum :category, CATEGORIES, validate: {allow_nil: true}
 
+    before_validation :set_category
+    before_validation :set_code
+
     validates :customer_id, uniqueness: {scope: :type}
     validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
     validate :only_one_tax_integration_per_customer, if: :tax_kind?
@@ -86,6 +89,14 @@ module IntegrationCustomers
     end
 
     private
+
+    def set_category
+      self.category ||= self.class.category_for(type)
+    end
+
+    def set_code
+      self.code ||= integration&.code
+    end
 
     def only_one_tax_integration_per_customer
       conflict = IntegrationCustomers::BaseCustomer.tax_kind.where(customer_id:)

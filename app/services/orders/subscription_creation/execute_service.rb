@@ -55,23 +55,32 @@ module Orders
           # id. NOTE: localId is optional on plan items, so an item carrying neither mints a new
           # external id on every attempt.
           external_id: payload["subscriptionExternalId"].presence || item["localId"].presence || SecureRandom.uuid,
+          # Mandatory under the api source, where the customer is normally identified by it rather
+          # than passed. Inert otherwise, but the customer here is always the order's own.
+          external_customer_id: order.customer.external_id,
           name: payload["subscriptionName"],
           billing_time: payload["billingTime"],
-          subscription_at: subscription_datetime(payload["startDate"], quote_version.start_date),
-          ending_at: subscription_datetime(payload["endDate"], quote_version.end_date),
+          subscription_at: subscription_datetime(payload["startDate"]),
+          ending_at: subscription_datetime(payload["endDate"]),
           payment_method: payment_method_params(payload),
+          billing_entity_id: quoted_billing_entity_id,
           plan_overrides: plan_overrides(item, plan).presence,
           usage_thresholds: usage_thresholds(item).presence
         }.compact
       end
 
-      # quote_versions.start_date and end_date are date columns, and the payload may carry a bare
-      # date too. A date reaches a datetime attribute as midnight UTC, which is the previous day for
-      # a customer west of UTC: Subscriptions::CreateService would then take its past subscription
-      # path and anniversary date. A calendar date means that day for the customer, so it is read in
-      # their timezone.
-      def subscription_datetime(payload_value, version_value)
-        value = payload_value.presence || version_value
+      # The raw column, not the applicable one: a deal that named no entity leaves the subscription
+      # and the wallets inheriting the customer's at billing time, which is what NULL means here.
+      def quoted_billing_entity_id
+        order.quote_version.billing_entity_id
+      end
+
+      # The payload may carry a bare date. A date reaches a datetime attribute as midnight UTC,
+      # which is the previous day for a customer west of UTC: Subscriptions::CreateService would
+      # then take its past subscription path and anniversary date. A calendar date means that day
+      # for the customer, so it is read in their timezone.
+      def subscription_datetime(payload_value)
+        value = payload_value.presence
         date = calendar_date(value)
         return value if date.nil?
 
@@ -81,7 +90,6 @@ module Orders
       # A string that only looks like a date is left alone for Subscriptions::ValidateService to
       # reject.
       def calendar_date(value)
-        return value.to_date if value.is_a?(Date)
         return nil unless value.is_a?(String) && CALENDAR_DATE.match?(value)
 
         Utils::Datetime.parse_iso8601_date(value)
@@ -100,6 +108,7 @@ module Orders
 
         {
           amount_cents: overrides["amountCents"],
+          amount_currency: overrides["amountCurrency"],
           invoice_display_name: overrides["invoiceDisplayName"],
           name: overrides["name"],
           description: overrides["description"],
@@ -128,7 +137,7 @@ module Orders
         Array(item.dig("overrides", "charges")).map do |override|
           {
             id: charge_id!(item, plan, override["billableMetricCode"]),
-            properties: override["properties"],
+            properties: Utils::ChargeProperties.underscore_keys(override["properties"]),
             min_amount_cents: override["minAmountCents"],
             invoice_display_name: override["invoiceDisplayName"]
           }.compact
@@ -140,7 +149,7 @@ module Orders
           {
             id: fixed_charge_id!(item, plan, override["addOnCode"]),
             units: override["units"],
-            properties: override["properties"],
+            properties: Utils::ChargeProperties.underscore_keys(override["properties"]),
             invoice_display_name: override["invoiceDisplayName"]
           }.compact
         end
@@ -219,11 +228,12 @@ module Orders
         end
       end
 
-      # amount_currency is left out on purpose so it falls back to the coupon's own currency,
-      # which approve validation pins to the deal currency.
+      # Only the override states a currency: the payload's own is the catalog snapshot, and
+      # AppliedCoupons::CreateService already falls back to the live coupon's when none is given.
       def coupon_params(item)
         {
           amount_cents: effective_value(item, "amountCents"),
+          amount_currency: item.dig("overrides", "amountCurrency"),
           percentage_rate: effective_value(item, "percentageRate"),
           frequency: effective_value(item, "frequency"),
           frequency_duration: effective_value(item, "frequencyDuration")
@@ -243,6 +253,7 @@ module Orders
           organization_id: order.organization_id,
           customer: order.customer,
           currency: payload["currency"] || order.currency,
+          billing_entity_id: quoted_billing_entity_id,
           name: payload["name"],
           rate_amount: payload["rateAmount"],
           paid_credits: payload["paidCredits"],
@@ -261,6 +272,9 @@ module Orders
 
         {
           fee_types: applies_to["feeTypes"].presence,
+          # Wallets::CreateService reads the codes under the api source and the ids otherwise, so
+          # the limitation must be stated both ways for the execution to be transport independent.
+          billable_metric_codes: applies_to["billableMetricCodes"].presence,
           billable_metric_ids: billable_metric_ids!(applies_to["billableMetricCodes"])
         }.compact.presence
       end
@@ -325,10 +339,6 @@ module Orders
           .coupons
           .where(id: coupon_items.map { |item| item["id"] })
           .index_by(&:id)
-      end
-
-      def quote_version
-        order.quote_version
       end
     end
   end

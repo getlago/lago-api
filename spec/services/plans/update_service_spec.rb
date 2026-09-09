@@ -152,6 +152,20 @@ RSpec.describe Plans::UpdateService do
       applied_tax
     end
 
+    context "when the plan is a catalog plan" do
+      let(:plan) { create(:plan, organization:, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil) }
+
+      it "rejects legacy pricing fields and accepts the others" do
+        result = described_class.call(plan:, params: {amount_cents: 100})
+        expect(result).to be_failure
+        expect(result.error.messages[:amount_cents]).to eq(["legacy_billing_disabled"])
+
+        result = described_class.call(plan:, params: {name: "Renamed"})
+        expect(result).to be_success
+        expect(plan.reload.name).to eq("Renamed")
+      end
+    end
+
     it "updates a plan" do
       result = plans_service.call
 

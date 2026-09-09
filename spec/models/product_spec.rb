@@ -92,7 +92,7 @@ RSpec.describe Product do
 
     it "is true when a subscription product references it" do
       rate_card = create(:rate_card, organization: product.organization, product:)
-      create(:subscription_rate_card, organization: product.organization, rate_card:)
+      create(:contract_rate_card, organization: product.organization, rate_card:)
 
       expect(product.attached_to_plan_or_subscription?).to be(true)
     end

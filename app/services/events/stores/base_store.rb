@@ -56,9 +56,9 @@ module Events
         :events_count
       )
 
-      def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      def initialize(context:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
-        @subscription = subscription
+        @context = context
         @boundaries = boundaries
 
         @filters = filters
@@ -103,7 +103,7 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
         []
       end
 
@@ -213,16 +213,12 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+      attr_accessor :code, :context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
 
-      delegate :customer, to: :subscription
+      delegate :customer, to: :context
 
       def period_duration
-        @period_duration ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?
-        ).charges_duration_in_days
+        @period_duration ||= context.charges_duration_at(to_datetime + 1.day)
       end
 
       def build_aggregation_result(row)

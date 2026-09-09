@@ -937,7 +937,9 @@ describe "Billing Boundaries Scenario" do
         invoice = subscription.invoices.order(created_at: :desc).first
         invoice_subscription = invoice.invoice_subscriptions.first
 
-        expect(invoice_subscription.from_datetime).to match_datetime("2024-02-29T00:00:00Z")
+        # Charges-only invoice: the subscription fee period is the semiannual one that is open,
+        # not the day it is billed on. February is not a billing month here.
+        expect(invoice_subscription.from_datetime).to match_datetime("2024-01-31T00:00:00Z")
         expect(invoice_subscription.charges_from_datetime).to match_datetime("2024-01-31T01:00:00Z")
         expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-02-28T23:59:59Z")
         expect(invoice_subscription.fixed_charges_from_datetime).to eq(nil)
@@ -992,7 +994,9 @@ describe "Billing Boundaries Scenario" do
         invoice = subscription.invoices.order(created_at: :desc).first
         invoice_subscription = invoice.invoice_subscriptions.first
 
-        expect(invoice_subscription.from_datetime).to match_datetime("2024-02-29T00:00:00Z")
+        # Charges-only invoice: the subscription fee period is the semiannual one that is open,
+        # not the day it is billed on. February is not a billing month here.
+        expect(invoice_subscription.from_datetime).to match_datetime("2024-01-31T00:00:00Z")
         expect(invoice_subscription.charges_from_datetime).to eq(nil)
         expect(invoice_subscription.charges_to_datetime).to eq(nil)
         expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-01-31T01:00:00Z")

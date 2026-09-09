@@ -148,7 +148,7 @@ module BillableMetrics
         @persisted_event_store_instance ||= begin
           event_store = event_store_class.new(
             code: billable_metric.code,
-            subscription:,
+            context:,
             boundaries: {to_datetime: from_datetime - PERSISTED_TOP_BOUNDARY_DELAY}, # Note: Avoid counting events exactly on `from_datetime` twice
             filters:,
             deduplicate: deduplicate?
@@ -175,7 +175,7 @@ module BillableMetrics
       def persisted_prorated_result
         @persisted_prorated_result ||= persisted_event_store_instance.prorated_sum(
           period_duration:,
-          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
+          persisted_duration: context.date_diff_with_timezone(from_datetime, to_datetime)
         )
       end
 
@@ -242,7 +242,7 @@ module BillableMetrics
       def persisted_grouped_prorated_results
         @persisted_grouped_prorated_results ||= persisted_event_store_instance.grouped_prorated_sum(
           period_duration:,
-          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
+          persisted_duration: context.date_diff_with_timezone(from_datetime, to_datetime)
         )
       end
     end

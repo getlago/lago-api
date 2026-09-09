@@ -163,6 +163,13 @@ module QuoteVersions
                         "minimum" => 0,
                         "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
                       },
+                      # Plans::OverrideService reprices the duplicated plan in this currency, which is
+                      # how a plan from the catalog is quoted in the currency of the deal.
+                      "amountCurrency" => {
+                        "type" => %w[string null],
+                        "enum" => CURRENCIES + [nil],
+                        "x-error" => {"type" => "invalid_type", "enum" => "invalid_currency"}
+                      },
                       "invoiceDisplayName" => {
                         "type" => %w[string null],
                         "minLength" => 1,
@@ -243,7 +250,10 @@ module QuoteVersions
                             # NOTE: chargeModel is stored for the execution flow to consume,
                             # Charges::OverrideService cannot switch models yet. properties is
                             # deliberately only type-checked: its shape per charge model is
-                            # validated where the override is applied, not here.
+                            # validated where the override is applied, not here. Its keys are
+                            # submitted in the camelCase of the payload and underscored by
+                            # Utils::ChargeProperties wherever they are read, since the charge
+                            # models themselves know them in snake_case.
                             "chargeModel" => {
                               "type" => %w[string null],
                               "enum" => [*CHARGE_MODELS, nil],
@@ -376,6 +386,13 @@ module QuoteVersions
                         "type" => %w[integer null],
                         "minimum" => 0,
                         "x-error" => {"type" => "invalid_type", "minimum" => "invalid_value"}
+                      },
+                      # AppliedCoupons::CreateService applies the coupon in this currency, which is
+                      # how a catalog coupon is quoted in the currency of the deal.
+                      "amountCurrency" => {
+                        "type" => %w[string null],
+                        "enum" => CURRENCIES + [nil],
+                        "x-error" => {"type" => "invalid_type", "enum" => "invalid_currency"}
                       },
                       "percentageRate" => {
                         "type" => %w[number null],

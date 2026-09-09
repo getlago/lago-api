@@ -11,6 +11,11 @@ module UsageMonitoring
     end
 
     def call
+      unless subscription.active?
+        subscription_activity.delete
+        return result
+      end
+
       exception_to_raise = nil
       lifetime_usage = find_or_create_lifetime_usage
 

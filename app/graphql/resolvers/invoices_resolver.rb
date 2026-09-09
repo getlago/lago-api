@@ -9,8 +9,8 @@ module Resolvers
 
     description "Query invoices"
 
-    argument :amount_from, Integer, required: false
-    argument :amount_to, Integer, required: false
+    argument :amount_from, GraphQL::Types::BigInt, required: false
+    argument :amount_to, GraphQL::Types::BigInt, required: false
     argument :billing_entity_ids, [ID], required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
@@ -32,7 +32,7 @@ module Resolvers
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
     argument :subscription_id, ID, required: false
 
-    type Types::Invoices::Object.collection_type, null: false
+    type Types::Invoices::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata), null: false
 
     def resolve( # rubocop:disable Metrics/ParameterLists
       amount_from: nil,
@@ -60,7 +60,6 @@ module Resolvers
     )
       result = InvoicesQuery.call(
         organization: current_organization,
-        meilisearch: true,
         pagination: {page:, limit:},
         search_term:,
         filters: {
@@ -88,7 +87,7 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      invoices = result.invoices
+      invoices = result.invoices.without_count.extend(BaseQuery::CappedTotalCount)
 
       ActiveRecord::Associations::Preloader.new(
         records: invoices.to_a,

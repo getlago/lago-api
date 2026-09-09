@@ -11,7 +11,7 @@ RSpec.describe ProductCategory do
     it do
       expect(product_category).to belong_to(:organization)
       expect(product_category).to have_many(:products)
-      expect(product_category).to have_many(:subscription_applied_rate_cards).through(:products)
+      expect(product_category).to have_many(:contract_applied_rate_cards).through(:products)
     end
   end
 
@@ -73,7 +73,7 @@ RSpec.describe ProductCategory do
     it "is true when one of its items has a subscription product" do
       item = create(:product, organization: product_category.organization, product_category:)
       rate_card = create(:rate_card, organization: product_category.organization, product: item)
-      create(:subscription_rate_card, organization: product_category.organization, rate_card:)
+      create(:contract_rate_card, organization: product_category.organization, rate_card:)
 
       expect(product_category.attached_to_plan_or_subscription?).to be(true)
     end

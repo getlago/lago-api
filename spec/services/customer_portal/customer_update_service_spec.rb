@@ -64,6 +64,19 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     expect(updated_customer.shipping_country).to eq(shipping_address[:country].upcase)
   end
 
+  it "refreshes the invoices search terms when a searchable field changes" do
+    expect { result }
+      .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+  end
+
+  context "when no searchable field changes" do
+    let(:update_args) { {city: "Updated customer city"} }
+
+    it "does not refresh the invoices search terms" do
+      expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+    end
+  end
+
   context "when partialy updating" do
     let(:update_args) do
       {

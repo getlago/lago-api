@@ -53,9 +53,8 @@ module Fees
       return result.fail_with_error!(aggregation_result.error) unless aggregation_result.success?
 
       charge_model_result = ChargeModels::Factory.new_instance(
-        chargeable: charge,
+        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties: properties_for_charge_model),
         aggregation_result:,
-        properties: properties_for_charge_model,
         period_ratio:,
         calculate_projected_usage: true
       ).apply
@@ -113,8 +112,19 @@ module Fees
       }
 
       aggregator = BillableMetrics::AggregationFactory.new_instance(
-        charge: charge,
-        subscription: subscription,
+        metered_item: ChargeService::MeteredItem.from_charge(
+          charge:,
+          charge_filter:,
+          boundaries: BillingPeriodBoundaries.new(
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime: from_datetime,
+            charges_to_datetime: to_datetime,
+            charges_duration: charges_duration_in_days,
+            timestamp: first_fee.properties["timestamp"]
+          )
+        ),
+        context: Events::Stores::EventContext.from(subscription:),
         boundaries: boundaries,
         filters: aggregation_filters,
         current_usage: true

@@ -45,6 +45,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             invoice_requires_successful_payment: false,
             metadata: [],
             name: "Recurring Transaction Rule",
+            ignore_paid_top_up_limits: false,
             purchase_order_number: nil
           }.merge(attrs)
         )
@@ -142,7 +143,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             create_interval_transactions_service.call
             expect_to_have_scheduled_wallet_transaction(
               paid_credits: "200.0", # the gap is 150 but wallet has min amount set to 200
-              granted_credits: "0.0"
+              granted_credits: "0.0",
+              ignore_paid_top_up_limits: true
             )
           end
         end
@@ -166,7 +168,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
               create_interval_transactions_service.call
               expect_to_have_scheduled_wallet_transaction(
                 paid_credits: "0.0",
-                granted_credits: "150.0"
+                granted_credits: "150.0",
+                ignore_paid_top_up_limits: true
               )
             end
           end
@@ -693,7 +696,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0")
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0", ignore_paid_top_up_limits: true)
           end
         end
       end
@@ -717,7 +720,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0")
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0", ignore_paid_top_up_limits: true)
           end
         end
       end

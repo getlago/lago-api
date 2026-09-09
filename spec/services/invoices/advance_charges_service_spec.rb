@@ -244,6 +244,34 @@ RSpec.describe Invoices::AdvanceChargesService do
         expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
         expect(sub.invoicing_reason).to eq "in_advance_charge_periodic"
       end
+
+      context "when a terminated subscription started after a backdated active subscription" do
+        let(:billing_at) { Time.zone.parse("2025-02-01T00:00:00") }
+        let(:started_at) { Time.zone.parse("2024-03-01T10:00:00") }
+
+        let(:subscription_2) do
+          create(
+            :subscription,
+            external_id: subscription.external_id,
+            customer:,
+            status: :terminated,
+            terminated_at: Time.zone.parse("2024-04-05T10:00:00"),
+            subscription_at: Date.new(2024, 3, 15),
+            started_at: Time.zone.parse("2024-03-15T10:00:00"),
+            plan:
+          )
+        end
+
+        it "stamps the invoice subscription with the current billing period" do
+          invoice_subscription = invoice_service.call.invoice.invoice_subscriptions.sole
+
+          expect(invoice_subscription).to have_attributes(
+            subscription: subscription_2,
+            charges_from_datetime: match_datetime("2025-01-01T00:00:00Z"),
+            charges_to_datetime: match_datetime("2025-01-31T23:59:59Z")
+          )
+        end
+      end
     end
 
     context "when re-expanded subscriptions carry different purchase order numbers" do

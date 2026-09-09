@@ -10,6 +10,10 @@ RSpec.describe Subscription do
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
 
+  it_behaves_like "a connection-resolvable billing object" do
+    let(:resolvable) { create(:subscription) }
+  end
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:status).with_values(
@@ -33,7 +37,7 @@ RSpec.describe Subscription do
         .with_prefix(:on_termination_invoice)
       expect(subject).to define_enum_for(:cancellation_reason)
         .backed_by_column_of_type(:enum)
-        .with_values(payment_failed: "payment_failed", timeout: "timeout")
+        .with_values(payment_failed: "payment_failed", timeout: "timeout", manual: "manual")
     end
   end
 
@@ -71,6 +75,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:invoice_subscriptions)
       expect(subject).to have_many(:invoices).through(:invoice_subscriptions)
       expect(subject).to have_many(:integration_resources)
+      expect(subject).to have_many(:billing_object_connections).dependent(:destroy)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
       expect(subject).to have_many(:usage_thresholds)
@@ -827,6 +832,25 @@ RSpec.describe Subscription do
         travel_to(Time.zone.parse("2022-07-03T00:00:00Z")) do
           expect(subscription.downgrade_plan_date).to eq(Date.parse("4 Jul 2022"))
         end
+      end
+    end
+
+    context "with a product-catalog plan" do
+      let(:plan) do
+        create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
+      end
+      let(:subscription) { create(:subscription, plan:) }
+
+      it "returns nil rather than deriving a plan-level period" do
+        create(:subscription, previous_subscription: subscription, status: :pending)
+
+        expect(subscription.downgrade_plan_date).to be_nil
+      end
+
+      it "returns nil without comparing plan amounts when the next subscription is active" do
+        create(:subscription, previous_subscription: subscription, status: :active)
+
+        expect(subscription.downgrade_plan_date).to be_nil
       end
     end
 

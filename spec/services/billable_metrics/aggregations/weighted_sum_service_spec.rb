@@ -6,8 +6,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
   subject(:aggregator) do
     described_class.new(
       event_store_class:,
-      charge:,
-      subscription:,
+      metered_item:,
+      context: Events::Stores::EventContext.from(subscription:),
       boundaries: {
         from_datetime:,
         to_datetime:,
@@ -19,6 +19,19 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime: from_datetime,
+        charges_to_datetime: to_datetime,
+        charges_duration:,
+        timestamp: to_datetime
+      )
+    )
+  end
   let(:bypass_aggregation) { false }
   let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
 

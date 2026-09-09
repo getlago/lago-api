@@ -302,6 +302,12 @@ module Subscriptions
       date.day == date.end_of_month.day
     end
 
+    # NOTE: the anniversary day of a month that is shorter than the subscription day, clamped to that
+    #       month. Resolved from the subscription, so a short month never drags the following periods.
+    def anniversary_day_in(year, month)
+      [subscription_at.day, Time.days_in_month(month, year)].min
+    end
+
     def compute_base_date
       raise(NotImplementedError)
     end

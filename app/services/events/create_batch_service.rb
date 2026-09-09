@@ -68,8 +68,10 @@ module Events
         return if result.errors.any?
       end
 
-      KafkaProducerService.call!(events: result.events, organization:)
+      # Enqueued before producing to Kafka so that a failed enqueue leaves nothing behind
+      # downstream either.
       enqueue_post_process_jobs if organization.postgres_events_store?
+      KafkaProducerService.call!(events: result.events, organization:)
     end
 
     def bulk_insert_events
@@ -100,6 +102,11 @@ module Events
     def enqueue_post_process_jobs
       jobs = result.events.map { |event| Events::PostProcessJob.new(event:) }
       ApplicationJob.perform_all_later(jobs)
+    rescue
+      # `perform_all_later` is a single bulk push, so one failure strands the whole batch. Hard-deleted
+      # rather than discarded for the same reason as in `Events::CreateService`.
+      Event.where(id: result.events.map(&:id)).delete_all
+      raise
     end
   end
 end

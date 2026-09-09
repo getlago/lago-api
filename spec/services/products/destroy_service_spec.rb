@@ -50,7 +50,7 @@ RSpec.describe Products::DestroyService do
   context "when the item is attached to a subscription" do
     before do
       rate_card = create(:rate_card, organization:, product:)
-      create(:subscription_rate_card, organization:, rate_card:)
+      create(:contract_rate_card, organization:, rate_card:)
     end
 
     it "returns a validation failure and discards nothing" do

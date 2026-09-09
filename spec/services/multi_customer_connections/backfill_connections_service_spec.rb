@@ -12,7 +12,12 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
   describe "#call" do
     context "with a payment_provider_customer missing a code" do
       let(:provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
-      let(:pp_customer) { create(:stripe_customer, customer:, organization:, payment_provider: provider, code: nil) }
+      let(:pp_customer) do
+        # Simulate a legacy row: the model now derives code on save, so null it directly.
+        create(:stripe_customer, customer:, organization:, payment_provider: provider).tap do |pp|
+          pp.update_columns(code: nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
 
       before { pp_customer }
 
@@ -46,7 +51,12 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
 
     context "with an integration_customer missing code and category" do
       let(:integration) { create(:netsuite_integration, organization:, code: "netsuite_eu") }
-      let(:int_customer) { create(:netsuite_customer, customer:, organization:, integration:, code: nil, category: nil) }
+      let(:int_customer) do
+        # Simulate a legacy row: the model now derives code/category on save, so null them directly.
+        create(:netsuite_customer, customer:, organization:, integration:).tap do |ic|
+          ic.update_columns(code: nil, category: nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
 
       before { int_customer }
 
@@ -81,8 +91,11 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
       let(:integration_b) { create(:xero_integration, organization:, code: "xero_b") }
 
       before do
-        create(:netsuite_customer, customer:, organization:, integration: integration_a, code: nil, category: nil)
-        create(:xero_customer, customer:, organization:, integration: integration_b, code: nil, category: nil)
+        # Simulate legacy rows: the model now derives code/category on save, so null them directly.
+        create(:netsuite_customer, customer:, organization:, integration: integration_a)
+          .update_columns(code: nil, category: nil) # rubocop:disable Rails/SkipsModelValidations
+        create(:xero_customer, customer:, organization:, integration: integration_b)
+          .update_columns(code: nil, category: nil) # rubocop:disable Rails/SkipsModelValidations
       end
 
       it "backfills codes/categories but sets no default and records a conflict" do
@@ -98,7 +111,12 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
     context "with dry_run: true" do
       let(:dry_run) { true }
       let(:provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
-      let(:pp_customer) { create(:stripe_customer, customer:, organization:, payment_provider: provider, code: nil) }
+      let(:pp_customer) do
+        # Simulate a legacy row: the model now derives code on save, so null it directly.
+        create(:stripe_customer, customer:, organization:, payment_provider: provider).tap do |pp|
+          pp.update_columns(code: nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
 
       before { pp_customer }
 

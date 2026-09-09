@@ -76,9 +76,10 @@ RSpec.describe SubscriptionsQuery do
   end
 
   context "with search_term" do
+    let(:plan) { create(:plan, organization:, name: "Test Plan") }
     let(:subscription) { create(:subscription, customer:, plan:, name: "Test Subscription") }
     let(:subscription_2) { create(:subscription, customer:, plan:, name: "Test Subscription 2") }
-    let(:other_plan) { create(:plan, organization:) }
+    let(:other_plan) { create(:plan, organization:, name: "Other Plan") }
     let(:other_subscription) { create(:subscription, customer:, plan: other_plan, name: "Other Subscription") }
 
     before { subscription_2 }

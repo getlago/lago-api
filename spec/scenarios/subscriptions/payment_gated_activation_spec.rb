@@ -249,6 +249,36 @@ describe "Payment Gated Subscription Activation Scenarios" do
         expect(invoice.payment_status).not_to eq("failed")
       end
     end
+
+    context "when the Stripe connection does not support 3DS" do
+      before { stub_off_session_rejection_then_on_session_retry }
+
+      it "keeps the subscription incomplete so the customer can still authenticate" do
+        # Stage 1: the off-session charge is rejected, the authentication retry takes over
+        create_subscription(subscription_params)
+        perform_all_enqueued_jobs
+
+        subscription = customer.subscriptions.sole
+        invoice = subscription.invoices.sole
+        rejected_payment = invoice.payments.find_by(error_code: "authentication_required")
+
+        expect(rejected_payment).to be_present
+        expect(subscription).to be_incomplete
+        expect(subscription.cancellation_reason).to be_nil
+        expect(subscription.activation_rules.sole).to be_pending
+        expect(invoice.reload).to be_open
+        expect(invoice.payment_status).not_to eq("failed")
+
+        # Stage 2: Stripe reports the rejected off-session intent as failed
+        simulate_rejected_intent_failure_webhook(rejected_payment)
+
+        expect(subscription.reload).to be_incomplete
+        expect(subscription.cancellation_reason).to be_nil
+        expect(subscription.activation_rules.sole).to be_pending
+        expect(invoice.reload).to be_open
+        expect(invoice.payment_status).not_to eq("failed")
+      end
+    end
   end
 
   describe "payment failure: subscription canceled" do
@@ -1572,6 +1602,66 @@ describe "Payment Gated Subscription Activation Scenarios" do
           expect(wallet.wallet_transactions.inbound.where(voided_invoice_id: invoice.id)).not_to exist
         end
       end
+    end
+  end
+
+  describe "merchant cancels the gated subscription" do
+    before do
+      # Best-effort PSP cancel calls Stripe; mock the SDK to return a canceled intent.
+      allow(::Stripe::PaymentIntent).to receive(:cancel).and_return(
+        ::Stripe::PaymentIntent.construct_from(
+          id: payment_intent_id,
+          object: "payment_intent",
+          status: "canceled",
+          amount: 1000,
+          currency: "eur"
+        )
+      )
+    end
+
+    it "cancels the gated subscription with cancellation_reason: manual" do
+      # Stage 1: Create gated subscription
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      expect(subscription).to be_incomplete
+      expect(subscription.activation_rules.sole).to be_pending
+
+      invoice = subscription.invoices.sole
+      expect(invoice).to be_open
+
+      expect(invoice.payments.sole.provider_payment_id).to eq(payment_intent_id)
+
+      # Stage 2: Merchant terminates the subscription while it is still gated
+      terminate_subscription(subscription, params: {status: "incomplete"})
+
+      expect(json[:subscription][:status]).to eq("canceled")
+      expect(json[:subscription][:cancellation_reason]).to eq("manual")
+
+      subscription.reload
+      expect(subscription).to be_canceled
+      expect(subscription.cancellation_reason).to eq("manual")
+      expect(subscription.activated_at).to be_nil
+      expect(subscription.activation_rules.sole).to be_declined
+
+      expect(invoice.reload).to be_closed
+      expect(::Stripe::PaymentIntent).to have_received(:cancel)
+    end
+
+    it "leaves an already activated subscription alone" do
+      create_subscription(subscription_params)
+      perform_all_enqueued_jobs
+
+      subscription = customer.subscriptions.sole
+      simulate_stripe_webhook(status: "succeeded")
+
+      expect(subscription.reload).to be_active
+
+      terminate_subscription(subscription, params: {status: "incomplete"}, raise_on_error: false)
+
+      expect(response).to have_http_status(:not_found)
+      expect(subscription.reload).to be_active
     end
   end
 

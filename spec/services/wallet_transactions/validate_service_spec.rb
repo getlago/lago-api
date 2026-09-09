@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe WalletTransactions::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
-  let(:result) { BaseResult[:current_wallet, :payment_method].new }
+  let(:result) { BaseResult[:current_wallet, :payment_method, :voided_wallet_transaction].new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -202,6 +202,64 @@ RSpec.describe WalletTransactions::ValidateService do
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
         expect(result.error.messages[:voided_credits]).to eq(["invalid_voided_credits", "invalid_amount"])
+      end
+    end
+
+    context "with voided_transaction_id" do
+      let(:args) { {wallet_id:, organization_id: organization.id, voided_transaction_id:} }
+      let(:voided_transaction_id) { wallet_transaction.id }
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, transaction_type: :inbound, transaction_status: :granted,
+          status: :settled, amount: 5, credit_amount: 5, remaining_amount_cents: 500)
+      end
+
+      before { wallet_transaction }
+
+      it "is valid and memoizes the targeted transaction" do
+        expect(validate_service).to be_valid
+        expect(result.voided_wallet_transaction).to eq(wallet_transaction)
+      end
+
+      context "when the wallet is not traceable" do
+        let(:wallet) { create(:wallet, customer:, traceable: false) }
+
+        it "is invalid" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:voided_transaction_id]).to eq(["wallet_not_traceable"])
+        end
+      end
+
+      context "when the transaction is not an inbound of the wallet" do
+        let(:voided_transaction_id) { create(:wallet_transaction, transaction_type: :inbound).id }
+
+        it "is invalid" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:voided_transaction_id]).to eq(["wallet_transaction_not_found"])
+        end
+      end
+
+      context "when the targeted transaction is fully consumed" do
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, transaction_type: :inbound, transaction_status: :granted,
+            status: :settled, amount: 5, credit_amount: 5, remaining_amount_cents: 0)
+        end
+
+        it "is invalid" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:voided_transaction_id]).to eq(["no_remaining_amount"])
+        end
+      end
+
+      context "when the targeted transaction is unsettled" do
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, transaction_type: :inbound, transaction_status: :purchased,
+            status: :pending, amount: 5, credit_amount: 5, remaining_amount_cents: nil)
+        end
+
+        it "is invalid" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:voided_transaction_id]).to eq(["no_remaining_amount"])
+        end
       end
     end
 

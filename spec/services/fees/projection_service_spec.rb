@@ -137,8 +137,8 @@ RSpec.describe Fees::ProjectionService do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          charge: charge,
-          subscription: subscription,
+          metered_item: have_attributes(charge:, charge_filter: nil),
+          context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
             to_datetime: match_datetime(to_datetime),
@@ -162,9 +162,14 @@ RSpec.describe Fees::ProjectionService do
         service.call
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          chargeable: charge,
+          pricing_structure: have_attributes(
+            charge_model: charge.charge_model,
+            properties: charge.properties,
+            prorated: charge.prorated?,
+            accepts_target_wallet: charge.accepts_target_wallet,
+            currency: charge.plan.amount.currency
+          ),
           aggregation_result:,
-          properties: charge.properties,
           period_ratio: expected_period_ratio,
           calculate_projected_usage: true
         )
@@ -196,7 +201,7 @@ RSpec.describe Fees::ProjectionService do
 
     context "with charge filter" do
       let(:charge_filter) do
-        create(:charge_filter, properties: {"amount" => "1000"})
+        create(:charge_filter, charge:, properties: {"amount" => "1000"})
       end
 
       let(:filter_service_result) do
@@ -218,8 +223,8 @@ RSpec.describe Fees::ProjectionService do
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          charge: charge,
-          subscription: subscription,
+          metered_item: have_attributes(charge:, charge_filter:),
+          context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
             to_datetime: match_datetime(to_datetime),
@@ -235,9 +240,14 @@ RSpec.describe Fees::ProjectionService do
         )
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          chargeable: charge,
+          pricing_structure: have_attributes(
+            charge_model: charge.charge_model,
+            properties: charge_filter.properties,
+            prorated: charge.prorated?,
+            accepts_target_wallet: charge.accepts_target_wallet,
+            currency: charge.plan.amount.currency
+          ),
           aggregation_result:,
-          properties: charge_filter.properties,
           period_ratio: 0.5,
           calculate_projected_usage: true
         )

@@ -12,6 +12,7 @@ module Types
 
       field :applied_coupon_ids, [ID], null: false
       field :subscription_ids, [ID], null: false
+      field :terminated_subscription_ids, [ID], null: false
       field :wallet_ids, [ID], null: false
 
       def errors
@@ -26,6 +27,10 @@ module Types
 
       def subscription_ids
         object["subscription_ids"] || []
+      end
+
+      def terminated_subscription_ids
+        object["terminated_subscription_ids"] || []
       end
 
       def wallet_ids

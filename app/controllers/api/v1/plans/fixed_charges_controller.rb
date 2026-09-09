@@ -4,6 +4,8 @@ module Api
   module V1
     module Plans
       class FixedChargesController < BaseController
+        include Api::ForbidsLegacyBilling
+
         before_action :find_fixed_charge, only: %i[show update destroy]
 
         def index

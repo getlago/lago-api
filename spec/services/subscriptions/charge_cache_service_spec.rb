@@ -32,6 +32,24 @@ RSpec.describe Subscriptions::ChargeCacheService do
           .to eq("charge-usage/#{described_class::LAZY_CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}")
       end
     end
+
+    context "with full usage" do
+      subject(:cache_service) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true) }
+
+      it "returns a cache key distinct from the current usage one" do
+        expect(cache_service.cache_key)
+          .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/full-usage")
+      end
+
+      context "with a charge filter" do
+        let(:charge_filter) { create(:charge_filter) }
+
+        it "returns the cache key with the charge filter" do
+          expect(cache_service.cache_key)
+            .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/#{charge_filter.id}/#{charge_filter.updated_at.iso8601}/full-usage")
+        end
+      end
+    end
   end
 
   describe "#expire_cache" do
@@ -41,6 +59,22 @@ RSpec.describe Subscriptions::ChargeCacheService do
       cache_service.expire_cache
 
       expect(Rails.cache).to have_received(:delete).with(cache_service.cache_key)
+    end
+  end
+
+  describe ".expire_cache" do
+    let(:current_usage_key) { described_class.new(subscription:, charge:, charge_filter:).cache_key }
+    let(:full_usage_key) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true).cache_key }
+
+    # Both go unconditionally: removing usage (a deleted metric, de-duplicated events) does not
+    # advance the ingestion watermark, so lazy validation would not clear what was left behind.
+    it "deletes both the current usage and the full usage entries" do
+      allow(Rails.cache).to receive(:delete)
+
+      described_class.expire_cache(subscription:, charge:, charge_filter:)
+
+      expect(Rails.cache).to have_received(:delete).with(current_usage_key)
+      expect(Rails.cache).to have_received(:delete).with(full_usage_key)
     end
   end
 
@@ -77,7 +111,7 @@ RSpec.describe Subscriptions::ChargeCacheService do
         described_class.expire_for_subscriptions(ids)
       end
 
-      # 4 expected SELECTs: subscriptions, plans, charges, filters. Add a small
+      # 5 expected SELECTs: subscriptions, organizations, plans, charges, filters. Add a small
       # safety margin for incidental loads (e.g. activity log context).
       expect(query_count).to be <= 6
     end

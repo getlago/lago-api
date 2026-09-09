@@ -141,6 +141,65 @@ RSpec.describe Orders::UpdateService do
         end
       end
 
+      context "when execute_at outlives the deal" do
+        let(:quote) { create(:quote, organization:, customer:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            :with_subscription_creation_billing_items,
+            quote:,
+            organization:,
+            plan_end_date: 1.month.from_now.to_date.iso8601
+          )
+        end
+        let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
+        let(:order) { create(:order, organization:, customer:, order_form:) }
+        let(:params) { {execution_mode: "execute_in_lago", execute_at: 2.months.from_now.iso8601} }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:execute_at]).to eq(["after_deal_expiration"])
+        end
+      end
+
+      # The stored date is what execution will use, so it is bounded even when the update leaves it
+      # alone.
+      context "when the stored execute_at outlives the deal" do
+        let(:quote) { create(:quote, organization:, customer:) }
+        let(:quote_version) do
+          create(
+            :quote_version,
+            :approved,
+            :with_subscription_creation_billing_items,
+            quote:,
+            organization:,
+            plan_end_date: 1.month.from_now.to_date.iso8601
+          )
+        end
+        let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
+        let(:order) do
+          create(
+            :order,
+            organization:,
+            customer:,
+            order_form:,
+            execution_mode: "execute_in_lago",
+            execute_at: 2.months.from_now
+          )
+        end
+        let(:params) { {execution_mode: "order_only"} }
+
+        it "returns a validation failure on execute_at" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:execute_at]).to eq(["after_deal_expiration"])
+        end
+      end
+
       context "when clearing execute_at while keeping an execution_mode" do
         let(:order) { create(:order, organization:, customer:, execution_mode: "execute_in_lago", execute_at: 1.month.from_now) }
         let(:params) { {execute_at: nil} }
@@ -152,6 +211,20 @@ RSpec.describe Orders::UpdateService do
           expect(result.order.execute_at).to be_nil
           expect(result.order.execution_mode).to eq("execute_in_lago")
         end
+      end
+    end
+
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
       end
     end
   end

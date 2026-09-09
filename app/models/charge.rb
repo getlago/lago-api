@@ -50,6 +50,7 @@ class Charge < ApplicationRecord
   validates :charge_model, :code, presence: true
 
   validate :validate_code_unique
+  validate :validate_plan_pricing_type
   validate :charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
@@ -95,6 +96,10 @@ class Charge < ApplicationRecord
     return false unless applied_pricing_unit && another_charge.applied_pricing_unit
 
     applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
+  end
+
+  def target_key
+    "charge-#{id}"
   end
 
   # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
@@ -191,6 +196,13 @@ class Charge < ApplicationRecord
     return unless accepts_target_wallet
 
     errors.add(:accepts_target_wallet, :feature_unavailable) unless organization.events_targeting_wallets_enabled?
+  end
+
+  # Model-level so no caller can bypass it: a catalog plan never carries chargeables.
+  def validate_plan_pricing_type
+    return unless plan&.product_catalog?
+
+    errors.add(:plan, :legacy_billing_disabled)
   end
 end
 

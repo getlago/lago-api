@@ -27,6 +27,10 @@ module Types
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
     field :billing_entity, resolver: Resolvers::BillingEntityResolver
     field :billing_entity_taxes, resolver: Resolvers::BillingEntityTaxesResolver
+    field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
+    field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
+    field :contract, resolver: Resolvers::ContractResolver
+    field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :credit_note, resolver: Resolvers::CreditNoteResolver
@@ -89,6 +93,7 @@ module Types
     field :payment_requests, resolver: Resolvers::PaymentRequestsResolver
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
+    field :plan_applied_rate_cards, resolver: Resolvers::PlanAppliedRateCardsResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
@@ -101,6 +106,10 @@ module Types
     field :quote, resolver: Resolvers::QuoteResolver
     field :quote_version, resolver: Resolvers::QuoteVersionResolver
     field :quotes, resolver: Resolvers::QuotesResolver
+    field :rate_card, resolver: Resolvers::RateCardResolver
+    field :rate_card_rate, resolver: Resolvers::RateCardRateResolver
+    field :rate_card_rates, resolver: Resolvers::RateCardRatesResolver
+    field :rate_cards, resolver: Resolvers::RateCardsResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver

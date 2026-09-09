@@ -496,6 +496,39 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
           end
         end
       end
+
+      context "when the payment activates a payment-gated subscription without 3ds support" do
+        let(:subscription) { create(:subscription, :incomplete, organization:, customer:) }
+        let(:invoice) do
+          create(
+            :invoice,
+            :open,
+            :with_subscriptions,
+            subscriptions: [subscription],
+            organization:,
+            customer:,
+            total_amount_cents: 200,
+            currency:,
+            ready_for_payment_processing: true
+          )
+        end
+
+        before { create(:subscription_activation_rule, subscription:, status: "pending") }
+
+        it "retries the payment to offer the authentication challenge" do
+          WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .to_return(
+              status: 400,
+              body: get_stripe_fixtures("payment_intent_authentication_required_response.json", version: "2025-04-30.basil")
+            )
+
+          result = create_service.call
+
+          expect(result).to be_failure
+          expect(result.error_code).to eq "authentication_required"
+          expect(result.should_retry).to eq true
+        end
+      end
     end
 
     context "when invoice amount is too big to pay with Boleto" do

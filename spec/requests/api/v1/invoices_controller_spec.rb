@@ -146,7 +146,6 @@ RSpec.describe Api::V1::InvoicesController do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
-        organization.enable_feature_flag!(:multi_entity_billing)
         create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
       end
 
@@ -202,25 +201,6 @@ RSpec.describe Api::V1::InvoicesController do
         end
       end
     end
-
-    context "when multi_entity_billing feature flag is disabled" do
-      let(:other_billing_entity) { create(:billing_entity, organization:) }
-      let(:create_params) do
-        {
-          external_customer_id: customer_external_id,
-          currency: "EUR",
-          billing_entity_code: other_billing_entity.code,
-          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
-        }
-      end
-
-      it "ignores billing_entity_code and falls back to the customer's billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
-      end
-    end
   end
 
   describe "PUT /api/v1/invoices/:id" do
@@ -252,6 +232,17 @@ RSpec.describe Api::V1::InvoicesController do
         subject
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when invoice is voided" do
+      let(:invoice) { create(:invoice, :voided, customer:, organization:) }
+
+      it "returns a method not allowed error and does not update the invoice" do
+        expect { subject }.not_to change { invoice.reload.payment_status }
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("update_on_voided_invoice")
       end
     end
 
@@ -467,6 +458,22 @@ RSpec.describe Api::V1::InvoicesController do
           expect(invoice[:customer][:integration_customers]).to be_present
           expect(invoice[:customer][:metadata]).to be_present
         end
+      end
+    end
+
+    context "when the result set exceeds the graphql cap" do
+      before do
+        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
+        create(:invoice, customer:, organization:)
+        create(:invoice, customer:, organization:)
+      end
+
+      it "still returns the exact total count" do
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta]).not_to have_key(:total_count_capped)
       end
     end
 
@@ -1227,8 +1234,6 @@ RSpec.describe Api::V1::InvoicesController do
           }
         end
 
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
         it "creates a preview invoice under the requested billing entity" do
           subject
 
@@ -1253,8 +1258,6 @@ RSpec.describe Api::V1::InvoicesController do
             billing_entity_code: billing_entity.code
           }
         end
-
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
 
         it "stamps the invoice with the requested billing entity" do
           subject

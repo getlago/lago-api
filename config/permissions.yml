@@ -38,6 +38,9 @@ charges:
   create:
   update:
   delete:
+contracts:
+  view:
+  create:
 coupons:
   view:
     - finance
@@ -231,6 +234,11 @@ products:
   update:
   delete:
 product_categories:
+  view:
+  create:
+  update:
+  delete:
+rate_cards:
   view:
   create:
   update:

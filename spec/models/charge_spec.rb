@@ -5,6 +5,16 @@ require "rails_helper"
 RSpec.describe Charge do
   subject(:charge) { create(:standard_charge) }
 
+  describe "plan pricing type validation" do
+    it "rejects a charge on a product-catalog plan" do
+      plan = create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
+      charge = build(:standard_charge, plan:, organization: plan.organization)
+
+      expect(charge).not_to be_valid
+      expect(charge.errors.where(:plan, :legacy_billing_disabled)).to be_present
+    end
+  end
+
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to validate_presence_of(:code) }
@@ -15,6 +25,12 @@ RSpec.describe Charge do
       expect(subject).to have_many(:filters).dependent(:destroy)
       expect(subject).to have_one(:applied_pricing_unit)
       expect(subject).to have_one(:pricing_unit).through(:applied_pricing_unit)
+    end
+  end
+
+  describe "#target_key" do
+    it "returns the charge event-filter target key" do
+      expect(charge.target_key).to eq("charge-#{charge.id}")
     end
   end
 

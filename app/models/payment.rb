@@ -85,6 +85,10 @@ class Payment < ApplicationRecord
     payment_provider&.payment_type
   end
 
+  def gated_subscription_activation?
+    payable.subscription_payment_gated?
+  end
+
   def method_display_name
     return nil if provider_payment_method_data.blank?
 

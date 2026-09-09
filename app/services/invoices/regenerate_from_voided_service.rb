@@ -32,7 +32,10 @@ module Invoices
 
         # apply taxes credits and coupons
         Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice)
-        Credits::AppliedCouponsService.call!(invoice: regenerated_invoice) if should_create_coupon_credit?
+        if should_create_coupon_credit?
+          Credits::AppliedCouponsService.call!(invoice: regenerated_invoice)
+          regenerated_invoice.fees.reload
+        end
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice: regenerated_invoice, finalizing: true)
 
         # We intentionally return early from the transaction block if tax computation fails this is an async call,
@@ -46,6 +49,8 @@ module Invoices
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         regenerated_invoice.payment_status = regenerated_invoice.total_amount_cents.positive? ? :pending : :succeeded
+        regenerated_invoice.issuing_date = issuing_date
+        regenerated_invoice.payment_due_date = payment_due_date
         Invoices::TransitionToFinalStatusService.call!(invoice: regenerated_invoice)
         regenerated_invoice.save!
       end
@@ -63,6 +68,14 @@ module Invoices
     attr_reader :voided_invoice, :fees_params, :purchase_order_number
 
     delegate :customer, to: :voided_invoice
+
+    def issuing_date
+      @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def payment_due_date
+      @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
+    end
 
     def should_create_credit_note_credit?
       return false unless regenerated_invoice.total_amount_cents&.positive?
@@ -211,7 +224,7 @@ module Invoices
         adjusted_fee_params[:unit_precise_amount] = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
         adjusted_fee_params[:fee_id] = dup_fee.id if dup_fee
 
-        AdjustedFees::CreateService.call(
+        AdjustedFees::CreateService.call!(
           invoice: regenerated_invoice,
           params: adjusted_fee_params,
           regenerating_voided: true
@@ -274,6 +287,8 @@ module Invoices
           voided_invoice_id: voided_invoice.id,
           purchase_order_number: resolved_purchase_order_number
         )
+
+        Invoices::RefreshSearchTermsService.call!(invoice:)
       end
     end
 

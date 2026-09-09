@@ -331,8 +331,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
 
       context "when multi_entity_billing flag is enabled" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
         it "binds the subscription to the resolved billing entity" do
           subject
 
@@ -362,16 +360,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
       end
 
-      context "when multi_entity_billing flag is disabled" do
-        it "ignores the param and persists subscription with no explicit billing entity" do
-          subject
-
-          expect(response).to have_http_status(:ok)
-          subscription = Subscription.find_by(external_id: params[:external_id])
-          expect(subscription.billing_entity_id).to be_nil
-        end
-      end
-
       context "without billing_entity_code" do
         let(:params) do
           {
@@ -381,8 +369,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
             billing_time: "anniversary"
           }
         end
-
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
 
         it "persists subscription with no explicit billing entity" do
           subject
@@ -726,6 +712,24 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when consolidate_invoice is null" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          consolidate_invoice: "null"
+        }
+      end
+
+      it "returns a validation failure" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({consolidate_invoice: ["invalid_value"]})
+      end
+    end
+
     context "with applied_invoice_custom_sections in response" do
       it "includes applied_invoice_custom_sections in the serialized response" do
         subject
@@ -888,6 +892,14 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       test_termination(expected_on_termination_credit_note: nil)
     end
 
+    context "when external_id contains dots" do
+      let(:subscription) { create(:subscription, customer:, plan:, external_id: "coker.com") }
+
+      it "terminates a subscription" do
+        test_termination(expected_on_termination_credit_note: nil)
+      end
+    end
+
     context "when plan is pay_in_arrears" do
       let(:params) { {on_termination_credit_note: "credit"} }
 
@@ -1012,6 +1024,36 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when subscription is incomplete" do
+      let(:subscription) { create(:subscription, :incomplete, customer:, plan:) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+
+      context "when status is given" do
+        let(:params) { {status: "incomplete"} }
+        let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
+
+        before do
+          create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+          create(:invoice_subscription, invoice:, subscription:)
+        end
+
+        it "cancels the subscription" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:lago_id]).to eq(subscription.id)
+          expect(json[:subscription][:status]).to eq("canceled")
+          expect(json[:subscription][:canceled_at]).to be_present
+          expect(json[:subscription][:cancellation_reason]).to eq("manual")
+        end
+      end
+    end
+
     context "with not existing subscription" do
       let(:external_id) { SecureRandom.uuid }
 
@@ -1112,6 +1154,20 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
     end
 
     include_examples "requires API permission", "subscription", "write"
+
+    context "when external_id contains dots" do
+      let(:subscription) { create(:subscription, :pending, customer:, plan:, external_id: "coker.com") }
+
+      it "updates a subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription]).to include(
+          external_id: "coker.com",
+          name: "subscription name new"
+        )
+      end
+    end
 
     it "updates a subscription" do
       subject
@@ -1823,8 +1879,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         let(:new_billing_entity) { create(:billing_entity, organization:) }
 
         context "with multi_entity_billing feature flag enabled" do
-          before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
           context "with billing_entity_code" do
             let(:update_params) { {billing_entity_code: new_billing_entity.code} }
 
@@ -1855,17 +1909,6 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
               expect(response).to be_not_found_error("billing_entity")
             end
-          end
-        end
-
-        context "with multi_entity_billing feature flag disabled" do
-          let(:update_params) { {billing_entity_code: new_billing_entity.code} }
-
-          it "silently ignores billing_entity_code and returns success" do
-            subject
-
-            expect(response).to have_http_status(:success)
-            expect(subscription.reload.billing_entity_id).to be_nil
           end
         end
       end
@@ -1922,6 +1965,20 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when external_id contains dots" do
+      let(:subscription) { create(:subscription, customer:, plan:, external_id: "coker.com") }
+
+      it "returns a subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription]).to include(
+          lago_id: subscription.id,
+          external_id: "coker.com"
+        )
       end
     end
 

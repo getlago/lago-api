@@ -31,15 +31,18 @@ module QuoteVersions
             approved_at: nil
           )
 
+          SendWebhookJob.perform_after_commit("quote.voided", quote_version)
+          Utils::ActivityLog.produce_after_commit(quote_version, "quote.voided")
+
           result.quote_version = quote_version
         end
       end
 
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.voided", quote_version)
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

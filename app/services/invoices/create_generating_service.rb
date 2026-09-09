@@ -43,6 +43,8 @@ module Invoices
         )
         result.invoice = invoice
 
+        Invoices::RefreshSearchTermsService.call!(invoice:)
+
         yield invoice if block_given?
       end
 

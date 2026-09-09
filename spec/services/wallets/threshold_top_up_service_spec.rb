@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Wallets::ThresholdTopUpService do
   subject(:top_up_service) { described_class.new(wallet:) }
 
+  let(:paid_top_up_min_amount_cents) { 205_50 }
+  let(:paid_top_up_max_amount_cents) { nil }
   let(:wallet) do
     create(
       :wallet,
@@ -14,7 +16,8 @@ RSpec.describe Wallets::ThresholdTopUpService do
       credits_balance: 10.0,
       credits_ongoing_balance: 5.5,
       credits_ongoing_usage_balance: 4.0,
-      paid_top_up_min_amount_cents: 205_50
+      paid_top_up_min_amount_cents:,
+      paid_top_up_max_amount_cents:
     )
   end
 
@@ -69,7 +72,30 @@ RSpec.describe Wallets::ThresholdTopUpService do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(invoice_requires_successful_payment: true, ignore_paid_top_up_limits: false),
+            params: hash_including(invoice_requires_successful_payment: true),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when the rule keeps the wallet top-up limits" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          ignore_paid_top_up_limits: false
+        )
+      end
+
+      it "enqueues the top-up with the limit check enabled" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(ignore_paid_top_up_limits: false),
             unique_transaction: true
           )
       end
@@ -245,10 +271,53 @@ RSpec.describe Wallets::ThresholdTopUpService do
       end
     end
 
+    context "when the wallet is several top-ups short" do
+      let(:wallet) do
+        create(
+          :wallet,
+          balance_cents: 5000,
+          ongoing_balance_cents: -42_980,
+          ongoing_usage_balance_cents: 47_980,
+          credits_balance: 50.0,
+          credits_ongoing_balance: -429.8,
+          credits_ongoing_usage_balance: 479.8,
+          rate_amount: 1.0
+        )
+      end
+
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "10.0",
+          paid_credits: "50.0",
+          granted_credits: "0.0"
+        )
+      end
+
+      it "closes the whole gap in a single top-up" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(paid_credits: "450.0", granted_credits: "0.0"),
+            unique_transaction: true
+          )
+      end
+    end
+
     context "when border has NOT been crossed" do
       let(:recurring_transaction_rule) do
         create(:recurring_transaction_rule, wallet:, trigger: "threshold", threshold_credits: "2.0")
       end
+
+      it "does not call wallet transaction create job" do
+        expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+    end
+
+    context "when the ongoing balance write changed nothing" do
+      subject(:top_up_service) { described_class.new(wallet:, state_changed: false) }
 
       it "does not call wallet transaction create job" do
         expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
@@ -260,6 +329,28 @@ RSpec.describe Wallets::ThresholdTopUpService do
         create(:wallet_transaction, wallet:, amount: 1.0, credit_amount: 1.0, status: "pending")
 
         expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+
+      context "when the wallet rate is not one" do
+        let(:wallet) do
+          create(
+            :wallet,
+            balance_cents: 1000,
+            ongoing_balance_cents: 550,
+            ongoing_usage_balance_cents: 450,
+            credits_balance: 10.0,
+            credits_ongoing_balance: 5.5,
+            credits_ongoing_usage_balance: 4.0,
+            rate_amount: 0.1,
+            paid_top_up_min_amount_cents: 205_50
+          )
+        end
+
+        it "counts the pending credits rather than the pending currency amount" do
+          create(:wallet_transaction, wallet:, amount: 0.1, credit_amount: 1.0, status: "pending")
+
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
       end
     end
 
@@ -305,11 +396,28 @@ RSpec.describe Wallets::ThresholdTopUpService do
               invoice_requires_successful_payment: false,
               metadata: [],
               name: "Recurring Transaction Rule",
-              ignore_paid_top_up_limits: false,
+              ignore_paid_top_up_limits: true,
               purchase_order_number: nil
             },
             unique_transaction: true
           )
+      end
+
+      context "when the refill exceeds the wallet max top-up limit" do
+        let(:paid_top_up_min_amount_cents) { nil }
+        let(:paid_top_up_max_amount_cents) { 100_00 }
+
+        it "enqueues the full refill with the limit check disabled" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            .with(
+              organization_id: wallet.organization.id,
+              params: hash_including(
+                paid_credits: "194.5",
+                ignore_paid_top_up_limits: true
+              ),
+              unique_transaction: true
+            )
+        end
       end
 
       context "when grants_target_top_up is true" do
@@ -335,6 +443,101 @@ RSpec.describe Wallets::ThresholdTopUpService do
               ),
               unique_transaction: true
             )
+        end
+      end
+    end
+
+    describe "declined top-ups" do
+      let(:failed_top_up) do
+        create(:wallet_transaction, :failed, wallet:, source: :threshold, failed_at: 10.minutes.ago)
+      end
+
+      before { failed_top_up }
+
+      it "does not call wallet transaction create job while the failure is recent" do
+        expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+
+      context "when the failure is older than the back-off window" do
+        let(:failed_top_up) do
+          create(
+            :wallet_transaction,
+            :failed,
+            wallet:,
+            source: :threshold,
+            failed_at: described_class::DECLINE_BACKOFF.ago - 1.minute
+          )
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when a top-up settled after the failure" do
+        before { create(:wallet_transaction, wallet:, source: :threshold, created_at: 1.minute.ago) }
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when only granted credits arrived after the failure" do
+        before do
+          create(
+            :wallet_transaction,
+            wallet:,
+            source: :threshold,
+            transaction_status: :granted,
+            settled_at: 1.minute.ago
+          )
+        end
+
+        it "does not call wallet transaction create job" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when a top-up created before the failure settled after it" do
+        before do
+          create(
+            :wallet_transaction,
+            wallet:,
+            source: :manual,
+            created_at: 2.hours.ago,
+            settled_at: 1.minute.ago
+          )
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when the rule only grants credits" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            wallet:,
+            trigger: "threshold",
+            threshold_credits: "6.0",
+            paid_credits: "0.0",
+            granted_credits: "3.0"
+          )
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when the failed transaction was not an automatic top-up" do
+        let(:failed_top_up) do
+          create(:wallet_transaction, :failed, wallet:, source: :manual, failed_at: 10.minutes.ago)
+        end
+
+        it "calls wallet transaction create job" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
         end
       end
     end

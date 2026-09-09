@@ -93,7 +93,10 @@ module Fees
       end
 
       @amount_result = ChargeModels::Factory
-        .new_instance(chargeable: charge, aggregation_result:, properties:)
+        .new_instance(
+          pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+          aggregation_result:
+        )
         .apply
     end
 

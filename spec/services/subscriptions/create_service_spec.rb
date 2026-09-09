@@ -238,6 +238,28 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when consolidate_invoice is passed as null" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          consolidate_invoice: "null"
+        }
+      end
+
+      it "returns a validation failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({consolidate_invoice: ["invalid_value"]})
+      end
+    end
+
     context "when customer is invalid in an api context" do
       let(:customer) do
         build(:customer, organization:, currency: "EUR", external_id: nil)
@@ -899,6 +921,105 @@ RSpec.describe Subscriptions::CreateService do
           expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
+
+      context "when a terminated subscription on the same external_id covered that period" do
+        let(:terminated_at) { 2.days.ago }
+        let(:on_termination_invoice) { :generate }
+
+        let(:previous_subscription) do
+          create(
+            :subscription,
+            :terminated,
+            customer:,
+            plan:,
+            organization:,
+            external_id:,
+            started_at: 1.month.ago,
+            terminated_at:,
+            on_termination_invoice:
+          )
+        end
+
+        before { previous_subscription }
+
+        it "starts at the termination so the already invoiced period is not billed twice" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          subscription = result.subscription
+          expect(subscription).to be_active
+          expect(subscription.started_at).to eq(previous_subscription.reload.terminated_at)
+          expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
+        end
+
+        context "when several terminated subscriptions share the external_id" do
+          let(:latest_terminated_at) { 1.day.ago }
+
+          before do
+            create(
+              :subscription,
+              :terminated,
+              customer:,
+              plan:,
+              organization:,
+              external_id:,
+              started_at: terminated_at,
+              terminated_at: latest_terminated_at
+            )
+          end
+
+          it "starts at the most recent invoiced termination" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at).to be_within(1.second).of(latest_terminated_at)
+          end
+        end
+
+        context "when the previous subscription skipped its termination invoice" do
+          let(:on_termination_invoice) { :skip }
+
+          it "starts at subscription_at since that period was never invoiced" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at.to_s).to eq(subscription_at.to_s)
+          end
+        end
+
+        context "when the previous subscription was terminated before subscription_at" do
+          let(:terminated_at) { subscription_at - 1.day }
+
+          it "starts at subscription_at since the periods do not overlap" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at.to_s).to eq(subscription_at.to_s)
+          end
+        end
+
+        context "when the previous subscription has a different external_id" do
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              :terminated,
+              customer:,
+              plan:,
+              organization:,
+              started_at: 1.month.ago,
+              terminated_at:
+            )
+          end
+
+          it "starts at subscription_at" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.started_at.to_s).to eq(subscription_at.to_s)
+          end
+        end
+      end
     end
 
     context "when subscription_at is earlier today" do
@@ -1028,13 +1149,11 @@ RSpec.describe Subscriptions::CreateService do
       context "when new plan has different currency than the old plan" do
         let(:plan) { create(:plan, amount_cents: 200, organization:, amount_currency: "USD") }
 
-        it "fails" do
+        it "creates the subscription (currency is a default preference)" do
           result = create_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+          expect(result).to be_success
+          expect(result.subscription).to be_present
         end
       end
 
@@ -1917,29 +2036,7 @@ RSpec.describe Subscriptions::CreateService do
     describe "billing entity binding" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
-      context "when multi_entity_billing flag is OFF" do
-        it "ignores billing_entity_code and persists nil" do
-          params[:billing_entity_code] = billing_entity.code
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to be_nil
-        end
-
-        it "ignores billing_entity_id and persists nil" do
-          params[:billing_entity_id] = billing_entity.id
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.billing_entity_id).to be_nil
-        end
-      end
-
-      context "when multi_entity_billing flag is ON" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
+      context "when binding a billing entity" do
         it "persists nil when no billing entity reference is provided" do
           result = create_service.call
 
@@ -2019,40 +2116,8 @@ RSpec.describe Subscriptions::CreateService do
 
       before { CurrentContext.source = "api" }
 
-      context "when multi_entity_billing flag is OFF" do
+      context "when downgrading" do
         before { subscription.mark_as_active! }
-
-        it "carries over current_subscription.billing_entity_id to the pending subscription" do
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
-        end
-
-        it "carries over NULL when current_subscription is not bound to any entity" do
-          subscription.update!(billing_entity_id: nil)
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.next_subscription.billing_entity_id).to be_nil
-        end
-
-        it "ignores billing_entity_code param and still carries over from current_subscription" do
-          params[:billing_entity_code] = target_entity.code
-
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.subscription.next_subscription.billing_entity_id).to eq(current_entity.id)
-        end
-      end
-
-      context "when multi_entity_billing flag is ON" do
-        before do
-          subscription.mark_as_active!
-          organization.enable_feature_flag!(:multi_entity_billing)
-        end
 
         it "carries over current_subscription.billing_entity_id when no param is provided" do
           result = create_service.call
@@ -2133,7 +2198,6 @@ RSpec.describe Subscriptions::CreateService do
 
         before do
           subscription
-          organization.enable_feature_flag!(:multi_entity_billing)
         end
 
         it "re-binds the pending subscription when billing_entity_code is provided" do

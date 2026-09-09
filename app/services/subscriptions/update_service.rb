@@ -39,7 +39,9 @@ module Subscriptions
         payment_method: params[:payment_method],
         activation_rules: params[:activation_rules],
         subscription_type: "update",
-        subscription:
+        subscription:,
+        consolidate_invoice: params[:consolidate_invoice],
+        consolidate_invoice_provided: params.key?(:consolidate_invoice)
       )
         return result
       end
@@ -54,12 +56,18 @@ module Subscriptions
 
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
+      if params.key?(:plan_overrides) && (subscription.plan.product_catalog? || subscription.plan.organization.product_catalog_enabled?)
+        return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
+      end
+
       ActiveRecord::Base.transaction do
         subscription.name = params[:name] if params.key?(:name)
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
         subscription.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
-        subscription.consolidate_invoice = params[:consolidate_invoice] if params.key?(:consolidate_invoice)
+        if params.key?(:consolidate_invoice)
+          subscription.consolidate_invoice = ActiveModel::Type::Boolean.new.cast(params[:consolidate_invoice])
+        end
 
         if pay_in_advance? && params.key?(:on_termination_credit_note)
           subscription.on_termination_credit_note = params[:on_termination_credit_note]
@@ -74,8 +82,7 @@ module Subscriptions
           subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
-        if subscription.organization.feature_flag_enabled?(:multi_entity_billing) &&
-            (params.key?(:billing_entity_id) || params.key?(:billing_entity_code))
+        if params.key?(:billing_entity_id) || params.key?(:billing_entity_code)
           new_billing_entity = resolve_billing_entity(organization: subscription.organization, params:)
           subscription.billing_entity = new_billing_entity
         end
@@ -108,7 +115,7 @@ module Subscriptions
             Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
           end
 
-          SendWebhookJob.perform_after_commit("subscription.updated", subscription)
+          notify_updated
 
           if subscription.should_sync_hubspot_subscription?
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
@@ -176,6 +183,23 @@ module Subscriptions
           Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
         end
       end
+
+      # NOTE: Reaching this point means the subscription went from pending to active, so it emits
+      #       `subscription.started` like every other activation path, and `subscription.updated`
+      #       like every other edit going through this service.
+      notify_started
+      notify_updated
+    end
+
+    # Mirrors Subscriptions::ActivateService#notify_started, without the Hubspot sync.
+    def notify_started
+      SendWebhookJob.perform_after_commit("subscription.started", subscription)
+      Utils::ActivityLog.produce_after_commit(subscription, "subscription.started")
+    end
+
+    # The `subscription.updated` activity log is handled by the `activity_loggable` declaration.
+    def notify_updated
+      SendWebhookJob.perform_after_commit("subscription.updated", subscription)
     end
 
     def handle_plan_override

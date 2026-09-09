@@ -340,6 +340,29 @@ RSpec.describe Resolvers::PlanResolver do
     end
   end
 
+  context "when the plan uses the product catalog" do
+    let(:query) do
+      <<~GQL
+        query($planId: ID!) {
+          plan(id: $planId) { id amountCents interval payInAdvance }
+        }
+      GQL
+    end
+
+    let(:plan) do
+      create(:plan, organization:, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
+    end
+
+    it "returns the plan with null plan-level billing fields" do
+      expect(result["data"]["plan"]).to eq(
+        "id" => plan.id,
+        "amountCents" => nil,
+        "interval" => nil,
+        "payInAdvance" => nil
+      )
+    end
+  end
+
   context "when plan is not found" do
     it "returns an error" do
       result = execute_graphql(
