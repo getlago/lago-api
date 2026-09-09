@@ -38,9 +38,10 @@ end
 #
 # Indexes
 #
-#  index_payment_receipts_on_billing_entity_id  (billing_entity_id)
-#  index_payment_receipts_on_organization_id    (organization_id)
-#  index_payment_receipts_on_payment_id         (payment_id) UNIQUE
+#  index_payment_receipts_on_billing_entity_id             (billing_entity_id)
+#  index_payment_receipts_on_organization_id               (organization_id)
+#  index_payment_receipts_on_organization_id_lower_number  (organization_id, lower((number)::text))
+#  index_payment_receipts_on_payment_id                    (payment_id) UNIQUE
 #
 # Foreign Keys
 #

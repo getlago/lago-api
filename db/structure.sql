@@ -597,6 +597,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type_and_er
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id_reference_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
+DROP INDEX IF EXISTS public.index_payments_on_org_pending_processing_created_at;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
 DROP INDEX IF EXISTS public.index_payments_on_customer_id;
 DROP INDEX IF EXISTS public.index_payments_by_cursor;
@@ -604,6 +605,7 @@ DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
+DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id_lower_number;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_payment_providers_on_organization_id;
@@ -666,6 +668,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_search_terms_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_billing_entity_sequential;
@@ -10028,6 +10031,13 @@ CREATE INDEX index_invoices_on_organization_id_and_customer_id ON public.invoice
 
 
 --
+-- Name: index_invoices_on_organization_id_lower_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_lower_number ON public.invoices USING btree (organization_id, lower((number)::text));
+
+
+--
 -- Name: index_invoices_on_organization_id_lower_purchase_order_number; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10462,6 +10472,13 @@ CREATE INDEX index_payment_receipts_on_organization_id ON public.payment_receipt
 
 
 --
+-- Name: index_payment_receipts_on_organization_id_lower_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_receipts_on_organization_id_lower_number ON public.payment_receipts USING btree (organization_id, lower((number)::text));
+
+
+--
 -- Name: index_payment_receipts_on_payment_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10508,6 +10525,13 @@ CREATE INDEX index_payments_on_customer_id ON public.payments USING btree (custo
 --
 
 CREATE INDEX index_payments_on_invoice_id ON public.payments USING btree (invoice_id);
+
+
+--
+-- Name: index_payments_on_org_pending_processing_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_org_pending_processing_created_at ON public.payments USING btree (organization_id, payable_payment_status, created_at DESC, id) WHERE (payable_payment_status = ANY (ARRAY['pending'::public.payment_payable_payment_status, 'processing'::public.payment_payable_payment_status]));
 
 
 --
@@ -14904,6 +14928,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260909090200'),
+('20260909090100'),
+('20260909090000'),
 ('20260908180522'),
 ('20260905223042'),
 ('20260905223041'),
