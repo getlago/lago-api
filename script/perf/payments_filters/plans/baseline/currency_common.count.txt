@@ -1,0 +1,29 @@
+-- case: currency_common (count) phase: baseline selective: false
+-- filters: {"currency":"EUR"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."amount_currency" = 'EUR'
+
+Aggregate  (cost=13594002.17..13594002.18 rows=1 width=8) (actual time=15143.154..15143.180 rows=1 loops=1)
+  Buffers: shared hit=18046005 read=165267
+  I/O Timings: shared/local read=1206.293
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13588092.14 rows=2364013 width=0) (actual time=70.494..14986.101 rows=4705309 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND ((amount_currency)::text = 'EUR'::text) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 294691
+        Buffers: shared hit=18046005 read=165267
+        I/O Timings: shared/local read=1206.293
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4512315)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=18046005 read=3255
+                I/O Timings: shared/local read=94.352
+Planning:
+  Buffers: shared hit=3 read=5
+  I/O Timings: shared/local read=0.073
+Planning Time: 0.406 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.062 ms, Inlining 7.756 ms, Optimization 34.043 ms, Emission 28.868 ms, Total 71.729 ms
+Execution Time: 15144.646 ms

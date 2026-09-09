@@ -1,0 +1,51 @@
+-- case: invoice_hit_request (count) phase: baseline selective: true
+-- filters: {"invoice_number":"her-1556-202609-000765141"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (EXISTS ( SELECT 1 FROM invoices WHERE invoices.organization_id = '<org-uuid>' AND LOWER(invoices.number) = LOWER('her-1556-202609-000765141') AND ( (payments.payable_type = 'Invoice' AND invoices.id = payments.payable_id) OR (payments.payable_type = 'PaymentRequest' AND EXISTS ( SELECT 1 FROM invoices_payment_requests WHERE invoices_payment_requests.payment_request_id = payments.payable_id AND invoices_payment_requests.invoice_id = invoices.id )) ) ))
+
+Aggregate  (cost=85076132259.31..85076132259.32 rows=1 width=8) (actual time=17070.225..17070.327 rows=1 loops=1)
+  Buffers: shared hit=19169990 read=228078
+  I/O Timings: shared/local read=2693.793
+  ->  Nested Loop Semi Join  (cost=1000.43..85076132082.35 rows=70786 width=0) (actual time=3497.788..17070.190 rows=1 loops=1)
+        Join Filter: ((((payments.payable_type)::text = 'Invoice'::text) AND (invoices.id = payments.payable_id)) OR (((payments.payable_type)::text = 'PaymentRequest'::text) AND (hashed SubPlan 3)))
+        Rows Removed by Join Filter: 4952718
+        Buffers: shared hit=19169990 read=228078
+        I/O Timings: shared/local read=2693.793
+        ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13575625.91 rows=2493246 width=24) (actual time=141.273..15035.275 rows=4952719 loops=1)
+              Index Cond: (organization_id = '<org-uuid>'::uuid)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 47281
+              Buffers: shared hit=18996912 read=164436
+              I/O Timings: shared/local read=1623.282
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices invoices_1  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4749834)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=18996912 read=2424
+                      I/O Timings: shared/local read=69.487
+        ->  Materialize  (cost=1000.00..273258.07 rows=22437 width=16) (actual time=0.000..0.000 rows=1 loops=4952719)
+              Buffers: shared hit=173078 read=53810
+              I/O Timings: shared/local read=1042.835
+              ->  Gather  (cost=1000.00..273145.88 rows=22437 width=16) (actual time=904.313..904.431 rows=1 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=173078 read=53810
+                    I/O Timings: shared/local read=1042.835
+                    ->  Parallel Seq Scan on invoices  (cost=0.00..269902.18 rows=9349 width=16) (actual time=891.108..891.112 rows=0 loops=3)
+                          Filter: ((organization_id = '<org-uuid>'::uuid) AND (lower((number)::text) = 'her-1556-202609-000765141'::text))
+                          Rows Removed by Filter: 1966358
+                          Buffers: shared hit=173078 read=53810
+                          I/O Timings: shared/local read=1042.835
+        SubPlan 3
+          ->  Seq Scan on invoices_payment_requests  (cost=0.00..17205.38 rows=737338 width=32) (actual time=11.637..73.762 rows=737338 loops=1)
+                Buffers: shared read=9832
+                I/O Timings: shared/local read=27.677
+Planning:
+  Buffers: shared hit=6 read=5
+  I/O Timings: shared/local read=0.488
+Planning Time: 1.187 ms
+JIT:
+  Functions: 48
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 5.702 ms, Inlining 60.710 ms, Optimization 104.142 ms, Emission 90.830 ms, Total 261.384 ms
+Execution Time: 17075.037 ms

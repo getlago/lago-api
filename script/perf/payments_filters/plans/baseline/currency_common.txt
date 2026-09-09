@@ -1,0 +1,21 @@
+-- case: currency_common (list) phase: baseline selective: false
+-- filters: {"currency":"EUR"} search_term: nil page: 1
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."amount_currency" = 'EUR' ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=0.56..115.86 rows=20 width=330) (actual time=0.026..0.088 rows=20 loops=1)
+  Buffers: shared hit=106
+  ->  Index Scan using index_payments_by_cursor on payments  (cost=0.56..13629173.91 rows=2364013 width=330) (actual time=0.026..0.087 rows=20 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND ((amount_currency)::text = 'EUR'::text) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 2
+        Buffers: shared hit=106
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=20)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.174 ms
+Execution Time: 0.114 ms

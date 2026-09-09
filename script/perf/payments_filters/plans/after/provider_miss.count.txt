@@ -1,0 +1,7 @@
+-- case: provider_miss (count) phase: after selective: true
+-- filters: {"payment_provider_type":["cashfree"]} search_term: nil page: 1
+-- runs_ms: [0.0]
+(no query)
+
+Result (no query: ActiveRecord short-circuits an empty IN list)  (actual time=0.000..0.000 rows=0 loops=1)
+Execution Time: 0.000 ms

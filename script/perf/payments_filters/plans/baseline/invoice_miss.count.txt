@@ -1,0 +1,48 @@
+-- case: invoice_miss (count) phase: baseline selective: true
+-- filters: {"invoice_number":"PERF-NOPE-000000-000000001"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (EXISTS ( SELECT 1 FROM invoices WHERE invoices.organization_id = '<org-uuid>' AND LOWER(invoices.number) = LOWER('PERF-NOPE-000000-000000001') AND ( (payments.payable_type = 'Invoice' AND invoices.id = payments.payable_id) OR (payments.payable_type = 'PaymentRequest' AND EXISTS ( SELECT 1 FROM invoices_payment_requests WHERE invoices_payment_requests.payment_request_id = payments.payable_id AND invoices_payment_requests.invoice_id = invoices.id )) ) ))
+
+Aggregate  (cost=85076132259.31..85076132259.32 rows=1 width=8) (actual time=16469.838..16469.950 rows=1 loops=1)
+  Buffers: shared hit=19139517 read=248719
+  I/O Timings: shared/local read=2594.394
+  ->  Nested Loop Semi Join  (cost=1000.43..85076132082.35 rows=70786 width=0) (actual time=16469.692..16469.801 rows=0 loops=1)
+        Join Filter: ((((payments.payable_type)::text = 'Invoice'::text) AND (invoices.id = payments.payable_id)) OR (((payments.payable_type)::text = 'PaymentRequest'::text) AND (hashed SubPlan 3)))
+        Buffers: shared hit=19139517 read=248719
+        I/O Timings: shared/local read=2594.394
+        ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13575625.91 rows=2493246 width=24) (actual time=157.867..15073.525 rows=4952719 loops=1)
+              Index Cond: (organization_id = '<org-uuid>'::uuid)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 47281
+              Buffers: shared hit=18997500 read=163848
+              I/O Timings: shared/local read=1118.710
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices invoices_1  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4749834)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=18990429 read=8907
+                      I/O Timings: shared/local read=89.067
+        ->  Materialize  (cost=1000.00..273258.07 rows=22437 width=16) (actual time=0.000..0.000 rows=0 loops=4952719)
+              Buffers: shared hit=142017 read=84871
+              I/O Timings: shared/local read=1475.683
+              ->  Gather  (cost=1000.00..273145.88 rows=22437 width=16) (actual time=974.359..974.465 rows=0 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=142017 read=84871
+                    I/O Timings: shared/local read=1475.683
+                    ->  Parallel Seq Scan on invoices  (cost=0.00..269902.18 rows=9349 width=16) (actual time=956.420..956.420 rows=0 loops=3)
+                          Filter: ((organization_id = '<org-uuid>'::uuid) AND (lower((number)::text) = 'perf-nope-000000-000000001'::text))
+                          Rows Removed by Filter: 1966359
+                          Buffers: shared hit=142017 read=84871
+                          I/O Timings: shared/local read=1475.683
+        SubPlan 3
+          ->  Seq Scan on invoices_payment_requests  (cost=0.00..17205.38 rows=737338 width=32) (never executed)
+Planning:
+  Buffers: shared hit=6 read=5
+  I/O Timings: shared/local read=0.017
+Planning Time: 0.810 ms
+JIT:
+  Functions: 45
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 6.046 ms, Inlining 62.167 ms, Optimization 101.785 ms, Emission 89.845 ms, Total 259.843 ms
+Execution Time: 16473.652 ms
