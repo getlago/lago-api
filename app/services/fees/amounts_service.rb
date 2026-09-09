@@ -51,16 +51,24 @@ module Fees
       end
     end
 
-    PricingUnit = Data.define(:pricing_unit, :conversion_rate) do
+    AppliedPricingUnit = Data.define(:pricing_unit, :conversion_rate) do
       def self.none
         new(pricing_unit: nil, conversion_rate: nil)
       end
 
-      def self.from(applied_pricing_unit)
+      def self.from_pricing_unit(pricing_unit:, conversion_rate:)
+        if pricing_unit.nil?
+          none
+        else
+          new(pricing_unit:, conversion_rate:)
+        end
+      end
+
+      def self.from_applied_pricing_unit(applied_pricing_unit)
         if applied_pricing_unit.nil?
           none
         else
-          new(pricing_unit: applied_pricing_unit.pricing_unit, conversion_rate: applied_pricing_unit.conversion_rate)
+          from_pricing_unit(pricing_unit: applied_pricing_unit.pricing_unit, conversion_rate: applied_pricing_unit.conversion_rate)
         end
       end
 
@@ -76,7 +84,7 @@ module Fees
     def initialize(
       currency:,
       charge_model_result:,
-      applied_pricing_unit: PricingUnit.none,
+      applied_pricing_unit: AppliedPricingUnit.none,
       deduction: Deduction.none,
       true_up: TrueUp.none
     )

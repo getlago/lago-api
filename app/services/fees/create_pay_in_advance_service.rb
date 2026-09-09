@@ -85,7 +85,7 @@ module Fees
       amount = Fees::AmountsService.call(
         currency: subscription.plan.amount.currency,
         charge_model_result:,
-        applied_pricing_unit: Fees::AmountsService::PricingUnit.from(charge.applied_pricing_unit)
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(charge.applied_pricing_unit)
       ).amount
 
       fee = Fee.new(

@@ -69,6 +69,18 @@ class BillingSegment < ApplicationRecord
     end
   end
 
+  # Returns the prorated minimum in pricing-unit cents when configured, otherwise fiat cents.
+  def prorated_min_amount_cents
+    minimum = min_amount_cents.to_d * proration_ratio
+
+    if pricing_unit
+      minimum / Money::Currency.new(currency).subunit_to_unit /
+        pricing_unit_conversion_rate * pricing_unit.subunit_to_unit.to_d
+    else
+      minimum
+    end
+  end
+
   private
 
   def validate_rate_presence

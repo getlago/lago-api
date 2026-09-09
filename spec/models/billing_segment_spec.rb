@@ -217,6 +217,41 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "#prorated_min_amount_cents" do
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, min_amount_cents: 1_001, applied_pricing_unit_conversion_rate: 0.5) }
+    let(:billing_segment) { described_class.new(rate_card_rate:, currency: "USD", proration_ratio: 0.5) }
+
+    it "prorates the fiat minimum without rounding fractional cents" do
+      expect(billing_segment.prorated_min_amount_cents).to eq(BigDecimal("500.5"))
+    end
+
+    it "preserves a zero minimum" do
+      rate_card_rate.min_amount_cents = 0
+
+      expect(billing_segment.prorated_min_amount_cents).to eq(0)
+    end
+
+    context "with a pricing unit" do
+      before { billing_segment.pricing_unit = build_stubbed(:pricing_unit) }
+
+      it "converts the prorated fiat minimum into pricing-unit cents" do
+        expect(billing_segment.prorated_min_amount_cents).to eq(1_001)
+      end
+
+      it "uses the fiat currency subunit factor" do
+        billing_segment.currency = "JPY"
+
+        expect(billing_segment.prorated_min_amount_cents).to eq(100_100)
+      end
+
+      it "uses the override minimum and conversion rate" do
+        billing_segment.rate_override = build_stubbed(:rate_override, min_amount_cents: 2_001, pricing_unit_conversion_rate: 0.25)
+
+        expect(billing_segment.prorated_min_amount_cents).to eq(4_002)
+      end
+    end
+  end
+
   describe "#cycle_started_at" do
     it "groups segments created by one cycle" do
       cycle_started_at = Time.zone.parse("2026-09-01")

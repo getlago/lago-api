@@ -26,6 +26,8 @@ class Invoice < ApplicationRecord
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
+  has_many :billing_segments
+  has_many :contracts, -> { distinct }, through: :billing_segments
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
