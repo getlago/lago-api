@@ -118,7 +118,10 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          # Price the contract atomically at birth: each card carries the same
+          # shape the standalone attach surface permits.
+          applied_rate_cards: ContractRateCardsController::APPLIED_RATE_CARD_PARAMS
         )
       end
 

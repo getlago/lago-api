@@ -46,6 +46,49 @@ RSpec.describe Contracts::CreateService do
     end
   end
 
+  context "with applied_rate_cards priced at creation" do
+    let(:customer) { create(:customer, organization:, currency: "EUR") }
+    let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
+    let(:params) do
+      {
+        external_customer_id: customer.external_id,
+        external_id: "contract-1",
+        applied_rate_cards: [
+          {rate_card_code: rate_card.code, units: "10", rate_phases: [{code: "ramp", position: 1}]}
+        ]
+      }
+    end
+
+    it "prices the immediate-start plan-less contract at birth" do
+      expect { result }.to change(Contract, :count).by(1).and change(ContractRateCard, :count).by(1)
+
+      contract = result.contract
+      expect(contract.status).to eq("active")
+      card = contract.applied_rate_cards.sole
+      expect(card).to have_attributes(rate_card:, units: 10)
+      expect(card.rate_phases.sole.code).to eq("ramp")
+    end
+
+    context "when a card is invalid" do
+      let(:params) { super().merge(applied_rate_cards: [{rate_card_code: "unknown"}]) }
+
+      it "rolls the whole create back" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+      end
+    end
+
+    context "when the card currency does not match" do
+      let(:rate_card) { create(:rate_card, organization:, currency: "USD") }
+
+      it "rolls back with a currency error" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages[:currency]).to eq(["currency_does_not_match"])
+      end
+    end
+  end
+
   context "when the contract starts in the future" do
     let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
 

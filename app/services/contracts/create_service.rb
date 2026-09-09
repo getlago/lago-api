@@ -62,6 +62,15 @@ module Contracts
 
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
 
+        # Atomic initial pricing: cards authored here are born with the
+        # contract, bypassing the active lock only for this birth. An
+        # immediate-start plan-less contract would otherwise be unpriceable —
+        # active on creation with the attach door already closed. Any invalid
+        # card or phase rolls the whole create back.
+        Array.wrap(params[:applied_rate_cards]).each do |card_params|
+          ContractRateCards::CreateService.call!(contract:, params: card_params, initial: true)
+        end
+
         result.contract = contract
       end
 

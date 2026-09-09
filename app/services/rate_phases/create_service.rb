@@ -6,10 +6,11 @@ module RatePhases
   class CreateService < BaseService
     Result = BaseResult[:rate_phase]
 
-    def initialize(plan_rate_card: nil, contract_rate_card: nil, params: {})
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, params: {}, initial: false)
       @plan_rate_card = plan_rate_card
       @contract_rate_card = contract_rate_card
       @params = params.to_h.with_indifferent_access
+      @initial = initial
       super
     end
 
@@ -28,7 +29,10 @@ module RatePhases
       # contract activating (or a plan gaining a subscription) concurrently
       # cannot slip past the edit check.
       applied_rate_card.with_lock do
-        if (blocked = applied_rate_card.edit_error_code)
+        # initial: the card is being authored inside its contract's create
+        # transaction, before the active lock applies. Every other caller edits
+        # a live card and must still pass the guard.
+        if !initial && (blocked = applied_rate_card.edit_error_code)
           return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
@@ -73,7 +77,7 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :contract_rate_card, :params
+    attr_reader :plan_rate_card, :contract_rate_card, :params, :initial
 
     def applied_rate_card
       plan_rate_card || contract_rate_card

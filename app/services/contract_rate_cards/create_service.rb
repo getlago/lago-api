@@ -8,16 +8,21 @@ module ContractRateCards
   class CreateService < BaseService
     Result = BaseResult[:contract_rate_card]
 
-    def initialize(contract:, params:)
+    def initialize(contract:, params:, initial: false)
       @contract = contract
       @params = params.to_h.with_indifferent_access
+      @initial = initial
       super
     end
 
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      unless contract.editable?
+      # initial: cards authored inside the contract's own create transaction,
+      # before the active lock applies — an immediate-start contract is born
+      # active, so it could never be priced otherwise. External attach passes
+      # initial: false and still rejects active contracts.
+      unless initial || contract.editable?
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
 
@@ -57,9 +62,9 @@ module ContractRateCards
         # create back. Omitted or null, the card starts on a single default
         # terminal phase.
         if params.key?(:rate_phases) && !params[:rate_phases].nil?
-          RatePhases::ReplaceService.call!(contract_rate_card:, phases_params: params[:rate_phases])
+          RatePhases::ReplaceService.call!(contract_rate_card:, phases_params: params[:rate_phases], initial:)
         else
-          RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1})
+          RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1}, initial:)
         end
 
         result.contract_rate_card = contract_rate_card
@@ -74,7 +79,7 @@ module ContractRateCards
 
     private
 
-    attr_reader :contract, :params
+    attr_reader :contract, :params, :initial
 
     def slice_error_code(rate_card)
       if rate_card.product_filter_id

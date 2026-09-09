@@ -46,6 +46,40 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with applied_rate_cards priced at creation" do
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+      let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          external_id: "contract-1",
+          applied_rate_cards: [{rate_card_code: rate_card.code, units: "10"}]
+        }
+      end
+
+      it "creates the active contract already priced" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("active")
+        expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+      end
+
+      it "still rejects a post-creation attach on the now-active contract" do
+        subject
+        expect(response).to have_http_status(:success)
+
+        post_with_token(
+          organization,
+          "/api/v2/contracts/contract-1/applied_rate_cards",
+          {applied_rate_card: {rate_card_code: create(:rate_card, organization:, currency: "EUR").code}}
+        )
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :contract)).to eq(["contract_locked"])
+      end
+    end
+
     context "when the customer does not exist" do
       let(:create_params) { super().merge(external_customer_id: "unknown") }
 

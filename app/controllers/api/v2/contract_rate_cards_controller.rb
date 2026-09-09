@@ -5,6 +5,35 @@ module Api
     class ContractRateCardsController < Api::BaseController
       include Api::RequiresProductCatalog
 
+      # The permitted shape of one applied rate card, shared with the contract
+      # create surface that authors cards atomically at birth.
+      APPLIED_RATE_CARD_PARAMS = [
+        :rate_card_code, :units, :billing_anchor_date,
+        {rate_phases: [
+          :code,
+          :position,
+          :name,
+          :billing_interval_cycle_count,
+          {rate_override: [
+            :rate_model,
+            :min_amount_cents,
+            :billing_interval_count,
+            :billing_interval_unit,
+            :pricing_unit_conversion_rate,
+            # Structural card fields pass through so the override service can
+            # reject them explicitly instead of strong params dropping them.
+            :billing_timing,
+            :currency,
+            :proration,
+            :display_on_invoice,
+            :regroup_paid_fees,
+            :wallet_targetable,
+            :applied_pricing_unit_code,
+            {rate_properties: {}}
+          ]}
+        ]}
+      ].freeze
+
       def create
         return not_found_error(resource: "contract") unless find_contract
 
@@ -95,32 +124,7 @@ module Api
       end
 
       def create_params
-        params.require(:applied_rate_card).permit(
-          :rate_card_code, :units, :billing_anchor_date,
-          rate_phases: [
-            :code,
-            :position,
-            :name,
-            :billing_interval_cycle_count,
-            {rate_override: [
-              :rate_model,
-              :min_amount_cents,
-              :billing_interval_count,
-              :billing_interval_unit,
-              :pricing_unit_conversion_rate,
-              # Structural card fields pass through so the override service can
-              # reject them explicitly instead of strong params dropping them.
-              :billing_timing,
-              :currency,
-              :proration,
-              :display_on_invoice,
-              :regroup_paid_fees,
-              :wallet_targetable,
-              :applied_pricing_unit_code,
-              {rate_properties: {}}
-            ]}
-          ]
-        )
+        params.require(:applied_rate_card).permit(*APPLIED_RATE_CARD_PARAMS)
       end
 
       def update_params

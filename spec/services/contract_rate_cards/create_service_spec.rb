@@ -63,6 +63,15 @@ RSpec.describe ContractRateCards::CreateService do
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
     end
+
+    context "when authored as an initial (birth) card" do
+      subject(:result) { described_class.call(contract:, params:, initial: true) }
+
+      it "bypasses the active lock" do
+        expect(result).to be_success
+        expect(result.contract_rate_card.rate_card).to eq(rate_card)
+      end
+    end
   end
 
   context "when the rate card does not exist" do

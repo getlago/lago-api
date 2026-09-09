@@ -4,10 +4,11 @@ module RatePhases
   class ReplaceService < BaseService
     Result = BaseResult[:rate_phases]
 
-    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [])
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [], initial: false)
       @plan_rate_card = plan_rate_card
       @contract_rate_card = contract_rate_card
       @phases_params = Array.wrap(phases_params).map { |phase| phase.to_h.with_indifferent_access }
+      @initial = initial
       super
     end
 
@@ -21,7 +22,9 @@ module RatePhases
       # gaining a subscription) concurrently cannot slip past the guard
       # mid-replace.
       applied_rate_card.with_lock do
-        if (blocked = applied_rate_card.edit_error_code)
+        # initial: authored inside the contract's create transaction, before
+        # the active lock applies; every live-card caller still passes the guard.
+        if !initial && (blocked = applied_rate_card.edit_error_code)
           return result.single_validation_failure!(field: :rate_phases, error_code: blocked)
         end
 
@@ -50,7 +53,7 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :contract_rate_card, :phases_params
+    attr_reader :plan_rate_card, :contract_rate_card, :phases_params, :initial
 
     def applied_rate_card
       plan_rate_card || contract_rate_card
