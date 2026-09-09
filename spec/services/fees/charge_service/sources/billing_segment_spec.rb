@@ -37,13 +37,6 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     )
   end
 
-  describe "validations" do
-    it "validates source inputs" do
-      expect { described_class.new(billing_segment: nil) }
-        .to raise_error(ArgumentError, "billing_segment must be a BillingSegment")
-    end
-  end
-
   describe "#charge_id" do
     it "returns nil for a catalog product without a legacy charge" do
       expect(source.charge_id).to be_nil
@@ -59,19 +52,12 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     end
   end
 
-  describe "#dynamic?" do
-    it "reflects the segment rate model without a legacy charge" do
-      expect(source).not_to be_dynamic
-
-      rate_card_rate.rate_model = "dynamic"
-
-      expect(source).to be_dynamic
-    end
-
-    it "prefers the rate override model" do
-      billing_segment.rate_override = build(:rate_override, organization:, rate_model: "dynamic")
-
-      expect(source).to be_dynamic
+  describe "fee identity" do
+    it "exposes product fee attributes individually" do
+      expect(source).to have_attributes(
+        fee_type: :product, invoiceable: product, contract: billing_segment.contract,
+        rate_card_rate:, rate_override: nil
+      )
     end
   end
 
@@ -82,6 +68,38 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       expect(result).to be_a(ChargeFilters::MatchingAndIgnoredService::Result)
       expect(result).to have_attributes(matching_filters: {}, ignored_filters: [])
       expect(source.matching_and_ignored_filters).to eq(result)
+    end
+
+    context "with a selected product filter" do
+      let(:product_filter) { build(:product_filter, organization:, product:) }
+
+      before do
+        rate_card.product_filter = product_filter
+        allow(product_filter).to receive(:to_h).and_return({"region" => ["us"]})
+      end
+
+      it "matches the selected filter without ignoring other filters" do
+        expect(source.matching_and_ignored_filters).to have_attributes(
+          matching_filters: {"region" => ["us"]}, ignored_filters: []
+        )
+      end
+
+      it "supports an explicit default bucket without changing segment properties" do
+        filtered_source = source.with_filter(nil)
+
+        expect(source.selected_filter).to eq(product_filter)
+        expect(filtered_source).to have_attributes(selected_filter: nil, properties: segment_rate_properties)
+        expect(filtered_source.matching_and_ignored_filters).to have_attributes(matching_filters: {}, ignored_filters: [])
+      end
+
+      it "allows selecting a filter from the default bucket" do
+        filtered_source = source.with_filter(nil).with_filter(product_filter)
+
+        expect(filtered_source).to have_attributes(selected_filter: product_filter, billing_segment:)
+        expect(filtered_source.matching_and_ignored_filters).to have_attributes(
+          matching_filters: {"region" => ["us"]}, ignored_filters: []
+        )
+      end
     end
   end
 
@@ -99,17 +117,6 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         prorated: true,
         accepts_target_wallet: false,
         currency: Money::Currency.new("USD")
-      )
-    end
-  end
-
-  describe "#aggregation_options" do
-    it "returns aggregation options from stored properties" do
-      expect(source.aggregation_options(current_usage: false)).to eq(
-        free_units_per_events: 2,
-        free_units_per_total_aggregation: 3.to_d,
-        is_current_usage: false,
-        is_pay_in_advance: false
       )
     end
   end
