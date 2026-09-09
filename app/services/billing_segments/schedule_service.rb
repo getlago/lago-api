@@ -49,21 +49,13 @@ module BillingSegments
 
     def schedule_card(card)
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
-      scheduled = schedule.segments_due_by(timestamp).filter_map do |segment|
-        if due_from_clock?(segment, card.next_billing_at)
-          persist_segment(card, segment)
-        end
+      scheduled = schedule.segments_due_by(timestamp, billing_from: card.next_billing_at).filter_map do |segment|
+        persist_segment(card, segment)
       end
 
       # nil means the schedule is exhausted, so this card is no longer due.
       card.update!(next_billing_at: schedule.next_billing_at(after: timestamp))
       scheduled
-    end
-
-    def due_from_clock?(segment, clock)
-      # A freshly attached advance card can have a clock seeded at the signing
-      # instant, inside the first segment rather than at its local midnight.
-      segment.billing_at >= clock || (segment.started_at...segment.ended_at).cover?(clock)
     end
 
     def persist_segment(card, segment)

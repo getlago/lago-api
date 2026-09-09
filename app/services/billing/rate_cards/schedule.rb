@@ -16,11 +16,26 @@ module Billing
       end
 
       # A rate change can make a segment due before its cycle ends.
-      def segments_due_by(timestamp)
+      def segments_due_by(timestamp, billing_from: nil)
         cycles = walker.walk_to(timestamp, from: resume_at)
 
-        billable_segments_of(cycles).select do |segment|
-          segment.billing_at <= timestamp
+        cycles.flat_map do |cycle|
+          segments = billable_segments_of([cycle])
+
+          if billing_from
+            # A saved arrears clock can point to the original cycle end even
+            # after termination shortens it. Select against the unshortened
+            # pricing windows, then persist the actual service boundaries.
+            full_cycle = cycle.with(ended_at: cycle.calendar.interval_containing(cycle.started_at).end)
+            eligible_starts = billable_segments_of([full_cycle]).filter_map do |segment|
+              if segment.billing_at >= billing_from || (segment.started_at...segment.ended_at).cover?(billing_from)
+                segment.started_at
+              end
+            end
+            segments = segments.select { eligible_starts.include?(it.started_at) }
+          end
+
+          segments.select { it.billing_at <= timestamp }
         end
       end
 
