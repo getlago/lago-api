@@ -6,6 +6,7 @@ RSpec.describe Contract do
   subject(:contract) { build(:contract) }
 
   it_behaves_like "paper_trail traceable"
+  it_behaves_like "a model with a purchase order number"
 
   describe "enums" do
     it do
@@ -17,6 +18,11 @@ RSpec.describe Contract do
         .backed_by_column_of_type(:enum)
         .validating
         .with_values(calendar: "calendar", anniversary: "anniversary")
+      expect(subject).to define_enum_for(:payment_method_type)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_prefix
+        .with_values(provider: "provider", manual: "manual")
     end
   end
 
@@ -25,8 +31,11 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:organization)
       expect(contract).to belong_to(:customer)
       expect(contract).to belong_to(:catalog_plan).optional
+      expect(contract).to belong_to(:billing_entity).optional
+      expect(contract).to belong_to(:payment_method).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
+      expect(contract).to have_many(:invoices).through(:billing_segments)
     end
 
     it "resolves a discarded customer and catalog plan" do
@@ -44,6 +53,15 @@ RSpec.describe Contract do
 
   describe "validations" do
     it { is_expected.to validate_presence_of(:external_id) }
+
+    describe "payment_method_type validation" do
+      it "rejects an unsupported payment method type" do
+        contract.payment_method_type = "unsupported"
+
+        expect(contract).not_to be_valid
+        expect(contract.errors.of_kind?(:payment_method_type, :inclusion)).to be(true)
+      end
+    end
 
     it "rejects an ended_at before started_at" do
       contract = build(:contract, started_at: Time.zone.parse("2026-02-15"), ended_at: Time.zone.parse("2026-02-01"))
@@ -71,6 +89,101 @@ RSpec.describe Contract do
 
         expect { create(:contract, organization:, customer:, external_id: "c-1") }.not_to raise_error
       end
+    end
+  end
+
+  describe "#billing_entity" do
+    it "persists an optional billing entity" do
+      billing_entity = create(:billing_entity, organization: contract.organization)
+      contract.update!(billing_entity:)
+
+      expect(contract.reload.billing_entity).to eq(billing_entity)
+      expect(contract.billing_entity_id).to eq(billing_entity.id)
+    end
+
+    it "returns nil when no override is set, including when preloaded" do
+      contract.save!
+
+      expect(contract.reload.billing_entity).to be_nil
+      expect(contract.billing_entity_id).to be_nil
+      expect(described_class.includes(:billing_entity).find(contract.id).billing_entity).to be_nil
+    end
+  end
+
+  describe "#applicable_billing_entity" do
+    it "prefers the explicit billing entity" do
+      billing_entity = create(:billing_entity, organization: contract.organization)
+      contract.update!(billing_entity:)
+
+      expect(contract.reload.applicable_billing_entity).to eq(billing_entity)
+      expect(contract.applicable_billing_entity_id).to eq(billing_entity.id)
+    end
+
+    it "falls back to the customer billing entity when no override is set" do
+      expect(contract.applicable_billing_entity).to eq(contract.customer.billing_entity)
+      expect(contract.applicable_billing_entity_id).to eq(contract.customer.billing_entity_id)
+    end
+
+    it "returns nil without a billing entity or customer" do
+      contract.customer = nil
+
+      expect(contract.applicable_billing_entity).to be_nil
+      expect(contract.applicable_billing_entity_id).to be_nil
+    end
+  end
+
+  describe "#consolidate_invoice" do
+    it "defaults to consolidated invoices" do
+      contract.save!
+
+      expect(contract.reload.consolidate_invoice).to be(true)
+    end
+
+    it "persists opting out of invoice consolidation" do
+      contract.update!(consolidate_invoice: false)
+
+      expect(contract.reload.consolidate_invoice).to be(false)
+    end
+  end
+
+  describe "#purchase_order_number" do
+    it "persists the normalized purchase order number" do
+      contract.update!(purchase_order_number: "  PO-123  ")
+
+      expect(contract.reload.purchase_order_number).to eq("PO-123")
+    end
+  end
+
+  describe "#payment_method" do
+    it "persists an optional payment method" do
+      payment_method = create(:payment_method, organization: contract.organization, customer: contract.customer)
+      contract.update!(payment_method:)
+
+      expect(contract.reload.payment_method).to eq(payment_method)
+    end
+  end
+
+  describe "#payment_method_type" do
+    it "defaults to provider payments" do
+      contract.save!
+
+      expect(contract.reload).to be_payment_method_type_provider
+    end
+
+    it "persists manual payments" do
+      contract.update!(payment_method_type: :manual)
+
+      expect(contract.reload).to be_payment_method_type_manual
+    end
+  end
+
+  describe "#invoices" do
+    it "returns each invoice once across multiple billing segments" do
+      contract.save!
+      invoice = create(:invoice, organization: contract.organization, customer: contract.customer)
+      create_list(:billing_segment, 2, contract:, invoice:, organization: contract.organization, customer: contract.customer)
+
+      expect(contract.invoices).to eq([invoice])
     end
   end
 
