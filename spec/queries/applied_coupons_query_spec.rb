@@ -7,17 +7,16 @@ RSpec.describe AppliedCouponsQuery do
     described_class.call(organization:, pagination:, filters:)
   end
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:pagination) { nil }
-  let(:filters) { {} }
-
-  let(:customer_1) { create(:customer, organization:) }
   let(:coupon_1) { create(:coupon, organization:) }
-  let(:customer_2) { create(:customer, organization:) }
   let(:coupon_2) { create(:coupon, organization:) }
-
   let!(:applied_coupon_1) { create(:applied_coupon, coupon: coupon_1, customer: customer_1) }
   let!(:applied_coupon_2) { create(:applied_coupon, coupon: coupon_2, customer: customer_2) }
+  let(:filters) { {} }
+
+  let_it_be(:customer_1) { create(:customer, organization:) }
+  let_it_be(:customer_2) { create(:customer, organization:) }
 
   it "returns a list of applied_coupons" do
     expect(result).to be_success

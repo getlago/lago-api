@@ -14,7 +14,7 @@ RSpec.describe TaxesQuery do
   let(:filters) { nil }
   let(:order) { nil }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create_default(:organization) }
   let(:tax_first) { create(:tax, :applied_to_billing_entity, organization:, name: "defgh", code: "11", rate: 10) }
   let(:tax_second) { create(:tax, :applied_to_billing_entity, organization:, name: "abcde", code: "22", rate: 5) }
 

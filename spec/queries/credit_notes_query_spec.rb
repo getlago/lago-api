@@ -3,18 +3,21 @@
 require "rails_helper"
 
 RSpec.describe CreditNotesQuery do
+  before_all do
+    create_default(:invoice)
+  end
+
   subject(:result) do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
   let(:returned_ids) { result.credit_notes.pluck(:id) }
-
-  let(:organization) { customer.organization }
-  let(:customer) { create(:customer) }
-
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   context "when no filters applied" do
     let!(:credit_notes) { create_pair(:credit_note, customer:) }
@@ -423,13 +426,13 @@ RSpec.describe CreditNotesQuery do
   end
 
   context "when filtering by self_billed" do
-    let(:credit_note_first) do
+    let_it_be(:credit_note_first) do
       invoice = create(:invoice, :self_billed, organization:, customer:)
 
       create(:credit_note, customer:, invoice:)
     end
 
-    let(:credit_note_second) do
+    let_it_be(:credit_note_second) do
       invoice = create(:invoice, organization:, customer:)
 
       create(:credit_note, customer:, invoice:)
@@ -469,11 +472,11 @@ RSpec.describe CreditNotesQuery do
   end
 
   context "when billing entity ids filter applied" do
-    let(:billing_entity) { create(:billing_entity, organization:) }
+    let_it_be(:billing_entity) { create(:billing_entity, organization:) }
     let(:filters) { {billing_entity_ids: [billing_entity.id]} }
 
-    let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
-    let(:other_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, organization:)) }
+    let_it_be(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+    let_it_be(:other_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, organization:)) }
 
     before do
       matching_credit_note

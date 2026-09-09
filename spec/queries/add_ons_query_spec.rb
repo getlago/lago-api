@@ -9,7 +9,7 @@ RSpec.describe AddOnsQuery do
 
   let(:returned_ids) { result.add_ons.pluck(:id) }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create_default(:organization) }
   let(:add_on_first) { create(:add_on, organization:, name: "defgh", code: "11") }
   let(:add_on_second) { create(:add_on, organization:, name: "abcde", code: "22") }
   let(:add_on_third) { create(:add_on, organization:, name: "presuv", code: "33") }

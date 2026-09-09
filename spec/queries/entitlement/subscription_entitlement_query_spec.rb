@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementQuery do
+  before_all do
+    create_default(:customer)
+  end
+
   subject do
     described_class.call(
       organization:,
@@ -13,25 +17,22 @@ RSpec.describe Entitlement::SubscriptionEntitlementQuery do
     )
   end
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
 
   let(:subscription_id) { subscription.id }
-  let(:plan_id) { subscription.plan.parent_id || subscription.plan.id }
-
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
-
   let(:seats) { create(:feature, organization:, code: "seats", name: "Nb users") }
   let(:seats_max) { create(:privilege, feature: seats, code: "max", name: "Max", value_type: "integer") }
   let(:seats_reset) { create(:privilege, feature: seats, code: "reset", name: "Password Reset", value_type: "boolean") }
-
   let(:storage) { create(:feature, organization:, code: "storage", name: "Storage") }
   let(:storage_limit) { create(:privilege, feature: storage, code: "limit", name: "Limit", value_type: "string") }
   let(:storage_type) { create(:privilege, feature: storage, code: "type", name: "Type", value_type: "select", config: {select_options: ["rom", "ram"]}) }
-
   let(:support) { create(:feature, organization:, code: "support", name: "Premium Support") }
+  let(:plan_id) { subscription.plan.parent_id || subscription.plan.id }
 
-  let(:other_organization_feature) { create(:feature, organization: create(:organization), code: "other") }
+  let_it_be(:plan) { create(:plan, organization:) }
+
+  let_it_be(:other_organization_feature) { create(:feature, organization: create(:organization), code: "other") }
 
   before do
     storage_type
