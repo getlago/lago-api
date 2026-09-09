@@ -6606,7 +6606,6 @@ enum FeatureFlagEnum {
   lazy_charge_usage_cache
   multi_connection
   order_forms
-  payment_gated_subscriptions
   postgres_enriched_events
   product_catalog
   skip_credit_invoice_auto_payment_delay
