@@ -14,10 +14,16 @@ module Fees
         )
       end
 
+      def self.from_billing_segment(billing_segment)
+        new(source: Sources::BillingSegment.new(billing_segment:))
+      end
+
       delegate :charge,
+        :billing_segment,
         :charge_id,
         :dynamic?,
         :charge_filter,
+        :product_filter,
         :billable_metric,
         :organization_id,
         :currency,

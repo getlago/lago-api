@@ -45,6 +45,14 @@ class BillingSegment < ApplicationRecord
     rate_override || rate_card_rate
   end
 
+  def duration_in_days
+    Billing::Days.between(
+      started_at,
+      BillingSegment.exclusive_end(ended_at),
+      timezone: customer.applicable_timezone
+    )
+  end
+
   def pricing_unit_conversion_rate
     if rate_override
       rate_override.pricing_unit_conversion_rate
