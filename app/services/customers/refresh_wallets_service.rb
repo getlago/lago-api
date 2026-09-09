@@ -35,7 +35,7 @@ module Customers
 
       customer.update!(awaiting_wallet_refresh: false)
 
-      deliver_current_usage
+      deliver_streaming_events
 
       result.wallets = customer.wallets.active.reload
       result
@@ -47,12 +47,14 @@ module Customers
 
     attr_reader :customer, :include_generating_invoices
 
-    def deliver_current_usage
-      event_type = EventDestinations::CustomerUsage::RefreshedService::EVENT_TYPE
-
-      return unless StreamingDestinations::BaseDestination.streams_event?(customer.organization, event_type)
-
-      DeliverEventJob.perform_after_commit(event_type, customer)
+    def deliver_streaming_events
+      StreamingDestinations::BaseDestination
+        .where(organization: customer.organization)
+        .pluck(:event_types)
+        .flatten
+        .uniq
+        .intersection(StreamingDestinations::BaseDestination::EVENT_TYPES)
+        .each { DeliverEventJob.perform_after_commit(it, customer) }
     end
 
     def all_wallets

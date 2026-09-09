@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module EventDestinations
-  module CustomerUsage
+  module CustomerFullUsage
     class RefreshedService < BaseService
       Result = BaseResult
 
-      EVENT_TYPE = "customer_usage.refreshed.v1"
+      EVENT_TYPE = "customer_full_usage.refreshed.v1"
       OBJECT_TYPE = "customer_usage"
 
       def initialize(object:)
@@ -61,7 +61,11 @@ module EventDestinations
           customer:,
           subscription:,
           apply_taxes: false,
-          with_cache: true
+          with_cache: true,
+          usage_filters: UsageFilters.new(
+            full_usage: true,
+            filter_by_charge_id: subscription.plan.charges.ids
+          )
         )
 
         unless usage_result.success?

@@ -112,6 +112,11 @@ RSpec.describe Customers::RefreshWalletsService do
             .with("customer_usage.refreshed.v1", customer)
         end
 
+        it "enqueues one job per event type the destination subscribes to" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_full_usage.refreshed.v1", customer)
+        end
+
         it "enqueues nothing when the wrapping transaction rolls back" do
           expect do
             ActiveRecord::Base.transaction do
