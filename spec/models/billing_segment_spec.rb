@@ -79,6 +79,19 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "#empty_product_filter" do
+    it "builds an unsaved default-bucket filter for the segment's product" do
+      filter = billing_segment.empty_product_filter
+
+      expect(filter).to have_attributes(
+        organization: billing_segment.organization,
+        product: billing_segment.contract_rate_card.rate_card.product,
+        new_record?: true
+      )
+      expect(filter.to_h_with_all_values).to eq({})
+    end
+  end
+
   describe "#rate" do
     let(:rate_card_rate) { build_stubbed(:rate_card_rate) }
     let(:billing_segment) { described_class.new(rate_card_rate:) }

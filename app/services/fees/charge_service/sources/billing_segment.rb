@@ -4,7 +4,8 @@ module Fees
   class ChargeService
     module Sources
       BillingSegment = Data.define(:billing_segment, :product_filter) do
-        def initialize(billing_segment:, product_filter: billing_segment.contract_rate_card.rate_card.product_filter)
+        def initialize(billing_segment:, product_filter: nil)
+          @cache = {}
           super
         end
 
@@ -79,10 +80,12 @@ module Fees
         end
 
         def matching_and_ignored_filters
-          ChargeFilters::MatchingAndIgnoredService::Result.new.tap do |result|
-            result.matching_filters = product_filter&.to_h || {}
-            result.ignored_filters = []
-          end
+          @cache[:matching_and_ignored_filters] ||= Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+            target_filter: Events::BillingPeriodFilters::FilterTarget.from_billing_segment(
+              billing_segment:,
+              filter: product_filter || billing_segment.empty_product_filter
+            )
+          )
         end
 
         def pay_in_advance?

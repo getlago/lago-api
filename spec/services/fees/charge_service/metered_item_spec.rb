@@ -97,8 +97,12 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       rate_card.product_filter = product_filter
       metered_item = described_class.from_billing_segment(billing_segment)
 
-      expect(metered_item).to have_attributes(product_filter:, selected_filter: product_filter, filter_id: product_filter.id)
-      expect(metered_item.with_filter(nil)).to have_attributes(product_filter: nil, selected_filter: nil, filter_id: nil)
+      expect(metered_item).to have_attributes(product_filter: nil, selected_filter: nil, filter_id: nil)
+
+      filtered_item = metered_item.with_filter(product_filter)
+
+      expect(filtered_item).to have_attributes(product_filter:, selected_filter: product_filter, filter_id: product_filter.id)
+      expect(filtered_item.with_filter(nil)).to have_attributes(product_filter: nil, selected_filter: nil, filter_id: nil)
     end
 
     it "builds aggregation options from the stored segment properties" do

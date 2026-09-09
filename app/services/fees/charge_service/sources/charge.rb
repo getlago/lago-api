@@ -5,6 +5,7 @@ module Fees
     module Sources
       Charge = Data.define(:charge, :boundaries, :charge_filter, :properties_override) do
         def initialize(charge:, boundaries:, charge_filter: nil, properties_override: nil)
+          @cache = {}
           super
         end
 
@@ -74,9 +75,8 @@ module Fees
         end
 
         def matching_and_ignored_filters
-          ChargeFilters::MatchingAndIgnoredService.call(
-            charge:,
-            filter: charge_filter
+          @cache[:matching_and_ignored_filters] ||= Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+            target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: charge_filter)
           )
         end
 

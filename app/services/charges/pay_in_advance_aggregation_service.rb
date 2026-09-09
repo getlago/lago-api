@@ -58,10 +58,12 @@ module Charges
       filters[:presentation_by] = presentation_group_keys_values if presentation_group_keys_values.present?
 
       if charge_filter.present?
-        result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
+        matching_result = Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+          target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: charge_filter)
+        )
         filters[:charge_filter] = charge_filter if charge_filter.persisted?
-        filters[:matching_filters] = result.matching_filters
-        filters[:ignored_filters] = result.ignored_filters
+        filters[:matching_filters] = matching_result.matching_filters
+        filters[:ignored_filters] = matching_result.ignored_filters
       end
 
       filters

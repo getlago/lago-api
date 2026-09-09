@@ -53,6 +53,21 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
     end
   end
 
+  describe "#matching_and_ignored_filters" do
+    it "memoizes the result per source without sharing it with a new filter source" do
+      allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_return(BaseResult.new)
+
+      result = source.matching_and_ignored_filters
+
+      expect(source.matching_and_ignored_filters).to equal(result)
+      expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).once
+
+      source.with_filter(nil).matching_and_ignored_filters
+
+      expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).twice
+    end
+  end
+
   describe "#properties" do
     it "uses explicit properties before filter and charge properties" do
       charge_filter = create(:charge_filter, charge:, properties: {amount: "30"})
