@@ -6,7 +6,7 @@ module EventDestinations
   class KinesisProducer
     HTTP_OPEN_TIMEOUT = 2
     HTTP_READ_TIMEOUT = 5
-    RETRY_LIMIT = 1
+    MAX_ATTEMPTS = 2
 
     ROLE_SESSION_NAME = "lago-event-destinations"
 
@@ -90,7 +90,8 @@ module EventDestinations
       {
         http_open_timeout: HTTP_OPEN_TIMEOUT,
         http_read_timeout: HTTP_READ_TIMEOUT,
-        retry_limit: RETRY_LIMIT
+        retry_mode: "standard",
+        max_attempts: MAX_ATTEMPTS
       }
     end
   end

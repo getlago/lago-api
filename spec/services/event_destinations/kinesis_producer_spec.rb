@@ -62,20 +62,32 @@ RSpec.describe EventDestinations::KinesisProducer do
     end
   end
 
-  describe "timeouts" do
+  describe "timeouts and retries" do
     it "caps both the Kinesis and the STS client, so a hanging endpoint cannot hold a worker" do
       allow(Aws::STS::Client).to receive(:new).and_call_original
 
       expect(client.config.http_open_timeout).to eq(described_class::HTTP_OPEN_TIMEOUT)
       expect(client.config.http_read_timeout).to eq(described_class::HTTP_READ_TIMEOUT)
-      expect(client.config.retry_limit).to eq(described_class::RETRY_LIMIT)
+      expect(client.config.max_attempts).to eq(described_class::MAX_ATTEMPTS)
       expect(Aws::STS::Client).to have_received(:new).with(
         hash_including(
           http_open_timeout: described_class::HTTP_OPEN_TIMEOUT,
           http_read_timeout: described_class::HTTP_READ_TIMEOUT,
-          retry_limit: described_class::RETRY_LIMIT
+          retry_mode: "standard",
+          max_attempts: described_class::MAX_ATTEMPTS
         )
       )
+    end
+
+    it "holds the attempt budget even when the environment asks for more" do
+      original = ENV.slice("AWS_RETRY_MODE", "AWS_MAX_ATTEMPTS")
+      ENV["AWS_RETRY_MODE"] = "standard"
+      ENV["AWS_MAX_ATTEMPTS"] = "20"
+
+      expect(client.config.max_attempts).to eq(described_class::MAX_ATTEMPTS)
+    ensure
+      ENV["AWS_RETRY_MODE"] = original["AWS_RETRY_MODE"]
+      ENV["AWS_MAX_ATTEMPTS"] = original["AWS_MAX_ATTEMPTS"]
     end
   end
 
