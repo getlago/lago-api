@@ -31,7 +31,7 @@ RSpec.describe Utils::ApiLog do
   end
 
   describe ".produce", :capture_kafka_messages do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     context "when kafka is configured" do
       before do

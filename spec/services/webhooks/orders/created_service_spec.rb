@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Webhooks::Orders::CreatedService do
   subject(:webhook_service) { described_class.new(object: order) }
 
-  let(:organization) { create(:organization, webhook_url: "http://foo.bar", feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, webhook_url: "http://foo.bar", feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:order) { create(:order, organization:, customer:) }
 
   describe ".call", :premium do
@@ -37,6 +37,7 @@ RSpec.describe Webhooks::Orders::CreatedService do
     end
 
     context "when the order_forms feature flag is disabled", :premium do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization, webhook_url: "http://foo.bar") }
 
       it "does not create a webhook" do

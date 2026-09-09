@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService do
   describe "#call" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create(:organization) }
     let(:service) { described_class.new(organization:) }
 
     it "enqueues jobs for subscription activities that are not yet enqueued" do

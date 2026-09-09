@@ -6,9 +6,9 @@ RSpec.describe Subscriptions::OrganizationBillingService do
   subject(:billing_service) { described_class.new(organization:, billing_at:) }
 
   describe ".call" do
+    let_it_be(:organization) { create_default(:organization) }
     let(:billing_entity_timezone) { "UTC" }
     let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
-    let(:organization) { billing_entity.organization }
 
     let(:interval) { :monthly }
     let(:bill_charges_monthly) { false }
