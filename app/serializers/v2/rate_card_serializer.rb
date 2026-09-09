@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module V1
+module V2
   class RateCardSerializer < ModelSerializer
     def serialize
       payload = {
@@ -35,13 +35,13 @@ module V1
       rate = model.active_rate
       return if rate.nil?
 
-      ::V1::RateCardRateSerializer.new(rate).serialize
+      ::V2::RateCardRateSerializer.new(rate).serialize
     end
 
     def rates
       ::CollectionSerializer.new(
         model.rates,
-        ::V1::RateCardRateSerializer,
+        ::V2::RateCardRateSerializer,
         collection_name: "rates"
       ).serialize
     end
