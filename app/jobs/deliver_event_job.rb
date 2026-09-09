@@ -16,7 +16,9 @@ class DeliverEventJob < ApplicationJob
 
   EVENT_SERVICES = {
     EventDestinations::CustomerUsage::RefreshedService::EVENT_TYPE =>
-      EventDestinations::CustomerUsage::RefreshedService
+      EventDestinations::CustomerUsage::RefreshedService,
+    EventDestinations::CustomerFullUsage::RefreshedService::EVENT_TYPE =>
+      EventDestinations::CustomerFullUsage::RefreshedService
   }.freeze
 
   def perform(event_type, object)

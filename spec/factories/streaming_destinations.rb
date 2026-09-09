@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :kinesis_destination, class: "StreamingDestinations::KinesisDestination" do
     organization
     type { "StreamingDestinations::KinesisDestination" }
-    event_types { ["customer_usage.refreshed.v1"] }
+    event_types { ["customer_usage.refreshed.v1", "customer_full_usage.refreshed.v1"] }
 
     settings do
       {
