@@ -2,12 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe "Progressive billing credits with metric-limited coupons", :premium do
+RSpec.describe Credits::ProgressiveBillingService, :premium do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
   let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:charges) { Array.new(2) { create(:standard_charge, plan:) } }
+  let(:charges) do
+    Array.new(2) { create(:standard_charge, plan:, billable_metric: create(:billable_metric, organization:)) }
+  end
   let(:coupon_charges) { charges }
   let(:period_start) { Time.zone.parse("2026-08-01") }
   let(:period_end) { Time.zone.parse("2026-08-31").end_of_day }
@@ -28,7 +30,7 @@ RSpec.describe "Progressive billing credits with metric-limited coupons", :premi
   end
 
   def build_invoice(invoice_type, amounts)
-    invoice = create(:invoice, organization:, customer:, invoice_type:,
+    invoice = create(:invoice, organization:, customer:, invoice_type:, status: :generating,
       issuing_date: (invoice_type == :progressive_billing) ? Date.new(2026, 8, 28) : Date.new(2026, 9, 1),
       fees_amount_cents: amounts.sum, sub_total_excluding_taxes_amount_cents: amounts.sum)
     create(:invoice_subscription, invoice:, subscription:, charges_from_datetime: period_start,

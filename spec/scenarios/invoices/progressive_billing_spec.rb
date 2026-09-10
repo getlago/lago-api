@@ -74,36 +74,40 @@ describe "Progressive billing invoices", :premium, transaction: false do
       create(:applied_coupon, customer:, coupon: fixed_coupon, amount_cents: 4000, frequency: "forever")
     end
 
-    it "discounts the full period before deducting the net progressive credit" do
-      start_time = Time.zone.parse("2026-08-01")
-      travel_to(start_time) do
-        create_subscription({external_customer_id: customer.external_id,
-                             external_id: customer.external_id, plan_code: plan.code})
-      end
-      subscription = customer.subscriptions.sole
+    shared_examples "a discounted billing period" do
+      it "discounts the full period before deducting the net progressive credit" do
+        start_time = Time.zone.parse("2026-08-01")
+        travel_to(start_time) do
+          create_subscription({external_customer_id: customer.external_id,
+                               external_id: customer.external_id, plan_code: plan.code})
+        end
+        subscription = customer.subscriptions.sole
 
-      travel_to(start_time + 5.days) { ingest_event(subscription, billable_metric, 10_339) }
-      if additional_progressive_invoice
-        travel_to(start_time + 10.days) { ingest_event(subscription, billable_metric, 161) }
-        travel_to(start_time + 15.days) { ingest_event(subscription, billable_metric, 256) }
-      else
-        travel_to(start_time + 15.days) { ingest_event(subscription, billable_metric, 417) }
-      end
+        travel_to(start_time + 5.days) { ingest_event(subscription, billable_metric, 10_339) }
+        if additional_progressive_invoice
+          travel_to(start_time + 10.days) { ingest_event(subscription, billable_metric, 161) }
+          travel_to(start_time + 15.days) { ingest_event(subscription, billable_metric, 256) }
+        else
+          travel_to(start_time + 15.days) { ingest_event(subscription, billable_metric, 417) }
+        end
 
-      progressive_invoices = subscription.invoices.progressive_billing.order(:created_at)
-      expect(progressive_invoices.pluck(:total_amount_cents)).to eq(expected_progressive_amounts)
+        progressive_invoices = subscription.invoices.progressive_billing.order(:created_at)
+        expect(progressive_invoices.pluck(:total_amount_cents)).to eq(expected_progressive_amounts)
 
-      travel_to(start_time + 1.month) do
-        perform_billing
-        invoice = subscription.invoices.subscription.sole
+        travel_to(start_time + 1.month) do
+          perform_billing
+          invoice = subscription.invoices.subscription.sole
 
-        expect(invoice.fees_amount_cents).to eq(10_756)
-        expect(invoice.coupons_amount_cents).to eq(9378)
-        expect(invoice.total_amount_cents).to eq(expected_final_amount)
-        expect(invoice.fees.sum(&:sub_total_excluding_taxes_amount_cents)).to eq(expected_final_amount)
-        expect(progressive_invoices.sum(:total_amount_cents) + invoice.total_amount_cents).to eq(1378)
+          expect(invoice.fees_amount_cents).to eq(10_756)
+          expect(invoice.coupons_amount_cents).to eq(9378)
+          expect(invoice.total_amount_cents).to eq(expected_final_amount)
+          expect(invoice.fees.sum(&:sub_total_excluding_taxes_amount_cents)).to eq(expected_final_amount)
+          expect(progressive_invoices.sum(:total_amount_cents) + invoice.total_amount_cents).to eq(1378)
+        end
       end
     end
+
+    include_examples "a discounted billing period"
 
     context "with two progressive invoices" do
       let(:additional_progressive_invoice) { true }
@@ -111,6 +115,8 @@ describe "Progressive billing invoices", :premium, transaction: false do
       let(:expected_final_amount) { 128 }
 
       before { create(:usage_threshold, plan:, amount_cents: 10_500) }
+
+      include_examples "a discounted billing period"
     end
   end
 
