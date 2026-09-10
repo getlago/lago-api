@@ -4,8 +4,9 @@ module Credits
   class AppliedCouponsService < BaseService
     Result = BaseResult[:credits, :invoice]
 
-    def initialize(invoice:)
+    def initialize(invoice:, only_billable_metric_coupons: false)
       @invoice = invoice
+      @only_billable_metric_coupons = only_billable_metric_coupons
       super
     end
 
@@ -39,7 +40,7 @@ module Credits
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :only_billable_metric_coupons
 
     delegate :customer, :currency, to: :invoice
 
@@ -48,10 +49,16 @@ module Credits
 
       # NOTE: We want to apply first coupons limited to the billable metrics, then the ones limited to the plans
       #       and finally the ones with no limitation
-      @applied_coupons = customer
+      coupons = customer
         .applied_coupons.active
         .joins(:coupon)
         .order("coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC")
+
+      @applied_coupons = if only_billable_metric_coupons
+        coupons.where(coupons: {limited_billable_metrics: true})
+      else
+        coupons
+      end
     end
   end
 end

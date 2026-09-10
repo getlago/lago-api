@@ -4,13 +4,15 @@ module Credits
   class ProgressiveBillingService < BaseService
     Result = BaseResult[:credits]
 
-    def initialize(invoice:)
+    def initialize(invoice:, apply_billable_metric_coupons: false)
       @invoice = invoice
+      @apply_billable_metric_coupons = apply_billable_metric_coupons
       super
     end
 
     def call
       result.credits = []
+      coupons_applied = false
 
       invoice.invoice_subscriptions.each do |invoice_subscription|
         subscription = invoice_subscription.subscription
@@ -22,6 +24,14 @@ module Credits
         progressive_billing_invoice = progressive_billed_result.progressive_billing_invoice
 
         next unless progressive_billing_invoice
+
+        if apply_billable_metric_coupons && !coupons_applied
+          # Metric-limited coupons need the full fee base. Other coupons retain
+          # their existing position after progressive billing credits.
+          Credits::AppliedCouponsService.call!(invoice:, only_billable_metric_coupons: true)
+          invoice.fees.reload
+          coupons_applied = true
+        end
 
         fees = matching_fees(subscription, progressive_billing_invoice)
         total_charges_amount = fees.sum(&:sub_total_excluding_taxes_amount_cents).round
@@ -59,7 +69,7 @@ module Credits
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :apply_billable_metric_coupons
 
     def matching_fees(subscription, progressive_billing_invoice)
       progressive_fee_keys = progressive_billing_invoice.fees.charge.map { |fee| fee_key(fee) }

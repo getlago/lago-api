@@ -50,11 +50,8 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents) -
           invoice.coupons_amount_cents
 
-        if should_create_coupon_credit?
-          Credits::AppliedCouponsService.call(invoice:)
-          invoice.fees.reload
-        end
-        Credits::ProgressiveBillingService.call(invoice:)
+        Credits::ProgressiveBillingService.call(invoice:, apply_billable_metric_coupons: should_create_coupon_credit?)
+        Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:, finalizing: finalizing_invoice?)
         return totals_result if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure) # rubocop:disable Rails/TransactionExitStatement

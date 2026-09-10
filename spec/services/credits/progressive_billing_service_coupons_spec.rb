@@ -23,7 +23,7 @@ RSpec.describe Credits::ProgressiveBillingService, :premium do
 
   before do
     coupon_charges.each do |charge|
-      create(:coupon_target, organization:, coupon: percentage_coupon, billable_metric: charge.billable_metric)
+      create(:coupon_billable_metric, organization:, coupon: percentage_coupon, billable_metric: charge.billable_metric)
     end
     create(:applied_coupon, customer:, coupon: percentage_coupon, percentage_rate: 50,
       frequency: "recurring", frequency_duration: 12, frequency_duration_remaining: 12)
@@ -44,9 +44,9 @@ RSpec.describe Credits::ProgressiveBillingService, :premium do
   end
 
   def apply_credits_and_finalize(invoice)
+    Credits::ProgressiveBillingService.call!(invoice:, apply_billable_metric_coupons: true)
     Credits::AppliedCouponsService.call!(invoice:)
     invoice.fees.reload
-    Credits::ProgressiveBillingService.call!(invoice:)
     Invoices::ComputeAmountsFromFees.call!(invoice:)
     invoice.update!(status: :finalized)
     invoice

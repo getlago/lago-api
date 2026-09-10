@@ -67,7 +67,7 @@ describe "Progressive billing invoices", :premium, transaction: false do
     before do
       coupon = create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 50,
         frequency: "recurring", frequency_duration: 12, limited_billable_metrics: true)
-      create(:coupon_target, organization:, coupon:, billable_metric:)
+      create(:coupon_billable_metric, organization:, coupon:, billable_metric:)
       create(:applied_coupon, customer:, coupon:, percentage_rate: 50,
         frequency: "recurring", frequency_duration: 12, frequency_duration_remaining: 12)
       fixed_coupon = create(:coupon, organization:, amount_cents: 4000, frequency: "forever")

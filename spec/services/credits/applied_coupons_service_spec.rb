@@ -346,6 +346,17 @@ RSpec.describe Credits::AppliedCouponsService do
         fee_middle
       end
 
+      context "when selecting only billable metric coupons" do
+        it "leaves plan coupons for the subsequent pass" do
+          result = described_class.call(invoice:, only_billable_metric_coupons: true)
+
+          expect(result).to be_success
+          expect(invoice.credits.pluck(:applied_coupon_id)).to eq([applied_coupon_middle.id])
+          expect(invoice.coupons_amount_cents).to eq(5)
+          expect(applied_coupon.reload).to be_active
+        end
+      end
+
       it "applies two coupons" do
         result = credit_service.call
 
