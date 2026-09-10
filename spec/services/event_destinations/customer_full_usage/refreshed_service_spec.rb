@@ -90,7 +90,7 @@ RSpec.describe EventDestinations::CustomerFullUsage::RefreshedService do
       it "skips rather than raising, so the current period record is unaffected" do
         expect(service.call).to be_success
         expect(producer_calls).to be_empty
-        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/skipped for subscription/))
+        expect(Rails.logger).to have_received(:warn).with(a_string_matching(/outcome=skipped/))
       end
     end
   end
