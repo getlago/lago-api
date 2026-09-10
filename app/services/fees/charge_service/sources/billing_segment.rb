@@ -5,6 +5,14 @@ module Fees
     module Sources
       BillingSegment = Data.define(:billing_segment, :product_filter) do
         def initialize(billing_segment:, product_filter: nil)
+          unless billing_segment.is_a?(::BillingSegment)
+            raise ArgumentError, "billing_segment must be a BillingSegment"
+          end
+
+          unless billing_segment.contract_rate_card.rate_card.product.usage?
+            raise ArgumentError, "billing_segment must belong to a usage product; fixed products cannot be metered"
+          end
+
           @cache = {}
           super
         end
@@ -31,6 +39,14 @@ module Fees
 
         def selected_filter
           product_filter
+        end
+
+        def filter_association
+          :product_filter
+        end
+
+        def with_default_filter
+          with_filter(nil)
         end
 
         def with_filter(filter)

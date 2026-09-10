@@ -57,6 +57,18 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       )
     end
 
+    it "rejects an invalid source type" do
+      expect { described_class.from_billing_segment(Object.new) }
+        .to raise_error(ArgumentError, "billing_segment must be a BillingSegment")
+    end
+
+    it "rejects fixed products" do
+      billing_segment.contract_rate_card.rate_card.product = build(:product, :fixed, organization:)
+
+      expect { described_class.from_billing_segment(billing_segment) }
+        .to raise_error(ArgumentError, "billing_segment must belong to a usage product; fixed products cannot be metered")
+    end
+
     it "builds a metered item backed by a billing segment source" do
       metered_item = described_class.from_billing_segment(billing_segment)
 
@@ -105,6 +117,17 @@ RSpec.describe Fees::ChargeService::MeteredItem do
 
       expect(filtered_item).to have_attributes(product_filter:, selected_filter: product_filter, filter_id: product_filter.id)
       expect(filtered_item.with_filter(nil)).to have_attributes(product_filter: nil, selected_filter: nil, filter_id: nil)
+    end
+
+    it "clears the product filter for the default bucket while keeping the segment price" do
+      product_filter = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
+      item = described_class.from_billing_segment(billing_segment).with_filter(product_filter)
+
+      expect(item.with_default_filter).to have_attributes(
+        selected_filter: nil, filter_id: nil, filter_association: :product_filter,
+        properties: billing_segment.rate_properties, billing_segment:
+      )
+      expect(item.selected_filter).to eq(product_filter)
     end
 
     it "builds aggregation options from the stored segment properties" do
@@ -194,6 +217,19 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       filtered_item = metered_item.with_filter(charge_filter, properties: {"amount" => "40"})
 
       expect(filtered_item).to have_attributes(charge_filter:, properties: {"amount" => "40"})
+    end
+
+    it "uses charge pricing and an unsaved filter for the default bucket" do
+      charge.properties = {"amount" => "20", "pricing_group_keys" => ["region"]}
+      filtered_item = metered_item.with_filter(charge_filter)
+      default_item = filtered_item.with_default_filter
+
+      expect(default_item).to have_attributes(
+        properties: charge.properties, pricing_group_keys: ["region"], filter_id: nil, filter_association: :charge_filter
+      )
+      expect(default_item.selected_filter).to be_new_record
+      expect(default_item.selected_filter.charge).to eq(charge)
+      expect(filtered_item.selected_filter).to eq(charge_filter)
     end
   end
 

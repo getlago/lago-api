@@ -33,6 +33,17 @@ module Fees
           charge_filter
         end
 
+        def filter_association
+          :charge_filter
+        end
+
+        def with_default_filter
+          with_filter(
+            ChargeFilter.new(charge:, properties: {"pricing_group_keys" => charge.pricing_group_keys}),
+            properties: charge.properties
+          )
+        end
+
         def fee_type
           :charge
         end

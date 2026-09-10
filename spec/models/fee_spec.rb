@@ -19,6 +19,18 @@ RSpec.describe Fee do
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
   it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
 
+  describe "product filter association" do
+    it "is optional and resolves discarded filters" do
+      expect(subject).to belong_to(:product_filter).optional
+
+      product_filter = create(:product_filter)
+      fee = create(:fee, product_filter:)
+      product_filter.discard!
+
+      expect(fee.reload.product_filter).to eq(product_filter)
+    end
+  end
+
   describe "#ordered_by_period" do
     let(:fee1) do
       create(:fee, properties: {
