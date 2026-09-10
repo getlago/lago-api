@@ -11,20 +11,16 @@ RSpec.describe RealtimeUsage::RefreshableCustomersService do
     create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
   end
   let(:customer) { create(:customer, organization:) }
-  let!(:wallet) { create(:wallet, customer:, organization:) }
 
   let(:triggers) do
     {customer.id => {organization_id: organization.id, customer_id: customer.id, offset: 0}}
   end
 
+  before { create(:wallet, customer:, organization:) }
+
   describe "#call" do
     it "returns the customer a refresh could act on" do
       expect(service.customers).to eq(customer.id => customer)
-    end
-
-    # The wallet ids are what let the job run for a customer the sweep has not flagged.
-    it "returns the customer's active wallet ids" do
-      expect(service.active_wallet_ids).to eq(customer.id => [wallet.id])
     end
 
     it "excludes a customer whose wallets are all terminated" do

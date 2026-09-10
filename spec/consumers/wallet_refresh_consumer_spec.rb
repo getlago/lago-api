@@ -12,10 +12,9 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
   let(:organization) do
     create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
   end
-  # No `awaiting_wallet_refresh`: this lane dispatches on the trigger alone, so every example
+  # No `awaiting_wallet_refresh`: this lane refreshes on the trigger alone, so every example
   # runs against a customer the clock sweep would not pick up.
   let(:customer) { create(:customer, organization:) }
-  let!(:wallet) { create(:wallet, customer:, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
@@ -29,7 +28,14 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
   # What the sink actually sends: RisingWave renders a naive timestamp as epoch milliseconds.
   let(:watermark) { (last_ingested_at.to_r * 1000).to_i }
 
-  before { allow(consumer).to receive(:pause) }
+  let(:refresh_options) { {force: true, lock_timeout_seconds: described_class::LOCK_TIMEOUT} }
+
+  before do
+    create(:wallet, customer:, organization:)
+
+    allow(consumer).to receive(:pause)
+    allow(Customers::RefreshWalletService).to receive(:call!).and_return(Customers::RefreshWalletService::Result.new)
+  end
 
   def produce(subscription_id: subscription.id, customer_id: customer.id, ingested_at: watermark, **options)
     payload = {
@@ -69,18 +75,21 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
     context "when the buckets have caught up with the watermark" do
       before { create_bucket(last_ingested_at:) }
 
-      # The wallet ids are what make the job run for a customer the sweep has not flagged.
-      it "enqueues the refresh with the customer's active wallet ids" do
+      # Throughput comes from the partitions and Karafka's concurrency, not from a job queue.
+      it "refreshes the customer inline" do
         produce
 
-        expect { consumer.consume }
-          .to have_enqueued_job(Customers::RefreshWalletJob).with(customer, wallet_ids: [wallet.id])
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer:, **refresh_options)
       end
 
       it "collapses every trigger of one customer into a single refresh" do
         3.times { produce }
 
-        expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob).once
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).once
       end
 
       it "does not pause the partition" do
@@ -93,8 +102,129 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       it "refreshes a trigger produced inside the age window" do
         produce(timestamp: (RealtimeUsage::WalletRefreshTriggersService::MAX_TRIGGER_AGE - 5.seconds).ago)
 
-        expect { consumer.consume }
-          .to have_enqueued_job(Customers::RefreshWalletJob).with(customer, wallet_ids: [wallet.id])
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer:, **refresh_options)
+      end
+    end
+
+    # The refresh is not retried here: the partition is keyed by customer, so a retry would
+    # spend it on one customer for usage the sweep picks up in one pass.
+    context "when the refresh fails" do
+      before do
+        create_bucket(last_ingested_at:)
+
+        allow(Customers::RefreshWalletService).to receive(:call!).and_raise(ActiveRecord::StaleObjectError)
+        allow(Sentry).to receive(:capture_exception)
+
+        produce
+      end
+
+      it "leaves the customer to the sweep rather than failing the batch" do
+        expect { consumer.consume }.not_to raise_error
+
+        expect(dlq_messages).to be_empty
+        expect(consumer).not_to have_received(:pause)
+      end
+
+      it "reports the failure" do
+        consumer.consume
+
+        expect(Sentry).to have_received(:capture_exception)
+      end
+
+      it "keeps refreshing the rest of the batch" do
+        other_wallet
+        create_other_bucket(last_ingested_at:)
+
+        allow(Customers::RefreshWalletService)
+          .to receive(:call!).with(customer:, **refresh_options).and_raise(ActiveRecord::StaleObjectError)
+
+        produce_other
+
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer: other_customer, **refresh_options)
+      end
+    end
+
+    # Contention means the sweep is refreshing that customer already, which is not a failure.
+    context "when the customer's refresh lock is held elsewhere" do
+      before do
+        create_bucket(last_ingested_at:)
+
+        allow(Customers::RefreshWalletService).to receive(:call!).and_raise(BaseLockService::FailedToAcquireLock)
+        allow(Sentry).to receive(:capture_exception)
+
+        produce
+      end
+
+      it "moves on without reporting it" do
+        expect { consumer.consume }.not_to raise_error
+
+        expect(Sentry).not_to have_received(:capture_exception)
+      end
+    end
+
+    # The refreshes run inline, so a batch that overran the poll interval would have the group
+    # rebalance under it. What is left is handed back and re-delivered on the next poll.
+    context "when the batch runs out of time" do
+      before do
+        create_bucket(last_ingested_at:)
+        other_wallet
+        create_other_bucket(last_ingested_at:)
+
+        stub_const("#{described_class}::CONSUME_DEADLINE", 1.second)
+
+        allow(Customers::RefreshWalletService).to receive(:call!) { travel(2.seconds) }
+        allow(consumer).to receive(:mark_as_consumed)
+
+        produce
+        produce_other
+      end
+
+      it "defers the triggers it did not reach" do
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer:, **refresh_options)
+        expect(Customers::RefreshWalletService).not_to have_received(:call!).with(customer: other_customer, **refresh_options)
+      end
+
+      it "resumes from the first deferred offset without spending the watermark grace" do
+        consumer.consume
+
+        expect(consumer).to have_received(:pause).with(1, described_class::RESUME_PAUSE_TIMEOUT)
+        expect(consumer).to have_received(:mark_as_consumed).with(consumer.messages.first)
+      end
+
+      it "does not dead letter what it deferred" do
+        consumer.consume
+
+        expect(dlq_messages).to be_empty
+      end
+    end
+
+    # The offset handed back may be the one waited on for its buckets next, so it enters the
+    # grace with a count of its own rather than the deadline's.
+    context "when a deferred offset is behind its watermark on the next cycle" do
+      before do
+        create_bucket(last_ingested_at:)
+        other_wallet
+        create_other_bucket(last_ingested_at: last_ingested_at - 1.second)
+
+        stub_const("#{described_class}::CONSUME_DEADLINE", 1.second)
+
+        allow(Customers::RefreshWalletService).to receive(:call!) { travel(2.seconds) }
+
+        produce
+        produce_other
+      end
+
+      it "waits on it instead of raising" do
+        expect { 2.times { consumer.consume } }.not_to raise_error
+
+        expect(consumer).to have_received(:pause).with(1, described_class::RESUME_PAUSE_TIMEOUT)
+        expect(consumer).to have_received(:pause).with(1, described_class::WATERMARK_PAUSE_TIMEOUT)
       end
     end
 
@@ -107,7 +237,9 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         create_bucket(last_ingested_at:)
         produce(**stale)
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
 
       it "does not pause, even with the buckets behind" do
@@ -123,10 +255,12 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
     context "when the buckets are still behind the watermark" do
       before { create_bucket(last_ingested_at: last_ingested_at - 1.second) }
 
-      it "does not enqueue the refresh" do
+      it "does not refresh" do
         produce
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
 
       it "pauses on the customer's first offset instead of waiting" do
@@ -147,8 +281,9 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         produce_other
         produce
 
-        expect { 2.times { consumer.consume } }
-          .to have_enqueued_job(Customers::RefreshWalletJob).with(other_customer, wallet_ids: [other_wallet.id]).once
+        2.times { consumer.consume }
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer: other_customer, **refresh_options).once
       end
 
       # Usage ingested since the refresh raises the watermark, which is the whole point of the
@@ -164,8 +299,9 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         create_other_bucket(last_ingested_at: last_ingested_at + 1.second)
         produce_other(ingested_at: watermark + 1_000, offset: 2)
 
-        expect { consumer.consume }
-          .to have_enqueued_job(Customers::RefreshWalletJob).with(other_customer, wallet_ids: [other_wallet.id])
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer: other_customer, **refresh_options).twice
       end
 
       it "commits the messages preceding the blocked one" do
@@ -199,13 +335,17 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       it "does not refresh while one of them is behind its own watermark" do
         create_bucket(subscription: second_subscription, last_ingested_at: last_ingested_at - 2.seconds)
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
 
       it "refreshes once every one of them has caught up" do
         create_bucket(subscription: second_subscription, last_ingested_at: last_ingested_at - 1.second)
 
-        expect { consumer.consume }.to have_enqueued_job(Customers::RefreshWalletJob).once
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).once
       end
     end
 
@@ -285,15 +425,17 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
       it "refreshes the customer carried by the second batch" do
         produce_other(offset: 1)
 
-        expect { consumer.consume }
-          .to have_enqueued_job(Customers::RefreshWalletJob).with(other_customer, wallet_ids: [other_wallet.id])
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer: other_customer, **refresh_options)
       end
 
       it "does not replay the first batch" do
         produce_other(offset: 1)
 
-        expect { consumer.consume }
-          .not_to have_enqueued_job(Customers::RefreshWalletJob).with(customer, wallet_ids: [wallet.id])
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).to have_received(:call!).with(customer:, **refresh_options).once
       end
     end
 
@@ -332,8 +474,10 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         produce
       end
 
-      it "does not enqueue the refresh" do
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+      it "does not refresh" do
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
 
       it "waits instead of raising out of the batch" do
@@ -366,7 +510,9 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         create_bucket(last_ingested_at:)
         produce(ingested_at: nil)
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
 
       it "does not pause, even with the buckets behind" do
@@ -385,10 +531,12 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         customer.wallets.update_all(status: :terminated) # rubocop:disable Rails/SkipsModelValidations
       end
 
-      it "does not enqueue the refresh" do
+      it "does not refresh" do
         produce
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
     end
 
@@ -398,10 +546,12 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
         create(:error_detail, owner: customer, organization:, error_code: :tax_error)
       end
 
-      it "does not enqueue the refresh" do
+      it "does not refresh" do
         produce
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
     end
 
@@ -410,10 +560,12 @@ RSpec.describe WalletRefreshConsumer, clickhouse: {clean_before: true} do
 
       before { create_bucket(last_ingested_at:) }
 
-      it "does not enqueue the refresh" do
+      it "does not refresh" do
         produce
 
-        expect { consumer.consume }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+        consumer.consume
+
+        expect(Customers::RefreshWalletService).not_to have_received(:call!)
       end
     end
   end
