@@ -34,6 +34,21 @@ RSpec.describe RateCards::CreateService do
     expect(rate_card.regroup_paid_fees).to eq("none")
   end
 
+  context "when hiding fees on a fixed product" do
+    let(:product) { create(:product, :fixed, organization:) }
+
+    before do
+      params[:billing_timing] = "advance"
+      params[:display_on_invoice] = false
+      params[:proration] = false
+    end
+
+    it "rejects it with a product-type error" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:display_on_invoice]).to eq(["not_allowed_for_product_type"])
+    end
+  end
+
   context "when regroup_paid_fees is explicitly null" do
     before { params[:regroup_paid_fees] = nil }
 
