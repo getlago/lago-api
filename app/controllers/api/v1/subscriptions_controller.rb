@@ -180,6 +180,12 @@ module Api
               :payment_method_type,
               :payment_method_id
             ],
+            connections: [
+              payment: [:behavior, :code],
+              tax: [:behavior, :code],
+              accounting: [:behavior, :code],
+              crm: [:behavior, :code]
+            ],
             usage_thresholds: usage_thresholds_params,
             plan_overrides:
           )
@@ -205,6 +211,12 @@ module Api
           payment_method: [
             :payment_method_type,
             :payment_method_id
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
           ],
           usage_thresholds: usage_thresholds_params,
           plan_overrides:
