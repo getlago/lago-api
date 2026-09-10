@@ -42,37 +42,6 @@ class AppliedCoupon < ApplicationRecord
     already_applied_amount = credits.active.sum(&:amount_cents)
     @remaining_amount = amount_cents - already_applied_amount
   end
-
-  # A recurring or forever fixed coupon has one allowance per billing period,
-  # shared by the invoices generated for that period.
-  def remaining_amount_for_this_subscription_billing_period(invoice:)
-    invoice_ids = invoice.invoice_subscriptions.flat_map do |invoice_subscription|
-      invoice_ids_for_invoice_subscription(invoice_subscription, invoice)
-    end.uniq
-    used_amount = credits.active.where(invoice_id: invoice_ids).sum(:amount_cents)
-
-    [amount_cents - used_amount, 0].max
-  end
-
-  private
-
-  # Returns invoice ids whose fees for this invoice_subscription's subscription fall within
-  # the billing period boundaries. Boundaries are read from a fee on the invoice rather than
-  # from the invoice_subscription itself, because pay-in-advance fees carry their own
-  # boundaries that may differ from the invoice_subscription record.
-  def invoice_ids_for_invoice_subscription(invoice_subscription, invoice)
-    boundaries = invoice.fees.where(subscription_id: invoice_subscription.subscription_id).first&.properties ||
-      {"charges_from_datetime" => invoice_subscription.charges_from_datetime,
-       "charges_to_datetime" => invoice_subscription.charges_to_datetime}
-
-    Fee.where(organization_id: invoice.organization_id,
-      billing_entity_id: invoice.billing_entity_id,
-      subscription_id: invoice_subscription.subscription_id)
-      .where("(properties->>'charges_from_datetime')::timestamptz >= ?::timestamptz", boundaries["charges_from_datetime"])
-      .where("(properties->>'charges_to_datetime')::timestamptz <= ?::timestamptz", boundaries["charges_to_datetime"])
-      .distinct
-      .pluck(:invoice_id)
-  end
 end
 
 # == Schema Information

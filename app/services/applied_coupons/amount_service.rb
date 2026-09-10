@@ -4,10 +4,9 @@ module AppliedCoupons
   class AmountService < BaseService
     Result = BaseResult[:amount]
 
-    def initialize(applied_coupon:, base_amount_cents:, invoice: nil)
+    def initialize(applied_coupon:, base_amount_cents:)
       @applied_coupon = applied_coupon
       @base_amount_cents = base_amount_cents
-      @invoice = invoice
 
       super
     end
@@ -21,7 +20,7 @@ module AppliedCoupons
 
     private
 
-    attr_reader :applied_coupon, :base_amount_cents, :invoice
+    attr_reader :applied_coupon, :base_amount_cents
 
     def compute_amount
       if applied_coupon.coupon.percentage?
@@ -30,16 +29,15 @@ module AppliedCoupons
         return (discounted_value >= base_amount_cents) ? base_amount_cents : discounted_value.round
       end
 
-      remaining_amount = if applied_coupon.recurring? || applied_coupon.forever?
-        if invoice
-          applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)
-        else
-          applied_coupon.amount_cents
-        end
+      if applied_coupon.recurring? || applied_coupon.forever?
+        return base_amount_cents if applied_coupon.amount_cents > base_amount_cents
+
+        applied_coupon.amount_cents
       else
+        return base_amount_cents if applied_coupon.remaining_amount > base_amount_cents
+
         applied_coupon.remaining_amount
       end
-      [remaining_amount, base_amount_cents].min
     end
   end
 end

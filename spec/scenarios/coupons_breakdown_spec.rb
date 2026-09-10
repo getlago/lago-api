@@ -326,9 +326,9 @@ describe "Coupons breakdown Spec", :premium do
     end
   end
 
-  # BIL-654: documents how a $20 fixed-amount coupon interacts with progressive billing
-  # for a single-subscription, single-billing-period across the matrix of PB amounts.
-  # scenarios are (run against coupon 20$ applied once and coupon applied forever):
+  # BIL-654: matrix inherited from #4057, extended with 50% coupons.
+  # Forever fixed coupons keep their existing per-invoice allowance here.
+  # Scenarios:
   #   - Sc1: PB $5, final fees $35 (everything in charges or split, doesn't matter — math works the same)
   #   - Sc2: PB $30, final fees $35
   #   - Sc3: PB1 $5 + PB2 $30, final fees $50
@@ -337,7 +337,7 @@ describe "Coupons breakdown Spec", :premium do
   #
   # Customer's "paid" = sum of invoice totals; "refund" = sum of credit notes issued.
   # Net cash-out = paid - refund.
-  context "with PB invoice and $20 coupon matrix", transaction: false do
+  context "with progressive billing and coupons", transaction: false do
     let(:start_time) { DateTime.new(2025, 1, 1) }
     let(:bm) do
       create_metric({name: "U", code: "u", aggregation_type: "sum_agg", field_name: "n"})
@@ -354,13 +354,21 @@ describe "Coupons breakdown Spec", :premium do
       organization.plans.find_by(code: "pb")
     end
 
-    def apply_fixed_coupon(frequency)
-      create_coupon({
-        name: "C", code: "c", coupon_type: "fixed_amount",
-        frequency: frequency, amount_cents: 20_00, amount_currency: "EUR",
-        frequency_duration: ((frequency == "recurring") ? 1 : nil),
+    def apply_matrix_coupon(frequency, percentage:, limited_to_metrics:)
+      params = {
+        name: "C", code: "c", coupon_type: percentage ? "percentage" : "fixed_amount",
+        frequency:, frequency_duration: (frequency == "recurring") ? 2 : nil,
         expiration: "no_expiration", reusable: false
-      })
+      }
+      if percentage
+        params[:percentage_rate] = 50
+      else
+        params.merge!(amount_cents: 20_00, amount_currency: "EUR")
+      end
+      if limited_to_metrics
+        params[:applies_to] = {billable_metric_codes: [bm.code]}
+      end
+      create_coupon(params)
       create_or_update_customer({external_id: "cust"})
       apply_coupon({external_customer_id: "cust", coupon_code: "c"})
     end
@@ -382,15 +390,19 @@ describe "Coupons breakdown Spec", :premium do
       }
     end
 
-    shared_examples "matrix case" do |coupon:, paid:, refund:|
-      it "with #{coupon} coupon: customer pays $#{paid / 100.0}, refund $#{refund / 100.0}" do
+    shared_examples "matrix case" do |coupon:, paid:, refund:, percentage: false, limited_to_metrics: false, remaining_uses: nil|
+      it "with #{coupon} #{percentage ? "50%" : "$20"} coupon (metric-limited: #{limited_to_metrics}): pays #{paid}, refund #{refund}" do
         plan = setup_pb_plan(thresholds)
-        apply_fixed_coupon(coupon)
+        apply_matrix_coupon(coupon, percentage:, limited_to_metrics:)
         sub = create_sub(plan)
         trigger_usage(sub)
         end_of_month_billing
 
-        expect(customer_totals).to eq(paid: paid, refund: refund)
+        expect(customer_totals).to eq(paid:, refund:)
+        unless remaining_uses.nil?
+          customer = organization.customers.find_by(external_id: "cust")
+          expect(customer.applied_coupons.sole.frequency_duration_remaining).to eq(remaining_uses)
+        end
       end
     end
 
@@ -403,7 +415,9 @@ describe "Coupons breakdown Spec", :premium do
       end
 
       include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
-      include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 10_00, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, paid: 17_50, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, limited_to_metrics: true, paid: 17_50, refund: 0
     end
 
     context "with Sc2: 1 PB at $30, period total $35" do
@@ -415,7 +429,9 @@ describe "Coupons breakdown Spec", :premium do
       end
 
       include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
-      include_examples "matrix case", coupon: "forever", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 10_00, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, paid: 17_50, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, limited_to_metrics: true, paid: 17_50, refund: 0
     end
 
     context "with Sc3: 2 PBs at $5 and $30, period total $50" do
@@ -428,7 +444,20 @@ describe "Coupons breakdown Spec", :premium do
       end
 
       include_examples "matrix case", coupon: "once", paid: 30_00, refund: 0
-      include_examples "matrix case", coupon: "forever", paid: 30_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 5_00, refund: 0
+      include_examples "matrix case", coupon: "recurring", percentage: true, paid: 35_00, refund: 0, remaining_uses: 0
+      include_examples "matrix case", coupon: "recurring", percentage: true, limited_to_metrics: true, paid: 35_00, refund: 0, remaining_uses: 0
+    end
+
+    context "with no new usage after a PB at $40" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+      end
+
+      include_examples "matrix case", coupon: "recurring", percentage: true, paid: 20_00, refund: 0, remaining_uses: 1
+      include_examples "matrix case", coupon: "recurring", percentage: true, limited_to_metrics: true, paid: 20_00, refund: 0, remaining_uses: 1
     end
 
     context "with Sc4: PB at $40, usage clawed back to $0" do
