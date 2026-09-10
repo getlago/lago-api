@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module Invoices
       class BaseService < Integrations::Aggregator::BaseService
+        INVALID_LOGIN_ATTEMPT = "INVALID_LOGIN_ATTEMPT"
+
         def initialize(invoice:)
           @invoice = invoice
 
@@ -39,6 +41,15 @@ module Integrations
             integration_customer:,
             invoice:
           )
+        end
+
+        def retryable_error?(http_error)
+          server_error = http_error.error_code.to_i >= 500 || http_error.error_code.to_i == 424
+          server_error && !invalid_login_attempt_error?(http_error)
+        end
+
+        def invalid_login_attempt_error?(http_error)
+          http_error.error_body.include?(INVALID_LOGIN_ATTEMPT)
         end
       end
     end
