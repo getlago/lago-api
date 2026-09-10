@@ -59,7 +59,7 @@ module Fees
 
       # The source determines which buckets have pricing, independently of the matching filter set.
       def billing_items
-        source.billing_sources.map { |billing_source| with(source: billing_source) }
+        source.pricing_buckets.map { |bucket| with(source: bucket) }
       end
 
       def aggregation_options(current_usage:)

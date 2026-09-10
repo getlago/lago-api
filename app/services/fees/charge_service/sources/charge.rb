@@ -37,7 +37,7 @@ module Fees
           :charge_filter
         end
 
-        def billing_sources
+        def pricing_buckets
           if charge.filters.any?
             charge.filters.map { |filter| with_filter(filter) } + [with_default_filter]
           else

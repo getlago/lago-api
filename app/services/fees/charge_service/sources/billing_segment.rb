@@ -45,7 +45,7 @@ module Fees
           :product_filter
         end
 
-        def billing_sources
+        def pricing_buckets
           [with_filter(rate_card.product_filter)]
         end
 
