@@ -461,8 +461,9 @@ describe "Coupons breakdown Spec", :premium do
         travel_to(start_time + 20.days) do
           update_plan(plan, {charges: []})
           expect(plan.reload.charges).to be_empty
-          update_plan(plan, {charges: [{billable_metric_id: bm.id, charge_model: "standard",
-                                       pay_in_advance: false, properties: {amount: "1"}}]})
+          update_plan(plan, {
+            charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}]
+          })
         end
         replacement_charge = plan.reload.charges.sole
         expect(original_charge.reload).to be_discarded
