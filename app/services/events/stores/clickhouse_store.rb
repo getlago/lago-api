@@ -130,13 +130,26 @@ module Events
         conditions.join(" AND ")
       end
 
+      # Relies directly on the events_enriched_expanded table, where the enrichment pipeline
+      # already resolved the charge and the charge filter matching each event.
       def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
-        # Implementation relies directly on the events_enriched_expanded table,
-        # so we delegate the implementation to the ClickhouseEnrichedStore
-        Events::Stores::ClickhouseEnrichedStore.new(
-          billing_context:,
-          boundaries:
-        ).distinct_charges_and_filters(codes:, include_all_history:, with_last_seen_at:)
+        lower_bound = include_all_history ? nil : from_datetime
+
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          scope = ::Clickhouse::EventsEnrichedExpanded
+            .where(external_subscription_id: billing_context.external_id)
+            .where(organization_id: billing_context.organization_id)
+            .where(timestamp: lower_bound..to_datetime)
+
+          scope = scope.where(code: codes) unless codes.nil?
+          scope = scope.group("charge_id", "charge_filter_id")
+
+          scope.pluck(
+            "charge_id",
+            Arel.sql("nullIf(charge_filter_id, '')"),
+            Arel.sql(with_last_seen_at ? "MAX(enriched_at)" : "NULL")
+          )
+        end
       end
 
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
