@@ -23,22 +23,16 @@ module Credits
 
         next unless progressive_billing_invoice
 
-        total_charges_amount = invoice
-          .fees
-          .charge
-          .where(subscription:)
-          .where(charge_id: progressive_billing_invoice.fees.charge.pluck(:charge_id))
-          .sum(:amount_cents)
+        fee_amounts, credit_note_items = allocate_gross_amount(progressive_billed_result, subscription:)
+        amount_to_credit = fee_amounts.values.sum
 
-        # Don't be tempted to calculate the credit amount yourself, you have to use the result from this service.
-        amount_to_credit = progressive_billed_result.to_credit_amount
-
-        if amount_to_credit > total_charges_amount
+        if credit_note_items.any? && progressive_billed_result.to_credit_amount.positive?
+          # Credit note items are gross; the service deducts their coupons exactly once.
           CreditNotes::CreateFromProgressiveBillingInvoice.call(
-            progressive_billing_invoice:, amount: amount_to_credit - total_charges_amount
+            progressive_billing_invoice:,
+            amount: credit_note_items.sum { |item| item[:amount_cents] },
+            fee_items: credit_note_items
           ).raise_if_error!
-
-          amount_to_credit = total_charges_amount
         end
 
         if amount_to_credit.positive?
@@ -51,7 +45,10 @@ module Credits
             before_taxes: true
           )
 
-          apply_credit_to_fees(progressive_billing_invoice)
+          fee_amounts.each do |fee, amount|
+            fee.precise_coupons_amount_cents += amount
+            fee.save!
+          end
 
           invoice.sub_total_excluding_taxes_amount_cents -= credit.amount_cents
           invoice.progressive_billing_credit_amount_cents += credit.amount_cents
@@ -65,21 +62,43 @@ module Credits
 
     attr_reader :invoice
 
-    def apply_credit_to_fees(progressive_billing_invoice)
-      # Use the loaded association so the credit stays visible to the caller's in-memory fees.
+    def allocate_gross_amount(progressive_billed_result, subscription:)
+      remaining_amount = progressive_billed_result.to_invoice_amount
+      fee_amounts = Hash.new(0)
+      remaining_fee_amounts = {}
+      # Use the loaded association so discounts remain visible to the caller.
       invoice_fees = invoice.fees.select(&:charge?)
-      progressive_billing_invoice.fees.charge.each do |progressive_fee|
-        fee = invoice_fees.find { |f|
-          f.charge_id == progressive_fee.charge_id &&
-            f.charge_filter_id == progressive_fee.charge_filter_id &&
-            f.grouped_by == progressive_fee.grouped_by
-        }
-        next unless fee
 
-        fee.precise_coupons_amount_cents += progressive_fee.amount_cents
-        fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
-        fee.save!
+      progressive_billed_result.progressive_billing_invoice.fees.order(amount_cents: :desc).each do |progressive_fee|
+        available_amount = [progressive_fee.creditable_amount_cents, 0].max
+        fee = invoice_fees.find { |current_fee|
+          current_fee.subscription_id == subscription.id &&
+            current_fee.charge_id == progressive_fee.charge_id &&
+            current_fee.charge_filter_id == progressive_fee.charge_filter_id &&
+            current_fee.grouped_by == progressive_fee.grouped_by
+        }
+
+        if fee
+          amount = [remaining_amount, available_amount, fee.amount_cents - fee.precise_coupons_amount_cents - fee_amounts[fee]].min.clamp(0, remaining_amount)
+          fee_amounts[fee] += amount
+          remaining_amount -= amount
+          available_amount -= amount
+        end
+        remaining_fee_amounts[progressive_fee] = available_amount
       end
+
+      credit_note_items = []
+      remaining_fee_amounts.each do |fee, available_amount|
+        break unless remaining_amount.positive?
+
+        amount = [remaining_amount, available_amount].min
+        next unless amount.positive?
+
+        credit_note_items << {fee_id: fee.id, amount_cents: amount}
+        remaining_amount -= amount
+      end
+
+      [fee_amounts, credit_note_items]
     end
   end
 end

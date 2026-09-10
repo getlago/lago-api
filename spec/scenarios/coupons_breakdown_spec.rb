@@ -491,6 +491,77 @@ describe "Coupons breakdown Spec", :premium do
       end
     end
 
+    context "when finalizing after charges are recreated" do
+      def recreate_charges(plan)
+        travel_to(start_time + 20.days) do
+          update_plan(plan, {charges: []})
+          update_plan(plan, {
+            charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}]
+          })
+        end
+      end
+
+      it "finalizes a draft after a fully discounted PB without issuing a zero credit note" do
+        plan = setup_pb_plan([20_00])
+        apply_matrix_coupon("forever", percentage: false, limited_to_metrics: false)
+        sub = create_sub(plan)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 20) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 10) }
+        progressive_invoice = sub.invoices.progressive_billing.sole
+        expect(progressive_invoice).to have_attributes(fees_amount_cents: 20_00, coupons_amount_cents: 20_00, total_amount_cents: 0)
+
+        recreate_charges(plan)
+        sub.customer.update!(invoice_grace_period: 2)
+        end_of_month_billing
+        invoice = sub.invoices.subscription.sole
+        expect(invoice).to be_draft
+
+        travel_to(start_time + 1.month + 2.days) { Invoices::FinalizeJob.perform_now(invoice) }
+
+        expect(invoice.reload).to have_attributes(
+          status: "finalized", fees_amount_cents: 30_00, coupons_amount_cents: 20_00,
+          progressive_billing_credit_amount_cents: 0, credit_notes_amount_cents: 0, total_amount_cents: 10_00
+        )
+        expect(progressive_invoice.credit_notes).to be_empty
+      end
+
+      it "reverses only the remaining gross fee after a coupon-adjusted credit note" do
+        plan = setup_pb_plan([100_00])
+        apply_matrix_coupon("forever", percentage: false, limited_to_metrics: false)
+        sub = create_sub(plan)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 100) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 10) }
+        progressive_invoice = sub.invoices.progressive_billing.sole
+        progressive_fee = progressive_invoice.fees.charge.sole
+
+        travel_to(start_time + 16.days) do
+          create_credit_note({
+            invoice_id: progressive_invoice.id, reason: "other", credit_amount_cents: 20_00,
+            items: [{fee_id: progressive_fee.id, amount_cents: 25_00}]
+          })
+        end
+        existing_credit_note = progressive_invoice.credit_notes.sole
+        expect(existing_credit_note).to have_attributes(credit_amount_cents: 20_00, coupons_adjustment_amount_cents: 5_00)
+
+        recreate_charges(plan)
+        end_of_month_billing
+
+        invoice = sub.invoices.subscription.sole
+        new_credit_note = progressive_invoice.credit_notes.where.not(id: existing_credit_note.id).sole
+        expect(new_credit_note).to have_attributes(
+          credit_amount_cents: 60_00, coupons_adjustment_amount_cents: 15_00,
+          balance_amount_cents: 0, credit_status: "consumed"
+        )
+        expect(new_credit_note.items.sole).to have_attributes(fee_id: progressive_fee.id, amount_cents: 75_00)
+        expect(invoice).to have_attributes(
+          status: "finalized", fees_amount_cents: 110_00, coupons_amount_cents: 20_00,
+          progressive_billing_credit_amount_cents: 0, credit_notes_amount_cents: 80_00, total_amount_cents: 10_00
+        )
+        expect(existing_credit_note.reload).to have_attributes(balance_amount_cents: 0, credit_status: "consumed")
+        expect(progressive_fee.credit_note_items.sum(:amount_cents)).to eq(100_00)
+      end
+    end
+
     context "with Sc3: 2 PBs at $5 and $30, period total $50" do
       let(:thresholds) { [5_00, 30_00] }
 
