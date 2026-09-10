@@ -165,9 +165,16 @@ module BillingMatrix
       end
     end
 
-    delegate :perform_usage_update, to: :ctx
+    # Row validation loads this file without Rails or ActiveSupport.
+    # rubocop:disable Rails/Delegate
+    def perform_usage_update
+      ctx.perform_usage_update
+    end
 
-    delegate :perform_billing, to: :ctx
+    def perform_billing
+      ctx.perform_billing
+    end
+    # rubocop:enable Rails/Delegate
 
     def refresh_invoice(**api)
       ctx.refresh_invoice(target_invoice, **api)
