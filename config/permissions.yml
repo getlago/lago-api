@@ -259,6 +259,11 @@ subscriptions:
     - manager
   update:
     - manager
+usage_attribution_types:
+  view:
+  create:
+  update:
+  delete:
 wallets:
   create:
     - manager

@@ -122,7 +122,8 @@ module Clickhouse
       order_form_expired: "order_form.expired",
       order_form_voided: "order_form.voided",
       order_created: "order.created",
-      order_executed: "order.executed"
+      order_executed: "order.executed",
+      usage_attribution_type_created: "usage_attribution_type.created"
     }
 
     before_save :ensure_activity_id
