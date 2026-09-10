@@ -46,8 +46,8 @@ module Events
         event_store
       end
 
-      def self.new_instance(organization:, context:, **kwargs)
-        store_class(organization: organization).new(context:, **kwargs)
+      def self.new_instance(organization:, billing_context:, **kwargs)
+        store_class(organization: organization).new(billing_context:, **kwargs)
       end
     end
   end

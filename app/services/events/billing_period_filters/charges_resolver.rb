@@ -23,7 +23,7 @@ module Events
       def event_store
         @event_store ||= Events::Stores::StoreFactory.new_instance(
           organization: organization,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: boundaries.charges_from_datetime,
             to_datetime: boundaries.charges_to_datetime

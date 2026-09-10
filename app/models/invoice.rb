@@ -318,7 +318,7 @@ class Invoice < ApplicationRecord
         boundaries: BillingPeriodBoundaries.from_fee(fee),
         charge_filter: fee.charge_filter
       ),
-      context: Events::Stores::EventContext.from(subscription: fee.subscription),
+      billing_context: Billing::Context.from(subscription: fee.subscription),
       boundaries: {
         from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
         to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),

@@ -124,7 +124,7 @@ module Fees
             timestamp: first_fee.properties["timestamp"]
           )
         ),
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: boundaries,
         filters: aggregation_filters,
         current_usage: true

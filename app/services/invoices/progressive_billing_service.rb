@@ -98,7 +98,7 @@ module Invoices
         Fees::ChargeService.call!(
           invoice:,
           metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           options: Fees::ChargeService::Options.new(context: :finalize),
           filtered_aggregations: filters[charge.target_key]&.keys || []
         )
