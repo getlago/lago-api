@@ -32,7 +32,15 @@ interactions:
       values: [equal, unequal, capped]
     observed_via:
       values: [invoice, preview, regenerated]
+    premium:
+      values: [true, false]
+      requires:
+        false: {schema: setup.properties.premium}
   legality: >-
+    `premium: false` is legal only with feature_a/feature_b in {commitment_true_up, progressive_billing}
+    and never with a `stack` containing progressive_billing: those are the producers/reducers
+    Plans::CreateService (:82) and Plans::UpdateService (:75, :79) gate on License.premium?, so every
+    other feature is licence-independent and a `false` cell there is the `true` cell relabelled.
     Two producers never interact — GoldenLegality.interacting_pair? excludes producer/producer pairs,
     since both simply add to fees_amount_cents with no stage between them to disagree over.
     `arrangement: capped` is legal only for GoldenLegality::CAPPABLE_FEATURES (coupon, credit_note,
@@ -62,7 +70,15 @@ identity_churn:
         commitment_progress — each mapped to the columns Lago finds it by.
     observed_via:
       values: [invoice, draft, regenerated, preview]
+    premium:
+      values: [true, false]
+      requires:
+        false: {schema: setup.properties.premium}
   legality: >-
+    `premium: false` is legal only with churn plan-override or subscription-override, and there the
+    cell is a rejection, not a silent drop: Subscriptions::CreateService (:36) and
+    Subscriptions::UpdateService (:57) answer 403 to any `plan_overrides` without a licence before
+    Plans::OverrideService's own `License.premium?` gates (override_service.rb:17, :57, :64) are reached.
     GoldenLegality.identity_at_risk? — a cell is legal only when carried_state's lookup keys
     intersect the churn's rewritten columns. E.g. wallet_balance (keyed on customer_id alone) is never
     at risk from any of the six churns here, since none rewrites customer_id.
@@ -186,6 +202,33 @@ surface_parity:
     - app/services/invoices/calculate_fees_service.rb
     - app/services/invoices/refresh_draft_service.rb
     - app/services/invoices/preview_service.rb
+
+premium_gating:
+  purpose: >-
+    Features that answer 200 and silently no-op without a premium licence, or without the matching
+    entry in organization.premium_integrations — the post-mortem's named source of missed findings.
+    Each `feature` value is a pair of rows differing only in `setup.premium`, asserting figures that
+    must disagree; a pair that agrees means the axis has stopped being live.
+  axes:
+    premium:
+      values: [true, false]
+      requires:
+        false: {schema: setup.properties.premium}
+    feature:
+      values: [minimum_commitment, usage_thresholds, plan_override]
+  legality: >-
+    `plan_override` with `premium: false` is a 403 (Subscriptions::CreateService:36,
+    Subscriptions::UpdateService:57), so its `false` cell asserts `error`, not an invoice.
+    `usage_thresholds` also depends on organization.premium_integrations containing
+    progressive_billing, which World only sets under a premium licence (world.rb PREMIUM_FEATURE_OF).
+  services:
+    - app/services/plans/create_service.rb
+    - app/services/plans/update_service.rb
+    - app/services/plans/override_service.rb
+    - app/services/subscriptions/create_service.rb
+    - app/services/subscriptions/update_service.rb
+    - app/services/commitments
+    - lib/lago_utils/lago_utils/license.rb
 
 invoice_types:
   status: deferred

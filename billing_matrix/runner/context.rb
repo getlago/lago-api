@@ -18,8 +18,11 @@ module BillingMatrix
     # Terminal no-ops for the before_setup/after_teardown chains that Minitest::Test
     # normally terminates; must sit below every other include.
     module Lifecycle
-      def before_setup; end
-      def after_teardown; end
+      def before_setup
+      end
+
+      def after_teardown
+      end
     end
 
     include Lifecycle
@@ -51,10 +54,10 @@ module BillingMatrix
     # `enter` runs inside the begin, not before it: it mutates global state — the premium
     # flag, WebMock stubs, the time offset — so an `enter` that raises halfway must still
     # reach `leave`, or it leaks all of that into the next row.
-    def self.isolate
+    def self.isolate(premium: true)
       ctx = new
       begin
-        ctx.enter
+        ctx.enter(premium:)
         yield ctx
       ensure
         ctx.leave
@@ -62,7 +65,7 @@ module BillingMatrix
     end
 
     def initialize
-      super()
+      super
       (SCENARIO_READERS + STASHED).each { |name| instance_variable_set(:"@#{name}", nil) }
     end
 
@@ -78,16 +81,24 @@ module BillingMatrix
       raise Unsupported, "mock_vies_check! relies on rspec-mocks (instance_double/allow) and is not available in the matrix runner"
     end
 
-    def enter
+    def enter(premium: true)
       self.class.clean_database!
       before_setup
       reset!
       Sidekiq::Worker.clear_all
       WebMock.reset!
       stub_pdf_generation
-      License.instance_variable_set(:@premium, true)
+      self.premium = premium
       travel_back
     end
+
+    # The licence is process-global (`License` is one LagoUtils::License instance), so a row
+    # states it here and `leave` always drops it, whatever the row did.
+    def premium=(enabled)
+      License.instance_variable_set(:@premium, enabled == true)
+    end
+
+    delegate :premium?, to: :License
 
     def leave
       run_all_even_if_one_fails(
@@ -97,7 +108,7 @@ module BillingMatrix
         -> { clear_performed_jobs },
         -> { Sidekiq::Worker.clear_all },
         -> { WebMock.reset! },
-        -> { License.instance_variable_set(:@premium, false) },
+        -> { self.premium = false },
         -> { self.class.clean_database! }
       )
     end
@@ -113,11 +124,9 @@ module BillingMatrix
     def run_all_even_if_one_fails(*steps)
       first_error = nil
       steps.each do |step|
-        begin
-          step.call
-        rescue Exception => e # rubocop:disable Lint/RescueException
-          first_error ||= e
-        end
+        step.call
+      rescue Exception => e # rubocop:disable Lint/RescueException
+        first_error ||= e
       end
       raise first_error if first_error
     end

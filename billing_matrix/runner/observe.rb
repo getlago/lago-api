@@ -73,7 +73,7 @@ module BillingMatrix
     end
 
     def fee_hash(fee, keys)
-      keys.each_with_object({}) { |key, hash| hash[key] = fee_field(fee, key) }
+      keys.index_with { |key| fee_field(fee, key) }
     end
 
     def fee_field(fee, key)
@@ -139,7 +139,7 @@ module BillingMatrix
       keys = (FEE_IDENTITY_FIELDS + requested.map(&:to_s)).uniq
 
       fees_json.map do |fee_json|
-        keys.each_with_object({}) { |key, hash| hash[key] = preview_fee_field(fee_json, key) }
+        keys.index_with { |key| preview_fee_field(fee_json, key) }
       end
     end
 

@@ -1,23 +1,26 @@
-name: Billing Matrix Daily
+name: Billing Matrix
 
 on:
-  schedule:
-    - cron: "10 5 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
         description: "Run the suite and print the report without committing, opening a PR, or posting to Slack"
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: billing-matrix
+  cancel-in-progress: false
+
 jobs:
   billing-matrix:
-    name: Billing Matrix Daily
+    name: Billing Matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: getlago/postgres-partman:15.0-alpine
@@ -49,7 +52,9 @@ jobs:
       LAGO_PDF_URL: https://pdf.lago.dev
       LAGO_DATA_API_URL: http://data_api
       LAGO_FROM_EMAIL: noreply@getlago.com
-      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
@@ -72,38 +77,41 @@ jobs:
       - name: Run billing matrix
         id: run_matrix
         run: |
+          mkdir -p tmp/billing_matrix
           set +e
-          ruby billing_matrix/run.rb
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          bundle exec ruby billing_matrix/run.rb 2>&1 | tee tmp/billing_matrix/run.log
+          rc=${PIPESTATUS[0]}
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
         env:
           GIT_SHA: ${{ github.sha }}
 
       - name: Alarm on void run
-        if: steps.run_matrix.outputs.exit_code == '2'
+        if: steps.run_matrix.outputs.exit_code == '2' && env.DRY_RUN != 'true' && env.SLACK_BOT_TOKEN != '' && env.SLACK_DM_USER_ID != ''
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
         run: |
-          curl -sS https://slack.com/api/chat.postMessage \
+          curl --fail-with-body -sS https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H "Content-Type: application/json; charset=utf-8" \
             -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" \
-              '{channel: $channel, text: ":rotating_light: Billing matrix canary passed — the suite'\''s assertions can no longer be trusted. This run is void; investigate the harness before trusting any result."}')"
+              '{channel: $channel, text: ":rotating_light: Billing matrix canary passed — the suite'\''s assertions can no longer be trusted. This run is void; investigate the harness before trusting any result."}')" | jq -e '.ok == true'
 
       # Exit 3 is the harness not running at all, which is worse than a void run: exit 2 at
       # least proves the rows executed. It gets its own alarm rather than a silently red job.
       - name: Alarm on harness failure
-        if: steps.run_matrix.outputs.exit_code == '3'
+        if: steps.run_matrix.outputs.exit_code != '' && steps.run_matrix.outputs.exit_code != '0' && steps.run_matrix.outputs.exit_code != '2' && env.DRY_RUN != 'true' && env.SLACK_BOT_TOKEN != '' && env.SLACK_DM_USER_ID != ''
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -sS https://slack.com/api/chat.postMessage \
+          curl --fail-with-body -sS https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H "Content-Type: application/json; charset=utf-8" \
             -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" --arg url "$RUN_URL" \
-              '{channel: $channel, text: (":rotating_light: Billing matrix could not run — the harness failed before executing any row, so no billing was checked at all today. " + $url)}')"
+              '{channel: $channel, text: (":rotating_light: Billing matrix could not run — the harness failed before executing any row, so no billing was checked at all today. " + $url)}')" | jq -e '.ok == true'
 
       # `has_news` is a boolean rather than a test on the report string: an empty report
       # still writes a newline through the heredoc, so comparing the text to '' is not a
@@ -111,6 +119,10 @@ jobs:
       # Gated on success, not on "not void": exit 3 means the harness never ran, so
       # results.json is either absent or left over from a previous run. Reading it would
       # let yesterday's verdicts move today's ledger.
+      - name: Check that every row executed
+        if: steps.run_matrix.outputs.exit_code == '0'
+        run: jq -e '.run.summary | .canaries_total > 0 and .canaries_unproven == 0 and .errored == 0' tmp/billing_matrix/results.json
+
       - name: Build ledger report
         id: ledger
         if: steps.run_matrix.outputs.exit_code == '0'
@@ -133,7 +145,7 @@ jobs:
       # committing unconditionally would turn that ordinary morning into a red build.
       - name: Commit and push ledger
         id: commit
-        if: steps.ledger.outputs.has_news == 'true' && env.DRY_RUN != 'true'
+        if: steps.run_matrix.outputs.exit_code == '0' && env.DRY_RUN != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -143,7 +155,8 @@ jobs:
             echo "ledger unchanged; nothing to push"
             echo "pushed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore(billing-matrix): update ledger"
+            git commit -m "chore(billing-matrix): update ledger" \
+              -m $'## Context\n\nA manual billing matrix run updated the recorded findings.\n\n## Description\n\nRecord the current billing matrix statuses.'
             git push --force origin billing-matrix/ledger
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
@@ -159,26 +172,49 @@ jobs:
               --base main \
               --head billing-matrix/ledger \
               --title "chore(billing-matrix): update ledger" \
-              --body "Opened by Billing Matrix Daily. Contains only \`billing_matrix/ledger.yml\` — the day's status changes. Amended in place while it stays open."
+              --body "Opened by Billing Matrix. Contains only \`billing_matrix/ledger.yml\` — the day's status changes. Amended in place while it stays open."
           fi
 
       - name: Post report to Slack
-        if: steps.ledger.outputs.has_news == 'true' && env.DRY_RUN != 'true'
+        if: steps.ledger.outputs.has_news == 'true' && env.DRY_RUN != 'true' && env.SLACK_BOT_TOKEN != '' && env.SLACK_DM_USER_ID != ''
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
           REPORT: ${{ steps.ledger.outputs.report }}
         run: |
-          curl -sS https://slack.com/api/chat.postMessage \
+          curl --fail-with-body -sS https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H "Content-Type: application/json; charset=utf-8" \
-            -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" --arg text "$REPORT" '{channel: $channel, text: $text}')"
+            -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" --arg text "$REPORT" '{channel: $channel, text: $text}')" | jq -e '.ok == true'
 
       # Through the environment, not string-interpolated into the script: report text is
       # built from row ids and mismatch values, and interpolating it directly is the
       # standard Actions command-injection hole.
-      - name: Print dry-run report
-        if: env.DRY_RUN == 'true' && steps.run_matrix.outputs.exit_code == '0'
+      - name: Show run report
+        if: steps.run_matrix.outputs.exit_code == '0'
         env:
           REPORT: ${{ steps.ledger.outputs.report }}
-        run: printf '%s\n' "$REPORT"
+        run: |
+          printf '%s\n' "${REPORT:-No new billing transitions.}"
+          {
+            echo '## Billing matrix results'
+            jq -r '.run.summary | "\(.passed) passed · \(.failed) failed · \(.errored) errored (counts include canaries)"' tmp/billing_matrix/results.json
+            echo
+            printf '%s\n' "${REPORT:-No new billing transitions.}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload billing matrix results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-matrix-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tmp/billing_matrix/
+          if-no-files-found: warn
+
+      - name: Fail when the harness could not verify the run
+        if: always() && steps.run_matrix.outputs.exit_code != '0'
+        env:
+          MATRIX_EXIT_CODE: ${{ steps.run_matrix.outputs.exit_code }}
+        run: |
+          echo "::error::Billing matrix did not complete a trustworthy run (exit ${MATRIX_EXIT_CODE:-not started}). See the run log."
+          exit 1

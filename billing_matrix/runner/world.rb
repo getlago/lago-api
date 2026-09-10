@@ -69,6 +69,7 @@ module BillingMatrix
     }.freeze
     PREMIUM_FEATURE_OF = {"thresholds" => "progressive_billing"}.freeze
     PLAN_SECTIONS = %w[plan charges fixed_charges thresholds].freeze
+    PREMIUM_KEY = "premium"
 
     def self.build!(ctx, setup)
       new(ctx, setup || {}).build!
@@ -77,9 +78,10 @@ module BillingMatrix
     def self.validate!(setup)
       raise InvalidRow, "must be a mapping, got #{setup.class}" unless setup.is_a?(Hash)
 
-      unknown = setup.keys.map(&:to_s) - KEYS.keys
-      raise InvalidRow, "unknown key(s) #{unknown.inspect}; supported: #{KEYS.keys.join(", ")}" if unknown.any?
+      unknown = setup.keys.map(&:to_s) - KEYS.keys - [PREMIUM_KEY]
+      raise InvalidRow, "unknown key(s) #{unknown.inspect}; supported: #{PREMIUM_KEY}, #{KEYS.keys.join(", ")}" if unknown.any?
 
+      validate_premium!(setup)
       HASH_SECTIONS.each { |section| validate_entry!(setup[section], section, section) if setup.key?(section) }
       LIST_SECTIONS.each do |section|
         next unless setup.key?(section)
@@ -90,6 +92,17 @@ module BillingMatrix
       end
       validate_references!(setup)
       nil
+    end
+
+    def self.validate_premium!(setup)
+      return unless setup.key?(PREMIUM_KEY)
+
+      value = setup[PREMIUM_KEY]
+      raise InvalidRow, "#{PREMIUM_KEY}: must be true or false, got #{value.inspect}" unless [true, false].include?(value)
+      return if value || Array(setup.dig("organization", "premium_integrations")).empty?
+
+      raise InvalidRow, "organization.premium_integrations: contradicts `#{PREMIUM_KEY}: false`; every premium " \
+                        "integration is also gated on License.premium?, so the row would test nothing"
     end
 
     def self.validate_entry!(entry, section, field)
@@ -159,6 +172,7 @@ module BillingMatrix
 
     def build!
       self.class.validate!(setup)
+      ctx.premium = setup[PREMIUM_KEY] if setup.key?(PREMIUM_KEY)
       create_organization
       update_billing_entity if setup.key?("billing_entity")
       create_taxes
@@ -198,7 +212,11 @@ module BillingMatrix
       ctx.organization.reload
     end
 
+    # A setup section that needs a premium integration implies it only under a premium licence;
+    # a row that turned the licence off is asking to see the feature no-op, not to be rescued.
     def premium_integrations(spec)
+      return [] unless ctx.premium?
+
       asked = Array(spec["premium_integrations"]).map(&:to_s)
       implied = PREMIUM_FEATURE_OF.select { |section, _| setup.key?(section) }.values
       wanted = asked | implied
@@ -295,7 +313,7 @@ module BillingMatrix
       expect_count!("charges", list("charges").size, plan.charges.parents.count)
       expect_count!("fixed_charges", list("fixed_charges").size, plan.fixed_charges.parents.count)
       expect_count!("thresholds", list("thresholds").size, plan.usage_thresholds.count)
-      if section("plan").key?("minimum_commitment") && plan.minimum_commitment.nil?
+      if ctx.premium? && section("plan").key?("minimum_commitment") && plan.minimum_commitment.nil?
         raise Error, "setup.plan.minimum_commitment: the API answered 200 but the plan has no minimum commitment " \
                      "(it is premium-gated; License.premium? must be true)"
       end

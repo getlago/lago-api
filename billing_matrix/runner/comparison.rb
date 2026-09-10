@@ -51,7 +51,9 @@ module BillingMatrix
       case semantics(field)
       when :datetime
         return false if observed.nil?
-        Time.parse(expected.to_s) == Time.parse(observed.to_s)
+        # Zone-aware parsing needs ActiveSupport; this file loads no Rails, and both sides
+        # are already absolute instants by the time they get here.
+        Time.parse(expected.to_s) == Time.parse(observed.to_s) # rubocop:disable Rails/TimeZone
       when :numeric
         return false if observed.nil?
         BigDecimal(observed.to_s) == BigDecimal(expected.to_s)
@@ -125,7 +127,7 @@ module BillingMatrix
         if collision_index
           raise AmbiguousFeeIdentity,
             "#{path}: observed fees at index #{collision_index} and #{index} share the same identity " \
-            "#{Hash[FEE_IDENTITY_FIELDS.zip(identity)].inspect} — cannot tell which expectation refers to which fee"
+            "#{FEE_IDENTITY_FIELDS.zip(identity).to_h.inspect} — cannot tell which expectation refers to which fee"
         end
 
         seen[identity] = index
@@ -146,7 +148,8 @@ module BillingMatrix
     def deep_stringify(value)
       case value
       when Hash
-        value.each_with_object({}) { |(k, v), h| h[k.to_s] = deep_stringify(v) }
+        # index_with is ActiveSupport, and this file loads no Rails.
+        value.each_with_object({}) { |(k, v), h| h[k.to_s] = deep_stringify(v) } # rubocop:disable Rails/IndexWith
       when Array
         value.map { |v| deep_stringify(v) }
       else

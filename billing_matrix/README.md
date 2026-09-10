@@ -1,7 +1,7 @@
 # billing matrix
 
-A small, high-signal suite of billing scenarios that runs on a schedule, reports only what
-changed since yesterday, and grows its own coverage as the billing code moves. It is not
+A small, high-signal suite of billing scenarios that runs on demand, reports only what
+changed since yesterday, and can be extended by the companion maintainer skill. It is not
 RSpec and does not run in PR CI.
 
 One **row** is one billing scenario: a setup, a dated timeline, and the few numbers that
@@ -88,21 +88,26 @@ with the `math:` that justifies it — and only then execute. If the two disagre
 conclusion is that the code is wrong, not the row. An expectation copied from observed
 output documents a bug instead of catching it.
 
-## The daily run and the ledger
+## Run from GitHub Actions
 
-`.github/workflows/billing-matrix-daily.yml` runs the whole suite every morning against a
-fresh `lago_matrix_test`, then hands `results.json` to `billing_matrix/ledger.rb`, which
+After this workflow is merged to `main`, open **Actions → Billing Matrix → Run workflow**.
+There is no schedule. Leave **dry_run** checked to execute and inspect results without
+publishing a ledger PR or sending Slack messages. Uncheck it to publish the report.
+
+`.github/workflows/billing-matrix-daily.yml` runs the whole suite against a fresh `lago_matrix_test`, then hands `results.json` to `billing_matrix/ledger.rb`, which
 diffs today's verdicts against `ledger.yml` and reports only what changed — a row that went
 red, a pinned finding that went green, a canary that stopped failing.
 
 The ledger is never committed to `main` by the workflow. Changes are pushed to the
 `billing-matrix/ledger` branch and opened as a pull request, amended in place while it
-stays open, so a status change is reviewed before it becomes the record.
+stays open, so a status change is reviewed before it becomes the record. Merge that ledger
+PR before the next non-dry run to avoid reporting the same transition again.
 
 Nothing reaches Slack until two repository secrets exist: `SLACK_BOT_TOKEN` (a bot token
 with `chat:write`) and `SLACK_DM_USER_ID` (the channel or user id the report is posted to).
-Without them the suite still runs and the PR still opens, but the daily report and the
-exit-2 / exit-3 alarms are silent — check the Actions log, not your DMs. `workflow_dispatch`
+Without them the suite still runs and a non-dry run can still open the ledger PR; Slack
+steps are skipped. Every run uploads its JSON results and log. The Actions summary shows
+row counts and new transitions; a harness failure or an errored row fails the job. `workflow_dispatch`
 with `dry_run: true` runs everything and prints the report without committing, opening a
 PR, or posting.
 
@@ -121,10 +126,8 @@ Treat any recurrence as a harness defect, not a billing one, and chase it before
 rows: the previous suite's credibility died of exactly this — intermittent failures nobody
 could attribute, so failures stopped being read at all.
 
-**Premium is forced on for every row.** `Context#enter` sets `License.premium? == true`
-unconditionally. Features that silently no-op without a premium licence are a documented
-source of missed findings in the old suite, and with premium always on that entire class is
-invisible. Premium belongs on an axis, not in the harness — a Phase 1 change.
+**Premium defaults to on.** Set `setup.premium: false` to exercise licence gating. The
+premium-gating rows compare otherwise identical scenarios with and without the licence.
 
 **Clickhouse is neither cleaned nor stubbed.** Organizations with `clickhouse_events_store`
 are out of scope until a row needs them.

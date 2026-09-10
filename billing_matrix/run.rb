@@ -47,12 +47,15 @@ module BillingMatrix
 
       OptionParser.new do |o|
         o.banner = "usage: ruby billing_matrix/run.rb [options]"
-        o.on("--rows PATH", "directory or file of rows (repeatable)") { options[:rows] << _1 }
-        o.on("--id ID", "run only this row id (repeatable)") { options[:ids] << _1 }
-        o.on("--area AREA", "run only this area (repeatable)") { options[:areas] << _1 }
-        o.on("--shard N/TOTAL", "run shard N of TOTAL, round-robin") { options[:shard] = _1 }
-        o.on("--out PATH", "where to write results.json") { options[:out] = _1 }
-        o.on("-h", "--help") { puts o; exit EXIT_OK }
+        o.on("--rows PATH", "directory or file of rows (repeatable)") { options[:rows] << it }
+        o.on("--id ID", "run only this row id (repeatable)") { options[:ids] << it }
+        o.on("--area AREA", "run only this area (repeatable)") { options[:areas] << it }
+        o.on("--shard N/TOTAL", "run shard N of TOTAL, round-robin") { options[:shard] = it }
+        o.on("--out PATH", "where to write results.json") { options[:out] = it }
+        o.on("-h", "--help") {
+          puts o
+          exit EXIT_OK
+        }
       end.parse!(argv)
 
       options[:rows] = DEFAULT_ROWS if options[:rows].empty?
@@ -107,15 +110,15 @@ module BillingMatrix
     # see the whole corpus, so duplicate ids and dangling control: references are only
     # detectable here.
     def load_rows
-      rows = @options[:rows].flat_map { Row.load_all(_1) }
+      rows = @options[:rows].flat_map { Row.load_all(it) }
       Row.reject_duplicate_ids!(rows)
       Row.check_controls!(rows)
       rows
     end
 
     def select(rows)
-      rows = rows.select { @options[:ids].include?(_1.id) } if @options[:ids].any?
-      rows = rows.select { @options[:areas].include?(_1.area) } if @options[:areas].any?
+      rows = rows.select { @options[:ids].include?(it.id) } if @options[:ids].any?
+      rows = rows.select { @options[:areas].include?(it.area) } if @options[:areas].any?
       return rows unless @options[:shard]
 
       index, total = @options[:shard].split("/").map(&:to_i)

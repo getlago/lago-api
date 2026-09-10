@@ -34,7 +34,7 @@ module BillingMatrix
       @started_at = Time.now.utc
     end
 
-    def record(row:, verdict:, mismatches: [], error: nil, duration_ms:)
+    def record(row:, verdict:, duration_ms:, mismatches: [], error: nil)
       raise ArgumentError, "unknown verdict #{verdict.inspect}" unless VERDICTS.include?(verdict)
 
       @rows << Row.new(
@@ -69,7 +69,7 @@ module BillingMatrix
         errored: count(:errored),
         canaries_broken: count(:canary_broken),
         canaries_total: canaries.size,
-        canaries_unproven: canaries.count { _1.verdict != :passed }
+        canaries_unproven: canaries.count { it.verdict != :passed }
       }
     end
 
@@ -134,7 +134,8 @@ module BillingMatrix
     # the only reliable source in that environment; a real .git is a bonus for other contexts.
     def git_revision
       env_revision = ENV["GIT_SHA"] || ENV["GITHUB_SHA"] || ENV["CI_COMMIT_SHA"]
-      return env_revision unless env_revision.nil? || env_revision.empty?
+      # blank? is ActiveSupport, and this file loads no Rails.
+      return env_revision unless env_revision.nil? || env_revision.empty? # rubocop:disable Rails/Blank
 
       sha = `git rev-parse HEAD 2>/dev/null`.strip
       sha.empty? ? nil : sha

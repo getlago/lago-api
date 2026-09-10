@@ -5,6 +5,10 @@ require_relative "errors"
 module BillingMatrix
   APP_ROOT = File.expand_path("../..", __dir__)
 
+  # Deliberately a class instance variable: this guards a once-per-process side effect —
+  # requiring the Rails environment — in a single-threaded CLI. A thread-safe alternative
+  # would only add a mutex around something that must happen before any thread exists.
+  # rubocop:disable ThreadSafety/ClassInstanceVariable
   def self.boot!
     return if @booted
 
@@ -35,6 +39,7 @@ module BillingMatrix
     @booted = true
     nil
   end
+  # rubocop:enable ThreadSafety/ClassInstanceVariable
 
   def self.abort_unless_test_environment!
     unless Rails.env.test?

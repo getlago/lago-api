@@ -81,9 +81,15 @@ end
 ```
 
 On entry the block is guaranteed: an empty database, empty ActiveJob and Sidekiq queues,
-HTTP blocked except a stubbed PDF service, `License.premium? == true`, and real time.
-On exit, guaranteed regardless of how the block ended: database cleaned, time restored,
-WebMock reset, queues cleared.
+HTTP blocked except a stubbed PDF service, `License.premium?` equal to the `premium:` keyword
+(default `true`), and real time. On exit, guaranteed regardless of how the block ended:
+database cleaned, time restored, WebMock reset, queues cleared, `License.premium? == false`.
+
+`License` is one process-global `LagoUtils::License` instance, so the licence is row state,
+not harness state: `ctx.premium = false` / `ctx.premium?` are the only way to touch it, and
+`leave` drops it unconditionally so a row cannot leak premium into the next. `World` calls
+`ctx.premium=` from the row's `setup.premium` (see below), because `run.rb` does not yet pass
+the keyword.
 
 `enter` must run **inside** the `begin` that `ensure`s `leave`. `enter` mutates global
 state — premium flag, WebMock stubs, the time offset — so an `enter` that raises halfway
@@ -198,9 +204,32 @@ express (start with `organization` and its billing entity). Set `premium_integra
 the organization when the setup asks for a premium feature — the old suite lost findings to
 features silently dropping without it.
 
-Supported `setup` keys for the MVP, all optional: `organization`, `billing_entity`,
+Supported `setup` keys for the MVP, all optional: `premium`, `organization`, `billing_entity`,
 `taxes`, `metrics`, `plan`, `charges`, `fixed_charges`, `thresholds`, `customer`,
 `coupons`, `wallets`, `add_ons`, `plans`. Unknown key ⇒ raise `BillingMatrix::InvalidRow`.
+
+### `premium`
+
+`setup.premium: false` runs the row without a premium licence; `true` (the default when the
+key is absent) is what every pre-existing row means. It must be a boolean. It is a first-class
+axis — plan overrides, usage thresholds, minimum commitments and progressive billing all
+answer 200 and silently no-op without a licence (`Plans::CreateService:82`,
+`Plans::UpdateService:75,79`, `Plans::OverrideService:57,64`), and the previous suite never saw
+that class of defect because premium was hardcoded on. Rules `World` enforces:
+
+- `premium: false` with `organization.premium_integrations` present is `InvalidRow`: every
+  premium integration is also gated on `License.premium?`, so the row would test nothing.
+- Implied integrations (`thresholds` ⇒ `progressive_billing`, `PREMIUM_FEATURE_OF`) are added
+  only under a premium licence; a row that turned the licence off is asking to see the feature
+  no-op, not to be rescued by a setup key.
+- The "plan has no minimum commitment" guard in `verify_plan!` fires only under a premium
+  licence; without one the dropped commitment is the behaviour under test and `expect` must
+  state the shorter invoice. `expect_count!` for charges/thresholds is unchanged: asking for
+  thresholds without a licence still errors, because the plan cannot carry them at all.
+- Every `premium: false` row names a `premium: true` row (same setup, same timeline) as its
+  `control:`, and the two assert different figures — an axis whose values cannot be shown to
+  produce different results is a label, not coverage. `billing_matrix/rows/premium_gating.yml`
+  is the reference pair.
 
 `plans` is a list of **extra** plans, each `{code, ...plan keys, charges: [...], thresholds: [...]}`
 with the same entry shapes as the top-level sections, so a timeline can move the subscription

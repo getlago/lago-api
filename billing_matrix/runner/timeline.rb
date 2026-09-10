@@ -70,8 +70,10 @@ module BillingMatrix
     def self.failable?(verb) = !NOT_FAILABLE.include?(verb)
 
     def self.param_keys(verb)
+      # Free-form verbs take precedence over stricter parameter lists.
+      return if FREE_FORM_PARAMS.include?(verb)
+
       case verb
-      when *FREE_FORM_PARAMS then nil
       when "update_plan" then World::KEYS.fetch("plan") + %w[charges usage_thresholds cascade_updates]
       when "update_charge" then World::KEYS.fetch("charges") - %w[metric] + %w[cascade_updates]
       when "update_customer" then World::KEYS.fetch("customer") - %w[external_id]
@@ -163,13 +165,9 @@ module BillingMatrix
       end
     end
 
-    def perform_usage_update
-      ctx.perform_usage_update
-    end
+    delegate :perform_usage_update, to: :ctx
 
-    def perform_billing
-      ctx.perform_billing
-    end
+    delegate :perform_billing, to: :ctx
 
     def refresh_invoice(**api)
       ctx.refresh_invoice(target_invoice, **api)

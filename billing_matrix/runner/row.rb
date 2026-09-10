@@ -40,7 +40,7 @@ module BillingMatrix
     end
 
     def self.load_file(path)
-      documents = YAML.safe_load(File.read(path), permitted_classes: [Time, Date], aliases: true, filename: path)
+      documents = YAML.safe_load_file(path, permitted_classes: [Time, Date], aliases: true, filename: path)
       unless documents.is_a?(Array)
         raise InvalidRow, "#{path}: expected a top-level list of rows, got #{documents.class}"
       end
