@@ -45,6 +45,14 @@ module Fees
           :product_filter
         end
 
+        def billing_sources
+          [with_filter(rate_card.product_filter)]
+        end
+
+        def true_up_filter_id
+          rate_card.product_filter_id
+        end
+
         def with_default_filter
           with_filter(nil)
         end

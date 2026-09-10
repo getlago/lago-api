@@ -22,6 +22,7 @@ module Fees
         :charge_id,
         :selected_filter,
         :filter_association,
+        :true_up_filter_id,
         :fee_type,
         :invoiceable,
         :billable_metric,
@@ -54,6 +55,11 @@ module Fees
 
       def filter_id
         selected_filter&.id
+      end
+
+      # The source determines which buckets have pricing, independently of the matching filter set.
+      def billing_items
+        source.billing_sources.map { |billing_source| with(source: billing_source) }
       end
 
       def aggregation_options(current_usage:)
