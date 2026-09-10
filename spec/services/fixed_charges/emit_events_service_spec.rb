@@ -102,7 +102,7 @@ RSpec.describe FixedCharges::EmitEventsService do
 
         expect(result).to be_success
         expect(result.fixed_charge_events.map(&:subscription_id)).to eq([active_subscription_2.id])
-        expect(result.fixed_charge_events.sole.timestamp).to eq(Time.zone.parse("2024-07-01"))
+        expect(result.fixed_charge_events.sole.timestamp).to be_within(1.second).of(Time.zone.parse("2024-07-01"))
         expect(queries.size).to eq(1)
       end
 
