@@ -82,6 +82,27 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when okta is disabled on the integration's organization but enabled on another of the user's organizations" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before do
+        create(:membership, user:, organization: okta_integration.organization)
+        okta_integration.organization.disable_okta_authentication!
+
+        other_organization = create(:organization)
+        other_organization.update!(premium_integrations: ["okta"])
+        other_organization.enable_okta_authentication!
+        create(:membership, user:, organization: other_organization)
+      end
+
+      it "does not authenticate the user" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
+      end
+    end
+
     context "when domain is not configured with an integration" do
       let(:okta_integration) { nil }
 
@@ -104,21 +125,58 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
-    context "when user already exists" do
-      let(:user) { create(:user, email: "foo@bar.com") }
+    context "when okta userinfo email only differs in casing" do
+      let(:okta_userinfo_response) { {"email" => "FOO@BAR.COM"} }
 
-      before { user }
+      it "authenticates the user" do
+        result = service.call
 
-      it "does not create a new user" do
-        expect { service.call }.not_to change(User, :count)
+        expect(result).to be_success
+        expect(result.token).to be_present
       end
     end
 
-    context "when membership already exists" do
-      let(:user) { create(:user, email: "foo@bar.com") }
-      let(:membership) { create(:membership, user:, organization: okta_integration.organization) }
+    context "when the user exists but does not belong to the organization" do
+      before { create(:user, email: "foo@bar.com") }
 
-      before { membership }
+      it "does not authenticate the user" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("user_does_not_belong_to_organization")
+        expect(result.token).to be_nil
+      end
+
+      it "does not create a membership" do
+        expect { service.call }.not_to change(Membership, :count)
+      end
+    end
+
+    context "when the user exists with a revoked membership in the organization" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before { create(:membership, :revoked, user:, organization: okta_integration.organization) }
+
+      it "does not authenticate the user" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("user_does_not_belong_to_organization")
+      end
+    end
+
+    context "when the user already belongs to the organization" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before { create(:membership, user:, organization: okta_integration.organization) }
+
+      it "authenticates without creating a new user" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result).to be_success
+        expect(result.token).to be_present
+      end
 
       it "does not create a new membership" do
         expect { service.call }.not_to change(Membership, :count)
