@@ -35,6 +35,8 @@ RSpec.describe Billing::Context do
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
       expect(context.anniversary?).to eq(subscription.anniversary?)
+      expect(context.plan).to eq(subscription.plan)
+      expect(context.currency).to eq(subscription.plan.amount_currency)
     end
 
     it "preserves subscription charge duration calculation" do
@@ -67,11 +69,22 @@ RSpec.describe Billing::Context do
       expect(context.subscription_at).to eq(contract.started_at)
       expect(context.started_at).to eq(contract.started_at)
       expect(context.organization).to eq(contract.organization)
+      expect(context.plan).to eq(contract.catalog_plan)
+      expect(context.currency).to eq(contract.currency)
     end
 
     it "prevents using contract identity in subscription queries" do
       expect { context.subscription_id }
         .to raise_error(NotImplementedError, "contract-backed billing contexts do not have a subscription id")
+    end
+
+    context "with a catalog plan" do
+      let(:catalog_plan) { build_stubbed(:catalog_plan, currency: "USD") }
+      let(:contract) { build_stubbed(:contract, catalog_plan:) }
+
+      it "exposes the catalog plan and its currency" do
+        expect(context).to have_attributes(plan: catalog_plan, currency: "USD")
+      end
     end
 
     context "with a customer timezone" do

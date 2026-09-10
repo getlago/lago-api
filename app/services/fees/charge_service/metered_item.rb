@@ -66,11 +66,11 @@ module Fees
       end
 
       def with_filter(filter, **options)
-        self.class.new(source: source.with_filter(filter, **options))
+        with(source: source.with_filter(filter, **options))
       end
 
       def with_default_filter
-        self.class.new(source: source.with_default_filter)
+        with(source: source.with_default_filter)
       end
 
       def filtered_for_charge_boundaries

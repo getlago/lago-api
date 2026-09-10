@@ -33,6 +33,7 @@ Rails.application.routes.draw do
     # Drawn first so catalog routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      get "customers/:customer_external_id/current_usage", to: "customers/usage#current", as: :contract_customer_current_usage
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end

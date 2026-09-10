@@ -82,7 +82,9 @@ module Customers
     # billed invoice subscriptions used to net already-billed amounts out of ongoing usage.
     def subscription_usages
       @subscription_usages ||= customer.active_subscriptions.map do |subscription|
-        invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER).invoice
+        invoice = ::Invoices::CustomerUsageService.call!(
+          customer:, billing_context: Billing::Context.from(subscription:), usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER
+        ).invoice
 
         billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
           .call(subscription:, include_generating_invoices:)

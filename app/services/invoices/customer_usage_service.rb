@@ -6,7 +6,7 @@ module Invoices
 
     def initialize(
       customer:,
-      subscription:,
+      billing_context:,
       timestamp: Time.current,
       apply_taxes: true,
       with_cache: true,
@@ -19,7 +19,7 @@ module Invoices
 
       @apply_taxes = apply_taxes
       @customer = customer
-      @subscription = subscription
+      @billing_context = billing_context
       @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
       @calculate_projected_usage = calculate_projected_usage
@@ -34,7 +34,8 @@ module Invoices
       calculate_projected_usage: false, usage_filters: UsageFilters::NONE)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:)
+      billing_context = Billing::Context.from(subscription:) if subscription
+      new(customer:, billing_context:, apply_taxes:, calculate_projected_usage:, usage_filters:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -42,16 +43,29 @@ module Invoices
     def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
+      billing_context = Billing::Context.from(subscription:) if subscription
+      new(customer:, billing_context:, apply_taxes:, calculate_projected_usage:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
 
     def call
       return result.not_found_failure!(resource: "customer") unless customer
-      return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
+      return result.not_allowed_failure!(code: "no_active_subscription") if billing_context.blank?
+      if billing_context.contract? && !billing_context.contract.active?
+        return result.not_allowed_failure!(code: "no_active_contract")
+      end
       return result.not_allowed_failure!(code: "full_usage_not_allowed") if usage_filters.full_usage && !querying_full_usage_allowed
-      return result.not_found_failure!(resource: "charge") if charges.empty? && usage_filters.has_charge_filter?
+      if billing_context.contract?
+        unless current_segment_usage.success?
+          return result.fail_with_error!(current_segment_usage.error)
+        end
+        if usage_segments.empty? && usage_filters.has_product_filter?
+          return result.not_found_failure!(resource: "product")
+        end
+      elsif charges.empty? && usage_filters.has_charge_filter?
+        return result.not_found_failure!(resource: "charge")
+      end
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -62,11 +76,18 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
+    attr_reader :customer, :invoice, :billing_context, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
     attr_reader :usage_filters
 
-    delegate :plan, to: :subscription
-    delegate :billing_entity, to: :customer
+    delegate :plan, :subscription, to: :billing_context
+
+    def billing_entity
+      if billing_context.contract?
+        billing_context.contract.applicable_billing_entity
+      else
+        customer.billing_entity
+      end
+    end
 
     def charges
       return @charges if defined?(@charges)
@@ -97,7 +118,7 @@ module Invoices
         billing_entity:,
         customer:,
         issuing_date: boundaries.issuing_date,
-        currency: plan.amount_currency
+        currency: billing_context.currency
       )
 
       invoice.fees = compute_charge_fees
@@ -114,10 +135,19 @@ module Invoices
     end
 
     def organization
-      @organization ||= subscription.organization
+      @organization ||= billing_context.organization
     end
 
     def compute_charge_fees
+      if billing_context.contract?
+        # Current-cycle segments may be unsaved, so aggregate directly rather than using
+        # the persisted-segment prefilter resolver. MeteredItem supplies product matching rules.
+        return usage_segments.flat_map do |segment|
+          metered_item = Fees::ChargeService::MeteredItem.from_billing_segment(segment)
+          metered_usage(metered_item)
+        end.sort_by { |fee| fee.billable_metric.name.downcase }
+      end
+
       fees = []
       filters = event_filters(subscription, boundaries).filter_targets
       charges.find_each { |c| fees += charge_usage(c, filters[c.target_key] || {}) }
@@ -139,13 +169,21 @@ module Invoices
       applied_boundaries = boundaries
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
 
+      metered_usage(
+        Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
+        cache_middleware:,
+        filtered_aggregations: applied_filters.keys
+      )
+    end
+
+    def metered_usage(metered_item, cache_middleware: nil, filtered_aggregations: nil)
       Fees::ChargeService
         .call!(
           invoice:,
-          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
-          billing_context: Billing::Context.from(subscription:),
+          metered_item:,
+          billing_context:,
           cache_middleware:,
-          filtered_aggregations: applied_filters.keys,
+          filtered_aggregations:,
           options: Fees::ChargeService::Options.new(
             context: :current_usage,
             calculate_projected_usage:,
@@ -159,6 +197,10 @@ module Invoices
     end
 
     def boundaries
+      if billing_context.contract?
+        return current_segment_usage.boundaries
+      end
+
       return @boundaries if @boundaries.present?
 
       from = usage_filters.full_usage ? subscription.started_at : date_service.from_datetime
@@ -179,9 +221,16 @@ module Invoices
       @date_service ||= Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true)
     end
 
+    def current_segment_usage
+      @current_segment_usage ||= BillingSegments::BuildCurrentUsageService.call(billing_context:, timestamp:, usage_filters:)
+    end
+
+    def usage_segments
+      current_segment_usage.billing_segments
+    end
+
     def compute_amounts
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
-      plan = subscription.plan
 
       invoice.fees.each do |fee|
         taxes_result = Fees::ApplyTaxesService.call(fee:, customer:, plan:)
@@ -296,6 +345,7 @@ module Invoices
     end
 
     def querying_full_usage_allowed
+      return false if billing_context.contract?
       return false unless organization.granular_lifetime_usage_enabled?
 
       any_filter_present = usage_filters.has_charge_filter? || usage_filters.filter_by_group.present?

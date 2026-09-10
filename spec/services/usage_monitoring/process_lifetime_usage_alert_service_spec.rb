@@ -30,7 +30,7 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
 
       expect(::Invoices::CustomerUsageService).to have_received(:call!).with(
         customer: an_object_having_attributes(id: subscription.customer_id),
-        subscription: an_object_having_attributes(id: subscription.id),
+        billing_context: an_object_having_attributes(subscription:),
         apply_taxes: false,
         with_cache: true,
         usage_filters: an_instance_of(UsageFilters)

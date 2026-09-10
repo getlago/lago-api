@@ -19,7 +19,6 @@ module Billing
       :organization,
       :organization_id,
       :customer,
-      :plan,
       :started_at,
       :terminated_at,
       :terminated?,
@@ -33,6 +32,22 @@ module Billing
       return record.id if subscription?
 
       raise NotImplementedError, "contract-backed billing contexts do not have a subscription id"
+    end
+
+    def plan
+      if contract?
+        contract.catalog_plan
+      else
+        subscription.plan
+      end
+    end
+
+    def currency
+      if contract?
+        contract.currency
+      else
+        subscription.plan.amount_currency
+      end
     end
 
     def contract_id

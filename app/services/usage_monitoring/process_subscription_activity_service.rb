@@ -74,7 +74,7 @@ module UsageMonitoring
     def current_usage
       @current_usage ||= ::Invoices::CustomerUsageService.call(
         customer: subscription.customer,
-        subscription:,
+        billing_context: Billing::Context.from(subscription:),
         apply_taxes: false, # Never use taxes for alerting
         with_cache: true
       ).usage

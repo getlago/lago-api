@@ -21,6 +21,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
   let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:timestamp) { Time.current }
   let(:apply_taxes) { true }
+  let(:billing_context) { Billing::Context.from(subscription:) }
 
   let(:subscription) do
     create(
@@ -402,7 +403,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       subject(:usage_service) do
         described_class.new(
           customer:,
-          subscription:,
+          billing_context:,
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_charge_id: charge.id)
@@ -436,7 +437,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       subject(:usage_service) do
         described_class.new(
           customer:,
-          subscription:,
+          billing_context:,
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_charge_code: charge.code)
@@ -470,7 +471,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       subject(:usage_service) do
         described_class.new(
           customer:,
-          subscription:,
+          billing_context:,
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_group: {"cloud" => ["aws"]})
@@ -523,7 +524,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         subject(:usage_service) do
           described_class.new(
             customer:,
-            subscription:,
+            billing_context:,
             apply_taxes: false,
             with_cache: false,
             usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -558,7 +559,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: false,
               usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -581,7 +582,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: false,
               usage_filters: UsageFilters.new(filter_by_charge_code: charge.code, full_usage: true)
@@ -604,7 +605,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: false,
               usage_filters: UsageFilters.new(full_usage: true)
@@ -628,7 +629,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: false,
               usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -657,7 +658,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: false,
               usage_filters: UsageFilters.new(filter_by_charge_id: prorated_charge.id, full_usage: true)
@@ -687,7 +688,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: true,
               usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -723,7 +724,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subject(:usage_service) do
             described_class.new(
               customer:,
-              subscription:,
+              billing_context:,
               apply_taxes: false,
               with_cache: true,
               usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -770,7 +771,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       subject(:usage_service) do
         described_class.new(
           customer:,
-          subscription:,
+          billing_context:,
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(skip_grouping: true)
@@ -828,7 +829,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
       context "when the usage is not filtered" do
         subject(:usage_service) do
-          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: true)
+          described_class.new(customer:, billing_context:, apply_taxes: false, with_cache: true)
         end
 
         it "caches the charge and requests the ingestion timestamps" do
@@ -842,7 +843,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         subject(:usage_service) do
           described_class.new(
             customer:,
-            subscription:,
+            billing_context:,
             apply_taxes: false,
             with_cache: true,
             usage_filters: UsageFilters.new(filter_by_charge_id: charge.id)
@@ -858,7 +859,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
       context "when the cache is disabled by the caller" do
         subject(:usage_service) do
-          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false)
+          described_class.new(customer:, billing_context:, apply_taxes: false, with_cache: false)
         end
 
         it "skips both the cache and the ingestion timestamps" do
@@ -872,7 +873,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         subject(:usage_service) do
           described_class.new(
             customer:,
-            subscription:,
+            billing_context:,
             apply_taxes: false,
             with_cache: true,
             usage_filters: UsageFilters.new(filter_by_group: {"cloud" => ["aws"]})
@@ -904,7 +905,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         subject(:usage_service) do
           described_class.new(
             customer:,
-            subscription:,
+            billing_context:,
             apply_taxes: false,
             with_cache: true,
             usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -954,7 +955,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         subject(:usage_service) do
           described_class.new(
             customer:,
-            subscription:,
+            billing_context:,
             apply_taxes: false,
             with_cache: true,
             usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
@@ -978,7 +979,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         subject(:usage_service) do
           described_class.new(
             customer:,
-            subscription:,
+            billing_context:,
             apply_taxes: false,
             with_cache: true,
             usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true, skip_grouping: true)

@@ -117,7 +117,7 @@ end
 def compute_usage_totals(subscription)
   legacy_result = Invoices::CustomerUsageService.call(
     customer: subscription.customer,
-    subscription:,
+    billing_context: Billing::Context.from(subscription:),
     with_cache: true,
     apply_taxes: false
   )
@@ -129,7 +129,7 @@ def compute_usage_totals(subscription)
   ) do
     Invoices::CustomerUsageService.call(
       customer: subscription.customer,
-      subscription:,
+      billing_context: Billing::Context.from(subscription:),
       with_cache: false,
       apply_taxes: false
     )

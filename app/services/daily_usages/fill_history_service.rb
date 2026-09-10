@@ -42,7 +42,7 @@ module DailyUsages
         Timecop.freeze(time_to_freeze) do
           usage = Invoices::CustomerUsageService.call(
             customer: subscription.customer,
-            subscription: subscription,
+            billing_context: Billing::Context.from(subscription:),
             apply_taxes: false,
             with_cache: false,
             max_timestamp: time_to_freeze,
