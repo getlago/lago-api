@@ -10,6 +10,20 @@ RSpec.describe Invoice do
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
 
+  describe "associations" do
+    it do
+      expect(invoice).to have_many(:billing_segments)
+      expect(invoice).to have_many(:contracts).through(:billing_segments)
+    end
+
+    it "returns each contract once across multiple billing segments" do
+      contract = create(:contract, organization:, customer: invoice.customer)
+      create_list(:billing_segment, 2, contract:, invoice:, organization:, customer: invoice.customer)
+
+      expect(invoice.contracts).to eq([contract])
+    end
+  end
+
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 

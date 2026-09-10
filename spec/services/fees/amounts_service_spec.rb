@@ -18,7 +18,7 @@ RSpec.describe Fees::AmountsService do
   let(:options) { {} }
 
   describe "option values" do
-    [described_class::Deduction, described_class::TrueUp, described_class::PricingUnit].each do |type|
+    [described_class::Deduction, described_class::TrueUp, described_class::AppliedPricingUnit].each do |type|
       it "represents absent #{type.name.demodulize} with an immutable none value" do
         expect(type.none).to be_none
         expect(type.none).to be_frozen
@@ -28,16 +28,26 @@ RSpec.describe Fees::AmountsService do
     it "distinguishes zero monetary values from absence" do
       expect(described_class::Deduction.new(amount_cents: 0, billed_days: 1, period_days: 1)).not_to be_none
       expect(described_class::TrueUp.new(minimum_amount_cents: 0)).not_to be_none
-      expect(described_class::PricingUnit.new(pricing_unit: build(:pricing_unit), conversion_rate: 0.to_d)).not_to be_none
+      expect(described_class::AppliedPricingUnit.from_pricing_unit(pricing_unit: build(:pricing_unit), conversion_rate: 0.to_d)).not_to be_none
     end
 
     it "normalizes absent pricing units" do
-      expect(described_class::PricingUnit.from(nil)).to be_none
+      expect(described_class::AppliedPricingUnit.from_applied_pricing_unit(nil)).to eq(described_class::AppliedPricingUnit.none)
+      expect(described_class::AppliedPricingUnit.from_pricing_unit(pricing_unit: nil, conversion_rate: 0.25)).to eq(described_class::AppliedPricingUnit.none)
+    end
+
+    it "builds options from a pricing unit and conversion rate" do
+      pricing_unit = build(:pricing_unit)
+      options = described_class::AppliedPricingUnit.from_pricing_unit(pricing_unit:, conversion_rate: 0.25.to_d)
+
+      expect(options).to have_attributes(pricing_unit:, conversion_rate: 0.25.to_d)
+      expect(options).not_to be_none
+      expect(options).to be_frozen
     end
 
     it "copies actual pricing-unit options" do
       actual = build(:applied_pricing_unit, conversion_rate: 0.25)
-      options = described_class::PricingUnit.from(actual)
+      options = described_class::AppliedPricingUnit.from_applied_pricing_unit(actual)
 
       expect(options).to have_attributes(pricing_unit: actual.pricing_unit, conversion_rate: actual.conversion_rate)
       expect(options).not_to be_none
@@ -57,7 +67,7 @@ RSpec.describe Fees::AmountsService do
     end
 
     it "exposes the pricing unit's decimal subunit factor" do
-      options = described_class::PricingUnit.from(build(:applied_pricing_unit))
+      options = described_class::AppliedPricingUnit.from_applied_pricing_unit(build(:applied_pricing_unit))
 
       expect(options.subunit_to_unit).to eq(100.to_d)
       expect(options.subunit_to_unit).to be_a(BigDecimal)
@@ -141,7 +151,7 @@ RSpec.describe Fees::AmountsService do
 
       context "with pricing units" do
         let(:options) do
-          {applied_pricing_unit: described_class::PricingUnit.from(
+          {applied_pricing_unit: described_class::AppliedPricingUnit.from_applied_pricing_unit(
             build(:applied_pricing_unit, pricing_unitable: nil, conversion_rate: 0.25)
           )}
         end
@@ -176,7 +186,7 @@ RSpec.describe Fees::AmountsService do
     context "with explicit absent options" do
       let(:options) do
         {
-          applied_pricing_unit: described_class::PricingUnit.none,
+          applied_pricing_unit: described_class::AppliedPricingUnit.none,
           deduction: described_class::Deduction.none,
           true_up: described_class::TrueUp.none
         }
@@ -439,7 +449,7 @@ RSpec.describe Fees::AmountsService do
     context "with pricing units" do
       let(:pricing_unit) { build(:pricing_unit) }
       let(:applied_pricing_unit) do
-        described_class::PricingUnit.from(build(:applied_pricing_unit, pricing_unit:, pricing_unitable: nil, conversion_rate: 0.25))
+        described_class::AppliedPricingUnit.from_applied_pricing_unit(build(:applied_pricing_unit, pricing_unit:, pricing_unitable: nil, conversion_rate: 0.25))
       end
       let(:options) { {applied_pricing_unit:} }
       let(:value) { "0.336".to_d }

@@ -18,7 +18,7 @@ module Fees
       amount = Fees::AmountsService.call(
         currency: charge.plan.amount.currency,
         charge_model_result: ChargeModels::BaseService::Result.new,
-        applied_pricing_unit: Fees::AmountsService::PricingUnit.from(charge.applied_pricing_unit),
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(charge.applied_pricing_unit),
         true_up: Fees::AmountsService::TrueUp.new(
           minimum_amount_cents: charge.min_amount_cents,
           billed_days: subscription.date_diff_with_timezone(boundaries.charges_from_datetime.to_time, boundaries.charges_to_datetime.to_time),

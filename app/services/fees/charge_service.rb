@@ -184,7 +184,7 @@ module Fees
       charge_model_result = ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result: zero_aggregation,
-        period_ratio: selected_metered_item.period_ratio,
+        period_ratio: selected_metered_item.elapsed_period_ratio,
         calculate_projected_usage: options.calculate_projected_usage
       ).apply
 
@@ -272,7 +272,7 @@ module Fees
       amount = Fees::AmountsService.call(
         currency: selected_metered_item.currency,
         charge_model_result: amount_result,
-        applied_pricing_unit: Fees::AmountsService::PricingUnit.from(selected_metered_item.applied_pricing_unit)
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(selected_metered_item.applied_pricing_unit)
       ).amount
 
       # Prevent trying to create a fee with negative units or amount.
@@ -387,7 +387,7 @@ module Fees
       ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result:,
-        period_ratio: selected_metered_item.period_ratio,
+        period_ratio: selected_metered_item.elapsed_period_ratio,
         calculate_projected_usage: options.calculate_projected_usage
       ).apply
     end

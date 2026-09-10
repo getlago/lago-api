@@ -59,6 +59,18 @@ class BillingSegment < ApplicationRecord
     )
   end
 
+  # Elapsed progress is independent of the stored service-price proration_ratio.
+  def elapsed_period_ratio(at: Time.current)
+    timezone = customer.applicable_timezone
+
+    Billing::ElapsedPeriodRatio.calculate(
+      from_date: started_at.in_time_zone(timezone).to_date,
+      to_date: ended_at.in_time_zone(timezone).to_date,
+      current_date: at.in_time_zone(timezone).to_date,
+      duration_in_days:
+    )
+  end
+
   def pricing_unit_conversion_rate
     if rate_override
       rate_override.pricing_unit_conversion_rate
@@ -72,6 +84,18 @@ class BillingSegment < ApplicationRecord
       rate_override.min_amount_cents
     else
       rate_card_rate.min_amount_cents
+    end
+  end
+
+  # Returns the prorated minimum in pricing-unit cents when configured, otherwise fiat cents.
+  def prorated_min_amount_cents
+    minimum = min_amount_cents.to_d * proration_ratio
+
+    if pricing_unit
+      minimum / Money::Currency.new(currency).subunit_to_unit /
+        pricing_unit_conversion_rate * pricing_unit.subunit_to_unit.to_d
+    else
+      minimum
     end
   end
 
