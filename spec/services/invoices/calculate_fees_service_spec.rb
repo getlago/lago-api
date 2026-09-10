@@ -151,7 +151,7 @@ RSpec.describe Invoices::CalculateFeesService do
       it "calls the ProgressiveBillingService" do
         result = invoice_service.call
         expect(result).to be_success
-        expect(Credits::ProgressiveBillingService).to have_received(:call).with(invoice:, apply_coupons: true)
+        expect(Credits::ProgressiveBillingService).to have_received(:call).with(invoice:)
       end
 
       context "with adjusted fees existence query" do

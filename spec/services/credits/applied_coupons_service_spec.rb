@@ -346,33 +346,6 @@ RSpec.describe Credits::AppliedCouponsService do
         fee_middle
       end
 
-      context "when selecting applied coupon IDs" do
-        it "leaves unselected coupons for the subsequent pass" do
-          result = described_class.call(invoice:, applied_coupon_ids: [applied_coupon_middle.id])
-
-          expect(result).to be_success
-          expect(invoice.credits.pluck(:applied_coupon_id)).to eq([applied_coupon_middle.id])
-          expect(invoice.coupons_amount_cents).to eq(5)
-          expect(applied_coupon.reload).to be_active
-        end
-
-        it "selects a plan coupon without applying the metric coupon" do
-          result = described_class.call(invoice:, applied_coupon_ids: [applied_coupon.id])
-
-          expect(result).to be_success
-          expect(invoice.credits.pluck(:applied_coupon_id)).to eq([applied_coupon.id])
-          expect(invoice.coupons_amount_cents).to eq(75)
-          expect(applied_coupon_middle.reload).to be_active
-        end
-
-        it "does not apply any coupons when the selected IDs are empty" do
-          result = described_class.call(invoice:, applied_coupon_ids: [])
-
-          expect(result).to be_success
-          expect(invoice.credits).to be_empty
-        end
-      end
-
       it "applies two coupons" do
         result = credit_service.call
 
