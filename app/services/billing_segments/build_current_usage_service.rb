@@ -75,7 +75,10 @@ module BillingSegments
         .where(products: {product_type: :usage})
         .includes(:contract, rate_phases: :rate_override,
           product: {billable_metric: :organization, filters: {values: :billable_metric_filter}},
-          rate_card: [:rates, {product: {billable_metric: :organization, filters: {values: :billable_metric_filter}}}])
+          rate_card: [:rates, {
+            product_filter: {values: :billable_metric_filter},
+            product: {billable_metric: :organization, filters: {values: :billable_metric_filter}}
+          }])
 
       if usage_filters.filter_by_product_id.present?
         cards = cards.where(products: {id: usage_filters.filter_by_product_id})
