@@ -8,7 +8,9 @@ module StreamingDestinations
 
     self.table_name = "streaming_destinations"
 
-    EVENT_TYPES = %w[customer_usage.refreshed.v1].freeze
+    CURRENT_USAGE_EVENT_TYPE = "customer_usage.refreshed.v1"
+    FULL_USAGE_EVENT_TYPE = "customer_full_usage.refreshed.v1"
+    EVENT_TYPES = [CURRENT_USAGE_EVENT_TYPE, FULL_USAGE_EVENT_TYPE].freeze
 
     belongs_to :organization
 
@@ -19,6 +21,26 @@ module StreamingDestinations
     scope :for_event, lambda { |organization, event_type|
       where(organization:, active: true).where("event_types @> ARRAY[?]::varchar[]", event_type)
     }
+
+    def self.streams_event?(organization, event_type)
+      for_event(organization, event_type).exists?
+    end
+
+    settings_accessors :customer_full_usage_excluded_plan_codes, default: []
+
+    def event_types_for(subscription)
+      return event_types unless customer_full_usage_excluded_plan_codes.include?(subscription.plan.code)
+
+      event_types - [FULL_USAGE_EVENT_TYPE]
+    end
+
+    def producer
+      raise NotImplementedError
+    end
+
+    def partition_key_for(customer:)
+      nil
+    end
 
     private
 

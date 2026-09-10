@@ -21,6 +21,36 @@ RSpec.describe StreamingDestinations::KinesisDestination, type: :model do
     end
   end
 
+  describe "#producer" do
+    it "builds the producer for its own transport" do
+      expect(destination.producer).to be_a(Lago::Kinesis::Producer)
+    end
+  end
+
+  describe "#partition_key_for" do
+    let(:customer) { create(:customer, organization: destination.organization) }
+
+    it "resolves the configured strategy" do
+      expect(destination.partition_key_for(customer:)).to eq(customer.external_id)
+    end
+
+    it "bounds the key to what Kinesis accepts, so a long external id still delivers" do
+      customer.update!(external_id: "x" * 400)
+
+      key = destination.partition_key_for(customer:)
+
+      expect(key.length).to eq(described_class::PARTITION_KEY_MAX_LENGTH)
+      expect(customer.external_id).to start_with(key)
+    end
+
+    it "raises on a strategy that was written past the validation" do
+      destination.update_column(:settings, destination.settings.merge("partition_key" => "galaxy")) # rubocop:disable Rails/SkipsModelValidations
+
+      expect { destination.reload.partition_key_for(customer:) }
+        .to raise_error(ArgumentError, /galaxy/)
+    end
+  end
+
   describe "settings" do
     it "reads the settings back" do
       expect(destination.stream_arn).to eq("arn:aws:kinesis:eu-west-1:123456789012:stream/lago-streaming-sandbox")

@@ -73,6 +73,50 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
     end
   end
 
+  describe "#producer" do
+    it "is the subtype's responsibility" do
+      expect { described_class.new.producer }.to raise_error(NotImplementedError)
+    end
+  end
+
+  describe "#event_types_for" do
+    subject(:destination) { create(:kinesis_destination) }
+
+    let(:customer) { create(:customer, organization: destination.organization) }
+    let(:plan) { create(:plan, organization: destination.organization, code: "self_serve_monthly") }
+    let(:subscription) { create(:subscription, customer:, plan:) }
+
+    it "returns every subscribed type when no plan is excluded" do
+      expect(destination.event_types_for(subscription)).to match_array(described_class::EVENT_TYPES)
+    end
+
+    it "drops the full usage type for an excluded plan" do
+      destination.customer_full_usage_excluded_plan_codes = ["self_serve_monthly"]
+
+      expect(destination.event_types_for(subscription)).to eq([described_class::CURRENT_USAGE_EVENT_TYPE])
+    end
+
+    it "keeps the full usage type for a plan that is not excluded" do
+      destination.customer_full_usage_excluded_plan_codes = ["another_plan"]
+
+      expect(destination.event_types_for(subscription)).to include(described_class::FULL_USAGE_EVENT_TYPE)
+    end
+  end
+
+  describe ".streams_event?" do
+    let(:organization) { create(:organization) }
+
+    it "is true when the organization has a destination for the event" do
+      create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"])
+
+      expect(described_class.streams_event?(organization, "customer_usage.refreshed.v1")).to be true
+    end
+
+    it "is false when it does not" do
+      expect(described_class.streams_event?(organization, "customer_usage.refreshed.v1")).to be false
+    end
+  end
+
   describe ".for_event" do
     let(:organization) { create(:organization) }
     let!(:destination) { create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"]) }
