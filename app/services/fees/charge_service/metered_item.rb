@@ -21,6 +21,7 @@ module Fees
       delegate :charge,
         :charge_id,
         :selected_filter,
+        :filter_association,
         :fee_type,
         :invoiceable,
         :billable_metric,
@@ -38,6 +39,8 @@ module Fees
         :invoiceable?,
         :applied_pricing_unit,
         to: :source
+
+      delegate :filters, to: :invoiceable
 
       %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
@@ -64,6 +67,10 @@ module Fees
 
       def with_filter(filter, **options)
         self.class.new(source: source.with_filter(filter, **options))
+      end
+
+      def with_default_filter
+        self.class.new(source: source.with_default_filter)
       end
 
       def filtered_for_charge_boundaries

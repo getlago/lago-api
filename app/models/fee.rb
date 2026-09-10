@@ -14,6 +14,7 @@ class Fee < ApplicationRecord
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
   belongs_to :charge_filter, -> { with_discarded }, optional: true
+  belongs_to :product_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
@@ -418,6 +419,7 @@ end
 #  original_fee_id                     :uuid
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
+#  product_filter_id                   :uuid
 #  rate_card_rate_id                   :uuid
 #  rate_override_id                    :uuid
 #  subscription_id                     :uuid
@@ -442,6 +444,7 @@ end
 #  index_fees_on_organization_id_and_created_at_and_id  (organization_id,created_at,id) WHERE (deleted_at IS NULL)
 #  index_fees_on_original_fee_id                        (original_fee_id)
 #  index_fees_on_pay_in_advance_event_transaction_id    (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_product_filter_id                      (product_filter_id)
 #  index_fees_on_rate_card_rate_id                      (rate_card_rate_id)
 #  index_fees_on_rate_override_id                       (rate_override_id)
 #  index_fees_on_subscription_id                        (subscription_id)
@@ -458,6 +461,7 @@ end
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (original_fee_id => fees.id)
+#  fk_rails_...  (product_filter_id => product_filters.id)
 #  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
 #  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
