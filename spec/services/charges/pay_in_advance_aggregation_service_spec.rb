@@ -56,7 +56,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         expect(BillableMetrics::Aggregations::CustomService).to have_received(:new).with(
           event_store_class: Events::Stores::PostgresStore,
           metered_item: have_attributes(properties: charge.properties),
-          context: subscription_context,
+          billing_context: subscription_context,
           boundaries: anything,
           filters: hash_excluding(:charge_filter)
         )
@@ -75,7 +75,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           .with(
             event_store_class: Events::Stores::PostgresStore,
             metered_item:,
-            context: subscription_context,
+            billing_context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
@@ -122,7 +122,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               metered_item:,
-              context: subscription_context,
+              billing_context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -170,7 +170,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               metered_item:,
-              context: subscription_context,
+              billing_context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -221,7 +221,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               .with(
                 event_store_class: Events::Stores::PostgresStore,
                 metered_item:,
-                context: subscription_context,
+                billing_context: subscription_context,
                 boundaries: {
                   from_datetime: boundaries.charges_from_datetime,
                   to_datetime: boundaries.charges_to_datetime,
@@ -267,7 +267,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               metered_item:,
-              context: subscription_context,
+              billing_context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -315,7 +315,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               metered_item:,
-              context: subscription_context,
+              billing_context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -359,7 +359,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             .with(
               event_store_class: Events::Stores::PostgresStore,
               metered_item:,
-              context: subscription_context,
+              billing_context: subscription_context,
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
@@ -398,7 +398,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           .with(
             event_store_class: Events::Stores::PostgresStore,
             metered_item:,
-            context: subscription_context,
+            billing_context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
@@ -432,7 +432,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           .with(
             event_store_class: Events::Stores::PostgresStore,
             metered_item:,
-            context: subscription_context,
+            billing_context: subscription_context,
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,

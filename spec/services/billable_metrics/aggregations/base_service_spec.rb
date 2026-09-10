@@ -80,7 +80,7 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
       described_class.new(
         event_store_class: Events::Stores::PostgresStore,
         metered_item:,
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {from_datetime: Time.current, to_datetime: Time.current},
         filters:
       )

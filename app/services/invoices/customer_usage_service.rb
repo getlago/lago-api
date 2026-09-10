@@ -143,7 +143,7 @@ module Invoices
         .call!(
           invoice:,
           metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           cache_middleware:,
           filtered_aggregations: applied_filters.keys,
           options: Fees::ChargeService::Options.new(
