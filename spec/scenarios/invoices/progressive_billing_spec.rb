@@ -56,6 +56,64 @@ describe "Progressive billing invoices", :premium, transaction: false do
     end
   end
 
+  context "with a percentage coupon limited to metrics and a fixed coupon" do
+    let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "0.01"}) }
+    let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 10_339) }
+    let(:additional_progressive_invoice) { false }
+    let(:expected_progressive_amounts) { [1169] }
+    let(:expected_final_amount) { 209 }
+
+    before do
+      coupon = create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 50,
+        frequency: "recurring", frequency_duration: 12, limited_billable_metrics: true)
+      create(:coupon_target, organization:, coupon:, billable_metric:)
+      create(:applied_coupon, customer:, coupon:, percentage_rate: 50,
+        frequency: "recurring", frequency_duration: 12, frequency_duration_remaining: 12)
+      fixed_coupon = create(:coupon, organization:, amount_cents: 4000, frequency: "forever")
+      create(:applied_coupon, customer:, coupon: fixed_coupon, amount_cents: 4000, frequency: "forever")
+    end
+
+    it "discounts the full period before deducting the net progressive credit" do
+      start_time = Time.zone.parse("2026-08-01")
+      travel_to(start_time) do
+        create_subscription({external_customer_id: customer.external_id,
+                             external_id: customer.external_id, plan_code: plan.code})
+      end
+      subscription = customer.subscriptions.sole
+
+      travel_to(start_time + 5.days) { ingest_event(subscription, billable_metric, 10_339) }
+      if additional_progressive_invoice
+        travel_to(start_time + 10.days) { ingest_event(subscription, billable_metric, 161) }
+        travel_to(start_time + 15.days) { ingest_event(subscription, billable_metric, 256) }
+      else
+        travel_to(start_time + 15.days) { ingest_event(subscription, billable_metric, 417) }
+      end
+
+      progressive_invoices = subscription.invoices.progressive_billing.order(:created_at)
+      expect(progressive_invoices.pluck(:total_amount_cents)).to eq(expected_progressive_amounts)
+
+      travel_to(start_time + 1.month) do
+        perform_billing
+        invoice = subscription.invoices.subscription.sole
+
+        expect(invoice.fees_amount_cents).to eq(10_756)
+        expect(invoice.coupons_amount_cents).to eq(9378)
+        expect(invoice.total_amount_cents).to eq(expected_final_amount)
+        expect(invoice.fees.sum(&:sub_total_excluding_taxes_amount_cents)).to eq(expected_final_amount)
+        expect(progressive_invoices.sum(:total_amount_cents) + invoice.total_amount_cents).to eq(1378)
+      end
+    end
+
+    context "with two progressive invoices" do
+      let(:additional_progressive_invoice) { true }
+      let(:expected_progressive_amounts) { [1169, 81] }
+      let(:expected_final_amount) { 128 }
+
+      before { create(:usage_threshold, plan:, amount_cents: 10_500) }
+    end
+  end
+
   context "with grace period enabled" do
     let(:invoice_grace_period) { 2 }
 

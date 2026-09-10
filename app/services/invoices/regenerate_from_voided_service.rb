@@ -31,11 +31,11 @@ module Invoices
         regenerated_invoice.sub_total_excluding_taxes_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
 
         # apply taxes credits and coupons
-        Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice)
         if should_create_coupon_credit?
           Credits::AppliedCouponsService.call!(invoice: regenerated_invoice)
           regenerated_invoice.fees.reload
         end
+        Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice)
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice: regenerated_invoice, finalizing: true)
 
         # We intentionally return early from the transaction block if tax computation fails this is an async call,
