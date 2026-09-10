@@ -53,6 +53,18 @@ class BillingSegment < ApplicationRecord
     )
   end
 
+  # Elapsed progress is independent of the stored service-price proration_ratio.
+  def elapsed_period_ratio(at: Time.current)
+    timezone = customer.applicable_timezone
+
+    Billing::ElapsedPeriodRatio.calculate(
+      from_date: started_at.in_time_zone(timezone).to_date,
+      to_date: ended_at.in_time_zone(timezone).to_date,
+      current_date: at.in_time_zone(timezone).to_date,
+      duration_in_days:
+    )
+  end
+
   def pricing_unit_conversion_rate
     if rate_override
       rate_override.pricing_unit_conversion_rate

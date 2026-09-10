@@ -114,9 +114,14 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     end
   end
 
-  describe "#period_ratio" do
-    it "returns the persisted proration ratio" do
-      expect(source.period_ratio).to eq(0.5)
+  describe "#elapsed_period_ratio" do
+    it "returns elapsed progress instead of persisted service proration" do
+      billing_segment.customer.timezone = "UTC"
+
+      travel_to(Time.utc(2026, 9, 10)) do
+        expect(source.elapsed_period_ratio).to eq(10.fdiv(30))
+        expect(source.proration_ratio).to eq(0.5)
+      end
     end
   end
 

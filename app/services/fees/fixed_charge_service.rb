@@ -167,7 +167,7 @@ module Fees
       ChargeModels::Factory.new_instance(
         pricing_structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge),
         aggregation_result:,
-        period_ratio: calculate_period_ratio,
+        period_ratio: elapsed_period_ratio,
         calculate_projected_usage: false
       ).apply
     end
@@ -188,21 +188,13 @@ module Fees
       FixedChargeEvents::Aggregations::SimpleAggregationService.new(fixed_charge:, subscription:, boundaries:)
     end
 
-    def calculate_period_ratio
-      from_date = boundaries["fixed_charges_from_datetime"].to_date
-      to_date = boundaries["fixed_charges_to_datetime"].to_date
-      current_date = Time.current.to_date
-
-      total_days = (to_date - from_date).to_i + 1
-      charges_duration = boundaries["fixed_charges_duration"] || total_days
-
-      return 1.0 if current_date >= to_date
-      return 0.0 if current_date < from_date
-
-      days_passed = (current_date - from_date).to_i + 1
-
-      ratio = days_passed.fdiv(charges_duration)
-      ratio.clamp(0.0, 1.0)
+    def elapsed_period_ratio
+      Billing::ElapsedPeriodRatio.calculate(
+        from_date: boundaries["fixed_charges_from_datetime"].to_date,
+        to_date: boundaries["fixed_charges_to_datetime"].to_date,
+        current_date: Time.current.to_date,
+        duration_in_days: boundaries["fixed_charges_duration"]
+      )
     end
 
     def should_persist_fee?

@@ -153,6 +153,47 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "#elapsed_period_ratio" do
+    subject(:segment) do
+      described_class.new(customer:, started_at:, ended_at:, proration_ratio: 0.5,
+        cycle_started_at: Time.utc(2026, 8, 1))
+    end
+
+    let(:customer) { build(:customer, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 8, 20) }
+    let(:ended_at) { Time.utc(2026, 8, 29).end_of_day }
+
+    it "measures the segment's elapsed progress independently of service proration and cycle start" do
+      expect(segment.elapsed_period_ratio(at: Time.utc(2026, 8, 21))).to eq(2.fdiv(10))
+      expect(segment.proration_ratio).to eq(0.5)
+    end
+
+    it "defaults to the current time without caching progress" do
+      travel_to(Time.utc(2026, 8, 21)) { expect(segment.elapsed_period_ratio).to eq(2.fdiv(10)) }
+      travel_to(Time.utc(2026, 8, 29)) { expect(segment.elapsed_period_ratio).to eq(1.0) }
+    end
+
+    context "with a non-UTC customer timezone" do
+      let(:customer) { build(:customer, timezone: "America/New_York") }
+      let(:started_at) { Time.utc(2026, 8, 1, 4) }
+      let(:ended_at) { described_class.inclusive_end(Time.utc(2026, 9, 1, 4)) }
+
+      it "uses the customer's date before treating the last day as complete" do
+        expect(segment.elapsed_period_ratio(at: Time.utc(2026, 8, 31, 2))).to eq(30.fdiv(31))
+      end
+    end
+
+    context "with a daylight saving time transition" do
+      let(:customer) { build(:customer, timezone: "Europe/Paris") }
+      let(:started_at) { Time.utc(2026, 2, 28, 23) }
+      let(:ended_at) { described_class.inclusive_end(Time.utc(2026, 3, 31, 22)) }
+
+      it "counts calendar days rather than hours" do
+        expect(segment.elapsed_period_ratio(at: Time.utc(2026, 3, 29, 22))).to eq(30.fdiv(31))
+      end
+    end
+  end
+
   describe "#rate_properties" do
     let(:rate_card_rate) { build_stubbed(:rate_card_rate, rate_properties: {"amount" => "10.00"}) }
     let(:billing_segment) { described_class.new(rate_card_rate:, rate_properties: {"amount" => "10.00"}) }

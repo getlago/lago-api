@@ -64,7 +64,9 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item).not_to be_dynamic
       expect(metered_item.billable_metric).to eq(billable_metric)
       expect(metered_item.properties).to eq("amount" => "24")
-      expect(metered_item.period_ratio).to eq(0.5)
+      travel_to(Time.utc(2026, 10, 2)) do
+        expect(metered_item.elapsed_period_ratio).to eq(1.0)
+      end
       expect(metered_item.currency).to eq(Money::Currency.new("USD"))
       expect(metered_item.boundaries).to have_attributes(
         charges_from_datetime: billing_segment.started_at,

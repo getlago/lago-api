@@ -97,7 +97,7 @@ module BillingSegments
         @charge_model_result ||= ChargeModels::Factory.new_instance(
           pricing_structure: ChargeModels::PricingStructure.from_billing_segment(billing_segment),
           aggregation_result:,
-          period_ratio: billing_segment.proration_ratio,
+          period_ratio: billing_segment.elapsed_period_ratio,
           calculate_projected_usage: false
         ).apply
       end

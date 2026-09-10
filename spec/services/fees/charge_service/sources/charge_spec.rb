@@ -81,11 +81,11 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
     end
   end
 
-  describe "#period_ratio" do
+  describe "#elapsed_period_ratio" do
     around { |test| travel_to(Time.zone.parse("2022-03-16")) { test.run } }
 
     it "returns the elapsed charge period ratio" do
-      expect(source.period_ratio).to eq(16.fdiv(31))
+      expect(source.elapsed_period_ratio).to eq(16.fdiv(31))
     end
   end
 

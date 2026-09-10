@@ -11,6 +11,7 @@ module Fees
         end
 
         delegate :organization_id,
+          :elapsed_period_ratio,
           :rate,
           :rate_card_rate,
           :rate_override,
@@ -50,11 +51,6 @@ module Fees
 
         def pricing_structure
           ChargeModels::PricingStructure.from_billing_segment(billing_segment)
-        end
-
-        # Segment proration is persisted by the billing schedule, not elapsed current usage.
-        def period_ratio
-          billing_segment.proration_ratio
         end
 
         # NOTE: Product-catalog pricing groups will move to product/plan data once that feature is supported.

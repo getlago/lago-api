@@ -49,19 +49,13 @@ module Fees
           ChargeModels::PricingStructure.from_charge(charge).with(properties:)
         end
 
-        def period_ratio
-          from_date = boundaries.charges_from_datetime.to_date
-          to_date = boundaries.charges_to_datetime.to_date
-          current_date = Time.current.to_date
-
-          total_days = (to_date - from_date).to_i + 1
-          charges_duration = boundaries.charges_duration || total_days
-
-          return 1.0 if current_date >= to_date
-          return 0.0 if current_date < from_date
-
-          days_passed = (current_date - from_date).to_i + 1
-          days_passed.fdiv(charges_duration).clamp(0.0, 1.0)
+        def elapsed_period_ratio
+          Billing::ElapsedPeriodRatio.calculate(
+            from_date: boundaries.charges_from_datetime.to_date,
+            to_date: boundaries.charges_to_datetime.to_date,
+            current_date: Time.current.to_date,
+            duration_in_days: boundaries.charges_duration
+          )
         end
 
         def pricing_group_keys

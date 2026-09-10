@@ -30,7 +30,7 @@ module Fees
         :boundaries,
         :properties,
         :pricing_structure,
-        :period_ratio,
+        :elapsed_period_ratio,
         :pricing_group_keys,
         :presentation_group_keys_values,
         :matching_filters,

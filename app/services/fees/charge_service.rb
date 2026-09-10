@@ -182,7 +182,7 @@ module Fees
       charge_model_result = ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result: zero_aggregation,
-        period_ratio: selected_metered_item.period_ratio,
+        period_ratio: selected_metered_item.elapsed_period_ratio,
         calculate_projected_usage: options.calculate_projected_usage
       ).apply
 
@@ -385,7 +385,7 @@ module Fees
       ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result:,
-        period_ratio: selected_metered_item.period_ratio,
+        period_ratio: selected_metered_item.elapsed_period_ratio,
         calculate_projected_usage: options.calculate_projected_usage
       ).apply
     end

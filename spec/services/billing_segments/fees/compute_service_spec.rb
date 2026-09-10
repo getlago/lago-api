@@ -93,6 +93,65 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         end
       end
 
+      context "with an elapsed period ratio" do
+        let(:customer) { create(:customer, organization:, currency: "USD", timezone: "UTC") }
+        let(:proration_ratio) { 0.5 }
+        let(:min_amount_cents) { 100_000 }
+
+        before do
+          billing_segment
+          allow(ChargeModels::Factory).to receive(:new_instance).and_call_original
+        end
+
+        {
+          "before the segment starts" => [Time.utc(2026, 7, 31, 12), 0.0],
+          "on the first day" => [Time.utc(2026, 8, 1, 12), 1.fdiv(31)],
+          "during the segment" => [Time.utc(2026, 8, 16, 12), 16.fdiv(31)],
+          "on the last day before its end instant" => [Time.utc(2026, 8, 31, 0), 1.0],
+          "after the segment ends" => [Time.utc(2026, 9, 1), 1.0]
+        }.each do |description, (current_time, expected_ratio)|
+          it "passes the elapsed ratio #{description} without changing service proration" do
+            travel_to(current_time) do
+              expect(result).to be_success
+              expect(ChargeModels::Factory).to have_received(:new_instance).with(
+                hash_including(period_ratio: expected_ratio, calculate_projected_usage: false)
+              )
+              expect(result.fee.amount_cents).to eq(22_500)
+              expect(result.true_up_fee.amount_cents).to eq(27_500)
+            end
+          end
+        end
+
+        it "measures progress within the segment rather than its parent cycle" do
+          billing_segment.update!(started_at: Time.utc(2026, 8, 20), ended_at: Time.utc(2026, 8, 29).end_of_day)
+
+          travel_to(Time.utc(2026, 8, 21, 12)) do
+            expect(result).to be_success
+            expect(ChargeModels::Factory).to have_received(:new_instance).with(
+              hash_including(period_ratio: 2.fdiv(10))
+            )
+          end
+        end
+
+        context "with a customer timezone different from UTC" do
+          let(:customer) { create(:customer, organization:, currency: "USD", timezone: "America/New_York") }
+
+          it "uses the customer's date when UTC has already reached the last day" do
+            billing_segment.update!(
+              cycle_started_at: Time.utc(2026, 8, 1, 4), started_at: Time.utc(2026, 8, 1, 4),
+              ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1, 4))
+            )
+
+            travel_to(Time.utc(2026, 8, 31, 2)) do
+              expect(result).to be_success
+              expect(ChargeModels::Factory).to have_received(:new_instance).with(
+                hash_including(period_ratio: 30.fdiv(31))
+              )
+            end
+          end
+        end
+      end
+
       context "with a fixed product and pricing unit" do
         let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits", short_name: "cr") }
         let(:rate_card) do
