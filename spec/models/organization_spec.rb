@@ -40,6 +40,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:wallet_transactions)
       expect(subject).to have_one(:default_billing_entity).class_name("BillingEntity")
       expect(subject).to have_many(:webhook_endpoints)
+      expect(subject).to have_many(:streaming_destinations).class_name("StreamingDestinations::BaseDestination")
       expect(subject).to have_many(:webhooks)
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
