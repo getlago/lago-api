@@ -42,13 +42,13 @@ module FixedCharges
         result.fixed_charge = fixed_charge
 
         if fixed_charge.units_previously_changed?
-          emitted_events = FixedCharges::EmitEventsService.call!(
+          FixedCharges::EmitEventsService.call!(
             fixed_charge:,
             apply_units_immediately: params[:apply_units_immediately],
             timestamp:
-          ).fixed_charge_events
+          )
 
-          if emitted_events.any? && trigger_billing && params[:apply_units_immediately] && fixed_charge.pay_in_advance?
+          if trigger_billing && params[:apply_units_immediately] && fixed_charge.pay_in_advance?
             Invoices::CreateAllPayInAdvanceFixedChargesJob.perform_after_commit(plan, timestamp, fixed_charge)
           end
         end

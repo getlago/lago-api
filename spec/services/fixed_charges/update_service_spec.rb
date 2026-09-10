@@ -264,7 +264,7 @@ RSpec.describe FixedCharges::UpdateService do
 
         before do
           allow(FixedCharges::EmitEventsService)
-            .to receive(:call!).and_call_original
+            .to receive(:call!)
         end
 
         it "emits fixed charge events for all active subscriptions" do
@@ -301,21 +301,6 @@ RSpec.describe FixedCharges::UpdateService do
             expect(Invoices::CreatePayInAdvanceFixedChargesJob)
               .to have_been_enqueued
               .with(subscription, timestamp)
-          end
-
-          context "when the new units match the effective event" do
-            before do
-              create(:fixed_charge_event, subscription:, fixed_charge:, units: params[:units], timestamp: 1.hour.ago)
-            end
-
-            it "updates the model without emitting an event or scheduling billing" do
-              expect { result }
-                .to change { fixed_charge.reload.units }.from(10).to(25)
-                .and not_change(FixedChargeEvent, :count)
-
-              expect(result).to be_success
-              expect(Invoices::CreateAllPayInAdvanceFixedChargesJob).not_to have_been_enqueued
-            end
           end
 
           context "when the subscription has a per-subscription units override" do
