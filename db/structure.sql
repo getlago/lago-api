@@ -21,6 +21,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_f99eb07174;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
 ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_f94f882198;
+ALTER TABLE IF EXISTS ONLY public.usage_attribution_types DROP CONSTRAINT IF EXISTS fk_rails_f7f094fe3a;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
@@ -334,6 +335,7 @@ ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.catalog_plans DROP CONSTRAINT IF EXISTS fk_rails_19759667f5;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
+ALTER TABLE IF EXISTS ONLY public.usage_attribution_types DROP CONSTRAINT IF EXISTS fk_rails_18b43f689c;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_1811b32fcd;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_173327f0dc;
@@ -440,6 +442,10 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_subscription_extern
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organization_id;
+DROP INDEX IF EXISTS public.index_usage_attribution_types_on_parent_id;
+DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id_and_key;
+DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
@@ -1059,6 +1065,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS usage_monitoring_subscription_activities_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS usage_monitoring_alert_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_attribution_types DROP CONSTRAINT IF EXISTS usage_attribution_types_pkey;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS subscriptions_invoice_custom_sections_pkey;
@@ -1199,6 +1206,7 @@ DROP TABLE IF EXISTS public.user_devices;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
+DROP TABLE IF EXISTS public.usage_attribution_types;
 DROP TABLE IF EXISTS public.subscriptions_invoice_custom_sections;
 DROP TABLE IF EXISTS public.subscription_fixed_charge_units_overrides;
 DROP TABLE IF EXISTS public.subscription_activation_rules;
@@ -1372,6 +1380,7 @@ DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
+DROP TYPE IF EXISTS public.usage_attribution_type_role;
 DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_on_termination_invoice;
 DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
@@ -1950,6 +1959,16 @@ CREATE TYPE public.tax_status AS ENUM (
     'pending',
     'succeeded',
     'failed'
+);
+
+
+--
+-- Name: usage_attribution_type_role; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_attribution_type_role AS ENUM (
+    'hierarchical',
+    'flat'
 );
 
 
@@ -5884,6 +5903,24 @@ CREATE TABLE public.subscriptions_invoice_custom_sections (
 
 
 --
+-- Name: usage_attribution_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_attribution_types (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    parent_id uuid,
+    code character varying NOT NULL,
+    name character varying,
+    attribution_key character varying NOT NULL,
+    role public.usage_attribution_type_role NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: usage_monitoring_alerts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7115,6 +7152,14 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.taxes
     ADD CONSTRAINT taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_attribution_types usage_attribution_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_attribution_types
+    ADD CONSTRAINT usage_attribution_types_pkey PRIMARY KEY (id);
 
 
 --
@@ -11499,6 +11544,34 @@ CREATE UNIQUE INDEX index_unique_transaction_id ON public.events USING btree (or
 
 
 --
+-- Name: index_usage_attribution_types_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_usage_attribution_types_on_organization_id ON public.usage_attribution_types USING btree (organization_id);
+
+
+--
+-- Name: index_usage_attribution_types_on_organization_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_usage_attribution_types_on_organization_id_and_code ON public.usage_attribution_types USING btree (organization_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_usage_attribution_types_on_organization_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_usage_attribution_types_on_organization_id_and_key ON public.usage_attribution_types USING btree (organization_id, attribution_key) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_usage_attribution_types_on_parent_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_usage_attribution_types_on_parent_id ON public.usage_attribution_types USING btree (parent_id);
+
+
+--
 -- Name: index_usage_monitoring_alert_thresholds_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12181,6 +12254,14 @@ ALTER TABLE ONLY public.quote_owners
 
 ALTER TABLE ONLY public.coupon_targets
     ADD CONSTRAINT fk_rails_189f2a3949 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: usage_attribution_types fk_rails_18b43f689c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_attribution_types
+    ADD CONSTRAINT fk_rails_18b43f689c FOREIGN KEY (parent_id) REFERENCES public.usage_attribution_types(id);
 
 
 --
@@ -14688,6 +14769,14 @@ ALTER TABLE ONLY public.billing_entities
 
 
 --
+-- Name: usage_attribution_types fk_rails_f7f094fe3a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_attribution_types
+    ADD CONSTRAINT fk_rails_f7f094fe3a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: order_forms fk_rails_f94f882198; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14797,6 +14886,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260908160340'),
 ('20260908154406'),
 ('20260908154307'),
+('20260908112310'),
 ('20260905223042'),
 ('20260905223041'),
 ('20260904173416'),

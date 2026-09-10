@@ -93,6 +93,8 @@ class Organization < ApplicationRecord
   has_many :entitlement_values, class_name: "Entitlement::EntitlementValue"
   has_many :subscription_feature_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
 
+  has_many :usage_attribution_types
+
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
