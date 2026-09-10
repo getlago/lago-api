@@ -49,6 +49,16 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
         expect(destination.errors.where(:event_types, :taken)).to be_present
       end
 
+      it "keeps the claim while inactive, so one destination per event type holds whatever its state" do
+        organization = create(:organization)
+        create(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"], active: false)
+
+        destination = build(:kinesis_destination, organization:, event_types: ["customer_usage.refreshed.v1"])
+
+        expect(destination).not_to be_valid
+        expect(destination.errors.where(:event_types, :taken)).to be_present
+      end
+
       it "allows the same event type on another organization" do
         create(:kinesis_destination, event_types: ["customer_usage.refreshed.v1"])
 
@@ -69,6 +79,12 @@ RSpec.describe StreamingDestinations::BaseDestination, type: :model do
 
     it "returns a destination whose event_types contain the event type" do
       expect(described_class.for_event(organization, "customer_usage.refreshed.v1")).to eq([destination])
+    end
+
+    it "excludes an inactive destination, so deactivating stops delivery without losing its settings" do
+      destination.update!(active: false)
+
+      expect(described_class.for_event(organization, "customer_usage.refreshed.v1")).to be_empty
     end
 
     it "does not return a destination without the event type" do

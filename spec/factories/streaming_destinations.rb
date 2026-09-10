@@ -5,6 +5,7 @@ FactoryBot.define do
     organization
     type { "StreamingDestinations::KinesisDestination" }
     event_types { ["customer_usage.refreshed.v1"] }
+    active { true }
 
     settings do
       {

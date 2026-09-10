@@ -9,6 +9,8 @@ class CreateStreamingDestinations < ActiveRecord::Migration[8.0]
 
       t.string :event_types, array: true, null: false, default: []
 
+      t.boolean :active, null: false, default: false
+
       t.jsonb :settings, null: false, default: {}
       t.string :secrets
 

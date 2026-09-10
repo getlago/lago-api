@@ -5861,6 +5861,7 @@ CREATE TABLE public.streaming_destinations (
     organization_id uuid NOT NULL,
     type character varying NOT NULL,
     event_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    active boolean DEFAULT false NOT NULL,
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     secrets character varying,
     created_at timestamp(6) without time zone NOT NULL,

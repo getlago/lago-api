@@ -21,6 +21,7 @@ end
 # Database name: primary
 #
 #  id              :uuid             not null, primary key
+#  active          :boolean          default(FALSE), not null
 #  event_types     :string           default([]), not null, is an Array
 #  secrets         :string
 #  settings        :jsonb            not null

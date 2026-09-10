@@ -17,7 +17,7 @@ module StreamingDestinations
     validate :event_types_not_already_claimed
 
     scope :for_event, lambda { |organization, event_type|
-      where(organization:).where("event_types @> ARRAY[?]::varchar[]", event_type)
+      where(organization:, active: true).where("event_types @> ARRAY[?]::varchar[]", event_type)
     }
 
     private
@@ -48,6 +48,7 @@ end
 # Database name: primary
 #
 #  id              :uuid             not null, primary key
+#  active          :boolean          default(FALSE), not null
 #  event_types     :string           default([]), not null, is an Array
 #  secrets         :string
 #  settings        :jsonb            not null
