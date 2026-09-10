@@ -363,7 +363,8 @@ describe "Coupons breakdown Spec", :premium do
       if percentage
         params[:percentage_rate] = 50
       else
-        params.merge!(amount_cents: 20_00, amount_currency: "EUR")
+        params[:amount_cents] = 20_00
+        params[:amount_currency] = "EUR"
       end
       if limited_to_metrics
         params[:applies_to] = {billable_metric_codes: [bm.code]}
