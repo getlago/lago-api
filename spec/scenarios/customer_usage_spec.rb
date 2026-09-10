@@ -151,7 +151,7 @@ describe "Customer usage Scenario" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_group: {user: ["0"]})
@@ -178,7 +178,7 @@ describe "Customer usage Scenario" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_charge_id: charge_1.id)
@@ -257,7 +257,7 @@ describe "Customer usage Scenario" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_group: {workspace: ["workspace_a"]})
@@ -286,7 +286,7 @@ describe "Customer usage Scenario" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(filter_by_group: {workspace: ["workspace_b"]})
@@ -314,7 +314,7 @@ describe "Customer usage Scenario" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           apply_taxes: false,
           with_cache: false
         )
@@ -339,7 +339,7 @@ describe "Customer usage Scenario" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           apply_taxes: false,
           with_cache: false,
           usage_filters: UsageFilters.new(skip_grouping: true)

@@ -66,7 +66,7 @@ module Events
 
               usage_result = Invoices::CustomerUsageService.call(
                 customer: subscription.customer,
-                subscription: subscription,
+                billing_context: Billing::Context.from(subscription:),
                 with_cache: false,
                 apply_taxes: false
               )

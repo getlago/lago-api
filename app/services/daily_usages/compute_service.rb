@@ -61,7 +61,7 @@ module DailyUsages
 
       @current_usage = Invoices::CustomerUsageService.call(
         customer: subscription.customer,
-        subscription: subscription,
+        billing_context: Billing::Context.from(subscription:),
         apply_taxes: false,
         with_cache:,
         # Force the timestamp, to allow computing usage if terminated subscription with the right boundaries

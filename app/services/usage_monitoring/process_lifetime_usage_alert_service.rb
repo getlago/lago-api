@@ -21,7 +21,7 @@ module UsageMonitoring
       usage_filters = UsageFilters.new(full_usage: true, filter_by_charge_id: charge_ids)
       usage_for_charges_result = ::Invoices::CustomerUsageService.call!(
         customer: subscription.customer,
-        subscription:,
+        billing_context: Billing::Context.from(subscription:),
         apply_taxes: false,
         with_cache: true,
         usage_filters:

@@ -56,7 +56,7 @@ Rails.application.console do
   def current_usage(subscription, apply_taxes: false, with_cache: false, **kwargs)
     Invoices::CustomerUsageService.call!(
       customer: subscription.customer,
-      subscription: subscription,
+      billing_context: Billing::Context.from(subscription:),
       apply_taxes:,
       with_cache:,
       **kwargs

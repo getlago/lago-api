@@ -111,7 +111,7 @@ RSpec.describe Customers::RefreshWalletsService do
         customer.active_subscriptions.each do |subscription|
           expect(Invoices::CustomerUsageService).to have_received(:call!).with(
             customer:,
-            subscription:,
+            billing_context: an_object_having_attributes(subscription:),
             usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER
           )
         end

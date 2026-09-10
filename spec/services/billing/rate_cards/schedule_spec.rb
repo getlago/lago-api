@@ -81,6 +81,31 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
+  describe "#segments_in_cycle_at" do
+    it "returns the open cycle even before arrears billing is due" do
+      expect(windows(schedule.segments_in_cycle_at(Time.utc(2022, 2, 10)))).to eq(["2022-02-01 -> 2022-02-28"])
+    end
+
+    it "starts the next cycle at the exclusive end boundary" do
+      expect(windows(schedule.segments_in_cycle_at(Time.utc(2022, 3, 1)))).to eq(["2022-03-01 -> 2022-03-31"])
+    end
+
+    it "returns no segments before the card starts" do
+      expect(schedule.segments_in_cycle_at(Time.utc(2022, 1, 10))).to eq([])
+    end
+
+    context "with a rate change" do
+      let(:rates) { [card_rate(Time.utc(2000, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
+
+      it "includes all priced slices of the cycle" do
+        segments = schedule.segments_in_cycle_at(Time.utc(2022, 2, 20))
+
+        expect(windows(segments)).to eq(["2022-02-01 -> 2022-02-14", "2022-02-15 -> 2022-02-28"])
+        expect(segments.map(&:rate)).to eq(rates)
+      end
+    end
+  end
+
   describe "cycle information on billable segments" do
     it "clamps the first cycle to the start rather than to the boundary before it" do
       expect(windows(schedule.segments_due_by(Time.utc(2022, 3, 1))))

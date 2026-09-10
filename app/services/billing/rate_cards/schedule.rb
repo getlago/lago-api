@@ -24,6 +24,17 @@ module Billing
         end
       end
 
+      # Current usage includes every priced slice in the current cycle, whether billed or not.
+      def segments_in_cycle_at(timestamp)
+        cycle = walker.resume(timestamp)
+
+        if cycle && cycle.started_at <= timestamp
+          billable_segments_of([cycle])
+        else
+          []
+        end
+      end
+
       # Next billing instant strictly after the given time, or nil when billing has ended.
       def next_billing_at(after:)
         cycle = walker.resume(after)

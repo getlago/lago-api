@@ -62,7 +62,7 @@ module LifetimeUsages
     def current_usage
       @current_usage ||= Invoices::CustomerUsageService.call(
         customer: subscription.customer,
-        subscription: subscription,
+        billing_context: Billing::Context.from(subscription:),
         apply_taxes: false,
         with_cache: true
       ).usage
