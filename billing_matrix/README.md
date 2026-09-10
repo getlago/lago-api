@@ -73,8 +73,13 @@ run.rb              entrypoint
 runner/             the execution layer — see runner/CONTRACT.md for the interfaces
 rows/               scenario rows, one file per area
 canaries/           rows engineered to fail, one per assertion mechanism
-salvage/            lifted from the old golden-billing-harness; deleted as it is ported
+reference/          feature-combination guidance used by areas.yml and the maintainer
 ```
+
+The previous harness's rows, runner, schema, and findings remain available in the
+[historical archive](https://github.com/getlago/lago-api/tree/353b7d821239171fb28688b2440e7f4f13d2ce25/billing_matrix/salvage).
+They are reference material, not part of the executable suite. Only the compact legality
+reference remains here because `areas.yml` uses it when guiding new coverage.
 
 ## The two rules that matter
 

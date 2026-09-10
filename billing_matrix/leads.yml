@@ -1,4 +1,4 @@
-# Findings inherited from the previous suite's salvage/state/findings.yml that are not yet covered
+# Findings inherited from the previous suite (archive linked in README.md) that are not yet covered
 # by a row in billing_matrix/rows/*.yml. These are known or suspected defects awaiting a row, not
 # ledger entries — nothing here is pruned automatically, because a lead never "passes" or "fails".
 # The maintainer skill picks from this file when choosing new cells to cover.

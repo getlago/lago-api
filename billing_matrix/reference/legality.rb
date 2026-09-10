@@ -1,18 +1,10 @@
 # frozen_string_literal: true
 
-# Which cells of the golden matrix are legal, derived rather than declared.
-#
-# Two halves:
-#
-#   * DOMAINS come straight from the model constants, so when Lago gains a charge model, an
-#     aggregation or an interval, the coverage denominator grows by itself and the new cells show up
-#     as unclaimed in the next ledger run. Nothing here lists enum values by hand.
-#
-#   * CONSTRAINTS mirror the private validators on Charge and FixedCharge. These are the one place
-#     the suite restates implementation, so each carries its source citation AND is verified against
-#     the real validation by spec/scenarios/golden/legality_spec.rb — if a rule changes under us the
-#     agreement spec fails and names the cell, instead of the matrix quietly measuring the wrong
-#     denominator.
+# Feature domains and combination constraints retained from the previous golden harness.
+# areas.yml cites this as a reference for the maintainer; the current runner does not load it
+# or automatically measure these domains. Check predicates against current models/services
+# before deriving a new row. References below to legality_spec.rb describe checks in the old
+# harness, not tests shipped with this suite.
 module GoldenLegality
   module_function
 

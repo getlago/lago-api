@@ -18,7 +18,7 @@ interactions:
   axes:
     feature_a:
       domain: >-
-        GoldenLegality.billing_features (billing_matrix/salvage/runner/legality.rb) —
+        GoldenLegality.billing_features (billing_matrix/reference/legality.rb) —
         BILLING_FEATURE_PRODUCERS (subscription_fee, charge, fixed_charge, advance_charge,
         commitment_true_up, min_amount_true_up) plus BILLING_FEATURE_REDUCERS (progressive_billing,
         coupon, tax, credit_note, prepaid_credit), named in CalculateFeesService's actual order.
@@ -251,7 +251,7 @@ upgrade_downgrade:
     on_termination_credit_note:
       domain: >-
         Subscription::ON_TERMINATION_CREDIT_NOTES, cited as domain on_termination_credit_notes in
-        GoldenLegality.domains (billing_matrix/salvage/runner/legality.rb).
+        GoldenLegality.domains (billing_matrix/reference/legality.rb).
   services:
     - app/services/subscriptions/plan_upgrade_service.rb
     - app/services/subscriptions/plan_downgrade_service.rb

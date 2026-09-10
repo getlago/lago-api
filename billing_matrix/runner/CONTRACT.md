@@ -180,8 +180,8 @@ A row **asserts the correct value, never the observed one.** A row that pins a f
 expected to be red until Lago is fixed; its `math:` says what Lago does instead and why that
 is wrong. Its `control` is a row on which the same machinery is correct.
 
-Keep the schema small. The salvaged `salvage/runner/schema.json` is 1,662 lines and is a
-reference for vocabulary only — do not reproduce its size.
+Keep the schema small. Use the supported keys in `row.rb` and the execution helpers
+as the vocabulary; the previous harness is linked from the README for historical reference.
 
 ## world.rb
 
@@ -249,9 +249,8 @@ BillingMatrix::Timeline.verbs                     # => [String] — Row validate
 
 Each step runs inside `ctx.travel_to_and_run(step["at"])`. **Steps must be sequential, never
 nested** — Rails ≥ 7.1 raises if block-form `travel_to` is called inside another block-form
-`travel_to`. MVP verb set — keep it this
-small, and mine `salvage/runner/runner.rb` for the exact `ScenariosHelper` call each one
-maps to:
+`travel_to`. Keep the verb set small and use `spec/support/scenarios_helper.rb` for the
+current helper interfaces:
 
 ```
 create_subscription   update_subscription   terminate_subscription
@@ -310,8 +309,7 @@ result.match?        # true / false
 result.mismatches    # => [{path:, expected:, observed:}]
 ```
 
-Port `salvage/runner/comparison.rb`, stripped of any RSpec matcher use. Keep its semantics
-exactly: `*_cents` compared as exact integers, `units` / `precise_unit_amount` /
+Keep comparison independent of RSpec matchers: `*_cents` compared as exact integers, `units` / `precise_unit_amount` /
 `taxes_rate` as `BigDecimal`, dates parsed before comparison, and fees matched by content
 identity (`fee_type`, `item_code`, `item_type`, `from_date`, `to_date`) rather than by
 array order.

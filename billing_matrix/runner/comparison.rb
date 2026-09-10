@@ -10,7 +10,7 @@ module BillingMatrix
   # (straight off Observe). Neither side carries AR objects, ids, or anything volatile, so this
   # file has no Rails dependency and is testable in isolation.
   #
-  # Ported from salvage/runner/comparison.rb, stripped of RSpec matcher use, plus two corrections
+  # Ported from the previous comparison helper, without RSpec matchers, plus two corrections
   # logged as findings against the old harness:
   #
   #   - two OBSERVED fees sharing the same identity (fee_type, item_code, item_type, from_date,
