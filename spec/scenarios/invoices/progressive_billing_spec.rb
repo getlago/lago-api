@@ -56,18 +56,21 @@ describe "Progressive billing invoices", :premium, transaction: false do
     end
   end
 
-  context "with a percentage coupon limited to metrics and a fixed coupon" do
+  context "with a percentage coupon and a fixed coupon" do
     let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
     let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "0.01"}) }
     let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 10_339) }
+    let(:limited_billable_metrics) { true }
     let(:additional_progressive_invoice) { false }
     let(:expected_progressive_amounts) { [1169] }
     let(:expected_final_amount) { 209 }
 
     before do
       coupon = create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 50,
-        frequency: "recurring", frequency_duration: 12, limited_billable_metrics: true)
-      create(:coupon_billable_metric, organization:, coupon:, billable_metric:)
+        frequency: "recurring", frequency_duration: 12, limited_billable_metrics:)
+      if limited_billable_metrics
+        create(:coupon_billable_metric, organization:, coupon:, billable_metric:)
+      end
       create(:applied_coupon, customer:, coupon:, percentage_rate: 50,
         frequency: "recurring", frequency_duration: 12, frequency_duration_remaining: 12)
       fixed_coupon = create(:coupon, organization:, amount_cents: 4000, frequency: "forever")
@@ -109,6 +112,12 @@ describe "Progressive billing invoices", :premium, transaction: false do
 
     include_examples "a discounted billing period"
 
+    context "with an unrestricted percentage coupon" do
+      let(:limited_billable_metrics) { false }
+
+      include_examples "a discounted billing period"
+    end
+
     context "with two progressive invoices" do
       let(:additional_progressive_invoice) { true }
       let(:expected_progressive_amounts) { [1169, 81] }
@@ -117,6 +126,12 @@ describe "Progressive billing invoices", :premium, transaction: false do
       before { create(:usage_threshold, plan:, amount_cents: 10_500) }
 
       include_examples "a discounted billing period"
+
+      context "with an unrestricted percentage coupon" do
+        let(:limited_billable_metrics) { false }
+
+        include_examples "a discounted billing period"
+      end
     end
   end
 

@@ -4,36 +4,30 @@ module Credits
   class ProgressiveBillingService < BaseService
     Result = BaseResult[:credits]
 
-    def initialize(invoice:, apply_billable_metric_coupons: false)
+    def initialize(invoice:, apply_coupons: false)
       @invoice = invoice
-      @apply_billable_metric_coupons = apply_billable_metric_coupons
+      @apply_coupons = apply_coupons
       super
     end
 
     def call
       result.credits = []
-      coupons_applied = false
+      billed_amounts = progressive_billed_amounts
 
-      invoice.invoice_subscriptions.each do |invoice_subscription|
-        subscription = invoice_subscription.subscription
+      if apply_coupons && billed_amounts.any?
+        # Reconcile coupons already used on progressive invoices against the full
+        # fee base, regardless of their scope. Newly applied coupons discount the
+        # remaining balance after the progressive credit, in the caller's pass.
+        applied_coupon_ids = Credit.active.coupon_kind
+          .where(invoice_id: billed_amounts.map { |_, billed| billed.progressive_billing_invoice.id })
+          .select(:applied_coupon_id)
+        Credits::AppliedCouponsService.call!(invoice:, applied_coupon_ids:)
+        invoice.fees.reload
+      end
 
-        # We can use invoice_subscription.charges_from_datetime as we're looking for the progressive billing invoices
-        # that are associated to a subscription with boundaries charges_from_datetime <= timestamp; charges_to_datetime > timestamp
-        progressive_billed_result = Subscriptions::ProgressiveBilledAmount.call(subscription:,
-          timestamp: invoice_subscription.charges_from_datetime).raise_if_error!
+      billed_amounts.each do |subscription_id, progressive_billed_result|
         progressive_billing_invoice = progressive_billed_result.progressive_billing_invoice
-
-        next unless progressive_billing_invoice
-
-        if apply_billable_metric_coupons && !coupons_applied
-          # Metric-limited coupons need the full fee base. Other coupons retain
-          # their existing position after progressive billing credits.
-          Credits::AppliedCouponsService.call!(invoice:, only_billable_metric_coupons: true)
-          invoice.fees.reload
-          coupons_applied = true
-        end
-
-        fees = matching_fees(subscription, progressive_billing_invoice)
+        fees = matching_fees(subscription_id, progressive_billing_invoice)
         total_charges_amount = fees.sum(&:sub_total_excluding_taxes_amount_cents).round
 
         # Don't be tempted to calculate the credit amount yourself, you have to use the result from this service.
@@ -69,14 +63,26 @@ module Credits
 
     private
 
-    attr_reader :invoice, :apply_billable_metric_coupons
+    attr_reader :invoice, :apply_coupons
 
-    def matching_fees(subscription, progressive_billing_invoice)
+    def progressive_billed_amounts
+      invoice.invoice_subscriptions.filter_map do |invoice_subscription|
+        # Find progressive invoices in the same charge billing period.
+        billed = Subscriptions::ProgressiveBilledAmount.call(subscription: invoice_subscription.subscription,
+          timestamp: invoice_subscription.charges_from_datetime).raise_if_error!
+
+        if billed.progressive_billing_invoice
+          [invoice_subscription.subscription_id, billed]
+        end
+      end
+    end
+
+    def matching_fees(subscription_id, progressive_billing_invoice)
       progressive_fee_keys = progressive_billing_invoice.fees.charge.map { |fee| fee_key(fee) }
 
       # Use the loaded association so the credit stays visible to the caller's in-memory fees.
       invoice.fees.select do |fee|
-        fee.charge? && fee.subscription_id == subscription.id && progressive_fee_keys.include?(fee_key(fee))
+        fee.charge? && fee.subscription_id == subscription_id && progressive_fee_keys.include?(fee_key(fee))
       end
     end
 

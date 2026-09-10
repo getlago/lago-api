@@ -31,7 +31,7 @@ module Invoices
         regenerated_invoice.sub_total_excluding_taxes_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
 
         # apply taxes credits and coupons
-        Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice, apply_billable_metric_coupons: should_create_coupon_credit?)
+        Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice, apply_coupons: should_create_coupon_credit?)
         if should_create_coupon_credit?
           Credits::AppliedCouponsService.call!(invoice: regenerated_invoice)
           regenerated_invoice.fees.reload

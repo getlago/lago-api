@@ -4,9 +4,9 @@ module Credits
   class AppliedCouponsService < BaseService
     Result = BaseResult[:credits, :invoice]
 
-    def initialize(invoice:, only_billable_metric_coupons: false)
+    def initialize(invoice:, applied_coupon_ids: nil)
       @invoice = invoice
-      @only_billable_metric_coupons = only_billable_metric_coupons
+      @applied_coupon_ids = applied_coupon_ids
       super
     end
 
@@ -40,7 +40,7 @@ module Credits
 
     private
 
-    attr_reader :invoice, :only_billable_metric_coupons
+    attr_reader :invoice, :applied_coupon_ids
 
     delegate :customer, :currency, to: :invoice
 
@@ -54,8 +54,8 @@ module Credits
         .joins(:coupon)
         .order("coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC")
 
-      @applied_coupons = if only_billable_metric_coupons
-        coupons.where(coupons: {limited_billable_metrics: true})
+      @applied_coupons = if applied_coupon_ids
+        coupons.where(id: applied_coupon_ids)
       else
         coupons
       end

@@ -28,7 +28,7 @@ module Invoices
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
 
-        credits = Credits::ProgressiveBillingService.call(invoice:, apply_billable_metric_coupons: true).credits
+        credits = Credits::ProgressiveBillingService.call(invoice:, apply_coupons: true).credits
         if credits.any? && sorted_usage_thresholds.last.recurring?
           Idempotency.unique!(invoice, previous_progressive_billing_invoice_id: credits.first.progressive_billing_invoice_id)
         end
