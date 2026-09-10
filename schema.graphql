@@ -3729,7 +3729,6 @@ input CreateRateCardInput {
   rates: [RateCardRateInput!]
   regroupPaidFees: RateCardRegroupPaidFeesEnum
   taxCodes: [String!]
-  walletTargetable: Boolean
 }
 
 """
@@ -12741,7 +12740,6 @@ type RateCard {
   regroupPaidFees: RateCardRegroupPaidFeesEnum!
   taxes: [Tax!]!
   updatedAt: ISO8601DateTime!
-  walletTargetable: Boolean
 }
 
 enum RateCardBillingTimingEnum {
@@ -15492,7 +15490,6 @@ input UpdateRateCardInput {
   proration: Boolean
   regroupPaidFees: RateCardRegroupPaidFeesEnum
   taxCodes: [String!]
-  walletTargetable: Boolean
 }
 
 """

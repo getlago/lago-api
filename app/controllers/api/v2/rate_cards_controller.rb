@@ -114,7 +114,6 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable,
           tax_codes: [],
           rates: [
             :code,
@@ -140,7 +139,6 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable,
           tax_codes: []
         )
       end
