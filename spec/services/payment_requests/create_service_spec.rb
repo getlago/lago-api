@@ -133,6 +133,114 @@ RSpec.describe PaymentRequests::CreateService, :premium do
       end
     end
 
+    context "when a payment method is provided" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+
+      before { params[:payment_method] = payment_method_params }
+
+      context "when the payment method belongs to the customer" do
+        let(:payment_method_params) do
+          {payment_method_type: "provider", payment_method_id: payment_method.id}
+        end
+
+        it "creates the payment request and forwards the payment method" do
+          allow(PaymentRequests::Payments::CreateService).to receive(:call_async).and_call_original
+
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to eq(payment_method)
+          expect(PaymentRequests::Payments::CreateService).to have_received(:call_async)
+            .with(payable: result.payment_request, payment_method_params:)
+        end
+      end
+
+      context "when the payment method type is manual" do
+        let(:payment_method_params) { {payment_method_type: "manual"} }
+
+        it "creates the payment request" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_nil
+        end
+      end
+
+      context "when the payment method type is invalid" do
+        let(:payment_method_params) do
+          {payment_method_type: "invalid", payment_method_id: payment_method.id}
+        end
+
+        it "returns a validation failure" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+
+        it "does not create a payment request" do
+          expect { create_service.call }.not_to change(PaymentRequest, :count)
+        end
+      end
+
+      context "when the payment method type is manual but an id is provided" do
+        let(:payment_method_params) do
+          {payment_method_type: "manual", payment_method_id: payment_method.id}
+        end
+
+        it "returns a validation failure" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
+      context "when the payment method does not exist" do
+        let(:payment_method_params) do
+          {payment_method_type: "provider", payment_method_id: SecureRandom.uuid}
+        end
+
+        it "returns a validation failure" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+
+        it "does not create a payment request" do
+          expect { create_service.call }.not_to change(PaymentRequest, :count)
+        end
+      end
+
+      context "when the payment method belongs to another customer of the organization" do
+        let(:other_customer) { create(:customer, organization:) }
+        let(:other_payment_method) { create(:payment_method, organization:, customer: other_customer) }
+        let(:payment_method_params) do
+          {payment_method_type: "provider", payment_method_id: other_payment_method.id}
+        end
+
+        it "returns a validation failure" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+
+        it "does not enqueue a payment creation" do
+          allow(PaymentRequests::Payments::CreateService).to receive(:call_async).and_call_original
+
+          create_service.call
+
+          expect(PaymentRequests::Payments::CreateService).not_to have_received(:call_async)
+        end
+      end
+    end
+
     it "creates a payment request" do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
     end
