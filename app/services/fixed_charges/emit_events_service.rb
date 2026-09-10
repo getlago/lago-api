@@ -4,6 +4,8 @@ module FixedCharges
   class EmitEventsService < BaseService
     Result = BaseResult[:fixed_charge_events]
 
+    BATCH_SIZE = 1_000
+
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
@@ -87,18 +89,25 @@ module FixedCharges
     # now. A deferred change already scheduled for the next period is the baseline for another
     # deferred change, so re-setting today's value must still emit an event superseding it.
     #
-    # NOTE: Grouped by timestamp rather than queried per subscription: a plan-wide emission covers
-    #       every subscription on the plan, and calendar billing gives them all the same next
-    #       period, so this is normally a single query.
+    # Batch subscriptions with their individual cutoffs so anniversary billing and different
+    # customer timezones do not turn the baseline lookup into one query per subscription.
     def previous_units_by_subscription(targets)
       charge_ids = [fixed_charge.id, fixed_charge.parent_id].compact
 
-      targets.group_by { |target| target[:timestamp] }.each_with_object({}) do |(event_timestamp, group), baselines|
+      targets.each_slice(BATCH_SIZE).each_with_object({}) do |batch, baselines|
+        values = batch.map do |target|
+          FixedChargeEvent.sanitize_sql_array(["(?::uuid, ?::timestamp)", target[:subscription].id, target[:timestamp]])
+        end.join(", ")
+
         FixedChargeEvent
-          .where(subscription_id: group.map { |target| target[:subscription].id }, fixed_charge_id: charge_ids)
-          .where(timestamp: ..event_timestamp)
-          .select("DISTINCT ON (subscription_id) subscription_id, units")
-          .order("subscription_id, created_at DESC")
+          .joins(<<~SQL)
+            INNER JOIN (VALUES #{values}) AS targets(subscription_id, timestamp)
+              ON targets.subscription_id = fixed_charge_events.subscription_id
+              AND fixed_charge_events.timestamp <= targets.timestamp
+          SQL
+          .where(fixed_charge_id: charge_ids)
+          .select("DISTINCT ON (fixed_charge_events.subscription_id) fixed_charge_events.subscription_id, units")
+          .order("fixed_charge_events.subscription_id, created_at DESC")
           .each { |event| baselines[event.subscription_id] = event.units }
       end
     end

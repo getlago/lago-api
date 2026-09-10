@@ -88,6 +88,8 @@ module Subscriptions
 
       unless subscription_plan_parent_present
         if existing_override
+          # The plan clone has already emitted events for this newly created fixed charge.
+          @emitted_fixed_charge_events = FixedChargeEvent.where(fixed_charge: existing_override, subscription:).to_a
           return existing_override.reload
         end
 

@@ -108,7 +108,10 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, pay_in_advance: true) }
 
           it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
-            expect { service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            expect { service.call }
+              .to change(FixedChargeEvent, :count).by(1)
+              .and have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+              .with(subscription, kind_of(Integer))
           end
 
           context "when the subscription is payment-gated" do
@@ -168,6 +171,23 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         it "does not enqueue the pay-in-advance billing job" do
           expect { service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+
+        it "does not emit a fixed charge event" do
+          expect { service.call }.not_to change(FixedChargeEvent, :count)
+        end
+
+        context "when the subscription already has a plan override" do
+          let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+          let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+
+          it "creates the fixed charge override without emitting an event or scheduling billing" do
+            expect { service.call }
+              .to change(FixedCharge, :count).by(1)
+              .and not_change(FixedChargeEvent, :count)
+
+            expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
+          end
         end
       end
 
