@@ -56,9 +56,9 @@ module Events
         :events_count
       )
 
-      def initialize(context:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      def initialize(billing_context:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
-        @context = context
+        @billing_context = billing_context
         @boundaries = boundaries
 
         @filters = filters
@@ -213,12 +213,12 @@ module Events
 
       protected
 
-      attr_accessor :code, :context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+      attr_accessor :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
 
-      delegate :customer, to: :context
+      delegate :customer, to: :billing_context
 
       def period_duration
-        @period_duration ||= context.charges_duration_at(to_datetime + 1.day)
+        @period_duration ||= billing_context.charges_duration_at(to_datetime + 1.day)
       end
 
       def build_aggregation_result(row)

@@ -48,11 +48,11 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store_class:, metered_item:, context:, boundaries:, filters: {}, bypass_aggregation: false)
+      def initialize(event_store_class:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
         @event_store_class = event_store_class
         @metered_item = metered_item
-        @context = context
+        @billing_context = billing_context
 
         @filters = filters
         @charge_filter = filters[:charge_filter]
@@ -133,7 +133,7 @@ module BillableMetrics
 
       attr_accessor :event_store_class,
         :metered_item,
-        :context,
+        :billing_context,
         :filters,
         :charge_filter,
         :event,
@@ -146,12 +146,12 @@ module BillableMetrics
 
       delegate :billable_metric, to: :metered_item
 
-      delegate :customer, to: :context
+      delegate :customer, to: :billing_context
 
       def event_store
         @event_store ||= event_store_class.new(
           code: billable_metric.code,
-          context:,
+          billing_context:,
           boundaries:,
           filters:,
           deduplicate: deduplicate?
@@ -162,7 +162,7 @@ module BillableMetrics
         override = Events::Stores::StoreFactory.override
         return override[:deduplicate] if override
 
-        organization = context&.organization
+        organization = billing_context&.organization
         return false unless organization
 
         organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
@@ -230,7 +230,7 @@ module BillableMetrics
       def find_cached_aggregation(with_from_datetime:, with_to_datetime:, grouped_by: nil)
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: context.external_id)
+          .where(external_subscription_id: billing_context.external_id)
           .where(charge_id: metered_item.charge_id)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)

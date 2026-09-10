@@ -13,7 +13,7 @@ RSpec.describe Events::Stores::StoreFactory do
     time = Time.current
 
     {
-      context: Events::Stores::EventContext.from(subscription: create(:subscription, organization:)),
+      billing_context: Billing::Context.from(subscription: create(:subscription, organization:)),
       boundaries: {
         from_datetime: time.beginning_of_month,
         to_datetime: time.end_of_month,

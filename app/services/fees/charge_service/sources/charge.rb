@@ -5,15 +5,11 @@ module Fees
     module Sources
       Charge = Data.define(:charge, :boundaries, :charge_filter, :properties_override) do
         def initialize(charge:, boundaries:, charge_filter: nil, properties_override: nil)
-          validate_charge!(charge)
-          validate_boundaries!(boundaries)
-          validate_charge_filter!(charge, charge_filter)
-
+          @cache = {}
           super
         end
 
         delegate :billable_metric,
-          :dynamic?,
           :pay_in_advance?,
           :prorated?,
           :invoiceable?,
@@ -24,7 +20,7 @@ module Fees
 
         delegate :id, to: :charge, prefix: true
 
-        def with_charge_filter(charge_filter, properties: nil)
+        def with_filter(charge_filter, properties: nil)
           self.class.new(
             charge:,
             boundaries:,
@@ -33,12 +29,16 @@ module Fees
           )
         end
 
-        def billing_segment
-          nil
+        def selected_filter
+          charge_filter
         end
 
-        def product_filter
-          nil
+        def fee_type
+          :charge
+        end
+
+        def invoiceable
+          charge
         end
 
         def properties
@@ -68,68 +68,14 @@ module Fees
           keys
         end
 
-        def matching_filters
-          return {} unless charge_filter
-
-          matching_and_ignored_filters.matching_filters
-        end
-
-        def ignored_filters
-          return [] unless charge_filter
-
-          matching_and_ignored_filters.ignored_filters
-        end
-
         def matching_and_ignored_filters
-          ChargeFilters::MatchingAndIgnoredService.call(
-            charge:,
-            filter: charge_filter
+          @cache[:matching_and_ignored_filters] ||= Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+            target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: charge_filter)
           )
-        end
-
-        def aggregation_options(current_usage:)
-          {
-            free_units_per_events: properties["free_units_per_events"].to_i,
-            free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0),
-            is_current_usage: current_usage,
-            is_pay_in_advance: pay_in_advance?
-          }
-        end
-
-        def accepts_target_wallet?
-          charge.accepts_target_wallet
         end
 
         def currency
           charge.plan.amount.currency
-        end
-
-        private
-
-        def validate_charge!(charge)
-          return if charge.is_a?(::Charge)
-
-          raise ArgumentError, "charge must be a Charge"
-        end
-
-        def validate_boundaries!(boundaries)
-          if boundaries&.charges_from_datetime && boundaries.charges_to_datetime
-            return
-          end
-
-          raise ArgumentError, "charge boundaries are mandatory"
-        end
-
-        def validate_charge_filter!(charge, charge_filter)
-          return unless charge_filter
-
-          unless charge_filter.is_a?(::ChargeFilter)
-            raise ArgumentError, "charge_filter must be a ChargeFilter"
-          end
-
-          return if charge_filter.charge.nil? || charge_filter.charge == charge
-
-          raise ArgumentError, "charge_filter must belong to charge"
         end
       end
     end

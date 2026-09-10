@@ -17,7 +17,7 @@ module Charges
     def call
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, charge_filter:, properties:),
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
@@ -58,10 +58,12 @@ module Charges
       filters[:presentation_by] = presentation_group_keys_values if presentation_group_keys_values.present?
 
       if charge_filter.present?
-        result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
+        matching_result = Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+          target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: charge_filter)
+        )
         filters[:charge_filter] = charge_filter if charge_filter.persisted?
-        filters[:matching_filters] = result.matching_filters
-        filters[:ignored_filters] = result.ignored_filters
+        filters[:matching_filters] = matching_result.matching_filters
+        filters[:ignored_filters] = matching_result.ignored_filters
       end
 
       filters

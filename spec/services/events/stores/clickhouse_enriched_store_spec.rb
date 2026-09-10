@@ -52,7 +52,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
     subject(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries:,
         filters: {
           grouped_by:,
@@ -133,7 +133,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
     def event_store(filters)
       described_class.new(
         code: billable_metric.code,
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: subscription.started_at.beginning_of_day,
           to_datetime: subscription.started_at.end_of_month.end_of_day,
