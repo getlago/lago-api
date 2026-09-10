@@ -470,13 +470,60 @@ RSpec.describe Plan do
 
   describe "#active_subscriptions_count" do
     let(:plan) { create(:plan) }
+    let(:organization) { plan.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:overridden_plan) { create(:plan, organization:, parent: plan) }
 
-    it "returns the number of active subscriptions" do
-      create(:subscription, plan:)
-      overridden_plan = create(:plan, parent_id: plan.id)
-      create(:subscription, plan: overridden_plan)
+    it "counts active subscriptions on the plan and all its overrides" do
+      create_list(:subscription, 2, plan:, customer:)
+      create_list(:subscription, 3, plan: overridden_plan, customer:)
+      another_override = create(:plan, organization:, parent: plan)
+      create(:subscription, plan: another_override, customer:)
+
+      expect(plan.active_subscriptions_count).to eq(6)
+    end
+
+    it "excludes non-active subscriptions on the plan and its overrides" do
+      [plan, overridden_plan].each do |subscription_plan|
+        create(:subscription, plan: subscription_plan, customer:)
+        %i[pending terminated canceled incomplete].each do |status|
+          create(:subscription, status, plan: subscription_plan, customer:)
+        end
+      end
 
       expect(plan.active_subscriptions_count).to eq(2)
+    end
+
+    it "excludes discarded overrides and subscriptions on unrelated plans" do
+      discarded_override = create(:plan, organization:, parent: plan, deleted_at: Time.current)
+      unrelated_plan = create(:plan, organization:)
+      [discarded_override, unrelated_plan].each do |subscription_plan|
+        create(:subscription, plan: subscription_plan, customer:)
+      end
+      create(:subscription)
+
+      expect(plan.active_subscriptions_count).to eq(0)
+    end
+
+    it "returns the direct count when there are no overrides" do
+      create(:subscription, plan:, customer:)
+
+      expect(plan.active_subscriptions_count).to eq(1)
+    end
+
+    it "returns zero when there are no subscriptions" do
+      overridden_plan
+
+      expect(plan.active_subscriptions_count).to eq(0)
+    end
+
+    it "counts subscriptions on an override without counting its parent or siblings" do
+      create(:subscription, plan:, customer:)
+      create_list(:subscription, 2, plan: overridden_plan, customer:)
+      sibling = create(:plan, organization:, parent: plan)
+      create(:subscription, plan: sibling, customer:)
+
+      expect(overridden_plan.active_subscriptions_count).to eq(2)
     end
   end
 
@@ -496,18 +543,59 @@ RSpec.describe Plan do
 
   describe "#draft_invoices_count" do
     let(:plan) { create(:plan) }
+    let(:organization) { plan.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:overridden_plan) { create(:plan, organization:, parent: plan) }
 
-    it "returns the number draft invoices" do
-      subscription = create(:subscription, plan:)
-      invoice = create(:invoice, :draft)
+    it "returns the number of draft invoices for the plan and its overrides" do
+      subscription = create(:subscription, plan:, customer:)
+      invoice = create(:invoice, :draft, customer:)
       create(:invoice_subscription, invoice:, subscription:)
 
-      overridden_plan = create(:plan, parent_id: plan.id)
-      subscription2 = create(:subscription, plan: overridden_plan)
-      invoice2 = create(:invoice, :draft)
+      subscription2 = create(:subscription, plan: overridden_plan, customer:)
+      invoice2 = create(:invoice, :draft, customer:)
       create(:invoice_subscription, invoice: invoice2, subscription: subscription2)
 
       expect(plan.draft_invoices_count).to eq(2)
+    end
+
+    it "counts an invoice shared by multiple override subscriptions once" do
+      invoice = create(:invoice, :draft, customer:)
+      another_override = create(:plan, organization:, parent: plan)
+      [overridden_plan, overridden_plan, another_override].each do |child|
+        subscription = create(:subscription, plan: child, customer:)
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+
+      expect(plan.draft_invoices_count).to eq(1)
+    end
+
+    it "excludes finalized invoices and discarded overrides" do
+      [plan, overridden_plan].each do |invoice_plan|
+        subscription = create(:subscription, plan: invoice_plan, customer:)
+        invoice = create(:invoice, status: :finalized, customer:)
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+      discarded_plan = create(:plan, organization:, parent: plan, deleted_at: Time.current)
+      subscription = create(:subscription, plan: discarded_plan, customer:)
+      invoice = create(:invoice, :draft, customer:)
+      create(:invoice_subscription, invoice:, subscription:)
+
+      expect(plan.draft_invoices_count).to eq(0)
+    end
+
+    it "excludes invoices belonging to another organization" do
+      invoice = create(:invoice, :draft)
+      [plan, overridden_plan].each do |invoice_plan|
+        subscription = create(:subscription, plan: invoice_plan, customer:)
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+
+      expect(plan.draft_invoices_count).to eq(0)
+    end
+
+    it "returns zero when there are no invoices or overrides" do
+      expect(plan.draft_invoices_count).to eq(0)
     end
   end
 
