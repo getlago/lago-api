@@ -308,5 +308,7 @@ module Types
     field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken
 
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
+
+    field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
   end
 end
