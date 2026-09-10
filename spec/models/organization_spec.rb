@@ -64,7 +64,6 @@ RSpec.describe Organization do
       expect(subject).to have_many(:usage_attribution_values)
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
-      expect(subject).to have_one(:enriched_store_migration)
       expect(subject).to have_many(:pending_vies_checks)
       expect(subject).to have_many(:order_forms)
       expect(subject).to have_many(:orders)
