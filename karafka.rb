@@ -32,6 +32,10 @@ class KarafkaApp < Karafka::App
     config.consumer_persistence = !Rails.env.development?
 
     config.monitor = Karafka::LagoMonitor.new
+
+    # Threads processing partitions in parallel, shared by every consumer group of the process.
+    # This is the only parallelism the inline wallet refresh has, so it is tunable per deployment.
+    config.concurrency = ENV.fetch("LAGO_KARAFKA_CONCURRENCY", 5).to_i
   end
 
   Karafka.monitor.subscribe(Karafka::Instrumentation::LoggerListener.new)
@@ -53,6 +57,26 @@ class KarafkaApp < Karafka::App
           consumer EventsChargedInAdvanceConsumer
 
           dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+        end
+      end
+    end
+  end
+
+  if ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_wallet_refresh_consumer do
+        topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
+          consumer WalletRefreshConsumer
+
+          # The batch is where the triggers of one customer collapse into one refresh. Kept
+          # small because the refreshes then run inline, bounded by the consumer's deadline.
+          max_messages 500
+
+          # Milliseconds. This lane exists to shorten the delay before the wallet is debited,
+          # so a poll returns what is there rather than waiting the default second to fill.
+          max_wait_time 100
+
+          dead_letter_queue(topic: "unprocessed_wallet_refresh", max_retries: 1, independent: true, dispatch_method: :produce_sync)
         end
       end
     end

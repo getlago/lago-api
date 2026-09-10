@@ -15,6 +15,14 @@ module Customers
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
 
+    # WalletRefreshConsumer refreshes the same customers inline, so the lock is now contended
+    # across lanes.
+    retry_on(
+      BaseLockService::FailedToAcquireLock,
+      wait: random_lock_retry_delay,
+      attempts: MAX_LOCK_RETRY_ATTEMPTS
+    )
+
     retry_on(
       BaseService::TooManyProviderRequestsFailure,
       wait: linear_delay(5, max_seconds: 30),
@@ -37,31 +45,11 @@ module Customers
 
     retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
 
+    # wallet_ids marks an explicitly requested refresh (e.g. balance increase) that must run even
+    # when the customer-wide awaiting_wallet_refresh flag is not set. The refresh itself always
+    # covers every wallet: the cascade makes allocations interdependent.
     def perform(customer, wallet_ids: nil)
-      # wallet_ids marks an explicitly requested refresh (e.g. balance increase) that must run
-      # even when the customer-wide awaiting_wallet_refresh flag is not set. The refresh itself
-      # always covers every wallet: the cascade makes allocations interdependent.
-      return if wallet_ids.nil? && !customer.awaiting_wallet_refresh?
-      return if customer.error_details.tax_error.exists?
-
-      Customers::RefreshWalletsService.call!(customer:)
-    rescue BaseService::ValidationFailure => e
-      tax_error = Array(e.messages[:tax_error])
-
-      raise unless tax_error.any? { |msg| msg.include?(Integrations::Aggregator::Taxes::BaseService::CUSTOMER_ADDRESS_INVALID) }
-
-      ErrorDetails::CreateService.call!(
-        owner: customer,
-        organization: customer.organization,
-        params: {
-          error_code: :tax_error,
-          details: {
-            tax_error: e.messages[:tax_error]&.first,
-            backtrace: e.backtrace,
-            error: e.inspect.to_json
-          }.compact
-        }
-      )
+      Customers::RefreshWalletService.call!(customer:, force: !wallet_ids.nil?)
     end
   end
 end
