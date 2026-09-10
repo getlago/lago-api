@@ -61,7 +61,7 @@ class AddAlertsCodeUniquePerWalletIndex < ActiveRecord::Migration[8.0]
                ) AS position
         FROM usage_monitoring_alerts a
         JOIN wallets w ON w.id = a.wallet_id
-        WHERE a.deleted_at IS NULL
+        WHERE a.deleted_at IS NULL AND a.wallet_id IS NOT NULL
       )
       UPDATE usage_monitoring_alerts a
       SET code = CASE
@@ -78,6 +78,8 @@ class AddAlertsCodeUniquePerWalletIndex < ActiveRecord::Migration[8.0]
       END
       FROM duplicates d
       WHERE d.id = a.id AND d.position > 1
+        AND a.deleted_at IS NULL
+        AND a.code = d.old_code
       RETURNING a.wallet_id, d.wallet_code, d.old_code, a.code AS new_code
     SQL
 
