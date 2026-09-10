@@ -81,6 +81,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         order_form_voided
         order_created
         order_executed
+        usage_attribution_type_created
       ]
     )
   end
