@@ -42,7 +42,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
   before do
     stripe_customer
     create_payment(invoice, :failed, "failed")
-    allow(Invoices::Payments::CreateJob).to receive(:perform_later)
   end
 
   describe "#call" do
@@ -51,7 +50,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
 
       expect(result).to be_success
       expect(result.invoice).to eq(invoice)
-      expect(Invoices::Payments::CreateJob).to have_received(:perform_later)
+      expect(Invoices::Payments::CreateJob).to have_been_enqueued
         .with(invoice:, payment_provider: :stripe)
     end
 
@@ -74,7 +73,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result.invoice).to eq(older_invoice)
-        expect(Invoices::Payments::CreateJob).to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued
           .with(invoice: older_invoice, payment_provider: :stripe)
       end
     end
@@ -101,7 +100,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result.invoice).to eq(older_invoice)
-        expect(Invoices::Payments::CreateJob).to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued
           .with(invoice: older_invoice, payment_provider: :stripe)
       end
     end
@@ -114,7 +113,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
 
         expect(result).to be_success
         expect(result.invoice).to be_nil
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -129,7 +128,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -140,7 +139,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -155,7 +154,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -170,7 +169,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -185,7 +184,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -198,7 +197,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
 
@@ -213,7 +212,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerCashBalanceTransactio
         result = webhook_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::CreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
       end
     end
   end
