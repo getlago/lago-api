@@ -15,23 +15,7 @@ module FixedCharges
     end
 
     def call
-      # Plan updates can affect thousands of subscriptions; load prior units once per batch.
-      batches = subscription ? subscriptions.each_slice(BATCH_SIZE) : subscriptions.find_in_batches(batch_size: BATCH_SIZE)
-      events_attributes = batches.flat_map do |batch|
-        attributes = batch.map do |subscription|
-          {
-            organization_id: subscription.organization_id,
-            subscription_id: subscription.id,
-            fixed_charge_id: fixed_charge.id,
-            units: units_for(subscription),
-            timestamp: event_timestamp_for(subscription)
-          }
-        end
-        previous_units = previous_units_by_subscription(attributes)
-
-        attributes.reject { |attrs| previous_units[attrs[:subscription_id]] == attrs[:units].to_d }
-      end
-
+      events_attributes = subscription_batches.flat_map { |batch| changed_event_attributes(batch) }
       result.fixed_charge_events = ::FixedChargeEvents::BulkCreateService.call!(events_attributes:).fixed_charge_events
 
       result
@@ -41,19 +25,18 @@ module FixedCharges
 
     attr_reader :fixed_charge, :subscription, :apply_units_immediately, :timestamp
 
-    def subscriptions
-      # When a specific subscription is provided, emit event for that subscription only
-      # This handles cases like plan overrides where the subscription hasn't been updated yet
-      # otherwise, emit events for all active subscriptions on the plan, except subscriptions
-      # that carry a per-subscription units override for this fixed charge (their units are
-      # decoupled from the plan-level value and a plan-level update must not touch them).
-      # Incomplete (payment-gated) subscriptions receive the event with a next-period
-      # timestamp even when apply_units_immediately is true: the customer paid (or is
-      # paying) the gating invoice for the original units, so a change made during gating
-      # must never be billed right after activation.
+    # Plan updates can affect thousands of subscriptions; load prior units once per batch.
+    def subscription_batches
       if subscription
-        # Emit events for active and incomplete subscriptions
-        # Pending subscriptions will have events created when they activate
+        subscriptions.each_slice(BATCH_SIZE)
+      else
+        subscriptions.find_in_batches(batch_size: BATCH_SIZE)
+      end
+    end
+
+    def subscriptions
+      if subscription
+        # During a plan override, the supplied subscription may still belong to the original plan.
         (subscription.active? || subscription.incomplete?) ? [subscription] : []
       else
         fixed_charge.plan.subscriptions
@@ -63,15 +46,32 @@ module FixedCharges
       end
     end
 
+    def changed_event_attributes(batch)
+      attributes = batch.map { |subscription| event_attributes(subscription) }
+      previous_units = previous_units_by_subscription(attributes)
+
+      attributes.reject { |attrs| previous_units[attrs[:subscription_id]] == attrs[:units].to_d }
+    end
+
+    def event_attributes(subscription)
+      {
+        organization_id: subscription.organization_id,
+        subscription_id: subscription.id,
+        fixed_charge_id: fixed_charge.id,
+        units: units_for(subscription),
+        timestamp: event_timestamp_for(subscription)
+      }
+    end
+
     def units_for(subscription)
-      # Only an explicitly provided subscription can carry an override; the bulk path filters
-      # overridden subscriptions out, so they always use the plan-level units.
+      # Plan-wide updates exclude subscriptions with their own units override.
       return fixed_charge.units unless self.subscription
 
       fixed_charge.effective_units_for(subscription)
     end
 
     def event_timestamp_for(subscription)
+      # Incomplete subscriptions must keep the units used by their activation invoice.
       if apply_units_immediately && !subscription.incomplete?
         timestamp
       else
@@ -79,9 +79,7 @@ module FixedCharges
       end
     end
 
-    # The baseline is the units effective at the event's own timestamp, not the units effective
-    # now. A deferred change already scheduled for the next period is the baseline for another
-    # deferred change, so re-setting today's value must still emit an event superseding it.
+    # Use each event's timestamp so deferred changes can supersede previously scheduled units.
     def previous_units_by_subscription(attributes)
       scope = FixedChargeEvent.where(fixed_charge_id: [fixed_charge.id, fixed_charge.parent_id].compact)
       events = attributes.group_by { |attrs| attrs[:timestamp] }.map do |timestamp, group|
