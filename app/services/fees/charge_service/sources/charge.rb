@@ -37,6 +37,18 @@ module Fees
           :charge_filter
         end
 
+        def billing_sources
+          if charge.filters.any?
+            charge.filters.map { |filter| with_filter(filter) } + [with_default_filter]
+          else
+            [self]
+          end
+        end
+
+        def true_up_filter_id
+          nil
+        end
+
         def with_default_filter
           with_filter(
             ChargeFilter.new(charge:, properties: {"pricing_group_keys" => charge.pricing_group_keys}),

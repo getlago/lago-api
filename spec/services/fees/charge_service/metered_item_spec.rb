@@ -130,6 +130,27 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(item.selected_filter).to eq(product_filter)
     end
 
+    it "only builds a billing item for the rate card's filter" do
+      selected = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
+      other = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
+      product.filters = [selected, other]
+      rate_card.product_filter = selected
+      item = described_class.from_billing_segment(billing_segment)
+
+      expect(item.billing_items.map(&:selected_filter)).to eq([selected])
+      expect(item.billing_items.sole.properties).to eq(billing_segment.rate_properties)
+      expect(item.true_up_filter_id).to eq(selected.id)
+    end
+
+    it "only builds a default billing item for an unscoped rate card" do
+      filter = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
+      product.filters = [filter]
+      item = described_class.from_billing_segment(billing_segment).with_filter(filter)
+
+      expect(item.billing_items.map(&:selected_filter)).to eq([nil])
+      expect(item.true_up_filter_id).to be_nil
+    end
+
     it "builds aggregation options from the stored segment properties" do
       billing_segment.rate_properties = {
         "free_units_per_events" => "2", "free_units_per_total_aggregation" => "3"
@@ -196,6 +217,22 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         is_current_usage: false,
         is_pay_in_advance: false
       )
+    end
+  end
+
+  describe "#billing_items" do
+    it "keeps an unfiltered charge as one billing item" do
+      expect(metered_item.billing_items).to eq([metered_item])
+      expect(metered_item.true_up_filter_id).to be_nil
+    end
+
+    it "expands charge filters with their own prices plus the default bucket" do
+      first = create(:charge_filter, charge:, properties: {amount: "30"})
+      second = create(:charge_filter, charge:, properties: {amount: "40"})
+
+      expect(metered_item.billing_items.map { |item| [item.filter_id, item.properties] }).to match_array([
+        [first.id, first.properties], [second.id, second.properties], [nil, charge.properties]
+      ])
     end
   end
 

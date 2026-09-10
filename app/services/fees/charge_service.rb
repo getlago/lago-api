@@ -81,17 +81,12 @@ module Fees
     def init_metered_items_fees
       result.fees = []
 
-      return init_fees(selected_metered_item: metered_item) unless metered_item.filters.any?
-
-      metered_item.filters.each do |filter|
-        init_fees(selected_metered_item: metered_item.with_filter(filter))
+      metered_item.billing_items.each do |item|
+        init_fees(selected_metered_item: item)
         unless result.success?
           return result
         end
       end
-
-      # Events that do not match any filter belong to the default bucket.
-      init_fees(selected_metered_item: metered_item.with_default_filter)
     end
 
     def init_fees(selected_metered_item:)
@@ -389,9 +384,9 @@ module Fees
     def init_true_up_fee
       fee = result.fees.find do |f|
         if metered_item.source.respond_to?(:product_filter)
-          f.product_filter_id.nil?
+          f.product_filter_id == metered_item.true_up_filter_id
         else
-          f.charge_filter_id.nil?
+          f.charge_filter_id == metered_item.true_up_filter_id
         end
       end
 
