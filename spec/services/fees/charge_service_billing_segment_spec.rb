@@ -12,7 +12,7 @@ RSpec.describe Fees::ChargeService do
   let(:invoice) { create(:invoice, organization:, customer:, currency: "USD", status: :generating) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
   let(:product) { create(:product, organization:, billable_metric:) }
-  let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+  let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "USD") }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
   let(:rate_card_rate) do
     create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "9"}, min_amount_cents:)
@@ -27,7 +27,7 @@ RSpec.describe Fees::ChargeService do
     )
   end
   let(:product_filter) { nil }
-  let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment).with_filter(product_filter) }
+  let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment) }
   let(:options) { described_class::Options.new(context: :finalize) }
 
   before do
@@ -137,42 +137,54 @@ RSpec.describe Fees::ChargeService do
         code: billable_metric.code, timestamp: Time.utc(2026, 8, 21), properties: {region: "apac"})
     end
 
-    it "persists one fee per product filter and a default fee for unmatched events" do
+    it "only prices unmatched events for an unscoped rate card" do
       expect(result).to be_success
-      expect(result.fees.map { |fee| [fee.product_filter_id, fee.units, fee.amount_cents] }).to match_array([
-        [eu_filter.id, 1, 200], [us_filter.id, 1, 200], [nil, 1, 200]
-      ])
-      expect(invoice.fees.pluck(:product_filter_id, :charge_filter_id)).to match_array([
-        [eu_filter.id, nil], [us_filter.id, nil], [nil, nil]
-      ])
+      expect(result.fees.sole).to have_attributes(product_filter_id: nil, units: 1, amount_cents: 200)
+      expect(invoice.fees.pluck(:product_filter_id, :charge_filter_id)).to eq([[nil, nil]])
     end
 
     context "with a selected filter" do
       let(:product_filter) { eu_filter }
 
-      it "expands all product filters and clears the selection for the default bucket" do
-        expect(result.fees.map(&:product_filter_id)).to match_array([eu_filter.id, us_filter.id, nil])
-        expect(result.fees.sum(&:units)).to eq(3)
+      it "only prices the rate card's selected bucket" do
+        expect(result.fees.sole.reload).to have_attributes(product_filter_id: eu_filter.id, charge_filter_id: nil, units: 1, amount_cents: 200)
+      end
+
+      context "with a minimum amount" do
+        let(:min_amount_cents) { 1000 }
+
+        it "attaches the true-up to the scoped fee and clears its filter identity" do
+          fees = result.fees
+
+          expect(fees.map(&:amount_cents)).to eq([200, 800])
+          expect(fees.first.product_filter_id).to eq(eu_filter.id)
+          expect(fees.last).to have_attributes(
+            invoiceable: product, fee_type: "product", product_filter_id: nil,
+            charge_filter_id: nil, true_up_parent_fee: fees.first
+          )
+        end
       end
     end
 
     context "with a minimum amount" do
       let(:min_amount_cents) { 1000 }
 
-      it "computes one true-up from the combined filter and default totals" do
+      it "computes the unscoped card's true-up using only default usage" do
         fees = result.fees
         default_fee = fees.find { |fee| fee.product_filter_id.nil? && fee.true_up_parent_fee_id.nil? }
 
-        expect(fees.map(&:amount_cents)).to match_array([200, 200, 200, 400])
+        expect(fees.map(&:amount_cents)).to eq([200, 800])
         expect(fees.last).to have_attributes(
           invoiceable: product, fee_type: "product", product_filter_id: nil,
           charge_filter_id: nil, true_up_parent_fee: default_fee
         )
-        expect(invoice.fees.count).to eq(4)
+        expect(invoice.fees.count).to eq(2)
       end
     end
 
-    context "when a later filter fails aggregation" do
+    context "when the scoped bucket fails aggregation" do
+      let(:product_filter) { us_filter }
+
       before do
         failed_aggregation = BillableMetrics::Aggregations::BaseService::Result.new
         failed_aggregation.service_failure!(code: "aggregation_failed", message: "Aggregation failed")

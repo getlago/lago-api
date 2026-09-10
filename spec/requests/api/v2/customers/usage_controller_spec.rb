@@ -62,20 +62,78 @@ RSpec.describe Api::V2::Customers::UsageController do
   end
 
   context "with product filters" do
-    let(:region) { create(:billable_metric_filter, organization:, billable_metric: metric, key: "region", values: %w[eu us]) }
+    let(:region) { create(:billable_metric_filter, organization:, billable_metric: metric, key: "region", values: %w[eu us apac]) }
     let(:filter) { create(:product_filter, organization:, product:, invoice_display_name: "Europe") }
 
     before { create(:product_filter_value, organization:, product_filter: filter, billable_metric_filter: region, value: "eu") }
 
-    it "returns the product filter values and default bucket" do
+    it "only returns the default bucket for an unscoped card" do
       request_usage
 
       expect(response).to have_http_status(:ok)
       filters = json[:customer_usage][:products_usage].sole[:filters]
-      expect(filters.map { |item| [item[:lago_id], item[:values], item[:amount_cents]] }).to match_array([
-        [filter.id, {region: ["eu"]}, 200], [nil, nil, 200]
-      ])
-      expect(filters.find { |item| item[:lago_id] == filter.id }[:invoice_display_name]).to eq("Europe")
+      expect(filters.map { |item| [item[:lago_id], item[:values], item[:amount_cents]] }).to eq([[nil, nil, 200]])
+    end
+
+    context "with a filter-scoped card" do
+      let(:rate_card) { create(:rate_card, organization:, product:, product_filter: filter, currency: "USD") }
+      let(:us_filter) { create(:product_filter, organization:, product:) }
+
+      before do
+        create(:product_filter_value, organization:, product_filter: us_filter, billable_metric_filter: region, value: "us")
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: metric.code, timestamp: Time.utc(2026, 8, 19), properties: {region: "apac"})
+      end
+
+      it "does not price other filters or unmatched events without their own cards" do
+        request_usage
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customer_usage][:amount_cents]).to eq(200)
+        filters = json[:customer_usage][:products_usage].sole[:filters]
+        expect(filters.map { |item| [item[:lago_id], item[:values], item[:amount_cents]] }).to eq([
+          [filter.id, {region: ["eu"]}, 200]
+        ])
+        expect(filters.sole[:invoice_display_name]).to eq("Europe")
+      end
+
+      context "with another scoped card at a different price" do
+        let(:us_card) { create(:rate_card, organization:, product:, product_filter: us_filter, currency: "USD") }
+
+        before do
+          create(:rate_card_rate, organization:, rate_card: us_card, effective_from: Time.utc(2026, 8, 1), rate_properties: {"amount" => "3"})
+          create(:contract_rate_card, organization:, contract:, rate_card: us_card,
+            effective_date: Date.new(2026, 8, 1), billing_anchor_date: Date.new(2026, 8, 1))
+        end
+
+        it "prices each filter with its own attached card" do
+          request_usage
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:customer_usage][:amount_cents]).to eq(500)
+          expect(json[:customer_usage][:products_usage].map { |usage| [usage[:rate_card][:code], usage[:filters].sole[:lago_id], usage[:amount_cents]] })
+            .to match_array([[rate_card.code, filter.id, 200], [us_card.code, us_filter.id, 300]])
+        end
+      end
+
+      context "with an attached default card" do
+        let(:default_card) { create(:rate_card, organization:, product:, currency: "USD") }
+
+        before do
+          create(:rate_card_rate, organization:, rate_card: default_card, effective_from: Time.utc(2026, 8, 1), rate_properties: {"amount" => "5"})
+          create(:contract_rate_card, organization:, contract:, rate_card: default_card,
+            effective_date: Date.new(2026, 8, 1), billing_anchor_date: Date.new(2026, 8, 1))
+        end
+
+        it "prices unmatched events using the default card's rate" do
+          request_usage
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:customer_usage][:amount_cents]).to eq(700)
+          expect(json[:customer_usage][:products_usage].map { |usage| [usage[:rate_card][:code], usage[:filters].sole[:lago_id], usage[:amount_cents]] })
+            .to match_array([[rate_card.code, filter.id, 200], [default_card.code, nil, 500]])
+        end
+      end
     end
   end
 
