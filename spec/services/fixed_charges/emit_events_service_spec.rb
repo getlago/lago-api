@@ -90,30 +90,19 @@ RSpec.describe FixedCharges::EmitEventsService do
         end
       end
 
-      it "loads baselines in one query while respecting each subscription's cutoff" do
-        queries = []
-        counter = lambda do |*, payload|
-          if payload[:sql].match?(/\ASELECT .*FROM "fixed_charge_events"/m)
-            queries << payload[:sql]
-          end
-        end
-
-        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { result }
-
+      it "respects each subscription's cutoff when skipping unchanged units" do
         expect(result).to be_success
         expect(result.fixed_charge_events.map(&:subscription_id)).to eq([active_subscription_2.id])
         expect(result.fixed_charge_events.sole.timestamp).to be_within(1.second).of(Time.zone.parse("2024-07-01"))
-        expect(queries.size).to eq(1)
       end
 
-      context "when subscriptions span multiple batches" do
+      context "when every subscription's units are unchanged" do
         before do
-          stub_const("FixedCharges::EmitEventsService::BATCH_SIZE", 1)
           create(:fixed_charge_event, subscription: active_subscription_2, fixed_charge:, units: fixed_charge.units,
             timestamp: Time.zone.parse("2024-07-01"))
         end
 
-        it "preserves baselines from every batch" do
+        it "does not emit any events" do
           expect(result).to be_success
           expect(result.fixed_charge_events).to eq([])
         end

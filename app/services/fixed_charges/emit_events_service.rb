@@ -4,8 +4,6 @@ module FixedCharges
   class EmitEventsService < BaseService
     Result = BaseResult[:fixed_charge_events]
 
-    BATCH_SIZE = 1_000
-
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
@@ -15,26 +13,17 @@ module FixedCharges
     end
 
     def call
-      targets = subscriptions.map do |subscription|
-        {
-          subscription:,
-          units: units_for(subscription),
-          timestamp: event_timestamp_for(subscription)
-        }
-      end
-
-      baselines = previous_units_by_subscription(targets)
-
-      events_attributes = targets.filter_map do |target|
-        previous_units = baselines[target[:subscription].id]
-        next if previous_units && previous_units == target[:units].to_d
+      events_attributes = subscriptions.filter_map do |subscription|
+        units = units_for(subscription)
+        event_timestamp = event_timestamp_for(subscription)
+        next if units_unchanged_at?(subscription, units, event_timestamp)
 
         {
-          organization_id: target[:subscription].organization_id,
-          subscription_id: target[:subscription].id,
+          organization_id: subscription.organization_id,
+          subscription_id: subscription.id,
           fixed_charge_id: fixed_charge.id,
-          units: target[:units],
-          timestamp: target[:timestamp]
+          units:,
+          timestamp: event_timestamp
         }
       end
 
@@ -88,28 +77,14 @@ module FixedCharges
     # The baseline is the units effective at the event's own timestamp, not the units effective
     # now. A deferred change already scheduled for the next period is the baseline for another
     # deferred change, so re-setting today's value must still emit an event superseding it.
-    #
-    # Batch subscriptions with their individual cutoffs so anniversary billing and different
-    # customer timezones do not turn the baseline lookup into one query per subscription.
-    def previous_units_by_subscription(targets)
-      charge_ids = [fixed_charge.id, fixed_charge.parent_id].compact
+    def units_unchanged_at?(subscription, units, event_timestamp)
+      previous_units = FixedChargeEvent
+        .where(subscription:, fixed_charge_id: [fixed_charge.id, fixed_charge.parent_id].compact)
+        .where(timestamp: ..event_timestamp)
+        .order(created_at: :desc)
+        .pick(:units)
 
-      targets.each_slice(BATCH_SIZE).each_with_object({}) do |batch, baselines|
-        values = batch.map do |target|
-          FixedChargeEvent.sanitize_sql_array(["(?::uuid, ?::timestamp)", target[:subscription].id, target[:timestamp]])
-        end.join(", ")
-
-        FixedChargeEvent
-          .joins(<<~SQL)
-            INNER JOIN (VALUES #{values}) AS targets(subscription_id, timestamp)
-              ON targets.subscription_id = fixed_charge_events.subscription_id
-              AND fixed_charge_events.timestamp <= targets.timestamp
-          SQL
-          .where(fixed_charge_id: charge_ids)
-          .select("DISTINCT ON (fixed_charge_events.subscription_id) fixed_charge_events.subscription_id, units")
-          .order("fixed_charge_events.subscription_id, created_at DESC")
-          .each { |event| baselines[event.subscription_id] = event.units }
-      end
+      previous_units == units.to_d
     end
 
     def next_billing_period(subscription)
