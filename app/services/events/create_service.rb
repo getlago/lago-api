@@ -20,7 +20,11 @@ module Events
       event.organization_id = organization.id
       event.code = params[:code]
       event.transaction_id = params[:transaction_id]
-      event.external_subscription_id = params[:external_subscription_id]
+      # external_contract_id is the v2 alias: a catalog org addresses its
+      # agreement by contract id, a legacy org by subscription id. Single-engine
+      # orgs carry one, and the event always stores it under
+      # external_subscription_id; an explicit external_subscription_id wins.
+      event.external_subscription_id = params[:external_subscription_id].presence || params[:external_contract_id]
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}
       event.timestamp = event_timestamp
