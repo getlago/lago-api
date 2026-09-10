@@ -97,15 +97,6 @@ RSpec.describe RateCards::UpdateService do
     end
   end
 
-  context "when wallet_targetable is set without the organization feature" do
-    let(:params) { {wallet_targetable: true} }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:wallet_targetable]).to eq(["feature_unavailable"])
-    end
-  end
-
   context "when applied_pricing_unit_code is unknown" do
     let(:params) { {applied_pricing_unit_code: "unknown"} }
 
@@ -196,15 +187,6 @@ RSpec.describe RateCards::UpdateService do
       it "returns a validation failure" do
         expect(result).not_to be_success
         expect(result.error.messages[:display_on_invoice]).to eq(["not_editable_with_rates"])
-      end
-    end
-
-    context "when changing wallet_targetable" do
-      let(:params) { {wallet_targetable: false} }
-
-      it "returns a validation failure" do
-        expect(result).not_to be_success
-        expect(result.error.messages[:wallet_targetable]).to eq(["not_editable_with_rates"])
       end
     end
 

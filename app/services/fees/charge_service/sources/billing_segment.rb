@@ -65,13 +65,7 @@ module Fees
 
         # NOTE: Product-catalog pricing groups will move to product/plan data once that feature is supported.
         def pricing_group_keys
-          keys = properties["pricing_group_keys"]&.dup || []
-
-          if rate_card.wallet_targetable? && !keys.include?(::Charge::EVENT_TARGET_WALLET_CODE)
-            keys << ::Charge::EVENT_TARGET_WALLET_CODE
-          end
-
-          keys
+          properties["pricing_group_keys"]&.dup || []
         end
 
         # NOTE: Product-catalog presentation groups will move to product/plan data once that feature is supported.

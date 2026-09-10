@@ -8,6 +8,11 @@ class RateCard < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  # wallet_targetable is being removed from the product catalog; the column is
+  # dropped in a follow-up release. Ignore it until then.
+  # TODO: drop the wallet_targetable column, then remove this ignore.
+  self.ignored_columns += %w[wallet_targetable]
+
   BILLING_TIMINGS = {
     arrears: "arrears",
     advance: "advance"
@@ -124,7 +129,6 @@ end
 #  name                      :string           not null
 #  proration                 :boolean          default(FALSE), not null
 #  regroup_paid_fees         :enum             default("none"), not null
-#  wallet_targetable         :boolean
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  organization_id           :uuid             not null

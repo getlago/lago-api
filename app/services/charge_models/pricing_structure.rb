@@ -43,7 +43,7 @@ module ChargeModels
         charge_model: billing_segment.rate.rate_model,
         properties: billing_segment.rate_properties,
         prorated: billing_segment.contract_rate_card.rate_card.proration?,
-        accepts_target_wallet: billing_segment.contract_rate_card.rate_card.wallet_targetable?,
+        accepts_target_wallet: false,
         currency: Money::Currency.new(billing_segment.currency)
       )
     end
