@@ -5671,7 +5671,6 @@ CREATE TABLE public.rate_cards (
     display_on_invoice boolean DEFAULT true NOT NULL,
     regroup_paid_fees public.rate_card_regroup_paid_fees DEFAULT 'none'::public.rate_card_regroup_paid_fees NOT NULL,
     applied_pricing_unit_code character varying,
-    wallet_targetable boolean,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
@@ -14791,6 +14790,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260910095513'),
 ('20260908222044'),
 ('20260908211313'),
 ('20260908180522'),
