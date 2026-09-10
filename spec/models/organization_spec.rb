@@ -61,6 +61,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:subscription_feature_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
 
       expect(subject).to have_many(:usage_attribution_types)
+      expect(subject).to have_many(:usage_attribution_values)
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
       expect(subject).to have_one(:enriched_store_migration)
