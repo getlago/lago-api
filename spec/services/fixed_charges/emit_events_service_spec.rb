@@ -96,6 +96,31 @@ RSpec.describe FixedCharges::EmitEventsService do
         expect(result.fixed_charge_events.sole.timestamp).to be_within(1.second).of(Time.zone.parse("2024-07-01"))
       end
 
+      shared_examples "a batched baseline lookup" do |expected_queries|
+        it "loads prior events once per batch despite different timestamp cutoffs" do
+          queries = []
+          counter = lambda do |*, payload|
+            if payload[:sql].match?(/\ASELECT .*FROM "fixed_charge_events"/m)
+              queries << payload[:sql]
+            end
+          end
+
+          ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { result }
+
+          expect(result).to be_success
+          expect(result.fixed_charge_events.map(&:subscription_id)).to eq([active_subscription_2.id])
+          expect(queries.size).to eq(expected_queries)
+        end
+      end
+
+      include_examples "a batched baseline lookup", 1
+
+      context "when subscriptions span multiple batches" do
+        before { stub_const("FixedCharges::EmitEventsService::BATCH_SIZE", 1) }
+
+        include_examples "a batched baseline lookup", 2
+      end
+
       context "when every subscription's units are unchanged" do
         before do
           create(:fixed_charge_event, subscription: active_subscription_2, fixed_charge:, units: fixed_charge.units,

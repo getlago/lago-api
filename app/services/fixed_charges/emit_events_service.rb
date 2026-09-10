@@ -4,6 +4,8 @@ module FixedCharges
   class EmitEventsService < BaseService
     Result = BaseResult[:fixed_charge_events]
 
+    BATCH_SIZE = 1_000
+
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
@@ -13,18 +15,21 @@ module FixedCharges
     end
 
     def call
-      events_attributes = subscriptions.filter_map do |subscription|
-        units = units_for(subscription)
-        event_timestamp = event_timestamp_for(subscription)
-        next if units_unchanged_at?(subscription, units, event_timestamp)
+      # Plan updates can affect thousands of subscriptions; load prior units once per batch.
+      batches = subscription ? subscriptions.each_slice(BATCH_SIZE) : subscriptions.find_in_batches(batch_size: BATCH_SIZE)
+      events_attributes = batches.flat_map do |batch|
+        attributes = batch.map do |subscription|
+          {
+            organization_id: subscription.organization_id,
+            subscription_id: subscription.id,
+            fixed_charge_id: fixed_charge.id,
+            units: units_for(subscription),
+            timestamp: event_timestamp_for(subscription)
+          }
+        end
+        previous_units = previous_units_by_subscription(attributes)
 
-        {
-          organization_id: subscription.organization_id,
-          subscription_id: subscription.id,
-          fixed_charge_id: fixed_charge.id,
-          units:,
-          timestamp: event_timestamp
-        }
+        attributes.reject { |attrs| previous_units[attrs[:subscription_id]] == attrs[:units].to_d }
       end
 
       result.fixed_charge_events = ::FixedChargeEvents::BulkCreateService.call!(events_attributes:).fixed_charge_events
@@ -77,14 +82,15 @@ module FixedCharges
     # The baseline is the units effective at the event's own timestamp, not the units effective
     # now. A deferred change already scheduled for the next period is the baseline for another
     # deferred change, so re-setting today's value must still emit an event superseding it.
-    def units_unchanged_at?(subscription, units, event_timestamp)
-      previous_units = FixedChargeEvent
-        .where(subscription:, fixed_charge_id: [fixed_charge.id, fixed_charge.parent_id].compact)
-        .where(timestamp: ..event_timestamp)
-        .order(created_at: :desc)
-        .pick(:units)
+    def previous_units_by_subscription(attributes)
+      scope = FixedChargeEvent.where(fixed_charge_id: [fixed_charge.id, fixed_charge.parent_id].compact)
+      events = attributes.group_by { |attrs| attrs[:timestamp] }.map do |timestamp, group|
+        scope.where(subscription_id: group.pluck(:subscription_id), timestamp: ..timestamp)
+      end.reduce(:or)
 
-      previous_units == units.to_d
+      events.select("DISTINCT ON (subscription_id) subscription_id, units")
+        .order(:subscription_id, created_at: :desc)
+        .to_h { |event| [event.subscription_id, event.units] }
     end
 
     def next_billing_period(subscription)
