@@ -127,6 +127,14 @@ RSpec.describe Customers::RefreshWalletsService do
         end
       end
 
+      context "when the destination is inactive" do
+        before { create(:kinesis_destination, organization:, active: false) }
+
+        it "enqueues nothing, so switching it off stops the work at the source" do
+          expect { result }.not_to have_enqueued_job(DeliverEventJob)
+        end
+      end
+
       context "when the destination asks for another event type" do
         before { create(:kinesis_destination, organization:).update_column(:event_types, ["wallet.updated"]) } # rubocop:disable Rails/SkipsModelValidations
 

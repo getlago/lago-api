@@ -49,7 +49,7 @@ module Customers
 
     def deliver_streaming_events
       StreamingDestinations::BaseDestination
-        .where(organization: customer.organization)
+        .where(organization: customer.organization, active: true)
         .pluck(:event_types)
         .flatten
         .uniq
