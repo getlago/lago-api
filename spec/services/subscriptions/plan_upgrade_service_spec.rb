@@ -556,7 +556,9 @@ RSpec.describe Subscriptions::PlanUpgradeService do
           expect(subscription.reload.billing_entity_id).to eq(billing_entity.id)
           expect(new_subscription.billing_entity_id).to eq(other_entity.id)
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription, new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
+            .with([subscription], kind_of(Integer), invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
         end
       end
     end
