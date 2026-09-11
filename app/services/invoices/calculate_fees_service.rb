@@ -134,7 +134,7 @@ module Invoices
           Fees::ChargeService.call!(
             invoice:,
             metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
-            subscription:,
+            billing_context: Billing::Context.from(subscription:),
             options: Fees::ChargeService::Options.new(
               context:,
               skip_adjusted_fees: !adjusted_fee_exists
@@ -229,7 +229,7 @@ module Invoices
           fee_result = Fees::ChargeService.call!(
             invoice: nil,
             metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
-            subscription:,
+            billing_context: Billing::Context.from(subscription:),
             plan: subscription.plan,
             customer: subscription.customer,
             options: Fees::ChargeService::Options.new(

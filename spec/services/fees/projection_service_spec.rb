@@ -138,7 +138,7 @@ RSpec.describe Fees::ProjectionService do
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           metered_item: have_attributes(charge:, charge_filter: nil),
-          context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
+          billing_context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
             to_datetime: match_datetime(to_datetime),
@@ -213,7 +213,7 @@ RSpec.describe Fees::ProjectionService do
       end
 
       before do
-        allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call)
+        allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call)
           .and_return(filter_service_result)
       end
 
@@ -224,7 +224,7 @@ RSpec.describe Fees::ProjectionService do
         service.call
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           metered_item: have_attributes(charge:, charge_filter:),
-          context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
+          billing_context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
           boundaries: {
             from_datetime: match_datetime(from_datetime),
             to_datetime: match_datetime(to_datetime),

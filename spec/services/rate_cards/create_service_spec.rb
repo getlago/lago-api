@@ -169,15 +169,6 @@ RSpec.describe RateCards::CreateService do
     end
   end
 
-  context "when wallet_targetable is set without the organization feature" do
-    before { params[:wallet_targetable] = true }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:wallet_targetable]).to eq(["feature_unavailable"])
-    end
-  end
-
   context "when applied_pricing_unit_code is unknown" do
     before { params[:applied_pricing_unit_code] = "unknown" }
 

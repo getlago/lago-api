@@ -29,10 +29,6 @@ module RateCards
         return result.not_found_failure!(resource: "product_filter") unless product_filter
       end
 
-      if params[:wallet_targetable] && !organization.events_targeting_wallets_enabled?
-        return result.single_validation_failure!(field: :wallet_targetable, error_code: "feature_unavailable")
-      end
-
       if params[:applied_pricing_unit_code].present? && !organization.pricing_units.exists?(code: params[:applied_pricing_unit_code])
         return result.single_validation_failure!(field: :applied_pricing_unit_code, error_code: "value_is_invalid")
       end
@@ -45,8 +41,7 @@ module RateCards
         description: params[:description],
         currency: params[:currency],
         billing_timing: params[:billing_timing] || "arrears",
-        applied_pricing_unit_code: params[:applied_pricing_unit_code],
-        wallet_targetable: params[:wallet_targetable]
+        applied_pricing_unit_code: params[:applied_pricing_unit_code]
       }
       # NOT NULL columns with DB defaults: only set when a value is given.
       attributes[:proration] = params[:proration] unless params[:proration].nil?

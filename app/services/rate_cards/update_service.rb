@@ -8,7 +8,7 @@ module RateCards
 
     # Billing-semantic fields freeze once a rate exists — changing them would
     # alter what the existing rates mean; create a new card instead.
-    LOCKED_WITH_RATES = %i[currency applied_pricing_unit_code billing_timing proration regroup_paid_fees display_on_invoice wallet_targetable].freeze
+    LOCKED_WITH_RATES = %i[currency applied_pricing_unit_code billing_timing proration regroup_paid_fees display_on_invoice].freeze
 
     def initialize(rate_card:, params:)
       @rate_card = rate_card
@@ -31,10 +31,6 @@ module RateCards
 
       boolean_failure = boolean_params_failure
       return boolean_failure if boolean_failure
-
-      if params[:wallet_targetable] && !rate_card.organization.events_targeting_wallets_enabled?
-        return result.single_validation_failure!(field: :wallet_targetable, error_code: "feature_unavailable")
-      end
 
       if params[:applied_pricing_unit_code].present? && !rate_card.organization.pricing_units.exists?(code: params[:applied_pricing_unit_code])
         return result.single_validation_failure!(field: :applied_pricing_unit_code, error_code: "value_is_invalid")
@@ -92,7 +88,6 @@ module RateCards
       rate_card.display_on_invoice = params[:display_on_invoice] if params.key?(:display_on_invoice)
       rate_card.regroup_paid_fees = params[:regroup_paid_fees] if params.key?(:regroup_paid_fees)
       rate_card.applied_pricing_unit_code = params[:applied_pricing_unit_code] if params.key?(:applied_pricing_unit_code)
-      rate_card.wallet_targetable = params[:wallet_targetable] if params.key?(:wallet_targetable)
     end
   end
 end

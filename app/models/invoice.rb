@@ -26,6 +26,8 @@ class Invoice < ApplicationRecord
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
+  has_many :billing_segments
+  has_many :contracts, -> { distinct }, through: :billing_segments
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
@@ -303,10 +305,12 @@ class Invoice < ApplicationRecord
 
     filters = {charge_id: fee.charge_id}
     if fee.charge_filter
-      result = ChargeFilters::MatchingAndIgnoredService.call(charge: fee.charge, filter: fee.charge_filter)
+      matching_result = Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+        target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge: fee.charge, filter: fee.charge_filter)
+      )
       filters[:charge_filter] = fee.charge_filter if fee.charge_filter
-      filters[:matching_filters] = result.matching_filters
-      filters[:ignored_filters] = result.ignored_filters
+      filters[:matching_filters] = matching_result.matching_filters
+      filters[:ignored_filters] = matching_result.ignored_filters
     end
 
     service.new(
@@ -316,7 +320,7 @@ class Invoice < ApplicationRecord
         boundaries: BillingPeriodBoundaries.from_fee(fee),
         charge_filter: fee.charge_filter
       ),
-      context: Events::Stores::EventContext.from(subscription: fee.subscription),
+      billing_context: Billing::Context.from(subscription: fee.subscription),
       boundaries: {
         from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
         to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
