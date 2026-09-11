@@ -1780,7 +1780,7 @@ CREATE TYPE public.payment_type AS ENUM (
 --
 
 CREATE TYPE public.product_type AS ENUM (
-    'usage',
+    'metered',
     'fixed'
 );
 
@@ -15043,6 +15043,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260911144853'),
 ('20260910095513'),
 ('20260909103355'),
 ('20260908222044'),

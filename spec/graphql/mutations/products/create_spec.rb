@@ -23,7 +23,7 @@ RSpec.describe Mutations::Products::Create do
     {
       name: "Storage",
       code: "storage",
-      productType: "usage",
+      productType: "metered",
       productCategoryId: product_category.id,
       billableMetricId: billable_metric.id
     }
@@ -51,7 +51,7 @@ RSpec.describe Mutations::Products::Create do
     expect(result_data["id"]).to be_present
     expect(result_data["name"]).to eq("Storage")
     expect(result_data["code"]).to eq("storage")
-    expect(result_data["productType"]).to eq("usage")
+    expect(result_data["productType"]).to eq("metered")
     expect(result_data["productCategory"]["id"]).to eq(product_category.id)
     expect(result_data["billableMetric"]["id"]).to eq(billable_metric.id)
   end
@@ -68,8 +68,8 @@ RSpec.describe Mutations::Products::Create do
     end
   end
 
-  context "when a usage item has no billable metric" do
-    let(:input) { {name: "Orphan", code: "orphan", productType: "usage"} }
+  context "when a metered item has no billable metric" do
+    let(:input) { {name: "Orphan", code: "orphan", productType: "metered"} }
 
     it "returns a validation error on the relation" do
       expect(execution["errors"].first["extensions"]["details"]).to eq("billableMetric" => ["value_is_mandatory"])

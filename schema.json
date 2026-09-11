@@ -58268,7 +58268,7 @@
           "interfaces": null,
           "enumValues": [
             {
-              "name": "usage",
+              "name": "metered",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
