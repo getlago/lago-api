@@ -438,11 +438,6 @@ enum ActivityTypeEnum {
   subscription_updated
 
   """
-  usage_attribution_type.created
-  """
-  usage_attribution_type_created
-
-  """
   wallet.created
   """
   wallet_created

@@ -27,11 +27,6 @@ RSpec.describe UsageAttributionTypes::CreateService do
     expect(usage_attribution_type.parent).to be_nil
   end
 
-  it "produces an activity log" do
-    usage_attribution_type = result.usage_attribution_type
-    expect(Utils::ActivityLog).to have_produced("usage_attribution_type.created").after_commit.with(usage_attribution_type)
-  end
-
   it "strips the code and the attribution key" do
     params[:code] = "  user  "
     params[:attribution_key] = "  user_id  "
