@@ -72,6 +72,24 @@ RSpec.describe RateCard do
       it "accepts a displayed arrears card" do
         expect(build(:rate_card, billing_timing: "arrears", display_on_invoice: true)).to be_valid
       end
+
+      context "with a fixed product" do
+        let(:product) { build(:product, :fixed) }
+
+        it "rejects hiding fees on both timings, reporting the product type" do
+          %w[advance arrears].each do |timing|
+            card = build(:rate_card, product:, organization: product.organization, billing_timing: timing, display_on_invoice: false)
+            card.valid?
+            expect(card.errors.where(:display_on_invoice).map(&:type)).to eq([:not_allowed_for_product_type])
+          end
+        end
+
+        it "accepts a displayed card on either timing" do
+          %w[advance arrears].each do |timing|
+            expect(build(:rate_card, product:, organization: product.organization, billing_timing: timing, display_on_invoice: true)).to be_valid
+          end
+        end
+      end
     end
 
     describe "proration compatibility" do

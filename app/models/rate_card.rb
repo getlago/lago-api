@@ -8,11 +8,6 @@ class RateCard < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  # wallet_targetable is being removed from the product catalog; the column is
-  # dropped in a follow-up release. Ignore it until then.
-  # TODO: drop the wallet_targetable column, then remove this ignore.
-  self.ignored_columns += %w[wallet_targetable]
-
   BILLING_TIMINGS = {
     arrears: "arrears",
     advance: "advance"
@@ -63,9 +58,16 @@ class RateCard < ApplicationRecord
   end
 
   def validate_display_on_invoice
-    return if advance? || display_on_invoice?
+    return if display_on_invoice?
 
-    errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
+    # A fixed product bills one fee per period, so its line must always show —
+    # hiding it charges the customer an amount with nothing to reconcile it to.
+    # This holds on both timings; the flag only makes sense for usage on advance.
+    if product&.fixed?
+      errors.add(:display_on_invoice, :not_allowed_for_product_type)
+    elsif !advance?
+      errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
+    end
   end
 
   # Usage proration spreads a recurring quantity across the period, so it
