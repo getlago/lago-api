@@ -316,7 +316,11 @@ class Fee < ApplicationRecord
 
   def date_boundaries
     if charge? && !pay_in_advance? && charge.pay_in_advance?
-      timestamp = invoice.invoice_subscription(subscription.id).timestamp
+      timestamp = if invoice.new_record?
+        Time.parse(properties["timestamp"]).to_i
+      else
+        invoice.invoice_subscription(subscription.id).timestamp
+      end
       interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, subscription)
 
       return {
