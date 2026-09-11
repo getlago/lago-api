@@ -92,10 +92,8 @@ module Customers
 
       Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
 
-      if args.key?(:net_payment_term)
-        Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
-      end
-
+      # NOTE: A term change never rewrites open drafts (snapshot-freeze):
+      #       it applies to future drafts only.
       PaymentTerms::AssignService.call(record: customer, params: args)
 
       # NOTE: Some fields are not editable if customer is attached to subscriptions:

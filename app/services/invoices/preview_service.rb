@@ -33,7 +33,9 @@ module Invoices
         timezone: customer.applicable_timezone,
         issuing_date:,
         payment_due_date:,
-        net_payment_term: customer.applicable_net_payment_term,
+        payment_term: payment_term.to_h,
+        payment_term_source: resolved_payment_term.source,
+        net_payment_term: payment_term.net_payment_term_alias,
         created_at: Time.current,
         updated_at: Time.current
       )
@@ -60,6 +62,7 @@ module Invoices
 
     attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions, :subscription_context
     delegate :organization, to: :customer
+    delegate :payment_term, to: :resolved_payment_term
 
     def billing_entity
       @billing_entity ||= first_subscription.billing_entity || customer.billing_entity
@@ -164,7 +167,11 @@ module Invoices
     end
 
     def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
+      payment_term.due_date_for(issuing_date)
+    end
+
+    def resolved_payment_term
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:)
     end
 
     def add_subscription_fee(subscription, boundaries)
