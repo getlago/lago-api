@@ -67,7 +67,8 @@ RSpec.describe Invoices::PrepaidCreditJob do
     it "marks the wallet transaction as failed" do
       allow(WalletTransactions::MarkAsFailedService).to receive(:new).and_call_original
       described_class.perform_now(invoice, payment_status)
-      expect(WalletTransactions::MarkAsFailedService).to have_received(:new).with(wallet_transaction: wallet_transaction)
+      expect(WalletTransactions::MarkAsFailedService).to have_received(:new)
+        .with(wallet_transaction: wallet_transaction, notify_settled_failure: payment_status == :failed)
       expect(wallet_transaction.reload.status).to eq("failed")
     end
 
@@ -86,6 +87,26 @@ RSpec.describe Invoices::PrepaidCreditJob do
 
   context "when payment fails" do
     it_behaves_like "does not grant credits", :failed
+
+    context "when the wallet transaction is already settled" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: 15.0, credit_amount: 15.0, status: "settled")
+      end
+
+      it "keeps the wallet transaction settled and does not change the wallet balance" do
+        expect {
+          described_class.perform_now(invoice, :failed)
+        }.to not_change { wallet_transaction.reload.status }
+          .and not_change { wallet.reload.balance_cents }
+      end
+
+      it "enqueues a SendWebhookJob to notify about the failed payment" do
+        expect {
+          described_class.perform_now(invoice, :failed)
+        }.to have_enqueued_job(SendWebhookJob)
+          .with("wallet_transaction.payment_failure_after_settlement", wallet_transaction)
+      end
+    end
   end
 
   context "when invoice is paid by credit note" do
@@ -96,6 +117,19 @@ RSpec.describe Invoices::PrepaidCreditJob do
     end
 
     it_behaves_like "does not grant credits", :succeeded
+
+    context "when the wallet transaction is already settled" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: 15.0, credit_amount: 15.0, status: "settled")
+      end
+
+      it "does not enqueue a payment failure webhook" do
+        expect {
+          described_class.perform_now(invoice, :succeeded)
+        }.not_to have_enqueued_job(SendWebhookJob)
+          .with("wallet_transaction.payment_failure_after_settlement", wallet_transaction)
+      end
+    end
   end
 
   context "when payment_status is not provided (Default to :succeeded for old jobs)" do
