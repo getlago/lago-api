@@ -31,6 +31,32 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
     end
   end
 
+  context "when the subscription has an alert" do
+    let(:organization) { create(:organization, premium_integrations: %w[salesforce]) }
+
+    it "tracks activity" do
+      create(:alert, organization:, subscription_external_id: subscription.external_id)
+      expect { subject.call }.to change { organization.subscription_activities.count }.by(1)
+    end
+  end
+
+  context "when another organization has an alert on the same external id" do
+    let(:organization) { create(:organization, premium_integrations: %w[salesforce]) }
+    let(:other_organization) { create(:organization) }
+
+    it "does not track activity" do
+      create(
+        :alert,
+        organization: other_organization,
+        subscription_external_id: subscription.external_id
+      )
+
+      subject.call
+
+      expect(organization.subscription_activities.count).to eq(0)
+    end
+  end
+
   context "when organization does use any integration with subscription tracking" do
     let(:organization) { create(:organization, premium_integrations: %w[salesforce]) }
 
