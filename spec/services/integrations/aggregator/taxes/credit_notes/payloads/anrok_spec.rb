@@ -35,7 +35,7 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Anrok do
                 "item_code" => mapping_codes.dig(:fixed_charge, :external_id)
               },
               {
-                "item_id" => billable_metric.id,
+                "item_id" => "charge_#{charge.id}",
                 "amount_cents" => -180,
                 "item_code" => mapping_codes.dig(:billable_metric, :external_id)
               },
@@ -53,6 +53,48 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Anrok do
             "tax_date" => credit_note.invoice.issuing_date
           }
         ]
+      end
+    end
+
+    context "when a charge is credited over several fees" do
+      let(:integration) { create(:anrok_integration) }
+      let(:organization) { integration.organization }
+      let(:customer) { create(:customer, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:credit_note) { create(:credit_note, customer:, invoice:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+      let(:other_charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+      let(:charge_fee) { create(:charge_fee, invoice:, charge:, amount_cents: 300, precise_amount_cents: 300) }
+      let(:charge_fee_two) { create(:charge_fee, invoice:, charge:, amount_cents: 700, precise_amount_cents: 700) }
+      let(:other_charge_fee) do
+        create(:charge_fee, invoice:, charge: other_charge, amount_cents: 500, precise_amount_cents: 500)
+      end
+
+      before do
+        integration_customer
+        create(:credit_note_item, credit_note:, fee: charge_fee, amount_cents: 300, precise_amount_cents: 300, created_at: 3.seconds.ago)
+        create(:credit_note_item, credit_note:, fee: other_charge_fee, amount_cents: 500, precise_amount_cents: 500, created_at: 2.seconds.ago)
+        create(:credit_note_item, credit_note:, fee: charge_fee_two, amount_cents: 700, precise_amount_cents: 700, created_at: 1.second.ago)
+
+        create(
+          :anrok_mapping,
+          integration:,
+          mappable_type: "BillableMetric",
+          mappable_id: billable_metric.id,
+          settings: {external_id: "ext_123"}
+        )
+      end
+
+      it "credits the charge as a single line item, keyed like the invoice line" do
+        expect(payload.first["fees"]).to eq(
+          [
+            {"item_id" => "charge_#{charge.id}", "item_code" => "ext_123", "amount_cents" => -1000},
+            {"item_id" => "charge_#{other_charge.id}", "item_code" => "ext_123", "amount_cents" => -500}
+          ]
+        )
       end
     end
 

@@ -206,6 +206,62 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "when a charge is split by grouped_by" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+        let(:requested_line_items) { [] }
+        let(:charge) do
+          create(:standard_charge, plan:, billable_metric:, properties: {amount: "12.66", grouped_by: ["region"]})
+        end
+        let(:events) do
+          %w[us eu].map do |region|
+            create(
+              :event,
+              organization:,
+              subscription:,
+              customer:,
+              code: billable_metric.code,
+              timestamp:,
+              properties: {region:}
+            )
+          end
+        end
+
+        before do
+          stub_request(:post, endpoint).to_return do |request|
+            line_item = JSON.parse(request.body).first["fees"].sole
+            requested_line_items << line_item
+
+            taxed = line_item.merge(
+              "tax_amount_cents" => 253,
+              "tax_breakdown" => [{"name" => "GST", "rate" => "0.10", "tax_amount" => 253, "type" => "tax"}]
+            )
+
+            {body: {succeededInvoices: [{id: "inv_123", fees: [taxed]}], failedInvoices: []}.to_json}
+          end
+        end
+
+        it "sends the charge as a single line item" do
+          travel_to(current_date) do
+            usage_service.call
+
+            expect(requested_line_items.sole)
+              .to include("item_key" => "charge_#{charge.id}", "amount_cents" => 2532)
+          end
+        end
+
+        it "taxes every fee of the charge and adds up to what the provider returned" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            expect(result.usage.fees.map(&:amount_cents)).to eq([1266, 1266])
+            expect(result.usage.fees.map(&:taxes_rate)).to eq([10, 10])
+            expect(result.usage.fees.sum(&:taxes_amount_cents)).to eq(253)
+            expect(result.usage.taxes_amount_cents).to eq(253)
+          end
+        end
+      end
+
       context "when a charge produces a zero fee" do
         let(:current_date) { DateTime.parse("2025-06-15") }
         let(:timestamp) { current_date }

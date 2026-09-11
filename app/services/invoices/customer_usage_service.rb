@@ -235,6 +235,8 @@ module Invoices
         res.raise_if_error!
       end
 
+      Fees::ReconcileGroupedProviderTaxesService.call!(fees: taxable_fees, provider_taxes: result.fees_taxes)
+
       res = Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes: result.fees_taxes)
       res.raise_if_error!
 

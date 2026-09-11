@@ -45,7 +45,7 @@ module Integrations
               invoice:,
               customer:,
               integration_customer:,
-              fees: taxable_fees
+              fees: payload_fees
             ).body
           end
         end
