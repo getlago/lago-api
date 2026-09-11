@@ -37,7 +37,7 @@ module UsageMonitoring
       alerts = Alert.where(
         subscription_external_id: subscription.external_id,
         organization_id: subscription_activity.organization_id
-      ).includes(:thresholds).load
+      ).load
 
       alerts.each do |alert|
         case alert.alert_type

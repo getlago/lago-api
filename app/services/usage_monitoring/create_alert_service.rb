@@ -77,14 +77,11 @@ module UsageMonitoring
           direction: direction_for_alert
         )
 
-        alertable.with_lock do
-          # Lock alertable to prevent any changes to it and avoid it becoming stale
-          # as we set previous_value to the alertable metric when the alert
-          # direction is :decreasing
-          alert.previous_value = alert.find_value(alertable) if alert.decreasing?
-          alert.save!
-        end
+        alert.save!
 
+        # NOTE: the alert row is inserted before the alertable is locked, so this takes the same order as
+        #       evaluation; the lock is what keeps the baseline in step with concurrent balance changes.
+        alert.update!(previous_value: alert.find_value(alertable.lock!)) if alert.decreasing?
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
         result.alert = alert
