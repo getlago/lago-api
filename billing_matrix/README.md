@@ -106,8 +106,9 @@ red, a pinned finding that went green, a canary that stopped failing.
 
 The ledger is never committed to `main` by the workflow. Changes are pushed to the
 `billing-matrix/ledger` branch and opened as a pull request, amended in place while it
-stays open, so a status change is reviewed before it becomes the record. Merge that ledger
-PR before the next non-dry run to avoid reporting the same transition again.
+stays open. Reruns use that open PR’s ledger as their input, so failures and fixes are
+reported once even before it is merged. Without an open ledger PR, the checked-out ledger
+is the input; leftover branches from closed or merged PRs are ignored.
 
 Nothing reaches Slack until two repository secrets exist: `SLACK_BOT_TOKEN` (a bot token
 with `chat:write`) and `SLACK_DM_USER_ID` (the channel or user id the report is posted to).

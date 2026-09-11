@@ -129,13 +129,33 @@ jobs:
             echo "complete=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Keep executing the checked-out code; only the pending PR's ledger is input state.
+      - name: Load current ledger
+        id: ledger_state
+        if: steps.run_matrix.outputs.exit_code == '0'
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ledger_ref=refs/heads/billing-matrix/ledger
+          ledger_head="$(git ls-remote origin "$ledger_ref" | cut -f1)"
+          echo "head=$ledger_head" >> "$GITHUB_OUTPUT"
+          if [[ -n "$ledger_head" ]]; then
+            git fetch --no-tags origin "$ledger_head"
+            pending_pr="$(gh pr list --head billing-matrix/ledger --base main --state open --json number --jq '.[0].number')"
+            if [[ -n "$pending_pr" ]]; then
+              git show "$ledger_head:billing_matrix/ledger.yml" > billing_matrix/ledger.yml
+            fi
+          fi
+          cp billing_matrix/ledger.yml tmp/billing_matrix/ledger-before.yml
+
       - name: Build ledger report
         id: ledger
         if: steps.run_matrix.outputs.exit_code == '0'
         env:
           RUN_COMPLETE: ${{ steps.verification.outputs.complete }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          pr_url="https://github.com/${{ github.repository }}/compare/main...billing-matrix/ledger?expand=1"
+          pr_url="https://github.com/$GH_REPO/compare/main...billing-matrix/ledger?expand=1"
           args=(--format slack)
           if [[ "$RUN_COMPLETE" == 'true' ]]; then
             args+=(--apply --pr-url "$pr_url")
@@ -152,31 +172,37 @@ jobs:
             echo "LEDGER_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # A report can exist while ledger.yml is unchanged — errored rows are reported but
-      # deliberately never move a ledger entry. `git commit` exits 1 on an empty index, so
-      # committing unconditionally would turn that ordinary morning into a red build.
+      # Compare with the input state, including an unmerged ledger PR. Comparing only
+      # with main would re-publish unchanged failures or miss cleanup back to main's state.
       - name: Commit and push ledger
         id: commit
         if: steps.verification.outputs.complete == 'true' && env.DRY_RUN != 'true'
+        env:
+          LEDGER_HEAD: ${{ steps.ledger_state.outputs.head }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B billing-matrix/ledger
-          git add billing_matrix/ledger.yml
-          if git diff --cached --quiet; then
+          if cmp -s tmp/billing_matrix/ledger-before.yml billing_matrix/ledger.yml; then
             echo "ledger unchanged; nothing to push"
             echo "pushed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore(billing-matrix): update ledger" \
-              -m $'## Context\n\nA manual billing matrix run updated the recorded findings.\n\n## Description\n\nRecord the current billing matrix statuses.'
-            git push --force origin billing-matrix/ledger
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B billing-matrix/ledger
+            git add billing_matrix/ledger.yml
+            if git diff --cached --quiet; then
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+              git commit -m "chore(billing-matrix): update ledger" \
+                -m $'## Context\n\nA manual billing matrix run updated the recorded findings.\n\n## Description\n\nRecord the current billing matrix statuses.'
+            fi
+            git push --force-with-lease="refs/heads/billing-matrix/ledger:$LEDGER_HEAD" origin HEAD:refs/heads/billing-matrix/ledger
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
 
       # Reusing one fixed branch is what makes tomorrow amend today's pull request instead
       # of opening a second one.
       - name: Open PR if needed
-        if: steps.commit.outputs.pushed == 'true'
+        if: steps.commit.outputs.pushed == 'true' && steps.commit.outputs.has_changes == 'true'
         run: |
           existing_pr="$(gh pr list --repo "${{ github.repository }}" --head billing-matrix/ledger --base main --state open --json number --jq '.[0].number')"
           if [[ -z "$existing_pr" ]]; then

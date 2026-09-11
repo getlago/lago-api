@@ -174,8 +174,8 @@ module BillingMatrix
       self.class.validate!(setup)
       ctx.premium = setup[PREMIUM_KEY] if setup.key?(PREMIUM_KEY)
       create_organization
-      update_billing_entity if setup.key?("billing_entity")
       create_taxes
+      update_billing_entity if setup.key?("billing_entity")
       create_add_ons
       create_metrics
       create_plan if PLAN_SECTIONS.any? { |section| setup.key?(section) }

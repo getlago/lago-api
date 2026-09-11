@@ -66,12 +66,13 @@ module BillingMatrix
     end
 
     def call
+      rows = select(load_rows)
+      raise Error, "no rows matched" if rows.empty?
+
       BillingMatrix.boot!
       # Importing CLI for unit tests must not boot the scenario context or clean the database.
       require_relative "runner/context"
       assert_shard_isolation!
-      rows = select(load_rows)
-      abort_harness("no rows matched") if rows.empty?
 
       results = Results.new
       rows.each do |row|
