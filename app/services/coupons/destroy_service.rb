@@ -27,6 +27,7 @@ module Coupons
       end
 
       result.coupon = coupon
+      SendWebhookJob.perform_after_commit("coupon.deleted", coupon)
       result
     end
 

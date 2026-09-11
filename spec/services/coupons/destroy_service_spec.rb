@@ -35,6 +35,12 @@ RSpec.describe Coupons::DestroyService do
       expect(Utils::ActivityLog).to have_produced("coupon.deleted").after_commit.with(coupon)
     end
 
+    it "enqueues a coupon.deleted webhook" do
+      result = destroy_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.deleted", result.coupon)
+    end
+
     context "with applied coupons" do
       it "terminates applied coupons" do
         applied_coupon = create(:applied_coupon, coupon:)
