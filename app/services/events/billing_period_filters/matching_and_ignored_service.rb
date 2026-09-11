@@ -21,7 +21,7 @@ module Events
           end
         end
 
-        result.ignored_filters = children.map do |child_filter|
+        ignored_filters = children.map do |child_filter|
           child = target_filter.filter_values(child_filter).dup
 
           if child.keys.sort == result.matching_filters.keys.sort
@@ -38,6 +38,8 @@ module Events
 
           child
         end.compact
+
+        result.ignored_filters = MinimizeIgnoredFiltersService.call(ignored_filters:).ignored_filters
 
         result
       end
