@@ -1,0 +1,71 @@
+# Prepaid credit: where it comes from and whether the invoice may draw on it. The `paid` and
+# `granted` sources differ only in the top-up parameter, so the pair isolates settlement.
+#
+# Cells on the `fee-types` and `billable-metrics` limitation axes — including the two-limitation
+# combinations the previous suite missed — are not written: neither World's `wallets` section nor
+# the top_up_wallet verb carries `applies_to`, so the runner cannot express a limited wallet.
+
+- id: wallets/paid/none/full-cover
+  area: wallets
+  axes: {source: paid, limitation: none, application: full-cover}
+  control: wallets/granted/none/full-cover
+  setup:
+    plan: {code: p_w_paid, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_w_paid}
+    wallets: [{code: w_paid, rate_amount: "1"}]
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_w_paid, plan_code: p_w_paid}
+    - {at: 2026-03-10, do: top_up_wallet, wallet: w_paid, paid_credits: "50"}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 2
+    invoice[1]:
+      invoice_type: credit
+      status: finalized
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+    invoice[2]:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 5000
+    wallet:
+      balance_cents: 0
+  math: >-
+    50 purchased credits at rate 1.00 are a 5_000¢ `credit` invoice (Fees::PaidCreditService), but
+    WalletTransactions::CreateFromParamsService#handle_paid_credits creates the inbound transaction
+    `pending`. It is settled only by Wallets::ApplyPaidCreditsService, reached from
+    Invoices::PrepaidCreditJob, which Invoices::UpdateService enqueues on a payment-status change.
+    The customer has no payment provider, so Invoices::Payments::CreateService#should_process_payment?
+    is false and nothing ever changes the status: the balance stays 0¢ and
+    Credits::AppliedPrepaidCreditsService finds no wallet with_positive_balance. The 5_000¢
+    subscription invoice is owed in full.
+
+- id: wallets/granted/none/full-cover
+  area: wallets
+  axes: {source: granted, limitation: none, application: full-cover}
+  setup:
+    plan: {code: p_w_granted, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_w_granted}
+    wallets: [{code: w_granted, rate_amount: "1"}]
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_w_granted, plan_code: p_w_granted}
+    - {at: 2026-03-10, do: top_up_wallet, wallet: w_granted, granted_credits: "50"}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 5000
+      total_amount_cents: 0
+    wallet:
+      balance_cents: 0
+  math: >-
+    Control for the source axis. WalletTransactions::CreateFromParamsService#handle_granted_credits
+    creates the transaction `settled` and runs Wallets::Balance::IncreaseService at once, so the
+    wallet holds 50 × 1.00 = 5_000¢ with no invoice. On billing day the 5_000¢ fee is fully covered:
+    Credits::AllocatePrepaidCreditsByWalletsService allocates min(balance, total) = 5_000¢, the
+    invoice total drops to 0¢ and the wallet to 0¢.

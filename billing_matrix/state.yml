@@ -1,0 +1,11 @@
+# The last lago-api commit the maintainer analysed.
+#
+# billing-matrix-maintainer diffs from this SHA to the ref it is running against, maps the
+# changed files to areas through the `services:` globs in areas.yml, and only re-derives the
+# rows those areas own. It advances this SHA only when it actually opens a pull request, so a
+# run that produces nothing does not silently skip a day's worth of changes.
+#
+# Seeded with the commit this branch was cut from, so the first real run has a bounded diff
+# instead of falling back to "look at everything".
+last_analysed_sha: b17273a33729586c46a2e086d60af24a28b5377e
+last_analysed_at: '2026-09-07'
