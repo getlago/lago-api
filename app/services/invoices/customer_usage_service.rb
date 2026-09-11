@@ -183,6 +183,15 @@ module Invoices
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
       plan = subscription.plan
 
+      # NOTE: Fees::ApplyTaxesService falls back to plan.taxes then customer.taxes for
+      #       every fee. `.any?` on an unloaded association issues a fresh EXISTS query
+      #       and never caches, so the loop below cost 2 round-trips per fee. Both
+      #       associations are invoice-level constants here — load them once.
+      #       This path already fans out over charges x charge filters, so the fee count
+      #       is where the round-trips multiply.
+      plan.taxes.load
+      customer.taxes.load
+
       invoice.fees.each do |fee|
         taxes_result = Fees::ApplyTaxesService.call(fee:, customer:, plan:)
         taxes_result.raise_if_error!

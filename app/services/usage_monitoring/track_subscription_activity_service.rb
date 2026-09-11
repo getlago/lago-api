@@ -45,7 +45,11 @@ module UsageMonitoring
     end
 
     def has_alerts?
-      Alert.where(subscription_external_id: subscription.external_id).any?
+      # NOTE: subscription_external_id is only unique within an organization, so an
+      #       unscoped lookup both scans every organization's alerts and can match a
+      #       different tenant's row. ProcessSubscriptionActivityService already scopes
+      #       the equivalent query by organization_id.
+      Alert.where(organization_id: organization.id, subscription_external_id: subscription.external_id).any?
     end
   end
 end
