@@ -361,4 +361,51 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       end
     end
   end
+
+  # ClickHouse rejects a query before running it when the statement is larger than
+  # `max_query_size` (256 kB) or expands to more than `max_ast_elements` (50 000) nodes.
+  # A charge carrying thousands of filters serializes into a predicate past both limits,
+  # so the rejected query is replayed with them raised.
+  describe "filters larger than the ClickHouse parser defaults" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {ignored_filters:},
+        deduplicate: true
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:ignored_filters) do
+      Array.new(2_000) do |index|
+        {"model" => ["model-#{index}"], "type" => ["type-#{index}"], "zone" => ["zone-#{index}"]}
+      end
+    end
+
+    before do
+      create_event(timestamp: DateTime.parse("2023-03-16"), value: 10, properties: {"model" => "kept"})
+    end
+
+    it "exceeds both parser defaults" do
+      sql = event_store.count_query
+
+      expect(sql.size).to be > 262_144
+    end
+
+    it "aggregates instead of failing to parse" do
+      expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+    end
+  end
 end
