@@ -2,7 +2,8 @@
 
 A small, high-signal suite of billing scenarios that runs on demand, reports only what
 changed since yesterday, and can be extended by the companion maintainer skill. It is not
-RSpec and does not run in PR CI.
+RSpec and does not run in PR CI. Focused unit specs in `spec/billing_matrix/` check the
+harness and ledger in ordinary CI without executing the billing scenarios.
 
 One **row** is one billing scenario: a setup, a dated timeline, and the few numbers that
 matter. Rows are executed by a plain-Ruby runner that drives the real REST API, so
@@ -112,7 +113,8 @@ Nothing reaches Slack until two repository secrets exist: `SLACK_BOT_TOKEN` (a b
 with `chat:write`) and `SLACK_DM_USER_ID` (the channel or user id the report is posted to).
 Without them the suite still runs and a non-dry run can still open the ledger PR; Slack
 steps are skipped. Every run uploads its JSON results and log. The Actions summary shows
-row counts and new transitions; a harness failure or an errored row fails the job. `workflow_dispatch`
+row counts and new transitions. Errored rows are reported before the job fails, and such
+runs do not publish ledger changes. A harness failure also fails the job. `workflow_dispatch`
 with `dry_run: true` runs everything and prints the report without committing, opening a
 PR, or posting.
 

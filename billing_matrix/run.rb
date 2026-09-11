@@ -16,7 +16,6 @@ require "json"
 require "benchmark"
 
 require_relative "runner/boot"
-require_relative "runner/context"
 require_relative "runner/row"
 require_relative "runner/world"
 require_relative "runner/timeline"
@@ -68,6 +67,8 @@ module BillingMatrix
 
     def call
       BillingMatrix.boot!
+      # Importing CLI for unit tests must not boot the scenario context or clean the database.
+      require_relative "runner/context"
       assert_shard_isolation!
       rows = select(load_rows)
       abort_harness("no rows matched") if rows.empty?

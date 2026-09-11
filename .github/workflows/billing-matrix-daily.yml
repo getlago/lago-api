@@ -120,15 +120,27 @@ jobs:
       # results.json is either absent or left over from a previous run. Reading it would
       # let yesterday's verdicts move today's ledger.
       - name: Check that every row executed
+        id: verification
         if: steps.run_matrix.outputs.exit_code == '0'
-        run: jq -e '.run.summary | .canaries_total > 0 and .canaries_unproven == 0 and .errored == 0' tmp/billing_matrix/results.json
+        run: |
+          if jq -e '.run.summary | .canaries_total > 0 and .canaries_unproven == 0 and .errored == 0' tmp/billing_matrix/results.json; then
+            echo "complete=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "complete=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build ledger report
         id: ledger
         if: steps.run_matrix.outputs.exit_code == '0'
+        env:
+          RUN_COMPLETE: ${{ steps.verification.outputs.complete }}
         run: |
           pr_url="https://github.com/${{ github.repository }}/compare/main...billing-matrix/ledger?expand=1"
-          output="$(ruby billing_matrix/ledger.rb --apply --format slack --pr-url "$pr_url")"
+          args=(--format slack)
+          if [[ "$RUN_COMPLETE" == 'true' ]]; then
+            args+=(--apply --pr-url "$pr_url")
+          fi
+          output="$(ruby billing_matrix/ledger.rb "${args[@]}")"
           if [[ -z "${output//[[:space:]]/}" ]]; then
             echo "has_news=false" >> "$GITHUB_OUTPUT"
           else
@@ -145,7 +157,7 @@ jobs:
       # committing unconditionally would turn that ordinary morning into a red build.
       - name: Commit and push ledger
         id: commit
-        if: steps.run_matrix.outputs.exit_code == '0' && env.DRY_RUN != 'true'
+        if: steps.verification.outputs.complete == 'true' && env.DRY_RUN != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -191,7 +203,7 @@ jobs:
       # built from row ids and mismatch values, and interpolating it directly is the
       # standard Actions command-injection hole.
       - name: Show run report
-        if: steps.run_matrix.outputs.exit_code == '0'
+        if: always() && steps.run_matrix.outputs.exit_code == '0'
         env:
           REPORT: ${{ steps.ledger.outputs.report }}
         run: |
@@ -212,9 +224,9 @@ jobs:
           if-no-files-found: warn
 
       - name: Fail when the harness could not verify the run
-        if: always() && steps.run_matrix.outputs.exit_code != '0'
+        if: always() && (steps.run_matrix.outputs.exit_code != '0' || steps.verification.outputs.complete != 'true')
         env:
           MATRIX_EXIT_CODE: ${{ steps.run_matrix.outputs.exit_code }}
         run: |
-          echo "::error::Billing matrix did not complete a trustworthy run (exit ${MATRIX_EXIT_CODE:-not started}). See the run log."
+          echo "::error::Billing matrix did not verify every row (exit ${MATRIX_EXIT_CODE:-not started}). See the run report and log."
           exit 1
