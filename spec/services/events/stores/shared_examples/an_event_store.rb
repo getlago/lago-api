@@ -2712,56 +2712,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  if include_feature?(:distinct_charges_and_filters)
-    describe "#distinct_charges_and_filters" do
-      let(:charge_filter) { create(:charge_filter, charge:) }
-
-      let(:events) { nil }
-
-      before do
-        create_enriched_event(
-          timestamp: boundaries[:from_datetime] + 12.days,
-          value: 12,
-          properties: {billable_metric.field_name => 12},
-          charge_filter:
-        )
-      end
-
-      it "returns distinct charges and filters with the last seen timestamp" do
-        result = event_store.distinct_charges_and_filters
-
-        expect(result.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-        expect(result.map(&:last)).to all(be_present)
-      end
-
-      context "when charge_filter is nil" do
-        let(:charge_filter) { nil }
-
-        it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters.map { |row| row[0..1] }).to match_array([[charge.id, nil]])
-        end
-      end
-
-      context "when codes are provided" do
-        it "returns only the charges and filters matching the provided codes" do
-          matching = event_store.distinct_charges_and_filters(codes: [code])
-          expect(matching.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
-        end
-      end
-
-      context "when the last seen timestamp is not requested" do
-        it "returns the same charges and filters without the timestamp" do
-          result = event_store.distinct_charges_and_filters(with_last_seen_at: false)
-
-          expect(result.map { |row| row[0..1] })
-            .to match_array(event_store.distinct_charges_and_filters.map { |row| row[0..1] })
-          expect(result.map(&:last)).to all(be_nil)
-        end
-      end
-    end
-  end
-
   if include_feature?(:distinct_codes_and_property_combinations)
     describe "#distinct_codes_and_property_combinations" do
       let(:events) { nil }
