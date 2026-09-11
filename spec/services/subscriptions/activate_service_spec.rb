@@ -707,6 +707,35 @@ RSpec.describe Subscriptions::ActivateService do
           expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], anything)
         end
       end
+
+      context "when the previous and new subscriptions resolve to different payment terms" do
+        let(:net_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
+            resolution.source = "customer"
+          end
+        end
+
+        let(:eom_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "end_of_month"})
+            resolution.source = "customer"
+          end
+        end
+
+        before do
+          allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
+        end
+
+        it "splits the upgrade bill into one job per payment term" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+        end
+      end
     end
 
     context "when activation_rules gate the new subscription" do
