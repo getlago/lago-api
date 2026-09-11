@@ -10268,6 +10268,16 @@ type Mutation {
   ): Tax
 
   """
+  Updates an existing usage attribution type
+  """
+  updateUsageAttributionType(
+    """
+    Parameters for UpdateUsageAttributionType
+    """
+    input: UpdateUsageAttributionTypeInput!
+  ): UsageAttributionType
+
+  """
   Update a new webhook endpoint
   """
   updateWebhookEndpoint(
@@ -15719,6 +15729,23 @@ input UpdateSubscriptionInput {
   purchaseOrderNumber: String
   subscriptionAt: ISO8601DateTime
   usageThresholds: [UsageThresholdInput!]
+}
+
+"""
+Update usage attribution type input arguments
+"""
+input UpdateUsageAttributionTypeInput {
+  attributionKey: String
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  id: ID!
+  name: String
+  parentId: ID
+  role: UsageAttributionTypeRoleEnum
 }
 
 """
