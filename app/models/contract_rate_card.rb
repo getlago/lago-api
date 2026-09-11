@@ -16,7 +16,6 @@ class ContractRateCard < ApplicationRecord
   has_many :billing_segments
 
   validates :billing_anchor_date, presence: true
-  validates :next_billing_at, presence: true
   validates :effective_date, presence: true
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_date: nil) }}
@@ -68,7 +67,7 @@ end
 #  deleted_at          :datetime
 #  effective_date      :date             not null
 #  ended_date          :date
-#  next_billing_at     :datetime         not null
+#  next_billing_at     :datetime
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
