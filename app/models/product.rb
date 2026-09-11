@@ -35,6 +35,19 @@ class Product < ApplicationRecord
 
   default_scope -> { kept }
 
+  # Filters by product_category, treating "no category" as a selectable value:
+  # with both, the chosen categories OR uncategorized; with only the flag,
+  # uncategorized only; otherwise the chosen categories.
+  scope :in_categories, ->(category_ids, include_uncategorized: false) {
+    if category_ids.present? && include_uncategorized
+      where(product_category_id: category_ids).or(where(product_category_id: nil))
+    elsif include_uncategorized
+      where(product_category_id: nil)
+    else
+      where(product_category_id: category_ids)
+    end
+  }
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
