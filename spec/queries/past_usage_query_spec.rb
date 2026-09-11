@@ -346,6 +346,62 @@ RSpec.describe PastUsageQuery do
       expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
     end
 
+    context "when loading multiple billing periods" do
+      let(:pagination) { {page: 1, limit: 100} }
+      let(:period_count) { 6 }
+      let(:include_free_fees) { true }
+
+      before do
+        (2...period_count).each do |offset|
+          create(:invoice_subscription, organization:, subscription:,
+            invoicing_reason: :in_advance_charge_periodic,
+            charges_from_datetime: invoice_subscription1.charges_from_datetime - offset.months,
+            charges_to_datetime: invoice_subscription1.charges_to_datetime - offset.months)
+        end
+        invoice_subscription2.update!(invoicing_reason: :in_advance_charge_periodic)
+        subscription.invoice_subscriptions.where.not(id: invoice_subscription1.id).find_each do |period|
+          create(:charge_fee, **free_fee_attributes, properties: {
+            charges_from_datetime: period.charges_from_datetime,
+            charges_to_datetime: period.charges_to_datetime
+          })
+        end
+        subscription.fees.where(invoice_id: nil).discard_all! unless include_free_fees
+      end
+
+      shared_examples "batched free usage" do
+        it "batches owner resolution and free-fee retrieval across the page" do
+          queries = []
+          subscriber = ->(_name, _start, _finish, _id, payload) { queries << payload[:sql] }
+
+          ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+            expect(result.usage_periods.size).to eq(period_count)
+            expect(result.usage_periods.flat_map(&:fees).size).to eq(include_free_fees ? period_count + 1 : 1)
+            expected_units = include_free_fees ? [50] + [40] * (period_count - 1) : [10] + [0] * (period_count - 1)
+            expect(result.usage_periods.map { |period| period.fees.sum(&:units) }).to eq(expected_units)
+          end
+
+          period_queries = queries.select { |sql| sql.include?('FROM "invoice_subscriptions"') && !sql.include?("COUNT(") }
+          free_fee_queries = queries.select { |sql| sql.include?('FROM "fees"') && sql.include?('"fees"."invoice_id" IS NULL') }
+          expect(period_queries.size).to eq(2)
+          expect(free_fee_queries.size).to eq(1)
+        end
+      end
+
+      include_examples "batched free usage"
+
+      context "with a smaller page" do
+        let(:period_count) { 2 }
+
+        include_examples "batched free usage"
+      end
+
+      context "when no free fees qualify" do
+        let(:include_free_fees) { false }
+
+        include_examples "batched free usage"
+      end
+    end
+
     context "with a regular invoice for the same period" do
       let!(:regular_period) do
         create(:invoice_subscription, organization:, subscription:,
