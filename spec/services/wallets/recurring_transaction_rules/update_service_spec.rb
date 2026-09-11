@@ -483,5 +483,140 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         end
       end
     end
+
+    context "with connections" do
+      let(:customer) { create(:customer) }
+      let(:wallet) { create(:wallet, customer:, organization: customer.organization) }
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+
+      before { stripe_connection }
+
+      context "when the rule is matched by lago_id" do
+        let(:params) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              connections: {payment: {code: "stripe_us"}}
+            }
+          ]
+        end
+
+        it "updates the rule in place and pins the connection to it" do
+          rule = result.wallet.reload.recurring_transaction_rules.active.sole
+
+          expect(rule.id).to eq(recurring_transaction_rule.id)
+          expect(rule.billing_object_connections.sole).to have_attributes(
+            category: "payment",
+            behavior: "specific",
+            payment_provider_customer_id: stripe_connection.id
+          )
+        end
+
+        it "does not leak the connections key into the rule attributes" do
+          expect(result).to be_success
+        end
+
+        context "when the rule already has an override for that category" do
+          before do
+            create(
+              :billing_object_connection,
+              owner: recurring_transaction_rule,
+              organization: wallet.organization,
+              category: "payment",
+              behavior: "skip"
+            )
+          end
+
+          it "keeps the surviving rule's row and updates it rather than duplicating" do
+            expect { result }.not_to change(BillingObjectConnection, :count)
+
+            rule = result.wallet.reload.recurring_transaction_rules.active.sole
+            expect(rule.billing_object_connections.sole).to have_attributes(
+              behavior: "specific",
+              payment_provider_customer_id: stripe_connection.id
+            )
+          end
+        end
+      end
+
+      context "when the rule is replaced because no lago_id was sent" do
+        let(:params) do
+          [
+            {
+              trigger: "interval",
+              interval: "weekly",
+              connections: {payment: {code: "stripe_us"}}
+            }
+          ]
+        end
+
+        before do
+          create(
+            :billing_object_connection,
+            owner: recurring_transaction_rule,
+            organization: wallet.organization,
+            category: "payment",
+            behavior: "skip"
+          )
+        end
+
+        it "writes fresh rows for the new rule and leaves the terminated rule's rows alone" do
+          expect { result }.to change(BillingObjectConnection, :count).by(1)
+
+          wallet = result.wallet.reload
+          new_rule = wallet.recurring_transaction_rules.active.sole
+          expect(new_rule.id).not_to eq(recurring_transaction_rule.id)
+
+          expect(new_rule.billing_object_connections.sole).to have_attributes(
+            behavior: "specific",
+            payment_provider_customer_id: stripe_connection.id
+          )
+
+          # The superseded rule is soft-terminated, never destroyed, so dependent: :destroy does
+          # not fire and its override survives on the dead rule.
+          expect(recurring_transaction_rule.reload).to be_terminated
+          expect(recurring_transaction_rule.billing_object_connections.sole.behavior).to eq("skip")
+        end
+      end
+
+      context "when a code does not resolve" do
+        let(:params) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              connections: {payment: {code: "nope"}}
+            }
+          ]
+        end
+
+        it "fails with connection_not_found" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:connections]).to include("connection_not_found")
+        end
+      end
+
+      context "when the behavior is invalid" do
+        let(:params) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              connections: {payment: {behavior: "nonsense"}}
+            }
+          ]
+        end
+
+        it "fails before writing anything" do
+          expect { result }.not_to change(BillingObjectConnection, :count)
+          expect(result).not_to be_success
+          expect(result.error.messages[:connections]).to include("invalid_connection_behavior")
+        end
+      end
+    end
   end
 end
