@@ -47,6 +47,12 @@ RSpec.describe AddOns::CreateService do
       )
     end
 
+    it "enqueues an add_on.created webhook" do
+      result = create_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("add_on.created", result.add_on)
+    end
+
     context "with code already used by a deleted add_on" do
       it "creates an add_on with the same code" do
         create(:add_on, :deleted, organization:, code: add_on_code)

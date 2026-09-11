@@ -43,6 +43,12 @@ RSpec.describe AddOns::UpdateService do
       expect(result.add_on.taxes.map { |t| t[:code] }).to contain_exactly(tax2.code)
     end
 
+    it "enqueues an add_on.updated webhook" do
+      result = add_ons_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("add_on.updated", result.add_on)
+    end
+
     context "when tax is not found" do
       let(:tax_codes) { ["unknown"] }
 
