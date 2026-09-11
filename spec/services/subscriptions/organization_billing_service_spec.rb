@@ -995,6 +995,291 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by connections" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      let(:subscription1) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+      let(:subscription2) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+
+      before do
+        subscription.destroy
+        subscription1
+        subscription2
+      end
+
+      context "when the multi_connection feature flag is disabled" do
+        before do
+          create(
+            :billing_object_connection,
+            owner: subscription1,
+            organization:,
+            category: "accounting",
+            behavior: "specific",
+            integration_customer: create(:netsuite_customer, customer:)
+          )
+          create(
+            :billing_object_connection,
+            owner: subscription2,
+            organization:,
+            category: "accounting",
+            behavior: "specific",
+            integration_customer: create(:xero_customer, customer:)
+          )
+        end
+
+        it "ignores connections and groups the subscriptions together" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+
+      context "when the multi_connection feature flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_connection) }
+
+        context "when subscriptions have different accounting connections" do
+          before do
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "accounting",
+              behavior: "specific",
+              integration_customer: create(:netsuite_customer, customer:)
+            )
+            create(
+              :billing_object_connection,
+              owner: subscription2,
+              organization:,
+              category: "accounting",
+              behavior: "specific",
+              integration_customer: create(:xero_customer, customer:)
+            )
+          end
+
+          it "produces separate billing jobs per accounting connection" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription1], current_date)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription2], current_date)
+          end
+        end
+
+        context "when subscriptions have different tax connections" do
+          let(:anrok_customer) { create(:anrok_customer, customer:) }
+          let(:avalara_customer) { build(:avalara_customer, customer:).tap { |ic| ic.save!(validate: false) } }
+
+          before do
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "tax",
+              behavior: "specific",
+              integration_customer: anrok_customer
+            )
+            create(
+              :billing_object_connection,
+              owner: subscription2,
+              organization:,
+              category: "tax",
+              behavior: "specific",
+              integration_customer: avalara_customer
+            )
+          end
+
+          it "produces separate billing jobs per tax connection" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          end
+        end
+
+        context "when subscriptions have different payment connections" do
+          before do
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "payment",
+              behavior: "specific",
+              payment_provider_customer: create(:stripe_customer, customer:)
+            )
+            create(
+              :billing_object_connection,
+              owner: subscription2,
+              organization:,
+              category: "payment",
+              behavior: "specific",
+              payment_provider_customer: create(:gocardless_customer, customer:)
+            )
+          end
+
+          it "produces separate billing jobs per payment connection" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          end
+        end
+
+        context "when a subscription skips a connection the other one inherits" do
+          before do
+            create(:anrok_customer, customer:)
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "tax",
+              behavior: "skip"
+            )
+          end
+
+          it "produces separate billing jobs" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          end
+        end
+
+        context "when a subscription pins the connection the other one inherits" do
+          let(:hubspot_customer) { create(:hubspot_customer, customer:) }
+
+          before do
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "crm",
+              behavior: "specific",
+              integration_customer: hubspot_customer
+            )
+          end
+
+          it "groups them into a single billing job" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(subscription1, subscription2),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
+        end
+
+        context "when the customer has several connections of the same category" do
+          let(:netsuite_customer) { create(:netsuite_customer, customer:, is_default: true) }
+
+          before do
+            netsuite_customer
+            create(:xero_customer, customer:)
+
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "accounting",
+              behavior: "specific",
+              integration_customer: netsuite_customer
+            )
+          end
+
+          it "resolves the inherited connection to the customer default" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(subscription1, subscription2),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
+        end
+
+        context "when a subscription pins a connection that is not the customer default" do
+          let(:netsuite_customer) { create(:netsuite_customer, customer:, is_default: true) }
+          let(:xero_customer) { create(:xero_customer, customer:) }
+
+          before do
+            netsuite_customer
+
+            create(
+              :billing_object_connection,
+              owner: subscription1,
+              organization:,
+              category: "accounting",
+              behavior: "specific",
+              integration_customer: xero_customer
+            )
+          end
+
+          it "produces separate billing jobs" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          end
+        end
+
+        context "when subscriptions have no connection override" do
+          before { create(:netsuite_customer, customer:) }
+
+          it "groups them into a single billing job" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(subscription1, subscription2),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
+        end
+      end
+    end
+
     context "when grouping subscriptions by purchase order number" do
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
