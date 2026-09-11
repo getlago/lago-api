@@ -45,7 +45,7 @@ RSpec.describe FixedCharges::OverrideService do
 
     context "when lago premium", :premium do
       before do
-        allow(FixedCharges::EmitEventsService).to receive(:call!)
+        allow(FixedCharges::EmitEventsService).to receive(:call!).and_call_original
       end
 
       it "creates a fixed charge based on the given fixed charge" do
@@ -266,7 +266,7 @@ RSpec.describe FixedCharges::OverrideService do
 
         before do
           allow(FixedCharges::EmitEventsService)
-            .to receive(:call!)
+            .to receive(:call!).and_call_original
         end
 
         it "creates a fixed charge for the new plan" do

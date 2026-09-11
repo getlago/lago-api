@@ -78,6 +78,31 @@ RSpec.describe FixedCharges::EmitEventsService do
       expect(FixedChargeEvent.where(subscription: terminated_subscription, fixed_charge:)).not_to exist
     end
 
+    context "when plan subscriptions already have matching events" do
+      before do
+        [active_subscription_1, active_subscription_2].each do |subscription|
+          create(:fixed_charge_event, subscription:, fixed_charge:, units: fixed_charge.units,
+            timestamp: 1.hour.ago)
+        end
+      end
+
+      it "keeps emitting events without querying previous units" do
+        queries = []
+        counter = lambda do |*, payload|
+          if payload[:sql].match?(/\ASELECT .*FROM "fixed_charge_events"/m)
+            queries << payload[:sql]
+          end
+        end
+
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { result }
+
+        expect(result).to be_success
+        expect(result.fixed_charge_events.map(&:subscription_id))
+          .to match_array([active_subscription_1.id, active_subscription_2.id])
+        expect(queries).to eq([])
+      end
+    end
+
     context "when there are incomplete subscriptions" do
       let(:incomplete_subscription) do
         create(
@@ -153,6 +178,19 @@ RSpec.describe FixedCharges::EmitEventsService do
         result
 
         expect(FixedChargeEvent.where(subscription: other_subscription, fixed_charge:)).not_to exist
+      end
+
+      context "when units match the previous event" do
+        before do
+          create(:fixed_charge_event, subscription:, fixed_charge:, units: fixed_charge.units, timestamp: 1.hour.ago)
+        end
+
+        it "does not emit an event" do
+          expect { result }.not_to change(FixedChargeEvent, :count)
+
+          expect(result).to be_success
+          expect(result.fixed_charge_events).to eq([])
+        end
       end
     end
 
