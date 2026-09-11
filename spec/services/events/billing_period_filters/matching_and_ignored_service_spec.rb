@@ -69,12 +69,9 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       context "when selecting f3" do
         let(:current_filter) { f3 }
 
-        it "expands all configured values on both keys and keeps explicit children" do
+        it "expands all configured values on both keys and keeps the most generic child" do
           expect(service_result.matching_filters).to eq({"size" => %w[512 1024], "steps" => %w[25 50 75 100]})
-          expect(service_result.ignored_filters).to eq([
-            {"model" => ["llama-2"], "size" => ["512"], "steps" => ["25"]},
-            {"size" => ["512"], "steps" => ["25"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"size" => ["512"], "steps" => ["25"]}])
         end
       end
 
@@ -84,8 +81,6 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
         it "expands all configured values and ignores all more specific filters" do
           expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
           expect(service_result.ignored_filters).to eq([
-            {"model" => ["llama-2"], "size" => ["512"], "steps" => ["25"]},
-            {"size" => ["512"], "steps" => ["25"]},
             {"size" => %w[512 1024], "steps" => %w[25 50 75 100]},
             {"size" => ["512"]}
           ])
@@ -98,8 +93,6 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
         it "keeps different-key children and subtracts its value from the all-values sibling" do
           expect(service_result.matching_filters).to eq({"size" => ["512"]})
           expect(service_result.ignored_filters).to eq([
-            {"model" => ["llama-2"], "size" => ["512"], "steps" => ["25"]},
-            {"size" => ["512"], "steps" => ["25"]},
             {"size" => %w[512 1024], "steps" => %w[25 50 75 100]},
             {"size" => ["1024"]}
           ])
@@ -156,9 +149,13 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       context "when selecting the newer empty filter" do
         let(:current_filter) { empty_b }
 
-        it "keeps the older empty duplicate and the explicit-valued child" do
+        it "drops the older empty duplicate, which excludes nothing, and keeps the explicit-valued child" do
+          allow(Events::BillingPeriodFilters::MinimizeIgnoredFiltersService).to receive(:call).and_call_original
+
           expect(service_result.matching_filters).to eq({})
-          expect(service_result.ignored_filters).to eq([{}, {"size" => ["512"]}])
+          expect(service_result.ignored_filters).to eq([{"size" => ["512"]}])
+          expect(Events::BillingPeriodFilters::MinimizeIgnoredFiltersService).to have_received(:call)
+            .with(ignored_filters: [{}, {"size" => ["512"]}])
         end
       end
 
@@ -193,12 +190,9 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
           create_filter_values(different_key_child, steps_filter, ["25"])
         end
 
-        it "keeps both the same-key subset and different-key child intact" do
+        it "drops the different-key child already covered by the same-key subset" do
           expect(service_result.matching_filters).to match({"size" => match_array(%w[512 1024])})
-          expect(service_result.ignored_filters).to eq([
-            {"size" => ["512"]},
-            {"size" => ["512"], "steps" => ["25"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"size" => ["512"]}])
         end
       end
     end
@@ -231,9 +225,9 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
         create_filter_values(mixed_child, steps_filter, %w[25 75])
       end
 
-      it "subtracts matching values from the non-subset child" do
+      it "subtracts matching values from the non-subset child and drops the emptied key" do
         expect(service_result.matching_filters).to match({"size" => match_array(%w[512 1024]), "steps" => match_array(%w[25 50])})
-        expect(service_result.ignored_filters).to eq([{"size" => [], "steps" => ["75"]}])
+        expect(service_result.ignored_filters).to eq([{"steps" => ["75"]}])
       end
     end
 
@@ -270,12 +264,17 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       context "when selecting the newest duplicate" do
         let(:current_filter) { filter_c }
 
-        it "keeps both older siblings verbatim" do
+        it "keeps a single clause for both identical older siblings" do
+          allow(Events::BillingPeriodFilters::MinimizeIgnoredFiltersService).to receive(:call).and_call_original
+
           expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
-          expect(service_result.ignored_filters).to eq([
-            {"size" => ["512"], "steps" => ["25"]},
-            {"size" => ["512"], "steps" => ["25"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"size" => ["512"], "steps" => ["25"]}])
+          expect(Events::BillingPeriodFilters::MinimizeIgnoredFiltersService).to have_received(:call).with(
+            ignored_filters: [
+              {"size" => ["512"], "steps" => ["25"]},
+              {"size" => ["512"], "steps" => ["25"]}
+            ]
+          )
         end
       end
     end
