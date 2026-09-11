@@ -14,6 +14,7 @@ module Wallets
 
       def call
         return result unless valid_payment_methods?
+        return result unless valid_connections?
 
         created_recurring_rules_ids = []
 
@@ -32,6 +33,8 @@ module Wallets
             rule_attributes[:payment_method_id] = rule_attributes[:payment_method][:payment_method_id] if rule_attributes[:payment_method].key?(:payment_method_id)
             rule_attributes.delete(:payment_method)
           end
+
+          connections = rule_attributes.delete(:connections)
 
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
@@ -52,6 +55,8 @@ module Wallets
             end
 
             recurring_rule.update!(rule_attributes)
+
+            attach_connections(recurring_rule, connections)
           else
             unless rule_attributes.key?(:invoice_requires_successful_payment)
               rule_attributes[:invoice_requires_successful_payment] = wallet.invoice_requires_successful_payment
@@ -67,6 +72,8 @@ module Wallets
                 params: invoice_custom_section
               )
             end
+
+            attach_connections(created_recurring_rule, connections)
 
             created_recurring_rules_ids.push(created_recurring_rule.id)
           end
@@ -125,6 +132,28 @@ module Wallets
 
             return false
           end
+        end
+
+        true
+      end
+
+      def attach_connections(recurring_rule, connections)
+        return if connections.blank?
+
+        BillingObjectConnections::AttachToResourceService.call!(
+          resource: recurring_rule,
+          params: {connections:}
+        )
+      end
+
+      def valid_connections?
+        hash_recurring_rules.each do |payload_rule|
+          validator = BillingObjectConnections::ValidateService.new(result, **payload_rule)
+          next if validator.valid?
+
+          result.single_validation_failure!(field: :connections, error_code: validator.error_codes.first)
+
+          return false
         end
 
         true

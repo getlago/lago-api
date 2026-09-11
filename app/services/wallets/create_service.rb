@@ -20,6 +20,7 @@ module Wallets
       result.payment_method = payment_method
 
       return result unless valid?
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
 
       code = params[:code]
 
@@ -86,6 +87,10 @@ module Wallets
 
         if params[:invoice_custom_section].present?
           InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
+        end
+
+        if connections_requested?
+          BillingObjectConnections::AttachToResourceService.call!(resource: wallet, params:)
         end
 
         billable_metrics.each do |bm|
@@ -161,6 +166,16 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def organization_flag_disabled?(flag)
+      !organization_flag_enabled?(flag)
+    end
+
+    def connections_requested?
+      return true if params[:connections].present?
+
+      Array(params[:recurring_transaction_rules]).any? { |rule| rule[:connections].present? }
     end
 
     def valid?

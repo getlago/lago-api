@@ -2219,5 +2219,90 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
     end
+
+    context "with connections" do
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          connections: {payment: {code: "stripe_us"}}
+        }
+      end
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+        stripe_connection
+      end
+
+      it "pins the connection on the created subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.billing_object_connections.sole).to have_attributes(
+          category: "payment",
+          behavior: "specific",
+          payment_provider_customer_id: stripe_connection.id
+        )
+      end
+
+      context "when the code does not resolve" do
+        let(:params) { super().merge(connections: {payment: {code: "nope"}}) }
+
+        it "fails with connection_not_found and creates no subscription" do
+          expect { create_service.call }.not_to change(Subscription, :count)
+          expect(create_service.call.error.messages[:connections]).to include("connection_not_found")
+        end
+      end
+
+      context "when the multi_connection flag is disabled" do
+        before { organization.disable_feature_flag!(:multi_connection) }
+
+        it "returns a forbidden failure rather than dropping the routing choice" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "when upgrading an existing subscription" do
+        let(:old_plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, customer:, organization:, plan: old_plan, external_id:)
+        end
+
+        it "pins the connection on the new subscription, not the terminated one" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).not_to eq(current_subscription.id)
+          expect(result.subscription.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+          expect(current_subscription.reload.billing_object_connections).to be_empty
+        end
+      end
+
+      context "when downgrading an existing subscription" do
+        let(:plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let(:old_plan) { create(:plan, amount_cents: 500, organization:, amount_currency: "EUR") }
+
+        before { create(:subscription, customer:, organization:, plan: old_plan, external_id:) }
+
+        # Deliberately not skipped the way invoice_custom_section is on a downgrade: connections are
+        # routing config in the same family as payment_method, which the downgrade path already
+        # carries onto the pending subscription.
+        it "pins the connection on the pending subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+        end
+      end
+    end
   end
 end
