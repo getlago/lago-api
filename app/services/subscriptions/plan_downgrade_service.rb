@@ -43,6 +43,7 @@ module Subscriptions
           progressive_billing_disabled: params[:progressive_billing_disabled] || false,
           consolidate_invoice: params.key?(:consolidate_invoice) ? params[:consolidate_invoice] : current_subscription.consolidate_invoice,
           purchase_order_number: params.key?(:purchase_order_number) ? params[:purchase_order_number] : current_subscription.purchase_order_number,
+          payment_term: carried_over_payment_term,
           billing_entity_id: current_subscription.billing_entity_id
         )
 
@@ -92,6 +93,15 @@ module Subscriptions
         subscription:,
         activation_rules: params[:activation_rules]
       )
+    end
+
+    # NOTE: The payment term carries over to the successor subscription, overridable via params.
+    def carried_over_payment_term
+      if params.key?(:payment_term)
+        params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h
+      else
+        current_subscription.payment_term
+      end
     end
 
     def override_plan

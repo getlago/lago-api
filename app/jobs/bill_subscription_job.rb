@@ -103,7 +103,7 @@ class BillSubscriptionJob < ApplicationJob
   private
 
   def resolve_payment_terms(subscriptions)
-    subscriptions.map { |sub| PaymentTerms::ResolveService.call!(customer: sub.customer) }
+    subscriptions.map { |sub| PaymentTerms::ResolveService.call!(customer: sub.customer, subscription: sub) }
   end
 
   def mixed_payment_terms?(resolutions)
