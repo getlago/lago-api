@@ -23,8 +23,14 @@ module BillingObjectConnections
 
     private
 
+    # GraphQL passes nested inputs as GraphQL::Schema::InputObject rather than Hash. to_hash is a
+    # deep unwrap defined by both Hash and InputObject but not by Array, so malformed input still
+    # falls through to the is_a?(Hash) check below.
     def connections
-      args[:connections]
+      raw = args[:connections]
+      return raw if raw.is_a?(Hash)
+
+      raw.respond_to?(:to_hash) ? raw.to_hash : raw
     end
 
     def validate_connections

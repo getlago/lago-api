@@ -8860,6 +8860,123 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "ConnectionBehaviorEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "inherit",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "skip",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "ConnectionChoiceInput",
+          "description": "Route a billing object to a specific customer connection, or skip the category",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "behavior",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "ConnectionBehaviorEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "ConnectionsInput",
+          "description": "Per-object connection routing, one choice per category. An omitted category keeps whatever is stored",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "payment",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionChoiceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "tax",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionChoiceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "accounting",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionChoiceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "crm",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionChoiceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
           "kind": "OBJECT",
           "name": "Contract",
           "description": "The agreement a customer signed: an optional plan, a validity window and the billing anchor",
@@ -14200,6 +14317,18 @@
               "deprecationReason": null
             },
             {
+              "name": "connections",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionsInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "clientMutationId",
               "description": "A unique identifier for the client performing the mutation.",
               "type": {
@@ -17946,6 +18075,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "PaymentMethodReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "connections",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionsInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -79642,6 +79783,18 @@
               "deprecationReason": null
             },
             {
+              "name": "connections",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionsInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "clientMutationId",
               "description": "A unique identifier for the client performing the mutation.",
               "type": {
@@ -83396,6 +83549,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "PaymentMethodReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "connections",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionsInput",
                 "ofType": null
               },
               "defaultValue": null,
