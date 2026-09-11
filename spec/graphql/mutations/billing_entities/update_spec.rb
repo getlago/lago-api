@@ -190,4 +190,92 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
       )
     end
   end
+
+  context "with payment_term" do
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: UpdateBillingEntityInput!) {
+          updateBillingEntity(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    def update_payment_term(payment_term, **extra_input)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: payment_term_mutation,
+        variables: {input: {id: billing_entity.id, paymentTerm: payment_term, **extra_input}}
+      )
+    end
+
+    it "sets the payment term" do
+      result = update_payment_term({termType: "end_of_month"})
+
+      payment_term = result["data"]["updateBillingEntity"]["paymentTerm"]
+      expect(payment_term["termType"]).to eq("end_of_month")
+      expect(payment_term["days"]).to be_nil
+      expect(billing_entity.reload.payment_term).to eq("term_type" => "end_of_month")
+    end
+
+    it "clears the payment term when null is sent" do
+      billing_entity.update!(payment_term: {term_type: "net", days: 30})
+
+      result = update_payment_term(nil)
+
+      expect(result["data"]["updateBillingEntity"]["paymentTerm"]).to be_nil
+      expect(billing_entity.reload.payment_term).to be_nil
+    end
+
+    it "clears both fields when null is sent alongside a legacy alias" do
+      billing_entity.update!(payment_term: {term_type: "net", days: 30}, net_payment_term: 30)
+
+      response = update_payment_term(nil, netPaymentTerm: 20)
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateBillingEntity", "paymentTerm")).to be_nil
+      expect(billing_entity.reload).to have_attributes(payment_term: nil, net_payment_term: nil)
+    end
+
+    it "rejects an invalid payment term" do
+      result = update_payment_term({termType: "day_of_month", dayOfMonth: 32})
+
+      expect_unprocessable_entity(result)
+      expect(billing_entity.reload.payment_term).to be_nil
+    end
+
+    it "rejects conflicting aliases without changing the record" do
+      billing_entity.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
+
+      response = update_payment_term({termType: "net", days: 30}, netPaymentTerm: 60)
+
+      expect_unprocessable_entity(response)
+      expect(billing_entity.reload.payment_term).to eq("term_type" => "net", "days" => 10)
+      expect(billing_entity.net_payment_term).to eq(10)
+    end
+
+    it "accepts a null alias echoed back with a structured term" do
+      response = update_payment_term({termType: "end_of_month"}, netPaymentTerm: nil)
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateBillingEntity", "paymentTerm", "termType")).to eq("end_of_month")
+      expect(billing_entity.reload.net_payment_term).to be_nil
+    end
+
+    it "keeps existing draft invoice terms and due dates unchanged" do
+      customer = create(:customer, organization:, billing_entity:)
+      draft = create(:invoice, :draft, customer:, organization:, billing_entity:, payment_term: {term_type: "net", days: 30}, net_payment_term: 30)
+      original_due_date = draft.payment_due_date
+
+      response = update_payment_term({termType: "end_of_month"})
+
+      expect(response["errors"]).to be_nil
+      expect(draft.reload.payment_due_date).to eq(original_due_date)
+      expect(draft.payment_term).to eq("term_type" => "net", "days" => 30)
+    end
+  end
 end

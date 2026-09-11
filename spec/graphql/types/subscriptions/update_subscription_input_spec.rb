@@ -6,6 +6,7 @@ RSpec.describe Types::Subscriptions::UpdateSubscriptionInput do
   subject { described_class }
 
   it do
+    expect(subject).to accept_argument(:payment_term).of_type("PaymentTermInput")
     expect(subject).to accept_argument(:id).of_type("ID!")
     expect(subject).to accept_argument(:ending_at).of_type("ISO8601DateTime")
     expect(subject).to accept_argument(:name).of_type("String")

@@ -49,6 +49,7 @@ module Types
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_due_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_overdue, Boolean, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: false, method: :snapshotted_payment_term
 
       field :all_charges_have_fees, Boolean, null: false, method: :all_charges_have_fees?
       field :all_fixed_charges_have_fees, Boolean, null: false, method: :all_fixed_charges_have_fees?

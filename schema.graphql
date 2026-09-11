@@ -1073,6 +1073,7 @@ type BillingEntity {
   name: String!
   netPaymentTerm: Int
   organization: Organization!
+  paymentTerm: PaymentTerm
   phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   state: String
@@ -3057,6 +3058,7 @@ input CreateBillingEntityInput {
   logo: String
   name: String!
   netPaymentTerm: Int
+  paymentTerm: PaymentTermInput
   phone: String
   state: String
   taxIdentificationNumber: String
@@ -3175,6 +3177,7 @@ input CreateCustomerInput {
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   paymentProviderCustomers: [PaymentProviderCustomerInput!]
+  paymentTerm: PaymentTermInput
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -3868,6 +3871,7 @@ input CreateSubscriptionInput {
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   planId: ID!
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
@@ -4942,6 +4946,7 @@ type Customer {
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   paymentProviderCustomers: [ProviderCustomer!]!
+  paymentTerm: PaymentTerm
   phone: String
   providerCustomer: ProviderCustomer @deprecated(reason: "Use paymentProviderCustomers instead")
   salesforceCustomer: SalesforceCustomer @deprecated(reason: "Use integrationCustomers instead")
@@ -7425,6 +7430,7 @@ type Invoice {
   paymentDueDate: ISO8601Date!
   paymentOverdue: Boolean!
   paymentStatus: InvoicePaymentStatusTypeEnum!
+  paymentTerm: PaymentTerm!
   payments: [Payment!]
   prepaidCreditAmountCents: BigInt!
   prepaidGrantedCreditAmountCents: BigInt
@@ -10742,6 +10748,38 @@ input PaymentRequestCreateInput {
   paymentMethod: PaymentMethodReferenceInput
 }
 
+"""
+Structured payment term
+"""
+type PaymentTerm {
+  dayOfMonth: Int
+  days: Int
+  monthOffset: Int
+  termType: PaymentTermTypeEnum!
+}
+
+"""
+Structured payment term input
+"""
+input PaymentTermInput {
+  dayOfMonth: Int
+  days: Int
+  monthOffset: Int
+  termType: PaymentTermTypeEnum!
+}
+
+"""
+Payment term type
+"""
+enum PaymentTermTypeEnum {
+  day_of_month
+  days_end_of_month
+  due_on_receipt
+  end_of_month
+  net
+  net_end_of_month
+}
+
 enum PaymentTypeEnum {
   manual
   provider
@@ -13569,6 +13607,7 @@ type Subscription {
   onTerminationInvoice: OnTerminationInvoiceEnum!
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
+  paymentTerm: PaymentTerm
   periodEndDate: ISO8601Date
   plan: Plan!
   previousPlan: Plan
@@ -14764,6 +14803,7 @@ input UpdateBillingEntityInput {
   logo: String
   name: String
   netPaymentTerm: Int
+  paymentTerm: PaymentTermInput
   phone: String
   state: String
   taxIdentificationNumber: String
@@ -14903,6 +14943,7 @@ input UpdateCustomerInput {
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   paymentProviderCustomers: [PaymentProviderCustomerInput!]
+  paymentTerm: PaymentTermInput
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -15680,6 +15721,7 @@ input UpdateSubscriptionInput {
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
   purchaseOrderNumber: String

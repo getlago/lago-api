@@ -6,6 +6,7 @@ RSpec.describe Types::Invoices::Object do
   subject { described_class }
 
   it "has the expected fields with correct types" do
+    expect(subject).to have_field(:payment_term).of_type("PaymentTerm!")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:billing_entity).of_type("BillingEntity!")
 

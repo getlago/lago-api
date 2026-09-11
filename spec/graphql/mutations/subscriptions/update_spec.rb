@@ -302,4 +302,52 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       end
     end
   end
+
+  context "with payment_term" do
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    def write_payment_term(payment_term)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: payment_term_mutation,
+        variables: {input: {id: subscription.id, paymentTerm: payment_term}}
+      )
+    end
+
+    it "persists and returns the normalized term" do
+      response = write_payment_term({termType: "day_of_month", dayOfMonth: 15})
+      data = response.dig("data", "updateSubscription")
+
+      expect(response["errors"]).to be_nil
+      expect(data["paymentTerm"]).to eq("termType" => "day_of_month", "days" => nil, "dayOfMonth" => 15, "monthOffset" => 1)
+      expect(Subscription.find(data["id"]).payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1)
+    end
+
+    it "rejects a term missing required days" do
+      response = write_payment_term({termType: "net"})
+
+      expect_unprocessable_entity(response)
+    end
+
+    it "clears the override when null is sent" do
+      subscription.update!(payment_term: {term_type: "net", days: 30})
+
+      response = write_payment_term(nil)
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateSubscription", "paymentTerm")).to be_nil
+      expect(subscription.reload.payment_term).to be_nil
+    end
+  end
 end

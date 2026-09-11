@@ -175,4 +175,43 @@ RSpec.describe Mutations::BillingEntities::Create, :premium do
       expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
     end
   end
+
+  context "with payment_term" do
+    let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
+
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: CreateBillingEntityInput!) {
+          createBillingEntity(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    it "creates a billing entity with a payment term" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: payment_term_mutation,
+        variables: {
+          input: {
+            code: "entity-with-term",
+            name: "Entity with term",
+            paymentTerm: {termType: "day_of_month", dayOfMonth: 31, monthOffset: 0}
+          }
+        }
+      )
+
+      payment_term = result["data"]["createBillingEntity"]["paymentTerm"]
+      expect(payment_term["termType"]).to eq("day_of_month")
+      expect(payment_term["dayOfMonth"]).to eq(31)
+      expect(payment_term["monthOffset"]).to eq(0)
+
+      billing_entity = BillingEntity.find(result["data"]["createBillingEntity"]["id"])
+      expect(billing_entity.payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 31, "month_offset" => 0)
+    end
+  end
 end

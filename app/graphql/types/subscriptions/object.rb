@@ -9,6 +9,7 @@ module Types
       field :customer, Types::Customers::Object, null: false
       field :external_id, String, null: false
       field :id, ID, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :plan, Types::Plans::Object, null: false
 
       field :name, String, null: true
