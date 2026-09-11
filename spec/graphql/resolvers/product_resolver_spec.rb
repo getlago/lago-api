@@ -37,7 +37,7 @@ RSpec.describe Resolvers::ProductResolver do
 
     expect(response["id"]).to eq(product.id)
     expect(response["name"]).to eq(product.name)
-    expect(response["productType"]).to eq("usage")
+    expect(response["productType"]).to eq("metered")
   end
 
   context "when the product belongs to another organization" do

@@ -11438,7 +11438,7 @@ input ProductFilterValueInput {
 
 enum ProductTypeEnum {
   fixed
-  usage
+  metered
 }
 
 type ProjectedChargeFilterUsage {

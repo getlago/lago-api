@@ -6,7 +6,7 @@ FactoryBot.define do
     product_category { association(:product_category, organization:) }
     name { Faker::Commerce.product_name }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
-    product_type { "usage" }
+    product_type { "metered" }
     billable_metric { association(:billable_metric, organization:) }
 
     trait :fixed do
