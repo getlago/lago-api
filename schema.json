@@ -987,12 +987,6 @@
               "description": "order.executed",
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "usage_attribution_type_created",
-              "description": "usage_attribution_type.created",
-              "isDeprecated": false,
-              "deprecationReason": null
             }
           ],
           "possibleTypes": null
