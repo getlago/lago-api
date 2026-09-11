@@ -49,29 +49,6 @@ RSpec.describe Events::PostProcessService do
         .with(subscription:, organization:, date: expected_date)
     end
 
-    describe "charge usage cache expiration" do
-      it "expires the charge usage cache for the matching charges" do
-        allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
-
-        process_service.call
-
-        expect(Subscriptions::ChargeCacheService).to have_received(:expire_cache)
-          .with(subscription:, charge:, charge_filter: nil)
-      end
-
-      context "when the lazy charge usage cache flag is enabled" do
-        let(:organization) { create(:organization, feature_flags: [:lazy_charge_usage_cache]) }
-
-        it "does not expire the cache, letting the read-time validation handle it" do
-          allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
-
-          process_service.call
-
-          expect(Subscriptions::ChargeCacheService).not_to have_received(:expire_cache)
-        end
-      end
-    end
-
     context "with events enrichment" do
       it "does not create an enriched event" do
         expect { process_service.call }.not_to change(EnrichedEvent, :count)
@@ -95,15 +72,6 @@ RSpec.describe Events::PostProcessService do
         end
         let(:event_properties) { {"item_id" => "12"} }
 
-        it "falls back on the currently active subscription to expire the charge usage cache" do
-          allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
-
-          process_service.call
-
-          expect(Subscriptions::ChargeCacheService).to have_received(:expire_cache)
-            .with(subscription:, charge:, charge_filter: nil)
-        end
-
         it "tracks subscription activity on the fallback subscription" do
           allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
 
@@ -119,12 +87,12 @@ RSpec.describe Events::PostProcessService do
       end
 
       context "with a non-recurring billable metric" do
-        it "does not fall back and skips the charge usage cache expiration" do
-          allow(Subscriptions::ChargeCacheService).to receive(:expire_cache)
+        it "does not fall back on the currently active subscription" do
+          allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
 
           process_service.call
 
-          expect(Subscriptions::ChargeCacheService).not_to have_received(:expire_cache)
+          expect(UsageMonitoring::TrackSubscriptionActivityService).not_to have_received(:call)
         end
       end
     end
