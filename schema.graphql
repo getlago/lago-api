@@ -1512,6 +1512,29 @@ enum CommitmentTypeEnum {
   minimum_commitment
 }
 
+enum ConnectionBehaviorEnum {
+  inherit
+  skip
+}
+
+"""
+Route a billing object to a specific customer connection, or skip the category
+"""
+input ConnectionChoiceInput {
+  behavior: ConnectionBehaviorEnum
+  code: String
+}
+
+"""
+Per-object connection routing, one choice per category. An omitted category keeps whatever is stored
+"""
+input ConnectionsInput {
+  accounting: ConnectionChoiceInput
+  crm: ConnectionChoiceInput
+  payment: ConnectionChoiceInput
+  tax: ConnectionChoiceInput
+}
+
 """
 The agreement a customer signed: an optional plan, a validity window and the billing anchor
 """
@@ -3243,6 +3266,7 @@ input CreateCustomerWalletInput {
   """
   clientMutationId: String
   code: String
+  connections: ConnectionsInput
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
@@ -3784,6 +3808,7 @@ input CreateRatePhaseInput {
 }
 
 input CreateRecurringTransactionRuleInput {
+  connections: ConnectionsInput
   expirationAt: ISO8601DateTime
   grantedCredits: String
   grantsTargetTopUp: Boolean
@@ -15073,6 +15098,7 @@ input UpdateCustomerWalletInput {
   """
   clientMutationId: String
   code: String
+  connections: ConnectionsInput
   expirationAt: ISO8601DateTime
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -15621,6 +15647,7 @@ input UpdateRatePhaseInput {
 }
 
 input UpdateRecurringTransactionRuleInput {
+  connections: ConnectionsInput
   expirationAt: ISO8601DateTime
   grantedCredits: String
   grantsTargetTopUp: Boolean
