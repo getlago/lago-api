@@ -34,6 +34,10 @@ module Customers
         )
       end
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: args[:payment_term], net_payment_term: args[:net_payment_term]).valid?
+        return result
+      end
+
       customer = billing_entity.customers.new(
         organization_id: organization.id,
         external_id: args[:external_id],
@@ -56,7 +60,6 @@ module Customers
         logo_url: args[:logo_url],
         legal_name: args[:legal_name],
         legal_number: args[:legal_number],
-        net_payment_term: args[:net_payment_term],
         external_salesforce_id: args[:external_salesforce_id],
         payment_provider: args[:payment_provider],
         payment_provider_code: args[:payment_provider_code],

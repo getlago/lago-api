@@ -3,6 +3,8 @@
 module Api
   module V1
     class BillingEntitiesController < Api::BaseController
+      include RawPaymentTermParams
+
       def index
         render(
           json: ::CollectionSerializer.new(
@@ -67,7 +69,7 @@ module Api
       private
 
       def create_params
-        params.require(:billing_entity).permit(
+        permitted = params.require(:billing_entity).permit(
           :code,
           :name,
           :einvoicing,
@@ -99,10 +101,12 @@ module Api
             :document_locale
           ]
         )
+
+        with_raw_payment_term(permitted, params[:billing_entity])
       end
 
       def update_params
-        params.require(:billing_entity).permit(
+        permitted = params.require(:billing_entity).permit(
           :name,
           :einvoicing,
           :email,
@@ -135,6 +139,8 @@ module Api
           tax_codes: [],
           invoice_custom_section_codes: []
         )
+
+        with_raw_payment_term(permitted, params[:billing_entity])
       end
 
       def resource_name
