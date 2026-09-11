@@ -125,6 +125,9 @@ module BillingMatrix
 
       rows.each do |row|
         entry = by_id.delete(row["id"])
+        if entry && row.key?("pins") && %w[failed passed].include?(row["verdict"])
+          entry = entry.merge("pins" => row["pins"])
+        end
 
         case [row["verdict"], entry&.fetch("status", nil)]
         in ["failed", nil]
@@ -185,6 +188,7 @@ module BillingMatrix
     def failed_entry(row)
       {
         "id" => row["id"],
+        "pins" => row["pins"],
         "status" => "failed",
         "first_seen" => @stamp,
         "last_seen" => @stamp,
@@ -228,10 +232,10 @@ module BillingMatrix
 
     def text(diff)
       lines = ["billing matrix · #{@today.strftime("%-d %b %Y")}", ""]
-      section(lines, "newly failing", diff[:newly_failed]) { "#{it["id"]}\n      #{it["note"]}" }
-      section(lines, "failing again", diff[:returned]) { "#{it["id"]} (first seen #{it["first_seen"]})" }
-      section(lines, "fixed", diff[:fixed]) { "#{it["id"]} (failed since #{it["first_seen"]})" }
-      section(lines, "errored", diff[:errored]) { "#{it["id"]}\n      #{it["error"]}" }
+      section(lines, "newly failing", diff[:newly_failed]) { "#{it["id"]}#{finding_suffix(it)}\n      #{it["note"]}" }
+      section(lines, "failing again", diff[:returned]) { "#{it["id"]}#{finding_suffix(it)} (first seen #{it["first_seen"]})" }
+      section(lines, "fixed", diff[:fixed]) { "#{it["id"]}#{finding_suffix(it)} (failed since #{it["first_seen"]})" }
+      section(lines, "errored", diff[:errored]) { "#{it["id"]}#{finding_suffix(it)}\n      #{it["error"]}" }
       unless diff[:still_failing].empty?
         oldest = diff[:still_failing].map { it["first_seen"] }.min
         lines << "#{diff[:still_failing].size} still failing, not reported again (oldest #{oldest})"
@@ -239,6 +243,11 @@ module BillingMatrix
       lines << ""
       lines << counts
       lines.join("\n")
+    end
+
+    def finding_suffix(entry)
+      pins = entry.fetch("pins", [])
+      pins.empty? ? "" : " (#{pins.join(", ")})"
     end
 
     def section(lines, label, items)
@@ -251,10 +260,10 @@ module BillingMatrix
 
     def slack(diff, options)
       parts = ["*Billing matrix* · #{@today.strftime("%-d %b %Y")}"]
-      parts << bullets(":red_circle: *#{diff[:newly_failed].size} newly failing*", diff[:newly_failed]) { "`#{it["id"]}`\n   #{it["note"]}" }
-      parts << bullets(":arrows_counterclockwise: *#{diff[:returned].size} failing again*", diff[:returned]) { "`#{it["id"]}` — first seen #{it["first_seen"]}" }
-      parts << bullets(":white_check_mark: *#{diff[:fixed].size} fixed*", diff[:fixed]) { "`#{it["id"]}` — had failed since #{it["first_seen"]}" }
-      parts << bullets(":warning: *#{diff[:errored].size} errored*", diff[:errored]) { "`#{it["id"]}`\n   #{it["error"]}" }
+      parts << bullets(":red_circle: *#{diff[:newly_failed].size} newly failing*", diff[:newly_failed]) { "`#{it["id"]}`#{finding_suffix(it)}\n   #{it["note"]}" }
+      parts << bullets(":arrows_counterclockwise: *#{diff[:returned].size} failing again*", diff[:returned]) { "`#{it["id"]}`#{finding_suffix(it)} — first seen #{it["first_seen"]}" }
+      parts << bullets(":white_check_mark: *#{diff[:fixed].size} fixed*", diff[:fixed]) { "`#{it["id"]}`#{finding_suffix(it)} — had failed since #{it["first_seen"]}" }
+      parts << bullets(":warning: *#{diff[:errored].size} errored*", diff[:errored]) { "`#{it["id"]}`#{finding_suffix(it)}\n   #{it["error"]}" }
       unless diff[:still_failing].empty?
         parts << "_#{diff[:still_failing].size} still failing, already reported (oldest #{diff[:still_failing].map { it["first_seen"] }.min})_"
       end

@@ -29,10 +29,14 @@ module BillingMatrix
 
     attr_reader :id, :area, :axes, :setup, :timeline, :expect, :math, :control, :canary, :pins, :source
 
-    def self.load_all(dir)
-      files = Dir.glob(File.join(dir, "**", "*.yml")).sort
-      raise InvalidRow, "no *.yml row files under #{dir}" if files.empty?
+    # Resolve every input before validating references: a control can live in another path.
+    def self.load_all(paths)
+      files = Array(paths).flat_map do |path|
+        matches = File.file?(path) ? [path] : Dir.glob(File.join(path, "**", "*.yml")).sort
+        raise InvalidRow, "no *.yml row files at #{path}" if matches.empty?
 
+        matches
+      end
       rows = files.flat_map { |path| load_file(path) }
       reject_duplicate_ids!(rows)
       check_controls!(rows)

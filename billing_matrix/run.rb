@@ -69,10 +69,9 @@ module BillingMatrix
       rows = select(load_rows)
       raise Error, "no rows matched" if rows.empty?
 
-      BillingMatrix.boot!
+      BillingMatrix.boot!(shard: @options[:shard])
       # Importing CLI for unit tests must not boot the scenario context or clean the database.
       require_relative "runner/context"
-      assert_shard_isolation!
 
       results = Results.new
       rows.each do |row|
@@ -90,32 +89,8 @@ module BillingMatrix
 
     private
 
-    # Shards must not share a database. Teardown uses the deletion strategy, which takes
-    # exclusive locks across all 143 tables and deletes rows belonging to whatever else is
-    # running — two shards on one database silently corrupt each other's worlds rather than
-    # failing. Requiring the database name to carry the shard index makes separate databases
-    # structurally necessary instead of merely documented.
-    def assert_shard_isolation!
-      return unless @options[:shard]
-
-      index = @options[:shard].split("/").first
-      database = ActiveRecord::Base.connection_db_config.database.to_s
-      return if database.end_with?("_#{index}_test")
-
-      raise Error, "refusing to run shard #{@options[:shard]} against #{database.inspect}: " \
-                   "each shard needs its own database, named …_#{index}_test — the index sits " \
-                   "before the suffix so the name still ends in _test, which boot! requires. " \
-                   "Point DATABASE_TEST_URL at it, or drop --shard and run the rows in one process."
-    end
-
-    # Cross-corpus checks run over every directory at once. A single load_all cannot
-    # see the whole corpus, so duplicate ids and dangling control: references are only
-    # detectable here.
     def load_rows
-      rows = @options[:rows].flat_map { Row.load_all(it) }
-      Row.reject_duplicate_ids!(rows)
-      Row.check_controls!(rows)
-      rows
+      Row.load_all(@options[:rows])
     end
 
     def select(rows)

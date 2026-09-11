@@ -27,7 +27,7 @@ module BillingMatrix
   class Results
     VERDICTS = %i[passed failed errored canary_broken].freeze
 
-    Row = Struct.new(:id, :area, :canary, :verdict, :duration_ms, :mismatches, :error, keyword_init: true)
+    Row = Struct.new(:id, :area, :pins, :canary, :verdict, :duration_ms, :mismatches, :error, keyword_init: true)
 
     def initialize
       @rows = []
@@ -40,6 +40,7 @@ module BillingMatrix
       @rows << Row.new(
         id: row.id,
         area: row.area,
+        pins: row.pins,
         canary: !row.canary.nil?,
         verdict: apply_canary_semantics(row, verdict),
         duration_ms: duration_ms,
@@ -121,6 +122,7 @@ module BillingMatrix
       {
         id: row.id,
         area: row.area,
+        pins: row.pins,
         verdict: row.verdict.to_s,
         duration_ms: row.duration_ms,
         mismatches: row.mismatches,

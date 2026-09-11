@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "tmpdir"
 require_relative "../../billing_matrix/runner/row"
 
 RSpec.describe BillingMatrix::Row do
@@ -15,6 +16,39 @@ RSpec.describe BillingMatrix::Row do
 
   it "accepts a supported row" do
     expect(validate(document).id).to eq("smoke/example")
+  end
+
+  describe ".load_all" do
+    let(:directory) { Dir.mktmpdir("matrix-rows") }
+    let(:first_path) { File.join(directory, "first.yml") }
+    let(:second_directory) { File.join(directory, "controls") }
+    let(:second_path) { File.join(second_directory, "second.yml") }
+
+    before do
+      FileUtils.mkdir_p(second_directory)
+      File.write(first_path, YAML.dump([document.merge("control" => "smoke/control")]))
+      File.write(second_path, YAML.dump([document.merge("id" => "smoke/control")]))
+    end
+
+    after { FileUtils.remove_entry(directory) }
+
+    it "loads an individual file" do
+      expect(described_class.load_all(second_path).map(&:id)).to eq(["smoke/control"])
+    end
+
+    it "resolves controls across combined file and directory inputs" do
+      expect(described_class.load_all([first_path, second_directory]).map(&:id)).to eq(%w[smoke/example smoke/control])
+    end
+
+    it "rejects duplicate ids across combined paths" do
+      expect { described_class.load_all([directory, second_path]) }
+        .to raise_error(BillingMatrix::InvalidRow, /duplicates row "smoke\/control"/)
+    end
+
+    it "rejects controls absent from all inputs" do
+      expect { described_class.load_all(first_path) }
+        .to raise_error(BillingMatrix::InvalidRow, /not a loaded row/)
+    end
   end
 
   it "rejects unsupported verbs" do

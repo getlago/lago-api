@@ -51,7 +51,9 @@ to another branch's checkout.
 
 ## boot.rb
 
-`BillingMatrix.boot!` — idempotent, safe to call twice, returns `nil`.
+`BillingMatrix.boot!(shard: nil)` — idempotent, safe to call twice, returns `nil`.
+When a shard is supplied, validate its database pairing after loading the Rails environment
+and before any cleanup, including on repeated calls. A mismatch raises `BillingMatrix::Error`.
 
 Must, in this order: set `ENV["RAILS_ENV"] = "test"`; `require` the app's
 `config/environment`; require `spec/support/monkey_patches/*.rb`; require and configure
@@ -154,13 +156,13 @@ row.canary   # Hash or nil — presence means this row is expected to FAIL
 row.pins     # Array<String> — finding ids (F69, BIL-537) this row pins; [] by default
 row.validate! # raises BillingMatrix::InvalidRow with a message naming id + source + field
 
-BillingMatrix::Row.assert_unique_ids!(rows)  # class method, raises InvalidRow naming both
+BillingMatrix::Row.reject_duplicate_ids!(rows)  # class method, raises InvalidRow naming both
                                              # sources on a collision
 ```
 
-`load_all` is called once per rows directory, so it cannot see the whole corpus.
-Uniqueness is therefore enforced by `assert_unique_ids!`, which the entrypoint calls across
-the concatenated result. `load_all` still validates everything else per row.
+`load_all` accepts a file, a directory, or an array of paths. The entrypoint passes all
+repeated `--rows` arguments together. It validates each row, then checks duplicate IDs and
+control references across the combined corpus, so controls can live in another input path.
 
 Validation rules, all of which must fail loudly rather than be tolerated:
 
@@ -351,12 +353,19 @@ mechanism it guards is no longer proven.
   "run": {"started_at": "...", "finished_at": "...", "revision": "<git sha>",
           "summary": {"passed": 0, "failed": 0, "errored": 0, "canaries_broken": 0}},
   "rows": [
-    {"id": "...", "area": "...", "verdict": "failed", "duration_ms": 6912,
+    {"id": "...", "area": "...", "pins": ["F69"], "verdict": "failed", "duration_ms": 6912,
      "mismatches": [{"path": "invoice[1].taxes_amount_cents", "expected": 200, "observed": 1200}],
      "error": null}
   ]
 }
 ```
+
+Every result carries the row's `pins` (an empty list when unpinned). The ledger stores
+these finding IDs and names them beside the row in text and Slack transition reports.
+Transitions remain keyed by row ID: several rows can pin the same finding without hiding
+one another's failures. Adding pins to a known failure updates its metadata silently;
+older results without `pins` preserve any existing association. Errored rows never change
+an existing ledger entry.
 
 ## Errors
 

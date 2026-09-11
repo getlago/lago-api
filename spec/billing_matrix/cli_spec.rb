@@ -30,6 +30,21 @@ RSpec.describe BillingMatrix::CLI do
     end
   end
 
+  it "rejects a shared shard database before boot cleanup" do
+    cli = described_class.new(described_class.parse(%w[--shard 1/2]))
+    allow(cli).to receive(:load_rows).and_return(rows)
+    configuration = instance_double(ActiveRecord::DatabaseConfigurations::HashConfig, database: "shared_test")
+    allow(ActiveRecord::Base).to receive(:connection_db_config).and_return(configuration)
+    cleaner = DatabaseCleaner[:active_record]
+    allow(cleaner).to receive(:clean_with)
+    allow(FactoryBot).to receive(:reload)
+
+    expect { expect(cli.call).to eq(described_class::EXIT_HARNESS_BROKEN) }
+      .to output(/refusing to run shard 1\/2 against "shared_test"/).to_stderr
+    expect(cleaner).not_to have_received(:clean_with)
+    expect(FactoryBot).not_to have_received(:reload)
+  end
+
   it "partitions selected rows without overlaps or omissions" do
     selected = (1..2).map do |index|
       options = described_class.parse(["--area", "smoke", "--shard", "#{index}/2"])

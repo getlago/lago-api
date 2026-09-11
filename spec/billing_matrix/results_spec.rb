@@ -8,6 +8,15 @@ RSpec.describe BillingMatrix::Results do
   let(:results) { described_class.new }
   let(:canary) { BillingMatrix::Row.new({"id" => "canary/example", "area" => "canary", "canary" => {"mechanism" => "cents"}}, source: "example.yml") }
 
+  it "preserves finding IDs in serialized results" do
+    row = BillingMatrix::Row.new({"id" => "smoke/pinned", "area" => "smoke", "pins" => %w[F69 BIL-537]}, source: "example.yml")
+    results.record(row:, verdict: :failed, duration_ms: 0)
+    results.record(row: canary, verdict: :failed, duration_ms: 0)
+
+    payload = JSON.parse(JSON.generate(results.to_h))
+    expect(payload.fetch("rows").map { it.fetch("pins") }).to eq([%w[F69 BIL-537], []])
+  end
+
   it "does not trust a run without canaries" do
     expect(results).not_to be_trustworthy
   end

@@ -9,12 +9,12 @@ module BillingMatrix
   # requiring the Rails environment — in a single-threaded CLI. A thread-safe alternative
   # would only add a mutex around something that must happen before any thread exists.
   # rubocop:disable ThreadSafety/ClassInstanceVariable
-  def self.boot!
-    return if @booted
-
+  def self.boot!(shard: nil)
     ENV["RAILS_ENV"] = "test"
     require File.join(APP_ROOT, "config/environment")
     abort_unless_test_environment!
+    assert_shard_isolation!(shard)
+    return if @booted
 
     Dir[File.join(APP_ROOT, "spec/support/monkey_patches/*.rb")].sort.each { |f| require f }
 
@@ -40,6 +40,21 @@ module BillingMatrix
     nil
   end
   # rubocop:enable ThreadSafety/ClassInstanceVariable
+
+  # Validate the actual Rails connection before boot or Context can delete any rows.
+  # Recheck even after a previous boot so changing the shard cannot bypass isolation.
+  def self.assert_shard_isolation!(shard)
+    return unless shard
+
+    index = shard.split("/").first
+    database = ActiveRecord::Base.connection_db_config.database.to_s
+    return if database.end_with?("_#{index}_test")
+
+    raise Error, "refusing to run shard #{shard} against #{database.inspect}: " \
+                 "each shard needs its own database, named …_#{index}_test. " \
+                 "Point DATABASE_TEST_URL at it, or drop --shard and run the rows in one process."
+  end
+  private_class_method :assert_shard_isolation!
 
   def self.abort_unless_test_environment!
     unless Rails.env.test?
