@@ -108,12 +108,19 @@ module Invoices
       fees_rate = if invoice.sub_total_excluding_taxes_amount_cents.positive?
         fees_amount_cents(tax).fdiv(invoice.sub_total_excluding_taxes_amount_cents)
       else
-        # NOTE: when invoice have a 0 amount. The prorata is on the number of fees
+        # NOTE: when invoice have a 0 amount. The prorata is on the number of fees.
+        #       Fees with no taxable base are not reported and carry no tax row, so they are
+        #       out of the denominator too; counting them would dilute the rate below the one
+        #       the provider returned.
         key = calculate_key(tax)
-        indexed_fees[key].count.fdiv(invoice.fees.count)
+        indexed_fees[key].count.fdiv(taxed_fees_count)
       end
 
       fees_rate * tax_rate
+    end
+
+    def taxed_fees_count
+      indexed_fees.values.flatten.uniq.count
     end
 
     def fees_amount_cents(tax)

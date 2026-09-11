@@ -706,10 +706,11 @@ RSpec.describe Fee do
   describe "#taxable?" do
     subject { fee.taxable? }
 
-    let(:fee) { build(:fee, units:, amount_cents:, events_count:) }
+    let(:fee) { build(:fee, units:, amount_cents:, events_count:, precise_coupons_amount_cents:) }
     let(:units) { 0 }
     let(:amount_cents) { 0 }
     let(:events_count) { 0 }
+    let(:precise_coupons_amount_cents) { 0 }
 
     context "when amount_cents is positive" do
       let(:amount_cents) { 100 }
@@ -724,6 +725,19 @@ RSpec.describe Fee do
     context "when amount_cents is zero but units and events_count are positive" do
       let(:units) { 5 }
       let(:events_count) { 3 }
+
+      it { is_expected.to be false }
+    end
+
+    context "when amount_cents is negative" do
+      let(:amount_cents) { -100 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when coupons cover the whole amount" do
+      let(:amount_cents) { 100 }
+      let(:precise_coupons_amount_cents) { 100 }
 
       it { is_expected.to be false }
     end

@@ -12,6 +12,7 @@ module Integrations
           def call
             return result unless integration
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
+            return no_taxable_fees_result if taxable_fees.empty?
 
             throttle!(:anrok, :avalara)
 
@@ -44,7 +45,7 @@ module Integrations
               invoice:,
               customer:,
               integration_customer:,
-              fees:
+              fees: taxable_fees
             ).body
           end
         end

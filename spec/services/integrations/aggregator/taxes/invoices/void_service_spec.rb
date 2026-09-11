@@ -46,6 +46,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
     ]
   end
 
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
+
   before do
     allow(LagoHttpClient::Client).to receive(:new)
       .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
@@ -53,9 +55,67 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
 
     integration_customer
     integration_collection_mapping1
+    fee
   end
 
   describe "#call" do
+    context "when the invoice carries no fee" do
+      let(:fee) { nil }
+
+      before { allow(lago_client).to receive(:post_with_response) }
+
+      it "reports nothing to void" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
+    context "when the invoice carries no fee but reached the provider before" do
+      let(:fee) { nil }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:body) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
+        File.read(path)
+      end
+
+      before do
+        create(:integration_resource, syncable: invoice, integration:, resource_type: :invoice)
+
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it "voids the transaction it was reported as" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).to have_received(:post_with_response).with(params, headers)
+      end
+    end
+
+    context "when the invoice has a zero-amount fee" do
+      let(:fee) { create(:fee, invoice:, amount_cents: 0) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:body) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
+        File.read(path)
+      end
+
+      before do
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it "voids the transaction the invoice was reported as" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).to have_received(:post_with_response).with(params, headers)
+      end
+    end
+
     context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
 
