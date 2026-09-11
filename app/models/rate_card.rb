@@ -62,7 +62,7 @@ class RateCard < ApplicationRecord
 
     # A fixed product bills one fee per period, so its line must always show —
     # hiding it charges the customer an amount with nothing to reconcile it to.
-    # This holds on both timings; the flag only makes sense for usage on advance.
+    # This holds on both timings; the flag only makes sense for metered on advance.
     if product&.fixed?
       errors.add(:display_on_invoice, :not_allowed_for_product_type)
     elsif !advance?
@@ -70,11 +70,11 @@ class RateCard < ApplicationRecord
     end
   end
 
-  # Usage proration spreads a recurring quantity across the period, so it
+  # Metered proration spreads a recurring quantity across the period, so it
   # needs a recurring metric — and not weighted_sum, which prorates by design
   def validate_proration
     return unless proration?
-    return unless product&.usage?
+    return unless product&.metered?
 
     metric = product.billable_metric
     return if metric.nil?

@@ -15,7 +15,7 @@ RSpec.describe Api::V2::ProductsController do
       {
         name: "Storage",
         code: "storage",
-        product_type: "usage",
+        product_type: "metered",
         product_category_code: product_category.code,
         billable_metric_code: billable_metric.code
       }
@@ -30,7 +30,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product][:lago_id]).to be_present
       expect(json[:product][:name]).to eq("Storage")
       expect(json[:product][:code]).to eq("storage")
-      expect(json[:product][:product_type]).to eq("usage")
+      expect(json[:product][:product_type]).to eq("metered")
       expect(json[:product][:product_category_code]).to eq(product_category.code)
       expect(json[:product][:billable_metric_code]).to eq(billable_metric.code)
     end
@@ -58,8 +58,8 @@ RSpec.describe Api::V2::ProductsController do
       end
     end
 
-    context "when a usage item has no billable metric" do
-      let(:create_params) { {name: "Orphan", code: "orphan", product_type: "usage"} }
+    context "when a metered item has no billable metric" do
+      let(:create_params) { {name: "Orphan", code: "orphan", product_type: "metered"} }
 
       it "returns a validation error naming billable_metric_code" do
         subject
