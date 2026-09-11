@@ -12,6 +12,14 @@ module Subscriptions
     # windows can coincide, but started_at is editable, so they never share an entry.
     FULL_USAGE_KEY_SEGMENT = "full-usage"
 
+    # Lazy validation is the only consumer of the ingestion watermark: without it
+    # invalidate_if_older_than is never read, so callers can skip computing the watermark. A caller
+    # that writes to this cache must ask here before skipping it, because CacheService#valid_cache?
+    # accepts any entry when the reader has no watermark to compare against.
+    def self.lazy_validation_enabled?(organization)
+      organization.feature_flag_enabled?(:lazy_charge_usage_cache)
+    end
+
     def self.expire_for_subscriptions(subscription_ids)
       Subscription
         .where(id: subscription_ids)
@@ -82,7 +90,7 @@ module Subscriptions
     def lazy_validation?
       return @lazy_validation if defined?(@lazy_validation)
 
-      @lazy_validation = subscription.organization.feature_flag_enabled?(:lazy_charge_usage_cache)
+      @lazy_validation = self.class.lazy_validation_enabled?(subscription.organization)
     end
   end
 end

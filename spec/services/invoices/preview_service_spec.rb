@@ -485,6 +485,31 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             end
 
+            # The preview middleware caches by default and shares its keys with CustomerUsageService,
+            # and a reader without a watermark accepts any lazily validated entry, so the timestamps
+            # must be requested whenever the entry it writes will be validated against them.
+            it "skips the ingestion timestamps", transaction: false do
+              allow(Events::BillingPeriodFilterService).to receive(:for_charges!).and_call_original
+
+              travel_to(timestamp) { preview_service.call }
+
+              expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+                .with(hash_including(with_last_seen_at: false))
+            end
+
+            context "when the cache is lazily validated" do
+              before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+
+              it "requests the ingestion timestamps", transaction: false do
+                allow(Events::BillingPeriodFilterService).to receive(:for_charges!).and_call_original
+
+                travel_to(timestamp) { preview_service.call }
+
+                expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+                  .with(hash_including(with_last_seen_at: true))
+              end
+            end
+
             context "with charge filters" do
               let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
 

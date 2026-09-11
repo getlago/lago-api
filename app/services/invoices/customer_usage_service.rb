@@ -266,8 +266,14 @@ module Invoices
         subscription:,
         boundaries:,
         codes: filtered_metric_codes,
-        with_last_seen_at: charge_cache_enabled?
+        with_last_seen_at: last_seen_at_needed?
       )
+    end
+
+    # MAX(enriched_at) is the widest aggregate of the combinations query, so it is only worth
+    # computing when an entry will be written *and* lazily validated against it.
+    def last_seen_at_needed?
+      charge_cache_enabled? && Subscriptions::ChargeCacheService.lazy_validation_enabled?(organization)
     end
 
     # nil when every charge of the plan is computed, so the whole plan is looked up as before.
@@ -277,9 +283,10 @@ module Invoices
       charges.except(:includes).joins(:billable_metric).distinct.pluck("billable_metrics.code")
     end
 
-    # Single gate for the charge cache: it drives both the middleware passed to Fees::ChargeService
-    # and whether the ingestion timestamps are requested. The two must never diverge, because a nil
-    # timestamp written into a live cache stays valid forever (see Events::BillingPeriodFilterService).
+    # Single gate for the charge cache: it drives the middleware passed to Fees::ChargeService, and
+    # #last_seen_at_needed? narrows it for the ingestion timestamps. Neither may be looser than the
+    # other, because a reader that skips the timestamps accepts any lazily validated entry until it
+    # expires (CacheService#valid_cache?).
     # Usage filtered by group is never cached, as its fees are a subset of the charge fees.
     def charge_cache_enabled?
       with_cache &&
@@ -290,7 +297,7 @@ module Invoices
     # Full usage is cached only with lazy validation, the one invalidation that clears its key.
     def full_usage_cache_enabled?
       organization.granular_lifetime_usage_enabled? &&
-        organization.feature_flag_enabled?(:lazy_charge_usage_cache) &&
+        Subscriptions::ChargeCacheService.lazy_validation_enabled?(organization) &&
         !usage_filters.skip_grouping &&
         usage_filters.filter_by_presentation.nil?
     end

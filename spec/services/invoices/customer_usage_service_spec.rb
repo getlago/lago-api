@@ -809,10 +809,12 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
-    # The charge cache is lazily invalidated with the ingestion timestamps requested by
-    # Events::BillingPeriodFilterService, so a cached charge must always have asked for them:
-    # an entry stored without a timestamp stays valid for the rest of the billing period, for
-    # every later reader. Each example asserts both halves so they cannot drift apart.
+    # A lazily validated charge cache is invalidated with the ingestion timestamps requested by
+    # Events::BillingPeriodFilterService, so such an entry must always have asked for them: one
+    # stored without a timestamp stays valid for the rest of the billing period, for every later
+    # reader. Without the flag the cache is expired eagerly on event reception instead
+    # (Events::PostProcessService) and the timestamps are dead weight, so they are not requested.
+    # Each example asserts both halves so they cannot drift apart.
     describe "charge cache gate" do
       let(:charge_cache_key) do
         [
@@ -831,10 +833,37 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           described_class.new(customer:, subscription:, apply_taxes: false, with_cache: true)
         end
 
-        it "caches the charge and requests the ingestion timestamps" do
+        it "caches the charge and skips the ingestion timestamps" do
           expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
           expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
-            .with(hash_including(codes: nil, with_last_seen_at: true))
+            .with(hash_including(codes: nil, with_last_seen_at: false))
+        end
+
+        context "when the cache is lazily validated" do
+          # created_at predates the aggregation: CacheService refuses to store a value whose
+          # watermark is younger than SETTLE_WINDOW.
+          let(:events) do
+            create_list(:event, 2, organization:, subscription:, customer:,
+              code: billable_metric.code, timestamp:, created_at: 1.hour.ago)
+          end
+
+          let(:charge_cache_key) do
+            [
+              "charge-usage",
+              Subscriptions::ChargeCacheService::LAZY_CACHE_KEY_VERSION,
+              charge.id,
+              subscription.id,
+              charge.updated_at.iso8601
+            ].join("/")
+          end
+
+          before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+
+          it "caches the charge and requests the ingestion timestamps" do
+            expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+              .with(hash_including(codes: nil, with_last_seen_at: true))
+          end
         end
       end
 
@@ -849,10 +878,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           )
         end
 
-        it "restricts the lookup to the filtered codes and keeps the timestamps" do
+        it "restricts the lookup to the filtered codes" do
           expect { usage_service.call }.to change { Rails.cache.exist?(charge_cache_key) }.from(false).to(true)
           expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
-            .with(hash_including(codes: [billable_metric.code], with_last_seen_at: true))
+            .with(hash_including(codes: [billable_metric.code], with_last_seen_at: false))
         end
       end
 

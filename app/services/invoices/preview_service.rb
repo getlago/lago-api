@@ -200,7 +200,11 @@ module Invoices
       # resolved: without it every configured filter is aggregated and the default bucket excludes
       # all of them inline, making the query grow with the pricing configuration until the store
       # rejects it.
-      charge_filters = Events::BillingPeriodFilterService.for_charges!(subscription:, boundaries:).filter_targets
+      charge_filters = Events::BillingPeriodFilterService.for_charges!(
+        subscription:,
+        boundaries:,
+        with_last_seen_at: Subscriptions::ChargeCacheService.lazy_validation_enabled?(subscription.organization)
+      ).filter_targets
 
       invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
         OpenTelemetry::Context.with_current(context) do
