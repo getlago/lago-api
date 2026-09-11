@@ -30,6 +30,31 @@ RSpec.describe Product do
     end
   end
 
+  describe "Scopes" do
+    describe ".in_categories" do
+      let(:organization) { create(:organization) }
+      let(:category) { create(:product_category, organization:) }
+      let!(:categorized) { create(:product, organization:, product_category: category) }
+      let!(:uncategorized) { create(:product, :standalone, organization:) }
+
+      # A product in a different category, to prove the filter excludes it.
+      before { create(:product, organization:) }
+
+      it "returns products in the given categories" do
+        expect(described_class.in_categories([category.id])).to eq([categorized])
+      end
+
+      it "returns uncategorized products when include_uncategorized is set" do
+        expect(described_class.in_categories([], include_uncategorized: true)).to eq([uncategorized])
+      end
+
+      it "returns products in the categories or uncategorized when both are given" do
+        expect(described_class.in_categories([category.id], include_uncategorized: true))
+          .to match_array([categorized, uncategorized])
+      end
+    end
+  end
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:name) }
     it { is_expected.to validate_presence_of(:code) }

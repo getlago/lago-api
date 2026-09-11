@@ -54,24 +54,14 @@ class RateCardsQuery < BaseQuery
     scope.where(product_filter_id: filters.product_filter_ids)
   end
 
-  # A rate card reaches a product_category through its product. The dimension is
-  # a multi-select: cards on products in the chosen categories OR on products
-  # with no category.
+  # A rate card reaches a product_category through its product, so scope the
+  # cards to the matching products (shared Product.in_categories rule).
   def with_product_category(scope)
-    scope.where(product_id: category_scoped_product_ids)
-  end
-
-  def category_scoped_product_ids
-    products = organization.products
-
-    if filters.product_category_ids.present? && filters.without_product_category.present?
-      products.where(product_category_id: filters.product_category_ids)
-        .or(products.where(product_category_id: nil)).select(:id)
-    elsif filters.without_product_category.present?
-      products.where(product_category_id: nil).select(:id)
-    else
-      products.where(product_category_id: filters.product_category_ids).select(:id)
-    end
+    matching_products = organization.products.in_categories(
+      filters.product_category_ids,
+      include_uncategorized: filters.without_product_category.present?
+    )
+    scope.where(product_id: matching_products.select(:id))
   end
 
   def with_code(scope)

@@ -49,6 +49,16 @@ RSpec.describe RateCardsQuery do
     it "returns only the cards of that product filter" do
       expect(result.rate_cards).to eq([filtered_card])
     end
+
+    context "with several product filters" do
+      let(:other_filter) { create(:product_filter, organization:, product:, code: "other_filter") }
+      let!(:other_filtered_card) { create(:rate_card, organization:, product:, product_filter: other_filter, code: "other_filtered") }
+      let(:filters) { {product_filter_ids: [item_filter.id, other_filter.id]} }
+
+      it "returns the cards of all requested product filters" do
+        expect(result.rate_cards).to match_array([filtered_card, other_filtered_card])
+      end
+    end
   end
 
   # card_one / card_two default products each carry their own category, so they
