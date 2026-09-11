@@ -43,6 +43,7 @@ module Invoices
         payment.save!
 
         deliver_webhook if payable_payment_status.to_sym == :succeeded
+        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
         unless authentication_retry_pending?(payment, status)
           update_invoice_payment_status(
