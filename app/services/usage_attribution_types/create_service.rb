@@ -10,11 +10,6 @@ module UsageAttributionTypes
       super
     end
 
-    activity_loggable(
-      action: "usage_attribution_type.created",
-      record: -> { result.usage_attribution_type }
-    )
-
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
