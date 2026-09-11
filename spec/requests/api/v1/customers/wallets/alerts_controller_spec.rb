@@ -109,6 +109,23 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       })
     end
 
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(UsageMonitoring::Alert.find(json[:alert][:lago_id]).thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
     context "when alert_type is wallet_credits_balance" do
       let(:params) do
         {
@@ -251,6 +268,21 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         last_processed_at: be_present,
         created_at: be_present
       })
+    end
+
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          thresholds: [{code: :notice, value: 88_00, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(alert.reload.thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
     end
 
     context "when alert is not found" do
