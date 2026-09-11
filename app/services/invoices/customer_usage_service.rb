@@ -75,7 +75,12 @@ module Invoices
         .plan
         .charges
         .joins(:billable_metric)
-        .includes(:taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        # NOTE: :plan looks redundant next to subscription.plan.charges, but the charges come back
+        #       as fresh records with an unloaded belongs_to. Fees::ChargeService resolves the fee
+        #       currency through charge.plan.amount (Sources::Charge#currency and
+        #       ChargeModels::PricingStructure.from_charge), which fired one SELECT on plans per
+        #       charge — 62 of the 500 queries in a sampled cached current_usage request.
+        .includes(:plan, :taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
       if usage_filters.filter_by_charge_id.present?
         charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
