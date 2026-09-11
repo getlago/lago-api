@@ -224,4 +224,215 @@ RSpec.describe PastUsageQuery do
       end
     end
   end
+
+  context "with unbilled free advance fees" do
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:graduated_charge, :regroup_paid_fees, plan:, billable_metric:) }
+    let(:free_fee_attributes) do
+      {
+        organization:,
+        subscription:,
+        charge:,
+        invoice: nil,
+        pay_in_advance: true,
+        amount_cents: 0,
+        precise_amount_cents: 0,
+        units: 40,
+        total_aggregated_units: 40,
+        properties: {
+          charges_from_datetime: invoice_subscription1.charges_from_datetime,
+          charges_to_datetime: invoice_subscription1.charges_to_datetime
+        }
+      }
+    end
+    let(:free_fee) { create(:charge_fee, **free_fee_attributes) }
+    let(:paid_fee) do
+      create(:charge_fee, organization:, subscription:, charge:, invoice: invoice_subscription1.invoice,
+        units: 10, total_aggregated_units: 10, amount_cents: 500)
+    end
+
+    before do
+      invoice_subscription1.update!(invoicing_reason: :in_advance_charge_periodic)
+      invoice_subscription1.invoice.update!(invoice_type: :advance_charges)
+      free_fee
+      paid_fee
+    end
+
+    it "includes free units from the same billing period" do
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+      expect(result.usage_periods.last.fees).to be_empty
+      expect(free_fee.reload).to have_attributes(invoice_id: nil, payment_status: "pending")
+    end
+
+    it "does not count free fees already attached to an invoice twice" do
+      free_fee.update!(invoice: invoice_subscription1.invoice)
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    it "excludes payable, zero-unit, discarded and other-period fees" do
+      create(:charge_fee, **free_fee_attributes, amount_cents: 50, precise_amount_cents: 50)
+      create(:charge_fee, **free_fee_attributes, payment_status: :failed, amount_cents: 50, precise_amount_cents: 50)
+      create(:charge_fee, **free_fee_attributes, precise_amount_cents: 0.1)
+      create(:charge_fee, **free_fee_attributes, units: 0)
+      create(:charge_fee, **free_fee_attributes, deleted_at: Time.current)
+      create(:charge_fee, **free_fee_attributes, properties: {
+        charges_from_datetime: invoice_subscription2.charges_from_datetime,
+        charges_to_datetime: invoice_subscription2.charges_to_datetime
+      })
+      create(:charge_fee, **free_fee_attributes, properties: {})
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    it "excludes other subscriptions and organizations even when external IDs match" do
+      other_subscription = create(:subscription, customer:, plan:, external_id: subscription.external_id, status: :terminated)
+      create(:charge_fee, **free_fee_attributes, subscription: other_subscription)
+      create(:charge_fee, **free_fee_attributes, subscription: subscription2)
+      other_customer = create(:customer, external_id: customer.external_id)
+      foreign_subscription = create(:subscription, customer: other_customer, external_id: subscription.external_id)
+      create(:charge_fee, **free_fee_attributes, organization: other_customer.organization, subscription: foreign_subscription)
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    it "excludes charges without regrouping and invoiceable advance charges" do
+      standalone_charge = create(:graduated_charge, plan:, pay_in_advance: true, invoiceable: false)
+      invoiceable_charge = create(:graduated_charge, plan:, pay_in_advance: true, invoiceable: true)
+      create(:charge_fee, **free_fee_attributes, charge: standalone_charge)
+      create(:charge_fee, **free_fee_attributes, charge: invoiceable_charge)
+      create(:charge_fee, **free_fee_attributes, pay_in_advance: false)
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    it "respects the billable metric filter for free fees" do
+      filters[:billable_metric_code] = charge.billable_metric.code
+      other_charge = create(:graduated_charge, :regroup_paid_fees, plan:)
+      create(:charge_fee, **free_fee_attributes, charge: other_charge)
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    it "includes free units in charge filters, grouped usage and presentation breakdowns" do
+      charge_filter = create(:charge_filter, charge:)
+      [paid_fee, free_fee].each do |fee|
+        fee.update!(charge_filter:, grouped_by: {region: "eu"}, events_count: 1)
+        create(:presentation_breakdown, fee:, organization:, presentation_by: {model: "basic"}, units: fee.units)
+      end
+
+      usage = V1::Customers::ChargeUsageSerializer.new(result.usage_periods.first.fees, root_name: "past_usage").serialize.sole
+      expected_usage = {units: "50.0", total_aggregated_units: "50.0", events_count: 2, amount_cents: 500}
+
+      expect(usage).to include(expected_usage)
+      expect(usage[:filters].sole).to include(expected_usage)
+      expect(usage[:grouped_usage].sole).to include(expected_usage)
+      expect(usage[:grouped_usage].sole[:filters].sole).to include(expected_usage)
+      expect(usage[:grouped_usage].sole[:filters].sole[:presentation_breakdowns].pluck(:units)).to match_array(["10.0", "40.0"])
+    end
+
+    it "matches equivalent timestamps with a timezone offset" do
+      free_fee.update!(properties: {
+        charges_from_datetime: invoice_subscription1.charges_from_datetime.in_time_zone("Europe/Paris").iso8601,
+        charges_to_datetime: invoice_subscription1.charges_to_datetime.in_time_zone("Europe/Paris").iso8601
+      })
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    it "retains fees for discarded charges" do
+      charge.discard!
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    context "when loading multiple billing periods" do
+      let(:pagination) { {page: 1, limit: 100} }
+      let(:period_count) { 6 }
+      let(:include_free_fees) { true }
+
+      before do
+        (2...period_count).each do |offset|
+          create(:invoice_subscription, organization:, subscription:,
+            invoicing_reason: :in_advance_charge_periodic,
+            charges_from_datetime: invoice_subscription1.charges_from_datetime - offset.months,
+            charges_to_datetime: invoice_subscription1.charges_to_datetime - offset.months)
+        end
+        invoice_subscription2.update!(invoicing_reason: :in_advance_charge_periodic)
+        subscription.invoice_subscriptions.where.not(id: invoice_subscription1.id).find_each do |period|
+          create(:charge_fee, **free_fee_attributes, properties: {
+            charges_from_datetime: period.charges_from_datetime,
+            charges_to_datetime: period.charges_to_datetime
+          })
+        end
+        subscription.fees.where(invoice_id: nil).discard_all! unless include_free_fees
+      end
+
+      shared_examples "batched free usage" do
+        it "batches owner resolution and free-fee retrieval across the page" do
+          queries = []
+          subscriber = ->(_name, _start, _finish, _id, payload) { queries << payload[:sql] }
+
+          ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+            expect(result.usage_periods.size).to eq(period_count)
+            expect(result.usage_periods.flat_map(&:fees).size).to eq(include_free_fees ? period_count + 1 : 1)
+            expected_units = include_free_fees ? [50] + [40] * (period_count - 1) : [10] + [0] * (period_count - 1)
+            expect(result.usage_periods.map { |period| period.fees.sum(&:units) }).to eq(expected_units)
+          end
+
+          period_queries = queries.select { |sql| sql.include?('FROM "invoice_subscriptions"') && !sql.include?("COUNT(") }
+          free_fee_queries = queries.select { |sql| sql.include?('FROM "fees"') && sql.include?('"fees"."invoice_id" IS NULL') }
+          expect(period_queries.size).to eq(2)
+          expect(free_fee_queries.size).to eq(1)
+        end
+      end
+
+      include_examples "batched free usage"
+
+      context "with a smaller page" do
+        let(:period_count) { 2 }
+
+        include_examples "batched free usage"
+      end
+
+      context "when no free fees qualify" do
+        let(:include_free_fees) { false }
+
+        include_examples "batched free usage"
+      end
+    end
+
+    context "with a regular invoice for the same period" do
+      let!(:regular_period) do
+        create(:invoice_subscription, organization:, subscription:,
+          invoicing_reason: :subscription_periodic,
+          charges_from_datetime: invoice_subscription1.charges_from_datetime,
+          charges_to_datetime: invoice_subscription1.charges_to_datetime)
+      end
+
+      it "includes free fees only in the regrouped invoice's usage" do
+        expect(result.usage_periods.find { |period| period.invoice_subscription == regular_period }.fees).to be_empty
+        expect(result.usage_periods.flat_map { |period| period.fees.to_a }).to match_array([paid_fee, free_fee])
+      end
+
+      context "when pagination excludes the regrouped invoice" do
+        let(:pagination) { {page: 1, limit: 1} }
+
+        before { regular_period.update!(created_at: 1.day.from_now) }
+
+        it "does not move free usage into the regular invoice" do
+          expect(result.usage_periods.sole.invoice_subscription).to eq(regular_period)
+          expect(result.usage_periods.sole.fees).to be_empty
+        end
+      end
+    end
+
+    context "when the period has only a regular invoice" do
+      before { invoice_subscription1.update!(invoicing_reason: :subscription_periodic) }
+
+      it "includes the free fees in that period" do
+        expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+      end
+    end
+  end
 end
