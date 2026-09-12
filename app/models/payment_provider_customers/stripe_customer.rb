@@ -11,7 +11,15 @@ module PaymentProviderCustomers
     validate :link_payment_method_can_exist_only_with_card
     validate :customer_balance_must_be_exclusive
 
-    settings_accessors :payment_method_id
+    settings_accessors :payment_method_id, :default_shared_payment_token
+
+    validates :default_shared_payment_token,
+      format: {with: /\Aspt_[a-zA-Z0-9]+\z/}, length: {maximum: 255}, allow_nil: true
+    validate :shared_payment_token_requires_card
+
+    def shared_payment_token?
+      default_shared_payment_token.present?
+    end
 
     def provider_payment_methods
       get_from_settings("provider_payment_methods")
@@ -30,6 +38,13 @@ module PaymentProviderCustomers
     end
 
     private
+
+    def shared_payment_token_requires_card
+      return unless shared_payment_token?
+      return if provider_payment_methods&.include?("card")
+
+      errors.add(:default_shared_payment_token, "requires card in provider_payment_methods")
+    end
 
     def allowed_provider_payment_methods
       return if (provider_payment_methods - PAYMENT_METHODS).blank?

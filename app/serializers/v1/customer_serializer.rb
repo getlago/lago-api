@@ -74,7 +74,11 @@ module V1
       when :stripe
         configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
         configuration[:provider_payment_methods] = model.stripe_customer&.provider_payment_methods
-        configuration.merge!(model.stripe_customer&.settings&.symbolize_keys || {})
+        settings = model.stripe_customer&.settings&.symbolize_keys || {}
+        configuration.merge!(settings.except(:default_shared_payment_token))
+        if settings.key?(:default_shared_payment_token)
+          configuration[:has_shared_payment_token] = model.stripe_customer.shared_payment_token?
+        end
       when :gocardless
         configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id
         configuration.merge!(model.gocardless_customer&.settings&.symbolize_keys || {})
