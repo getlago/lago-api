@@ -49,7 +49,7 @@ module Invoices
           payable_payment_status: "pending"
         )
 
-        payment.payment_method_id = determine_payment_method&.id
+        payment.payment_method_id = stripe_shared_payment_token? ? nil : determine_payment_method&.id
         payment.save!
 
         result.payment = payment
@@ -150,11 +150,22 @@ module Invoices
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided? || invoice.closed?
         return false if current_payment_provider.blank?
+        if current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+            current_payment_provider_customer.shared_payment_token? && determined_payment_method.manual_payment
+          return false
+        end
 
         current_payment_provider_customer&.provider_customer_id &&
           (determine_payment_method.present? ||
             provider_payment_method_pending_backfill? ||
-            stripe_customer_balance_only?)
+            stripe_customer_balance_only? ||
+            stripe_shared_payment_token?)
+      end
+
+      def stripe_shared_payment_token?
+        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+          current_payment_provider_customer.shared_payment_token? &&
+          !determined_payment_method.manual_payment
       end
 
       # NOTE: A Stripe customer_balance (V-BAN) customer has no instrument to pull from, so no
@@ -264,9 +275,13 @@ module Invoices
       #       nil means: skip automatic payment (manual type or no payment method configured)
       #       payment_method_params takes precedence (used for retry with override)
       def determine_payment_method
-        @determine_payment_method ||= PaymentMethods::DetermineService.call(
+        determined_payment_method.payment_method
+      end
+
+      def determined_payment_method
+        @determined_payment_method ||= PaymentMethods::DetermineService.call(
           invoice:, customer:, payment_method_params:
-        ).payment_method
+        )
       end
     end
   end

@@ -167,6 +167,7 @@ module Api
             :payment_provider,
             :payment_provider_code,
             :provider_customer_id,
+            :default_shared_payment_token,
             :sync,
             :sync_with_provider,
             :document_locale,
