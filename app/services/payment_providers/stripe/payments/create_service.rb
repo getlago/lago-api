@@ -122,12 +122,15 @@ module PaymentProviders
           # payable have been settled by another payment path
           raise Invoices::Payments::AlreadyPaidError if invoice.reload.payment_succeeded?
 
+          options = {
+            api_key: payment_provider.secret_key,
+            idempotency_key: "payment-#{payment.id}"
+          }
+          options[:stripe_version] = "2026-04-22.preview" if provider_customer.shared_payment_token?
+
           ::Stripe::PaymentIntent.create(
             payload,
-            {
-              api_key: payment_provider.secret_key,
-              idempotency_key: "payment-#{payment.id}"
-            }
+            options
           )
         end
 
@@ -145,6 +148,9 @@ module PaymentProviders
         end
 
         def shared_payment_token
+          # Locally configured tokens take priority, including when Stripe has a saved card.
+          return provider_customer.default_shared_payment_token if provider_customer.shared_payment_token?
+
           # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
           return nil unless invoice.organization.feature_flag_enabled?(:stripe_shared_payment_token)
           return nil if stripe_customer.deleted?
@@ -173,6 +179,7 @@ module PaymentProviders
             payload.merge!(customer_balance_fields)
           elsif shared_payment_token
             payload[:payment_method_data] = {shared_payment_granted_token: shared_payment_token}
+            payload[:payment_method_types] = ["card"] if provider_customer.shared_payment_token?
             payload.delete(:return_url)
             payload.delete(:off_session)
           else
