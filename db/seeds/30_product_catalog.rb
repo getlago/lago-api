@@ -53,7 +53,7 @@ unless ProductCategory.exists?(organization:, code: "cloud_platform")
     params: {
       name: "API calls",
       code: "api_calls",
-      product_type: "usage",
+      product_type: "metered",
       product_category_id: product_category.id,
       billable_metric_id: api_calls_bm.id
     }
