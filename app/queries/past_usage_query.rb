@@ -106,7 +106,7 @@ class PastUsageQuery < BaseQuery
       )
     end.reduce { |scope, condition| scope.or(condition) }
 
-    InvoiceSubscription.where(organization:,
+    InvoiceSubscription.where(organization:, regenerated_invoice_id: nil,
       invoicing_reason: [:in_advance_charge_periodic, :subscription_periodic, :subscription_terminating])
       .merge(conditions)
       .select(:id, :subscription_id, :charges_from_datetime, :charges_to_datetime)

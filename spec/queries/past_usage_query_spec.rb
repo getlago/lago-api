@@ -427,6 +427,38 @@ RSpec.describe PastUsageQuery do
       end
     end
 
+    context "when the invoice has been regenerated" do
+      let(:regenerated_invoice) { create(:invoice, organization:, customer:, invoice_type: :advance_charges) }
+      let(:regenerated_period) do
+        create(:invoice_subscription, organization:, subscription:, invoice: regenerated_invoice,
+          invoicing_reason: :in_advance_charge_periodic,
+          charges_from_datetime: invoice_subscription1.charges_from_datetime,
+          charges_to_datetime: invoice_subscription1.charges_to_datetime,
+          created_at: invoice_subscription1.created_at + 1.second)
+      end
+
+      before do
+        invoice_subscription1.update!(regenerated_invoice_id: regenerated_invoice.id)
+        regenerated_period
+      end
+
+      it "assigns the free fees to the replacement and retains the historical period" do
+        periods = result.usage_periods.index_by { |period| period.invoice_subscription.id }
+
+        expect(periods.fetch(regenerated_period.id).fees).to eq([free_fee])
+        expect(periods.fetch(invoice_subscription1.id).fees).to eq([paid_fee])
+      end
+
+      context "when only the superseded period is on the page" do
+        let(:pagination) { {page: 2, limit: 1} }
+
+        it "does not assign free fees to the superseded period" do
+          expect(result.usage_periods.sole.invoice_subscription).to eq(invoice_subscription1)
+          expect(result.usage_periods.sole.fees).to eq([paid_fee])
+        end
+      end
+    end
+
     context "when the period has only a regular invoice" do
       before { invoice_subscription1.update!(invoicing_reason: :subscription_periodic) }
 
