@@ -72,20 +72,50 @@ RSpec.describe CatalogPlans::UpdateService do
     end
   end
 
-  context "when changing the currency of a plan attached to a contract with direct rate cards" do
+  context "when changing the currency of a plan attached to a contract" do
     let(:catalog_plan) { create(:catalog_plan, currency: "EUR") }
     let(:params) { {currency: "USD"} }
 
     before do
       customer = create(:customer, organization: catalog_plan.organization)
-      contract = create(:contract, organization: catalog_plan.organization, customer:, catalog_plan:)
-      create(:contract_rate_card, organization: catalog_plan.organization, contract:)
+      create(:contract, organization: catalog_plan.organization, customer:, catalog_plan:)
     end
 
-    it "rejects the change even without plan-level rate cards" do
+    it "rejects it as plan_locked, even without plan-level rate cards" do
       expect(catalog_plan.applied_rate_cards).to be_empty
       expect(result).not_to be_success
-      expect(result.error.messages[:currency]).to eq(["not_editable_with_applied_rate_cards"])
+      expect(result.error.messages[:plan]).to eq(["plan_locked"])
+    end
+  end
+
+  context "when the plan is attached to a contract" do
+    let(:catalog_plan) { create(:catalog_plan, name: "Growth", code: "growth", description: "Old") }
+
+    before do
+      customer = create(:customer, organization: catalog_plan.organization)
+      create(:contract, organization: catalog_plan.organization, customer:, catalog_plan:)
+    end
+
+    it "rejects a code change" do
+      result = described_class.call(catalog_plan:, params: {code: "growth-v2"})
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(catalog_plan.reload.code).to eq("growth")
+    end
+
+    it "still allows editing the name, description and invoice display name" do
+      result = described_class.call(catalog_plan:, params: {name: "Renamed", description: "New", invoice_display_name: "On Invoice"})
+
+      expect(result).to be_success
+      expect(catalog_plan.reload).to have_attributes(name: "Renamed", description: "New", invoice_display_name: "On Invoice")
+    end
+
+    it "accepts the unchanged code passed back with an editable field" do
+      result = described_class.call(catalog_plan:, params: {code: "growth", name: "Renamed"})
+
+      expect(result).to be_success
+      expect(catalog_plan.reload.name).to eq("Renamed")
     end
   end
 end

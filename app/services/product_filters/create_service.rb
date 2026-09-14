@@ -18,7 +18,7 @@ module ProductFilters
     def call
       return result.not_found_failure!(resource: "product") unless product
 
-      unless product.usage?
+      unless product.metered?
         return result.single_validation_failure!(field: :product, error_code: "not_allowed_for_product_type")
       end
 

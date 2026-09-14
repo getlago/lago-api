@@ -22,29 +22,6 @@ RSpec.describe Events::Stores::PostgresStore do
       create(:event, **attributes)
     end
 
-    def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
-      event = create(
-        :event,
-        transaction_id:,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        external_customer_id: customer.external_id,
-        code:,
-        timestamp:,
-        properties:
-      )
-
-      create(
-        :enriched_event,
-        subscription:,
-        event:,
-        charge:,
-        charge_filter_id: charge_filter&.id,
-        value:,
-        decimal_value: value&.to_i&.to_d
-      )
-    end
-
     def format_timestamp(timestamp, precision: nil)
       Time.zone.parse(timestamp)
     end
@@ -59,7 +36,7 @@ RSpec.describe Events::Stores::PostgresStore do
     let(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: subscription.started_at.beginning_of_day,
           to_datetime: Time.current.end_of_day
@@ -109,7 +86,7 @@ RSpec.describe Events::Stores::PostgresStore do
       def store_for(event)
         described_class.new(
           code: billable_metric.code,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -142,7 +119,7 @@ RSpec.describe Events::Stores::PostgresStore do
 
         event_store = described_class.new(
           code: billable_metric.code,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -167,7 +144,7 @@ RSpec.describe Events::Stores::PostgresStore do
       let(:event_store) do
         described_class.new(
           code: billable_metric.code,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: datetime,
             to_datetime: datetime,
@@ -196,7 +173,7 @@ RSpec.describe Events::Stores::PostgresStore do
     let(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: started_at,
           to_datetime: started_at.end_of_month.end_of_day,

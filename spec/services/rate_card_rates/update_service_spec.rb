@@ -26,12 +26,22 @@ RSpec.describe RateCardRates::UpdateService do
       expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
     end
 
-    context "when the effective_from is moved to the past" do
+    context "when the effective_from is moved to the start of today" do
       let(:params) { {effective_from: Time.current.beginning_of_day.iso8601} }
 
       it "activates the rate" do
         expect(result).to be_success
         expect(result.rate_card_rate.status).to eq("active")
+      end
+    end
+
+    context "when the effective_from is moved before today" do
+      let(:params) { {effective_from: 1.day.ago.beginning_of_day.iso8601} }
+
+      it "returns a validation failure and leaves the rate pending" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
+        expect(rate_card_rate.reload.status).to eq("pending")
       end
     end
 

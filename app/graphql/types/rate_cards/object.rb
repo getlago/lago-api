@@ -19,10 +19,9 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
       field :display_on_invoice, Boolean, null: false
       field :proration, Boolean, null: false
-      field :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, null: false
+      field :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, null: true
 
       field :applied_pricing_unit_code, String, null: true
-      field :wallet_targetable, Boolean, null: true
 
       # Lock signals for clients: deletion locks at any plan/subscription
       # attachment, rate edits lock once a subscription bills the card.

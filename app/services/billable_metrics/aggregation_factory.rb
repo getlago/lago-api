@@ -2,11 +2,11 @@
 
 module BillableMetrics
   class AggregationFactory
-    def self.new_instance(metered_item:, context:, current_usage: false, **attributes)
+    def self.new_instance(metered_item:, billing_context:, current_usage: false, **attributes)
       aggregator_class(metered_item, current_usage).new(
         event_store_class: Events::Stores::StoreFactory.store_class(organization: metered_item.billable_metric.organization),
         metered_item:,
-        context:,
+        billing_context:,
         **attributes
       )
     end

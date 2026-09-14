@@ -7,7 +7,7 @@ module Fees
     def initialize(
       invoice:,
       metered_item:,
-      subscription:,
+      billing_context:,
       cache_middleware: nil,
       filtered_aggregations: nil,
       options: nil,
@@ -16,7 +16,7 @@ module Fees
     )
       @invoice = invoice
       @metered_item = metered_item
-      @subscription = subscription
+      @billing_context = billing_context
       @options = options || Options.default
       @plan = plan
       @customer = customer
@@ -69,7 +69,9 @@ module Fees
 
     private
 
-    attr_reader :invoice, :metered_item, :subscription, :cache_middleware, :filtered_aggregations, :options, :plan, :customer
+    attr_reader :invoice, :metered_item, :billing_context, :cache_middleware, :filtered_aggregations, :options, :plan, :customer
+
+    delegate :subscription, to: :billing_context
 
     def init_metered_items_fees
       result.fees = []
@@ -78,7 +80,7 @@ module Fees
 
       # NOTE: Create a fee for each filters defined on the charge.
       metered_item.charge.filters.each do |charge_filter|
-        filter_metered_item = metered_item.with_charge_filter(charge_filter)
+        filter_metered_item = metered_item.with_filter(charge_filter)
         init_fees(selected_metered_item: filter_metered_item)
       end
 
@@ -89,7 +91,7 @@ module Fees
       )
 
       init_fees(
-        selected_metered_item: metered_item.with_charge_filter(
+        selected_metered_item: metered_item.with_filter(
           charge_filter,
           properties: metered_item.charge.properties
         )
@@ -182,7 +184,7 @@ module Fees
       charge_model_result = ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result: zero_aggregation,
-        period_ratio: selected_metered_item.period_ratio,
+        period_ratio: selected_metered_item.elapsed_period_ratio,
         calculate_projected_usage: options.calculate_projected_usage
       ).apply
 
@@ -267,31 +269,15 @@ module Fees
         return adjustement_result.fee
       end
 
+      amount = Fees::AmountsService.call(
+        currency: selected_metered_item.currency,
+        charge_model_result: amount_result,
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(selected_metered_item.applied_pricing_unit)
+      ).amount
+
       # Prevent trying to create a fee with negative units or amount.
       if amount_result.units.negative? || amount_result.amount.negative?
-        amount_result.amount = amount_result.unit_amount = BigDecimal(0)
         amount_result.full_units_number = amount_result.units = BigDecimal(0)
-      end
-
-      # NOTE: amount_result should be a BigDecimal, we need to round it
-      # to the currency decimals and transform it into currency cents
-      if selected_metered_item.applied_pricing_unit
-        pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
-          amount: amount_result.amount,
-          unit_amount: amount_result.unit_amount,
-          applied_pricing_unit: selected_metered_item.applied_pricing_unit
-        )
-
-        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
-          .to_fiat_currency_cents(selected_metered_item.currency)
-          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
-      else
-        pricing_unit_usage = nil
-        rounded_amount = amount_result.amount.round(selected_metered_item.currency.exponent)
-        amount_cents = rounded_amount * selected_metered_item.currency.subunit_to_unit
-        precise_amount_cents = amount_result.amount * selected_metered_item.currency.subunit_to_unit.to_d
-        unit_amount_cents = amount_result.unit_amount * selected_metered_item.currency.subunit_to_unit
-        precise_unit_amount = amount_result.unit_amount
       end
 
       units = if options.current_usage? && (selected_metered_item.pay_in_advance? || selected_metered_item.prorated?)
@@ -304,12 +290,15 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization_id: subscription.organization_id,
-        billing_entity_id: subscription.applicable_billing_entity_id,
+        organization_id: billing_context.organization_id,
+        billing_entity_id: billing_context.applicable_billing_entity_id,
         subscription:,
         charge: selected_metered_item.charge,
-        amount_cents:,
-        precise_amount_cents:,
+        amount_cents: amount.amount_cents,
+        precise_amount_cents: amount.precise_amount_cents,
+        unit_amount_cents: amount.unit_amount_cents,
+        precise_unit_amount: amount.precise_unit_amount,
+        pricing_unit_usage: amount.pricing_unit_usage,
         amount_currency: selected_metered_item.currency,
         fee_type: :charge,
         invoiceable_type: "Charge",
@@ -321,12 +310,9 @@ module Fees
         payment_status: :pending,
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
-        unit_amount_cents:,
-        precise_unit_amount:,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter: selected_metered_item.charge_filter&.persisted? ? selected_metered_item.charge_filter : nil,
-        pricing_unit_usage:
+        charge_filter: selected_metered_item.charge_filter&.persisted? ? selected_metered_item.charge_filter : nil
       )
 
       unless selected_metered_item.invoiceable?
@@ -369,7 +355,7 @@ module Fees
       return @adjusted_fee[key] if @adjusted_fee.key?(key)
 
       scope = AdjustedFee
-        .where(invoice:, subscription:, charge: metered_item.charge, charge_filter:, fee_type: :charge)
+        .where(invoice:, subscription_id: billing_context.subscription_id, charge: metered_item.charge, charge_filter:, fee_type: :charge)
         .where("(properties->>'charges_from_datetime')::timestamptz = ?", metered_item.boundaries.charges_from_datetime&.iso8601(3))
         .where("(properties->>'charges_to_datetime')::timestamptz = ?", metered_item.boundaries.charges_to_datetime&.iso8601(3))
 
@@ -401,18 +387,18 @@ module Fees
       ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result:,
-        period_ratio: selected_metered_item.period_ratio,
+        period_ratio: selected_metered_item.elapsed_period_ratio,
         calculate_projected_usage: options.calculate_projected_usage
       ).apply
     end
 
     def already_billed?
       existing_fees = if invoice
-        invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: subscription.id)
+        invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)
       else
         Fee.where(
           charge_id: metered_item.charge.id,
-          subscription_id: subscription.id,
+          subscription_id: billing_context.subscription_id,
           invoice_id: nil,
           pay_in_advance_event_id: nil
         ).where(
@@ -435,7 +421,7 @@ module Fees
       BillableMetrics::AggregationFactory.new_instance(
         metered_item: selected_metered_item,
         current_usage: options.current_usage?,
-        context: Events::Stores::EventContext.from(subscription:),
+        billing_context:,
         boundaries: {
           from_datetime: selected_metered_item.boundaries.charges_from_datetime,
           to_datetime: selected_metered_item.boundaries.charges_to_datetime,
@@ -461,7 +447,7 @@ module Fees
 
         result.cached_aggregations << CachedAggregation.find_or_initialize_by(
           organization_id: selected_metered_item.organization_id,
-          external_subscription_id: subscription.external_id,
+          external_subscription_id: billing_context.external_id,
           charge_id: selected_metered_item.charge.id,
           charge_filter_id: selected_metered_item.charge_filter&.id,
           grouped_by:,
@@ -518,6 +504,10 @@ module Fees
     end
 
     def validate!
+      unless billing_context.is_a?(Billing::Context)
+        raise ArgumentError, "billing_context must be a Billing::Context"
+      end
+
       unless metered_item.is_a?(MeteredItem)
         raise ArgumentError, "metered_item must be a Fees::ChargeService::MeteredItem"
       end

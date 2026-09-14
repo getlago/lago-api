@@ -6,6 +6,7 @@ module Subscriptions
       :progressive_billed_amount,
       :progressive_billing_invoice,
       :to_credit_amount,
+      :to_invoice_amount,
       :total_billed_amount_cents,
       :invoice_subscriptions
     ]
@@ -23,6 +24,7 @@ module Subscriptions
       result.total_billed_amount_cents = 0
       result.progressive_billing_invoice = nil
       result.to_credit_amount = 0
+      result.to_invoice_amount = 0
 
       # Note: we might be refreshing balance while applying credits on generating invoice.
       # in this case this invoice should be included
@@ -57,9 +59,16 @@ module Subscriptions
       result.progressive_billing_invoice = invoice
       result.progressive_billed_amount = result.progressive_billing_invoice.fees_amount_cents
 
+      already_applied_amount = invoice.progressive_billing_credits.active.sum(:amount_cents)
+
+      # Invoice offsets reverse gross usage; credit note items also store gross amounts.
+      result.to_invoice_amount = invoice.fees_amount_cents - already_applied_amount
+      result.to_invoice_amount -= CreditNoteItem.where(credit_note: invoice.credit_notes).sum(:amount_cents)
+      result.to_invoice_amount = 0 if result.to_invoice_amount.negative?
+
       result.to_credit_amount = invoice.fees_amount_cents
       result.to_credit_amount -= invoice.coupons_amount_cents
-      result.to_credit_amount -= invoice.progressive_billing_credits.active.sum(:amount_cents)
+      result.to_credit_amount -= already_applied_amount
       result.to_credit_amount -= invoice.credit_notes.where(credit_status: ["available", "consumed"]).sum(:credit_amount_cents)
 
       # if for some reason this goes below zero, it should be zero.

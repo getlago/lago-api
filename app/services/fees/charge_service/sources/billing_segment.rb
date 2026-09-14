@@ -3,31 +3,39 @@
 module Fees
   class ChargeService
     module Sources
-      BillingSegment = Data.define(:billing_segment) do
-        def initialize(billing_segment:)
-          validate_billing_segment!(billing_segment)
-
+      BillingSegment = Data.define(:billing_segment, :product_filter) do
+        def initialize(billing_segment:, product_filter: nil)
+          @cache = {}
           super
         end
 
         delegate :organization_id,
+          :elapsed_period_ratio,
           :rate,
+          :contract,
           :rate_card_rate,
           :rate_override,
           :pricing_unit,
-          :proration_ratio,
           to: :billing_segment
 
         delegate :charge, :charge_id, to: :product
-        delegate :dynamic?, to: :rate
+        delegate :billable_metric, to: :product
 
-        def charge_filter
-          nil
+        def fee_type
+          :product
         end
 
-        delegate :product_filter, to: :rate_card
+        def invoiceable
+          product
+        end
 
-        delegate :billable_metric, to: :product
+        def selected_filter
+          product_filter
+        end
+
+        def with_filter(filter)
+          self.class.new(billing_segment:, product_filter: filter)
+        end
 
         def boundaries
           BillingPeriodBoundaries.new(
@@ -52,20 +60,9 @@ module Fees
           ChargeModels::PricingStructure.from_billing_segment(billing_segment)
         end
 
-        # Segment proration is persisted by the billing schedule, not elapsed current usage.
-        def period_ratio
-          billing_segment.proration_ratio
-        end
-
         # NOTE: Product-catalog pricing groups will move to product/plan data once that feature is supported.
         def pricing_group_keys
-          keys = properties["pricing_group_keys"]&.dup || []
-
-          if accepts_target_wallet? && !keys.include?(::Charge::EVENT_TARGET_WALLET_CODE)
-            keys << ::Charge::EVENT_TARGET_WALLET_CODE
-          end
-
-          keys
+          properties["pricing_group_keys"]&.dup || []
         end
 
         # NOTE: Product-catalog presentation groups will move to product/plan data once that feature is supported.
@@ -73,32 +70,13 @@ module Fees
           []
         end
 
-        def matching_filters
-          product_filter&.to_h || {}
-        end
-
-        def ignored_filters
-          []
-        end
-
         def matching_and_ignored_filters
-          ChargeFilters::MatchingAndIgnoredService::Result.new.tap do |result|
-            result.matching_filters = matching_filters
-            result.ignored_filters = ignored_filters
-          end
-        end
-
-        def aggregation_options(current_usage:)
-          {
-            free_units_per_events: properties["free_units_per_events"].to_i,
-            free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0),
-            is_current_usage: current_usage,
-            is_pay_in_advance: pay_in_advance?
-          }
-        end
-
-        def accepts_target_wallet?
-          rate_card.wallet_targetable?
+          @cache[:matching_and_ignored_filters] ||= Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+            target_filter: Events::BillingPeriodFilters::FilterTarget.from_billing_segment(
+              billing_segment:,
+              filter: product_filter || billing_segment.empty_product_filter
+            )
+          )
         end
 
         def pay_in_advance?
@@ -132,14 +110,6 @@ module Fees
 
         def rate_card
           billing_segment.contract_rate_card.rate_card
-        end
-
-        def validate_billing_segment!(billing_segment)
-          if billing_segment.is_a?(::BillingSegment)
-            return
-          end
-
-          raise ArgumentError, "billing_segment must be a BillingSegment"
         end
       end
     end

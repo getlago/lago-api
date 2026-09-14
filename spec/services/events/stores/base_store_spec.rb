@@ -9,7 +9,7 @@ RSpec.describe Events::Stores::BaseStore do
     let(:subscription) { create(:subscription) }
     let(:store) do
       described_class.new(
-        context:,
+        billing_context:,
         boundaries: {
           from_datetime: Time.zone.parse("2026-03-01"),
           to_datetime: Time.zone.parse("2026-03-31").end_of_day,
@@ -17,13 +17,13 @@ RSpec.describe Events::Stores::BaseStore do
         }
       )
     end
-    let(:context) { Events::Stores::EventContext.from(subscription:) }
+    let(:billing_context) { Billing::Context.from(subscription:) }
 
-    it "computes duration through the event context" do
-      allow(context).to receive(:charges_duration_at).and_return(31)
+    it "computes duration through the billing context" do
+      allow(billing_context).to receive(:charges_duration_at).and_return(31)
 
       expect(period_duration).to eq(31)
-      expect(context).to have_received(:charges_duration_at)
+      expect(billing_context).to have_received(:charges_duration_at)
         .with(Time.zone.parse("2026-03-31").end_of_day + 1.day)
     end
 
@@ -31,12 +31,12 @@ RSpec.describe Events::Stores::BaseStore do
       expect(store.charges_duration).to eq(30)
     end
 
-    context "when context is contract-backed" do
-      let(:context) { Events::Stores::EventContext.from(contract: create(:contract)) }
+    context "when billing context is contract-backed" do
+      let(:billing_context) { Billing::Context.from(contract: create(:contract)) }
 
       it "raises when duration is requested" do
         expect { period_duration }
-          .to raise_error(NotImplementedError, "contract-backed event contexts do not have charge durations yet")
+          .to raise_error(NotImplementedError, "contract-backed billing contexts do not have charges_duration_at yet")
       end
     end
   end

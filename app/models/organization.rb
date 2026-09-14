@@ -8,7 +8,7 @@ class Organization < ApplicationRecord
   include HasFeatureFlags
   include Organizations::Sluggable
 
-  self.ignored_columns += [:clickhouse_aggregation]
+  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events]
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
@@ -72,6 +72,7 @@ class Organization < ApplicationRecord
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_receipts
   has_many :payment_requests
+  has_many :streaming_destinations, class_name: "StreamingDestinations::BaseDestination"
   has_many :taxes
   has_many :wallets
   has_many :wallet_transactions
@@ -93,6 +94,9 @@ class Organization < ApplicationRecord
   has_many :entitlement_values, class_name: "Entitlement::EntitlementValue"
   has_many :subscription_feature_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
 
+  has_many :usage_attribution_types
+  has_many :usage_attribution_values
+
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
@@ -110,7 +114,6 @@ class Organization < ApplicationRecord
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
-  has_one :enriched_store_migration
 
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"

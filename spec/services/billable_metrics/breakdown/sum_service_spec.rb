@@ -7,7 +7,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
     described_class.new(
       event_store_class:,
       metered_item:,
-      context: Events::Stores::EventContext.from(subscription:),
+      billing_context: Billing::Context.from(subscription:),
       boundaries: {
         from_datetime:,
         to_datetime:,

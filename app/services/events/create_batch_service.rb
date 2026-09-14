@@ -46,7 +46,9 @@ module Events
         event.organization_id = organization.id
         event.code = event_params[:code]
         event.transaction_id = event_params[:transaction_id]
-        event.external_subscription_id = event_params[:external_subscription_id]
+        # external_contract_id is the v2 alias for external_subscription_id; an
+        # explicit external_subscription_id wins. See Events::CreateService.
+        event.external_subscription_id = event_params[:external_subscription_id].presence || event_params[:external_contract_id]
         event.properties = event_params[:properties] || {}
         event.metadata = metadata || {}
         event.timestamp = Time.zone.at(event_params[:timestamp] ? BigDecimal(event_params[:timestamp].to_s) : timestamp)

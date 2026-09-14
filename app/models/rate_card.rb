@@ -13,10 +13,9 @@ class RateCard < ApplicationRecord
     advance: "advance"
   }.freeze
 
-  # none is a real value, not a nil stand-in: the column is NOT NULL so the API
-  # always returns a concrete grouping behaviour.
+  # nil means the paid fee stays standalone; `invoice` folds it into the
+  # invoice. This mirrors the legacy charge `regroup_paid_fees` contract.
   REGROUP_PAID_FEES = {
-    none: "none",
     invoice: "invoice"
   }.freeze
 
@@ -31,9 +30,9 @@ class RateCard < ApplicationRecord
   has_many :taxes, through: :applied_taxes
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
-  # prefix: a bare `none` value would define a RateCard.none scope, which
-  # collides with ActiveRecord::QueryMethods#none.
-  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: true, prefix: true
+  # nil is a valid value (fee stays standalone); prefix keeps the predicate
+  # explicit (regroup_paid_fees_invoice?).
+  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}, prefix: true
 
   validates :name, presence: true
   validates :code,
@@ -58,16 +57,23 @@ class RateCard < ApplicationRecord
   end
 
   def validate_display_on_invoice
-    return if advance? || display_on_invoice?
+    return if display_on_invoice?
 
-    errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
+    # A fixed product bills one fee per period, so its line must always show —
+    # hiding it charges the customer an amount with nothing to reconcile it to.
+    # This holds on both timings; the flag only makes sense for metered on advance.
+    if product&.fixed?
+      errors.add(:display_on_invoice, :not_allowed_for_product_type)
+    elsif !advance?
+      errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
+    end
   end
 
-  # Usage proration spreads a recurring quantity across the period, so it
+  # Metered proration spreads a recurring quantity across the period, so it
   # needs a recurring metric — and not weighted_sum, which prorates by design
   def validate_proration
     return unless proration?
-    return unless product&.usage?
+    return unless product&.metered?
 
     metric = product.billable_metric
     return if metric.nil?
@@ -76,9 +82,12 @@ class RateCard < ApplicationRecord
     errors.add(:proration, :not_allowed_for_aggregation_type) if metric.weighted_sum_agg?
   end
 
-  # Paid-fee regrouping only exists for advance fees kept off the invoice
+  # Paid-fee regrouping only exists for advance fees kept off the invoice. The
+  # pairing checks apply only to the `invoice` value — a nil (standalone) or an
+  # invalid value skips them, so an invalid value fails on its inclusion error
+  # alone instead of also reporting a pairing conflict.
   def validate_regroup_paid_fees
-    return if regroup_paid_fees_none?
+    return unless regroup_paid_fees_invoice?
 
     errors.add(:regroup_paid_fees, :not_allowed_for_billing_timing) unless advance?
     errors.add(:regroup_paid_fees, :not_allowed_with_display_on_invoice) if display_on_invoice?
@@ -123,8 +132,7 @@ end
 #  display_on_invoice        :boolean          default(TRUE), not null
 #  name                      :string           not null
 #  proration                 :boolean          default(FALSE), not null
-#  regroup_paid_fees         :enum             default("none"), not null
-#  wallet_targetable         :boolean
+#  regroup_paid_fees         :enum
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  organization_id           :uuid             not null

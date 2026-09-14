@@ -4,7 +4,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   subject(:event_store) do
     described_class.new(
       code:,
-      context: Events::Stores::EventContext.from(subscription:),
+      billing_context: Billing::Context.from(subscription:),
       boundaries:,
       filters: {
         grouped_by:,
@@ -268,6 +268,68 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           expect(values).to match_array(["1", "3", "-1", "-2"])
         end
       end
+    end
+  end
+
+  describe "#for_window" do
+    it "mints a sibling store for another window" do
+      sibling = event_store.for_window(to_datetime: boundaries[:from_datetime] - 1.second)
+
+      expect(sibling).to be_an_instance_of(described_class)
+      expect(sibling).not_to be(event_store)
+      expect(sibling.code).to eq(event_store.code)
+      expect(sibling.billing_context).to eq(event_store.billing_context)
+      expect(sibling.filters).to eq(event_store.filters)
+      expect(sibling.deduplicate).to eq(event_store.deduplicate)
+      expect(sibling.boundaries).to eq({to_datetime: boundaries[:from_datetime] - 1.second})
+    end
+
+    it "aggregates the same property as the store it was minted from" do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.aggregation_property).to eq("value")
+      expect(sibling.numeric_property).to be(true)
+    end
+
+    it "leaves use_from_boundary to the caller, which declares what the window means" do
+      event_store.use_from_boundary = false
+
+      expect(event_store.for_window(to_datetime: boundaries[:to_datetime]).use_from_boundary).to be(true)
+    end
+
+    it "deduplicates like the store it was minted from" do
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.deduplicate).to eq(event_store.deduplicate)
+    end
+
+    it "forwards the boundaries it was given, whatever keys they carry" do
+      sibling = event_store.for_window(**boundaries)
+
+      expect(sibling.boundaries).to eq(boundaries)
+    end
+
+    it "narrows the filters when asked to" do
+      sibling = event_store.for_window(**boundaries, filters: event_store.filters.merge(grouped_by_values: {"region" => "europe"}))
+
+      expect(sibling.boundaries).to eq(boundaries)
+      expect(sibling.grouped_by_values).to eq({"region" => "europe"})
+    end
+
+    # NOTE: the sibling must actually query, on a window carrying no lower bound, and
+    #       deduplicate exactly as the store it was minted from. Asserting only that the
+    #       attributes were copied would pass on a sibling that returns nothing.
+    it "aggregates over its own window, deduplicating like the store it was minted from" do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+      sibling.use_from_boundary = false
+
+      expect(sibling.sum(with_count: false).value).to eq(event_store.sum(with_count: false).value)
     end
   end
 
@@ -824,7 +886,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         subject(:event_store) do
           described_class.new(
             code:,
-            context: Events::Stores::EventContext.from(subscription:),
+            billing_context: Billing::Context.from(subscription:),
             boundaries:,
             filters: {
               grouped_by:,
@@ -1580,7 +1642,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1645,7 +1707,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1705,7 +1767,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1768,7 +1830,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1833,7 +1895,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1900,7 +1962,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          context: Events::Stores::EventContext.from(subscription:),
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -2708,56 +2770,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         expect(result.events_count).to eq(3) # 2 from current period + 1 from before
         expect(result.value).to eq(204) # 4 from current period + 200 from before (999 (asia/japan) doesn't match)
-      end
-    end
-  end
-
-  if include_feature?(:distinct_charges_and_filters)
-    describe "#distinct_charges_and_filters" do
-      let(:charge_filter) { create(:charge_filter, charge:) }
-
-      let(:events) { nil }
-
-      before do
-        create_enriched_event(
-          timestamp: boundaries[:from_datetime] + 12.days,
-          value: 12,
-          properties: {billable_metric.field_name => 12},
-          charge_filter:
-        )
-      end
-
-      it "returns distinct charges and filters with the last seen timestamp" do
-        result = event_store.distinct_charges_and_filters
-
-        expect(result.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-        expect(result.map(&:last)).to all(be_present)
-      end
-
-      context "when charge_filter is nil" do
-        let(:charge_filter) { nil }
-
-        it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters.map { |row| row[0..1] }).to match_array([[charge.id, nil]])
-        end
-      end
-
-      context "when codes are provided" do
-        it "returns only the charges and filters matching the provided codes" do
-          matching = event_store.distinct_charges_and_filters(codes: [code])
-          expect(matching.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
-        end
-      end
-
-      context "when the last seen timestamp is not requested" do
-        it "returns the same charges and filters without the timestamp" do
-          result = event_store.distinct_charges_and_filters(with_last_seen_at: false)
-
-          expect(result.map { |row| row[0..1] })
-            .to match_array(event_store.distinct_charges_and_filters.map { |row| row[0..1] })
-          expect(result.map(&:last)).to all(be_nil)
-        end
       end
     end
   end

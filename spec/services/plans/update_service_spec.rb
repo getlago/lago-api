@@ -193,12 +193,65 @@ RSpec.describe Plans::UpdateService do
       end
     end
 
-    it "marks invoices as ready to be refreshed" do
-      subscription = create(:subscription, organization:, plan:)
-      invoice = create(:invoice, :draft)
-      create(:invoice_subscription, invoice:, subscription:)
+    context "when marking draft invoices for refresh" do
+      let(:update_args) { {name: plan_name} }
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, organization:, plan:, customer:) }
+      let(:invoice) { create(:invoice, :draft, customer:) }
 
-      expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+      before do
+        create(:invoice_subscription, organization:, invoice:, subscription:)
+      end
+
+      it "marks the plan's draft invoices as ready to be refreshed" do
+        expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+      end
+
+      it "marks consolidated invoices shared with other subscriptions" do
+        other_plan = create(:plan, organization:)
+        other_subscription = create(:subscription, organization:, customer:, plan: other_plan)
+        same_plan_subscription = create(:subscription, organization:, customer:, plan:)
+        create(:invoice_subscription, organization:, invoice:, subscription: other_subscription)
+        create(:invoice_subscription, organization:, invoice:, subscription: same_plan_subscription)
+
+        expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+      end
+
+      context "when the subscription is terminated" do
+        let(:subscription) { create(:subscription, :terminated, organization:, plan:, customer:) }
+
+        it "still marks its draft invoices as ready to be refreshed" do
+          expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+        end
+      end
+
+      context "when the invoice is finalized" do
+        let(:invoice) { create(:invoice, customer:, status: :finalized) }
+
+        it "updates the plan without marking the invoice for refresh" do
+          expect(plans_service.call).to be_success
+          expect(invoice.reload.ready_to_be_refreshed).to be(false)
+        end
+      end
+
+      context "when the invoice belongs to another plan" do
+        let(:other_plan) { create(:plan, organization:) }
+        let(:subscription) { create(:subscription, organization:, customer:, plan: other_plan) }
+
+        it "does not mark the invoice for refresh" do
+          expect(plans_service.call).to be_success
+          expect(invoice.reload.ready_to_be_refreshed).to be(false)
+        end
+      end
+
+      context "when an invoice from another organization is linked to the subscription" do
+        let(:invoice) { create(:invoice, :draft) }
+
+        it "does not mark the other organization's invoice for refresh" do
+          expect(plans_service.call).to be_success
+          expect(invoice.reload.ready_to_be_refreshed).to be(false)
+        end
+      end
     end
 
     context "with activity logs" do

@@ -16,10 +16,10 @@ RSpec.describe RateCard do
 
       expect(rate_card).to define_enum_for(:regroup_paid_fees)
         .backed_by_column_of_type(:enum)
-        .validating
-        .with_values(none: "none", invoice: "invoice")
+        .validating(allowing_nil: true)
+        .with_values(invoice: "invoice")
         .with_prefix(:regroup_paid_fees)
-      expect(rate_card.regroup_paid_fees).to eq("none")
+      expect(rate_card.regroup_paid_fees).to be_nil
     end
   end
 
@@ -72,6 +72,24 @@ RSpec.describe RateCard do
       it "accepts a displayed arrears card" do
         expect(build(:rate_card, billing_timing: "arrears", display_on_invoice: true)).to be_valid
       end
+
+      context "with a fixed product" do
+        let(:product) { build(:product, :fixed) }
+
+        it "rejects hiding fees on both timings, reporting the product type" do
+          %w[advance arrears].each do |timing|
+            card = build(:rate_card, product:, organization: product.organization, billing_timing: timing, display_on_invoice: false)
+            card.valid?
+            expect(card.errors.where(:display_on_invoice).map(&:type)).to eq([:not_allowed_for_product_type])
+          end
+        end
+
+        it "accepts a displayed card on either timing" do
+          %w[advance arrears].each do |timing|
+            expect(build(:rate_card, product:, organization: product.organization, billing_timing: timing, display_on_invoice: true)).to be_valid
+          end
+        end
+      end
     end
 
     describe "proration compatibility" do
@@ -121,6 +139,12 @@ RSpec.describe RateCard do
 
         valid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: false)
         expect(valid).to be_valid
+      end
+
+      it "reports only the inclusion failure for an invalid value, not the pairing rule" do
+        card = build(:rate_card, regroup_paid_fees: "bogus", billing_timing: "advance", display_on_invoice: true)
+        card.valid?
+        expect(card.errors.where(:regroup_paid_fees).map(&:type)).to eq([:inclusion])
       end
     end
 

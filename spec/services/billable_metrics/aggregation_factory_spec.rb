@@ -36,7 +36,7 @@ RSpec.describe BillableMetrics::AggregationFactory do
     )
   end
 
-  let(:result) { factory.new_instance(metered_item:, current_usage:, context: Events::Stores::EventContext.from(subscription:), boundaries:) }
+  let(:result) { factory.new_instance(metered_item:, current_usage:, billing_context: Billing::Context.from(subscription:), boundaries:) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do

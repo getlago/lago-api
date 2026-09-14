@@ -40,6 +40,47 @@ RSpec.describe Api::V1::EventsController do
       expect { subject }.not_to change(Clickhouse::ApiLog, :count)
     end
 
+    context "when a product-catalog org sends external_contract_id" do
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:create_params) do
+        {
+          code: metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_contract_id: contract.external_id,
+          timestamp: Time.current.to_i,
+          properties: {foo: "bar"}
+        }
+      end
+
+      it "stores the contract id under external_subscription_id" do
+        expect { subject }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:event][:external_subscription_id]).to eq(contract.external_id)
+        expect(Event.order(:created_at).last.external_subscription_id).to eq(contract.external_id)
+      end
+    end
+
+    context "when both external_subscription_id and external_contract_id are sent" do
+      let(:create_params) do
+        {
+          code: metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          external_contract_id: "ignored-contract-id",
+          timestamp: Time.current.to_i,
+          properties: {foo: "bar"}
+        }
+      end
+
+      it "keeps the explicit external_subscription_id" do
+        subject
+
+        expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
+      end
+    end
+
     context "with duplicated transaction_id" do
       let!(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
 
@@ -156,6 +197,29 @@ RSpec.describe Api::V1::EventsController do
 
       expect(response).to have_http_status(:ok)
       expect(json[:events].first[:external_subscription_id]).to eq(subscription.external_id)
+    end
+
+    context "when a product-catalog org sends external_contract_id" do
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:batch_params) do
+        [
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_contract_id: contract.external_id,
+            timestamp: Time.current.to_i,
+            properties: {foo: "bar"}
+          }
+        ]
+      end
+
+      it "stores the contract id under external_subscription_id" do
+        expect { subject }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].first[:external_subscription_id]).to eq(contract.external_id)
+      end
     end
 
     context "with invalid timestamp for one event" do
