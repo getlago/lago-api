@@ -211,6 +211,7 @@ ALTER TABLE IF EXISTS ONLY public.rate_overrides DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk_rails_6c720a8ccd;
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_values DROP CONSTRAINT IF EXISTS fk_rails_6b11e175f4;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_6a4ad694b3;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_69ec920393;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_699cd1384f;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_68754484c0;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
@@ -760,6 +761,7 @@ DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fees_on_rate_override_id;
 DROP INDEX IF EXISTS public.index_fees_on_rate_card_rate_id;
+DROP INDEX IF EXISTS public.index_fees_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
 DROP INDEX IF EXISTS public.index_fees_on_original_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_organization_id_and_created_at_and_id;
@@ -2631,7 +2633,7 @@ CREATE TABLE public.contract_rate_cards (
     contract_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
-    next_billing_at timestamp without time zone NOT NULL,
+    next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
     ended_date date,
     units numeric,
@@ -3739,7 +3741,8 @@ CREATE TABLE public.fees (
     duplicated_in_advance boolean DEFAULT false,
     original_fee_id uuid,
     rate_card_rate_id uuid,
-    rate_override_id uuid
+    rate_override_id uuid,
+    product_filter_id uuid
 );
 
 
@@ -9340,6 +9343,13 @@ CREATE INDEX index_fees_on_pay_in_advance_event_transaction_id ON public.fees US
 
 
 --
+-- Name: index_fees_on_product_filter_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_product_filter_id ON public.fees USING btree (product_filter_id);
+
+
+--
 -- Name: index_fees_on_rate_card_rate_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13252,6 +13262,14 @@ ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
 
 
 --
+-- Name: fees fk_rails_69ec920393; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_69ec920393 FOREIGN KEY (product_filter_id) REFERENCES public.product_filters(id);
+
+
+--
 -- Name: products fk_rails_6a4ad694b3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14876,7 +14894,10 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260911144853'),
 ('20260910151708'),
+('20260910124306'),
+('20260910124234'),
 ('20260910095513'),
+('20260909154904'),
 ('20260909103355'),
 ('20260908222044'),
 ('20260908211313'),
@@ -14884,6 +14905,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260908160340'),
 ('20260908154406'),
 ('20260908154307'),
+('20260908113720'),
+('20260908113710'),
 ('20260908112310'),
 ('20260905223042'),
 ('20260905223041'),

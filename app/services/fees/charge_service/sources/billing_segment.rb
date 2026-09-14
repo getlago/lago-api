@@ -5,6 +5,14 @@ module Fees
     module Sources
       BillingSegment = Data.define(:billing_segment, :product_filter) do
         def initialize(billing_segment:, product_filter: nil)
+          unless billing_segment.is_a?(::BillingSegment)
+            raise ArgumentError, "billing_segment must be a BillingSegment"
+          end
+
+          unless billing_segment.contract_rate_card.rate_card.product.metered?
+            raise ArgumentError, "billing_segment must belong to a metered product; fixed products cannot be metered"
+          end
+
           @cache = {}
           super
         end
@@ -31,6 +39,22 @@ module Fees
 
         def selected_filter
           product_filter
+        end
+
+        def filter_association
+          :product_filter
+        end
+
+        def pricing_buckets
+          [with_filter(rate_card.product_filter)]
+        end
+
+        def true_up_filter_id
+          rate_card.product_filter_id
+        end
+
+        def with_default_filter
+          with_filter(nil)
         end
 
         def with_filter(filter)
