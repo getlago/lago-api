@@ -15,6 +15,7 @@ module Wallets
       def call
         return unless License.premium?
         return result unless valid_payment_method?
+        return result unless valid_connections?
 
         if method == "fixed" && rule_params[:paid_credits].nil? && rule_params[:granted_credits].nil?
           paid_credits = wallet_params[:paid_credits]
@@ -67,6 +68,10 @@ module Wallets
           InvoiceCustomSections::AttachToResourceService.call(resource: rule, params: rule_params)
         end
 
+        if rule_params[:connections].present?
+          BillingObjectConnections::AttachToResourceService.call!(resource: rule, params: rule_params)
+        end
+
         result.recurring_transaction_rule = rule
         result
       rescue ActiveRecord::RecordInvalid => e
@@ -107,6 +112,15 @@ module Wallets
         result.payment_method = payment_method
 
         PaymentMethods::ValidateService.new(result, **rule_params).valid?
+      end
+
+      def valid_connections?
+        validator = BillingObjectConnections::ValidateService.new(result, **rule_params)
+        return true if validator.valid?
+
+        result.single_validation_failure!(field: :connections, error_code: validator.error_codes.first)
+
+        false
       end
 
       def payment_method
