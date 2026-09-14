@@ -59,6 +59,14 @@ RSpec.describe StreamingDestinations::KinesisDestination, type: :model do
       expect(destination.partition_key).to eq("customer_external_id")
     end
 
+    it "carries an optional external id, for a writer role whose trust policy requires one" do
+      destination.external_id = "00000000-0000-4000-8000-000000000001"
+      destination.save!
+
+      expect(destination.reload.external_id).to eq("00000000-0000-4000-8000-000000000001")
+      expect(build(:kinesis_destination).external_id).to be_nil
+    end
+
     it "defaults the partition key when unset" do
       destination = build(:kinesis_destination, settings: {stream_arn: "arn", region: "eu-west-1", role_arn: "role"})
 
