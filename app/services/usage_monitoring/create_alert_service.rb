@@ -83,6 +83,7 @@ module UsageMonitoring
         #       evaluation; the lock is what keeps the baseline in step with concurrent balance changes.
         alert.update!(previous_value: alert.find_value(alertable.lock!)) if alert.decreasing?
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
+        seed_alarms_already_past(alert, alertable)
 
         result.alert = alert
       end
