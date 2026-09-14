@@ -1277,6 +1277,52 @@ RSpec.shared_examples "a wallet show endpoint" do
     end
   end
 
+  context "with connections in response" do
+    let(:stripe_connection) do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+    end
+
+    before { stripe_connection }
+
+    it "reports every category with its behaviour and effective code" do
+      subject
+
+      expect(response).to have_http_status(:success)
+
+      connections = json[:wallet][:connections]
+      expect(connections.keys).to match_array(%i[payment tax accounting crm])
+      expect(connections[:payment]).to eq({behavior: "inherit", code: "stripe_default"})
+      expect(connections[:crm]).to eq({behavior: "inherit", code: nil})
+    end
+
+    context "when the wallet pins a specific connection" do
+      let(:pinned) { create(:gocardless_customer, customer:, organization:, code: "gocardless_eu") }
+
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment",
+          behavior: "specific", payment_provider_customer: pinned)
+      end
+
+      it "reports specific with the pinned code" do
+        subject
+
+        expect(json[:wallet][:connections][:payment]).to eq({behavior: "specific", code: "gocardless_eu"})
+      end
+    end
+
+    context "when the wallet skips a category" do
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment", behavior: "skip")
+      end
+
+      it "reports skip with no code" do
+        subject
+
+        expect(json[:wallet][:connections][:payment]).to eq({behavior: "skip", code: nil})
+      end
+    end
+  end
+
   context "with applied_invoice_custom_sections in response" do
     before { create(:wallet_applied_invoice_custom_section, wallet:) }
 
