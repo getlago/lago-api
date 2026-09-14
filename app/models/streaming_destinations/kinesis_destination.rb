@@ -7,7 +7,7 @@ module StreamingDestinations
     PARTITION_KEYS = [PARTITION_KEY_CUSTOMER_EXTERNAL_ID].freeze
     DEFAULT_PARTITION_KEY = PARTITION_KEY_CUSTOMER_EXTERNAL_ID
 
-    settings_accessors :stream_arn, :region, :role_arn
+    settings_accessors :stream_arn, :region, :role_arn, :external_id
     settings_accessors :partition_key, default: DEFAULT_PARTITION_KEY
 
     validates :stream_arn, presence: true
