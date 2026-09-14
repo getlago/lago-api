@@ -7,6 +7,8 @@ RSpec.describe ProductCategory do
 
   it_behaves_like "paper_trail traceable"
 
+  it_behaves_like "a catalog code", :product_category
+
   describe "associations" do
     it do
       expect(product_category).to belong_to(:organization)

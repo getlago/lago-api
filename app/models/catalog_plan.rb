@@ -7,6 +7,7 @@ class CatalogPlan < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
   include Discard::Model
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 
