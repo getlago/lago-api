@@ -331,6 +331,12 @@ RSpec.describe PastUsageQuery do
       expect(usage[:grouped_usage].sole[:filters].sole[:presentation_breakdowns].pluck(:units)).to match_array(["10.0", "40.0"])
     end
 
+    it "includes free fees when the period was truncated by a termination" do
+      invoice_subscription1.update!(charges_to_datetime: invoice_subscription1.charges_to_datetime - 10.days)
+
+      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
     it "matches equivalent timestamps with a timezone offset" do
       free_fee.update!(properties: {
         charges_from_datetime: invoice_subscription1.charges_from_datetime.in_time_zone("Europe/Paris").iso8601,
