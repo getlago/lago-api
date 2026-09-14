@@ -198,6 +198,34 @@ RSpec.describe Utils::Datetime do
     end
   end
 
+  describe ".in_zone" do
+    let(:timezone) { "America/Sao_Paulo" }
+
+    it "reads a bare date as that zone's day" do
+      expect(datetime.in_zone("2026-09-14", timezone:)).to eq(Time.utc(2026, 9, 14, 3))
+    end
+
+    it "keeps the instant a value named with its own offset" do
+      expect(datetime.in_zone("2026-09-14T22:00:00-03:00", timezone:)).to eq(Time.utc(2026, 9, 15, 1))
+      expect(datetime.in_zone("2026-09-14T22:00:00Z", timezone:)).to eq(Time.utc(2026, 9, 14, 22))
+    end
+
+    it "keeps the instant of a value already carrying a zone" do
+      instant = Time.utc(2026, 9, 14, 22).in_time_zone("UTC")
+
+      expect(datetime.in_zone(instant, timezone:)).to eq(instant)
+    end
+
+    it "hands back a value it cannot read" do
+      expect(datetime.in_zone("aaa", timezone:)).to eq("aaa")
+      expect(datetime.in_zone(nil, timezone:)).to be_nil
+    end
+
+    it "falls back to the application zone for an unknown zone name" do
+      expect(datetime.in_zone("2026-09-14", timezone: "Not/AZone")).to eq(Time.utc(2026, 9, 14))
+    end
+  end
+
   describe ".date_diff_with_timezone" do
     let(:from_datetime) { Time.zone.parse("2023-08-31T23:10:00") }
     let(:to_datetime) { Time.zone.parse("2023-09-30T22:59:59") }

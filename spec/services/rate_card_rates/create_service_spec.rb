@@ -28,6 +28,25 @@ RSpec.describe RateCardRates::CreateService do
     expect(rate.code).to eq("standard_price")
   end
 
+  context "when the organization is west of the application zone" do
+    # Organization#timezone resolves through the default billing entity.
+    before { organization.default_billing_entity.update!(timezone: "America/Sao_Paulo") }
+
+    it "reads a bare date as that organization's day" do
+      params[:effective_from] = "2026-12-01"
+
+      expect(result).to be_success
+      expect(result.rate_card_rate.effective_from).to eq(Time.utc(2026, 12, 1, 3))
+    end
+
+    it "cuts a timed value back to that organization's midnight" do
+      params[:effective_from] = "2026-12-01T17:00:00Z"
+
+      expect(result).to be_success
+      expect(result.rate_card_rate.effective_from).to eq(Time.utc(2026, 12, 1, 3))
+    end
+  end
+
   context "when the code is missing" do
     before { params.delete(:code) }
 

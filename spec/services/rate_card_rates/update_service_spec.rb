@@ -35,6 +35,17 @@ RSpec.describe RateCardRates::UpdateService do
       end
     end
 
+    context "when the organization is west of the application zone" do
+      before { organization.default_billing_entity.update!(timezone: "America/Sao_Paulo") }
+
+      let(:params) { {effective_from: "2026-12-01"} }
+
+      it "reads a bare date as that organization's day" do
+        expect(result).to be_success
+        expect(result.rate_card_rate.effective_from).to eq(Time.utc(2026, 12, 1, 3))
+      end
+    end
+
     context "when the effective_from carries a time component on an arrears card" do
       let(:params) { {effective_from: 2.months.from_now.change(hour: 17).iso8601} }
 

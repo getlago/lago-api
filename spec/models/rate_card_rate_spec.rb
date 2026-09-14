@@ -88,6 +88,18 @@ RSpec.describe RateCardRate do
         expect(from_datetime.effective_from).to eq(midnight + 1.day)
       end
 
+      it "cuts the day in the organization's zone, not the application's" do
+        organization = create(:organization)
+        organization.default_billing_entity.update!(timezone: "America/Sao_Paulo")
+        card = create(:rate_card, organization: organization.reload, billing_timing: "arrears")
+
+        # 17:00 UTC is 14:00 in Sao Paulo, so that organization's day opened at 03:00 UTC.
+        rate = create(:rate_card_rate, organization: card.organization, rate_card: card,
+          effective_from: "2026-12-01T17:00:00Z")
+
+        expect(rate.effective_from).to eq(Time.zone.parse("2026-12-01T03:00:00Z"))
+      end
+
       it "keeps the full instant on an advance card" do
         card = create(:rate_card, billing_timing: "advance")
         rate = create(:rate_card_rate, rate_card: card, effective_from: "2026-12-01T17:00:00Z")

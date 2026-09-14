@@ -108,12 +108,21 @@ class RateCardRate < ApplicationRecord
   private
 
   # Arrears rates apply per whole day, Advance rates keep full
-  # instants — they price per event
+  # instants — they price per event.
+  #
+  # Which day depends on who is asking, so the organization's calendar decides:
+  # truncating in the application zone would move a rate priced by an
+  # organization west of UTC onto the previous day. The stored instant stays
+  # UTC, as everywhere else — it is the day boundary that is local.
   def normalize_effective_from
     return if effective_from.blank?
     return unless rate_card&.arrears?
 
-    self.effective_from = effective_from.beginning_of_day
+    self.effective_from = effective_from.in_time_zone(applicable_timezone).beginning_of_day
+  end
+
+  def applicable_timezone
+    organization&.timezone || Time.zone.name
   end
 
   def validate_effective_from_parseable

@@ -23,7 +23,7 @@ module RateCardRates
       rate = rate_card.rates.create!(
         organization_id: rate_card.organization_id,
         code: params[:code].presence,
-        effective_from: params[:effective_from],
+        effective_from: effective_from,
         rate_model: params[:rate_model],
         rate_properties: params[:rate_properties] || {},
         min_amount_cents: params[:min_amount_cents] || 0,
@@ -41,5 +41,11 @@ module RateCardRates
     private
 
     attr_reader :rate_card, :params, :emit_activity_log
+
+    # A bare date means the organization's day, not the application's. The
+    # organization is the one pricing the card, so its calendar decides.
+    def effective_from
+      Utils::Datetime.in_zone(params[:effective_from], timezone: rate_card.organization.timezone)
+    end
   end
 end

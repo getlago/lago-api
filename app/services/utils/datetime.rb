@@ -52,6 +52,26 @@ module Utils
       parsed_date&.future? || false
     end
 
+    # Reads a value as belonging to `timezone` when it names no offset of its
+    # own, so a bare date means that zone's day rather than the application's.
+    # A value that does name an offset keeps the instant it named.
+    #
+    # Unreadable values are handed back untouched, so the caller's own format
+    # validation is the one that rejects them.
+    def self.in_zone(datetime, timezone:)
+      zone = Time.find_zone(timezone) || Time.zone
+
+      if datetime.is_a?(ActiveSupport::TimeWithZone)
+        return datetime.in_time_zone(zone)
+      end
+
+      unless valid_format?(datetime, format: :any)
+        return datetime
+      end
+
+      zone.parse(datetime.to_s) || datetime
+    end
+
     def self.date_diff_with_timezone(from_datetime, to_datetime, timezone)
       from = from_datetime
       from = Time.zone.parse(from.to_s) unless from.is_a?(ActiveSupport::TimeWithZone)

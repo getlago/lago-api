@@ -60,7 +60,10 @@ module RateCardRates
 
     def assign_attributes
       rate_card_rate.code = params[:code]&.strip if params.key?(:code)
-      rate_card_rate.effective_from = params[:effective_from] if params.key?(:effective_from)
+      if params.key?(:effective_from)
+        rate_card_rate.effective_from =
+          Utils::Datetime.in_zone(params[:effective_from], timezone: rate_card_rate.organization.timezone)
+      end
       rate_card_rate.rate_model = params[:rate_model] if params.key?(:rate_model)
       rate_card_rate.rate_properties = params[:rate_properties] if params.key?(:rate_properties)
       rate_card_rate.min_amount_cents = params[:min_amount_cents] if params.key?(:min_amount_cents)
