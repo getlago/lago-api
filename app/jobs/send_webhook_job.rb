@@ -17,6 +17,7 @@ class SendWebhookJob < ApplicationJob
   retry_on "Aws::S3::Errors::SlowDown", wait: :polynomially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
+    "alert.resolved" => Webhooks::UsageMonitoring::AlertResolvedService,
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
     "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,

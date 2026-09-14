@@ -135,9 +135,11 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(resolved.in_alarm_thresholds).to eq([])
         end
 
-        it "does not send a webhook yet" do
+        it "sends the resolution webhook" do
           result
-          expect(SendWebhookJob).not_to have_been_enqueued
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+
+          expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
         end
 
         context "when a watched line is also still crossed" do
@@ -182,6 +184,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
           expect(result).to be_success
           expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
     end
