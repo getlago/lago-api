@@ -13,7 +13,7 @@ RSpec.describe Products::CreateService do
     {
       product_category_id: product_category.id,
       billable_metric_id: billable_metric.id,
-      product_type: "usage",
+      product_type: "metered",
       name: "Storage",
       code: "storage",
       description: "Object storage",
@@ -21,13 +21,13 @@ RSpec.describe Products::CreateService do
     }
   end
 
-  it "creates a usage product" do
+  it "creates a metered product" do
     expect { result }.to change(Product, :count).by(1)
 
     item = result.product
     expect(item.product_category).to eq(product_category)
     expect(item.billable_metric).to eq(billable_metric)
-    expect(item.product_type).to eq("usage")
+    expect(item.product_type).to eq("metered")
     expect(item.name).to eq("Storage")
     expect(item.code).to eq("storage")
   end
@@ -75,7 +75,7 @@ RSpec.describe Products::CreateService do
     end
   end
 
-  context "when usage item has no billable metric" do
+  context "when metered item has no billable metric" do
     before { params[:billable_metric_id] = nil }
 
     it "returns a validation failure" do

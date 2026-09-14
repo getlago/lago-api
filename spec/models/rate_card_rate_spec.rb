@@ -158,18 +158,18 @@ RSpec.describe RateCardRate do
 
       it "rejects advance rates on a non-payable-in-advance aggregation" do
         metric = create(:billable_metric, organization:, aggregation_type: "max_agg", field_name: "amount")
-        rate = rate_for(product_type: "usage", billing_timing: "advance", metric:, rate_model: "standard")
+        rate = rate_for(product_type: "metered", billing_timing: "advance", metric:, rate_model: "standard")
         rate.valid?
         expect(rate.errors.where(:rate_model, :not_allowed_for_aggregation_type)).to be_present
       end
 
       it "applies the v1 proration matrix" do
         recurring = create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
-        rate = rate_for(product_type: "usage", proration: true, metric: recurring, rate_model: "percentage")
+        rate = rate_for(product_type: "metered", proration: true, metric: recurring, rate_model: "percentage")
         rate.valid?
         expect(rate.errors.where(:rate_model, :not_allowed_with_proration)).to be_present
 
-        allowed = rate_for(product_type: "usage", proration: true, metric: recurring, rate_model: "standard")
+        allowed = rate_for(product_type: "metered", proration: true, metric: recurring, rate_model: "standard")
         allowed.valid?
         expect(allowed.errors.where(:rate_model)).to be_empty
       end
@@ -178,7 +178,7 @@ RSpec.describe RateCardRate do
         latest = create(:billable_metric, organization:, aggregation_type: "latest_agg", field_name: "amount")
 
         %w[percentage graduated_percentage].each do |model|
-          rate = rate_for(product_type: "usage", metric: latest, rate_model: model)
+          rate = rate_for(product_type: "metered", metric: latest, rate_model: model)
           rate.valid?
           expect(rate.errors.where(:rate_model, :not_allowed_for_aggregation_type)).to be_present, "expected #{model} rejected"
           expect(rate.errors.where(:rate_properties)).to be_empty
@@ -189,11 +189,11 @@ RSpec.describe RateCardRate do
         sum = create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount")
         count = create(:billable_metric, organization:, aggregation_type: "count_agg")
 
-        allowed = rate_for(product_type: "usage", metric: sum, rate_model: "dynamic")
+        allowed = rate_for(product_type: "metered", metric: sum, rate_model: "dynamic")
         allowed.valid?
         expect(allowed.errors.where(:rate_model)).to be_empty
 
-        rejected = rate_for(product_type: "usage", metric: count, rate_model: "dynamic")
+        rejected = rate_for(product_type: "metered", metric: count, rate_model: "dynamic")
         rejected.valid?
         expect(rejected.errors.where(:rate_model, :not_allowed_for_aggregation_type)).to be_present
       end
@@ -222,7 +222,7 @@ RSpec.describe RateCardRate do
 
       it "validates percentage properties on usage items without crashing" do
         metric = create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount")
-        rate = rate_for(product_type: "usage", metric:, rate_model: "percentage")
+        rate = rate_for(product_type: "metered", metric:, rate_model: "percentage")
         rate.rate_properties = {"rate" => "1"}
         expect(rate).to be_valid
       end

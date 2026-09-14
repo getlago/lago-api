@@ -8,7 +8,7 @@ class Product < ApplicationRecord
   self.discard_column = :deleted_at
 
   PRODUCT_TYPES = {
-    usage: "usage",
+    metered: "metered",
     fixed: "fixed"
   }.freeze
 
@@ -52,7 +52,7 @@ class Product < ApplicationRecord
   def validate_billable_metric_presence
     has_billable_metric = billable_metric_id.present? || billable_metric.present?
 
-    if usage? && !has_billable_metric
+    if metered? && !has_billable_metric
       errors.add(:billable_metric, :blank)
     elsif fixed? && has_billable_metric
       errors.add(:billable_metric, :present)
