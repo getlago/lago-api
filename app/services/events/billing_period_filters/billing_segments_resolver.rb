@@ -11,14 +11,15 @@ module Events
 
       def filter_targets
         return {} if target_segments.empty?
-        return {} if metric_codes.empty?
+        return {} if metric_codes_by_contract_id.empty?
 
         # Aggregate event combinations across all contracts since consolidated invoices
-        # can span multiple contracts, each with their own external_subscription_id.
+        # can span multiple contracts, each with their own external_id.
         combinations = contracts.flat_map do |contract|
-          event_values_with_history do |**options|
+          event_values_with_history_for(contract_id: contract.id) do |**options|
             event_store_for(contract).distinct_codes_and_property_combinations(
-              filter_keys: billable_metric_filter_keys, **options
+              filter_keys: billable_metric_filter_keys_by_contract.fetch(contract.id, []),
+              **options
             )
           end
         end
@@ -39,7 +40,8 @@ module Events
       end
 
       def filter_target_for(billing_segment)
-        Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
+        @filter_targets ||= {}
+        @filter_targets[billing_segment.id] ||= Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
       end
 
       def target_segments
@@ -64,15 +66,38 @@ module Events
         end
       end
 
-      def metric_codes
-        @metric_codes ||= codes.presence || billing_segments_scope.distinct.pluck("billable_metrics.code")
+      def event_values_with_history_for(contract_id:)
+        recurring_codes = recurring_metric_codes_by_contract_id.fetch(contract_id, [])
+        non_recurring_metric_codes = metric_codes_for(contract_id:) - recurring_codes
+
+        values = yield(codes: non_recurring_metric_codes, with_last_seen_at:)
+
+        if recurring_codes.any?
+          values += yield(codes: recurring_codes, include_all_history: true, with_last_seen_at:)
+        end
+
+        values
       end
 
-      def recurring_metric_codes
-        @recurring_metric_codes ||= billing_segments_scope
+      def metric_codes_for(contract_id:)
+        @metric_codes_by_contract ||= {}
+        @metric_codes_by_contract[contract_id] ||= codes.presence || metric_codes_by_contract_id.fetch(contract_id, [])
+      end
+
+      def metric_codes_by_contract_id
+        @metric_codes_by_contract_id ||= billing_segments_scope
+          .distinct
+          .pluck("contract_rate_cards.contract_id, billable_metrics.code")
+          .group_by(&:first).transform_values! { |pairs| pairs.map(&:last) }
+      end
+
+      def recurring_metric_codes_by_contract_id
+        @recurring_metric_codes_by_contract_id ||= billing_segments_scope
           .where(billable_metrics: {recurring: true})
           .distinct
-          .pluck("billable_metrics.code")
+          .pluck("contract_rate_cards.contract_id, billable_metrics.code")
+          .group_by(&:first)
+          .transform_values! { |pairs| pairs.map(&:last) }
       end
 
       def current_recurring_targets
@@ -83,23 +108,32 @@ module Events
         @period_start ||= target_segments.map(&:started_at).min
       end
 
-      def billable_metric_filter_keys
-        @billable_metric_filter_keys ||= billing_segments_scope
+      def billable_metric_filter_keys_by_contract
+        @billable_metric_filter_keys_by_contract ||= billing_segments_scope
           .joins(contract_rate_card: {product: {billable_metric: :filters}})
           .distinct
-          .pluck("billable_metric_filters.key")
+          .pluck("contract_rate_cards.contract_id", "billable_metric_filters.key")
+          .group_by(&:first)
+          .transform_values! { |pairs| pairs.map(&:last) }
       end
 
       def event_store_for(contract)
         @event_stores ||= {}
-        @event_stores[contract.id] ||= Events::Stores::StoreFactory.new_instance(
-          organization:,
-          billing_context: Billing::Context.from(contract:),
-          boundaries: {
-            from_datetime: period_start,
-            to_datetime: target_segments.map(&:ended_at).max
-          }
-        )
+        @event_stores[contract.id] ||= begin
+          contract_segments = segments_by_contract[contract.id]
+          Events::Stores::StoreFactory.new_instance(
+            organization:,
+            billing_context: Billing::Context.from(contract:),
+            boundaries: {
+              from_datetime: contract_segments.map(&:started_at).min,
+              to_datetime: contract_segments.map(&:ended_at).max
+            }
+          )
+        end
+      end
+
+      def segments_by_contract
+        @segments_by_contract ||= target_segments.group_by(&:contract_id)
       end
 
       def contracts
