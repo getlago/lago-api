@@ -118,6 +118,36 @@ RSpec.describe Lago::Kinesis::Producer do
       )
     end
 
+    it "passes the external id when the destination carries one, since the trust policy requires it" do
+      destination.external_id = "00000000-0000-4000-8000-000000000001"
+      destination.save!
+
+      producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+      expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
+        hash_including(external_id: "00000000-0000-4000-8000-000000000001")
+      )
+    end
+
+    it "omits the external id when there is none, because the SDK forwards a nil straight to STS" do
+      producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+      expect(Aws::AssumeRoleCredentials).to have_received(:new).with(hash_excluding(:external_id))
+    end
+
+    it "never shares credentials between destinations differing only by external id" do
+      other = create(:kinesis_destination)
+      other.role_arn = destination.role_arn
+      other.region = destination.region
+      other.external_id = "00000000-0000-4000-8000-000000000002"
+      other.save!
+
+      producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+      described_class.new(destination: other).produce(data: {hello: "world"}, partition_key: "cust_2")
+
+      expect(Aws::AssumeRoleCredentials).to have_received(:new).twice
+    end
+
     it "never shares credentials between destinations with different role ARNs" do
       other = create(:kinesis_destination)
       other.role_arn = "arn:aws:iam::210987654321:role/other-writer"

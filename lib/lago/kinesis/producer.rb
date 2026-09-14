@@ -86,7 +86,7 @@ module Lago
       end
 
       def client
-        CLIENTS.compute_if_absent([destination.role_arn, destination.region]) do
+        CLIENTS.compute_if_absent(credentials_key) do
           build_client
         end
       end
@@ -102,13 +102,24 @@ module Lago
       end
 
       def assumed_credentials
-        ASSUMED_CREDENTIALS.compute_if_absent([destination.role_arn, destination.region]) do
+        ASSUMED_CREDENTIALS.compute_if_absent(credentials_key) do
           Aws::AssumeRoleCredentials.new(
             role_arn: destination.role_arn,
             role_session_name: ROLE_SESSION_NAME,
-            client: Aws::STS::Client.new(region: destination.region, **client_timeouts)
+            client: Aws::STS::Client.new(region: destination.region, **client_timeouts),
+            **external_id_option
           )
         end
+      end
+
+      def credentials_key
+        [destination.role_arn, destination.region, destination.external_id]
+      end
+
+      def external_id_option
+        return {} if destination.external_id.blank?
+
+        {external_id: destination.external_id}
       end
 
       def client_timeouts
