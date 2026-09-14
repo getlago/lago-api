@@ -287,10 +287,10 @@ module Invoices
         (!usage_filters.full_usage || full_usage_cache_enabled?)
     end
 
-    # Full usage is cached only with lazy validation, the one invalidation that clears its key.
+    # skip_grouping and filter_by_presentation change the fees but are absent from the cache key, so
+    # a full usage entry is only written when neither of them narrows the request.
     def full_usage_cache_enabled?
       organization.granular_lifetime_usage_enabled? &&
-        organization.feature_flag_enabled?(:lazy_charge_usage_cache) &&
         !usage_filters.skip_grouping &&
         usage_filters.filter_by_presentation.nil?
     end
