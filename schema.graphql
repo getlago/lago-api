@@ -6633,7 +6633,6 @@ Organization Feature Flag Values
 enum FeatureFlagEnum {
   account_tree
   fixed_charge_usage_delta_migration
-  lazy_charge_usage_cache
   multi_connection
   order_forms
   postgres_enriched_events
