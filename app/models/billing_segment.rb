@@ -45,6 +45,10 @@ class BillingSegment < ApplicationRecord
     rate_override || rate_card_rate
   end
 
+  def target_key
+    "contract-#{contract_id}-#{contract_rate_card.product.target_key}"
+  end
+
   # The shared matcher expects a filter object for the default bucket, not nil.
   # This mirrors the empty ChargeFilter in app/services/fees/charge_service.rb:85-95.
   def empty_product_filter
