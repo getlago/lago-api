@@ -101,4 +101,53 @@ RSpec.shared_examples "a connection-resolvable billing object" do
       expect(resolvable.effective_crm_connection).to eq(default_connection)
     end
   end
+
+  describe "#connection_routing" do
+    let(:routing) { resolvable.connection_routing.index_by(&:category) }
+
+    it "reports every category" do
+      expect(routing.keys).to match_array(%w[payment tax accounting crm])
+    end
+
+    context "when the category is inherited from the customer" do
+      let!(:default_connection) do
+        create(:stripe_customer, customer: resolution_customer, organization:, is_default: true, code: "stripe_default")
+      end
+
+      it "reports inherit with the customer default's code" do
+        expect(routing["payment"]).to have_attributes(behavior: "inherit", code: default_connection.code)
+      end
+    end
+
+    context "when the object pins a specific connection" do
+      let(:override_connection) do
+        create(:gocardless_customer, customer: resolution_customer, organization:, code: "gocardless_eu")
+      end
+
+      before do
+        create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
+          behavior: :specific, payment_provider_customer: override_connection)
+      end
+
+      it "reports specific with the pinned code" do
+        expect(routing["payment"]).to have_attributes(behavior: "specific", code: "gocardless_eu")
+      end
+    end
+
+    context "when the object skips the category" do
+      before do
+        create(:billing_object_connection, owner: resolvable, organization:, category: :payment, behavior: :skip)
+      end
+
+      it "reports skip with no code" do
+        expect(routing["payment"]).to have_attributes(behavior: "skip", code: nil)
+      end
+    end
+
+    context "when nothing resolves" do
+      it "reports inherit with a nil code" do
+        expect(routing["crm"]).to have_attributes(behavior: "inherit", code: nil)
+      end
+    end
+  end
 end
