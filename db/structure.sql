@@ -3196,7 +3196,7 @@ CREATE TABLE public.events (
     external_subscription_id character varying,
     precise_total_amount_cents numeric(40,15)
 )
-WITH (autovacuum_vacuum_scale_factor='0.005');
+WITH (autovacuum_vacuum_scale_factor='0.005', autovacuum_analyze_scale_factor='0', autovacuum_analyze_threshold='50000');
 
 
 --
@@ -5622,7 +5622,7 @@ CREATE TABLE public.rate_cards (
     billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
     proration boolean DEFAULT false NOT NULL,
     display_on_invoice boolean DEFAULT true NOT NULL,
-    regroup_paid_fees public.rate_card_regroup_paid_fees DEFAULT 'none'::public.rate_card_regroup_paid_fees NOT NULL,
+    regroup_paid_fees public.rate_card_regroup_paid_fees,
     applied_pricing_unit_code character varying,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
@@ -14892,6 +14892,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260914145333'),
+('20260914145022'),
 ('20260911144853'),
 ('20260910151708'),
 ('20260910124306'),

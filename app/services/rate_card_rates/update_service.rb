@@ -45,6 +45,11 @@ module RateCardRates
         return result.single_validation_failure!(field: :code, error_code: "attached_to_plan_or_subscription")
       end
 
+      if params.key?(:effective_from) &&
+          Utils::Datetime.before_today?(params[:effective_from], timezone: rate_card_rate.organization.timezone)
+        return result.single_validation_failure!(field: :effective_from, error_code: "must_not_be_before_today")
+      end
+
       assign_attributes
       rate_card_rate.save!
 

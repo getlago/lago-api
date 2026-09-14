@@ -24,11 +24,6 @@ module RateCards
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 
-      # An explicit null means none — the column is NOT NULL.
-      if params.key?(:regroup_paid_fees) && params[:regroup_paid_fees].nil?
-        params[:regroup_paid_fees] = "none"
-      end
-
       boolean_failure = boolean_params_failure
       return boolean_failure if boolean_failure
 
