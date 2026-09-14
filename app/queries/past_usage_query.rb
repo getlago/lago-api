@@ -67,18 +67,19 @@ class PastUsageQuery < BaseQuery
       {}
     else
       free_fees(periods).group_by do |fee|
-        owner_ids[usage_period_key(fee.subscription_id, fee.properties["charges_from_datetime"], fee.properties["charges_to_datetime"])]
+        owner_ids[usage_period_key(fee.subscription_id, fee.properties["charges_from_datetime"])]
       end
     end
   end
 
   def free_fees(periods)
-    # Match all requested periods in one scan of standalone fees. JSON boundaries
+    # Match all requested periods in one scan of standalone fees, on the period start
+    # only: a fee keeps the period end known when it was created, which outlives the
+    # invoice boundaries when the subscription is terminated mid-period. JSON boundaries
     # have millisecond precision; invoice boundaries have microseconds.
     conditions = periods.map do |period|
       Fee.where(subscription_id: period.subscription_id)
         .where("(fees.properties ->> 'charges_from_datetime')::timestamptz = ?", period.charges_from_datetime.iso8601(3))
-        .where("(fees.properties ->> 'charges_to_datetime')::timestamptz = ?", period.charges_to_datetime.iso8601(3))
     end.reduce { |scope, condition| scope.or(condition) }
 
     scope = Fee.where(organization:, subscription_id: periods.map(&:subscription_id).uniq, invoice_id: nil,
@@ -101,24 +102,23 @@ class PastUsageQuery < BaseQuery
     conditions = periods.map do |period|
       InvoiceSubscription.where(
         subscription_id: period.subscription_id,
-        charges_from_datetime: period.charges_from_datetime,
-        charges_to_datetime: period.charges_to_datetime
+        charges_from_datetime: period.charges_from_datetime
       )
     end.reduce { |scope, condition| scope.or(condition) }
 
     InvoiceSubscription.where(organization:, regenerated_invoice_id: nil,
       invoicing_reason: [:in_advance_charge_periodic, :subscription_periodic, :subscription_terminating])
       .merge(conditions)
-      .select(:id, :subscription_id, :charges_from_datetime, :charges_to_datetime)
+      .select(:id, :subscription_id, :charges_from_datetime)
       .order(Arel.sql("CASE WHEN invoicing_reason = 'in_advance_charge_periodic' THEN 0 ELSE 1 END"), :created_at, :id)
       .each_with_object({}) do |period, owners|
-        key = usage_period_key(period.subscription_id, period.charges_from_datetime, period.charges_to_datetime)
+        key = usage_period_key(period.subscription_id, period.charges_from_datetime)
         owners[key] ||= period.id
       end
   end
 
-  def usage_period_key(subscription_id, from_datetime, to_datetime)
-    [subscription_id, from_datetime.to_time.getutc.iso8601(3), to_datetime.to_time.getutc.iso8601(3)]
+  def usage_period_key(subscription_id, from_datetime)
+    [subscription_id, from_datetime.to_time.getutc.iso8601(3)]
   end
 
   def validate_filters

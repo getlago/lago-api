@@ -115,4 +115,50 @@ describe "Past usage for regrouped advance charges", transaction: false do
 
     include_examples "complete past usage"
   end
+
+  context "when the subscription is terminated mid-period" do
+    it "returns the free units on the truncated period" do
+      travel_to(Time.zone.local(2024, 6, 1)) do
+        create_subscription({external_customer_id: customer.external_id, external_id: external_subscription_id, plan_code: plan.code})
+      end
+
+      subscription = customer.subscriptions.sole
+
+      [40, 10].each_with_index do |units, index|
+        travel_to(Time.zone.local(2024, 6, 15 + index, 12)) do
+          create_event({
+            code: billable_metric.code,
+            external_subscription_id:,
+            properties: {billable_metric.field_name => units}
+          })
+        end
+      end
+
+      travel_to(Time.zone.local(2024, 6, 20, 12)) do
+        subscription.fees.charge.where("amount_cents > 0").find_each do |fee|
+          update_fee(fee.id, {payment_status: "succeeded"})
+        end
+      end
+
+      travel_to(Time.zone.local(2024, 6, 25, 12)) { terminate_subscription(subscription) }
+
+      travel_to(Time.zone.local(2024, 6, 26, 12)) do
+        # The free fee keeps the period end it was created with, while every invoice
+        # of the period is truncated at the termination date.
+        expect(subscription.fees.charge.where(invoice_id: nil).sole.properties["charges_to_datetime"])
+          .to eq("2024-06-30T23:59:59.999Z")
+        expect(subscription.invoice_subscriptions.pluck(:charges_to_datetime)).to all(eq(Time.zone.local(2024, 6, 25, 12)))
+
+        get_with_token(organization, "/api/v1/customers/#{customer.external_id}/past_usage", {external_subscription_id:})
+
+        expect(response).to have_http_status(:success)
+        charges_usage = json[:usage_periods].flat_map { |period| period[:charges_usage] }
+        expect(charges_usage.sole).to include(
+          units: "50.0",
+          total_aggregated_units: "50.0",
+          amount_cents: 500
+        )
+      end
+    end
+  end
 end
