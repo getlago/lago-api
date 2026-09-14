@@ -221,6 +221,32 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
       end
 
+      context "when renaming it to a code already used on the same wallet" do
+        let(:params) { {code: "taken"} }
+
+        before { create(:wallet_credits_balance_alert, organization:, wallet: alert.wallet, code: "taken") }
+
+        it "rejects it before reaching the database" do
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never saves the alert, so no update is attempted" do
+          allow(alert).to receive(:save!).and_call_original
+
+          expect(result).to be_failure
+          expect(alert).not_to have_received(:save!)
+        end
+      end
+
+      context "when keeping its own code" do
+        let(:params) { {code: alert.code} }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
       context "when processing wallet alerts", :premium do
         it "enqueues ProcessWalletAlertsJob" do
           expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(alert.wallet)
