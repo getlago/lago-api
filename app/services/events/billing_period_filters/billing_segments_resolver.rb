@@ -13,22 +13,34 @@ module Events
         return {} if target_segments.empty?
         return {} if metric_codes_by_contract_id.empty?
 
-        # Aggregate event combinations across all contracts since consolidated invoices
-        # can span multiple contracts, each with their own external_id.
-        combinations = contracts.flat_map do |contract|
-          event_values_with_history_for(contract_id: contract.id) do |**options|
+        # Event stores are scoped to a contract's external_id, so combinations must only
+        # be matched against targets from that contract, even when products share a code.
+        # For example, Contract A and Contract B can both use product "api_calls", while
+        # only A has a {region: "eu"} event. Matching A's combinations against B would
+        # incorrectly add A's filter bucket and last_seen_at to B's target.
+        result = recurring_event_filter_targets
+
+        contracts.each do |contract|
+          combinations = event_values_with_history_for(contract_id: contract.id) do |**options|
             event_store_for(contract).distinct_codes_and_property_combinations(
               filter_keys: billable_metric_filter_keys_by_contract.fetch(contract.id, []),
               **options
             )
           end
+
+          event_codes = combinations.map(&:first).to_set
+          contract_targets = segments_by_contract.fetch(contract.id, []).select do |target|
+            event_codes.include?(filter_target_for(target).billable_metric.code)
+          end
+
+          filter_targets_from_combinations(
+            combinations:,
+            targets: contract_targets,
+            result:
+          )
         end
 
-        filter_targets_from_combinations(
-          combinations:,
-          targets: targets_with_events(combinations.map(&:first).uniq),
-          result: recurring_event_filter_targets
-        )
+        result
       end
 
       private
@@ -46,13 +58,9 @@ module Events
 
       def target_segments
         @target_segments ||= billing_segments_scope.preload(
+          :contract,
           contract_rate_card: {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]}
         ).to_a
-      end
-
-      def targets_with_events(codes)
-        event_codes = codes.to_set
-        target_segments.select { |segment| event_codes.include?(filter_target_for(segment).billable_metric.code) }
       end
 
       def billing_segments_scope

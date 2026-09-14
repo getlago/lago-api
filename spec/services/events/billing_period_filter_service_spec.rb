@@ -104,6 +104,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           organization_id: organization.id,
           external_subscription_id: contract.external_id,
           timestamp: billing_segment.started_at + 5.days,
+          created_at: Time.zone.parse("2026-08-10 00:00:00"),
           code: billable_metric.code,
           properties: {"region" => "eu"}
         )
@@ -198,6 +199,8 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       let(:second_contract) { create(:contract, organization:, customer:, external_id: "second_contract_external_id") }
+      let(:first_contract_event_created_at) { Time.zone.parse("2026-08-12 00:00:00") }
+      let(:second_contract_event_created_at) { Time.zone.parse("2026-08-13 00:00:00") }
       let(:second_contract_rate_card) { create(:contract_rate_card, organization:, contract: second_contract, rate_card:) }
       let(:second_segment) do
         create(
@@ -215,9 +218,11 @@ RSpec.describe Events::BillingPeriodFilterService do
 
       before do
         create(:event, organization:, customer:, external_subscription_id: contract.external_id,
-          timestamp: billing_segment.started_at + 1.day, code: billable_metric.code, properties: {})
+          timestamp: billing_segment.started_at + 1.day, created_at: first_contract_event_created_at,
+          code: billable_metric.code, properties: {region: "eu"})
         create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
-          timestamp: second_segment.started_at + 1.day, code: billable_metric.code, properties: {})
+          timestamp: second_segment.started_at + 1.day, created_at: second_contract_event_created_at,
+          code: billable_metric.code, properties: {region: "us"})
       end
 
       it "keeps each contract's product bucket separate" do
@@ -226,6 +231,24 @@ RSpec.describe Events::BillingPeriodFilterService do
         expect(result.filter_targets.keys).to match_array([billing_segment.target_key, second_segment.target_key])
         expect(result.filter_targets[billing_segment.target_key].keys).to eq([nil])
         expect(result.filter_targets[second_segment.target_key].keys).to eq([nil])
+      end
+
+      context "with a product filter" do
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+
+        before do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+        end
+
+        it "matches events and timestamps only within their contract" do
+          result = filter_result
+
+          expect(result.filter_targets[billing_segment.target_key].keys).to eq([product_filter.id])
+          expect(result.filter_targets[second_segment.target_key].keys).to eq([nil])
+          expect(result.filter_targets[billing_segment.target_key][product_filter.id]).to eq(first_contract_event_created_at)
+          expect(result.filter_targets[second_segment.target_key][nil]).to eq(second_contract_event_created_at)
+        end
       end
     end
 
