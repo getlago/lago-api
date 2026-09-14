@@ -211,6 +211,66 @@ RSpec.describe BillingSegments::ProcessService do
           expect(fixed_segment.reload).to have_attributes(status: "done", invoice:)
         end
       end
+
+      context "with two consolidated metered contracts" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "5.00"} }
+
+        let(:second_contract) do
+          create(:contract, organization:, customer:, external_id: "second_contract_ext_id", consolidate_invoice: true)
+        end
+        let(:second_billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+        let(:second_product) { create(:product, :metered, organization:, billable_metric: second_billable_metric) }
+        let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "USD") }
+        let(:second_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract: second_contract, rate_card: second_rate_card, effective_date: Date.parse("2026-07-01"))
+        end
+        let(:second_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "7.00"})
+        end
+        let!(:second_segment) do
+          create(
+            :billing_segment, organization:, contract: second_contract, customer:,
+            contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
+            currency: "USD", rate_properties: {"amount" => "7.00"},
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        before do
+          # Events for the second contract (different external_subscription_id)
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-12"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-18"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-25"), properties: {})
+        end
+
+        it "creates a consolidated invoice with fees from both contracts using each contract's events" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+          expect(invoice.fees.count).to eq(2)
+
+          first_fee = invoice.fees.find { |f| f.invoiceable == product }
+          second_fee = invoice.fees.find { |f| f.invoiceable == second_product }
+
+          # First contract: 2 events × $5 = $10
+          expect(first_fee).to have_attributes(fee_type: "product", units: 2, events_count: 2, amount_cents: 1_000)
+          # Second contract: 3 events × $7 = $21
+          expect(second_fee).to have_attributes(fee_type: "product", units: 3, events_count: 3, amount_cents: 2_100)
+
+          expect(invoice.total_amount_cents).to eq(3_100)
+
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+          expect(second_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+      end
     end
 
     describe "#invoice_key" do

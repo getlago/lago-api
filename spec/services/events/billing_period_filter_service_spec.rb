@@ -53,7 +53,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
   describe ".for_billing_segments!" do
     subject(:filter_result) do
-      described_class.for_billing_segments!(contract:, billing_segments: [billing_segment])
+      described_class.for_billing_segments!(billing_segments: [billing_segment])
     end
 
     let(:contract) { create(:contract, organization:, customer:, external_id: "contract_external_id") }
@@ -86,7 +86,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
     context "without billing segments" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(contract:, billing_segments: [])
+        described_class.for_billing_segments!(billing_segments: [])
       end
 
       it "succeeds with no filter targets" do
@@ -170,7 +170,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
     context "with a relation containing segments sharing a billable metric" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(contract:, billing_segments: contract.billing_segments)
+        described_class.for_billing_segments!(billing_segments: contract.billing_segments)
       end
 
       before do
@@ -204,7 +204,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           cycle_started_at: billing_segment.cycle_started_at + 1.month,
           started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
 
-        result = described_class.for_billing_segments!(contract:, billing_segments: [later_segment, billing_segment])
+        result = described_class.for_billing_segments!(billing_segments: [later_segment, billing_segment])
 
         expect(result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
       end
@@ -242,7 +242,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           context "when timestamp aggregation is disabled" do
             subject(:filter_result) do
-              described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], with_last_seen_at: false)
+              described_class.for_billing_segments!(billing_segments: [billing_segment], with_last_seen_at: false)
             end
 
             it "retains the seeded timestamps" do
@@ -259,7 +259,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
 
-        described_class.for_billing_segments!(contract:, billing_segments: [billing_segment],
+        described_class.for_billing_segments!(billing_segments: [billing_segment],
           codes: [billable_metric.code, "other_code"], with_last_seen_at: false)
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
@@ -269,7 +269,7 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "does not seed recurring products excluded by explicit codes" do
-        result = described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
+        result = described_class.for_billing_segments!(billing_segments: [billing_segment], codes: ["unknown_code"])
 
         expect(result.filter_targets).to eq({})
       end
@@ -296,7 +296,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
     context "when codes restrict the lookup" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
+        described_class.for_billing_segments!(billing_segments: [billing_segment], codes: ["unknown_code"])
       end
 
       before do

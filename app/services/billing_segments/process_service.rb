@@ -81,7 +81,7 @@ module BillingSegments
           purchase_order_number: contract.purchase_order_number
         ).invoice
 
-        filtered_aggregations = event_filters(contract, metered_segments)
+        filtered_aggregations = event_filters(metered_segments)
 
         attach_fixed_fees(fixed_segments, invoice)
         attach_metered_fees(metered_segments, invoice, filtered_aggregations)
@@ -129,11 +129,11 @@ module BillingSegments
       )
     end
 
-    def event_filters(contract, metered_segments)
+    def event_filters(metered_segments)
       return {} if metered_segments.empty?
 
       Events::BillingPeriodFilterService.for_billing_segments!(
-        contract:, billing_segments: metered_segments, with_last_seen_at: false
+        billing_segments: metered_segments, with_last_seen_at: false
       ).filter_targets
     end
 

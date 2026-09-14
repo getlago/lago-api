@@ -3,8 +3,7 @@
 module Events
   module BillingPeriodFilters
     class BillingSegmentsResolver < BaseResolver
-      def initialize(contract:, billing_segments:, codes: nil, with_last_seen_at: true)
-        @contract = contract
+      def initialize(billing_segments:, codes: nil, with_last_seen_at: true)
         @billing_segments = billing_segments
         @codes = codes&.to_set || Set.new
         @with_last_seen_at = with_last_seen_at
@@ -14,14 +13,30 @@ module Events
         return {} if target_segments.empty?
         return {} if metric_codes.empty?
 
-        super
+        # Aggregate event combinations across all contracts since consolidated invoices
+        # can span multiple contracts, each with their own external_subscription_id.
+        combinations = contracts.flat_map do |contract|
+          event_values_with_history do |**options|
+            event_store_for(contract).distinct_codes_and_property_combinations(
+              filter_keys: billable_metric_filter_keys, **options
+            )
+          end
+        end
+
+        filter_targets_from_combinations(
+          combinations:,
+          targets: targets_with_events(combinations.map(&:first).uniq),
+          result: recurring_event_filter_targets
+        )
       end
 
       private
 
-      attr_reader :contract, :billing_segments, :codes, :with_last_seen_at
+      attr_reader :billing_segments, :codes, :with_last_seen_at
 
-      delegate :organization, to: :contract
+      def organization
+        @organization ||= target_segments.first.organization
+      end
 
       def filter_target_for(billing_segment)
         Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
@@ -75,8 +90,9 @@ module Events
           .pluck("billable_metric_filters.key")
       end
 
-      def event_store
-        @event_store ||= Events::Stores::StoreFactory.new_instance(
+      def event_store_for(contract)
+        @event_stores ||= {}
+        @event_stores[contract.id] ||= Events::Stores::StoreFactory.new_instance(
           organization:,
           billing_context: Billing::Context.from(contract:),
           boundaries: {
@@ -84,6 +100,10 @@ module Events
             to_datetime: target_segments.map(&:ended_at).max
           }
         )
+      end
+
+      def contracts
+        @contracts ||= target_segments.map(&:contract).uniq
       end
     end
   end
