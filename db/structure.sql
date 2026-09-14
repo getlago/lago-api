@@ -3194,7 +3194,7 @@ CREATE TABLE public.events (
     external_subscription_id character varying,
     precise_total_amount_cents numeric(40,15)
 )
-WITH (autovacuum_vacuum_scale_factor='0.005');
+WITH (autovacuum_vacuum_scale_factor='0.005', autovacuum_analyze_scale_factor='0', autovacuum_analyze_threshold='50000');
 
 
 --
@@ -14875,6 +14875,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260914145333'),
+('20260914145022'),
 ('20260911144853'),
 ('20260910151708'),
 ('20260910095513'),
