@@ -42,7 +42,7 @@ module UsageMonitoring
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 
-      ActiveRecord::Base.transaction do
+      alert.with_lock do
         alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)
         alert.billable_metric = billable_metric if billable_metric
