@@ -32,7 +32,7 @@ RSpec.describe Mutations::RateCards::Create do
     <<-GQL
       mutation($input: CreateRateCardInput!) {
         createRateCard(input: $input) {
-          id name code currency billingTiming proration
+          id name code currency billingTiming proration regroupPaidFees
           product { id }
           taxes { id code rate }
           ratesCount
@@ -53,6 +53,7 @@ RSpec.describe Mutations::RateCards::Create do
     expect(result_data["name"]).to eq("Growth USD")
     expect(result_data["currency"]).to eq("USD")
     expect(result_data["proration"]).to eq(false) # omitted -> column default
+    expect(result_data["regroupPaidFees"]).to be_nil # omitted -> null (standalone)
     expect(result_data["product"]["id"]).to eq(product.id)
     expect(result_data["taxes"]).to eq([])
     expect(result_data["ratesCount"]).to eq(0)

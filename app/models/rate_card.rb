@@ -13,10 +13,9 @@ class RateCard < ApplicationRecord
     advance: "advance"
   }.freeze
 
-  # none is a real value, not a nil stand-in: the column is NOT NULL so the API
-  # always returns a concrete grouping behaviour.
+  # nil means the paid fee stays standalone; `invoice` folds it into the
+  # invoice. This mirrors the legacy charge `regroup_paid_fees` contract.
   REGROUP_PAID_FEES = {
-    none: "none",
     invoice: "invoice"
   }.freeze
 
@@ -31,9 +30,9 @@ class RateCard < ApplicationRecord
   has_many :taxes, through: :applied_taxes
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
-  # prefix: a bare `none` value would define a RateCard.none scope, which
-  # collides with ActiveRecord::QueryMethods#none.
-  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: true, prefix: true
+  # nil is a valid value (fee stays standalone); prefix keeps the predicate
+  # explicit (regroup_paid_fees_invoice?).
+  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}, prefix: true
 
   validates :name, presence: true
   validates :code,
@@ -83,9 +82,12 @@ class RateCard < ApplicationRecord
     errors.add(:proration, :not_allowed_for_aggregation_type) if metric.weighted_sum_agg?
   end
 
-  # Paid-fee regrouping only exists for advance fees kept off the invoice
+  # Paid-fee regrouping only exists for advance fees kept off the invoice. The
+  # pairing checks apply only to the `invoice` value — a nil (standalone) or an
+  # invalid value skips them, so an invalid value fails on its inclusion error
+  # alone instead of also reporting a pairing conflict.
   def validate_regroup_paid_fees
-    return if regroup_paid_fees_none?
+    return unless regroup_paid_fees_invoice?
 
     errors.add(:regroup_paid_fees, :not_allowed_for_billing_timing) unless advance?
     errors.add(:regroup_paid_fees, :not_allowed_with_display_on_invoice) if display_on_invoice?
@@ -130,7 +132,7 @@ end
 #  display_on_invoice        :boolean          default(TRUE), not null
 #  name                      :string           not null
 #  proration                 :boolean          default(FALSE), not null
-#  regroup_paid_fees         :enum             default("none"), not null
+#  regroup_paid_fees         :enum
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  organization_id           :uuid             not null
