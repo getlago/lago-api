@@ -20,9 +20,9 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     expect(payload["alert_type"]).to eq("current_usage_amount")
     expect(payload["direction"]).to eq("increasing")
     expect(payload["thresholds"]).to eq([
-      {"code" => "warn10", "value" => "10.0", "recurring" => false},
-      {"code" => "warn12", "value" => "12.0", "recurring" => false},
-      {"code" => "rec", "value" => "33.0", "recurring" => true}
+      {"code" => "warn10", "value" => "10.0", "recurring" => false, "notify_on" => ["triggered"]},
+      {"code" => "warn12", "value" => "12.0", "recurring" => false, "notify_on" => ["triggered"]},
+      {"code" => "rec", "value" => "33.0", "recurring" => true, "notify_on" => ["triggered"]}
     ])
     expect(payload["previous_value"]).to eq("800.0")
     expect(payload["last_processed_at"]).to eq("2000-01-01T12:00:00Z")
