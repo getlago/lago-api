@@ -68,15 +68,148 @@ RSpec.describe BillingSegments::ProcessService do
       end
     end
 
-    context "with only usage (metered) products" do
-      let(:product) { create(:product, organization:) }
+    context "with metered products" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_override) { nil }
+      let(:billing_segment_rate_properties) { rate_properties }
 
-      it "leaves segments pending without creating invoices or fees" do
-        expect { result }.to not_change(Invoice, :count).and not_change(Fee, :count)
+      before do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-10"), properties: event_properties)
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: event_properties)
+      end
 
-        expect(result).to be_success
-        expect(result.invoices).to eq([])
-        expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+      context "with count aggregation" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "15.00"} }
+
+        it "creates an invoice with a metered fee based on event count" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+
+          fee = invoice.fees.sole
+          expect(fee).to have_attributes(
+            invoiceable: product,
+            fee_type: "product",
+            units: 2,
+            events_count: 2,
+            amount_cents: 3_000,
+            precise_unit_amount: BigDecimal("15.00")
+          )
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+
+        context "with a minimum amount" do
+          let(:min_amount_cents) { 10_000 }
+
+          it "creates a true-up fee when usage is below minimum" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole
+            fee, true_up_fee = invoice.fees.order(:created_at)
+
+            expect(invoice.total_amount_cents).to eq(10_000)
+            expect(fee.amount_cents).to eq(3_000)
+            expect(true_up_fee).to have_attributes(amount_cents: 7_000, true_up_parent_fee_id: fee.id)
+          end
+        end
+      end
+
+      context "with sum aggregation" do
+        let(:aggregation_type) { :sum_agg }
+        let(:field_name) { "quantity" }
+        let(:event_properties) { {"quantity" => 10} }
+        let(:rate_properties) { {"amount" => "2.50"} }
+
+        it "creates an invoice with a metered fee based on summed field values" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+
+          fee = invoice.fees.sole
+          expect(fee).to have_attributes(
+            invoiceable: product,
+            fee_type: "product",
+            units: 20,
+            events_count: 2,
+            amount_cents: 5_000,
+            precise_unit_amount: BigDecimal("2.50")
+          )
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+
+        context "with graduated pricing" do
+          let(:rate_model) { "graduated" }
+          let(:rate_properties) do
+            {"graduated_ranges" => [
+              {"from_value" => 0, "to_value" => 10, "per_unit_amount" => "5.00", "flat_amount" => "0.00"},
+              {"from_value" => 11, "to_value" => nil, "per_unit_amount" => "3.00", "flat_amount" => "0.00"}
+            ]}
+          end
+
+          it "applies graduated tiers to the summed usage" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole
+            fee = invoice.fees.sole
+
+            # First 10 units at $5, next 10 units at $3 = $50 + $30 = $80
+            expect(fee).to have_attributes(units: 20, amount_cents: 8_000)
+            expect(fee.amount_details["graduated_ranges"].size).to eq(2)
+          end
+        end
+      end
+
+      context "with mixed fixed and metered segments" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "10.00"} }
+
+        let(:fixed_product) { create(:product, :fixed, organization:) }
+        let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product, currency: "USD") }
+        let(:fixed_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract:, rate_card: fixed_rate_card, units: 3, effective_date: Date.parse("2026-07-01"))
+        end
+        let(:fixed_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: fixed_rate_card, rate_properties: {"amount" => "20.00"})
+        end
+        let!(:fixed_segment) do
+          create(
+            :billing_segment, organization:, contract:, customer:,
+            contract_rate_card: fixed_contract_rate_card, rate_card_rate: fixed_rate_card_rate,
+            currency: "USD", rate_properties: {"amount" => "20.00"},
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        it "creates an invoice with both fixed and metered fees" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+          expect(invoice.fees.count).to eq(2)
+
+          metered_fee = invoice.fees.find { |f| f.invoiceable == product }
+          fixed_fee = invoice.fees.find { |f| f.invoiceable == fixed_product }
+
+          expect(metered_fee).to have_attributes(fee_type: "product", units: 2, amount_cents: 2_000)
+          expect(fixed_fee).to have_attributes(fee_type: "product", units: 3, amount_cents: 6_000)
+
+          # 2 events × $10 + 3 units × $20 = $20 + $60 = $80
+          expect(invoice.total_amount_cents).to eq(8_000)
+
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+          expect(fixed_segment.reload).to have_attributes(status: "done", invoice:)
+        end
       end
     end
 

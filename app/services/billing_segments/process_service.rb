@@ -37,7 +37,6 @@ module BillingSegments
       BillingSegment.status_pending
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
-        .select { |segment| segment.contract_rate_card.product.fixed? }
     end
 
     def invoice_key(segment)
@@ -67,6 +66,9 @@ module BillingSegments
     def build_invoice(segments)
       contract = segments.first.contract
       invoice = nil
+      grouped = segments.group_by { |s| s.contract_rate_card.product.product_type }
+      metered_segments = grouped[Product::PRODUCT_TYPES[:metered]] || []
+      fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
 
       ActiveRecord::Base.transaction do
         invoice = Invoices::CreateGeneratingService.call!(
@@ -79,17 +81,11 @@ module BillingSegments
           purchase_order_number: contract.purchase_order_number
         ).invoice
 
-        segments.flat_map do |segment|
-          if segment.contract_rate_card.product.fixed?
-            computed_fees(segment)
-          else
-            []
-          end
-        end.each do |fee|
-          fee.invoice = invoice
-          fee.billing_entity = invoice.billing_entity
-          fee.save!
-        end
+        filtered_aggregations = event_filters(contract, metered_segments)
+
+        attach_fixed_fees(fixed_segments, invoice)
+        attach_metered_fees(metered_segments, invoice, filtered_aggregations)
+
         invoice.fees.reload
 
         Invoices::ComputeAmountsFromFees.call!(invoice:)
@@ -100,9 +96,45 @@ module BillingSegments
       invoice
     end
 
-    def computed_fees(segment)
+    def attach_fixed_fees(segments, invoice)
+      segments.each do |segment|
+        compute_fixed_fees(segment).each do |fee|
+          fee.invoice = invoice
+          fee.billing_entity = invoice.billing_entity
+          fee.save!
+        end
+      end
+    end
+
+    def attach_metered_fees(segments, invoice, filtered_aggregations)
+      segments.each do |segment|
+        compute_metered_fees(segment, invoice, filtered_aggregations)
+      end
+    end
+
+    def compute_fixed_fees(segment)
       fee_result = BillingSegments::Fees::ComputeService.call!(billing_segment: segment)
       [fee_result.fee, fee_result.true_up_fee].compact
+    end
+
+    # NOTE: Fees::ChargeService persists and attaches the product fees itself (within this
+    # surrounding transaction), so a failure on any segment rolls back the whole invoice group.
+    def compute_metered_fees(segment, invoice, filtered_aggregations)
+      ::Fees::ChargeService.call!(
+        invoice:,
+        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(segment),
+        billing_context: Billing::Context.from(contract: segment.contract),
+        options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
+        filtered_aggregations: filtered_aggregations[segment.contract_rate_card.product.target_key]&.keys || []
+      )
+    end
+
+    def event_filters(contract, metered_segments)
+      return {} if metered_segments.empty?
+
+      Events::BillingPeriodFilterService.for_billing_segments!(
+        contract:, billing_segments: metered_segments, with_last_seen_at: false
+      ).filter_targets
     end
 
     def finalize_generating_invoices
