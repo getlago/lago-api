@@ -21,6 +21,8 @@ module Fees
       delegate :charge,
         :charge_id,
         :selected_filter,
+        :filter_association,
+        :true_up_filter_id,
         :fee_type,
         :invoiceable,
         :billable_metric,
@@ -39,6 +41,8 @@ module Fees
         :applied_pricing_unit,
         to: :source
 
+      delegate :filters, to: :invoiceable
+
       %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
           source.public_send(attribute) if source.respond_to?(attribute)
@@ -53,6 +57,11 @@ module Fees
         selected_filter&.id
       end
 
+      # The source determines which buckets have pricing, independently of the matching filter set.
+      def pricing_buckets
+        source.pricing_buckets.map { |bucket| with(source: bucket) }
+      end
+
       def aggregation_options(current_usage:)
         {
           free_units_per_events: properties["free_units_per_events"].to_i,
@@ -63,7 +72,11 @@ module Fees
       end
 
       def with_filter(filter, **options)
-        self.class.new(source: source.with_filter(filter, **options))
+        with(source: source.with_filter(filter, **options))
+      end
+
+      def with_default_filter
+        with(source: source.with_default_filter)
       end
 
       def filtered_for_charge_boundaries
