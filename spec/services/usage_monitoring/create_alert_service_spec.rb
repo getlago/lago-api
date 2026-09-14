@@ -379,12 +379,47 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
       end
 
-      context "when code already exists on the same wallet" do
-        it "returns a record validation failure result" do
-          create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1")
+      context "when the code is already used on the same wallet" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1") }
 
+        it "rejects it before reaching the database" do
           expect(result).to be_failure
           expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never builds the alert, so no insert is attempted" do
+          allow(UsageMonitoring::Alert).to receive(:new).and_call_original
+
+          expect(result).to be_failure
+          expect(UsageMonitoring::Alert).not_to have_received(:new)
+        end
+
+        context "when a concurrent create slipped past the check" do
+          before { allow_any_instance_of(described_class).to receive(:wallet_alert_code_taken?).and_return(false) } # rubocop:disable RSpec/AnyInstance
+
+          it "still rejects it, on the unique index" do
+            expect(result).to be_failure
+            expect(result.error.messages[:code]).to eq(["value_already_exist"])
+          end
+        end
+      end
+
+      context "when the same code is used on another wallet" do
+        before do
+          other = create(:wallet, organization:)
+          create(:wallet_credits_balance_alert, organization:, wallet: other, code: "wallet1")
+        end
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when a discarded alert holds the code" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
         end
       end
 

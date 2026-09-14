@@ -26,6 +26,14 @@ module UsageMonitoring
         result.not_found_failure!(resource: "billable_metric")
       end
 
+      def wallet_alert_code_taken?(wallet_id:, code:, alert_type:, excluding_id: nil)
+        return false if wallet_id.blank? || code.blank?
+
+        scope = organization.alerts.where(wallet_id:, code:).where.not(alert_type:)
+        scope = scope.where.not(id: excluding_id) if excluding_id
+        scope.exists?
+      end
+
       def duplicate_threshold_values?(thresholds)
         threshold_keys = thresholds.map { |t| [t[:value], ActiveModel::Type::Boolean.new.cast(t[:recurring]) || false] }
         threshold_keys.size != threshold_keys.uniq.size
