@@ -14,6 +14,13 @@ module ConnectionResolvable
 
   CATEGORIES = BillingObjectConnection::CATEGORIES
 
+  # Read-side only: the absence of an override row is reported as "inherit". The column itself
+  # only ever holds "specific" or "skip".
+  INHERIT_BEHAVIOR = "inherit"
+  ROUTING_BEHAVIORS = (BillingObjectConnection::BEHAVIORS.values + [INHERIT_BEHAVIOR]).freeze
+
+  Routing = Data.define(:category, :behavior, :code)
+
   def effective_payment_connection
     effective_connection(CATEGORIES[:payment])
   end
@@ -28,6 +35,32 @@ module ConnectionResolvable
 
   def effective_crm_connection
     effective_connection(CATEGORIES[:crm])
+  end
+
+  # The routing of every category, for read surfaces: the stored behaviour ("inherit" when no
+  # override row exists) alongside the code of the connection actually in effect. Overrides are
+  # loaded once rather than per category, so `includes(:billing_object_connections)` on a
+  # collection keeps this to one query.
+  def connection_routing
+    overrides = billing_object_connections.index_by(&:category)
+
+    CATEGORIES.each_value.map do |category|
+      override = overrides[category]
+
+      connection = if override.nil?
+        customer_default_connection(category)
+      elsif override.skip?
+        nil
+      else
+        override_connection(override, category)
+      end
+
+      Routing.new(
+        category: category,
+        behavior: override&.behavior || INHERIT_BEHAVIOR,
+        code: connection&.code
+      )
+    end
   end
 
   private

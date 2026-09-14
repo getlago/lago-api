@@ -1512,6 +1512,35 @@ enum CommitmentTypeEnum {
   minimum_commitment
 }
 
+enum ConnectionCategoryEnum {
+  accounting
+  crm
+  payment
+  tax
+}
+
+"""
+How a billing object routes a category: its own choice, or inherited from the customer
+"""
+enum ConnectionResolvedBehaviorEnum {
+  inherit
+  skip
+  specific
+}
+
+"""
+The connection a billing object routes to for one category, and where that choice came from
+"""
+type ConnectionRouting {
+  behavior: ConnectionResolvedBehaviorEnum!
+  category: ConnectionCategoryEnum!
+
+  """
+  Code of the connection in effect. Null when the category is skipped or nothing resolves
+  """
+  code: String
+}
+
 """
 The agreement a customer signed: an optional plan, a validity window and the billing anchor
 """
@@ -12973,6 +13002,7 @@ enum RecurringTransactionMethodEnum {
 }
 
 type RecurringTransactionRule {
+  connections: [ConnectionRouting!]!
   createdAt: ISO8601DateTime!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
@@ -15964,6 +15994,7 @@ type Wallet {
   balanceCents: BigInt!
   billingEntityId: ID
   code: String
+  connections: [ConnectionRouting!]!
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   createdAt: ISO8601DateTime!
