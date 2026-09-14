@@ -63,8 +63,8 @@ module Api
             limit: params[:per_page] || PER_PAGE
           },
           filters: {
-            product_id: params[:product_id],
-            product_filter_id: params[:product_filter_id],
+            product_ids: Array(params[:product_id]).presence,
+            product_filter_ids: Array(params[:product_filter_id]).presence,
             code: params[:code],
             product_code: params[:product_code],
             product_filter_code: params[:product_filter_code]

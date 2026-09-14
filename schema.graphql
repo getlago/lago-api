@@ -12413,7 +12413,7 @@ type Query {
   """
   Query rate cards of an organization
   """
-  rateCards(code: String, limit: Int, page: Int, productCode: String, productFilterCode: String, productFilterId: ID, productId: ID, searchTerm: String): RateCardCollection!
+  rateCards(code: String, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
 
   """
   Query a single role
