@@ -161,4 +161,55 @@ describe "Past usage for regrouped advance charges", transaction: false do
       end
     end
   end
+
+  context "when the paid fee is regrouped after its usage period" do
+    it "reports each fee in the period it was consumed in" do
+      travel_to(Time.zone.local(2024, 6, 1)) do
+        create_subscription({external_customer_id: customer.external_id, external_id: external_subscription_id, plan_code: plan.code})
+      end
+
+      subscription = customer.subscriptions.sole
+
+      [40, 10].each_with_index do |units, index|
+        travel_to(Time.zone.local(2024, 6, 15 + index, 12)) do
+          create_event({
+            code: billable_metric.code,
+            external_subscription_id:,
+            properties: {billable_metric.field_name => units}
+          })
+        end
+      end
+
+      travel_to(Time.zone.local(2024, 7, 1, 1)) { perform_billing }
+      travel_to(Time.zone.local(2024, 8, 1, 1)) { perform_billing }
+
+      travel_to(Time.zone.local(2024, 8, 10, 12)) do
+        subscription.fees.charge.where("amount_cents > 0").find_each do |fee|
+          update_fee(fee.id, {payment_status: "succeeded"})
+        end
+      end
+
+      travel_to(Time.zone.local(2024, 9, 1, 1)) { perform_billing }
+
+      travel_to(Time.zone.local(2024, 9, 2, 12)) do
+        advance_invoice = customer.invoices.advance_charges.sole
+        june_period = subscription.invoice_subscriptions.find_by(charges_from_datetime: Time.zone.local(2024, 6, 1))
+
+        # The regrouping invoice is stamped with the period it is issued in, not with
+        # the period the fee was consumed in.
+        expect(advance_invoice.invoice_subscriptions.sole.charges_from_datetime).to eq(Time.zone.local(2024, 8, 1))
+
+        get_with_token(organization, "/api/v1/customers/#{customer.external_id}/past_usage", {external_subscription_id:})
+
+        expect(response).to have_http_status(:success)
+        periods = json[:usage_periods].index_by { |period| period[:lago_invoice_id] }
+        expect(periods.fetch(june_period.invoice_id)[:charges_usage].sole).to include(
+          units: "40.0",
+          total_aggregated_units: "40.0",
+          amount_cents: 0
+        )
+        expect(periods.fetch(advance_invoice.id)[:charges_usage].sole).to include(units: "10.0", amount_cents: 500)
+      end
+    end
+  end
 end
