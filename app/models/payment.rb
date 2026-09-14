@@ -6,6 +6,26 @@ class Payment < ApplicationRecord
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
+  # NOTE: A provider payment left in `requires_action` on an authentication challenge is one the
+  #       end customer never completed. Past this window it is treated as abandoned and cancelled,
+  #       since nothing else ever moves it and it keeps the payable locked.
+  #
+  #       The window is measured from `updated_at`, not `created_at`: a payment row is reused across
+  #       attempts while it is still `pending` (Invoices::Payments::CreateService does a
+  #       find_or_create_by! on that status), so `created_at` can be months older than the challenge
+  #       itself and would have a fresh challenge cancelled on the very next tick. Entering
+  #       `requires_action` is the last write the row takes, which makes `updated_at` the time of
+  #       that transition; any later write only pushes the deadline out, which is the safe direction.
+  AUTHENTICATION_ABANDON_PERIOD = 24.hours
+
+  # NOTE: `requires_action` is not only 3DS. The same status covers payments waiting on funds or on
+  #       a voucher the customer settles offline: a customer_balance wire sits on
+  #       `display_bank_transfer_instructions` for days, ACH on `verify_with_microdeposits`, and
+  #       Boleto/OXXO/Konbini on their own display details. Those must be left to arrive. Only an
+  #       interactive challenge is abandonable, so this is an allowlist: a next action Stripe adds
+  #       later is ignored until it is reviewed.
+  AUTHENTICATION_NEXT_ACTIONS = %w[use_stripe_sdk redirect_to_url].freeze
+
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
   belongs_to :payable, polymorphic: true
@@ -35,6 +55,12 @@ class Payment < ApplicationRecord
   enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
 
   delegate :billing_entity, to: :customer
+
+  scope :abandoned_at_authentication, lambda {
+    where(payable_type: "Invoice", status: "requires_action", payable_payment_status: :processing)
+      .where(updated_at: ..AUTHENTICATION_ABANDON_PERIOD.ago)
+      .where("payments.provider_payment_data->>'type' IN (?)", AUTHENTICATION_NEXT_ACTIONS)
+  }
 
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([
@@ -167,6 +193,7 @@ end
 #
 #  idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (organization_id,provider_payment_id) USING gin
 #  index_payments_by_cursor                                        (organization_id,created_at DESC,id)
+#  index_payments_on_created_at_awaiting_authentication            (created_at) WHERE (((status)::text = 'requires_action'::text) AND (payable_payment_status = 'processing'::payment_payable_payment_status))
 #  index_payments_on_customer_id                                   (customer_id)
 #  index_payments_on_invoice_id                                    (invoice_id)
 #  index_payments_on_organization_id                               (organization_id)

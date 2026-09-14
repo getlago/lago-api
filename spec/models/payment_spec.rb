@@ -656,6 +656,55 @@ RSpec.describe Payment do
     end
   end
 
+  describe ".abandoned_at_authentication" do
+    subject(:result) { described_class.abandoned_at_authentication }
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    let!(:abandoned) { challenged_payment(updated_at: 25.hours.ago) }
+
+    def challenged_payment(updated_at:, payable: nil, **attributes)
+      create(
+        :payment,
+        :requires_action,
+        payable: payable || create(:invoice, customer:, organization:),
+        customer:,
+        organization:,
+        payable_payment_status: "processing",
+        updated_at:,
+        **attributes
+      )
+    end
+
+    before do
+      challenged_payment(updated_at: 1.hour.ago)
+      # A payment row is reused while pending, so an old row can carry a challenge raised minutes
+      # ago. Selecting on created_at would cancel it on the next tick.
+      challenged_payment(updated_at: 1.hour.ago, created_at: 6.months.ago)
+      challenged_payment(updated_at: 25.hours.ago, payable_payment_status: "succeeded")
+      challenged_payment(updated_at: 25.hours.ago, status: "processing")
+      challenged_payment(updated_at: 25.hours.ago, payable: create(:payment_request, customer:, organization:))
+      create(
+        :payment,
+        :awaiting_bank_transfer,
+        payable: create(:invoice, customer:, organization:),
+        customer:,
+        organization:,
+        payable_payment_status: "processing",
+        updated_at: 25.hours.ago
+      )
+    end
+
+    it "returns invoice payments left in an authentication challenge past the abandon period" do
+      expect(result).to eq([abandoned])
+    end
+
+    it "excludes payments waiting on funds rather than on the customer" do
+      expect(result.map { it.provider_payment_data["type"] }.uniq).to eq(["redirect_to_url"])
+    end
+  end
+
   describe ".for_organization" do
     subject(:result) { described_class.for_organization(organization) }
 

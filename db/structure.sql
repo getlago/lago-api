@@ -592,6 +592,7 @@ DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
+DROP INDEX IF EXISTS public.index_payments_on_updated_at_awaiting_authentication;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
@@ -10516,6 +10517,13 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 
 
 --
+-- Name: index_payments_on_updated_at_awaiting_authentication; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_updated_at_awaiting_authentication ON public.payments USING btree (updated_at) WHERE (((status)::text = 'requires_action'::text) AND (payable_payment_status = 'processing'::public.payment_payable_payment_status));
+
+
+--
 -- Name: index_pending_active_subscriptions_on_plan_id_and_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14874,6 +14882,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260914151957'),
 ('20260914145333'),
 ('20260911144853'),
 ('20260910151708'),
