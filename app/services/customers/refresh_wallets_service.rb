@@ -48,13 +48,63 @@ module Customers
     attr_reader :customer, :include_generating_invoices
 
     def deliver_streaming_events
+      streamed_event_types.each do |event_type|
+        if event_type == StreamingDestinations::BaseDestination::CURRENT_USAGE_EVENT_TYPE && produce_inline?(event_type)
+          produce_current_usage
+        else
+          DeliverEventJob.perform_after_commit(event_type, customer)
+        end
+      end
+    end
+
+    def streamed_event_types
       StreamingDestinations::BaseDestination
         .where(organization: customer.organization, active: true)
         .pluck(:event_types)
         .flatten
-        .uniq
         .intersection(StreamingDestinations::BaseDestination::EVENT_TYPES)
-        .each { DeliverEventJob.perform_after_commit(it, customer) }
+    end
+
+    # The usage is already computed here, so the current-period record is produced from it rather
+    # than paying for it again in a job. Deferred to after commit for the same reason the enqueue
+    # is: Credits::AppliedPrepaidCreditsService refreshes inside a transaction and a customer lock,
+    # and a rolled back refresh must not reach the stream.
+    def produce_current_usage
+      event_type = StreamingDestinations::BaseDestination::CURRENT_USAGE_EVENT_TYPE
+
+      after_commit do
+        EventDestinations::CustomerUsage::RefreshedService.call(object: customer, usages: computed_usages)
+
+        # The producer swallows a credentials failure into a dropped log, so without this the event
+        # would be lost on a worker that cannot assume the destination role.
+        DeliverEventJob.perform_later(event_type, customer) unless produce_inline?(event_type)
+      rescue => e
+        EventDestinations::DeliveryLogger.emit(
+          :failed,
+          event_type:,
+          customer_id: customer.id,
+          error: e.class,
+          message: e.message
+        )
+
+        DeliverEventJob.perform_later(event_type, customer)
+      end
+    end
+
+    def computed_usages
+      subscription_usages.to_h { [it[:subscription], it[:usage]] }
+    end
+
+    # Only a worker holds the AWS identity the producer needs, and only until it proves otherwise:
+    # a process that has already failed to obtain credentials stops paying the STS timeout and
+    # hands the delivery to the streaming worker instead.
+    def produce_inline?(event_type)
+      return false unless Sidekiq.server?
+
+      destination = StreamingDestinations::BaseDestination.for_event(customer.organization, event_type).first
+      return false if destination.nil?
+
+      Lago::Kinesis::Producer.credentials_available?(destination)
     end
 
     def all_wallets
@@ -82,13 +132,13 @@ module Customers
     # billed invoice subscriptions used to net already-billed amounts out of ongoing usage.
     def subscription_usages
       @subscription_usages ||= customer.active_subscriptions.map do |subscription|
-        invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER).invoice
+        usage_result = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER)
 
         billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
           .call(subscription:, include_generating_invoices:)
           .invoice_subscriptions
 
-        {billed_progressive_invoice_subscriptions:, invoice:, subscription:}
+        {billed_progressive_invoice_subscriptions:, invoice: usage_result.invoice, usage: usage_result.usage, subscription:}
       end
     end
   end

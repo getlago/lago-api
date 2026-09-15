@@ -26,8 +26,28 @@ module Lago
         Seahorse::Client::NetworkingError
       ].freeze
 
+      # An identity problem, as opposed to a transport or configuration one: this process cannot
+      # reach that destination at all, and retrying it costs a full STS timeout each time.
+      CREDENTIALS_ERRORS = [
+        Aws::STS::Errors::AccessDenied,
+        Aws::Errors::MissingCredentialsError
+      ].freeze
+
       ASSUMED_CREDENTIALS = Concurrent::Map.new
       CLIENTS = Concurrent::Map.new
+      UNAVAILABLE_CREDENTIALS = Concurrent::Map.new
+
+      class << self
+        # Whether this process has already failed to obtain credentials for that destination.
+        # Callers with somewhere else to send the work use it to stop paying the timeout.
+        def credentials_available?(destination)
+          !UNAVAILABLE_CREDENTIALS[credentials_key(destination)]
+        end
+
+        def credentials_key(destination)
+          [destination.role_arn, destination.region, destination.external_id]
+        end
+      end
 
       def initialize(destination:)
         @destination = destination
@@ -55,6 +75,8 @@ module Lago
 
         response
       rescue *DELIVERY_ERRORS => e
+        UNAVAILABLE_CREDENTIALS[credentials_key] = true if CREDENTIALS_ERRORS.any? { e.is_a?(it) }
+
         log(
           outcome_for(e),
           partition_key:,
@@ -113,7 +135,7 @@ module Lago
       end
 
       def credentials_key
-        [destination.role_arn, destination.region, destination.external_id]
+        self.class.credentials_key(destination)
       end
 
       def external_id_option

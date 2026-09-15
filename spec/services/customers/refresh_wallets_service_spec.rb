@@ -127,6 +127,96 @@ RSpec.describe Customers::RefreshWalletsService do
         end
       end
 
+      context "when running on a worker, where the producer has an AWS identity" do
+        let(:delivery) { instance_double(BaseResult) }
+
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call).and_return(delivery)
+        end
+
+        it "produces the current usage inline, reusing the usage it already computed" do
+          allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
+          result
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).to have_received(:call) do |object:, usages:|
+            expect(object).to eq(customer)
+            expect(usages.keys).to match_array(customer.active_subscriptions)
+            expect(usages.values).to all(be_a(SubscriptionUsage))
+          end
+        end
+
+        it "computes the usage once per subscription rather than twice" do
+          allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
+          result
+
+          expect(Invoices::CustomerUsageService).to have_received(:call!).exactly(customer.active_subscriptions.count).times
+        end
+
+        it "still enqueues the full usage delivery, which cannot reuse this computation" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_full_usage.refreshed.v1", customer)
+        end
+
+        it "does not enqueue the current usage delivery" do
+          expect { result }.not_to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+
+        it "produces nothing when the wrapping transaction rolls back" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:, include_generating_invoices:)
+            raise ActiveRecord::Rollback
+          end
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).not_to have_received(:call)
+        end
+      end
+
+      context "when the worker cannot obtain credentials for the destination" do
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call)
+          allow(Lago::Kinesis::Producer).to receive(:credentials_available?).and_return(false)
+        end
+
+        it "hands the delivery to the streaming worker rather than losing it" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+
+        it "does not attempt the inline produce again, so the timeout is paid once" do
+          result
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).not_to have_received(:call)
+        end
+      end
+
+      context "when the inline delivery raises" do
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call).and_raise("stream is gone")
+          allow(EventDestinations::DeliveryLogger).to receive(:emit)
+        end
+
+        it "logs and lets the refresh succeed, because streaming must never fail a wallet refresh" do
+          expect(result).to be_success
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+          expect(EventDestinations::DeliveryLogger).to have_received(:emit)
+            .with(:failed, hash_including(customer_id: customer.id))
+        end
+
+        it "still hands the delivery to the streaming worker" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+      end
+
       context "when the destination is inactive" do
         before { create(:kinesis_destination, organization:, active: false) }
 
