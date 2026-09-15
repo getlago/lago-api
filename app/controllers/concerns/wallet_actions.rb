@@ -140,6 +140,12 @@ module WalletActions
         payment_method: [
           :payment_method_type,
           :payment_method_id
+        ],
+        connections: [
+          payment: [:behavior, :code],
+          tax: [:behavior, :code],
+          accounting: [:behavior, :code],
+          crm: [:behavior, :code]
         ]
       ],
       applies_to: [
@@ -153,6 +159,12 @@ module WalletActions
       payment_method: [
         :payment_method_type,
         :payment_method_id
+      ],
+      connections: [
+        payment: [:behavior, :code],
+        tax: [:behavior, :code],
+        accounting: [:behavior, :code],
+        crm: [:behavior, :code]
       ]
     )
   end
@@ -196,6 +208,12 @@ module WalletActions
         payment_method: [
           :payment_method_type,
           :payment_method_id
+        ],
+        connections: [
+          payment: [:behavior, :code],
+          tax: [:behavior, :code],
+          accounting: [:behavior, :code],
+          crm: [:behavior, :code]
         ]
       ],
       applies_to: [
@@ -209,6 +227,12 @@ module WalletActions
       payment_method: [
         :payment_method_type,
         :payment_method_id
+      ],
+      connections: [
+        payment: [:behavior, :code],
+        tax: [:behavior, :code],
+        accounting: [:behavior, :code],
+        crm: [:behavior, :code]
       ]
     )
   end
