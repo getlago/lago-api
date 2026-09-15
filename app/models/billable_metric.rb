@@ -19,6 +19,7 @@ class BillableMetric < ApplicationRecord
   has_many :coupons, through: :coupon_targets
   has_many :groups, dependent: :delete_all
   has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
+  has_many :product_filter_values, through: :filters
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },

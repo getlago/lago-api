@@ -35,6 +35,25 @@ RSpec.describe ProductFilterValue do
       end
     end
 
+    describe "referenced metric filter must be kept on create" do
+      it "rejects a new reference to a discarded metric filter" do
+        metric_filter = create(:billable_metric_filter, values: %w[us])
+        metric_filter.discard!
+        value = build(:product_filter_value, billable_metric_filter: metric_filter, value: "us")
+        value.valid?
+        expect(value.errors.added?(:billable_metric_filter, :billable_metric_deleted)).to be(true)
+      end
+
+      it "rejects a new reference when the metric itself is discarded" do
+        metric = create(:billable_metric)
+        metric_filter = create(:billable_metric_filter, billable_metric: metric, values: %w[us])
+        metric.discard!
+        value = build(:product_filter_value, billable_metric_filter: metric_filter, value: "us")
+        value.valid?
+        expect(value.errors.added?(:billable_metric_filter, :billable_metric_deleted)).to be(true)
+      end
+    end
+
     describe "value uniqueness per filter and metric filter" do
       it "rejects the same value twice for the same filter and key" do
         existing = create(:product_filter_value)
