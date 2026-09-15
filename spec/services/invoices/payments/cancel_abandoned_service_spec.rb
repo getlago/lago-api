@@ -74,9 +74,8 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
 
   context "when the payment is a bank transfer waiting on the wire" do
     let(:payment) do
-      create(:payment, payable: invoice, customer:, organization:, status: "requires_action",
-        payable_payment_status: :processing, updated_at: 2.days.ago,
-        provider_payment_data: {"type" => "display_bank_transfer_instructions"})
+      create(:payment, :awaiting_bank_transfer, payable: invoice, customer:, organization:,
+        payable_payment_status: :processing, updated_at: 2.days.ago)
     end
 
     it "does not cancel anything" do
