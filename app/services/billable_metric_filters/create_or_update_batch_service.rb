@@ -17,12 +17,15 @@ module BillableMetricFilters
       result.filters = []
 
       if filters_params.empty?
+        return referenced_by_product_filter_failure if billable_metric.product_filter_values.exists?
+
         discard_all_filters
 
         return result
       end
 
       return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
+      return referenced_by_product_filter_failure if orphaning_filters.any?
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
@@ -65,6 +68,28 @@ module BillableMetricFilters
     private
 
     attr_reader :billable_metric, :filters_params
+
+    def referenced_by_product_filter_failure
+      result.validation_failure!(errors: {filters: ["referenced_by_product_filter"]})
+    end
+
+    # A metric filter value is structural once a kept product filter value
+    # references it, so block (never cascade) any edit that would orphan one:
+    # removing a referenced value, or discarding a referenced filter. A product
+    # filter value with a nil value tracks the whole set, so it only blocks a
+    # full filter removal, not the trim of an individual value.
+    def orphaning_filters
+      billable_metric.filters.select do |filter|
+        param = filters_params.find { |filter_param| filter_param[:key] == filter.key }
+
+        if param.nil?
+          filter.product_filter_values.exists?
+        else
+          deleted_values = filter.values - Array(param[:values])
+          deleted_values.present? && filter.product_filter_values.where(value: deleted_values).exists?
+        end
+      end
+    end
 
     def any_filter_params_values_blank?
       filters_params.any? do |filter_param|

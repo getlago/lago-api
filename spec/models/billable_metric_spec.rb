@@ -18,6 +18,7 @@ RSpec.describe BillableMetric do
       expect(subject).to have_many(:subscriptions).through(:plans)
       expect(subject).to have_many(:invoices).through(:fees)
       expect(subject).to have_many(:filters).dependent(:delete_all)
+      expect(subject).to have_many(:product_filter_values).through(:filters)
       expect(subject).to have_many(:netsuite_mappings).dependent(:destroy)
     end
   end
