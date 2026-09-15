@@ -600,6 +600,48 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#filter_display_name" do
+    let(:charge) { create(:standard_charge) }
+    let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "EU Premium") }
+    let(:product) { create(:product) }
+    let(:product_filter) { create(:product_filter, product:, invoice_display_name: "EU Premium") }
+
+    context "when the fee is charge-backed" do
+      let(:fee) { build(:charge_fee, charge:, charge_filter:) }
+
+      it "uses the charge filter display name" do
+        expect(fee.filter_display_name).to eq("EU Premium")
+      end
+    end
+
+    context "when the fee is product-backed" do
+      let(:fee) { build(:fee, fee_type: :product, product_filter:) }
+
+      it "uses the product filter invoice name" do
+        expect(fee.filter_display_name).to eq("EU Premium")
+      end
+
+      context "when sorting the invoice fees" do
+        let(:product) { create(:product, name: "Compute") }
+        let(:fee) do
+          build(
+            :fee,
+            fee_type: :product,
+            product_filter:,
+            invoiceable: product,
+            subscription: nil,
+            invoice_display_name: nil,
+            grouped_by: {}
+          )
+        end
+
+        it "includes the product filter" do
+          expect(fee.invoice_sorting_clause).to eq("compute eu premium")
+        end
+      end
+    end
+  end
+
   describe "#grouped_by_display" do
     let(:charge) { create(:standard_charge, properties:) }
     let(:fee) { described_class.new(charge:, fee_type: "charge", grouped_by:) }
@@ -977,6 +1019,11 @@ RSpec.describe Fee do
       fee = build(:charge_fee, grouped_by: {}, charge_filter_id: SecureRandom.uuid)
       expect(fee).to be_grouped_or_filtered
     end
+
+    it "returns true when product_filter_id is present" do
+      fee = build(:fee, fee_type: :product, grouped_by: {}, product_filter_id: SecureRandom.uuid)
+      expect(fee).to be_grouped_or_filtered
+    end
   end
 
   describe "#ungrouped_or_filtered?" do
@@ -993,6 +1040,35 @@ RSpec.describe Fee do
     it "returns true when charge_filter_id is present" do
       fee = build(:charge_fee, grouped_by: {"cloud" => "aws"}, charge_filter_id: SecureRandom.uuid)
       expect(fee).to be_ungrouped_or_filtered
+    end
+
+    it "returns true when product_filter_id is present" do
+      fee = build(:fee, fee_type: :product, grouped_by: {"cloud" => "aws"}, product_filter_id: SecureRandom.uuid)
+      expect(fee).to be_ungrouped_or_filtered
+    end
+  end
+
+  describe "#filtered?" do
+    let(:fee) { build(:fee) }
+
+    it "returns false when neither filter is present" do
+      expect(fee).not_to be_filtered
+    end
+
+    context "when the charge filter is present" do
+      let(:fee) { build(:charge_fee, charge_filter_id: SecureRandom.uuid) }
+
+      it "returns true" do
+        expect(fee).to be_filtered
+      end
+    end
+
+    context "when the product filter is present" do
+      let(:fee) { build(:fee, fee_type: :product, product_filter_id: SecureRandom.uuid) }
+
+      it "returns true" do
+        expect(fee).to be_filtered
+      end
     end
   end
 
