@@ -286,6 +286,7 @@ RSpec.describe Wallet do
       paid_top_up_max_amount_cents
       paid_top_up_min_amount_cents
       payment_method_type
+      payment_term
       rate_amount
       ready_to_be_refreshed
       skip_invoice_custom_sections
