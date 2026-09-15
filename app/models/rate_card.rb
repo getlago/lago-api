@@ -5,6 +5,7 @@ class RateCard < ApplicationRecord
   include Currencies
   include Discard::Model
   include CatalogAttachable
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 
