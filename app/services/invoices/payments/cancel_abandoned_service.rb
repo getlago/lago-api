@@ -66,7 +66,7 @@ module Invoices
       def abandoned_at_redirect?
         payment.status == "requires_action" &&
           payment.processing? &&
-          payment.provider_payment_data["type"] == "redirect_to_url" &&
+          payment.provider_payment_data&.dig("type") == "redirect_to_url" &&
           payment.updated_at <= ABANDONED_PERIOD.ago
       end
 

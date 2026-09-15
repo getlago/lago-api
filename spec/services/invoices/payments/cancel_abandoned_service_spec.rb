@@ -184,6 +184,23 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
     end
   end
 
+  context "when the payment predates the provider data column" do
+    let(:payment) do
+      create(:payment, payable: invoice, customer:, organization:, status: "requires_action",
+        payable_payment_status: :processing, updated_at: 2.days.ago, provider_payment_data: nil)
+    end
+
+    it "skips it instead of raising, since the column is nullable" do
+      expect { result }.not_to raise_error
+    end
+
+    it "does not cancel anything" do
+      result
+
+      expect(::PaymentProviders::CancelPaymentService).not_to have_received(:call!)
+    end
+  end
+
   context "when the invoice was already paid" do
     let(:invoice) { create(:invoice, organization:, customer:, status: :finalized, payment_status: :succeeded, ready_for_payment_processing: false) }
 

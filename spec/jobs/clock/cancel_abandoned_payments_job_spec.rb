@@ -62,6 +62,18 @@ RSpec.describe Clock::CancelAbandonedPaymentsJob, job: true do
     end
   end
 
+  context "when the payable is a payment request" do
+    let(:payment_request) { create(:payment_request, organization:, customer:) }
+    let(:request_payment) { build_payment(payable: payment_request) }
+
+    before { request_payment }
+
+    it "skips it, since this flow only cancels invoice payments" do
+      expect { job.perform_now }
+        .not_to have_enqueued_job(Invoices::Payments::CancelAbandonedJob).with(request_payment)
+    end
+  end
+
   context "with more payments than fit in one batch" do
     let(:second) { build_payment({}) }
 
