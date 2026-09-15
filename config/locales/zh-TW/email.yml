@@ -72,10 +72,6 @@ zh-TW:
         already_paid: 若您已完成付款，請忽略此電子郵件。
         hello: 您好 %{customer_name}，
         pay_amount: 支付餘額
-        payment_terms:
-          one: 依合約約定，我們的付款期限為 %{count} 天。
-          other: 依合約約定，我們的付款期限為 %{count} 天。
-          zero: 依合約約定，需於發票產生時立即付款。
         remaining_amount: 尚需支付金額
         reminder_overdue_balance: 這是來自 %{billing_entity_name} 財務團隊的提醒，部分發票已逾期。
         subject: 您在 %{billing_entity_name} 的逾期應付金額
