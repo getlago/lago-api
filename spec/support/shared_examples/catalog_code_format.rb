@@ -7,7 +7,7 @@ RSpec.shared_examples "a catalog code" do |factory|
     it "allows a slug-safe code" do
       record = build(factory, code: "valid_code-1.2")
       record.valid?
-      expect(record.errors.where(:code, :invalid)).to be_empty
+      expect(record.errors[:code]).to be_empty
     end
 
     it "rejects a code containing a slash" do
