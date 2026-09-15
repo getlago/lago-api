@@ -67,7 +67,21 @@ describe "Pay in advance charges Scenarios (Clickhouse)", clickhouse: true, tran
       end
 
       travel_to(timestamp + 1.second) do
-        events.each { |event| Fees::CreatePayInAdvanceService.call!(charge:, event: event.as_json) }
+        events.each do |event|
+          metered_item = Fees::ChargeService::MeteredItem.from_charge(
+            charge:,
+            boundaries: BillingPeriodBoundaries.new(
+              from_datetime: subscription.started_at,
+              to_datetime: timestamp,
+              charges_from_datetime: subscription.started_at,
+              charges_to_datetime: timestamp,
+              charges_duration: timestamp - subscription.started_at,
+              timestamp:
+            ),
+            event: Events::CommonFactory.new_instance(source: event)
+          )
+          Fees::CreatePayInAdvanceService.call!(metered_item:)
+        end
       end
 
       fees = subscription.fees.where(charge:)

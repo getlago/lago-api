@@ -37,7 +37,14 @@ module Fees
           :charge_filter
         end
 
-        def pricing_buckets
+        # Pay-in-advance events must use only their matching filter; returning every
+        # configured filter would create duplicate fees for a single event.
+        def pricing_buckets(event: nil)
+          if event
+            matching_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+            return [with_filter(matching_filter)]
+          end
+
           if charge.filters.any?
             charge.filters.map { |filter| with_filter(filter) } + [with_default_filter]
           else

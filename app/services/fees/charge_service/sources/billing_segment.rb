@@ -45,7 +45,7 @@ module Fees
           :product_filter
         end
 
-        def pricing_buckets
+        def pricing_buckets(event: nil)
           [with_filter(rate_card.product_filter)]
         end
 
@@ -67,7 +67,7 @@ module Fees
             to_datetime: billing_segment.ended_at,
             charges_from_datetime: billing_segment.started_at,
             charges_to_datetime: billing_segment.ended_at,
-            charges_duration: billing_segment.duration_in_days,
+            charges_duration: duration_in_days,
             timestamp: billing_segment.billing_at
           )
         end
@@ -134,6 +134,10 @@ module Fees
 
         def rate_card
           billing_segment.contract_rate_card.rate_card
+        end
+
+        def duration_in_days
+          billing_segment.duration_in_days
         end
       end
     end
