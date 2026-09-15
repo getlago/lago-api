@@ -5,13 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Aggregations::MaxService do
   subject(:max_service) do
     described_class.new(
-      event_store_class:,
+      event_store:,
       metered_item:,
-      billing_context: Billing::Context.from(subscription:),
-      boundaries: {
-        from_datetime:,
-        to_datetime:
-      },
+      billing_context:,
+      boundaries:,
       filters:,
       bypass_aggregation:
     )
@@ -30,6 +27,11 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
         timestamp: to_datetime
       )
     )
+  end
+  let(:boundaries) { {from_datetime:, to_datetime:} }
+  let(:billing_context) { Billing::Context.from(subscription:) }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, billing_context:, boundaries:, filters:)
   end
   let(:bypass_aggregation) { false }
   let(:filters) { {grouped_by:, presentation_by:, matching_filters:, ignored_filters:} }
