@@ -1515,6 +1515,7 @@ type Contract {
   appliedRateCardsCount: Int!
   billingAnchorDate: ISO8601Date
   billingEntity: BillingEntity
+  billingEntityId: ID
   billingTime: ContractBillingTimeEnum!
   canceledAt: ISO8601DateTime
   consolidateInvoice: Boolean!
@@ -3101,8 +3102,7 @@ input CreateContractInput {
   externalCustomerId: String!
   externalId: String!
   name: String
-  paymentMethodId: ID
-  paymentMethodType: PaymentMethodTypeEnum
+  paymentMethod: PaymentMethodReferenceInput
   planCode: String
   purchaseOrderNumber: String
   startedAt: ISO8601DateTime
@@ -14864,8 +14864,7 @@ input UpdateContractInput {
   """
   externalId: String!
   name: String
-  paymentMethodId: ID
-  paymentMethodType: PaymentMethodTypeEnum
+  paymentMethod: PaymentMethodReferenceInput
   planCode: String
   purchaseOrderNumber: String
   startedAt: ISO8601DateTime

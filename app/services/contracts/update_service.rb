@@ -31,7 +31,7 @@ module Contracts
         return result.not_found_failure!(resource: "billing_entity")
       end
 
-      if params[:payment_method_id].present? && payment_method.nil?
+      if payment_method_params[:payment_method_id].present? && payment_method.nil?
         return result.not_found_failure!(resource: "payment_method")
       end
 
@@ -64,8 +64,8 @@ module Contracts
         contract.billing_entity = billing_entity if params.key?(:billing_entity_id)
         contract.consolidate_invoice = params[:consolidate_invoice] unless params[:consolidate_invoice].nil?
         contract.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
-        contract.payment_method = payment_method if params.key?(:payment_method_id)
-        contract.payment_method_type = params[:payment_method_type] if params[:payment_method_type].present?
+        contract.payment_method = payment_method if payment_method_params.key?(:payment_method_id)
+        contract.payment_method_type = payment_method_params[:payment_method_type] if payment_method_params[:payment_method_type].present?
         contract.save!
 
         # Replace the old plan's materialised cards. The destroy service also
@@ -106,10 +106,15 @@ module Contracts
       @billing_entity = params[:billing_entity_id].present? ? organization.billing_entities.find_by(id: params[:billing_entity_id]) : nil
     end
 
+    # Nested payment-method reference input {payment_method_id, payment_method_type}.
+    def payment_method_params
+      params[:payment_method] || {}
+    end
+
     def payment_method
       return @payment_method if defined?(@payment_method)
 
-      @payment_method = params[:payment_method_id].present? ? customer.payment_methods.find_by(id: params[:payment_method_id]) : nil
+      @payment_method = payment_method_params[:payment_method_id].present? ? customer.payment_methods.find_by(id: payment_method_params[:payment_method_id]) : nil
     end
 
     # Raw source values for the CustomerTimezone *_in_customer_timezone readers.

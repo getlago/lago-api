@@ -23,9 +23,9 @@ module Types
       # Invoicing settings.
       argument :consolidate_invoice, Boolean, required: false
       argument :purchase_order_number, String, required: false
-      # Payment settings: payment_method scopes to the contract's customer.
-      argument :payment_method_id, ID, required: false
-      argument :payment_method_type, Types::PaymentMethods::MethodTypeEnum, required: false
+      # Payment settings: mirrors the subscription input; the payment method
+      # scopes to the contract's customer.
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
     end
   end
 end

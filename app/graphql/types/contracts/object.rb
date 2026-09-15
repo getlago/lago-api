@@ -26,6 +26,8 @@ module Types
       # overrides (nil = inherit from the customer); the others carry the
       # stored value.
       field :billing_entity, Types::BillingEntities::Object, null: true
+      # Also exposed as the bare id, matching the subscription read side.
+      field :billing_entity_id, ID, null: true
       field :consolidate_invoice, Boolean, null: false
       field :payment_method, Types::PaymentMethods::Object, null: true
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false

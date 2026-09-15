@@ -125,8 +125,7 @@ RSpec.describe Contracts::UpdateService do
         billing_entity_id: billing_entity.id,
         consolidate_invoice: false,
         purchase_order_number: "PO-42",
-        payment_method_id: payment_method.id,
-        payment_method_type: "manual"
+        payment_method: {payment_method_id: payment_method.id, payment_method_type: "manual"}
       }
     end
 
@@ -152,7 +151,7 @@ RSpec.describe Contracts::UpdateService do
 
     context "when the payment method belongs to another customer" do
       let(:other_payment_method) { create(:payment_method, customer: create(:customer, organization:)) }
-      let(:params) { {payment_method_id: other_payment_method.id} }
+      let(:params) { {payment_method: {payment_method_id: other_payment_method.id}} }
 
       it "returns a not found failure, scoped to the contract's customer" do
         expect(result).not_to be_success
