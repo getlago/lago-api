@@ -28,8 +28,7 @@ RSpec.describe BillingSegments::ProcessService do
     let(:billing_segment_pricing_unit) { nil }
     let(:billing_segment_proration_ratio) { 1 }
     let(:min_amount_cents) { 0 }
-
-    let!(:billing_segment) do
+    let(:billing_segment) do
       create(
         :billing_segment,
         organization:,
@@ -47,6 +46,10 @@ RSpec.describe BillingSegments::ProcessService do
         started_at: Time.zone.parse("2026-08-01"),
         ended_at: Time.zone.parse("2026-08-31 23:59:59")
       )
+    end
+
+    before do
+      billing_segment
     end
 
     describe "#pending_segments" do
@@ -68,15 +71,411 @@ RSpec.describe BillingSegments::ProcessService do
       end
     end
 
-    context "with only usage (metered) products" do
-      let(:product) { create(:product, organization:) }
+    context "with metered products" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_override) { nil }
+      let(:billing_segment_rate_properties) { rate_properties }
 
-      it "leaves segments pending without creating invoices or fees" do
-        expect { result }.to not_change(Invoice, :count).and not_change(Fee, :count)
+      before do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-10"), properties: event_properties)
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: event_properties)
+      end
 
-        expect(result).to be_success
-        expect(result.invoices).to eq([])
-        expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+      context "with an advance card" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+
+        it "does not process the segment through periodic billing" do
+          expect { result }.not_to change(Invoice, :count)
+
+          expect(result).to be_success
+          expect(result.invoices).to be_empty
+          expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+        end
+      end
+
+      context "with count aggregation" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "15.00"} }
+
+        it "creates an invoice with a metered fee based on event count" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+
+          fee = invoice.fees.sole
+          expect(fee).to have_attributes(
+            invoiceable: product,
+            fee_type: "product",
+            units: 2,
+            events_count: 2,
+            amount_cents: 3_000,
+            precise_unit_amount: BigDecimal("15.00")
+          )
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+
+        context "with a minimum amount" do
+          let(:min_amount_cents) { 10_000 }
+
+          it "creates a true-up fee when usage is below minimum" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole
+            fee, true_up_fee = invoice.fees.order(:created_at)
+
+            expect(invoice.total_amount_cents).to eq(10_000)
+            expect(fee.amount_cents).to eq(3_000)
+            expect(true_up_fee).to have_attributes(amount_cents: 7_000, true_up_parent_fee_id: fee.id)
+          end
+        end
+      end
+
+      context "with sum aggregation" do
+        let(:aggregation_type) { :sum_agg }
+        let(:field_name) { "quantity" }
+        let(:event_properties) { {"quantity" => 10} }
+        let(:rate_properties) { {"amount" => "2.50"} }
+
+        it "creates an invoice with a metered fee based on summed field values" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+
+          fee = invoice.fees.sole
+          expect(fee).to have_attributes(
+            invoiceable: product,
+            fee_type: "product",
+            units: 20,
+            events_count: 2,
+            amount_cents: 5_000,
+            precise_unit_amount: BigDecimal("2.50")
+          )
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+
+        context "with graduated pricing" do
+          let(:rate_model) { "graduated" }
+          let(:rate_properties) do
+            {"graduated_ranges" => [
+              {"from_value" => 0, "to_value" => 10, "per_unit_amount" => "5.00", "flat_amount" => "0.00"},
+              {"from_value" => 11, "to_value" => nil, "per_unit_amount" => "3.00", "flat_amount" => "0.00"}
+            ]}
+          end
+
+          it "applies graduated tiers to the summed usage" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole
+            fee = invoice.fees.sole
+
+            # First 10 units at $5, next 10 units at $3 = $50 + $30 = $80
+            expect(fee).to have_attributes(units: 20, amount_cents: 8_000)
+            expect(fee.amount_details["graduated_ranges"].size).to eq(2)
+          end
+        end
+      end
+
+      context "with mixed fixed and metered segments" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "10.00"} }
+
+        let(:fixed_product) { create(:product, :fixed, organization:) }
+        let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product, currency: "USD") }
+        let(:fixed_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract:, rate_card: fixed_rate_card, units: 3, effective_date: Date.parse("2026-07-01"))
+        end
+        let(:fixed_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: fixed_rate_card, rate_properties: {"amount" => "20.00"})
+        end
+        let(:fixed_segment) do
+          create(
+            :billing_segment, organization:, contract:, customer:,
+            contract_rate_card: fixed_contract_rate_card, rate_card_rate: fixed_rate_card_rate,
+            currency: "USD", rate_properties: {"amount" => "20.00"},
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        before do
+          fixed_segment
+        end
+
+        it "creates an invoice with both fixed and metered fees" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+          expect(invoice.fees.count).to eq(2)
+
+          metered_fee = invoice.fees.find { |f| f.invoiceable == product }
+          fixed_fee = invoice.fees.find { |f| f.invoiceable == fixed_product }
+
+          expect(metered_fee).to have_attributes(fee_type: "product", units: 2, amount_cents: 2_000)
+          expect(fixed_fee).to have_attributes(fee_type: "product", units: 3, amount_cents: 6_000)
+
+          # 2 events × $10 + 3 units × $20 = $20 + $60 = $80
+          expect(invoice.total_amount_cents).to eq(8_000)
+
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+          expect(fixed_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+      end
+
+      context "with two consolidated metered contracts" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "5.00"} }
+
+        let(:second_contract) do
+          create(:contract, organization:, customer:, external_id: "second_contract_ext_id", consolidate_invoice: true)
+        end
+        let(:second_billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+        let(:second_product) { create(:product, :metered, organization:, billable_metric: second_billable_metric) }
+        let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "USD") }
+        let(:second_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract: second_contract, rate_card: second_rate_card, effective_date: Date.parse("2026-07-01"))
+        end
+        let(:second_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "7.00"})
+        end
+        let(:second_segment) do
+          create(
+            :billing_segment, organization:, contract: second_contract, customer:,
+            contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
+            currency: "USD", rate_properties: {"amount" => "7.00"},
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        before do
+          second_segment
+          # Events for the second contract (different external_subscription_id)
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-12"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-18"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-25"), properties: {})
+        end
+
+        it "creates a consolidated invoice with fees from both contracts using each contract's events" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.status).to eq("finalized")
+          expect(invoice.fees.count).to eq(2)
+
+          first_fee = invoice.fees.find { |f| f.invoiceable == product }
+          second_fee = invoice.fees.find { |f| f.invoiceable == second_product }
+
+          # First contract: 2 events × $5 = $10
+          expect(first_fee).to have_attributes(fee_type: "product", units: 2, events_count: 2, amount_cents: 1_000)
+          # Second contract: 3 events × $7 = $21
+          expect(second_fee).to have_attributes(fee_type: "product", units: 3, events_count: 3, amount_cents: 2_100)
+
+          expect(invoice.total_amount_cents).to eq(3_100)
+
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+          expect(second_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+      end
+
+      context "with consolidated contracts having different billing period date ranges" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "10.00"} }
+
+        # First contract: billing period Aug 15-31 (second half of August)
+        let(:billing_segment) do
+          create(
+            :billing_segment, organization:, contract:, customer:,
+            contract_rate_card:, rate_card_rate:,
+            currency: "USD", rate_properties:,
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-15"),
+            started_at: Time.zone.parse("2026-08-15"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        let(:second_contract) do
+          create(:contract, organization:, customer:, external_id: "second_contract_ext_id", consolidate_invoice: true)
+        end
+        let(:second_billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+        let(:second_product) { create(:product, :metered, organization:, billable_metric: second_billable_metric) }
+        let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "USD") }
+        let(:second_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract: second_contract, rate_card: second_rate_card, effective_date: Date.parse("2026-07-01"))
+        end
+        let(:second_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "20.00"})
+        end
+        # Second contract: billing period Aug 1-14 (first half of August)
+        let(:second_segment) do
+          create(
+            :billing_segment, organization:, contract: second_contract, customer:,
+            contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
+            currency: "USD", rate_properties: {"amount" => "20.00"},
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-14 23:59:59")
+          )
+        end
+
+        before do
+          Event.delete_all # clean previous events
+
+          billing_segment
+          second_segment
+
+          # Events for first contract in its billing period (Aug 15-31) - should be counted
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.zone.parse("2026-08-25"), properties: {})
+
+          # Events for first contract OUTSIDE its billing period (Aug 1-14) - should NOT be counted
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.zone.parse("2026-08-05"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.zone.parse("2026-08-10"), properties: {})
+
+          # Events for second contract in its billing period (Aug 1-14) - should be counted
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-05"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-10"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-12"), properties: {})
+
+          # Events for second contract OUTSIDE its billing period (Aug 15-31) - should NOT be counted
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: {})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-28"), properties: {})
+        end
+
+        it "only counts events within each contract's billing segment date range" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.fees.count).to eq(2)
+
+          first_fee = invoice.fees.find { |f| f.invoiceable == product }
+          second_fee = invoice.fees.find { |f| f.invoiceable == second_product }
+
+          # First contract: only 2 events in Aug 15-31 × $10 = $20 (not 4 events)
+          expect(first_fee).to have_attributes(fee_type: "product", units: 2, events_count: 2, amount_cents: 2_000)
+          # Second contract: only 3 events in Aug 1-14 × $20 = $60 (not 5 events)
+          expect(second_fee).to have_attributes(fee_type: "product", units: 3, events_count: 3, amount_cents: 6_000)
+
+          expect(invoice.total_amount_cents).to eq(8_000)
+        end
+      end
+
+      context "with consolidated contracts having different product filters" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {"region" => "eu"} }
+        let(:rate_properties) { {"amount" => "10.00"} }
+
+        # First contract product has "region" filter
+        let(:region_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+
+        # Second contract with different billable metric that has "country" filter
+        let(:second_contract) do
+          create(:contract, organization:, customer:, external_id: "second_contract_ext_id", consolidate_invoice: true)
+        end
+        let(:second_billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+        let(:country_filter) { create(:billable_metric_filter, billable_metric: second_billable_metric, key: "country", values: %w[fr de]) }
+        let(:second_product) { create(:product, :metered, organization:, billable_metric: second_billable_metric) }
+        let(:second_product_filter) { create(:product_filter, organization:, product: second_product) }
+        let(:second_rate_card) { create(:rate_card, organization:, product: second_product, product_filter: second_product_filter, currency: "USD") }
+        let(:second_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract: second_contract, rate_card: second_rate_card, effective_date: Date.parse("2026-07-01"))
+        end
+        let(:second_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "20.00"})
+        end
+        let(:second_segment) do
+          create(
+            :billing_segment, organization:, contract: second_contract, customer:,
+            contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
+            currency: "USD", rate_properties: {"amount" => "20.00"},
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+            started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
+          )
+        end
+
+        # First contract rate card with product filter
+        let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "USD") }
+
+        before do
+          Event.delete_all # clean before events
+          billing_segment
+          second_segment
+
+          # Setup product filter values
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter: region_filter, value: "eu")
+          create(:product_filter_value, organization:, product_filter: second_product_filter, billable_metric_filter: country_filter, value: "fr")
+
+          # Events for first contract with region=eu (matches filter)
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.zone.parse("2026-08-10"), properties: {"region" => "eu"})
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: {"region" => "eu"})
+
+          # Events for second contract with country=fr (matches filter)
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-12"), properties: {"country" => "fr"})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-18"), properties: {"country" => "fr"})
+          create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+            code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-25"), properties: {"country" => "fr"})
+        end
+
+        it "uses each contract's own filter keys when resolving event combinations" do
+          expect(result).to be_success
+
+          invoice = result.invoices.sole.reload
+          expect(invoice.fees.count).to eq(2)
+
+          first_fee = invoice.fees.find { |f| f.invoiceable == product }
+          second_fee = invoice.fees.find { |f| f.invoiceable == second_product }
+
+          # First contract: 2 events with region=eu × $10 = $20
+          expect(first_fee).to have_attributes(
+            fee_type: "product",
+            units: 2,
+            events_count: 2,
+            amount_cents: 2_000,
+            product_filter_id: product_filter.id
+          )
+          # Second contract: 3 events with country=fr × $20 = $60
+          expect(second_fee).to have_attributes(
+            fee_type: "product",
+            units: 3,
+            events_count: 3,
+            amount_cents: 6_000,
+            product_filter_id: second_product_filter.id
+          )
+
+          expect(invoice.total_amount_cents).to eq(8_000)
+        end
       end
     end
 
@@ -135,7 +534,11 @@ RSpec.describe BillingSegments::ProcessService do
       end
 
       context "when the customer has a default payment method" do
-        let!(:payment_method) { create(:payment_method, organization:, customer:, is_default: true) }
+        let(:payment_method) { create(:payment_method, organization:, customer:, is_default: true) }
+
+        before do
+          payment_method
+        end
 
         it "uses the resolved default payment method" do
           expect(invoice_key[4]).to eq([payment_method.id, "provider"])
@@ -338,7 +741,7 @@ RSpec.describe BillingSegments::ProcessService do
       let(:cycle_start) { Time.utc(2026, 6, 1) }
       let(:cycle_end) { Time.utc(2026, 7, 1) }
       let(:rate_change_at) { Time.utc(2026, 6, 16, 9, 30) }
-      let!(:billing_segment) do
+      let(:billing_segment) do
         build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
           currency: "USD", rate_properties:, billing_at: cycle_end, cycle_started_at: cycle_start,
           started_at: cycle_start, ended_at: BillingSegment.inclusive_end(rate_change_at)).tap do |segment|
@@ -346,7 +749,7 @@ RSpec.describe BillingSegments::ProcessService do
           segment.save!
         end
       end
-      let!(:second_segment) do
+      let(:second_segment) do
         override = create(:rate_override, organization:, rate_properties: {"amount" => "45.00"}, min_amount_cents:)
         build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
           rate_override: override, currency: "USD", rate_properties: override.rate_properties,
@@ -355,6 +758,11 @@ RSpec.describe BillingSegments::ProcessService do
           segment.proration_ratio = segment.duration_in_days.to_d / 30
           segment.save!
         end
+      end
+
+      before do
+        billing_segment
+        second_segment
       end
 
       it "bills each segment's base fee and prorated minimum without counting June 16 twice" do
@@ -529,12 +937,16 @@ RSpec.describe BillingSegments::ProcessService do
       let(:second_rate_card_rate) do
         create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "20.00"})
       end
-      let!(:second_segment) do
+      let(:second_segment) do
         create(:billing_segment, organization:, contract: second_contract, customer:,
           contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
           currency: second_rate_card.currency, rate_properties: {"amount" => "20.00"},
           billing_at: Time.zone.parse("2026-08-31 10:00:00"), cycle_started_at: Time.zone.parse("2026-08-01"),
           started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59"))
+      end
+
+      before do
+        second_segment
       end
 
       it "consolidates same-date segments into one invoice" do

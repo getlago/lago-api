@@ -33,12 +33,13 @@ module Events
 
       # A code outside of the plan matches no event, so codes is used as is: dropping it would leave
       # its charge out of the result, billed as zero units instead of surfaced.
-      def metric_codes
+      def metric_codes(record_id: nil)
         @metric_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
       end
 
       def filter_target_for(charge)
-        Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
+        @filter_target_for ||= {}
+        @filter_target_for[charge.id] ||= Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
       end
 
       def targets_with_events(codes)

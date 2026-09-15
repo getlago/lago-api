@@ -15,10 +15,9 @@ module Events
       )
     end
 
-    def self.for_billing_segments!(contract:, billing_segments:, codes: nil, with_last_seen_at: true)
+    def self.for_billing_segments!(billing_segments:, codes: nil, with_last_seen_at: true)
       call!(
         resolver: BillingPeriodFilters::BillingSegmentsResolver.new(
-          contract:,
           billing_segments:,
           codes:,
           with_last_seen_at:
