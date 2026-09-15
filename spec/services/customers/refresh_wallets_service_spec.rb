@@ -176,6 +176,26 @@ RSpec.describe Customers::RefreshWalletsService do
         end
       end
 
+      context "when the worker cannot obtain credentials for the destination" do
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call)
+          allow(Lago::Kinesis::Producer).to receive(:credentials_available?).and_return(false)
+        end
+
+        it "hands the delivery to the streaming worker rather than losing it" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+
+        it "does not attempt the inline produce again, so the timeout is paid once" do
+          result
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).not_to have_received(:call)
+        end
+      end
+
       context "when the inline delivery raises" do
         before do
           create(:kinesis_destination, organization:)
@@ -189,6 +209,11 @@ RSpec.describe Customers::RefreshWalletsService do
           expect(customer.reload.awaiting_wallet_refresh).to be(false)
           expect(EventDestinations::DeliveryLogger).to have_received(:emit)
             .with(:failed, hash_including(customer_id: customer.id))
+        end
+
+        it "still hands the delivery to the streaming worker" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
         end
       end
 

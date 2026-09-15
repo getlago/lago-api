@@ -49,7 +49,7 @@ module Customers
 
     def deliver_streaming_events
       streamed_event_types.each do |event_type|
-        if event_type == StreamingDestinations::BaseDestination::CURRENT_USAGE_EVENT_TYPE && produce_inline?
+        if event_type == StreamingDestinations::BaseDestination::CURRENT_USAGE_EVENT_TYPE && produce_inline?(event_type)
           produce_current_usage
         else
           DeliverEventJob.perform_after_commit(event_type, customer)
@@ -70,16 +70,24 @@ module Customers
     # is: Credits::AppliedPrepaidCreditsService refreshes inside a transaction and a customer lock,
     # and a rolled back refresh must not reach the stream.
     def produce_current_usage
+      event_type = StreamingDestinations::BaseDestination::CURRENT_USAGE_EVENT_TYPE
+
       after_commit do
         EventDestinations::CustomerUsage::RefreshedService.call(object: customer, usages: computed_usages)
+
+        # The producer swallows a credentials failure into a dropped log, so without this the event
+        # would be lost on a worker that cannot assume the destination role.
+        DeliverEventJob.perform_later(event_type, customer) unless produce_inline?(event_type)
       rescue => e
         EventDestinations::DeliveryLogger.emit(
           :failed,
-          event_type: StreamingDestinations::BaseDestination::CURRENT_USAGE_EVENT_TYPE,
+          event_type:,
           customer_id: customer.id,
           error: e.class,
           message: e.message
         )
+
+        DeliverEventJob.perform_later(event_type, customer)
       end
     end
 
@@ -87,9 +95,16 @@ module Customers
       subscription_usages.to_h { [it[:subscription], it[:usage]] }
     end
 
-    # Only a worker holds the AWS identity the producer needs. Anywhere else, fall back to the job.
-    def produce_inline?
-      Sidekiq.server?
+    # Only a worker holds the AWS identity the producer needs, and only until it proves otherwise:
+    # a process that has already failed to obtain credentials stops paying the STS timeout and
+    # hands the delivery to the streaming worker instead.
+    def produce_inline?(event_type)
+      return false unless Sidekiq.server?
+
+      destination = StreamingDestinations::BaseDestination.for_event(customer.organization, event_type).first
+      return false if destination.nil?
+
+      Lago::Kinesis::Producer.credentials_available?(destination)
     end
 
     def all_wallets
