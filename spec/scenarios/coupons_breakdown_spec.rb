@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Coupons breakdown Spec", :premium do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
 
   before do
     organization
@@ -323,6 +323,297 @@ describe "Coupons breakdown Spec", :premium do
       expect(invoice.sub_total_excluding_taxes_amount_cents).to eq(16_500)
       expect(invoice.taxes_amount_cents).to eq(1_889)
       expect(invoice.total_amount_cents).to eq(18_389)
+    end
+  end
+
+  # BIL-654: matrix inherited from #4057, extended with 50% coupons.
+  # Forever fixed coupons keep their existing per-invoice allowance here.
+  # Scenarios:
+  #   - Sc1: PB $5, final fees $35 (everything in charges or split, doesn't matter — math works the same)
+  #   - Sc2: PB $30, final fees $35
+  #   - Sc3: PB1 $5 + PB2 $30, final fees $50
+  #   - Sc4: PB $40, final fees $0 (no sub, no charges)
+  #   - Sc5: PB $40, final fees $20 (no sub, $20 charges)
+  #
+  # Customer's "paid" = sum of invoice totals; "refund" = sum of credit notes issued.
+  # Net cash-out = paid - refund.
+  context "with progressive billing and coupons", transaction: false do
+    let(:start_time) { DateTime.new(2025, 1, 1) }
+    let(:bm) do
+      create_metric({name: "U", code: "u", aggregation_type: "sum_agg", field_name: "n"})
+      organization.billable_metrics.find_by(code: "u")
+    end
+
+    def setup_pb_plan(thresholds_cents, currency: "EUR")
+      create_plan({
+        name: "P", code: "pb", interval: "monthly",
+        amount_cents: 0, amount_currency: currency, pay_in_advance: false,
+        charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}],
+        usage_thresholds: thresholds_cents.map { |c| {amount_cents: c} }
+      })
+      organization.plans.find_by(code: "pb")
+    end
+
+    def apply_matrix_coupon(frequency, percentage:, limited_to_metrics:, currency: "EUR")
+      params = {
+        name: "C", code: "c", coupon_type: percentage ? "percentage" : "fixed_amount",
+        frequency:, frequency_duration: (frequency == "recurring") ? 2 : nil,
+        expiration: "no_expiration", reusable: false
+      }
+      if percentage
+        params[:percentage_rate] = 50
+      else
+        params[:amount_cents] = 20_00
+        params[:amount_currency] = currency
+      end
+      if limited_to_metrics
+        params[:applies_to] = {billable_metric_codes: [bm.code]}
+      end
+      create_coupon(params)
+      create_or_update_customer({external_id: "cust"})
+      apply_coupon({external_customer_id: "cust", coupon_code: "c"})
+    end
+
+    def create_sub(plan)
+      travel_to(start_time) { create_subscription({external_customer_id: "cust", external_id: "s", plan_code: plan.code}) }
+      Subscription.find_by(external_id: "s")
+    end
+
+    def end_of_month_billing
+      travel_to(start_time + 1.month) { perform_billing }
+    end
+
+    def customer_totals
+      customer = organization.customers.find_by(external_id: "cust")
+      {
+        paid: customer.invoices.sum(:total_amount_cents),
+        refund: CreditNote.where(invoice_id: customer.invoices.pluck(:id)).sum(:credit_amount_cents)
+      }
+    end
+
+    shared_examples "matrix case" do |coupon:, paid:, refund:, percentage: false, limited_to_metrics: false, remaining_uses: nil|
+      it "with #{coupon} #{percentage ? "50%" : "$20"} coupon (metric-limited: #{limited_to_metrics}): pays #{paid}, refund #{refund}" do
+        plan = setup_pb_plan(thresholds)
+        apply_matrix_coupon(coupon, percentage:, limited_to_metrics:)
+        sub = create_sub(plan)
+        trigger_usage(sub)
+        end_of_month_billing
+
+        expect(customer_totals).to eq(paid:, refund:)
+        unless remaining_uses.nil?
+          customer = organization.customers.find_by(external_id: "cust")
+          expect(customer.applied_coupons.sole.frequency_duration_remaining).to eq(remaining_uses)
+        end
+      end
+    end
+
+    context "with Sc1: 1 PB at $5, period total $35" do
+      let(:thresholds) { [5_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 5) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 30) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 10_00, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, paid: 17_50, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, limited_to_metrics: true, paid: 17_50, refund: 0
+    end
+
+    context "with Sc2: 1 PB at $30, period total $35" do
+      let(:thresholds) { [30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 30) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 5) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 15_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 10_00, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, paid: 17_50, refund: 0
+      include_examples "matrix case", coupon: "forever", percentage: true, limited_to_metrics: true, paid: 17_50, refund: 0
+    end
+
+    context "with a PB at $30 and another $10 of usage" do
+      let(:thresholds) { [30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 30) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 10) }
+      end
+
+      include_examples "matrix case", coupon: "forever", paid: 10_00, refund: 0
+
+      it "credits the old progressive fee and consumes the credit note when charges are recreated" do
+        plan = setup_pb_plan(thresholds, currency: "USD")
+        apply_matrix_coupon("forever", percentage: false, limited_to_metrics: false, currency: "USD")
+        sub = create_sub(plan)
+        original_charge = plan.charges.sole
+        trigger_usage(sub)
+        progressive_invoice = sub.invoices.progressive_billing.sole
+        progressive_fee = progressive_invoice.fees.charge.sole
+
+        expect(progressive_invoice).to have_attributes(
+          currency: "USD", fees_amount_cents: 30_00, coupons_amount_cents: 20_00, total_amount_cents: 10_00
+        )
+
+        travel_to(start_time + 20.days) do
+          update_plan(plan, {charges: []})
+          expect(plan.reload.charges).to be_empty
+          update_plan(plan, {
+            charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}]
+          })
+        end
+        replacement_charge = plan.reload.charges.sole
+        expect(original_charge.reload).to be_discarded
+        expect(replacement_charge.id).not_to eq(original_charge.id)
+
+        end_of_month_billing
+
+        invoice = sub.invoices.subscription.sole
+        credit_note = progressive_invoice.credit_notes.sole
+        expect(invoice).to have_attributes(
+          status: "finalized", fees_amount_cents: 40_00, coupons_amount_cents: 20_00,
+          progressive_billing_credit_amount_cents: 0, credit_notes_amount_cents: 10_00,
+          sub_total_excluding_taxes_amount_cents: 20_00, total_amount_cents: 10_00
+        )
+        expect(invoice.fees.charge.sole.charge_id).to eq(replacement_charge.id)
+        expect(credit_note).to have_attributes(
+          credit_amount_cents: 10_00, coupons_adjustment_amount_cents: 20_00,
+          refund_amount_cents: 0, balance_amount_cents: 0, credit_status: "consumed"
+        )
+        expect(credit_note.items.sole).to have_attributes(fee_id: progressive_fee.id, amount_cents: 30_00)
+        expect(invoice.credits.credit_note_kind.sole).to have_attributes(credit_note_id: credit_note.id, amount_cents: 10_00)
+        # The credit note is already deducted from the final invoice, so it must
+        # not be subtracted again as a cash refund when summing invoice totals.
+        expect(sub.invoices.sum(:total_amount_cents)).to eq(20_00)
+      end
+    end
+
+    context "when finalizing after charges are recreated" do
+      def recreate_charges(plan)
+        travel_to(start_time + 20.days) do
+          update_plan(plan, {charges: []})
+          update_plan(plan, {
+            charges: [{billable_metric_id: bm.id, charge_model: "standard", pay_in_advance: false, properties: {amount: "1"}}]
+          })
+        end
+      end
+
+      it "finalizes a draft after a fully discounted PB without issuing a zero credit note" do
+        plan = setup_pb_plan([20_00])
+        apply_matrix_coupon("forever", percentage: false, limited_to_metrics: false)
+        sub = create_sub(plan)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 20) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 10) }
+        progressive_invoice = sub.invoices.progressive_billing.sole
+        expect(progressive_invoice).to have_attributes(fees_amount_cents: 20_00, coupons_amount_cents: 20_00, total_amount_cents: 0)
+
+        recreate_charges(plan)
+        sub.customer.update!(invoice_grace_period: 2)
+        end_of_month_billing
+        invoice = sub.invoices.subscription.sole
+        expect(invoice).to be_draft
+
+        travel_to(start_time + 1.month + 2.days) { Invoices::FinalizeJob.perform_now(invoice) }
+
+        expect(invoice.reload).to have_attributes(
+          status: "finalized", fees_amount_cents: 30_00, coupons_amount_cents: 20_00,
+          progressive_billing_credit_amount_cents: 0, credit_notes_amount_cents: 0, total_amount_cents: 10_00
+        )
+        expect(progressive_invoice.credit_notes).to be_empty
+      end
+
+      it "reverses only the remaining gross fee after a coupon-adjusted credit note" do
+        plan = setup_pb_plan([100_00])
+        apply_matrix_coupon("forever", percentage: false, limited_to_metrics: false)
+        sub = create_sub(plan)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 100) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 10) }
+        progressive_invoice = sub.invoices.progressive_billing.sole
+        progressive_fee = progressive_invoice.fees.charge.sole
+
+        travel_to(start_time + 16.days) do
+          create_credit_note({
+            invoice_id: progressive_invoice.id, reason: "other", credit_amount_cents: 20_00,
+            items: [{fee_id: progressive_fee.id, amount_cents: 25_00}]
+          })
+        end
+        existing_credit_note = progressive_invoice.credit_notes.sole
+        expect(existing_credit_note).to have_attributes(credit_amount_cents: 20_00, coupons_adjustment_amount_cents: 5_00)
+
+        recreate_charges(plan)
+        end_of_month_billing
+
+        invoice = sub.invoices.subscription.sole
+        new_credit_note = progressive_invoice.credit_notes.where.not(id: existing_credit_note.id).sole
+        expect(new_credit_note).to have_attributes(
+          credit_amount_cents: 60_00, coupons_adjustment_amount_cents: 15_00,
+          balance_amount_cents: 0, credit_status: "consumed"
+        )
+        expect(new_credit_note.items.sole).to have_attributes(fee_id: progressive_fee.id, amount_cents: 75_00)
+        expect(invoice).to have_attributes(
+          status: "finalized", fees_amount_cents: 110_00, coupons_amount_cents: 20_00,
+          progressive_billing_credit_amount_cents: 0, credit_notes_amount_cents: 80_00, total_amount_cents: 10_00
+        )
+        expect(existing_credit_note.reload).to have_attributes(balance_amount_cents: 0, credit_status: "consumed")
+        expect(progressive_fee.credit_note_items.sum(:amount_cents)).to eq(100_00)
+      end
+    end
+
+    context "with Sc3: 2 PBs at $5 and $30, period total $50" do
+      let(:thresholds) { [5_00, 30_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 5) }
+        travel_to(start_time + 10.days) { ingest_event(sub, bm, 25) }
+        travel_to(start_time + 15.days) { ingest_event(sub, bm, 20) }
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 30_00, refund: 0
+      include_examples "matrix case", coupon: "forever", paid: 5_00, refund: 0
+      include_examples "matrix case", coupon: "recurring", percentage: true, paid: 35_00, refund: 0, remaining_uses: 0
+      include_examples "matrix case", coupon: "recurring", percentage: true, limited_to_metrics: true, paid: 35_00, refund: 0, remaining_uses: 0
+    end
+
+    context "with no new usage after a PB at $40" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+      end
+
+      include_examples "matrix case", coupon: "recurring", percentage: true, paid: 20_00, refund: 0, remaining_uses: 1
+      include_examples "matrix case", coupon: "recurring", percentage: true, limited_to_metrics: true, paid: 20_00, refund: 0, remaining_uses: 1
+    end
+
+    context "with Sc4: PB at $40, usage clawed back to $0" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, -40) }
+        perform_usage_update
+      end
+
+      include_examples "matrix case", coupon: "once", paid: 20_00, refund: 20_00
+      include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 20_00
+    end
+
+    context "with Sc5: PB at $40, usage clawed back to $20" do
+      let(:thresholds) { [40_00] }
+
+      def trigger_usage(sub)
+        travel_to(start_time + 5.days) { ingest_event(sub, bm, 40) }
+        travel_to(start_time + 10.days) { ingest_event(sub, bm, -20) }
+      end
+
+      # Known limitation: $10 of coupon stays stranded on the PB for usage that was
+      # clawed back. Refund is the proportional cash portion only ($10), not the full
+      # $20 needed for the customer to come out at $0 owed.
+      include_examples "matrix case", coupon: "once", paid: 20_00, refund: 10_00
+      include_examples "matrix case", coupon: "forever", paid: 20_00, refund: 10_00
     end
   end
 end

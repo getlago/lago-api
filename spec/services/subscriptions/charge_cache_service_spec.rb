@@ -24,15 +24,6 @@ RSpec.describe Subscriptions::ChargeCacheService do
       end
     end
 
-    context "when the lazy charge usage cache flag is enabled" do
-      before { subscription.organization.enable_feature_flag!(:lazy_charge_usage_cache) }
-
-      it "uses the lazy cache key version" do
-        expect(cache_service.cache_key)
-          .to eq("charge-usage/#{described_class::LAZY_CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}")
-      end
-    end
-
     context "with full usage" do
       subject(:cache_service) { described_class.new(subscription:, charge:, charge_filter:, full_usage: true) }
 

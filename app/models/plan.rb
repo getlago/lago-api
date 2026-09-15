@@ -22,15 +22,12 @@ class Plan < ApplicationRecord
   has_many :fixed_charges, dependent: :destroy
   has_many :add_ons, through: :fixed_charges
   has_many :subscriptions
-  has_many :contracts
   has_many :customers, through: :subscriptions
   has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :invoices, through: :subscriptions
   has_many :usage_thresholds
-  has_many :applied_rate_cards, class_name: "PlanRateCard"
-  has_many :products, through: :applied_rate_cards
 
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -50,22 +47,17 @@ class Plan < ApplicationRecord
     semiannual
   ].freeze
 
-  PRICING_TYPES = {legacy: "legacy", product_catalog: "product_catalog"}.freeze
-
-  enum :pricing_type, PRICING_TYPES, validate: true
   enum :interval, INTERVALS, validate: {allow_nil: true}
 
   monetize :amount_cents, allow_nil: true
 
   validates :name, :code, presence: true
   validates :amount_currency, inclusion: {in: currency_list}
-  # Legacy plans price at the plan level; product-catalog plans price through
-  # their products, so the plan-level billing fields are optional for them.
   # A blank interval keeps the historical "value_is_invalid" error (the enum used
   # to reject nil as an out-of-range value) rather than a "value_is_mandatory" one.
-  validates :interval, presence: {message: "value_is_invalid"}, unless: :product_catalog?
-  validates :amount_cents, presence: true, unless: :product_catalog?
-  validates :pay_in_advance, inclusion: {in: [true, false]}, unless: :product_catalog?
+  validates :interval, presence: {message: "value_is_invalid"}
+  validates :amount_cents, presence: true
+  validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
 
   default_scope -> { kept }
@@ -91,10 +83,10 @@ class Plan < ApplicationRecord
     !pay_in_advance
   end
 
-  # A catalog plan is subscribed through contracts, a legacy plan through
-  # subscriptions; either attachment freezes the plan.
+  # A legacy plan is frozen once it has subscriptions. Catalog plans live in
+  # their own table and freeze on contracts (CatalogPlan#attached_to_contracts?).
   def attached_to_subscriptions?
-    subscriptions.exists? || contracts.exists?
+    subscriptions.exists?
   end
 
   def has_trial?
@@ -131,9 +123,13 @@ class Plan < ApplicationRecord
 
   def active_subscriptions_count
     count = subscriptions.active.count
-    return count unless children
+    active_count_per_child = Subscription.active
+      .where(Subscription.arel_table[:plan_id].eq(Plan.arel_table[:id]))
+      .select("COUNT(*)")
 
-    count + children.joins(:subscriptions).merge(Subscription.active).select("subscriptions.id").distinct.count
+    # Count through the (plan_id, status) index for each override instead of
+    # joining all active subscriptions before filtering by the parent plan.
+    count + children.sum(Arel::Nodes::Grouping.new(active_count_per_child.arel)).to_i
   end
 
   def customers_count
@@ -144,10 +140,10 @@ class Plan < ApplicationRecord
   end
 
   def draft_invoices_count
-    count = subscriptions.joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
-    return count unless children
+    draft_invoices = Invoice.draft.where(organization_id:)
+    count = subscriptions.joins(:invoices).merge(draft_invoices).select(:invoice_id).distinct.count
 
-    count + children.joins(:subscriptions).joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
+    count + children.joins(subscriptions: :invoices).merge(draft_invoices).select(:invoice_id).distinct.count
   end
 
   private
@@ -179,7 +175,6 @@ end
 #  name                       :string           not null
 #  pay_in_advance             :boolean          default(FALSE)
 #  pending_deletion           :boolean          default(FALSE), not null
-#  pricing_type               :enum             default("legacy"), not null
 #  trial_period               :float
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null

@@ -20,6 +20,7 @@ RSpec.describe Customer do
   it { is_expected.to have_many(:error_details).dependent(:destroy) }
   it { is_expected.to have_many(:order_forms) }
   it { is_expected.to have_many(:orders) }
+  it { is_expected.to have_many(:usage_attribution_values) }
 
   it { is_expected.to have_one(:netsuite_customer) }
   it { is_expected.to have_one(:anrok_customer) }
@@ -669,6 +670,34 @@ RSpec.describe Customer do
       it "returns the gocardless provider customer object" do
         expect(customer.provider_customer).to eq(gocardless_customer)
       end
+    end
+  end
+
+  describe "#payment_connection_status" do
+    subject { customer.payment_connection_status }
+
+    let(:customer) { create(:customer, organization:) }
+
+    context "when the customer has no payment connection" do
+      it { is_expected.to eq("not_connected") }
+    end
+
+    context "when no payment connection is default" do
+      before { create(:stripe_customer, customer:, is_default: false) }
+
+      it { is_expected.to eq("not_connected") }
+    end
+
+    context "when a provider connection is default" do
+      before { create(:stripe_customer, customer:, is_default: true) }
+
+      it { is_expected.to eq("connected") }
+    end
+
+    context "when the manual connection is default" do
+      before { create(:manual_payment_provider_customer, customer:, is_default: true) }
+
+      it { is_expected.to eq("manual") }
     end
   end
 
@@ -1444,37 +1473,16 @@ RSpec.describe Customer do
     end
   end
 
-  describe "#payment_connection_status" do
+  describe "#integration_connection" do
     let(:customer) { create(:customer) }
+    let!(:default_connection) { create(:netsuite_customer, customer:, is_default: true) }
 
-    context "when no connection is the default" do
-      it "returns not_connected" do
-        expect(customer.payment_connection_status).to eq("not_connected")
-      end
+    it "returns the default connection of the category" do
+      expect(customer.integration_connection("accounting")).to eq(default_connection)
     end
 
-    context "when the default is a provider connection" do
-      before { create(:stripe_customer, customer:, is_default: true) }
-
-      it "returns connected" do
-        expect(customer.payment_connection_status).to eq("connected")
-      end
-    end
-
-    context "when the default is the manual row" do
-      before do
-        PaymentProviderCustomers::BaseCustomer.create!(
-          customer:,
-          organization: customer.organization,
-          type: "PaymentProviderCustomers::BaseCustomer",
-          code: "lago_manual",
-          is_default: true
-        )
-      end
-
-      it "returns manual" do
-        expect(customer.payment_connection_status).to eq("manual")
-      end
+    it "returns nil when no connection is default in the category" do
+      expect(customer.integration_connection("crm")).to be_nil
     end
   end
 

@@ -63,7 +63,7 @@ module Api
             json: ::CollectionSerializer.new(
               # Preloaded so products_count reads the loaded association.
               result.product_categories.includes(:products),
-              ::V1::ProductCategorySerializer,
+              ::V2::ProductCategorySerializer,
               collection_name: "product_categories",
               meta: pagination_metadata(result.product_categories)
             )
@@ -94,7 +94,7 @@ module Api
       end
 
       def render_product_category(product_category)
-        render(json: ::V1::ProductCategorySerializer.new(product_category, root_name: "product_category"))
+        render(json: ::V2::ProductCategorySerializer.new(product_category, root_name: "product_category"))
       end
 
       def resource_name

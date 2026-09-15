@@ -119,8 +119,8 @@ module Invoices
 
     def compute_charge_fees
       fees = []
-      filters = event_filters(subscription, boundaries).charges
-      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || {}) }
+      filters = event_filters(subscription, boundaries).filter_targets
+      charges.find_each { |c| fees += charge_usage(c, filters[c.target_key] || {}) }
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
@@ -143,7 +143,7 @@ module Invoices
         .call!(
           invoice:,
           metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           cache_middleware:,
           filtered_aggregations: applied_filters.keys,
           options: Fees::ChargeService::Options.new(
@@ -262,7 +262,7 @@ module Invoices
     # avoids resolving combinations for the rest of the plan. The ingestion timestamps are requested
     # only when the charge cache can actually read them.
     def event_filters(subscription, boundaries)
-      Events::BillingPeriodFilterService.call!(
+      Events::BillingPeriodFilterService.for_charges!(
         subscription:,
         boundaries:,
         codes: filtered_metric_codes,
@@ -287,10 +287,10 @@ module Invoices
         (!usage_filters.full_usage || full_usage_cache_enabled?)
     end
 
-    # Full usage is cached only with lazy validation, the one invalidation that clears its key.
+    # skip_grouping and filter_by_presentation change the fees but are absent from the cache key, so
+    # a full usage entry is only written when neither of them narrows the request.
     def full_usage_cache_enabled?
       organization.granular_lifetime_usage_enabled? &&
-        organization.feature_flag_enabled?(:lazy_charge_usage_cache) &&
         !usage_filters.skip_grouping &&
         usage_filters.filter_by_presentation.nil?
     end

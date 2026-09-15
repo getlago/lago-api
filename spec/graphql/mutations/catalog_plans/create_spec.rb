@@ -21,7 +21,7 @@ RSpec.describe Mutations::CatalogPlans::Create do
   let(:query) do
     <<~GQL
       mutation($input: CreateCatalogPlanInput!) {
-        createCatalogPlan(input: $input) { id code amountCurrency }
+        createCatalogPlan(input: $input) { id code currency }
       }
     GQL
   end
@@ -34,10 +34,8 @@ RSpec.describe Mutations::CatalogPlans::Create do
     plan_response = result["data"]["createCatalogPlan"]
 
     expect(plan_response["code"]).to eq("growth")
-    expect(plan_response["amountCurrency"]).to eq("EUR")
-    expect(Plan.find(plan_response["id"])).to have_attributes(
-      pricing_type: "product_catalog", interval: nil, amount_cents: nil
-    )
+    expect(plan_response["currency"]).to eq("EUR")
+    expect(CatalogPlan.find(plan_response["id"])).to have_attributes(name: "Growth", currency: "EUR")
   end
 
   context "when the organization is not on the product catalog" do

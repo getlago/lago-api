@@ -108,7 +108,10 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, pay_in_advance: true) }
 
           it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
-            expect { service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            expect { service.call }
+              .to change(FixedChargeEvent, :count).by(1)
+              .and have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+              .with(subscription, kind_of(Integer))
           end
 
           context "when the subscription is payment-gated" do
@@ -148,6 +151,43 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
 
         it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
           expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+      end
+
+      context "when a plan override is created and the units are unchanged" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan:, organization:, add_on:, units: 5, pay_in_advance: true)
+        end
+        let(:params) { {invoice_display_name: "Renamed", units: "5", apply_units_immediately: true} }
+
+        before do
+          create(:fixed_charge_event, subscription:, fixed_charge:, units: 5, timestamp: 1.hour.ago)
+        end
+
+        it "still creates the fixed charge override" do
+          expect { service.call }.to change(FixedCharge, :count).by(1)
+        end
+
+        it "does not enqueue the pay-in-advance billing job" do
+          expect { service.call }
+            .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+
+        it "does not emit a fixed charge event" do
+          expect { service.call }.not_to change(FixedChargeEvent, :count)
+        end
+
+        context "when the subscription already has a plan override" do
+          let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+          let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+
+          it "creates the fixed charge override without emitting an event or scheduling billing" do
+            expect { service.call }
+              .to change(FixedCharge, :count).by(1)
+              .and not_change(FixedChargeEvent, :count)
+
+            expect(Invoices::CreatePayInAdvanceFixedChargesJob).not_to have_been_enqueued
+          end
         end
       end
 
@@ -209,7 +249,9 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
         end
 
         it "calls EmitEventsService" do
-          allow(FixedCharges::EmitEventsService).to receive(:call!)
+          allow(FixedCharges::EmitEventsService).to receive(:call!).and_return(
+              FixedCharges::EmitEventsService::Result.new.tap { |r| r.fixed_charge_events = [] }
+            )
 
           service.call
 
@@ -230,7 +272,9 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
           end
 
           it "calls EmitEventsService with apply_units_immediately true" do
-            allow(FixedCharges::EmitEventsService).to receive(:call!)
+            allow(FixedCharges::EmitEventsService).to receive(:call!).and_return(
+              FixedCharges::EmitEventsService::Result.new.tap { |r| r.fixed_charge_events = [] }
+            )
 
             service.call
 
@@ -334,6 +378,60 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
             expect { service.call }
               .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
               .with(subscription, kind_of(Integer))
+          end
+        end
+
+        context "when apply_units_immediately is true but the units are unchanged" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan:, organization:, add_on:, units: 5, pay_in_advance: true)
+          end
+          let(:params) { {units: "5", apply_units_immediately: true} }
+
+          before do
+            create(:fixed_charge_event, subscription:, fixed_charge:, units: 5, timestamp: 1.hour.ago)
+          end
+
+          it "does not emit a fixed charge event" do
+            expect { service.call }.not_to change(FixedChargeEvent, :count)
+          end
+
+          it "does not enqueue the pay-in-advance billing job" do
+            expect { service.call }
+              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+
+        context "when apply_units_immediately is true and the units match an existing override" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan:, organization:, add_on:, units: 5, pay_in_advance: true)
+          end
+          let(:params) { {units: "7", apply_units_immediately: true} }
+
+          before do
+            create(:subscription_fixed_charge_units_override, subscription:, fixed_charge:, organization:, units: 7)
+            create(:fixed_charge_event, subscription:, fixed_charge:, units: 7, timestamp: 1.hour.ago)
+          end
+
+          it "does not enqueue the pay-in-advance billing job" do
+            expect { service.call }
+              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+
+        context "when apply_units_immediately is true and the units actually change" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan:, organization:, add_on:, units: 5, pay_in_advance: true)
+          end
+          let(:params) { {units: "15", apply_units_immediately: true} }
+
+          before do
+            create(:fixed_charge_event, subscription:, fixed_charge:, units: 5, timestamp: 1.hour.ago)
+          end
+
+          it "emits a fixed charge event and enqueues the billing job" do
+            expect { service.call }
+              .to change(FixedChargeEvent, :count).by(1)
+              .and have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
           end
         end
 

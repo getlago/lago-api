@@ -87,11 +87,7 @@ module V1
       ::V1::UsageThresholdSerializer.new(options[:usage_threshold]).serialize
     end
 
-    # Billing periods derive from the plan interval, which product-catalog
-    # plans don't have: their rate cards each carry their own billing cycle.
     def dates_service
-      return if model.plan.product_catalog?
-
       @dates_service ||= ::Subscriptions::DatesService.new_instance(model, model.billing_reference_time, current_usage: true)
     end
 

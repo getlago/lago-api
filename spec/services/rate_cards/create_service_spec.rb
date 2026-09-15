@@ -31,14 +31,30 @@ RSpec.describe RateCards::CreateService do
     expect(rate_card.currency).to eq("USD")
     expect(rate_card.billing_timing).to eq("arrears")
     expect(rate_card.display_on_invoice).to be(true)
-    expect(rate_card.regroup_paid_fees).to eq("none")
+    expect(rate_card.regroup_paid_fees).to be_nil
+  end
+
+  context "when hiding fees on a fixed product" do
+    let(:product) { create(:product, :fixed, organization:) }
+
+    before do
+      params[:billing_timing] = "advance"
+      params[:display_on_invoice] = false
+      params[:proration] = false
+    end
+
+    it "rejects it with a product-type error" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:display_on_invoice]).to eq(["not_allowed_for_product_type"])
+    end
   end
 
   context "when regroup_paid_fees is explicitly null" do
     before { params[:regroup_paid_fees] = nil }
 
-    it "falls back to none instead of inserting NULL" do
-      expect(result.rate_card.regroup_paid_fees).to eq("none")
+    it "stores null (the fee stays standalone)" do
+      expect(result).to be_success
+      expect(result.rate_card.regroup_paid_fees).to be_nil
     end
   end
 
@@ -117,8 +133,35 @@ RSpec.describe RateCards::CreateService do
 
       it "returns a validation failure with prefixed keys and creates nothing" do
         expect { result }.not_to change(RateCard, :count)
+        expect(result).to be_a(described_class::Result)
         expect(result).not_to be_success
         expect(result.error.messages[:"rates.rate_properties"]).to be_present
+      end
+    end
+  end
+
+  context "with taxes" do
+    let(:tax1) { create(:tax, organization:) }
+    let(:tax2) { create(:tax, organization:) }
+
+    before { params[:tax_codes] = [tax1.code, tax2.code] }
+
+    it "applies the taxes to the rate card" do
+      expect(result).to be_success
+      expect(result.rate_card.taxes).to match_array([tax1, tax2])
+    end
+
+    context "when a tax belongs to another organization" do
+      let(:other_tax) { create(:tax) }
+
+      before { params[:tax_codes] = [other_tax.code] }
+
+      it "returns a tax not found failure and rolls back the rate card" do
+        expect { result }.not_to change(RateCard, :count)
+
+        expect(result).to be_a(described_class::Result)
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("tax")
       end
     end
   end
@@ -139,15 +182,6 @@ RSpec.describe RateCards::CreateService do
         expect(result).not_to be_success
         expect(result.error.resource).to eq("product_filter")
       end
-    end
-  end
-
-  context "when wallet_targetable is set without the organization feature" do
-    before { params[:wallet_targetable] = true }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:wallet_targetable]).to eq(["feature_unavailable"])
     end
   end
 

@@ -18,6 +18,21 @@ module Api
         end
       end
 
+      def update
+        contract = current_organization.contracts.live_by_external_id(params[:external_id])
+
+        result = ::Contracts::UpdateService.call(
+          contract:,
+          params: update_params.to_h.deep_symbolize_keys
+        )
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id)
         # Accept both ?status=pending and ?status[]=pending — strong params
@@ -36,7 +51,7 @@ module Api
         )
 
         if result.success?
-          contracts = result.contracts.includes(:plan, :customer)
+          contracts = result.contracts.includes(:catalog_plan, :customer)
 
           # One grouped query instead of one COUNT per row in the serializer.
           applied_rate_cards_counts = ContractRateCard.current_and_scheduled
@@ -59,9 +74,18 @@ module Api
       end
 
       def show
-        contract = current_organization.contracts
-          .order(started_at: :desc)
-          .find_by(external_id: params[:external_id], status: requested_status)
+        # No status filter resolves to the live contract (pending or active),
+        # so a pending contract is visible on its own detail URL and matches
+        # what the nested applied-rate-card endpoints operate on. An explicit
+        # status reads a specific one, including terminated/canceled history.
+        contract =
+          if params[:status].present?
+            current_organization.contracts
+              .order(started_at: :desc)
+              .find_by(external_id: params[:external_id], status: requested_status)
+          else
+            current_organization.contracts.live_by_external_id(params[:external_id])
+          end
         return not_found_error(resource: "contract") unless contract
 
         render(
@@ -89,6 +113,19 @@ module Api
         params.require(:contract).permit(
           :external_customer_id,
           :external_id,
+          :name,
+          :plan_code,
+          :billing_time,
+          :billing_anchor_date,
+          :started_at,
+          :ended_at
+        )
+      end
+
+      # external_customer_id and external_id are set at creation and address the
+      # contract; the rest are the editable authoring fields.
+      def update_params
+        params.require(:contract).permit(
           :name,
           :plan_code,
           :billing_time,

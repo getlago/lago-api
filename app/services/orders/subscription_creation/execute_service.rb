@@ -137,7 +137,7 @@ module Orders
         Array(item.dig("overrides", "charges")).map do |override|
           {
             id: charge_id!(item, plan, override["billableMetricCode"]),
-            properties: override["properties"],
+            properties: Utils::ChargeProperties.underscore_keys(override["properties"]),
             min_amount_cents: override["minAmountCents"],
             invoice_display_name: override["invoiceDisplayName"]
           }.compact
@@ -149,7 +149,7 @@ module Orders
           {
             id: fixed_charge_id!(item, plan, override["addOnCode"]),
             units: override["units"],
-            properties: override["properties"],
+            properties: Utils::ChargeProperties.underscore_keys(override["properties"]),
             invoice_display_name: override["invoiceDisplayName"]
           }.compact
         end

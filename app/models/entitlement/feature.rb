@@ -13,6 +13,7 @@ module Entitlement
     has_many :entitlements, class_name: "Entitlement::Entitlement", foreign_key: "entitlement_feature_id", dependent: :destroy
     has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
     has_many :plans, through: :entitlements
+    has_many :catalog_plans, through: :entitlements
 
     validates :code, presence: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}

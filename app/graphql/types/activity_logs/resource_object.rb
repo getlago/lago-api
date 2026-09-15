@@ -9,6 +9,7 @@ module Types
 
       possible_types Types::BillableMetrics::Object,
         Types::Plans::Object,
+        Types::CatalogPlans::Object,
         Types::Customers::Object,
         Types::Invoices::Object,
         Types::CreditNotes::Object,
@@ -33,6 +34,8 @@ module Types
           Types::BillableMetrics::Object
         when "Plan"
           Types::Plans::Object
+        when "CatalogPlan"
+          Types::CatalogPlans::Object
         when "Customer"
           Types::Customers::Object
         when "Invoice"

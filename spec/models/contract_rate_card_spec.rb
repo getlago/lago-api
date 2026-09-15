@@ -13,6 +13,7 @@ RSpec.describe ContractRateCard do
       expect(contract_rate_card).to belong_to(:contract)
       expect(contract_rate_card).to belong_to(:rate_card)
       expect(contract_rate_card).to have_many(:rate_phases).order(:position)
+      expect(contract_rate_card).to have_many(:billing_segments)
       expect(contract_rate_card).to have_one(:product).through(:rate_card)
     end
   end
@@ -98,6 +99,18 @@ RSpec.describe ContractRateCard do
         item.valid?
         expect(item.errors.added?(:ended_date, :must_be_after_effective_date)).to be(true)
       end
+    end
+  end
+
+  describe "#edit_error_code" do
+    it "is nil while the contract is pending" do
+      card = create(:contract_rate_card, contract: create(:contract, :pending))
+      expect(card.edit_error_code).to be_nil
+    end
+
+    it "is contract_locked once the contract is active" do
+      card = create(:contract_rate_card, contract: create(:contract))
+      expect(card.edit_error_code).to eq("contract_locked")
     end
   end
 end

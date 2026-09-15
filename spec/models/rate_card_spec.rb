@@ -16,10 +16,10 @@ RSpec.describe RateCard do
 
       expect(rate_card).to define_enum_for(:regroup_paid_fees)
         .backed_by_column_of_type(:enum)
-        .validating
-        .with_values(none: "none", invoice: "invoice")
+        .validating(allowing_nil: true)
+        .with_values(invoice: "invoice")
         .with_prefix(:regroup_paid_fees)
-      expect(rate_card.regroup_paid_fees).to eq("none")
+      expect(rate_card.regroup_paid_fees).to be_nil
     end
   end
 
@@ -29,6 +29,10 @@ RSpec.describe RateCard do
       expect(rate_card).to belong_to(:product)
       expect(rate_card).to belong_to(:product_filter).optional
       expect(rate_card).to have_many(:rates).class_name("RateCardRate")
+      expect(rate_card).to have_many(:plan_applied_rate_cards).class_name("PlanRateCard")
+      expect(rate_card).to have_many(:contract_applied_rate_cards).class_name("ContractRateCard")
+      expect(rate_card).to have_many(:applied_taxes).class_name("RateCard::AppliedTax").dependent(:destroy)
+      expect(rate_card).to have_many(:taxes).through(:applied_taxes)
     end
   end
 
@@ -67,6 +71,24 @@ RSpec.describe RateCard do
 
       it "accepts a displayed arrears card" do
         expect(build(:rate_card, billing_timing: "arrears", display_on_invoice: true)).to be_valid
+      end
+
+      context "with a fixed product" do
+        let(:product) { build(:product, :fixed) }
+
+        it "rejects hiding fees on both timings, reporting the product type" do
+          %w[advance arrears].each do |timing|
+            card = build(:rate_card, product:, organization: product.organization, billing_timing: timing, display_on_invoice: false)
+            card.valid?
+            expect(card.errors.where(:display_on_invoice).map(&:type)).to eq([:not_allowed_for_product_type])
+          end
+        end
+
+        it "accepts a displayed card on either timing" do
+          %w[advance arrears].each do |timing|
+            expect(build(:rate_card, product:, organization: product.organization, billing_timing: timing, display_on_invoice: true)).to be_valid
+          end
+        end
       end
     end
 
@@ -117,6 +139,12 @@ RSpec.describe RateCard do
 
         valid = build(:rate_card, regroup_paid_fees: "invoice", billing_timing: "advance", display_on_invoice: false)
         expect(valid).to be_valid
+      end
+
+      it "reports only the inclusion failure for an invalid value, not the pairing rule" do
+        card = build(:rate_card, regroup_paid_fees: "bogus", billing_timing: "advance", display_on_invoice: true)
+        card.valid?
+        expect(card.errors.where(:regroup_paid_fees).map(&:type)).to eq([:inclusion])
       end
     end
 
@@ -184,29 +212,21 @@ RSpec.describe RateCard do
       expect(rate_card.attached_to_subscriptions?).to be(false)
     end
 
-    it "is false when on a plan without subscriptions" do
+    it "is false when on a catalog plan without contracts" do
       create(:plan_rate_card, organization: rate_card.organization, rate_card:)
 
       expect(rate_card.attached_to_subscriptions?).to be(false)
     end
 
-    it "is true when on a plan that has subscriptions" do
-      plan = create(:plan, organization: rate_card.organization)
-      create(:plan_rate_card, organization: rate_card.organization, plan:, rate_card:)
-      create(:subscription, plan:, organization: rate_card.organization)
+    it "is true when on a catalog plan that has contracts" do
+      catalog_plan = create(:catalog_plan, organization: rate_card.organization)
+      create(:plan_rate_card, organization: rate_card.organization, catalog_plan:, rate_card:)
+      create(:contract, catalog_plan:, organization: rate_card.organization)
 
       expect(rate_card.attached_to_subscriptions?).to be(true)
     end
 
-    it "is true when on a plan that has contracts" do
-      plan = create(:plan, organization: rate_card.organization)
-      create(:plan_rate_card, organization: rate_card.organization, plan:, rate_card:)
-      create(:contract, plan:, organization: rate_card.organization)
-
-      expect(rate_card.attached_to_subscriptions?).to be(true)
-    end
-
-    it "is true when attached directly to a subscription" do
+    it "is true when attached directly to a contract" do
       create(:contract_rate_card, organization: rate_card.organization, rate_card:)
 
       expect(rate_card.attached_to_subscriptions?).to be(true)

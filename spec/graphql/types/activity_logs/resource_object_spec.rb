@@ -13,6 +13,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     expect(subject.possible_types).to contain_exactly(
       Types::BillableMetrics::Object,
       Types::Plans::Object,
+      Types::CatalogPlans::Object,
       Types::Customers::Object,
       Types::Invoices::Object,
       Types::CreditNotes::Object,
@@ -36,6 +37,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
   describe ".resolve_type" do
     let(:billable_metric) { create(:billable_metric) }
     let(:plan) { create(:plan) }
+    let(:catalog_plan) { create(:catalog_plan) }
     let(:customer) { create(:customer) }
     let(:invoice) { create(:invoice) }
     let(:credit_note) { create(:credit_note) }
@@ -59,6 +61,10 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "returns Types::Plans::Object for Plan objects" do
       expect(subject.resolve_type(plan, {})).to eq(Types::Plans::Object)
+    end
+
+    it "returns Types::CatalogPlans::Object for CatalogPlan objects" do
+      expect(subject.resolve_type(catalog_plan, {})).to eq(Types::CatalogPlans::Object)
     end
 
     it "returns Types::Customers::Object for Customer objects" do

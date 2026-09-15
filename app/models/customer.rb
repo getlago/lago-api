@@ -85,6 +85,7 @@ class Customer < ApplicationRecord
   has_many :payment_methods, dependent: :destroy
   has_many :payment_requests, dependent: :destroy
   has_many :quantified_events
+  has_many :usage_attribution_values
   has_many :integration_customers,
     class_name: "IntegrationCustomers::BaseCustomer",
     dependent: :destroy
@@ -382,6 +383,11 @@ class Customer < ApplicationRecord
     return payment_provider_customers.by_code(code).first if code.present?
 
     payment_provider_customers.find_by(is_default: true)
+  end
+
+  # The customer's default integration connection for a category (tax / accounting / crm).
+  def integration_connection(category)
+    integration_customers.where(category:).find_by(is_default: true)
   end
 
   def payment_connection_status

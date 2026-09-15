@@ -103,8 +103,8 @@ RSpec.describe RatePhases::CreateService do
     end
   end
 
-  context "when the plan has subscriptions" do
-    before { create(:subscription, plan: plan_rate_card.plan, organization:) }
+  context "when the plan has contracts" do
+    before { create(:contract, catalog_plan: plan_rate_card.catalog_plan, organization: plan_rate_card.organization) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success

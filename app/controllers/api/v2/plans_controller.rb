@@ -6,22 +6,21 @@ module Api
       include Api::RequiresProductCatalog
 
       def index
-        result = PlansQuery.call(
+        result = CatalogPlansQuery.call(
           organization: current_organization,
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
-          },
-          filters: {pricing_type: "product_catalog"}
+          }
         )
 
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.plans.includes(:applied_rate_cards),
-              ::V2::PlanSerializer,
+              result.catalog_plans,
+              ::V2::CatalogPlanSerializer,
               collection_name: "plans",
-              meta: pagination_metadata(result.plans)
+              meta: pagination_metadata(result.catalog_plans)
             )
           )
         else
@@ -30,54 +29,41 @@ module Api
       end
 
       def create
-        result = ::Plans::CreateService.call(input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys)
+        result = ::CatalogPlans::CreateService.call(input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys)
 
         if result.success?
-          render_plan(result.plan)
+          render_plan(result.catalog_plan)
         else
           render_error_response(result)
         end
       end
 
       def update
-        plan = current_organization.plans.parents.product_catalog.find_by(code: params[:code])
-        result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
+        catalog_plan = current_organization.catalog_plans.find_by(code: params[:code])
+        result = ::CatalogPlans::UpdateService.call(catalog_plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
-          render_plan(result.plan)
+          render_plan(result.catalog_plan)
         else
           render_error_response(result)
         end
       end
 
       def show
-        plan = current_organization.plans.parents.product_catalog.find_by(code: params[:code])
-        return not_found_error(resource: "plan") unless plan
+        catalog_plan = current_organization.catalog_plans.find_by(code: params[:code])
+        return not_found_error(resource: "plan") unless catalog_plan
 
-        render_plan(plan)
+        render_plan(catalog_plan)
       end
 
       private
 
       def input_params
-        permitted = params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency)
-        # v2 exposes amount_currency as `currency`; the column keeps the v1 name.
-        permitted[:amount_currency] = permitted.delete(:currency) if permitted.key?(:currency)
-        permitted
+        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency)
       end
 
-      def render_error_response(error_result)
-        error = error_result.error
-        if error.is_a?(BaseService::ValidationFailure) && error.messages.key?(:amount_currency)
-          messages = error.messages.except(:amount_currency).merge(currency: error.messages[:amount_currency])
-          return validation_errors(errors: messages)
-        end
-
-        super
-      end
-
-      def render_plan(plan)
-        render(json: ::V2::PlanSerializer.new(plan, root_name: "plan"))
+      def render_plan(catalog_plan)
+        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan"))
       end
 
       def resource_name

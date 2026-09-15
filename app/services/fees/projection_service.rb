@@ -112,8 +112,19 @@ module Fees
       }
 
       aggregator = BillableMetrics::AggregationFactory.new_instance(
-        charge: charge,
-        subscription: subscription,
+        metered_item: ChargeService::MeteredItem.from_charge(
+          charge:,
+          charge_filter:,
+          boundaries: BillingPeriodBoundaries.new(
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime: from_datetime,
+            charges_to_datetime: to_datetime,
+            charges_duration: charges_duration_in_days,
+            timestamp: first_fee.properties["timestamp"]
+          )
+        ),
+        billing_context: Billing::Context.from(subscription:),
         boundaries: boundaries,
         filters: aggregation_filters,
         current_usage: true
@@ -134,10 +145,12 @@ module Fees
       filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?
 
       if local_charge_filter.present?
-        result = ChargeFilters::MatchingAndIgnoredService.call(charge: charge, filter: local_charge_filter)
+        matching_result = Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+          target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: local_charge_filter)
+        )
         filters[:charge_filter] = local_charge_filter
-        filters[:matching_filters] = result.matching_filters
-        filters[:ignored_filters] = result.ignored_filters
+        filters[:matching_filters] = matching_result.matching_filters
+        filters[:ignored_filters] = matching_result.ignored_filters
       end
 
       filters

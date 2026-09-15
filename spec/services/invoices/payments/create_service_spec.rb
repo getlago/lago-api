@@ -559,8 +559,44 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
-    it_behaves_like "syncs payment" do
-      let(:service_call) { create_service.call }
+    context "when the provider updates the payment during the charge" do
+      let(:provider_payment_status) { "succeeded" }
+      let(:result) do
+        PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
+          r.payment = instance_double(Payment, payable_payment_status: provider_payment_status)
+        end
+      end
+
+      before do
+        provider_payment = nil
+
+        allow(provider_class).to receive(:new) do |payment:, **|
+          provider_payment = payment
+          provider_service
+        end
+
+        # NOTE: The provider service writes the resolved status back onto the payment it was given.
+        allow(provider_service).to receive(:call!) do
+          provider_payment.update!(payable_payment_status: provider_payment_status)
+          result
+        end
+      end
+
+      it_behaves_like "syncs payment" do
+        let(:service_call) { create_service.call }
+      end
+
+      context "when the payment is left processing" do
+        let(:provider_payment_status) { "processing" }
+        let(:integration) { create(:netsuite_integration, organization:, sync_payments: true) }
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "does not enqueue Integrations::Aggregator::Payments::CreateJob" do
+          expect { create_service.call }.not_to have_enqueued_job(Integrations::Aggregator::Payments::CreateJob)
+        end
+      end
     end
 
     context "when the provider raises AlreadyPaidError" do

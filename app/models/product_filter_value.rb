@@ -10,8 +10,8 @@ class ProductFilterValue < ApplicationRecord
   belongs_to :product_filter, -> { with_discarded }
   belongs_to :billable_metric_filter, -> { with_discarded }
 
-  # A NULL value selects the key alone: the filter matches any event carrying
-  # the key. An empty string is still invalid — absence is expressed by nil.
+  # A NULL value selects all configured values for the billable metric filter.
+  # An empty string is still invalid; all configured values are selected by nil.
   validates :value, presence: true, allow_nil: true
   validates :value,
     uniqueness: {scope: [:product_filter_id, :billable_metric_filter_id], conditions: -> { where(deleted_at: nil) }}

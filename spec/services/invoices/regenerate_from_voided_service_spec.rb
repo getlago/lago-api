@@ -69,6 +69,31 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "with a plan-limited coupon" do
+      let(:coupon) do
+        create(:coupon, organization:, coupon_type: :percentage, limited_plans: true, percentage_rate: 100)
+      end
+
+      before do
+        tax
+        create(:coupon_plan, coupon:, plan:)
+        create(:applied_coupon, coupon:, customer:, percentage_rate: 100)
+      end
+
+      it "calculates taxes from the discounted fee amount" do
+        invoice = regenerate_result.invoice
+
+        expect(invoice).to have_attributes(
+          fees_amount_cents: 50_500,
+          coupons_amount_cents: 50_500,
+          sub_total_excluding_taxes_amount_cents: 0,
+          taxes_amount_cents: 0,
+          total_amount_cents: 0,
+          payment_status: "succeeded"
+        )
+      end
+    end
+
     context "with the purchase order number" do
       before { voided_invoice.update!(purchase_order_number: "PO-ORIGINAL") }
 

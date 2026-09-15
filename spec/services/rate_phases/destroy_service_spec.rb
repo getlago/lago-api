@@ -75,10 +75,10 @@ RSpec.describe RatePhases::DestroyService do
     end
   end
 
-  context "when the plan has subscriptions" do
+  context "when the plan has contracts" do
     let(:rate_phase) { ramp }
 
-    before { create(:subscription, plan: plan_rate_card.plan, organization:) }
+    before { create(:contract, catalog_plan: plan_rate_card.catalog_plan, organization: plan_rate_card.organization) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success

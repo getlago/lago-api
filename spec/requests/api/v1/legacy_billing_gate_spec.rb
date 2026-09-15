@@ -4,27 +4,13 @@ require "rails_helper"
 
 RSpec.describe "v1 pricing endpoints on a product-catalog organization", type: :request do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
-  let(:plan) { create(:plan, organization:, pricing_type: "product_catalog") }
+  let(:plan) { create(:plan, organization:) }
 
   it "rejects legacy pricing fields on plan creation" do
     post_with_token(organization, "/api/v1/plans", {plan: {name: "Legacy", code: "legacy", interval: "monthly", amount_cents: 100, amount_currency: "USD", pay_in_advance: false}})
 
     expect(response).to have_http_status(:unprocessable_content)
     expect(json[:error_details]).to eq({interval: %w[legacy_billing_disabled]})
-  end
-
-  it "creates a catalog plan from a payload without legacy pricing fields" do
-    post_with_token(organization, "/api/v1/plans", {plan: {name: "Catalog", code: "catalog", amount_currency: "USD"}})
-
-    expect(response).to have_http_status(:success)
-    expect(json[:plan][:code]).to eq("catalog")
-  end
-
-  it "tolerates blank legacy no-ops without persisting them" do
-    post_with_token(organization, "/api/v1/plans", {plan: {name: "Catalog", code: "catalog_blank", amount_currency: "USD", pay_in_advance: false, interval: ""}})
-
-    expect(response).to have_http_status(:success)
-    expect(organization.plans.find_by(code: "catalog_blank")).to have_attributes(pricing_type: "product_catalog", interval: nil)
   end
 
   it "rejects legacy pricing fields on plan update but accepts the others" do

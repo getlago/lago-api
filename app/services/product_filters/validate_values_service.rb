@@ -23,9 +23,8 @@ module ProductFilters
         return result.single_validation_failure!(field: :"values.billable_metric_filter", error_code: "value_is_invalid")
       end
 
-      # A key-only entry (no value) matches any value of the key, so combining
-      # it with specific values for the same key is contradictory — the
-      # wildcard subsumes them.
+      # A key-only entry (no value) selects all configured values for the key,
+      # so combining it with specific values for the same key is redundant.
       key_only_ids = values_params.select { it[:value].nil? }.map { it[:billable_metric_filter_id].to_s }
       specific_ids = values_params.reject { it[:value].nil? }.map { it[:billable_metric_filter_id].to_s }
       if key_only_ids.intersect?(specific_ids)

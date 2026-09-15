@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :contract do
     customer
     organization { customer&.organization || association(:organization) }
-    plan { nil }
+    catalog_plan { nil }
     status { :active }
     external_id { SecureRandom.uuid }
     billing_time { :calendar }

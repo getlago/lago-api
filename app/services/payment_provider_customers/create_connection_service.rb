@@ -22,7 +22,7 @@ module PaymentProviderCustomers
       ActiveRecord::Base.transaction do
         @payment_provider_customer = create_provider_customer(payment_provider)
 
-        payment_provider_customer.code = params[:code] || payment_provider.code
+        payment_provider_customer.code = params[:code] if params[:code].present?
         payment_provider_customer.is_default = true if first_connection
         payment_provider_customer.save!
 

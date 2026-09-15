@@ -505,6 +505,75 @@ Rspec.describe Credits::ProgressiveBillingService do
     end
   end
 
+  context "with a coupon and a previous credit note" do
+    let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 100_00) }
+    let(:progressive_billing_invoice) do
+      create(:invoice, :with_subscriptions, organization:, customer:, subscriptions: [subscription],
+        status: :finalized, invoice_type: :progressive_billing, issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 100_00, coupons_amount_cents: 20_00, total_amount_cents: 80_00)
+    end
+    let(:progressive_fee) do
+      create(:charge_fee, invoice: progressive_billing_invoice, subscription:, charge: subscription_fee1.charge,
+        amount_cents: 100_00, precise_amount_cents: 100_00, precise_coupons_amount_cents: 20_00, taxes_amount_cents: 0)
+    end
+
+    before do
+      progressive_fee
+      progressive_billing_invoice.invoice_subscriptions.sole.update!(
+        charges_from_datetime: invoice.issuing_date - 1.month,
+        charges_to_datetime: invoice.issuing_date
+      )
+      CreditNotes::CreateService.call!(
+        invoice: progressive_billing_invoice, credit_amount_cents: 20_00, reason: :other, automatic: true,
+        items: [{fee_id: progressive_fee.id, amount_cents: 25_00}]
+      )
+    end
+
+    it "applies the remaining gross amount consistently to the invoice and its fee" do
+      result = credit_service.call
+
+      expect(result.credits.sole.amount_cents).to eq(75_00)
+      expect(invoice.progressive_billing_credit_amount_cents).to eq(75_00)
+      expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(75_00)
+      expect(progressive_billing_invoice.credit_notes.count).to eq(1)
+    end
+  end
+
+  context "with a discounted fee that no longer matches the final invoice" do
+    let(:progressive_billing_invoice) do
+      create(:invoice, :with_subscriptions, organization:, customer:, subscriptions: [subscription],
+        status: :finalized, invoice_type: :progressive_billing, issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 60_00, coupons_amount_cents: 20_00, total_amount_cents: 40_00)
+    end
+    let(:matching_fee) do
+      create(:charge_fee, invoice: progressive_billing_invoice, subscription:, charge: subscription_fee1.charge,
+        amount_cents: 40_00, precise_amount_cents: 40_00, taxes_amount_cents: 0)
+    end
+    let(:removed_fee) do
+      create(:charge_fee, invoice: progressive_billing_invoice, subscription:,
+        amount_cents: 20_00, precise_amount_cents: 20_00, precise_coupons_amount_cents: 20_00, taxes_amount_cents: 0)
+    end
+    let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 50_00) }
+
+    before do
+      matching_fee
+      removed_fee
+      progressive_billing_invoice.invoice_subscriptions.sole.update!(
+        charges_from_datetime: invoice.issuing_date - 1.month,
+        charges_to_datetime: invoice.issuing_date
+      )
+    end
+
+    it "offsets only the matching usage and skips the fully discounted credit note" do
+      result = credit_service.call
+
+      expect(result.credits.sole.amount_cents).to eq(40_00)
+      expect(invoice.progressive_billing_credit_amount_cents).to eq(40_00)
+      expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(40_00)
+      expect(progressive_billing_invoice.credit_notes).to be_empty
+    end
+  end
+
   context "with a spy on Subscriptions::ProgressiveBilledAmount" do
     let(:progressive_billing_invoice) do
       create(
@@ -545,7 +614,7 @@ Rspec.describe Credits::ProgressiveBillingService do
 
       allow(Subscriptions::ProgressiveBilledAmount).to receive(:call).and_wrap_original do |original_method, *args, **kwargs, &block|
         result = original_method.call(*args, **kwargs, &block)
-        expect(result).to receive(:to_credit_amount).and_call_original # rubocop:disable RSpec/ExpectInHook,RSpec/MessageSpies
+        expect(result).to receive(:to_invoice_amount).and_call_original # rubocop:disable RSpec/ExpectInHook,RSpec/MessageSpies
         result
       end
     end

@@ -28,6 +28,33 @@ RSpec.describe Api::V2::RateCardsController do
       expect(json[:rate_card][:product_code]).to eq(product.code)
       expect(json[:rate_card][:code]).to eq("standard")
       expect(json[:rate_card][:currency]).to eq("EUR")
+      expect(json[:rate_card][:taxes]).to eq([])
+    end
+
+    context "with taxes" do
+      let(:tax1) { create(:tax, organization:) }
+      let(:tax2) { create(:tax, organization:) }
+
+      before { create_params[:tax_codes] = [tax1.code, tax2.code] }
+
+      it "applies and returns the taxes" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_card][:taxes].pluck(:code)).to match_array([tax1.code, tax2.code])
+      end
+
+      context "when a tax belongs to another organization" do
+        let(:other_tax) { create(:tax) }
+
+        before { create_params[:tax_codes] = [other_tax.code] }
+
+        it "returns a tax not found error" do
+          expect { subject }.not_to change(RateCard, :count)
+
+          expect(response).to be_not_found_error("tax")
+        end
+      end
     end
 
     context "when the product does not exist" do
@@ -163,6 +190,32 @@ RSpec.describe Api::V2::RateCardsController do
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
+
+    context "when regroup_paid_fees is an invalid value" do
+      let(:create_params) do
+        {product_code: product.code, name: "Standard", code: "standard", currency: "EUR", regroup_paid_fees: "bogus"}
+      end
+
+      it "returns only the invalid-value error, not the pairing rule" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:regroup_paid_fees]).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "when regroup_paid_fees is null" do
+      let(:create_params) do
+        {product_code: product.code, name: "Standard", code: "standard", currency: "EUR", regroup_paid_fees: nil}
+      end
+
+      it "round-trips as null instead of coercing to a string" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_card][:regroup_paid_fees]).to be_nil
+      end
+    end
   end
 
   describe "PUT /api/v2/rate_cards/:code" do
@@ -178,6 +231,55 @@ RSpec.describe Api::V2::RateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:name]).to eq("After")
+    end
+
+    context "with taxes" do
+      let(:tax1) { create(:tax, organization:) }
+      let(:tax2) { create(:tax, organization:) }
+      let(:update_params) { {tax_codes: [tax2.code]} }
+
+      before { create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:) }
+
+      it "replaces and returns the taxes" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_card][:taxes].pluck(:code)).to eq([tax2.code])
+      end
+
+      context "when tax codes are empty" do
+        let(:update_params) { {tax_codes: []} }
+
+        it "removes the tax override" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:rate_card][:taxes]).to eq([])
+        end
+      end
+
+      context "when tax codes are null" do
+        let(:update_params) { {tax_codes: nil} }
+
+        it "keeps the existing tax" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:rate_card][:taxes].pluck(:code)).to eq([tax1.code])
+        end
+      end
+
+      context "when a tax belongs to another organization" do
+        let(:other_tax) { create(:tax) }
+        let(:update_params) { {tax_codes: [other_tax.code]} }
+
+        it "returns a tax not found error and keeps the existing tax" do
+          subject
+
+          expect(response).to be_not_found_error("tax")
+          expect(rate_card.reload.taxes).to eq([tax1])
+        end
+      end
     end
 
     context "when the rate card does not exist" do
@@ -198,7 +300,9 @@ RSpec.describe Api::V2::RateCardsController do
 
     include_examples "requires API permission", "rate_card", "read"
 
-    it "returns the rate card with its rates count and active rate" do
+    it "returns the rate card with its rates count, active rate, and taxes" do
+      tax = create(:tax, organization:)
+      create(:rate_card_applied_tax, rate_card:, tax:, organization:)
       create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day)
 
       subject
@@ -207,6 +311,7 @@ RSpec.describe Api::V2::RateCardsController do
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
       expect(json[:rate_card][:rates_count]).to eq(1)
       expect(json[:rate_card][:active_rate][:status]).to eq("active")
+      expect(json[:rate_card][:taxes].pluck(:code)).to eq([tax.code])
     end
 
     context "when the rate card belongs to another organization" do

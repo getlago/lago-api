@@ -97,15 +97,6 @@ RSpec.describe RateCards::UpdateService do
     end
   end
 
-  context "when wallet_targetable is set without the organization feature" do
-    let(:params) { {wallet_targetable: true} }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:wallet_targetable]).to eq(["feature_unavailable"])
-    end
-  end
-
   context "when applied_pricing_unit_code is unknown" do
     let(:params) { {applied_pricing_unit_code: "unknown"} }
 
@@ -166,10 +157,10 @@ RSpec.describe RateCards::UpdateService do
     context "when sending an explicit null regroup_paid_fees" do
       let(:params) { {regroup_paid_fees: nil, name: "After"} }
 
-      it "reads as none, not as a locked-field change" do
+      it "stays null (no change), not a locked-field change" do
         expect(result).to be_success
         expect(result.rate_card.name).to eq("After")
-        expect(result.rate_card.regroup_paid_fees).to eq("none")
+        expect(result.rate_card.regroup_paid_fees).to be_nil
       end
     end
 
@@ -199,21 +190,74 @@ RSpec.describe RateCards::UpdateService do
       end
     end
 
-    context "when changing wallet_targetable" do
-      let(:params) { {wallet_targetable: false} }
-
-      it "returns a validation failure" do
-        expect(result).not_to be_success
-        expect(result.error.messages[:wallet_targetable]).to eq(["not_editable_with_rates"])
-      end
-    end
-
     context "when editing presentation fields" do
       let(:params) { {name: "After", description: "new"} }
 
       it "is allowed" do
         expect(result).to be_success
         expect(result.rate_card.name).to eq("After")
+      end
+    end
+  end
+
+  describe "taxes" do
+    let(:tax1) { create(:tax, organization:) }
+    let(:tax2) { create(:tax, organization:) }
+    let(:params) { {tax_codes: [tax2.code]} }
+
+    before { create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:) }
+
+    it "replaces the rate card taxes" do
+      expect(result).to be_success
+      expect(result.rate_card.taxes).to eq([tax2])
+    end
+
+    context "when tax codes are empty" do
+      let(:params) { {tax_codes: []} }
+
+      it "removes the rate card tax override" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to be_empty
+      end
+    end
+
+    context "when tax codes are null" do
+      let(:params) { {tax_codes: nil} }
+
+      it "keeps the existing taxes" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to eq([tax1])
+      end
+    end
+
+    context "when tax codes are omitted" do
+      let(:params) { {name: "Renamed"} }
+
+      it "keeps the existing taxes" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to eq([tax1])
+      end
+    end
+
+    context "when the rate card is attached to a contract" do
+      before { create(:contract_rate_card, organization:, rate_card:) }
+
+      it "still updates the taxes" do
+        expect(result).to be_success
+        expect(result.rate_card.taxes).to eq([tax2])
+      end
+    end
+
+    context "when a tax belongs to another organization" do
+      let(:other_tax) { create(:tax) }
+      let(:params) { {name: "Should roll back", tax_codes: [other_tax.code]} }
+
+      it "returns a tax not found failure and rolls back other changes" do
+        expect(result).to be_a(described_class::Result)
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("tax")
+        expect(rate_card.reload.name).to eq("Before")
+        expect(rate_card.taxes).to eq([tax1])
       end
     end
   end

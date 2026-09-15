@@ -27,8 +27,8 @@ module Events
             ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
           else
             query = ::Clickhouse::EventsEnriched
-              .where(external_subscription_id: subscription.external_id)
-              .where(organization_id: subscription.organization_id)
+              .where(external_subscription_id: billing_context.external_id)
+              .where(organization_id: billing_context.organization_id)
               .where(code:)
 
             query = query.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
@@ -50,8 +50,8 @@ module Events
 
       def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         query = arel_table.where(
-          arel_table[:external_subscription_id].eq(subscription.external_id)
-          .and(arel_table[:organization_id].eq(subscription.organization.id)
+          arel_table[:external_subscription_id].eq(billing_context.external_id)
+          .and(arel_table[:organization_id].eq(billing_context.organization.id)
           .and(arel_table[:code].eq(code)))
         )
 
@@ -118,9 +118,9 @@ module Events
           ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               "organization_id = ? AND code = ? AND external_subscription_id = ?",
-              subscription.organization_id,
+              billing_context.organization_id,
               code,
-              subscription.external_id
+              billing_context.external_id
             ]
           )
         ]
@@ -128,15 +128,6 @@ module Events
         conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp >= ?", from_datetime]) if from_datetime
         conditions << upper_timestamp_boundary_sql(to_datetime) if to_datetime
         conditions.join(" AND ")
-      end
-
-      def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
-        # Implementation relies directly on the events_enriched_expanded table,
-        # so we delegate the implementation to the ClickhouseEnrichedStore
-        Events::Stores::ClickhouseEnrichedStore.new(
-          subscription:,
-          boundaries:
-        ).distinct_charges_and_filters(codes:, include_all_history:, with_last_seen_at:)
       end
 
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
@@ -154,8 +145,8 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnriched
-            .where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization_id)
+            .where(external_subscription_id: billing_context.external_id)
+            .where(organization_id: billing_context.organization_id)
             .where(code: codes)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) unless include_all_history

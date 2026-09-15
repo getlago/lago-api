@@ -63,8 +63,8 @@ module Api
             limit: params[:per_page] || PER_PAGE
           },
           filters: {
-            product_id: params[:product_id],
-            product_filter_id: params[:product_filter_id],
+            product_ids: Array(params[:product_id]).presence,
+            product_filter_ids: Array(params[:product_filter_id]).presence,
             code: params[:code],
             product_code: params[:product_code],
             product_filter_code: params[:product_filter_code]
@@ -75,7 +75,7 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.rate_cards.includes(:product, :product_filter, :rates),
-              ::V1::RateCardSerializer,
+              ::V2::RateCardSerializer,
               collection_name: "rate_cards",
               meta: pagination_metadata(result.rate_cards)
             )
@@ -114,7 +114,7 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable,
+          tax_codes: [],
           rates: [
             :code,
             :effective_from,
@@ -139,12 +139,12 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable
+          tax_codes: []
         )
       end
 
       def render_rate_card(rate_card)
-        render(json: ::V1::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate]))
+        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate taxes]))
       end
 
       def resource_name

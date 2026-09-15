@@ -13,12 +13,12 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
     )
   end
 
-  let(:input) { {planId: plan.id, rateCardCode: rate_card.code, units: 10.0} }
+  let(:input) { {planId: catalog_plan.id, rateCardCode: rate_card.code, units: 10.0} }
 
   let(:required_permission) { "plans:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   let(:mutation) do
@@ -51,7 +51,7 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
   context "with nested rate phases" do
     let(:input) do
       {
-        planId: plan.id,
+        planId: catalog_plan.id,
         rateCardCode: rate_card.code,
         ratePhases: [
           {code: "launch", position: 1, name: "Launch", billingIntervalCycleCount: 3},
@@ -67,7 +67,7 @@ RSpec.describe Mutations::PlanAppliedRateCards::Create do
     end
 
     context "when the list is explicitly empty" do
-      let(:input) { {planId: plan.id, rateCardCode: rate_card.code, ratePhases: []} }
+      let(:input) { {planId: catalog_plan.id, rateCardCode: rate_card.code, ratePhases: []} }
 
       it "returns an error" do
         expect_graphql_error(result: execution, message: :unprocessable_entity)

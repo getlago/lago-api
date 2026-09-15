@@ -200,12 +200,12 @@ module Invoices
       # resolved: without it every configured filter is aggregated and the default bucket excludes
       # all of them inline, making the query grow with the pricing configuration until the store
       # rejects it.
-      charge_filters = Events::BillingPeriodFilterService.call!(subscription:, boundaries:).charges
+      charge_filters = Events::BillingPeriodFilterService.for_charges!(subscription:, boundaries:).filter_targets
 
       invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
         OpenTelemetry::Context.with_current(context) do
           ActiveRecord::Base.connection_pool.with_connection do
-            applied_filters = charge_filters[charge.id] || {}
+            applied_filters = charge_filters[charge.target_key] || {}
 
             cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
               subscription:,
@@ -218,7 +218,7 @@ module Invoices
               .call!(
                 invoice:,
                 metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:),
-                subscription:,
+                billing_context: Billing::Context.from(subscription:),
                 cache_middleware:,
                 filtered_aggregations: applied_filters.keys,
                 options: Fees::ChargeService::Options.new(context: :invoice_preview)

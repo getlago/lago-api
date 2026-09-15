@@ -51,6 +51,40 @@ RSpec.describe Api::V1::PaymentRequestsController do
       expect(json[:payment_request][:invoices].map { |i| i[:lago_id] }).to contain_exactly(invoice.id)
       expect(json[:payment_request][:customer][:lago_id]).to eq(customer.id)
     end
+
+    context "with payment_method" do
+      let(:payment_method_id) { SecureRandom.uuid }
+      let(:params) do
+        {
+          email: customer.email,
+          external_customer_id: customer.external_id,
+          lago_invoice_ids: [invoice.id],
+          payment_method: {
+            payment_method_type: "provider",
+            payment_method_id:
+          }
+        }
+      end
+
+      it "forwards the payment method to PaymentRequests::CreateService" do
+        subject
+
+        expect(PaymentRequests::CreateService).to have_received(:call).with(
+          organization:,
+          params: {
+            email: customer.email,
+            external_customer_id: customer.external_id,
+            lago_invoice_ids: [invoice.id],
+            payment_method: {
+              payment_method_type: "provider",
+              payment_method_id:
+            }
+          }
+        )
+
+        expect(response).to have_http_status(:success)
+      end
+    end
   end
 
   describe "GET /api/v1/payment_requests" do

@@ -91,6 +91,22 @@ RSpec.describe RateCardRates::CreateService do
       expect(result).to be_success
       expect(result.rate_card_rate.effective_from).to eq(1.month.from_now.beginning_of_day)
     end
+
+    # An advance card keeps instants, so two rates can share today. The past
+    # bound lets both through and the timeline placement still decides.
+    context "when an earlier instant of today is already active" do
+      around { |example| travel_to(Time.zone.parse("2026-09-14 14:00")) { example.run } }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.current.beginning_of_day + 1.hour)
+        params[:effective_from] = (Time.current.beginning_of_day + 30.minutes).iso8601
+      end
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
+      end
+    end
   end
 
   context "when a rate is already active" do
@@ -102,15 +118,69 @@ RSpec.describe RateCardRates::CreateService do
     end
   end
 
-  context "when the effective_from is at or before the active rate" do
+  # Organization#timezone resolves through the default billing entity.
+  context "when the organization is west of the application zone" do
+    # 01:00 UTC is still the 14th in Sao Paulo, so the 14th is that org's today.
+    around { |example| travel_to(Time.utc(2026, 9, 15, 1, 0)) { example.run } }
+
+    before { organization.default_billing_entity.update!(timezone: "America/Sao_Paulo") }
+
+    it "accepts that organization's today" do
+      params[:effective_from] = "2026-09-14"
+
+      expect(result).to be_success
+    end
+
+    it "still rejects the day before it" do
+      params[:effective_from] = "2026-09-13"
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
+    end
+  end
+
+  context "when the organization is east of the application zone" do
+    # 15:00 UTC is already the 15th in Tokyo, so the server's own date is that
+    # org's yesterday — the timezone tightens the bound here, it does not relax it.
+    around { |example| travel_to(Time.utc(2026, 9, 14, 15, 0)) { example.run } }
+
+    before { organization.default_billing_entity.update!(timezone: "Asia/Tokyo") }
+
+    it "rejects the date the application zone is still on" do
+      params[:effective_from] = "2026-09-14"
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
+    end
+
+    it "accepts that organization's today" do
+      params[:effective_from] = "2026-09-15"
+
+      expect(result).to be_success
+    end
+  end
+
+  context "when the effective_from is yesterday" do
+    before { params[:effective_from] = 1.day.ago.beginning_of_day.iso8601 }
+
+    it "returns a validation failure and creates nothing" do
+      expect { result }.not_to change(RateCardRate, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
+    end
+  end
+
+  context "when the effective_from is before an already active rate" do
     before do
       create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day)
       params[:effective_from] = 2.days.ago.beginning_of_day.iso8601
     end
 
+    # The past bound is the broader rule and is reached first, so
+    # must_be_after_active_rate no longer surfaces for a backdated value.
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
+      expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
     end
   end
 
@@ -162,23 +232,23 @@ RSpec.describe RateCardRates::CreateService do
       expect(result.rate_card_rate).to be_persisted
     end
 
-    context "when the rate is not after the active rate" do
+    context "when the rate is backdated" do
       before { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day) }
 
       it "still enforces the timeline placement" do
         params[:effective_from] = 2.months.ago.beginning_of_day.iso8601
 
         expect(result).not_to be_success
-        expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
+        expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
       end
     end
   end
 
-  context "when the card is on a plan that has subscriptions" do
+  context "when the card is on a plan that has contracts" do
     before do
-      plan = create(:plan, organization:)
-      create(:plan_rate_card, organization:, plan:, rate_card:)
-      create(:subscription, plan:, organization:)
+      catalog_plan = create(:catalog_plan, organization:)
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+      create(:contract, catalog_plan:, organization:)
     end
 
     it "appends the rate" do

@@ -9,15 +9,15 @@ RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {planId: plan.id}
+      variables: {planId: catalog_plan.id}
     )
   end
 
   let(:required_permission) { "plans:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
-  let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let!(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
   let(:query) do
     <<~GQL

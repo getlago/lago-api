@@ -4,7 +4,7 @@
 # not repeat the setup.
 CATALOG_SPEC_PATHS = %r{
   requests/api/v2 |
-  graphql/(mutations|resolvers)/.*(product|rate_card|rate_phase|plan_applied)
+  graphql/(mutations|resolvers)/.*(product|rate_card|rate_phase|plan_applied|contract)
 }x
 
 RSpec.configure do |config|

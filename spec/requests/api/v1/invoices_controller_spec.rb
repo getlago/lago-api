@@ -1170,6 +1170,62 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with an invoiceable recurring pay-in-advance charge" do
+      let(:timestamp) { Time.zone.parse("2024-03-15") }
+      let(:customer) { create(:customer, organization:) }
+      let(:billing_time) { "calendar" }
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          billing_time:,
+          subscription_at: Time.zone.parse("2024-02-10"),
+          started_at: Time.zone.parse("2024-02-10")
+        )
+      end
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id]}
+        }
+      end
+      let(:expected_from_date) { "2024-04-01T00:00:00+00:00" }
+      let(:expected_to_date) { "2024-04-30T23:59:59+00:00" }
+
+      before do
+        create(:standard_charge, plan:, billable_metric:, pay_in_advance: true, invoiceable: true, properties: {amount: "1"})
+        create(:event, organization:, customer:, subscription:, code: billable_metric.code, timestamp: timestamp - 1.day, properties: {item_id: "3"})
+      end
+
+      shared_examples "a preview with pay-in-advance date boundaries" do
+        it "serializes the charge's upcoming period without saving an invoice", transaction: false do
+          travel_to(timestamp) do
+            expect { subject }.not_to change(Invoice, :count)
+
+            expect(response).to have_http_status(:success)
+            charge_fee = json[:invoice][:fees].find { |fee| fee[:item][:type] == "charge" }
+            expect(charge_fee).to include(
+              amount_cents: 300,
+              from_date: expected_from_date,
+              to_date: expected_to_date
+            )
+          end
+        end
+      end
+
+      include_examples "a preview with pay-in-advance date boundaries"
+
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
+        let(:expected_from_date) { "2024-04-10T00:00:00+00:00" }
+        let(:expected_to_date) { "2024-05-09T23:59:59+00:00" }
+
+        include_examples "a preview with pay-in-advance date boundaries"
+      end
+    end
+
     context "when sending billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }

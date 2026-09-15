@@ -26,6 +26,7 @@ RSpec.describe Resolvers::RateCardResolver do
           id name code currency
           ratesCount
           activeRate { id }
+          taxes { id code rate }
         }
       }
     GQL
@@ -35,12 +36,16 @@ RSpec.describe Resolvers::RateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "rate_cards:view"
 
-  it "returns a single rate card with its rates count and active rate" do
+  it "returns a single rate card with its rates count, active rate, and taxes" do
+    tax = create(:tax, organization:)
+    create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+
     response = execution["data"]["rateCard"]
 
     expect(response["id"]).to eq(rate_card.id)
     expect(response["ratesCount"]).to eq(1)
     expect(response["activeRate"]["id"]).to eq(rate.id)
+    expect(response["taxes"].pluck("code")).to eq([tax.code])
   end
 
   context "when the rate card belongs to another organization" do

@@ -13,6 +13,7 @@ class ContractRateCard < ApplicationRecord
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
+  has_many :billing_segments
 
   validates :billing_anchor_date, presence: true
   validates :next_billing_at, presence: true
@@ -42,6 +43,10 @@ class ContractRateCard < ApplicationRecord
       Time.current.to_date - 1, Time.current
     )
   }
+
+  def edit_error_code
+    "contract_locked" unless contract.editable?
+  end
 
   private
 

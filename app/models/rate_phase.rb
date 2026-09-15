@@ -23,19 +23,9 @@ class RatePhase < ApplicationRecord
   validates :billing_interval_cycle_count, numericality: {greater_than: 0}, allow_nil: true
   validates :rate_override_id, uniqueness: {conditions: -> { where(deleted_at: nil) }}, allow_nil: true
 
-  validate :validate_exactly_one_parent
+  validates_with ParentPresenceValidator, parents: %i[plan_rate_card contract_rate_card], error: :exactly_one_parent_required
 
   default_scope -> { kept }
-
-  private
-
-  def validate_exactly_one_parent
-    has_plan_parent = plan_rate_card_id.present? || plan_rate_card.present?
-    has_contract_parent = contract_rate_card_id.present? || contract_rate_card.present?
-    return if has_plan_parent ^ has_contract_parent
-
-    errors.add(:base, :exactly_one_parent_required)
-  end
 end
 
 # == Schema Information

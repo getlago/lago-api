@@ -19,12 +19,8 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "customer") unless customer
 
-      if params[:plan_code].present? && plan.nil?
+      if params[:plan_code].present? && catalog_plan.nil?
         return result.not_found_failure!(resource: "plan")
-      end
-
-      if plan && !plan.product_catalog?
-        return result.single_validation_failure!(field: :plan, error_code: "not_a_product_catalog_plan")
       end
 
       # Date columns: a malformed value would silently cast to nil instead of
@@ -54,7 +50,7 @@ module Contracts
       ActiveRecord::Base.transaction do
         contract = organization.contracts.create!(
           customer:,
-          plan:,
+          catalog_plan:,
           external_id: params[:external_id],
           name: params[:name],
           billing_time: params[:billing_time].presence || "calendar",
@@ -64,7 +60,7 @@ module Contracts
           status: started_at.future? ? :pending : :active
         )
 
-        Contracts::MaterializeRateCardsService.call!(contract:) if contract.plan
+        Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
 
         result.contract = contract
       end
@@ -91,8 +87,8 @@ module Contracts
       @customer ||= organization.customers.find_by(external_id: params[:external_customer_id])
     end
 
-    def plan
-      @plan ||= organization.plans.parents.find_by(code: params[:plan_code])
+    def catalog_plan
+      @catalog_plan ||= organization.catalog_plans.find_by(code: params[:plan_code])
     end
 
     # Read through the CustomerTimezone suffix: a datetime without an offset

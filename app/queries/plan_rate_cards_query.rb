@@ -22,10 +22,10 @@ class PlanRateCardsQuery < BaseQuery
   end
 
   def with_plan(scope)
-    scope.where(plan_id: filters.plan_id)
+    scope.where(catalog_plan_id: filters.plan_id)
   end
 
   def with_plan_code(scope)
-    scope.joins(:plan).where(plans: {code: filters.plan_code})
+    scope.joins(:catalog_plan).where(catalog_plans: {code: filters.plan_code})
   end
 end

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Api::V2::ContractsController do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
 
   describe "POST /api/v2/contracts" do
     subject { post_with_token(organization, "/api/v2/contracts", {contract: create_params}) }
@@ -14,7 +14,7 @@ RSpec.describe Api::V2::ContractsController do
       {
         external_customer_id: customer.external_id,
         external_id: "contract-1",
-        plan_code: plan.code
+        plan_code: catalog_plan.code
       }
     end
 
@@ -22,13 +22,13 @@ RSpec.describe Api::V2::ContractsController do
 
     it "creates the contract and returns it with its materialized rate cards" do
       rate_card = create(:rate_card, organization:)
-      create(:plan_rate_card, organization:, plan:, rate_card:, units: 2)
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 2)
 
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq("contract-1")
-      expect(json[:contract][:plan_code]).to eq(plan.code)
+      expect(json[:contract][:plan_code]).to eq(catalog_plan.code)
       expect(json[:contract][:status]).to eq("active")
       expect(json[:contract][:applied_rate_cards_count]).to eq(1)
       expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
@@ -71,7 +71,7 @@ RSpec.describe Api::V2::ContractsController do
   describe "GET /api/v2/contracts" do
     subject { get_with_token(organization, "/api/v2/contracts") }
 
-    let!(:contract) { create(:contract, organization:, customer:, plan:) }
+    let!(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
     include_examples "requires API permission", "contract", "read"
 
@@ -114,7 +114,7 @@ RSpec.describe Api::V2::ContractsController do
   describe "GET /api/v2/contracts/:external_id" do
     subject { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
 
-    let!(:contract) { create(:contract, organization:, customer:, plan:) }
+    let!(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
     include_examples "requires API permission", "contract", "read"
 
@@ -148,8 +148,87 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "when the contract is pending" do
+      let!(:contract) { create(:contract, :pending, organization:, customer:) }
+
+      it "returns it without a status filter" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+        expect(json[:contract][:status]).to eq("pending")
+      end
+    end
+
+    context "when reading a terminated contract by status" do
+      let!(:contract) { create(:contract, :terminated, organization:, customer:) }
+
+      it "returns it only with an explicit status filter" do
+        subject
+        expect(response).to be_not_found_error("contract")
+
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=terminated")
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+      end
+    end
+
     context "when it does not exist" do
       subject { get_with_token(organization, "/api/v2/contracts/unknown") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+
+  describe "PUT /api/v2/contracts/:external_id" do
+    subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {contract: update_params}) }
+
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+    let(:update_params) { {name: "Renamed"} }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "updates the contract and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq(contract.external_id)
+      expect(json[:contract][:name]).to eq("Renamed")
+    end
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:update_params) { {plan_code: other_plan.code} }
+
+      it "re-materializes the rate cards from the new plan" do
+        rate_card = create(:rate_card, organization:)
+        create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card:, units: 4)
+
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:plan_code]).to eq(other_plan.code)
+        expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+      end
+    end
+
+    context "when the contract is already active" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+      it "returns an unprocessable entity error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:contract]).to eq(["contract_locked"])
+      end
+    end
+
+    context "when it does not exist" do
+      subject { put_with_token(organization, "/api/v2/contracts/unknown", {contract: update_params}) }
 
       it "returns a not found error" do
         subject

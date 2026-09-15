@@ -24,7 +24,7 @@ module Api
             render(
               json: ::CollectionSerializer.new(
                 result.product_filters,
-                ::V1::ProductFilterSerializer,
+                ::V2::ProductFilterSerializer,
                 collection_name: "filters",
                 meta: pagination_metadata(result.product_filters)
               )
@@ -112,7 +112,7 @@ module Api
         end
 
         def render_filter(filter, values: nil)
-          render(json: ::V1::ProductFilterSerializer.new(filter, root_name: "filter", values:))
+          render(json: ::V2::ProductFilterSerializer.new(filter, root_name: "filter", values:))
         end
 
         def resource_name

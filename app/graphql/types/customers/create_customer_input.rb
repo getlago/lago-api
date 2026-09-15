@@ -38,6 +38,7 @@ module Types
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false
       argument :payment_provider_code, String, required: false
+      argument :payment_provider_customers, [Types::PaymentProviderCustomers::CustomerInput], required: false
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false
 
       argument :integration_customers, [Types::IntegrationCustomers::Input], required: false

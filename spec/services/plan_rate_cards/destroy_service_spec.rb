@@ -6,13 +6,13 @@ RSpec.describe PlanRateCards::DestroyService do
   subject(:result) { described_class.call(plan_rate_card:) }
 
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
   it "soft deletes the entry" do
     expect(result).to be_success
     expect(result.plan_rate_card).to be_discarded
-    expect(plan.reload.applied_rate_cards).to be_empty
+    expect(catalog_plan.reload.applied_rate_cards).to be_empty
   end
 
   it "discards the entry's phases and their overrides" do
@@ -25,8 +25,8 @@ RSpec.describe PlanRateCards::DestroyService do
     expect(rate_override.reload).to be_discarded
   end
 
-  context "when the plan has subscriptions" do
-    before { create(:subscription, plan:, organization:) }
+  context "when the plan has contracts" do
+    before { create(:contract, catalog_plan:, organization:) }
 
     it "forbids the deletion" do
       expect(result).not_to be_success

@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+# The product-catalog plan: a named, priced envelope whose pricing lives in
+# its attached rate cards, not in legacy plan columns. It is the v2 catalog's
+# own table — the legacy `plans` table is untouched and never shared.
+class CatalogPlan < ApplicationRecord
+  include PaperTrailTraceable
+  include Currencies
+  include Discard::Model
+
+  self.discard_column = :deleted_at
+
+  belongs_to :organization
+
+  has_many :applied_rate_cards, class_name: "PlanRateCard"
+  has_many :contracts
+
+  has_many :coupon_targets
+  has_many :coupons, through: :coupon_targets
+  has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+  has_many :entitlements, class_name: "Entitlement::Entitlement", dependent: :destroy
+  has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
+
+  validates :name, presence: true
+  validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
+  validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
+
+  default_scope -> { kept }
+
+  # A catalog plan is subscribed through contracts; any attachment freezes its
+  # pricing (its rate cards can no longer be edited).
+  def attached_to_contracts?
+    contracts.exists?
+  end
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+end
+
+# == Schema Information
+#
+# Table name: catalog_plans
+# Database name: primary
+#
+#  id                   :uuid             not null, primary key
+#  code                 :string           not null
+#  currency             :string           not null
+#  deleted_at           :datetime
+#  description          :string
+#  invoice_display_name :string
+#  name                 :string           not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  organization_id      :uuid             not null
+#
+# Indexes
+#
+#  index_catalog_plans_on_deleted_at                (deleted_at)
+#  index_catalog_plans_on_organization_id           (organization_id)
+#  index_catalog_plans_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#

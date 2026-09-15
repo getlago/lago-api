@@ -25,17 +25,10 @@ module BillableMetrics
       end
 
       def persisted_breakdown
-        event_store = event_store_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries: {to_datetime: from_datetime},
-          filters:
-        )
+        store = event_store.for_window(to_datetime: from_datetime)
+        store.use_from_boundary = false
 
-        event_store.use_from_boundary = false
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
-        persisted_sum = event_store.sum(with_count: false).value
+        persisted_sum = store.sum(with_count: false).value
         return [] if persisted_sum.zero?
 
         [
