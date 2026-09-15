@@ -6,7 +6,13 @@ class FeeDisplayHelper
   end
 
   def self.fee_title(fee)
-    fee.invoice_name + grouped_by_display(fee) + (fee.charge_filter_id? ? " • #{fee.filter_display_name(separator: " • ")}" : "")
+    filter_display = if fee.filtered?
+      " • #{fee.filter_display_name(separator: " • ")}"
+    else
+      ""
+    end
+
+    fee.invoice_name + grouped_by_display(fee) + filter_display
   end
 
   def self.should_display_subscription_fee?(invoice_subscription)
