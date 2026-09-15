@@ -208,6 +208,29 @@ RSpec.describe UsageAttributionTypes::UpdateService do
         expect(result.usage_attribution_type.reload.name).to eq("Member")
       end
     end
+
+    context "when every attributed value has been discarded" do
+      before { usage_attribution_type.usage_attribution_values.sole.discard! }
+
+      it "still returns a validation failure listing each frozen attribute" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(
+          code: ["usage_already_attributed"],
+          attribution_key: ["usage_already_attributed"],
+          role: ["usage_already_attributed"],
+          parent_id: ["usage_already_attributed"]
+        )
+      end
+
+      context "when only the name is submitted" do
+        let(:params) { {name: "Member"} }
+
+        it "updates the name" do
+          expect(result).to be_success
+          expect(result.usage_attribution_type.reload.name).to eq("Member")
+        end
+      end
+    end
   end
 
   context "when the code is already used by another type" do

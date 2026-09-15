@@ -48,7 +48,7 @@ module UsageAttributionTypes
     delegate :organization, to: :usage_attribution_type
 
     def attributed?
-      usage_attribution_type.usage_attribution_values.exists?
+      usage_attribution_type.usage_attribution_values.with_discarded.exists?
     end
   end
 end
