@@ -43,14 +43,8 @@ module EventDestinations
           .first
       end
 
-      def wallet_for(currency)
-        wallets_by_currency[currency]
-      end
-
-      def wallets_by_currency
-        @wallets_by_currency ||= customer.wallets.active.in_application_order
-          .group_by(&:balance_currency)
-          .transform_values(&:first)
+      def active_wallets
+        @active_wallets ||= customer.wallets.active.in_application_order.to_a
       end
 
       def producer
@@ -114,7 +108,7 @@ module EventDestinations
         EventDestinations::CustomerUsageSerializer.new(
           usage,
           root_name: OBJECT_TYPE,
-          wallet: wallet_for(usage.currency)
+          wallets: active_wallets
         ).serialize
       end
     end
