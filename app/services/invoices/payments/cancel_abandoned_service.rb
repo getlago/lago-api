@@ -24,7 +24,12 @@ module Invoices
 
         ::PaymentProviders::CancelPaymentService.call!(payment:)
 
-        return result if payment.reload.processing?
+        # Only a payment that actually reached a failed state was cancelled. "No longer processing"
+        # is not the same claim: the provider refuses an intent the customer completed in the
+        # meantime, and the succeeded webhook can land before this reload, so reading the absence
+        # of processing as success would unlock an invoice that has just been paid.
+        return result unless payment.reload.failed?
+        return result if payable.reload.payment_succeeded?
 
         unlock_invoice
 

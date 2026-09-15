@@ -47,6 +47,21 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
     expect { result }.not_to change { invoice.reload.payment_status }
   end
 
+  context "when the customer completes the payment while we are cancelling" do
+    before do
+      allow(::PaymentProviders::CancelPaymentService).to receive(:call!) do
+        # The provider refuses an intent that has just succeeded, and its webhook lands the real
+        # status on both records before this service reloads them.
+        payment.update!(payable_payment_status: :succeeded)
+        invoice.update!(payment_status: :succeeded)
+      end
+    end
+
+    it "leaves the invoice locked rather than reopening a paid one" do
+      expect { result }.not_to change { invoice.reload.ready_for_payment_processing }
+    end
+  end
+
   context "when the provider refuses the cancellation" do
     before do
       allow(::PaymentProviders::CancelPaymentService).to receive(:call!).and_return(BaseResult.new)
