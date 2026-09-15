@@ -1,0 +1,32 @@
+-- case: provider_miss (count) phase: baseline selective: true
+-- filters: {"payment_provider_type":["cashfree"]} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payment_provider_id" IN (SELECT "payment_providers"."id" FROM "payment_providers" WHERE "payment_providers"."type" = 'PaymentProviders::CashfreeProvider')
+
+Aggregate  (cost=251661.48..251661.49 rows=1 width=8) (actual time=5.084..5.085 rows=1 loops=1)
+  Buffers: shared hit=5
+  ->  Nested Loop  (cost=40691.71..251588.15 rows=29332 width=0) (actual time=5.082..5.082 rows=0 loops=1)
+        Buffers: shared hit=5
+        ->  Seq Scan on payment_providers  (cost=0.00..6.06 rows=1 width=16) (actual time=5.081..5.082 rows=0 loops=1)
+              Filter: ((type)::text = 'PaymentProviders::CashfreeProvider'::text)
+              Rows Removed by Filter: 85
+              Buffers: shared hit=5
+        ->  Bitmap Heap Scan on payments  (cost=40691.71..251289.29 rows=29279 width=16) (never executed)
+              Recheck Cond: ((payment_provider_id = payment_providers.id) AND (organization_id = '<org-uuid>'::uuid))
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              ->  BitmapAnd  (cost=40691.71..40691.71 rows=58557 width=0) (never executed)
+                    ->  Bitmap Index Scan on index_payments_on_payment_provider_id  (cost=0.00..651.34 rows=76961 width=0) (never executed)
+                          Index Cond: (payment_provider_id = payment_providers.id)
+                    ->  Bitmap Index Scan on idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (cost=0.00..39409.49 rows=4986492 width=0) (never executed)
+                          Index Cond: (organization_id = '<org-uuid>'::uuid)
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (never executed)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+Planning:
+  Buffers: shared hit=20
+Planning Time: 0.186 ms
+JIT:
+  Functions: 18
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 0.536 ms, Inlining 0.000 ms, Optimization 0.381 ms, Emission 4.694 ms, Total 5.611 ms
+Execution Time: 5.655 ms

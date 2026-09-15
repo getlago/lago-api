@@ -1,0 +1,48 @@
+-- case: five_filter_common (count) phase: baseline selective: false
+-- filters: {"payment_status":["succeeded"],"currency":"EUR","created_at_from":"2024-09-08","created_at_to":"2026-09-08","amount_from":100,"payment_provider_type":["stripe"]} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."amount_currency" = 'EUR' AND "payments"."payable_payment_status" = 'succeeded' AND (payments.amount_cents >= 100::bigint) AND "payments"."created_at" >= '2024-09-08 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999' AND "payments"."payment_provider_id" IN (SELECT "payment_providers"."id" FROM "payment_providers" WHERE "payment_providers"."type" = 'PaymentProviders::StripeProvider')
+
+Aggregate  (cost=10336642.41..10336642.42 rows=1 width=8) (actual time=16645.389..16645.397 rows=1 loops=1)
+  Buffers: shared hit=11970579 read=178556
+  I/O Timings: shared/local read=581.601
+  ->  Nested Loop  (cost=40535.97..10333724.59 rows=1167130 width=0) (actual time=306.109..16563.693 rows=3115566 loops=1)
+        Buffers: shared hit=11970579 read=178556
+        I/O Timings: shared/local read=581.601
+        ->  Seq Scan on payment_providers  (cost=0.00..6.06 rows=51 width=16) (actual time=70.305..70.513 rows=51 loops=1)
+              Filter: ((type)::text = 'PaymentProviders::StripeProvider'::text)
+              Rows Removed by Filter: 34
+              Buffers: shared hit=1 read=4
+              I/O Timings: shared/local read=0.050
+        ->  Bitmap Heap Scan on payments  (cost=40535.97..202393.50 rows=22843 width=16) (actual time=157.925..320.365 rows=61090 loops=51)
+              Recheck Cond: ((payment_provider_id = payment_providers.id) AND (organization_id = '<org-uuid>'::uuid))
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (amount_cents >= '100'::bigint) AND (created_at >= '2024-09-08 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone) AND ((amount_currency)::text = 'EUR'::text) AND (payable_payment_status = 'succeeded'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 17355
+              Heap Blocks: exact=157639
+              Buffers: shared hit=11970578 read=178552
+              I/O Timings: shared/local read=581.551
+              ->  BitmapAnd  (cost=40535.97..40535.97 rows=58557 width=0) (actual time=157.640..157.640 rows=0 loops=51)
+                    Buffers: shared hit=34449 read=4586
+                    I/O Timings: shared/local read=17.569
+                    ->  Bitmap Index Scan on index_payments_on_payment_provider_id  (cost=0.00..634.21 rows=76961 width=0) (actual time=1.582..1.582 rows=104764 loops=51)
+                          Index Cond: (payment_provider_id = payment_providers.id)
+                          Buffers: shared hit=126 read=4586
+                          I/O Timings: shared/local read=17.569
+                    ->  Bitmap Index Scan on idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (cost=0.00..39409.49 rows=4986492 width=0) (actual time=155.633..155.633 rows=5000000 loops=51)
+                          Index Cond: (organization_id = '<org-uuid>'::uuid)
+                          Buffers: shared hit=34323
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.002..0.002 rows=1 loops=2988114)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=11936129 read=16327
+                      I/O Timings: shared/local read=155.237
+Planning:
+  Buffers: shared hit=16 read=4
+  I/O Timings: shared/local read=0.017
+Planning Time: 0.429 ms
+JIT:
+  Functions: 18
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.488 ms, Inlining 7.497 ms, Optimization 33.336 ms, Emission 29.592 ms, Total 71.912 ms
+Execution Time: 16647.050 ms

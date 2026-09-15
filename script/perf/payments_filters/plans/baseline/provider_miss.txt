@@ -1,0 +1,37 @@
+-- case: provider_miss (list) phase: baseline selective: true
+-- filters: {"payment_provider_type":["cashfree"]} search_term: nil page: 1
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payment_provider_id" IN (SELECT "payment_providers"."id" FROM "payment_providers" WHERE "payment_providers"."type" = 'PaymentProviders::CashfreeProvider') ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=0.56..9310.60 rows=20 width=330) (actual time=66537.344..66537.347 rows=0 loops=1)
+  Buffers: shared hit=21097387 read=2937644
+  I/O Timings: shared/local read=38438.801
+  ->  Nested Loop  (cost=0.56..13654112.44 rows=29332 width=330) (actual time=66537.343..66537.344 rows=0 loops=1)
+        Join Filter: (payments.payment_provider_id = payment_providers.id)
+        Buffers: shared hit=21097387 read=2937644
+        I/O Timings: shared/local read=38438.801
+        ->  Index Scan using index_payments_by_cursor on payments  (cost=0.56..13616707.68 rows=2493246 width=330) (actual time=0.750..65892.996 rows=4952719 loops=1)
+              Index Cond: (organization_id = '<org-uuid>'::uuid)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 47281
+              Buffers: shared hit=21097385 read=2937641
+              I/O Timings: shared/local read=38438.683
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.009..0.009 rows=1 loops=4749834)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=17469701 read=1529635
+                      I/O Timings: shared/local read=23166.824
+        ->  Materialize  (cost=0.00..6.07 rows=1 width=16) (actual time=0.000..0.000 rows=0 loops=4952719)
+              Buffers: shared hit=2 read=3
+              I/O Timings: shared/local read=0.118
+              ->  Seq Scan on payment_providers  (cost=0.00..6.06 rows=1 width=16) (actual time=0.136..0.137 rows=0 loops=1)
+                    Filter: ((type)::text = 'PaymentProviders::CashfreeProvider'::text)
+                    Rows Removed by Filter: 85
+                    Buffers: shared hit=2 read=3
+                    I/O Timings: shared/local read=0.118
+Planning:
+  Buffers: shared hit=5 read=15
+  I/O Timings: shared/local read=2.655
+Planning Time: 3.422 ms
+Execution Time: 66537.518 ms

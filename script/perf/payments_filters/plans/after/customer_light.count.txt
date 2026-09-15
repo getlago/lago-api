@@ -1,0 +1,22 @@
+-- case: customer_light (count) phase: after selective: true
+-- filters: {"external_customer_id":"perf-cust-0-23830"} search_term: nil page: 1
+-- runs_ms: [0.1, 0.1, 0.1]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."customer_id" = '<uuid>'
+
+Aggregate  (cost=603.26..603.27 rows=1 width=8) (actual time=0.080..0.080 rows=1 loops=1)
+  Buffers: shared hit=265
+  ->  Index Scan using index_payments_on_customer_id on payments  (cost=0.43..603.11 rows=60 width=0) (actual time=0.012..0.078 rows=52 loops=1)
+        Index Cond: ((customer_id IS NOT NULL) AND (customer_id = '<uuid>'::uuid))
+        Filter: ((payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 2
+        Buffers: shared hit=265
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.001..0.001 rows=1 loops=52)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=208
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.089 ms
+Execution Time: 0.094 ms
