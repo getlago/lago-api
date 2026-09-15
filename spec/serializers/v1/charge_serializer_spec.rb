@@ -6,9 +6,12 @@ RSpec.describe ::V1::ChargeSerializer do
   subject(:result) { JSON.parse(serializer.to_json) }
 
   let(:serializer) { described_class.new(charge, root_name: "charge", includes: %i[taxes]) }
-
   let(:charge) { create(:standard_charge, properties:) }
   let(:properties) { {"amount" => "1000"} }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
 
   it "serializes the object" do
     expect(result["charge"]["lago_id"]).to eq(charge.id)

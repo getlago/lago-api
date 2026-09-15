@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe ::V1::BillableMetricSerializer do
   subject(:serializer) { described_class.new(billable_metric, root_name: "billable_metric", includes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:billable_metric) { create(:weighted_sum_billable_metric) }
   let(:result) { JSON.parse(serializer.to_json) }
 
