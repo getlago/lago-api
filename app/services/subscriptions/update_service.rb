@@ -37,6 +37,7 @@ module Subscriptions
         on_termination_credit_note: params[:on_termination_credit_note],
         on_termination_invoice: params[:on_termination_invoice],
         payment_method: params[:payment_method],
+        connections: params[:connections],
         activation_rules: params[:activation_rules],
         subscription_type: "update",
         subscription:,
@@ -55,6 +56,7 @@ module Subscriptions
       end
 
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
 
       if params.key?(:plan_overrides) && subscription.plan.organization.product_catalog_enabled?
         return result.single_validation_failure!(field: :plan_overrides, error_code: "legacy_billing_disabled")
@@ -123,6 +125,10 @@ module Subscriptions
         end
 
         InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:)
+
+        if connections_requested?
+          BillingObjectConnections::AttachToResourceService.call!(resource: subscription, params:)
+        end
       end
 
       result.subscription = subscription
@@ -285,6 +291,14 @@ module Subscriptions
       result.payment_method = payment_method
 
       Subscriptions::ValidateService.new(result, **args).valid?
+    end
+
+    def connections_requested?
+      params[:connections].present?
+    end
+
+    def organization_flag_disabled?(flag)
+      !subscription.organization.feature_flag_enabled?(flag)
     end
 
     def payment_method

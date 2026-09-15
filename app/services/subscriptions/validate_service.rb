@@ -11,6 +11,7 @@ module Subscriptions
       valid_on_termination_credit_note?
       valid_on_termination_invoice?
       valid_payment_method?
+      valid_connections?
       valid_activation_rules?
       valid_consolidate_invoice?
 
@@ -97,6 +98,17 @@ module Subscriptions
       return true if PaymentMethods::ValidateService.new(result, **args).valid?
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
+
+      false
+    end
+
+    def valid_connections?
+      return true if args[:connections].blank?
+
+      validator = BillingObjectConnections::ValidateService.new(result, connections: args[:connections])
+      return true if validator.valid?
+
+      validator.error_codes.each { |error_code| add_error(field: :connections, error_code:) }
 
       false
     end
