@@ -79,8 +79,8 @@ module Invoices
       @applicable_taxes
     end
 
-    def indexed_fees
-      @indexed_fees ||= invoice.fees.each_with_object({}) do |fee, applied_taxes|
+    def indexed_fee_taxes
+      @indexed_fee_taxes ||= invoice.fees.each_with_object({}) do |fee, output|
         fee.applied_taxes.each do |applied_tax|
           tax = GroupingTax.new(
             name: applied_tax.tax_name,
@@ -89,17 +89,33 @@ module Invoices
           )
           key = calculate_key(tax)
 
-          applied_taxes[key] ||= []
-          applied_taxes[key] << fee
+          output[key] ||= []
+          output[key] << [fee, applied_tax]
         end
       end
     end
 
+    def indexed_fees
+      @indexed_fees ||= indexed_fee_taxes.transform_values { |entries| entries.map(&:first) }
+    end
+
+    def grouped_fee_keys
+      @grouped_fee_keys ||= provider_taxes.filter_map { |fee_taxes| fee_taxes.item_key if fee_taxes.group_key.present? }.to_set
+    end
+
+    # NOTE: A charge the provider priced as one line item had its tax allocated over the charge
+    #       fees so the group total is exact. Recomputing it from the fee sub-totals and their
+    #       base rates would undo that allocation, so the booked amount is taken as is.
     def compute_tax_amount_cents(tax)
       key = calculate_key(tax)
 
-      indexed_fees[key]
-        .sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate * tax.rate.to_f }
+      indexed_fee_taxes[key].sum do |fee, applied_tax|
+        if grouped_fee_keys.include?(fee.item_key)
+          applied_tax.amount_cents
+        else
+          fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate * tax.rate.to_f
+        end
+      end
     end
 
     def pro_rated_taxes_rate(tax)

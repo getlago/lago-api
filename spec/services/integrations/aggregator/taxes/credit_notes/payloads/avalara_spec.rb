@@ -5,6 +5,48 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara do
   subject(:payload) { described_class.new(integration:, customer:, integration_customer:, credit_note:).body }
 
+  describe "when a charge is credited over several fees" do
+    let(:integration) { create(:avalara_integration) }
+    let(:organization) { integration.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:credit_note) { create(:credit_note, customer:, invoice:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:plan) { create(:plan, organization:) }
+    let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+    let(:other_charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
+    let(:charge_fee) { create(:charge_fee, invoice:, charge:, units: 2, amount_cents: 300, precise_amount_cents: 300) }
+    let(:charge_fee_two) { create(:charge_fee, invoice:, charge:, units: 3, amount_cents: 700, precise_amount_cents: 700) }
+    let(:other_charge_fee) do
+      create(:charge_fee, invoice:, charge: other_charge, units: 4, amount_cents: 500, precise_amount_cents: 500)
+    end
+
+    before do
+      integration_customer
+      create(:credit_note_item, credit_note:, fee: charge_fee, amount_cents: 300, precise_amount_cents: 300, created_at: 3.seconds.ago)
+      create(:credit_note_item, credit_note:, fee: other_charge_fee, amount_cents: 500, precise_amount_cents: 500, created_at: 2.seconds.ago)
+      create(:credit_note_item, credit_note:, fee: charge_fee_two, amount_cents: 700, precise_amount_cents: 700, created_at: 1.second.ago)
+
+      create(
+        :avalara_mapping,
+        integration:,
+        mappable_type: "BillableMetric",
+        mappable_id: billable_metric.id,
+        settings: {external_id: "ext_123"}
+      )
+    end
+
+    it "sums the units and the amount of the credited charge" do
+      expect(payload.first["fees"]).to eq(
+        [
+          {"item_id" => "charge_#{charge.id}", "item_code" => "ext_123", "unit" => 5, "amount" => "-10.0"},
+          {"item_id" => "charge_#{other_charge.id}", "item_code" => "ext_123", "unit" => 4, "amount" => "-5.0"}
+        ]
+      )
+    end
+  end
+
   describe "shipping address fallback" do
     let(:integration) { create(:avalara_integration) }
     let(:customer) do
@@ -124,7 +166,7 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara d
               "item_code" => mapping_codes.dig(:fixed_charge, :external_id)
             },
             {
-              "item_id" => billable_metric.id,
+              "item_id" => "charge_#{charge.id}",
               "amount" => "-1.8",
               "unit" => 3.0,
               "item_code" => mapping_codes.dig(:billable_metric, :external_id)
