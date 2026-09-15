@@ -143,6 +143,7 @@ resources :plans, param: :code, code: /.*/ do
   draw(:plan_nested_api)
 end
 resources :taxes, param: :code, code: /.*/
+resources :usage_attribution_types, param: :code, code: /.*/, only: %i[index show create update destroy]
 resources :wallet_transactions, only: %i[create show] do
   post :payment_url, on: :member
   get :consumptions, on: :member
