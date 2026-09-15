@@ -8,7 +8,7 @@ module Contracts
   class UpdateService < BaseService
     include CustomerTimezone
 
-    Result = BaseResult[:contract]
+    Result = BaseResult[:contract, :payment_method]
 
     def initialize(contract:, params:)
       @contract = contract
@@ -34,6 +34,11 @@ module Contracts
       if payment_method_params[:payment_method_id].present? && payment_method.nil?
         return result.not_found_failure!(resource: "payment_method")
       end
+
+      # Rejects contradictory combinations (e.g. a manual type with a concrete
+      # payment method), matching the subscription semantics.
+      result.payment_method = payment_method
+      return result unless PaymentMethods::ValidateService.new(result, payment_method: params[:payment_method]).valid?
 
       # Reject malformed dates, but let an explicit null clear the field. A bare
       # present? check would treat false or "" as absent, silently clearing the

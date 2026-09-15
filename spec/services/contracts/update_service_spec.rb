@@ -125,7 +125,7 @@ RSpec.describe Contracts::UpdateService do
         billing_entity_id: billing_entity.id,
         consolidate_invoice: false,
         purchase_order_number: "PO-42",
-        payment_method: {payment_method_id: payment_method.id, payment_method_type: "manual"}
+        payment_method: {payment_method_id: payment_method.id, payment_method_type: "provider"}
       }
     end
 
@@ -136,8 +136,17 @@ RSpec.describe Contracts::UpdateService do
         consolidate_invoice: false,
         purchase_order_number: "PO-42",
         payment_method:,
-        payment_method_type: "manual"
+        payment_method_type: "provider"
       )
+    end
+
+    context "when a manual type is paired with a concrete payment method" do
+      let(:params) { {payment_method: {payment_method_id: payment_method.id, payment_method_type: "manual"}} }
+
+      it "rejects the contradictory combination" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+      end
     end
 
     context "when the billing entity id is unknown" do
