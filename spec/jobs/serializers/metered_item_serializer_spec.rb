@@ -2,8 +2,7 @@
 
 require "rails_helper"
 
-# rubocop:disable RSpec/SpecFilePathFormat
-RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
+RSpec.describe Jobs::Serializers::MeteredItemSerializer do
   let(:organization) { create(:organization) }
   let(:event) { create(:event, organization:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, organization:) }
@@ -23,13 +22,13 @@ RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
     )
   end
 
-  let(:billable_metric) { build(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount", recurring: true) }
-  let(:product) { build(:product, organization:, billable_metric:) }
-  let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: true) }
-  let(:contract_rate_card) { build(:contract_rate_card, organization:, rate_card:) }
-  let(:rate_card_rate) { build(:rate_card_rate, organization:, rate_card:, rate_model: "standard", rate_properties: {"amount" => "30"}) }
+  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "amount", recurring: true) }
+  let(:product) { create(:product, organization:, billable_metric:) }
+  let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", proration: true) }
+  let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+  let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:, rate_model: "standard", rate_properties: {"amount" => "30"}) }
   let(:billing_segment) do
-    build(
+    create(
       :billing_segment,
       organization:,
       contract: contract_rate_card.contract,
@@ -49,6 +48,7 @@ RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
       billing_segment, event: Events::CommonFactory.new_instance(source: event)
     )
   end
+  let(:product_filter) { create(:product_filter, organization:, product:) }
 
   describe ".serialize?" do
     it "supports charge and billing segment metered items" do
@@ -76,7 +76,7 @@ RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
       expect(serialized).to include(
         "source_type" => "charge",
         "charge" => anything,
-        "boundaries" => charge_boundaries.to_h,
+        "boundaries" => anything,
         "charge_filter" => nil,
         "properties_override" => nil,
         "event" => anything
@@ -101,21 +101,37 @@ RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
     end
 
     it "round trips a charge source" do
-      serialized = ActiveJob::Arguments.serialize([charge_metered_item]).first
+      serialized = JSON.parse(ActiveJob::Arguments.serialize([charge_metered_item]).to_json).first
       deserialized = ActiveJob::Arguments.deserialize([serialized]).first
 
       expect(deserialized.source).to be_a(Fees::ChargeService::Sources::Charge)
       expect(deserialized.charge).to eq(charge)
       expect(deserialized.event.timestamp).to eq(event.timestamp)
+      expect(deserialized.boundaries).to have_attributes(
+        from_datetime: charge_boundaries.from_datetime,
+        to_datetime: charge_boundaries.to_datetime,
+        charges_from_datetime: charge_boundaries.charges_from_datetime,
+        charges_to_datetime: charge_boundaries.charges_to_datetime,
+        charges_duration: charge_boundaries.charges_duration,
+        timestamp: charge_boundaries.timestamp
+      )
     end
 
     it "round trips a billing segment source" do
-      serialized = ActiveJob::Arguments.serialize([billing_segment_metered_item]).first
+      serialized = JSON.parse(ActiveJob::Arguments.serialize([billing_segment_metered_item]).to_json).first
       deserialized = ActiveJob::Arguments.deserialize([serialized]).first
 
       expect(deserialized.source).to be_a(Fees::ChargeService::Sources::BillingSegment)
       expect(deserialized.billing_segment).to eq(billing_segment)
       expect(deserialized.event.timestamp).to eq(event.timestamp)
+    end
+
+    it "preserves the selected billing segment product filter" do
+      metered_item = billing_segment_metered_item.with_filter(product_filter)
+      serialized = JSON.parse(ActiveJob::Arguments.serialize([metered_item]).to_json).first
+      deserialized = ActiveJob::Arguments.deserialize([serialized]).first
+
+      expect(deserialized.product_filter).to eq(product_filter)
     end
 
     it "rejects an unsupported source type" do
@@ -131,4 +147,3 @@ RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
     end
   end
 end
-# rubocop:enable RSpec/SpecFilePathFormat

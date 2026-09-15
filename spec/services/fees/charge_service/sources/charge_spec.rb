@@ -103,10 +103,17 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
     context "when the event does not match any filter" do
       let(:event_properties) { {"region" => "eu"} }
 
-      it "returns the default bucket" do
-        buckets = source.pricing_buckets(event:)
+      it "returns the default bucket with configured filter exclusions" do
+        matching_event = create(:event, organization:, properties: {"region" => "us"})
+        matching_bucket = source.pricing_buckets(event: matching_event).sole
+        default_bucket = source.pricing_buckets(event:).sole
 
-        expect(buckets).to match([have_attributes(charge_filter: nil, properties: charge.properties)])
+        expect(matching_bucket.charge_filter).to eq(charge_filter)
+        expect(default_bucket).to have_attributes(
+          charge_filter: have_attributes(charge:),
+          properties: charge.properties
+        )
+        expect(default_bucket.matching_and_ignored_filters.ignored_filters).not_to be_empty
       end
     end
   end

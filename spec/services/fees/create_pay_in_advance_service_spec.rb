@@ -346,7 +346,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       end
 
       context "when event does not match the charge filter" do
-        let(:charge_filter) { ChargeFilter }
+        let(:charge_filter) { nil }
 
         let(:event_properties) do
           {
@@ -357,7 +357,14 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           }
         end
 
-        it "creates a fee" do
+        it "creates a fee using the default filter" do
+          expect(metered_item.pricing_buckets).to match([
+            have_attributes(
+              charge_filter: have_attributes(charge:, id: nil),
+              properties: charge.properties
+            )
+          ])
+
           result = fee_service.call
 
           expect(result).to be_success

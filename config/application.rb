@@ -66,4 +66,4 @@ require_relative "../lib/active_job/logging"
 require_relative "../lib/active_job/json_log_subscriber"
 require_relative "../app/jobs/serializers/metered_item_serializer"
 
-ActiveJob::Serializers.add_serializers(ActiveJob::Serializers::MeteredItemSerializer)
+ActiveJob::Serializers.add_serializers(Jobs::Serializers::MeteredItemSerializer)

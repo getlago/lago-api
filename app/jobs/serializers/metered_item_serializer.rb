@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module ActiveJob
+module Jobs
   module Serializers
-    class MeteredItemSerializer < ObjectSerializer
+    class MeteredItemSerializer < ActiveJob::Serializers::ObjectSerializer
       def self.serialize?(argument)
         argument.is_a?(Fees::ChargeService::MeteredItem) && [
           Fees::ChargeService::Sources::Charge,
@@ -30,15 +30,21 @@ module ActiveJob
           raise ArgumentError, "Unsupported MeteredItem source: #{source.class}"
         end
 
-        super(payload.merge("event" => metered_item.event&.as_json))
+        serialized_payload = ActiveJob::Arguments.serialize([payload.merge("event" => metered_item.event&.as_json)]).first
+        super(serialized_payload)
       end
 
       def deserialize(payload)
+        payload = ActiveJob::Arguments.deserialize([payload.except("_aj_serialized")]).first
         event = payload["event"] && Events::CommonFactory.new_instance(source: payload["event"])
 
         case payload["source_type"]
         when "billing_segment"
-          Fees::ChargeService::MeteredItem.from_billing_segment(payload["billing_segment"], event:)
+          Fees::ChargeService::MeteredItem.from_billing_segment(
+            payload["billing_segment"],
+            product_filter: payload["product_filter"],
+            event:
+          )
         when "charge"
           Fees::ChargeService::MeteredItem.from_charge(
             charge: payload["charge"],

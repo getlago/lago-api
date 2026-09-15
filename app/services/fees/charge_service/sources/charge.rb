@@ -42,7 +42,10 @@ module Fees
         def pricing_buckets(event: nil)
           if event
             matching_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-            return [with_filter(matching_filter)]
+            return [with_filter(matching_filter)] if matching_filter
+            return [with_default_filter] if charge.filters.any?
+
+            return [self]
           end
 
           if charge.filters.any?

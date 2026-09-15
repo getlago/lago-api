@@ -23,8 +23,8 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment, event: nil)
-        new(source: Sources::BillingSegment.new(billing_segment:), event:)
+      def self.from_billing_segment(billing_segment, product_filter: nil, event: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
       end
 
       delegate :charge,
