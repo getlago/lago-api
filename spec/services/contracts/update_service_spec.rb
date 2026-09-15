@@ -169,5 +169,28 @@ RSpec.describe Contracts::UpdateService do
         expect(contract.reload.consolidate_invoice).to be(false)
       end
     end
+
+    context "when payment_method_type is omitted" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, payment_method_type: "manual") }
+      let(:params) { {name: "Renamed"} }
+
+      it "leaves the stored payment_method_type unchanged" do
+        expect(result).to be_success
+        expect(contract.reload.payment_method_type).to eq("manual")
+      end
+    end
+
+    context "when clearing the override fields with an explicit null" do
+      let(:contract) do
+        create(:contract, :pending, organization:, customer:, catalog_plan:,
+          billing_entity:, purchase_order_number: "PO-1")
+      end
+      let(:params) { {billing_entity_id: nil, purchase_order_number: nil} }
+
+      it "clears the billing entity override and the purchase order number" do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(billing_entity: nil, purchase_order_number: nil)
+      end
+    end
   end
 end
