@@ -5,6 +5,7 @@ en:
       messages:
         blank: value_is_mandatory
         cannot_be_empty: cannot_be_empty
+        cannot_form_a_cycle: cannot_form_a_cycle
         content_type_invalid: invalid_content_type
         country_code_invalid: not_a_valid_country_code
         country_must_be_present: country_must_be_present
@@ -14,6 +15,7 @@ en:
         exclusion: value_is_reserved
         feature_unavailable: feature_unavailable
         file_size_not_less_than: file_too_large
+        forbidden_for_flat_role: forbidden_for_flat_role
         graduated_percentage_requires_premium_license: graduated_percentage_requires_premium_license
         greater_than: value_is_out_of_range
         greater_than_or_equal_to: value_is_out_of_range
@@ -55,7 +57,9 @@ en:
         must_be_array: must_be_array
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         must_be_greater_than_or_equal_threshold: must_be_greater_than_or_equal_threshold
+        must_be_hierarchical: must_be_hierarchical
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
+        must_belong_to_same_organization: must_belong_to_same_organization
         not_allowed_for_aggregation_type: not_allowed_for_aggregation_type
         not_allowed_for_billing_timing: not_allowed_for_billing_timing
         not_allowed_for_product: not_allowed_for_product
