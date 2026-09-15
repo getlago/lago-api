@@ -44,14 +44,17 @@ module EventDestinations
       model.fees.group_by(&:charge_id).filter_map do |_charge_id, fees|
         units = fees.sum { BigDecimal(it.units) }
         amount_cents = fees.sum(&:amount_cents)
+        events_count = fees.sum { it.events_count.to_i }
 
-        next if units.zero? && amount_cents.zero?
+        # Events with nothing to show for them are still usage: a sum over values that cancel out
+        # leaves units and amount at zero while events did happen, and the fee is kept deliberately.
+        next if units.zero? && amount_cents.zero? && events_count.zero?
 
         fee = fees.first
 
         {
           units: units.to_s,
-          events_count: fees.sum { it.events_count.to_i },
+          events_count: events_count,
           amount_cents: amount_cents,
           amount_currency: fee.amount_currency,
           charge: {
