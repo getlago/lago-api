@@ -38,14 +38,21 @@ module EventDestinations
       end
     end
 
+    # A plan carries a charge per feature, so a customer using a handful of them would otherwise
+    # ship a long tail of zeroes on every record. Dropping them keeps headroom under the 1MB cap.
     def charges_usage
-      model.fees.group_by(&:charge_id).map do |_charge_id, fees|
+      model.fees.group_by(&:charge_id).filter_map do |_charge_id, fees|
+        units = fees.sum { BigDecimal(it.units) }
+        amount_cents = fees.sum(&:amount_cents)
+
+        next if units.zero? && amount_cents.zero?
+
         fee = fees.first
 
         {
-          units: fees.sum { BigDecimal(it.units) }.to_s,
+          units: units.to_s,
           events_count: fees.sum { it.events_count.to_i },
-          amount_cents: fees.sum(&:amount_cents),
+          amount_cents: amount_cents,
           amount_currency: fee.amount_currency,
           charge: {
             lago_id: fee.charge_id,
