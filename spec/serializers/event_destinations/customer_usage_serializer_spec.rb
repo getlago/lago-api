@@ -50,6 +50,31 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
     )
   end
 
+  describe "charges with no usage" do
+    let(:unused_charge) { create(:standard_charge, plan:, billable_metric: create(:billable_metric, organization:, code: "unused")) }
+
+    it "omits a charge with neither units nor amount" do
+      usage.fees << build(:charge_fee, charge: unused_charge, subscription:, units: "0.0", events_count: 0,
+        amount_cents: 0, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+
+      expect(result[:charges_usage].map { it[:charge][:code] }).to eq([charge.code])
+    end
+
+    it "keeps a charge billed without units, which is real usage" do
+      usage.fees << build(:charge_fee, charge: unused_charge, subscription:, units: "0.0", events_count: 0,
+        amount_cents: 250, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+
+      expect(result[:charges_usage].map { it[:charge][:code] }).to match_array([charge.code, unused_charge.code])
+    end
+
+    it "keeps a charge with units but nothing to pay, such as a free allowance" do
+      usage.fees << build(:charge_fee, charge: unused_charge, subscription:, units: "3.0", events_count: 3,
+        amount_cents: 0, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+
+      expect(result[:charges_usage].map { it[:charge][:code] }).to match_array([charge.code, unused_charge.code])
+    end
+  end
+
   it "leaks no per-filter breakdown" do
     expect(result[:charges_usage].first.keys).not_to include(:filters, :grouped_usage, :presentation_breakdowns)
   end
