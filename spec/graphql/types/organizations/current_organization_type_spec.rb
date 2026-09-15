@@ -22,7 +22,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
     expect(subject).to have_field(:address_line2).of_type("String")
     expect(subject).to have_field(:city).of_type("String")
     expect(subject).to have_field(:country).of_type("CountryCode")
-    expect(subject).to have_field(:net_payment_term).of_type("Int!")
+    expect(subject).to have_field(:net_payment_term).of_type("Int")
     expect(subject).to have_field(:state).of_type("String")
     expect(subject).to have_field(:zipcode).of_type("String")
 
