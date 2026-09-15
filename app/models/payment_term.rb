@@ -49,6 +49,15 @@ class PaymentTerm
     }.compact
   end
 
+  def ==(other)
+    other.is_a?(self.class) && to_h == other.to_h
+  end
+  alias_method :eql?, :==
+
+  def hash
+    [self.class, to_h].hash
+  end
+
   # N for net, 0 for due_on_receipt, nil for the four types the integer cannot represent.
   def net_payment_term_alias
     case term_type
