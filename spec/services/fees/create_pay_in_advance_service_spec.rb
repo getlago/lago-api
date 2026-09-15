@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceService do
-  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
+  subject(:fee_service) { described_class.new(metered_item:, billing_at: event.timestamp, estimate:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
@@ -30,6 +30,21 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   end
 
   let(:event_properties) { {} }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: event.timestamp,
+        to_datetime: event.timestamp,
+        charges_from_datetime: event.timestamp,
+        charges_to_datetime: event.timestamp,
+        charges_duration: 0,
+        timestamp: event.timestamp
+      ),
+      charge_filter: charge_filter,
+      event:
+    )
+  end
 
   before { tax }
 
@@ -54,7 +69,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(charge:, boundaries: BillingPeriodBoundaries, properties: Hash, event:, charge_filter:)
+        .with(metered_item: have_attributes(charge:, event:))
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)

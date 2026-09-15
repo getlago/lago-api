@@ -27,6 +27,16 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item.billable_metric).to eq(billable_metric)
       expect(metered_item).to have_attributes(fee_type: :charge, invoiceable: charge)
     end
+
+    context "when the event is not wrapped in Events::Common" do
+      let(:event) { create(:event, organization:) }
+
+      it "raises an argument error" do
+        expect do
+          described_class.from_charge(charge:, boundaries:, event:)
+        end.to raise_error(ArgumentError, "event must be wrapped in Events::Common")
+      end
+    end
   end
 
   describe ".from_billing_segment" do

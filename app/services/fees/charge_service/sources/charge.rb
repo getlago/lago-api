@@ -29,6 +29,19 @@ module Fees
           )
         end
 
+        def boundaries_for_event(event)
+          timestamp = event.timestamp
+
+          BillingPeriodBoundaries.new(
+            from_datetime: timestamp,
+            to_datetime: timestamp,
+            charges_from_datetime: timestamp,
+            charges_to_datetime: timestamp,
+            charges_duration: 0,
+            timestamp:
+          )
+        end
+
         def selected_filter
           charge_filter
         end
@@ -37,7 +50,14 @@ module Fees
           :charge_filter
         end
 
-        def pricing_buckets
+        # Pay-in-advance events must use only their matching filter; returning every
+        # configured filter would create duplicate fees for a single event.
+        def pricing_buckets(event: nil)
+          if event
+            matching_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+            return [with_filter(matching_filter)]
+          end
+
           if charge.filters.any?
             charge.filters.map { |filter| with_filter(filter) } + [with_default_filter]
           else
