@@ -46,22 +46,31 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       expect(producer).to have_received(:produce).with(hash_including(partition_key: customer.external_id))
     end
 
-    describe "choosing the wallet credits are converted through" do
-      let(:service) { described_class.new(object: customer) }
+    describe "the wallets the usage is attributed to" do
+      let(:producer_calls) { [] }
 
-      it "takes the first in application order within the usage currency" do
-        create(:wallet, customer:, organization:, rate_amount: "2.0", currency: "EUR", priority: 50)
-        first = create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR", priority: 10)
+      before { allow(producer).to receive(:produce) { |args| producer_calls << args } }
 
-        expect(service.send(:wallet_for, "EUR")).to eq(first)
+      it "reports every active wallet in application order, not one picked by currency" do
+        second = create(:wallet, customer:, organization:, currency: "EUR", priority: 50,
+          ongoing_usage_balance_cents: 500, credits_ongoing_usage_balance: "5.0")
+        first = create(:wallet, customer:, organization:, currency: "EUR", priority: 10,
+          ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
+
+        described_class.new(object: customer).call
+
+        expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:lago_id] })
+          .to eq([first.id, second.id])
       end
 
-      it "ignores a wallet in another currency" do
-        create(:wallet, customer:, organization:, rate_amount: "2.0", currency: "USD", priority: 10)
-        eur = create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR", priority: 50)
+      it "includes a wallet in another currency, since each entry names its own" do
+        create(:wallet, customer:, organization:, currency: "USD", priority: 10,
+          ongoing_usage_balance_cents: 200, credits_ongoing_usage_balance: "2.0")
 
-        expect(service.send(:wallet_for, "EUR")).to eq(eur)
-        expect(service.send(:wallet_for, "GBP")).to be_nil
+        described_class.new(object: customer).call
+
+        expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:amount_currency] })
+          .to eq(["USD"])
       end
     end
 
