@@ -84,6 +84,21 @@ RSpec.describe BillingSegments::ProcessService do
           code: billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: event_properties)
       end
 
+      context "with an advance card" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+
+        it "does not process the segment through periodic billing" do
+          expect { result }.not_to change(Invoice, :count)
+
+          expect(result).to be_success
+          expect(result.invoices).to be_empty
+          expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+        end
+      end
+
       context "with count aggregation" do
         let(:aggregation_type) { :count_agg }
         let(:field_name) { nil }
