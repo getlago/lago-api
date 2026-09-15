@@ -28,6 +28,56 @@ RSpec.describe RateCards::ApplyTaxesService do
     expect(rate_card).to have_received(:with_lock)
   end
 
+  context "when the rate card is used by an invoice fee" do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+    let(:invoice) { create(:invoice, organization:, customer:, status: invoice_status) }
+    let(:invoice_status) { :draft }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+
+    before do
+      create(:product_fee, invoice:, subscription:, rate_card_rate:)
+    end
+
+    it "marks a draft invoice for refresh and updates its timestamp when the assignments change" do
+      invoice.update!(updated_at: 1.day.ago)
+      previous_updated_at = invoice.updated_at
+
+      result
+
+      expect(invoice.reload.ready_to_be_refreshed).to be(true)
+      expect(invoice.updated_at).to be > previous_updated_at
+    end
+
+    it "does not mark a draft invoice when the assignments do not change" do
+      create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:)
+      create(:rate_card_applied_tax, rate_card:, tax: tax2, organization:)
+
+      expect { result }.not_to change { invoice.reload.ready_to_be_refreshed }
+    end
+
+    context "when every assignment is removed" do
+      let(:tax_codes) { [] }
+
+      before do
+        create(:rate_card_applied_tax, rate_card:, tax: tax1, organization:)
+      end
+
+      it "marks a draft invoice for refresh" do
+        expect { result }.to change { invoice.reload.ready_to_be_refreshed }.from(false).to(true)
+      end
+    end
+
+    context "when the invoice is finalized" do
+      let(:invoice_status) { :finalized }
+
+      it "does not mark the invoice for refresh" do
+        expect { result }.not_to change { invoice.reload.ready_to_be_refreshed }
+      end
+    end
+  end
+
   context "when tax codes contain duplicates" do
     let(:tax_codes) { [tax1.code, tax1.code] }
 
