@@ -24,14 +24,16 @@ module Clock
     # selecting them would schedule work that is refused again every hour. Everything else is left
     # to the service, which re-checks each row and is the only thing that asks the provider.
     def candidates
+      service = Invoices::Payments::CancelAbandonedService
+      window = service::RECOVERY_WINDOW.ago..service::ABANDONED_PERIOD.ago
+
       Payment
         .payment_type_provider
         .joins(:payment_provider)
         .where(payable_type: "Invoice")
         .where(payment_providers: {type: PaymentProviders::StripeProvider.to_s})
         .where(payable_payment_status: :processing, status: "requires_action")
-        .where(updated_at: Invoices::Payments::CancelAbandonedService::RECOVERY_WINDOW.ago..
-                           Invoices::Payments::CancelAbandonedService::ABANDONED_PERIOD.ago)
+        .where(updated_at: window)
     end
   end
 end
