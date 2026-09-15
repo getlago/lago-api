@@ -66,6 +66,6 @@ preload_app! if ENV["WEB_CONCURRENCY"].present?
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
-# Activate Yabeda
-activate_control_app
+# Explicit TCP avoids Dir.tmpdir, required under readOnlyRootFilesystem.
+activate_control_app "tcp://127.0.0.1:9293", { no_token: true }
 plugin :yabeda
