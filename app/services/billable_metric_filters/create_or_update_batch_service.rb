@@ -25,6 +25,10 @@ module BillableMetricFilters
       end
 
       return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
+      # Reject duplicate keys: `call` applies every entry (last write wins per
+      # key), so the orphaning guard — which reads one entry per key — could
+      # otherwise miss a value removed by a later duplicate entry.
+      return result.validation_failure!(errors: {key: ["value_already_exist"]}) if duplicated_keys?
       return referenced_by_product_filter_failure if orphaning_filters.any?
 
       ActiveRecord::Base.transaction do
@@ -95,6 +99,11 @@ module BillableMetricFilters
       filters_params.any? do |filter_param|
         filter_param[:values].blank?
       end
+    end
+
+    def duplicated_keys?
+      keys = filters_params.map { |filter_param| filter_param[:key] }
+      keys.length != keys.uniq.length
     end
 
     def discard_all_filters

@@ -534,4 +534,25 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       end
     end
   end
+
+  describe "duplicate keys" do
+    let!(:filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
+
+    # A later duplicate entry would remove `eu` (last write wins) while the
+    # orphaning guard reads only the first entry — reject the payload up front.
+    let(:filters_params) do
+      [
+        {key: "region", values: %w[us eu]},
+        {key: "region", values: %w[us]}
+      ]
+    end
+
+    it "rejects the payload without mutating" do
+      result = service
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:key]).to eq(["value_already_exist"])
+      expect(filter.reload.values).to eq(%w[us eu])
+    end
+  end
 end
