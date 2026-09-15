@@ -3,6 +3,7 @@ en:
   activerecord:
     errors:
       messages:
+        billable_metric_deleted: billable_metric_deleted
         blank: value_is_mandatory
         cannot_be_empty: cannot_be_empty
         content_type_invalid: invalid_content_type

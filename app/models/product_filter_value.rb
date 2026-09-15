@@ -16,6 +16,10 @@ class ProductFilterValue < ApplicationRecord
   validates :value,
     uniqueness: {scope: [:product_filter_id, :billable_metric_filter_id], conditions: -> { where(deleted_at: nil) }}
   validate :validate_value_inclusion
+  # Deleting a billable metric discards its filters asynchronously, so a new
+  # reference could otherwise be created between the discard and the cleanup job
+  # and be orphaned. Reject any new reference to a discarded filter or metric.
+  validate :validate_metric_filter_kept, on: :create
 
   default_scope -> { kept.order(created_at: :asc) }
 
@@ -28,6 +32,13 @@ class ProductFilterValue < ApplicationRecord
     return if billable_metric_filter&.values&.include?(value) # rubocop:disable Performance/InefficientHashSearch
 
     errors.add(:value, :inclusion)
+  end
+
+  def validate_metric_filter_kept
+    return if billable_metric_filter.nil?
+    return unless billable_metric_filter.discarded? || billable_metric_filter.billable_metric&.discarded?
+
+    errors.add(:billable_metric_filter, :billable_metric_deleted)
   end
 end
 
