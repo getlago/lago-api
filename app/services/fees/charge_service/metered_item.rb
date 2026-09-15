@@ -84,12 +84,6 @@ module Fees
         with(event:)
       end
 
-      def boundaries
-        return source.boundaries unless event
-
-        source.boundaries_for_event(event)
-      end
-
       def with_filter(filter, **options)
         with(source: source.with_filter(filter, **options))
       end

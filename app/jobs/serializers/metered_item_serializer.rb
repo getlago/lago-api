@@ -16,7 +16,7 @@ module ActiveJob
           {
             "source_type" => "charge",
             "charge" => source.charge,
-            "boundaries" => source.boundaries.to_h,
+            "boundaries" => metered_item.boundaries.to_h,
             "charge_filter" => source.charge_filter,
             "properties_override" => source.properties_override
           }
@@ -36,9 +36,10 @@ module ActiveJob
       def deserialize(payload)
         event = payload["event"] && Events::CommonFactory.new_instance(source: payload["event"])
 
-        if payload["source_type"] == "billing_segment"
+        case payload["source_type"]
+        when "billing_segment"
           Fees::ChargeService::MeteredItem.from_billing_segment(payload["billing_segment"], event:)
-        else
+        when "charge"
           Fees::ChargeService::MeteredItem.from_charge(
             charge: payload["charge"],
             boundaries: BillingPeriodBoundaries.new(**payload["boundaries"].symbolize_keys),
@@ -46,6 +47,8 @@ module ActiveJob
             properties: payload["properties_override"],
             event:
           )
+        else
+          raise ArgumentError, "Unsupported MeteredItem source type: #{payload["source_type"].inspect}"
         end
       end
     end

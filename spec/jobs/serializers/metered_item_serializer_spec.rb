@@ -117,6 +117,18 @@ RSpec.describe ActiveJob::Serializers::MeteredItemSerializer do
       expect(deserialized.billing_segment).to eq(billing_segment)
       expect(deserialized.event.timestamp).to eq(event.timestamp)
     end
+
+    it "rejects an unsupported source type" do
+      serialized = ActiveJob::Arguments.serialize([charge_metered_item]).first
+      serialized["source_type"] = "unknown"
+
+      expect do
+        ActiveJob::Arguments.deserialize([serialized])
+      end.to raise_error(
+        ActiveJob::DeserializationError,
+        'Error while trying to deserialize arguments: Unsupported MeteredItem source type: "unknown"'
+      )
+    end
   end
 end
 # rubocop:enable RSpec/SpecFilePathFormat

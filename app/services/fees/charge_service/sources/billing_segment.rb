@@ -72,19 +72,6 @@ module Fees
           )
         end
 
-        def boundaries_for_event(event)
-          timestamp = event.timestamp
-
-          BillingPeriodBoundaries.new(
-            from_datetime: timestamp,
-            to_datetime: timestamp,
-            charges_from_datetime: timestamp,
-            charges_to_datetime: timestamp,
-            charges_duration: 0,
-            timestamp:
-          )
-        end
-
         def properties
           billing_segment.rate_properties
         end

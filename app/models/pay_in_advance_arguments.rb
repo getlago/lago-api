@@ -2,28 +2,24 @@
 
 class PayInAdvanceArguments
   # Centralizes the migration from legacy charge/event job arguments to MeteredItem.
-  def initialize(metered_item: nil, charge: nil, boundaries: nil, event: nil)
+  def initialize(metered_item: nil, charge: nil, event: nil)
     @metered_item = metered_item
     @charge = charge
-    @boundaries = boundaries
     @event = event
   end
 
   def metered_item
-    if @metered_item.is_a?(Hash)
-      payload = @metered_item.with_indifferent_access
-      @metered_item = Fees::ChargeService::MeteredItem.from_charge(
-        charge: payload[:charge],
-        boundaries: BillingPeriodBoundaries.new(**payload[:boundaries].symbolize_keys),
-        event: Events::CommonFactory.new_instance(source: payload[:event])
-      )
+    if @metered_item && !@metered_item.is_a?(Fees::ChargeService::MeteredItem)
+      @metered_item = ActiveJob::Arguments.deserialize([@metered_item]).first
     end
 
-    return @metered_item if @metered_item
+    if @metered_item
+      return @metered_item
+    end
 
     @metered_item = Fees::ChargeService::MeteredItem.from_charge(
       charge:,
-      boundaries: boundaries || build_boundaries,
+      boundaries: build_boundaries,
       event: normalized_event
     )
   end
@@ -39,7 +35,7 @@ class PayInAdvanceArguments
 
   private
 
-  attr_reader :charge, :boundaries, :event
+  attr_reader :charge, :event
 
   def normalized_event
     @normalized_event ||= Events::CommonFactory.new_instance(source: event)
