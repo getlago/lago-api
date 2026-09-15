@@ -67,6 +67,15 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       expect(result[:charges_usage].map { it[:charge][:code] }).to match_array([charge.code, unused_charge.code])
     end
 
+    it "keeps a charge whose events cancelled out, since the events still happened" do
+      usage.fees << build(:charge_fee, charge: unused_charge, subscription:, units: "0.0", events_count: 5,
+        amount_cents: 0, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+
+      entry = result[:charges_usage].find { it[:charge][:code] == unused_charge.code }
+
+      expect(entry).to include(units: "0.0", amount_cents: 0, events_count: 5)
+    end
+
     it "keeps a charge with units but nothing to pay, such as a free allowance" do
       usage.fees << build(:charge_fee, charge: unused_charge, subscription:, units: "3.0", events_count: 3,
         amount_cents: 0, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
