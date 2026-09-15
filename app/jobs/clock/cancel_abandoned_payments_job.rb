@@ -30,7 +30,8 @@ module Clock
         .where(payable_type: "Invoice")
         .where(payment_providers: {type: PaymentProviders::StripeProvider.to_s})
         .where(payable_payment_status: :processing, status: "requires_action")
-        .where(updated_at: ..Invoices::Payments::CancelAbandonedService::ABANDONED_PERIOD.ago)
+        .where(updated_at: Invoices::Payments::CancelAbandonedService::RECOVERY_WINDOW.ago..
+                           Invoices::Payments::CancelAbandonedService::ABANDONED_PERIOD.ago)
     end
   end
 end

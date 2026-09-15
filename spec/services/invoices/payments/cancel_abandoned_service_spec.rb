@@ -201,6 +201,20 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
     end
   end
 
+  context "when the redirect went stale before the recovery window" do
+    let(:payment) do
+      create(:payment, payable: invoice, customer:, organization:, status: "requires_action",
+        payable_payment_status: :processing, updated_at: 6.months.ago,
+        provider_payment_data: {"type" => "redirect_to_url"})
+    end
+
+    it "leaves the older backlog to a deliberate decision" do
+      result
+
+      expect(::PaymentProviders::CancelPaymentService).not_to have_received(:call!)
+    end
+  end
+
   context "when the invoice was already paid" do
     let(:invoice) { create(:invoice, organization:, customer:, status: :finalized, payment_status: :succeeded, ready_for_payment_processing: false) }
 

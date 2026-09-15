@@ -5,7 +5,12 @@ module Invoices
     class CancelAbandonedService < BaseService
       Result = BaseResult[:payment]
 
+      # A redirect is abandoned once the customer has had a day to come back, and is only recovered
+      # automatically while it is recent. Anything that went stale before the window opened belongs
+      # to a backlog that predates this job, and cancelling it means charging and dunning an end
+      # customer who has heard nothing for months — that needs a decision, not a clock.
       ABANDONED_PERIOD = 24.hours
+      RECOVERY_WINDOW = 1.month
 
       def initialize(payment:)
         @payment = payment
@@ -67,7 +72,7 @@ module Invoices
         payment.status == "requires_action" &&
           payment.processing? &&
           payment.provider_payment_data&.dig("type") == "redirect_to_url" &&
-          payment.updated_at <= ABANDONED_PERIOD.ago
+          payment.updated_at.between?(RECOVERY_WINDOW.ago, ABANDONED_PERIOD.ago)
       end
 
       def unlock_invoice

@@ -62,6 +62,17 @@ RSpec.describe Clock::CancelAbandonedPaymentsJob, job: true do
     end
   end
 
+  context "when the redirect went stale before the recovery window" do
+    let(:ancient) { build_payment(updated_at: 6.months.ago) }
+
+    before { ancient }
+
+    it "does not enqueue it" do
+      expect { job.perform_now }
+        .not_to have_enqueued_job(Invoices::Payments::CancelAbandonedJob).with(ancient)
+    end
+  end
+
   context "when the payable is a payment request" do
     let(:payment_request) { create(:payment_request, organization:, customer:) }
     let(:request_payment) { build_payment(payable: payment_request) }
