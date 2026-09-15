@@ -1514,15 +1514,20 @@ type Contract {
   appliedRateCards: [ContractAppliedRateCard!]!
   appliedRateCardsCount: Int!
   billingAnchorDate: ISO8601Date
+  billingEntity: BillingEntity
   billingTime: ContractBillingTimeEnum!
   canceledAt: ISO8601DateTime
+  consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   customer: Customer!
   endedAt: ISO8601DateTime
   externalId: String!
   id: ID!
   name: String
+  paymentMethod: PaymentMethod
+  paymentMethodType: PaymentMethodTypeEnum!
   plan: CatalogPlan
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
   status: ContractStatusEnum!
   terminatedAt: ISO8601DateTime
@@ -3084,17 +3089,22 @@ Create contract input arguments
 """
 input CreateContractInput {
   billingAnchorDate: ISO8601Date
+  billingEntityId: ID
   billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
   externalCustomerId: String!
   externalId: String!
   name: String
+  paymentMethodId: ID
+  paymentMethodType: PaymentMethodTypeEnum
   planCode: String
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
 }
 
@@ -14839,12 +14849,14 @@ Update contract input arguments
 """
 input UpdateContractInput {
   billingAnchorDate: ISO8601Date
+  billingEntityId: ID
   billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
 
   """
@@ -14852,7 +14864,10 @@ input UpdateContractInput {
   """
   externalId: String!
   name: String
+  paymentMethodId: ID
+  paymentMethodType: PaymentMethodTypeEnum
   planCode: String
+  purchaseOrderNumber: String
   startedAt: ISO8601DateTime
 }
 

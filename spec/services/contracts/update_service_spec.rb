@@ -116,4 +116,58 @@ RSpec.describe Contracts::UpdateService do
       expect(result.error.messages[:ended_at]).to eq(["already_ended"])
     end
   end
+
+  context "with billing, invoicing and payment settings" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:payment_method) { create(:payment_method, customer:) }
+    let(:params) do
+      {
+        billing_entity_id: billing_entity.id,
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        payment_method_id: payment_method.id,
+        payment_method_type: "manual"
+      }
+    end
+
+    it "updates the settings" do
+      expect(result).to be_success
+      expect(contract.reload).to have_attributes(
+        billing_entity:,
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        payment_method:,
+        payment_method_type: "manual"
+      )
+    end
+
+    context "when the billing entity id is unknown" do
+      let(:params) { {billing_entity_id: "00000000-0000-0000-0000-000000000000"} }
+
+      it "returns a not found failure" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("billing_entity")
+      end
+    end
+
+    context "when the payment method belongs to another customer" do
+      let(:other_payment_method) { create(:payment_method, customer: create(:customer, organization:)) }
+      let(:params) { {payment_method_id: other_payment_method.id} }
+
+      it "returns a not found failure, scoped to the contract's customer" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("payment_method")
+      end
+    end
+
+    context "when consolidate_invoice is omitted" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, consolidate_invoice: false) }
+      let(:params) { {name: "Renamed"} }
+
+      it "leaves the stored value unchanged" do
+        expect(result).to be_success
+        expect(contract.reload.consolidate_invoice).to be(false)
+      end
+    end
+  end
 end

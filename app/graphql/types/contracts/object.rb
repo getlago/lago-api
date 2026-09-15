@@ -22,6 +22,15 @@ module Types
       field :started_at, GraphQL::Types::ISO8601DateTime, null: true
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
 
+      # Settings. billing_entity and payment_method are the explicitly-set
+      # overrides (nil = inherit from the customer); the others carry the
+      # stored value.
+      field :billing_entity, Types::BillingEntities::Object, null: true
+      field :consolidate_invoice, Boolean, null: false
+      field :payment_method, Types::PaymentMethods::Object, null: true
+      field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false
+      field :purchase_order_number, String, null: true
+
       field :customer, Types::Customers::Object, null: false
       # Nullable by design: a plan-less contract prices through directly
       # attached rate cards. Exposed as `plan`, but the record lives in
