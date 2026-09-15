@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Jobs::Serializers::MeteredItemSerializer do
+RSpec.describe ActiveJob::MeteredItemSerializer do
   let(:organization) { create(:organization) }
   let(:event) { create(:event, organization:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, organization:) }
