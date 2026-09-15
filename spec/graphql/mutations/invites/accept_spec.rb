@@ -32,7 +32,6 @@ RSpec.describe Mutations::Invites::Accept do
           query: mutation,
           variables: {
             input: {
-              email: invite.email,
               password:,
               token: invite.token
             }
@@ -48,6 +47,66 @@ RSpec.describe Mutations::Invites::Accept do
       end
     end
 
+    context "with the deprecated email argument" do
+      let(:invite) { create(:invite, organization:) }
+
+      it "ignores it and accepts the invite" do
+        result = execute_graphql(
+          query: mutation,
+          variables: {
+            input: {
+              email: "not-the-invited-email@example.com",
+              password:,
+              token: invite.token
+            }
+          }
+        )
+
+        data = result["data"]["acceptInvite"]
+
+        expect(data["user"]["email"]).to eq(invite.email)
+        expect(data["token"]).to be_present
+      end
+    end
+
+    context "with an existing user" do
+      let(:invite) { create(:invite, organization:) }
+
+      before { create(:user, email: invite.email, password: "ILoveLago") }
+
+      it "accepts the invite with the password of the existing user" do
+        result = execute_graphql(
+          query: mutation,
+          variables: {
+            input: {
+              password: "ILoveLago",
+              token: invite.token
+            }
+          }
+        )
+
+        data = result["data"]["acceptInvite"]
+
+        expect(data["user"]["email"]).to eq(invite.email)
+        expect(data["token"]).to be_present
+      end
+
+      it "returns an error with any other password" do
+        result = execute_graphql(
+          query: mutation,
+          variables: {
+            input: {
+              password:,
+              token: invite.token
+            }
+          }
+        )
+
+        expect(result["errors"].first["extensions"]["status"]).to eq(422)
+        expect(result["errors"].first["extensions"]["details"]["base"]).to eq(["incorrect_login_or_password"])
+      end
+    end
+
     context "when invite is revoked" do
       let(:invite) { create(:invite, organization:, status: :revoked) }
 
@@ -58,7 +117,6 @@ RSpec.describe Mutations::Invites::Accept do
           query: mutation,
           variables: {
             input: {
-              email: invite.email,
               password:,
               token: invite.token
             }
@@ -81,7 +139,6 @@ RSpec.describe Mutations::Invites::Accept do
           query: mutation,
           variables: {
             input: {
-              email: invite.email,
               password:,
               token: invite.token
             }
