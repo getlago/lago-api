@@ -311,5 +311,6 @@ module Types
 
     field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
     field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
+    field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
   end
 end
