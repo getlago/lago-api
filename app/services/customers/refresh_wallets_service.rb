@@ -57,11 +57,17 @@ module Customers
       end
     end
 
-    def streamed_event_types
-      StreamingDestinations::BaseDestination
+    # Loaded once: the refresh asks which types are streamed, then asks twice more whether the
+    # current usage one can be produced here, and all three answers come from the same rows.
+    def active_destinations
+      @active_destinations ||= StreamingDestinations::BaseDestination
         .where(organization: customer.organization, active: true)
-        .pluck(:event_types)
-        .flatten
+        .to_a
+    end
+
+    def streamed_event_types
+      active_destinations
+        .flat_map(&:event_types)
         .intersection(StreamingDestinations::BaseDestination::EVENT_TYPES)
     end
 
@@ -101,7 +107,8 @@ module Customers
     def produce_inline?(event_type)
       return false unless Sidekiq.server?
 
-      destination = StreamingDestinations::BaseDestination.for_event(customer.organization, event_type).first
+      # An event type is claimed by a single destination, so the first match is the only one.
+      destination = active_destinations.find { it.event_types.include?(event_type) }
       return false if destination.nil?
 
       Lago::Kinesis::Producer.credentials_available?(destination)

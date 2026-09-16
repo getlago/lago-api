@@ -174,6 +174,23 @@ RSpec.describe Customers::RefreshWalletsService do
 
           expect(EventDestinations::CustomerUsage::RefreshedService).not_to have_received(:call)
         end
+
+        # The refresh asks the same rows which types are streamed and whether it may produce them
+        # here. It runs on every customer of every cycle, so those answers come from one read.
+        it "reads the destinations once, however many questions it asks of them" do
+          queries = 0
+          subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+            queries += 1 if payload[:sql].include?("streaming_destinations")
+          end
+
+          begin
+            result
+          ensure
+            ActiveSupport::Notifications.unsubscribe(subscriber)
+          end
+
+          expect(queries).to eq(1)
+        end
       end
 
       context "when the worker cannot obtain credentials for the destination" do
