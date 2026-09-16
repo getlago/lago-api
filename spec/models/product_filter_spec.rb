@@ -7,6 +7,8 @@ RSpec.describe ProductFilter do
 
   it_behaves_like "paper_trail traceable"
 
+  it_behaves_like "a catalog code", :product_filter
+
   describe "associations" do
     it do
       expect(product_filter).to belong_to(:organization)

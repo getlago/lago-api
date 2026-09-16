@@ -116,4 +116,89 @@ RSpec.describe Contracts::UpdateService do
       expect(result.error.messages[:ended_at]).to eq(["already_ended"])
     end
   end
+
+  context "with billing, invoicing and payment settings" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:payment_method) { create(:payment_method, customer:) }
+    let(:params) do
+      {
+        billing_entity_id: billing_entity.id,
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        payment_method: {payment_method_id: payment_method.id, payment_method_type: "provider"}
+      }
+    end
+
+    it "updates the settings" do
+      expect(result).to be_success
+      expect(contract.reload).to have_attributes(
+        billing_entity:,
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        payment_method:,
+        payment_method_type: "provider"
+      )
+    end
+
+    context "when a manual type is paired with a concrete payment method" do
+      let(:params) { {payment_method: {payment_method_id: payment_method.id, payment_method_type: "manual"}} }
+
+      it "rejects the contradictory combination" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+      end
+    end
+
+    context "when the billing entity id is unknown" do
+      let(:params) { {billing_entity_id: "00000000-0000-0000-0000-000000000000"} }
+
+      it "returns a not found failure" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("billing_entity")
+      end
+    end
+
+    context "when the payment method belongs to another customer" do
+      let(:other_payment_method) { create(:payment_method, customer: create(:customer, organization:)) }
+      let(:params) { {payment_method: {payment_method_id: other_payment_method.id}} }
+
+      it "returns a not found failure, scoped to the contract's customer" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("payment_method")
+      end
+    end
+
+    context "when consolidate_invoice is omitted" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, consolidate_invoice: false) }
+      let(:params) { {name: "Renamed"} }
+
+      it "leaves the stored value unchanged" do
+        expect(result).to be_success
+        expect(contract.reload.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when payment_method_type is omitted" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, payment_method_type: "manual") }
+      let(:params) { {name: "Renamed"} }
+
+      it "leaves the stored payment_method_type unchanged" do
+        expect(result).to be_success
+        expect(contract.reload.payment_method_type).to eq("manual")
+      end
+    end
+
+    context "when clearing the override fields with an explicit null" do
+      let(:contract) do
+        create(:contract, :pending, organization:, customer:, catalog_plan:,
+          billing_entity:, purchase_order_number: "PO-1")
+      end
+      let(:params) { {billing_entity_id: nil, purchase_order_number: nil} }
+
+      it "clears the billing entity override and the purchase order number" do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(billing_entity: nil, purchase_order_number: nil)
+      end
+    end
+  end
 end

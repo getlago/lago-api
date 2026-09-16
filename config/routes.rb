@@ -16,15 +16,6 @@ Rails.application.routes.draw do
   get "/health", to: "application#health"
   get "/ready", to: "application#ready"
 
-  namespace :data_api do
-    namespace :v1 do
-      resources :charges, only: [] do
-        post :forecasted_usage_amount, on: :member
-        post :bulk_forecasted_usage_amount, on: :collection
-      end
-    end
-  end
-
   namespace :api do
     namespace :v1 do
       draw(:shared_api)

@@ -7,6 +7,8 @@ RSpec.describe Product do
 
   it_behaves_like "paper_trail traceable"
 
+  it_behaves_like "a catalog code", :product
+
   describe "enums" do
     it do
       expect(product).to define_enum_for(:product_type)

@@ -216,6 +216,10 @@ class Organization < ApplicationRecord
     feature_flag_enabled?(:product_catalog)
   end
 
+  def account_tree_enabled?
+    feature_flag_enabled?(:account_tree)
+  end
+
   def using_lifetime_usage?
     lifetime_usage_enabled? || progressive_billing_enabled?
   end

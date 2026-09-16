@@ -25,6 +25,10 @@ class UsageAttributionType < ApplicationRecord
 
   default_scope -> { kept }
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[code name attribution_key]
+  end
+
   private
 
   def validate_parent

@@ -268,13 +268,14 @@ RSpec.describe ChargeModels::PercentageService do
 
     let(:aggregator) do
       BillableMetrics::Aggregations::SumService.new(
-        event_store_class:,
+        event_store: event_store_class.new(billing_context:, boundaries: nil),
         metered_item:,
-        billing_context: Billing::Context.from(subscription:),
+        billing_context:,
         boundaries: nil
       )
     end
 
+    let(:billing_context) { Billing::Context.from(subscription:) }
     let(:event_store_class) { Events::Stores::PostgresStore }
 
     let(:aggregation) { 10_090 }
