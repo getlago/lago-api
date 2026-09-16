@@ -9,8 +9,7 @@ module EventDestinations
         issuing_date: iso8601(model.issuing_date),
         currency: model.currency,
         amount_cents: model.amount_cents,
-        credits: credits,
-        wallet_id: wallet&.id,
+        wallets: wallets_usage,
         charges_usage: charges_usage
       }
     end
@@ -21,18 +20,29 @@ module EventDestinations
       value.respond_to?(:iso8601) ? value.iso8601 : value
     end
 
-    def wallet
-      options[:wallet]
+    def wallets
+      options[:wallets] || []
     end
 
-    def credits
-      return if wallet.nil? || !wallet.rate_amount.to_d.positive?
-
-      WalletCredit.from_amount_cents(wallet:, amount_cents: model.amount_cents).credit_amount.to_s
+    # The ongoing usage each wallet absorbs, as the wallet refresh allocated it: wallet targets,
+    # allowed fee types, thresholds and the cascade are all already applied. Customer scoped, so a
+    # customer with several subscriptions sees the same totals on each of their records.
+    def wallets_usage
+      wallets.map do |wallet|
+        {
+          lago_id: wallet.id,
+          credits: wallet.credits_ongoing_usage_balance.to_s,
+          amount_cents: wallet.ongoing_usage_balance_cents,
+          amount_currency: wallet.balance_currency
+        }
+      end
     end
 
+    # A plan carries a charge per feature, so a customer using a handful of them would otherwise
+    # ship a long tail of zeroes on every record. Dropping them keeps headroom under the 1MB cap.
+    # Fee#non_zero? is the trim daily usage already applies, so both payloads agree on what counts.
     def charges_usage
-      model.fees.group_by(&:charge_id).map do |_charge_id, fees|
+      model.fees.select(&:non_zero?).group_by(&:charge_id).map do |_charge_id, fees|
         fee = fees.first
 
         {
