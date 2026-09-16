@@ -237,4 +237,53 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
   end
+
+  describe "DELETE /api/v2/contracts/:external_id" do
+    subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
+
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "terminates the active contract and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq(contract.external_id)
+      expect(json[:contract][:status]).to eq("terminated")
+    end
+
+    context "when the contract is pending" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+      it "cancels it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("canceled")
+      end
+    end
+
+    context "when a pending replacement coexists with the active contract" do
+      it "terminates the active contract and leaves the replacement live" do
+        replacement = create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id)
+
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("terminated")
+        expect(replacement.reload.status).to eq("pending")
+      end
+    end
+
+    context "when no live contract matches the external id" do
+      subject { delete_with_token(organization, "/api/v2/contracts/unknown") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
 end

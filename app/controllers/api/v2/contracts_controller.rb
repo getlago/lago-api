@@ -33,6 +33,20 @@ module Api
         end
       end
 
+      # A contract is never destroyed: DELETE ends its lifecycle. An active
+      # contract is terminated, a pending one canceled — the service decides.
+      def terminate
+        contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
+
+        result = ::Contracts::TerminateService.call(contract:)
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id)
         # Accept both ?status=pending and ?status[]=pending — strong params
