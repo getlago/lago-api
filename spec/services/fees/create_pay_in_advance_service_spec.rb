@@ -100,9 +100,9 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         Events::CommonFactory.new_instance(source:)
       end
 
-      it "skips without creating a fee and logs a warning" do
-        allow(Rails.logger).to receive(:warn)
+      before { allow(Rails.logger).to receive(:warn) }
 
+      it "skips without creating a fee and logs a warning" do
         result = fee_service.call
 
         expect(result).to be_success
@@ -146,11 +146,10 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       before do
         allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_return(aggregation_result)
         allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_return(charge_result)
+        allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
       end
 
       it "creates a product fee without a subscription or legacy charge" do
-        allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
-
         result = fee_service.call
 
         expect(result).to be_success
@@ -908,18 +907,20 @@ RSpec.describe Fees::CreatePayInAdvanceService do
     context "when charge is non-invoiceable" do
       let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:, invoiceable: false) }
 
-      it "applies local taxes eagerly" do
-        allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
+      context "when customer does not have a tax provider integration" do
+        before { allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original }
 
-        result = fee_service.call
+        it "applies local taxes eagerly" do
+          result = fee_service.call
 
-        expect(result).to be_success
-        expect(Fees::ApplyTaxesService).to have_received(:call!).with(fee: an_instance_of(Fee), customer:)
+          expect(result).to be_success
+          expect(Fees::ApplyTaxesService).to have_received(:call!).with(fee: an_instance_of(Fee), customer:)
 
-        fee = result.fees.first
-        expect(fee.applied_taxes.count).to eq(1)
-        expect(fee.taxes_rate).to eq(20.0)
-        expect(fee.taxes_amount_cents).to eq(2)
+          fee = result.fees.first
+          expect(fee.applied_taxes.count).to eq(1)
+          expect(fee.taxes_rate).to eq(20.0)
+          expect(fee.taxes_amount_cents).to eq(2)
+        end
       end
 
       context "when customer has tax provider integration" do
@@ -962,11 +963,10 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *_args| # rubocop:disable RSpec/AnyInstance
             fee_id
           end
+          allow(Fees::ApplyProviderTaxesToStandaloneFeesService).to receive(:call!).and_call_original
         end
 
         it "applies provider taxes instead of local taxes" do
-          allow(Fees::ApplyProviderTaxesToStandaloneFeesService).to receive(:call!).and_call_original
-
           result = fee_service.call
 
           expect(result).to be_success

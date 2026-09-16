@@ -49,7 +49,7 @@ module Fees
     private
 
     def skip_missing_billing_context
-      # NOTE: `event.subscription` is nil when the subscription was terminated before the
+      # NOTE: `billing_context` is nil when the subscription/contract was terminated before the
       # event's timestamp (e.g. enqueued while active, terminated before the job ran).
       message = "Fees::CreatePayInAdvanceService skipped: no active subscription for event"
       context = {
@@ -93,6 +93,8 @@ module Fees
         organization_id: billing_context.organization_id,
         billing_entity_id: billing_context.applicable_billing_entity_id,
         subscription: billing_context.subscription,
+        # A segment's product can have an optional legacy charge (including discarded charges).
+        # TODO: Decide whether to assign that charge here; segment-backed fees currently receive nil.
         charge: selected_metered_item.billing_segment ? nil : selected_metered_item.charge,
         amount_cents: amount.amount_cents,
         precise_amount_cents: amount.precise_amount_cents,
@@ -104,6 +106,7 @@ module Fees
         product_filter: selected_metered_item.product_filter,
         units: charge_model_result.units,
         total_aggregated_units: charge_model_result.units,
+        # TODO: Review which fee properties billing segments should expose.
         properties: selected_metered_item.billing_segment ? {} : selected_metered_item.filtered_for_charge_boundaries,
         events_count: charge_model_result.count,
         charge_filter: charge_filter&.persisted? ? charge_filter : nil,
@@ -175,6 +178,8 @@ module Fees
     end
 
     def cache_aggregation_result(selected_metered_item:, aggregation_result:, charge_filter:)
+      # TODO: Review recurring product usage persistence. CachedAggregation needs
+      # product_id and product_filter_id support before segment-backed values can be persisted.
       return unless aggregation_result.current_aggregation.present? ||
         aggregation_result.max_aggregation.present? ||
         aggregation_result.max_aggregation_with_proration.present?
