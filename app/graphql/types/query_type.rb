@@ -124,6 +124,8 @@ module Types
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver
+    field :usage_attribution_type, resolver: Resolvers::UsageAttributionTypeResolver
+    field :usage_attribution_types, resolver: Resolvers::UsageAttributionTypesResolver
     field :wallet, resolver: Resolvers::WalletResolver
     field :wallet_alert, resolver: Resolvers::Wallets::AlertResolver
     field :wallet_alerts, resolver: Resolvers::Wallets::AlertsResolver
