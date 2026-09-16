@@ -113,6 +113,47 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       end
     end
 
+    describe "when the caller supplies the usage it already computed" do
+      let(:producer_calls) { [] }
+      let(:precomputed) do
+        Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER).usage
+      end
+
+      before do
+        allow(producer).to receive(:produce) { |args| producer_calls << args }
+      end
+
+      it "does not compute the usage again" do
+        usage = precomputed
+        allow(Invoices::CustomerUsageService).to receive(:call)
+
+        described_class.new(object: customer, usages: {subscription => usage}).call
+
+        expect(Invoices::CustomerUsageService).not_to have_received(:call)
+        expect(producer).to have_received(:produce).once
+      end
+
+      it "produces the same envelope as computing it here would" do
+        described_class.new(object: customer).call
+        computed = producer_calls.first[:data]
+
+        producer_calls.clear
+        described_class.new(object: customer, usages: {subscription => precomputed}).call
+        supplied = producer_calls.first[:data]
+
+        expect(supplied.except(:event_id, :version)).to eq(computed.except(:event_id, :version))
+      end
+
+      it "falls back to computing a subscription the caller did not supply" do
+        other = create(:subscription, customer:, plan: create(:plan, organization:))
+
+        described_class.new(object: customer, usages: {subscription => precomputed}).call
+
+        expect(producer_calls.map { it[:data][:subscription_external_id] })
+          .to match_array([subscription.external_id, other.external_id])
+      end
+    end
+
     context "with several active subscriptions" do
       let(:other_subscription) { create(:subscription, customer:, plan: create(:plan, organization:)) }
 

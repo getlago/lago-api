@@ -11,6 +11,7 @@ RSpec.describe Lago::Kinesis::Producer do
   before do
     described_class::CLIENTS.clear
     described_class::ASSUMED_CREDENTIALS.clear
+    described_class::UNAVAILABLE_CREDENTIALS.clear
     Aws.config[:kinesis] = {stub_responses: true}
     Aws.config[:sts] = {stub_responses: true, credentials: Aws::Credentials.new("akid", "secret")}
   end
@@ -157,6 +158,42 @@ RSpec.describe Lago::Kinesis::Producer do
       described_class.new(destination: other).produce(data: {hello: "world"}, partition_key: "cust_2")
 
       expect(Aws::AssumeRoleCredentials).to have_received(:new).twice
+    end
+  end
+
+  describe "remembering that credentials are unavailable" do
+    it "starts out believing it can reach the destination" do
+      expect(described_class.credentials_available?(destination)).to be(true)
+    end
+
+    [Aws::Errors::MissingCredentialsError, Aws::STS::Errors::AccessDenied].each do |error_class|
+      it "marks the destination unreachable after #{error_class}, so callers stop paying the timeout" do
+        allow(client).to receive(:put_record).and_raise(build_aws_error(error_class))
+
+        producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+        expect(described_class.credentials_available?(destination)).to be(false)
+      end
+    end
+
+    it "leaves a throttle alone, since that is not an identity problem" do
+      allow(client).to receive(:put_record)
+        .and_raise(build_aws_error(Aws::Kinesis::Errors::ProvisionedThroughputExceededException))
+
+      producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+      expect(described_class.credentials_available?(destination)).to be(true)
+    end
+
+    it "leaves another destination reachable, since the role may differ" do
+      other = create(:kinesis_destination)
+      other.role_arn = "arn:aws:iam::210987654321:role/other-writer"
+      other.save!
+      allow(client).to receive(:put_record).and_raise(build_aws_error(Aws::Errors::MissingCredentialsError))
+
+      producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+      expect(described_class.credentials_available?(other)).to be(true)
     end
   end
 
