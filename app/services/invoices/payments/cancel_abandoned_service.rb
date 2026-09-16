@@ -69,18 +69,12 @@ module Invoices
       def abandoned?
         return false unless payable.is_a?(Invoice)
         return false unless payment.payment_provider_type == "stripe"
-        return false unless abandoned_at_redirect?
+        return false unless payment.awaiting_redirect?
+        return false unless self.class.recovery_range.cover?(payment.updated_at)
         return false if payable.payment_succeeded? || payable.voided? || payable.closed?
         # Cancelling would land a failed payment status on the invoice, and that resolves the
         # activation through Invoices::UpdateService. That flow has its own window and its own clock.
         !payment.gated_subscription_activation?
-      end
-
-      def abandoned_at_redirect?
-        payment.status == "requires_action" &&
-          payment.processing? &&
-          payment.provider_payment_data&.dig("type") == "redirect_to_url" &&
-          self.class.recovery_range.cover?(payment.updated_at)
       end
 
       # The invoice payment status is left alone. A failed payment on a pending invoice is what
