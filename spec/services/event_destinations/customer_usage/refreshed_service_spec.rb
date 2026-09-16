@@ -72,6 +72,22 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
         expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:amount_currency] })
           .to eq(["USD"])
       end
+
+      # The refresh allocates across every subscription at once, so there is no per-subscription
+      # share to report. Each record carries the same customer wide totals, deliberately.
+      it "repeats the same customer totals on each subscription's record" do
+        create(:wallet, customer:, organization:, currency: "EUR", priority: 10,
+          ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
+        create(:subscription, customer:, plan: create(:plan, organization:))
+
+        described_class.new(object: customer).call
+
+        wallets = producer_calls.map { it[:data][:customer_usage][:wallets] }
+
+        expect(wallets.size).to eq(2)
+        expect(wallets.uniq.size).to eq(1)
+        expect(wallets.first.sum { it[:amount_cents] }).to eq(1500)
+      end
     end
 
     it "computes usage without taxes, so no tax provider is called on every refresh" do
