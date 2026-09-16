@@ -34,7 +34,7 @@ module Api
       end
 
       def index
-        filters = params.permit(:plan_code, :external_customer_id, :external_id)
+        filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
         # Accept both ?status=pending and ?status[]=pending — strong params
         # would silently drop the scalar form and hand back active contracts
         # to a caller who believes they filtered.
@@ -47,7 +47,8 @@ module Api
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
-          filters:
+          filters:,
+          search_term: params[:search_term]
         )
 
         if result.success?

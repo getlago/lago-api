@@ -146,13 +146,15 @@ end
 #
 # Indexes
 #
-#  index_contracts_on_billing_entity_id                (billing_entity_id)
-#  index_contracts_on_catalog_plan_id                  (catalog_plan_id)
-#  index_contracts_on_customer_id                      (customer_id)
-#  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
-#  index_contracts_on_organization_id                  (organization_id)
-#  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
-#  index_contracts_on_payment_method_id                (payment_method_id)
+#  index_contracts_on_billing_entity_id                         (billing_entity_id)
+#  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
+#  index_contracts_on_customer_id                               (customer_id)
+#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
+#  index_contracts_on_organization_id                           (organization_id)
+#  index_contracts_on_organization_id_and_external_id           (organization_id,external_id)
+#  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
+#  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
+#  index_contracts_on_payment_method_id                         (payment_method_id)
 #
 # Foreign Keys
 #

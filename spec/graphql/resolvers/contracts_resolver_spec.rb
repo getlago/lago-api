@@ -62,6 +62,68 @@ RSpec.describe Resolvers::ContractsResolver do
     end
   end
 
+  context "with a billing entity filter" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:variables) { {billingEntityIds: [billing_entity.id]} }
+    let!(:matching_contract) { create(:contract, organization:, billing_entity:) }
+
+    let(:query) do
+      <<~GQL
+        query($billingEntityIds: [ID!]) {
+          contracts(limit: 5, billingEntityIds: $billingEntityIds) {
+            collection { id }
+          }
+        }
+      GQL
+    end
+
+    it "returns only contracts on that billing entity" do
+      expect(execution["data"]["contracts"]["collection"].map { it["id"] }).to eq([matching_contract.id])
+    end
+  end
+
+  context "with a has_rate_overrides filter" do
+    let(:variables) { {hasRateOverrides: true} }
+
+    let(:query) do
+      <<~GQL
+        query($hasRateOverrides: Boolean) {
+          contracts(limit: 5, hasRateOverrides: $hasRateOverrides) {
+            collection { id }
+          }
+        }
+      GQL
+    end
+
+    before do
+      card = create(:contract_rate_card, organization:, contract: active_contract)
+      create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, rate_override: create(:rate_override, organization:))
+    end
+
+    it "returns only contracts carrying a rate override" do
+      expect(execution["data"]["contracts"]["collection"].map { it["id"] }).to eq([active_contract.id])
+    end
+  end
+
+  context "with a search term" do
+    let(:variables) { {searchTerm: "needle"} }
+    let!(:matching_contract) { create(:contract, organization:, external_id: "needle-1") }
+
+    let(:query) do
+      <<~GQL
+        query($searchTerm: String) {
+          contracts(limit: 5, searchTerm: $searchTerm) {
+            collection { id }
+          }
+        }
+      GQL
+    end
+
+    it "returns only the matching contracts" do
+      expect(execution["data"]["contracts"]["collection"].map { it["id"] }).to eq([matching_contract.id])
+    end
+  end
+
   context "when the applied rate cards are requested for several contracts" do
     let(:query) do
       <<~GQL
