@@ -20,12 +20,12 @@ module Wallets
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
       return result unless valid_connections?
-      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
 
       if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?

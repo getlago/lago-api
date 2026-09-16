@@ -1337,6 +1337,29 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when connections are sent with the flag disabled" do
+      let(:params) { super().merge(connections: {payment: {code: "stripe_us"}}) }
+
+      it "returns a forbidden failure without running the other validations" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+
+      # The flag check runs before valid?, so it must tolerate a customer that was never found.
+      context "when the customer does not exist" do
+        let(:params) { super().merge(customer: nil) }
+
+        it "still reports customer_not_found rather than raising" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:customer]).to include("customer_not_found")
+        end
+      end
+    end
+
     context "with connections on a recurring transaction rule", :premium do
       let(:params) do
         super().merge(
