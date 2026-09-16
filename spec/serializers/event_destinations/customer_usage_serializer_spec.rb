@@ -3,14 +3,18 @@
 require "rails_helper"
 
 RSpec.describe EventDestinations::CustomerUsageSerializer do
-  subject(:result) { described_class.new(usage, root_name: "customer_usage", wallet:).serialize }
+  subject(:result) { described_class.new(usage, root_name: "customer_usage", wallets:).serialize }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
-  let(:wallet) { create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR") }
+  let(:wallet) do
+    create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR",
+      ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
+  end
+  let(:wallets) { [wallet] }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
   let(:usage) do
@@ -82,52 +86,58 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
     expect(result.keys).not_to include(:taxes_amount_cents, :total_amount_cents)
   end
 
-  describe "credits" do
-    it "converts the amount through the wallet's rate" do
-      expect(result[:credits]).to eq("15.0")
+  describe "wallets" do
+    it "reports the ongoing usage the refresh allocated to the wallet" do
+      expect(result[:wallets]).to eq(
+        [{lago_id: wallet.id, credits: "15.0", amount_cents: 1500, amount_currency: "EUR"}]
+      )
     end
 
-    it "names the wallet the conversion went through" do
-      expect(result[:wallet_id]).to eq(wallet.id)
+    it "no longer carries a single wallet id, which could not express a split" do
+      expect(result.keys).not_to include(:wallet_id, :credits)
     end
 
-    context "when the rate is not one credit per unit of currency" do
-      let(:wallet) { create(:wallet, customer:, organization:, rate_amount: "0.5", currency: "EUR") }
+    context "when the customer has several wallets" do
+      let(:other) do
+        create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR",
+          ongoing_usage_balance_cents: 500, credits_ongoing_usage_balance: "5.0")
+      end
+      let(:wallets) { [wallet, other] }
 
-      it "divides by the rate" do
-        expect(result[:credits]).to eq("30.0")
+      it "reports each wallet's own share rather than picking one" do
+        expect(result[:wallets].map { it[:amount_cents] }).to eq([1500, 500])
+        expect(result[:wallets].map { it[:lago_id] }).to eq([wallet.id, other.id])
+      end
+    end
+
+    context "when a wallet is in another currency" do
+      let(:other) do
+        create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "USD",
+          ongoing_usage_balance_cents: 200, credits_ongoing_usage_balance: "2.0")
+      end
+      let(:wallets) { [wallet, other] }
+
+      it "names each wallet's own currency, so the figures are not ambiguous" do
+        expect(result[:wallets].map { it[:amount_currency] }).to eq(%w[EUR USD])
       end
     end
 
     context "when the customer has no wallet" do
-      let(:wallet) { nil }
+      let(:wallets) { [] }
 
-      it "sends no credits rather than an unconvertible figure" do
-        expect(result[:credits]).to be_nil
+      it "sends an empty list rather than omitting the field" do
+        expect(result[:wallets]).to eq([])
         expect(result[:amount_cents]).to eq(1500)
       end
-
-      it "sends a null wallet_id, so a null credits is not a mystery" do
-        expect(result[:wallet_id]).to be_nil
-      end
     end
 
-    context "when the only wallet is in another currency" do
-      let(:wallet) { nil }
+    context "when a wallet has absorbed nothing" do
+      let(:wallet) { create(:wallet, customer:, organization:, currency: "EUR") }
 
-      it "sends no credits, since that wallet cannot fund this usage" do
-        create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "USD")
-
-        expect(result[:credits]).to be_nil
-        expect(result[:currency]).to eq("EUR")
-      end
-    end
-
-    context "when the rate is zero" do
-      let(:wallet) { build(:wallet, customer:, organization:, rate_amount: "0.0", currency: "EUR") }
-
-      it "sends no credits rather than dividing by zero" do
-        expect(result[:credits]).to be_nil
+      it "reports it at zero rather than dropping it from the list" do
+        expect(result[:wallets]).to eq(
+          [{lago_id: wallet.id, credits: "0.0", amount_cents: 0, amount_currency: "EUR"}]
+        )
       end
     end
   end
