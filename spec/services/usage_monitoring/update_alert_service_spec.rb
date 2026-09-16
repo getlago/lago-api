@@ -237,6 +237,15 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result).to be_failure
           expect(alert).not_to have_received(:save!)
         end
+
+        context "when a concurrent update slipped past the check" do
+          before { allow_any_instance_of(described_class).to receive(:wallet_alert_code_taken?).and_return(false) } # rubocop:disable RSpec/AnyInstance
+
+          it "still rejects it, on the unique index" do
+            expect(result).to be_failure
+            expect(result.error.messages[:code]).to eq(["value_already_exist"])
+          end
+        end
       end
 
       context "when keeping its own code" do

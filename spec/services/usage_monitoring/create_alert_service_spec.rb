@@ -393,6 +393,15 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           expect(result).to be_failure
           expect(UsageMonitoring::Alert).not_to have_received(:new)
         end
+
+        context "when a concurrent create slipped past the check" do
+          before { allow_any_instance_of(described_class).to receive(:wallet_alert_code_taken?).and_return(false) } # rubocop:disable RSpec/AnyInstance
+
+          it "still rejects it, on the unique index" do
+            expect(result).to be_failure
+            expect(result.error.messages[:code]).to eq(["value_already_exist"])
+          end
+        end
       end
 
       context "when the same code is used on another wallet" do
