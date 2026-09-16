@@ -7,6 +7,7 @@ module Contracts
   # billing side-effects — lifecycle transitions live in their own services.
   class UpdateService < BaseService
     include CustomerTimezone
+    include SettingsResolvable
 
     Result = BaseResult[:contract, :payment_method]
 
@@ -27,18 +28,9 @@ module Contracts
         return result.not_found_failure!(resource: "plan")
       end
 
-      if params[:billing_entity_id].present? && billing_entity.nil?
-        return result.not_found_failure!(resource: "billing_entity")
+      if (failure = settings_references_failure)
+        return failure
       end
-
-      if payment_method_params[:payment_method_id].present? && payment_method.nil?
-        return result.not_found_failure!(resource: "payment_method")
-      end
-
-      # Rejects contradictory combinations (e.g. a manual type with a concrete
-      # payment method), matching the subscription semantics.
-      result.payment_method = payment_method
-      return result unless PaymentMethods::ValidateService.new(result, payment_method: params[:payment_method]).valid?
 
       # Reject malformed dates, but let an explicit null clear the field. A bare
       # present? check would treat false or "" as absent, silently clearing the
@@ -66,11 +58,7 @@ module Contracts
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
         contract.ended_at = ended_at_in_customer_timezone if params.key?(:ended_at)
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
-        contract.billing_entity = billing_entity if params.key?(:billing_entity_id)
-        contract.consolidate_invoice = params[:consolidate_invoice] unless params[:consolidate_invoice].nil?
-        contract.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
-        contract.payment_method = payment_method if payment_method_params.key?(:payment_method_id)
-        contract.payment_method_type = payment_method_params[:payment_method_type] if payment_method_params[:payment_method_type].present?
+        apply_settings(contract)
         contract.save!
 
         # Replace the old plan's materialised cards. The destroy service also
@@ -103,23 +91,6 @@ module Contracts
       return @catalog_plan if defined?(@catalog_plan)
 
       @catalog_plan = params[:plan_code].present? ? organization.catalog_plans.find_by(code: params[:plan_code]) : nil
-    end
-
-    def billing_entity
-      return @billing_entity if defined?(@billing_entity)
-
-      @billing_entity = params[:billing_entity_id].present? ? organization.billing_entities.find_by(id: params[:billing_entity_id]) : nil
-    end
-
-    # Nested payment-method reference input {payment_method_id, payment_method_type}.
-    def payment_method_params
-      params[:payment_method] || {}
-    end
-
-    def payment_method
-      return @payment_method if defined?(@payment_method)
-
-      @payment_method = payment_method_params[:payment_method_id].present? ? customer.payment_methods.find_by(id: payment_method_params[:payment_method_id]) : nil
     end
 
     # Raw source values for the CustomerTimezone *_in_customer_timezone readers.

@@ -7,6 +7,7 @@ module Contracts
   # — lifecycle state lives in the status, the dates only carry the window.
   class CreateService < BaseService
     include CustomerTimezone
+    include SettingsResolvable
 
     Result = BaseResult[:contract, :payment_method]
 
@@ -45,38 +46,26 @@ module Contracts
         return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
       end
 
-      if params[:billing_entity_id].present? && billing_entity.nil?
-        return result.not_found_failure!(resource: "billing_entity")
+      if (failure = settings_references_failure)
+        return failure
       end
-
-      if payment_method_params[:payment_method_id].present? && payment_method.nil?
-        return result.not_found_failure!(resource: "payment_method")
-      end
-
-      # Rejects contradictory combinations (e.g. a manual type with a concrete
-      # payment method), matching the subscription semantics.
-      result.payment_method = payment_method
-      return result unless PaymentMethods::ValidateService.new(result, payment_method: params[:payment_method]).valid?
 
       started_at = params[:started_at].present? ? started_at_in_customer_timezone : Time.current
 
       ActiveRecord::Base.transaction do
-        contract = organization.contracts.create!(
+        contract = organization.contracts.new(
           customer:,
           catalog_plan:,
-          billing_entity:,
           external_id: params[:external_id],
           name: params[:name],
           billing_time: params[:billing_time].presence || "calendar",
           billing_anchor_date: params[:billing_anchor_date],
-          purchase_order_number: params[:purchase_order_number],
-          payment_method:,
           started_at:,
           ended_at: ended_at_in_customer_timezone,
-          status: started_at.future? ? :pending : :active,
-          # NOT NULL columns with DB defaults: only set when given.
-          **optional_settings
+          status: started_at.future? ? :pending : :active
         )
+        apply_settings(contract)
+        contract.save!
 
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
 
@@ -107,32 +96,6 @@ module Contracts
 
     def catalog_plan
       @catalog_plan ||= organization.catalog_plans.find_by(code: params[:plan_code])
-    end
-
-    # Explicit billing-entity override; nil (no id) inherits the customer's.
-    def billing_entity
-      return @billing_entity if defined?(@billing_entity)
-
-      @billing_entity = params[:billing_entity_id].present? ? organization.billing_entities.find_by(id: params[:billing_entity_id]) : nil
-    end
-
-    # Nested payment-method reference input {payment_method_id, payment_method_type}.
-    def payment_method_params
-      params[:payment_method] || {}
-    end
-
-    # Payment methods are scoped to the customer.
-    def payment_method
-      return @payment_method if defined?(@payment_method)
-
-      @payment_method = payment_method_params[:payment_method_id].present? ? customer.payment_methods.find_by(id: payment_method_params[:payment_method_id]) : nil
-    end
-
-    def optional_settings
-      settings = {}
-      settings[:consolidate_invoice] = params[:consolidate_invoice] unless params[:consolidate_invoice].nil?
-      settings[:payment_method_type] = payment_method_params[:payment_method_type] if payment_method_params[:payment_method_type].present?
-      settings
     end
 
     # Read through the CustomerTimezone suffix: a datetime without an offset

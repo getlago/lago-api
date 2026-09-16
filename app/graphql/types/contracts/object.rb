@@ -6,7 +6,7 @@ module Types
       graphql_name "Contract"
       description "The agreement a customer signed: an optional plan, a validity window and the billing anchor"
 
-      dataload_association :customer
+      dataload_association :customer, :billing_entity, :payment_method
 
       field :external_id, String, null: false
       field :id, ID, null: false
