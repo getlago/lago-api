@@ -22,12 +22,12 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when the metric changed after the caller measured usage" do
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 50) }
-      let(:measured_metric) { create(:billable_metric, organization:) }
-
       subject(:result) do
         described_class.call(alert:, alertable: subscription, current_metrics:, expected_billable_metric_id: measured_metric.id)
       end
+
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 50) }
+      let(:measured_metric) { create(:billable_metric, organization:) }
 
       it "skips the evaluation rather than measuring it against the new configuration" do
         expect(result).to be_success
