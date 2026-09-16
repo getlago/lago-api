@@ -33,7 +33,7 @@ module Invoices
             status: intent.status,
             payable_payment_status: payment.payment_provider.determine_payment_status(intent.status)
           )
-          unlock_invoice
+          settle_invoice
 
           return result
         end
@@ -83,8 +83,21 @@ module Invoices
           self.class.recovery_range.cover?(payment.updated_at)
       end
 
-      # The invoice payment status is left alone. A failed payment on a pending invoice is what
-      # returns it to dunning, and writing a status here would duplicate the provider's webhook.
+      # The whole of what the missing webhook would have done, not half of it: the payment failed,
+      # so the invoice says so. That also emits `invoice.payment_status_updated` and lets
+      # Invoices::PrepaidCreditJob settle a wallet top-up that has been pending ever since.
+      def settle_invoice
+        return if payable.reload.payment_succeeded?
+
+        Invoices::UpdateService.call!(
+          invoice: payable,
+          params: {payment_status: :failed, ready_for_payment_processing: true},
+          webhook_notification: true
+        )
+      end
+
+      # No status written here: the provider's own webhook lands it, and writing one would duplicate
+      # the event the merchant is about to receive.
       def unlock_invoice
         return if payable.reload.payment_succeeded?
 

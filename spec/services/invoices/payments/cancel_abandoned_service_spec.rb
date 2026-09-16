@@ -47,6 +47,10 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
     expect { result }.not_to change { invoice.reload.payment_status }
   end
 
+  it "does not duplicate the event that webhook will carry" do
+    expect { result }.not_to have_enqueued_job(SendWebhookJob)
+  end
+
   context "when the customer completes the payment while we are cancelling" do
     before do
       allow(::PaymentProviders::CancelPaymentService).to receive(:call!) do
@@ -156,6 +160,15 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
 
     it "releases the invoice, which the missing webhook never did" do
       expect { result }.to change { invoice.reload.ready_for_payment_processing }.from(false).to(true)
+    end
+
+    it "marks the invoice failed, the other half of what that webhook would have done" do
+      expect { result }.to change { invoice.reload.payment_status }.from("pending").to("failed")
+    end
+
+    it "tells the merchant, since nothing else will" do
+      expect { result }.to have_enqueued_job(SendWebhookJob)
+        .with("invoice.payment_status_updated", invoice)
     end
   end
 
