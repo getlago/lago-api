@@ -16,6 +16,11 @@ module Types
       argument :billing_time, Types::Contracts::BillingTimeEnum, required: false
       argument :ended_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :started_at, GraphQL::Types::ISO8601DateTime, required: false
+
+      argument :billing_entity_id, ID, required: false
+      argument :consolidate_invoice, Boolean, required: false
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
+      argument :purchase_order_number, String, required: false
     end
   end
 end
