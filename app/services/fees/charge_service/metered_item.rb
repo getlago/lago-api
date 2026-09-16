@@ -58,7 +58,7 @@ module Fees
       end
 
       # The source determines which buckets have pricing, independently of the matching filter set.
-      def billing_items
+      def pricing_buckets
         source.pricing_buckets.map { |bucket| with(source: bucket) }
       end
 

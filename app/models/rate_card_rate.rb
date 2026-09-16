@@ -4,6 +4,7 @@ class RateCardRate < ApplicationRecord
   include PaperTrailTraceable
   include ChargePropertiesValidation
   include Discard::Model
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 

@@ -52,6 +52,15 @@ module Utils
       parsed_date&.future? || false
     end
 
+    def self.before_today?(datetime, timezone: Time.zone.name)
+      zone = Time.find_zone(timezone) || Time.zone
+
+      parsed = datetime.is_a?(ActiveSupport::TimeWithZone) ? datetime : nil
+      parsed ||= zone.parse(datetime.to_s) if valid_format?(datetime, format: :any)
+
+      parsed.present? && parsed < zone.now.beginning_of_day
+    end
+
     def self.date_diff_with_timezone(from_datetime, to_datetime, timezone)
       from = from_datetime
       from = Time.zone.parse(from.to_s) unless from.is_a?(ActiveSupport::TimeWithZone)

@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe LagoApiSchema do
+  it "rejects retired forecast queries before executing a resolver" do
+    errors = described_class.validate("{ dataApiUsagesForecasted { collection { amountCents } } }")
+
+    expect(errors.map { |error| error.to_h.dig("extensions", "code") }).to include("undefinedField")
+  end
+
   it "matches the dumped graphql schema" do
     expect(described_class.to_definition.rstrip).to eq(File.read(Rails.root.join("schema.graphql")).rstrip)
   end

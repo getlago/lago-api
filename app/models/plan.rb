@@ -123,9 +123,13 @@ class Plan < ApplicationRecord
 
   def active_subscriptions_count
     count = subscriptions.active.count
-    return count unless children
+    active_count_per_child = Subscription.active
+      .where(Subscription.arel_table[:plan_id].eq(Plan.arel_table[:id]))
+      .select("COUNT(*)")
 
-    count + children.joins(:subscriptions).merge(Subscription.active).select("subscriptions.id").distinct.count
+    # Count through the (plan_id, status) index for each override instead of
+    # joining all active subscriptions before filtering by the parent plan.
+    count + children.sum(Arel::Nodes::Grouping.new(active_count_per_child.arel)).to_i
   end
 
   def customers_count
@@ -136,10 +140,10 @@ class Plan < ApplicationRecord
   end
 
   def draft_invoices_count
-    count = subscriptions.joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
-    return count unless children
+    draft_invoices = Invoice.draft.where(organization_id:)
+    count = subscriptions.joins(:invoices).merge(draft_invoices).select(:invoice_id).distinct.count
 
-    count + children.joins(:subscriptions).joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
+    count + children.joins(subscriptions: :invoices).merge(draft_invoices).select(:invoice_id).distinct.count
   end
 
   private

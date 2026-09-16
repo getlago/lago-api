@@ -121,25 +121,13 @@ module BillableMetrics
         total_batches = (target_result.count.to_f / BATCH_SIZE).ceil
         state = current_state(grouped_by_values:)
 
-        # NOTE: for grouped_by aggregations we need to initialize
-        #       the event store with the grouped_by values to only fetch the events
-        #       of the group
-        store = event_store
-        if grouped_by_values
-          store = event_store_class.new(
-            code: billable_metric.code,
-            billing_context:,
-            boundaries:,
-            filters: filters.merge(grouped_by_values:)
-          )
-        end
+        event_store.with_grouped_by_values(grouped_by_values) do
+          (1..total_batches).each do |batch|
+            events_properties = event_store.events(ordered: true).page(batch).per(BATCH_SIZE)
+              .map { |event| {timestamp: event.timestamp, properties: event.properties} }
 
-        # NOTE: Loop over events by batch
-        (1..total_batches).each do |batch|
-          events_properties = store.events(ordered: true).page(batch).per(BATCH_SIZE)
-            .map { |event| {timestamp: event.timestamp, properties: event.properties} }
-
-          state = sandboxed_aggregation(events_properties, state)
+            state = sandboxed_aggregation(events_properties, state)
+          end
         end
 
         state

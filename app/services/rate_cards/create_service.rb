@@ -46,7 +46,8 @@ module RateCards
       # NOT NULL columns with DB defaults: only set when a value is given.
       attributes[:proration] = params[:proration] unless params[:proration].nil?
       attributes[:display_on_invoice] = params[:display_on_invoice] unless params[:display_on_invoice].nil?
-      attributes[:regroup_paid_fees] = params[:regroup_paid_fees] unless params[:regroup_paid_fees].nil?
+      # Nullable: nil (omitted or explicit) stores NULL — the fee stays standalone.
+      attributes[:regroup_paid_fees] = params[:regroup_paid_fees]
 
       ActiveRecord::Base.transaction do
         rate_card = product.rate_cards.create!(**attributes)

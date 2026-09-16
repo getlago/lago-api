@@ -68,6 +68,7 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20260908211313_drop_retired_pricing_type_and_plan_id.rb"
     - "db/migrate/20260908222044_drop_subscription_rate_cards.rb"
     - "db/migrate/20260910095513_drop_wallet_targetable_from_rate_cards.rb"
+    - "db/migrate/20260910151708_drop_enriched_store_migration_tables.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:

@@ -81,11 +81,10 @@ module Fees
     def init_metered_items_fees
       result.fees = []
 
-      metered_item.billing_items.each do |item|
+      metered_item.pricing_buckets.each do |item|
         init_fees(selected_metered_item: item)
-        unless result.success?
-          return result
-        end
+
+        return result unless result.success?
       end
     end
 
@@ -383,7 +382,7 @@ module Fees
 
     def init_true_up_fee
       fee = result.fees.find do |f|
-        if metered_item.source.respond_to?(:product_filter)
+        if metered_item.billing_segment
           f.product_filter_id == metered_item.true_up_filter_id
         else
           f.charge_filter_id == metered_item.true_up_filter_id

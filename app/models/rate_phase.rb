@@ -3,6 +3,7 @@
 class RatePhase < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 

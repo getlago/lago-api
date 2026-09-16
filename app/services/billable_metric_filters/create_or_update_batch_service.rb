@@ -17,12 +17,19 @@ module BillableMetricFilters
       result.filters = []
 
       if filters_params.empty?
+        return referenced_by_product_filter_failure if billable_metric.product_filter_values.exists?
+
         discard_all_filters
 
         return result
       end
 
       return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
+      # Reject duplicate keys: `call` applies every entry (last write wins per
+      # key), so the orphaning guard — which reads one entry per key — could
+      # otherwise miss a value removed by a later duplicate entry.
+      return result.validation_failure!(errors: {key: ["value_already_exist"]}) if duplicated_keys?
+      return referenced_by_product_filter_failure if orphaning_filters.any?
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
@@ -66,10 +73,37 @@ module BillableMetricFilters
 
     attr_reader :billable_metric, :filters_params
 
+    def referenced_by_product_filter_failure
+      result.validation_failure!(errors: {filters: ["referenced_by_product_filter"]})
+    end
+
+    # A metric filter value is structural once a kept product filter value
+    # references it, so block (never cascade) any edit that would orphan one:
+    # removing a referenced value, or discarding a referenced filter. A product
+    # filter value with a nil value tracks the whole set, so it only blocks a
+    # full filter removal, not the trim of an individual value.
+    def orphaning_filters
+      billable_metric.filters.select do |filter|
+        param = filters_params.find { |filter_param| filter_param[:key] == filter.key }
+
+        if param.nil?
+          filter.product_filter_values.exists?
+        else
+          deleted_values = filter.values - Array(param[:values])
+          deleted_values.present? && filter.product_filter_values.where(value: deleted_values).exists?
+        end
+      end
+    end
+
     def any_filter_params_values_blank?
       filters_params.any? do |filter_param|
         filter_param[:values].blank?
       end
+    end
+
+    def duplicated_keys?
+      keys = filters_params.map { |filter_param| filter_param[:key] }
+      keys.length != keys.uniq.length
     end
 
     def discard_all_filters

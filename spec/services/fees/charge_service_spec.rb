@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# services/fees/charge_service/metered_item.rb frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe Fees::ChargeService, :premium do

@@ -2,10 +2,6 @@ postgres_enriched_events:
   description: "Turn on events pre-enrichement for organizations using the PG event store"
   owners: ["@vincent-pochet"]
 
-enriched_events_aggregation:
-  description: "Use the enriched events store for aggregation queries in ClickHouse"
-  owners: ["@vincent-pochet"]
-
 wallet_traceability:
   description: "Enable wallet traceability on newly created wallets"
   owners: ["@groyoh", "@D1353L"]
@@ -25,10 +21,6 @@ fixed_charge_usage_delta_migration:
 multi_connection:
   description: "Allow organizations to configure multiple connections of the same type per customer"
   owners: ["@lovrocolic", "@mariohd"]
-
-lazy_charge_usage_cache:
-  description: "Validate the charge usage cache lazily at read time (compare cache creation time to the last event) instead of expiring it on every event reception"
-  owners: ["@vincent-pochet"]
 
 product_catalog:
   description: "Use the product catalog (billing v2): product_categories, products, rate cards and plan rate phases"

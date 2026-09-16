@@ -20,6 +20,7 @@ RSpec.describe Customer do
   it { is_expected.to have_many(:error_details).dependent(:destroy) }
   it { is_expected.to have_many(:order_forms) }
   it { is_expected.to have_many(:orders) }
+  it { is_expected.to have_many(:usage_attribution_values) }
 
   it { is_expected.to have_one(:netsuite_customer) }
   it { is_expected.to have_one(:anrok_customer) }

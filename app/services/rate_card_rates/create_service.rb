@@ -20,6 +20,10 @@ module RateCardRates
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 
+      if Utils::Datetime.before_today?(params[:effective_from], timezone: rate_card.organization.timezone)
+        return result.single_validation_failure!(field: :effective_from, error_code: "must_not_be_before_today")
+      end
+
       rate = rate_card.rates.create!(
         organization_id: rate_card.organization_id,
         code: params[:code].presence,

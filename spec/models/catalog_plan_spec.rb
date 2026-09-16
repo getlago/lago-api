@@ -7,6 +7,8 @@ RSpec.describe CatalogPlan do
 
   it_behaves_like "paper_trail traceable"
 
+  it_behaves_like "a catalog code", :catalog_plan
+
   describe "associations" do
     it do
       expect(catalog_plan).to belong_to(:organization)

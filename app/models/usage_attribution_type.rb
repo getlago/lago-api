@@ -11,8 +11,9 @@ class UsageAttributionType < ApplicationRecord
   }.freeze
 
   belongs_to :organization
-  belongs_to :parent, class_name: "UsageAttributionType", optional: true
+  belongs_to :parent, -> { with_discarded }, class_name: "UsageAttributionType", optional: true
   has_many :children, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
+  has_many :usage_attribution_values
 
   enum :role, ROLES, validate: true
 
@@ -23,6 +24,10 @@ class UsageAttributionType < ApplicationRecord
   validate :validate_parent
 
   default_scope -> { kept }
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[code name attribution_key]
+  end
 
   private
 

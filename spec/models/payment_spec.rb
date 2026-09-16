@@ -528,7 +528,8 @@ RSpec.describe Payment do
   describe "#should_sync_payment?" do
     subject(:method_call) { payment.should_sync_payment? }
 
-    let(:payment) { create(:payment, payable: invoice) }
+    let(:payment) { create(:payment, payable: invoice, payable_payment_status:) }
+    let(:payable_payment_status) { :succeeded }
     let(:invoice) { create(:invoice, customer:, organization:, status:) }
     let(:organization) { create(:organization) }
 
@@ -591,6 +592,14 @@ RSpec.describe Payment do
 
           it "returns true" do
             expect(method_call).to eq(true)
+          end
+
+          context "when the payment has not succeeded" do
+            let(:payable_payment_status) { %i[pending processing failed].sample }
+
+            it "returns false" do
+              expect(method_call).to eq(false)
+            end
           end
         end
 

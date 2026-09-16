@@ -22,22 +22,6 @@ module Events
         filters_scope(scope)
       end
 
-      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
-      # enriched_at of the most recent event for that charge/filter in the period.
-      # With with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
-      # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
-      def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
-        lower_bound = include_all_history ? nil : from_datetime
-        scope = EnrichedEvent.where(organization_id: billing_context.organization_id)
-          .where(subscription_id: billing_context.subscription_id)
-          .where(timestamp: lower_bound..to_datetime)
-
-        scope = scope.where(code: codes) unless codes.nil?
-        scope = scope.group(:charge_id, :charge_filter_id)
-
-        scope.pluck(:charge_id, :charge_filter_id, Arel.sql(with_last_seen_at ? "MAX(enriched_at)" : "NULL"))
-      end
-
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
       # of the period. Only properties present in the filter_keys are considered, so the result
       # holds only the dimensions that can be matched against charge filters.

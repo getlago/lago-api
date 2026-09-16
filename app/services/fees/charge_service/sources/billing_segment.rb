@@ -9,8 +9,8 @@ module Fees
             raise ArgumentError, "billing_segment must be a BillingSegment"
           end
 
-          unless billing_segment.contract_rate_card.rate_card.product.usage?
-            raise ArgumentError, "billing_segment must belong to a usage product; fixed products cannot be metered"
+          unless billing_segment.contract_rate_card.rate_card.product.metered?
+            raise ArgumentError, "billing_segment must belong to a metered product; fixed products cannot be metered"
           end
 
           @cache = {}

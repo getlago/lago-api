@@ -105,11 +105,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       context "when product_filter is nil" do
         it "excludes all product filters with nil values expanded to configured values" do
           expect(service_result.matching_filters).to eq({})
-          expect(service_result.ignored_filters).to match_array([
-            {"region" => ["us"]},
-            {"region" => ["us"], "size" => ["512"]},
-            {"region" => %w[us eu]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"region" => %w[us eu]}])
         end
 
         it "uses an empty filter only for matching without persisting or selecting it" do
@@ -141,11 +137,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
           expect(default_source.properties).to eq(segment_rate_properties)
           expect(default_source).to have_attributes(product_filter: nil, selected_filter: nil)
           expect(result.matching_filters).to eq({})
-          expect(result.ignored_filters).to match_array([
-            {"region" => ["us"]},
-            {"region" => ["us"], "size" => ["512"]},
-            {"region" => %w[us eu]}
-          ])
+          expect(result.ignored_filters).to eq([{"region" => %w[us eu]}])
         end
       end
 
@@ -164,10 +156,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         it "matches all configured values rather than nil or arbitrary values carrying the key" do
           expect(product_filter.to_h).to eq("region" => [nil])
           expect(service_result.matching_filters).to eq("region" => %w[us eu])
-          expect(service_result.ignored_filters).to match_array([
-            {"region" => ["us"]},
-            {"region" => ["us"], "size" => ["512"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"region" => ["us"]}])
         end
       end
     end

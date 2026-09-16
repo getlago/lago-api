@@ -130,15 +130,6 @@ module Events
         conditions.join(" AND ")
       end
 
-      def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
-        # Implementation relies directly on the events_enriched_expanded table,
-        # so we delegate the implementation to the ClickhouseEnrichedStore
-        Events::Stores::ClickhouseEnrichedStore.new(
-          billing_context:,
-          boundaries:
-        ).distinct_charges_and_filters(codes:, include_all_history:, with_last_seen_at:)
-      end
-
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
       # of the period. Only properties present in the filter_keys are considered, so the result
       # holds only the dimensions that can be matched against charge filters.

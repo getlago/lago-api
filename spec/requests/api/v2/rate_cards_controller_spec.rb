@@ -190,6 +190,32 @@ RSpec.describe Api::V2::RateCardsController do
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
+
+    context "when regroup_paid_fees is an invalid value" do
+      let(:create_params) do
+        {product_code: product.code, name: "Standard", code: "standard", currency: "EUR", regroup_paid_fees: "bogus"}
+      end
+
+      it "returns only the invalid-value error, not the pairing rule" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:regroup_paid_fees]).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "when regroup_paid_fees is null" do
+      let(:create_params) do
+        {product_code: product.code, name: "Standard", code: "standard", currency: "EUR", regroup_paid_fees: nil}
+      end
+
+      it "round-trips as null instead of coercing to a string" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_card][:regroup_paid_fees]).to be_nil
+      end
+    end
   end
 
   describe "PUT /api/v2/rate_cards/:code" do
