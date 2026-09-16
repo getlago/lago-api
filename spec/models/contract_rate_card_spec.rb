@@ -58,7 +58,7 @@ RSpec.describe ContractRateCard do
 
   describe "validations" do
     it { is_expected.to validate_presence_of(:billing_anchor_date) }
-    it { is_expected.to validate_presence_of(:next_billing_at) }
+    it { is_expected.to allow_value(nil).for(:next_billing_at) }
     it { is_expected.to validate_presence_of(:effective_date) }
     it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0).allow_nil }
 

@@ -1520,6 +1520,7 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 CREATE TYPE public.billing_segment_status AS ENUM (
     'pending',
+    'collecting',
     'processing',
     'done',
     'failed'
@@ -2633,7 +2634,7 @@ CREATE TABLE public.contract_rate_cards (
     contract_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
-    next_billing_at timestamp without time zone NOT NULL,
+    next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
     ended_date date,
     units numeric,
@@ -3743,10 +3744,6 @@ CREATE TABLE public.fees (
     rate_card_rate_id uuid,
     rate_override_id uuid,
     product_filter_id uuid
-<<<<<<< HEAD
-||||||| 00caba6f0
-    rate_override_id uuid
-=======
 );
 
 
@@ -3770,7 +3767,6 @@ CREATE TABLE public.fixed_charges (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     code character varying NOT NULL
->>>>>>> main
 );
 
 
@@ -14910,17 +14906,15 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-<<<<<<< HEAD
-||||||| 00caba6f0
-=======
+('20260916122921'),
 ('20260914145333'),
 ('20260914145022'),
 ('20260911144853'),
 ('20260910151708'),
->>>>>>> main
 ('20260910124306'),
 ('20260910124234'),
 ('20260910095513'),
+('20260909154904'),
 ('20260909103355'),
 ('20260908222044'),
 ('20260908211313'),
@@ -16053,3 +16047,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
