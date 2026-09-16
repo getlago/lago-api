@@ -1336,5 +1336,42 @@ RSpec.describe Wallets::CreateService do
         end
       end
     end
+
+    context "with connections on a recurring transaction rule", :premium do
+      let(:params) do
+        super().merge(
+          recurring_transaction_rules: [
+            {trigger: "interval", interval: "monthly", connections: {payment: {code: "stripe_us"}}}
+          ]
+        )
+      end
+
+      before { organization.enable_feature_flag!(:multi_connection) }
+
+      context "when the code does not resolve" do
+        it "fails instead of creating the wallet with the routing silently dropped" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:connections]).to include("connection_not_found")
+        end
+
+        it "creates no wallet" do
+          expect { create_service.call }.not_to change(Wallet, :count)
+        end
+      end
+
+      context "when the code resolves" do
+        let!(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+
+        it "pins the connection on the rule" do
+          result = create_service.call
+
+          expect(result).to be_success
+          rule = result.wallet.recurring_transaction_rules.sole
+          expect(rule.billing_object_connections.sole.payment_provider_customer_id).to eq(stripe_connection.id)
+        end
+      end
+    end
   end
 end

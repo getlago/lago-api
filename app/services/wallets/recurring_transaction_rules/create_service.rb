@@ -76,8 +76,11 @@ module Wallets
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
-      rescue BaseService::FailedResult
-        result
+      rescue BaseService::FailedResult => e
+        # The raising service carries its own result: validate_paid_credits! raises on this one, but
+        # AttachToResourceService raises on its own, and returning the local result would drop that
+        # error silently.
+        e.result
       end
 
       private
