@@ -19,10 +19,7 @@ module Clock
 
     private
 
-    # Narrowed to what the service can ever act on, not to what it will accept: a payment request,
-    # a provider other than Stripe, or one that was deleted can never be cancelled by this flow, so
-    # selecting them would schedule work that is refused again every hour. Everything else is left
-    # to the service, which re-checks each row and is the only thing that asks the provider.
+    # Narrowed to what the service can ever act on
     def candidates
       service = Invoices::Payments::CancelAbandonedService
       window = service::RECOVERY_WINDOW.ago..service::ABANDONED_PERIOD.ago

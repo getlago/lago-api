@@ -5,6 +5,8 @@ module Invoices
     class CancelAbandonedService < BaseService
       Result = BaseResult[:payment]
 
+      # Abandoned after a day, and only recovered while recent: cancelling something older means
+      # charging and dunning an end customer who has heard nothing for months
       ABANDONED_PERIOD = 24.hours
       RECOVERY_WINDOW = 1.month
 
@@ -21,11 +23,7 @@ module Invoices
         intent = stripe_intent
         return result unless intent
 
-        # The intent is already over at the provider and its webhook never arrived, which is what
-        # the merchant creates by cancelling in the dashboard by hand. Nothing left to cancel: the
-        # row is brought in line with what the provider reports, as the webhook would have done.
-        # Its own word goes in `status` and ours in `payable_payment_status`, the same way
-        # PaymentProviders::Stripe::Payments::CancelService writes them on the path below.
+        # The intent is already over at the provider and its webhook never reached us
         if ::PaymentProviders::StripeProvider::FAILED_STATUSES.include?(intent.status)
           payment.update!(
             status: intent.status,
@@ -36,18 +34,11 @@ module Invoices
           return result
         end
 
-        # Local columns cannot tell a card from a redirect-based alternative method: the payment
-        # method is unknown on most rows, and `provider_payment_method_data` is only ever written
-        # by the succeeded webhook, so a payment stuck before success has it empty by construction.
-        # Only cards do 3DS, so the provider decides.
+        # Only cards do 3DS, and we ask the provider because we do not store the method our side
         return result unless intent.status == "requires_action" && intent.payment_method_type == "card"
 
         ::PaymentProviders::CancelPaymentService.call!(payment:)
 
-        # Only a payment that actually reached a failed state was cancelled. "No longer processing"
-        # is not the same claim: the provider refuses an intent the customer completed in the
-        # meantime, and the succeeded webhook can land before this reload, so reading the absence
-        # of processing as success would unlock an invoice that has just been paid.
         return result unless payment.reload.failed?
 
         unlock_invoice
@@ -61,10 +52,6 @@ module Invoices
 
       delegate :payable, to: :payment
 
-      # Scoped to the read on purpose: a rejected key, a revoked permission or a missing intent
-      # reads the same way an hour from now, so it means "do nothing" rather than a job in the dead
-      # set every hour. Rate limits and dropped connections say nothing about the intent and travel
-      # up to the job's `retry_on`. A failure to cancel is neither, and must not be logged as one.
       def stripe_intent
         ::PaymentProviders::Stripe::Payments::RetrieveService.call!(payment:)
       rescue ::Stripe::AuthenticationError, ::Stripe::PermissionError, ::Stripe::InvalidRequestError => e
