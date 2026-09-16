@@ -188,6 +188,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:cancel_abandoned_payments", at: "*:40") do
+    Clock::CancelAbandonedPaymentsJob
+      .set(sentry: {"slug" => "lago_cancel_abandoned_payments", "cron" => "40 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:process_dunning_campaigns", at: "*:45") do
     Clock::ProcessDunningCampaignsJob
       .set(sentry: {"slug" => "lago_process_dunning_campaigns", "cron" => "45 */1 * * *"})

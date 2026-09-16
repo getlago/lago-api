@@ -23,6 +23,7 @@ module Types
     field :preview_adjusted_fee, mutation: Mutations::AdjustedFees::Preview
 
     field :create_catalog_plan, mutation: Mutations::CatalogPlans::Create
+    field :destroy_catalog_plan, mutation: Mutations::CatalogPlans::Destroy
     field :update_catalog_plan, mutation: Mutations::CatalogPlans::Update
 
     field :create_plan, mutation: Mutations::Plans::Create
@@ -307,5 +308,9 @@ module Types
     field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken
 
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
+
+    field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
+    field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
+    field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
   end
 end

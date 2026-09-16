@@ -94,6 +94,40 @@ RSpec.describe Fees::ApplyProviderTaxesService do
       end
     end
 
+    context "when the fee has no entry in the provider response" do
+      let(:fee_taxes) { nil }
+
+      context "when the fee has no amount" do
+        let(:fee) do
+          create(:fee, invoice:, amount_cents: 0, precise_amount_cents: 0.0, precise_coupons_amount_cents:,
+            taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0, taxes_base_rate: 0.0)
+        end
+
+        it "leaves the fee untaxed" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes).to be_empty
+          expect(fee.applied_taxes).to be_empty
+          expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
+        end
+      end
+
+      it "fails rather than leaving a fee with an amount untaxed" do
+        result = apply_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("fee_missing_from_tax_response")
+      end
+
+      it "does not apply taxes to a fee with an amount" do
+        apply_service.call
+
+        expect(fee.applied_taxes).to be_empty
+        expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
+      end
+    end
+
     context "when fee already have taxes" do
       before { create(:fee_applied_tax, fee:) }
 

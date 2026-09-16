@@ -600,6 +600,48 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#filter_display_name" do
+    let(:charge) { create(:standard_charge) }
+    let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "EU Premium") }
+    let(:product) { create(:product) }
+    let(:product_filter) { create(:product_filter, product:, invoice_display_name: "EU Premium") }
+
+    context "when the fee is charge-backed" do
+      let(:fee) { build(:charge_fee, charge:, charge_filter:) }
+
+      it "uses the charge filter display name" do
+        expect(fee.filter_display_name).to eq("EU Premium")
+      end
+    end
+
+    context "when the fee is product-backed" do
+      let(:fee) { build(:fee, fee_type: :product, product_filter:) }
+
+      it "uses the product filter invoice name" do
+        expect(fee.filter_display_name).to eq("EU Premium")
+      end
+
+      context "when sorting the invoice fees" do
+        let(:product) { create(:product, name: "Compute") }
+        let(:fee) do
+          build(
+            :fee,
+            fee_type: :product,
+            product_filter:,
+            invoiceable: product,
+            subscription: nil,
+            invoice_display_name: nil,
+            grouped_by: {}
+          )
+        end
+
+        it "includes the product filter" do
+          expect(fee.invoice_sorting_clause).to eq("compute eu premium")
+        end
+      end
+    end
+  end
+
   describe "#grouped_by_display" do
     let(:charge) { create(:standard_charge, properties:) }
     let(:fee) { described_class.new(charge:, fee_type: "charge", grouped_by:) }
@@ -706,10 +748,11 @@ RSpec.describe Fee do
   describe "#taxable?" do
     subject { fee.taxable? }
 
-    let(:fee) { build(:fee, units:, amount_cents:, events_count:) }
+    let(:fee) { build(:fee, units:, amount_cents:, events_count:, precise_coupons_amount_cents:) }
     let(:units) { 0 }
     let(:amount_cents) { 0 }
     let(:events_count) { 0 }
+    let(:precise_coupons_amount_cents) { 0 }
 
     context "when amount_cents is positive" do
       let(:amount_cents) { 100 }
@@ -724,6 +767,19 @@ RSpec.describe Fee do
     context "when amount_cents is zero but units and events_count are positive" do
       let(:units) { 5 }
       let(:events_count) { 3 }
+
+      it { is_expected.to be false }
+    end
+
+    context "when amount_cents is negative" do
+      let(:amount_cents) { -100 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when coupons cover the whole amount" do
+      let(:amount_cents) { 100 }
+      let(:precise_coupons_amount_cents) { 100 }
 
       it { is_expected.to be false }
     end
@@ -977,6 +1033,11 @@ RSpec.describe Fee do
       fee = build(:charge_fee, grouped_by: {}, charge_filter_id: SecureRandom.uuid)
       expect(fee).to be_grouped_or_filtered
     end
+
+    it "returns true when product_filter_id is present" do
+      fee = build(:fee, fee_type: :product, grouped_by: {}, product_filter_id: SecureRandom.uuid)
+      expect(fee).to be_grouped_or_filtered
+    end
   end
 
   describe "#ungrouped_or_filtered?" do
@@ -993,6 +1054,35 @@ RSpec.describe Fee do
     it "returns true when charge_filter_id is present" do
       fee = build(:charge_fee, grouped_by: {"cloud" => "aws"}, charge_filter_id: SecureRandom.uuid)
       expect(fee).to be_ungrouped_or_filtered
+    end
+
+    it "returns true when product_filter_id is present" do
+      fee = build(:fee, fee_type: :product, grouped_by: {"cloud" => "aws"}, product_filter_id: SecureRandom.uuid)
+      expect(fee).to be_ungrouped_or_filtered
+    end
+  end
+
+  describe "#filtered?" do
+    let(:fee) { build(:fee) }
+
+    it "returns false when neither filter is present" do
+      expect(fee).not_to be_filtered
+    end
+
+    context "when the charge filter is present" do
+      let(:fee) { build(:charge_fee, charge_filter_id: SecureRandom.uuid) }
+
+      it "returns true" do
+        expect(fee).to be_filtered
+      end
+    end
+
+    context "when the product filter is present" do
+      let(:fee) { build(:fee, fee_type: :product, product_filter_id: SecureRandom.uuid) }
+
+      it "returns true" do
+        expect(fee).to be_filtered
+      end
     end
   end
 

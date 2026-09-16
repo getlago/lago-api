@@ -2,11 +2,23 @@
 
 module BillableMetrics
   class AggregationFactory
-    def self.new_instance(metered_item:, context:, current_usage: false, **attributes)
+    # NOTE: provider is the collaborator that mints the event store instance for this
+    #       metered item. Callers that already run one for the whole computation pass
+    #       theirs; the others get one scoped to this single aggregation.
+    def self.new_instance(metered_item:, billing_context:, current_usage: false, provider: nil, **attributes)
+      provider ||= Events::Stores::Provider.new(
+        organization: metered_item.billable_metric.organization,
+        billing_context:
+      )
+
       aggregator_class(metered_item, current_usage).new(
-        event_store_class: Events::Stores::StoreFactory.store_class(organization: metered_item.billable_metric.organization),
+        event_store: provider.store_for(
+          metered_item:,
+          boundaries: attributes[:boundaries],
+          filters: attributes[:filters] || {}
+        ),
         metered_item:,
-        context:,
+        billing_context:,
         **attributes
       )
     end

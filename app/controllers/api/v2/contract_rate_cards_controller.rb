@@ -115,7 +115,6 @@ module Api
               :proration,
               :display_on_invoice,
               :regroup_paid_fees,
-              :wallet_targetable,
               :applied_pricing_unit_code,
               {rate_properties: {}}
             ]}

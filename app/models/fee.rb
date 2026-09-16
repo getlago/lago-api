@@ -14,6 +14,7 @@ class Fee < ApplicationRecord
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
   belongs_to :charge_filter, -> { with_discarded }, optional: true
+  belongs_to :product_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
@@ -152,6 +153,7 @@ class Fee < ApplicationRecord
   def invoice_name
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
+    return invoiceable.invoice_name if product?
     return add_on.invoice_name if add_on?
     return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?
@@ -160,7 +162,11 @@ class Fee < ApplicationRecord
   end
 
   def filter_display_name(separator: ", ")
-    charge_filter&.display_name(separator:)
+    if product?
+      product_filter&.invoice_name
+    else
+      charge_filter&.display_name(separator:)
+    end
   end
 
   def grouped_by_display
@@ -172,7 +178,7 @@ class Fee < ApplicationRecord
   def invoice_sorting_clause
     base_clause = "#{invoice_name} #{filter_display_name}".downcase
 
-    return base_clause unless charge?
+    return base_clause unless charge? || product?
     return base_clause if grouped_by.blank?
 
     "#{invoice_name} #{grouped_by.values.join} #{filter_display_name}".downcase
@@ -183,11 +189,15 @@ class Fee < ApplicationRecord
   end
 
   def grouped_or_filtered?
-    grouped_by.present? || charge_filter_id.present?
+    grouped_by.present? || filtered?
   end
 
   def ungrouped_or_filtered?
-    grouped_by.blank? || charge_filter_id.present?
+    grouped_by.blank? || filtered?
+  end
+
+  def filtered?
+    charge_filter_id.present? || product_filter_id.present?
   end
 
   def presentation_group_keys_values_displayed_in_invoice
@@ -311,12 +321,16 @@ class Fee < ApplicationRecord
   end
 
   def taxable?
-    amount_cents.positive?
+    !sub_total_excluding_taxes_amount_cents.zero?
   end
 
   def date_boundaries
     if charge? && !pay_in_advance? && charge.pay_in_advance?
-      timestamp = invoice.invoice_subscription(subscription.id).timestamp
+      timestamp = if invoice.new_record?
+        Time.parse(properties["timestamp"]).to_i
+      else
+        invoice.invoice_subscription(subscription.id).timestamp
+      end
       interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, subscription)
 
       return {
@@ -418,6 +432,7 @@ end
 #  original_fee_id                     :uuid
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
+#  product_filter_id                   :uuid
 #  rate_card_rate_id                   :uuid
 #  rate_override_id                    :uuid
 #  subscription_id                     :uuid
@@ -442,6 +457,7 @@ end
 #  index_fees_on_organization_id_and_created_at_and_id  (organization_id,created_at,id) WHERE (deleted_at IS NULL)
 #  index_fees_on_original_fee_id                        (original_fee_id)
 #  index_fees_on_pay_in_advance_event_transaction_id    (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_product_filter_id                      (product_filter_id)
 #  index_fees_on_rate_card_rate_id                      (rate_card_rate_id)
 #  index_fees_on_rate_override_id                       (rate_override_id)
 #  index_fees_on_subscription_id                        (subscription_id)
@@ -458,6 +474,7 @@ end
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (original_fee_id => fees.id)
+#  fk_rails_...  (product_filter_id => product_filters.id)
 #  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
 #  fk_rails_...  (rate_override_id => rate_overrides.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)

@@ -19,33 +19,64 @@ module Fees
       end
 
       delegate :charge,
-        :billing_segment,
         :charge_id,
-        :dynamic?,
-        :charge_filter,
-        :product_filter,
+        :selected_filter,
+        :filter_association,
+        :true_up_filter_id,
+        :fee_type,
+        :invoiceable,
         :billable_metric,
         :organization_id,
         :currency,
         :boundaries,
         :properties,
         :pricing_structure,
-        :period_ratio,
+        :elapsed_period_ratio,
         :pricing_group_keys,
         :presentation_group_keys_values,
-        :matching_filters,
-        :ignored_filters,
         :matching_and_ignored_filters,
-        :aggregation_options,
-        :accepts_target_wallet?,
         :pay_in_advance?,
         :prorated?,
         :invoiceable?,
         :applied_pricing_unit,
         to: :source
 
-      def with_charge_filter(charge_filter, properties: nil)
-        self.class.new(source: source.with_charge_filter(charge_filter, properties:))
+      delegate :filters, to: :invoiceable
+
+      %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
+        define_method(attribute) do
+          source.public_send(attribute) if source.respond_to?(attribute)
+        end
+      end
+
+      def dynamic?
+        pricing_structure.charge_model == "dynamic"
+      end
+
+      def filter_id
+        selected_filter&.id
+      end
+
+      # The source determines which buckets have pricing, independently of the matching filter set.
+      def pricing_buckets
+        source.pricing_buckets.map { |bucket| with(source: bucket) }
+      end
+
+      def aggregation_options(current_usage:)
+        {
+          free_units_per_events: properties["free_units_per_events"].to_i,
+          free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0),
+          is_current_usage: current_usage,
+          is_pay_in_advance: pay_in_advance?
+        }
+      end
+
+      def with_filter(filter, **options)
+        with(source: source.with_filter(filter, **options))
+      end
+
+      def with_default_filter
+        with(source: source.with_default_filter)
       end
 
       def filtered_for_charge_boundaries

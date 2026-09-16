@@ -8,7 +8,7 @@ module RateOverrides
     # one has misunderstood the contract, not made a typo — reject it.
     NOT_OVERRIDABLE_FIELDS = %i[
       billing_timing currency proration display_on_invoice
-      regroup_paid_fees wallet_targetable applied_pricing_unit_code
+      regroup_paid_fees applied_pricing_unit_code
     ].freeze
 
     def initialize(rate_card:, params:)

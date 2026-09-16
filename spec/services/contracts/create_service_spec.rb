@@ -168,4 +168,68 @@ RSpec.describe Contracts::CreateService do
       expect(result.error.messages[:external_id]).to be_present
     end
   end
+
+  context "with billing, invoicing and payment settings" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:payment_method) { create(:payment_method, customer:) }
+    let(:params) do
+      {
+        external_customer_id: customer.external_id,
+        external_id: "contract-1",
+        billing_entity_id: billing_entity.id,
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        payment_method: {payment_method_id: payment_method.id, payment_method_type: "provider"}
+      }
+    end
+
+    it "stores the settings on the contract" do
+      expect(result.contract).to have_attributes(
+        billing_entity:,
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        payment_method:,
+        payment_method_type: "provider"
+      )
+    end
+
+    context "when a manual type is paired with a concrete payment method" do
+      before { params[:payment_method] = {payment_method_id: payment_method.id, payment_method_type: "manual"} }
+
+      it "rejects the contradictory combination" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+      end
+    end
+
+    context "when the billing entity id is unknown" do
+      before { params[:billing_entity_id] = "00000000-0000-0000-0000-000000000000" }
+
+      it "returns a not found failure" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("billing_entity")
+      end
+    end
+
+    context "when the payment method belongs to another customer" do
+      let(:other_payment_method) { create(:payment_method, customer: create(:customer, organization:)) }
+
+      before { params[:payment_method] = {payment_method_id: other_payment_method.id} }
+
+      it "returns a not found failure, scoped to the contract's customer" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("payment_method")
+      end
+    end
+  end
+
+  context "when the optional settings are omitted" do
+    it "keeps the column defaults and inherits the billing entity" do
+      expect(result.contract).to have_attributes(
+        consolidate_invoice: true,
+        payment_method_type: "provider",
+        billing_entity: nil
+      )
+    end
+  end
 end

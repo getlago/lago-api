@@ -36,7 +36,9 @@ RSpec.describe BillableMetrics::AggregationFactory do
     )
   end
 
-  let(:result) { factory.new_instance(metered_item:, current_usage:, context: Events::Stores::EventContext.from(subscription:), boundaries:) }
+  let(:billing_context) { Billing::Context.from(subscription:) }
+
+  let(:result) { factory.new_instance(metered_item:, current_usage:, billing_context:, boundaries:) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do
@@ -129,6 +131,71 @@ RSpec.describe BillableMetrics::AggregationFactory do
       let(:billable_aggregation) { :custom_billable_metric }
 
       it { expect(result).to be_a(BillableMetrics::Aggregations::CustomService) }
+    end
+
+    describe "the event store the aggregator is built with" do
+      let(:store) { result.__send__(:event_store) }
+
+      it "carries the metric, the billing context and the aggregation window" do
+        expect(store).to be_a(Events::Stores::PostgresStore)
+        expect(store.code).to eq(billable_metric.code)
+        expect(store.billing_context).to eq(billing_context)
+        expect(store.boundaries).to eq(boundaries)
+        expect(store.deduplicate).to be(false)
+      end
+
+      it "forwards the aggregation filters" do
+        charge_filter = create(:charge_filter, charge: create(:standard_charge, billable_metric:))
+        filters = {charge_id: charge.id, charge_filter:}
+
+        store = factory.new_instance(metered_item:, billing_context:, boundaries:, filters:).__send__(:event_store)
+
+        expect(store.filters).to eq(filters)
+      end
+
+      context "when the organization deduplicates its clickhouse events" do
+        include_context "with clickhouse availability"
+
+        let(:billable_metric) do
+          create(
+            billable_aggregation,
+            recurring:,
+            organization: create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
+          )
+        end
+
+        it "resolves the store class and the deduplication mode from the organization" do
+          expect(store).to be_a(Events::Stores::ClickhouseStore)
+          expect(store.deduplicate).to be(true)
+        end
+      end
+
+      context "with a provider" do
+        let(:provider) do
+          Events::Stores::Provider.new(organization: billable_metric.organization, billing_context:)
+        end
+
+        it "mints the store from it rather than building another one" do
+          provider
+          allow(Events::Stores::Provider).to receive(:new).and_call_original
+          allow(provider).to receive(:store_for).and_call_original
+
+          store = factory.new_instance(metered_item:, billing_context:, boundaries:, provider:).__send__(:event_store)
+
+          expect(provider).to have_received(:store_for)
+          expect(Events::Stores::Provider).not_to have_received(:new)
+          expect(store.code).to eq(billable_metric.code)
+        end
+
+        it "scopes the store to the window of the aggregation, not to the provider" do
+          other_boundaries = boundaries.merge(max_timestamp: subscription.started_at)
+
+          store = factory.new_instance(metered_item:, billing_context:, boundaries: other_boundaries, provider:)
+            .__send__(:event_store)
+
+          expect(store.boundaries).to eq(other_boundaries)
+        end
+      end
     end
   end
 end

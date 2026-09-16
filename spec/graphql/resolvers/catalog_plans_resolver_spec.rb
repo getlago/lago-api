@@ -23,7 +23,7 @@ RSpec.describe Resolvers::CatalogPlansResolver do
     <<~GQL
       query($searchTerm: String) {
         catalogPlans(limit: 5, searchTerm: $searchTerm) {
-          collection { id code name currency }
+          collection { id code name currency appliedRateCardsCount contractsCount attachedToContracts }
           metadata { currentPage totalCount }
         }
       }
@@ -44,6 +44,21 @@ RSpec.describe Resolvers::CatalogPlansResolver do
     expect(collection.map { it["id"] }).to eq([catalog_plan.id])
     expect(collection.first).to include("code" => "growth", "name" => "Growth", "currency" => "EUR")
     expect(result["data"]["catalogPlans"]["metadata"]["totalCount"]).to eq(1)
+  end
+
+  it "resolves the per-plan counts across the list" do
+    create(:catalog_plan, organization:, code: "scale")
+    create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:))
+    create(:contract, organization:, catalog_plan:)
+
+    collection = result["data"]["catalogPlans"]["collection"].index_by { it["code"] }
+
+    expect(collection["growth"]).to include(
+      "appliedRateCardsCount" => 1, "contractsCount" => 1, "attachedToContracts" => true
+    )
+    expect(collection["scale"]).to include(
+      "appliedRateCardsCount" => 0, "contractsCount" => 0, "attachedToContracts" => false
+    )
   end
 
   context "with a search term" do

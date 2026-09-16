@@ -26,6 +26,8 @@ class Invoice < ApplicationRecord
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
+  has_many :billing_segments
+  has_many :contracts, -> { distinct }, through: :billing_segments
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
@@ -303,25 +305,34 @@ class Invoice < ApplicationRecord
 
     filters = {charge_id: fee.charge_id}
     if fee.charge_filter
-      result = ChargeFilters::MatchingAndIgnoredService.call(charge: fee.charge, filter: fee.charge_filter)
+      matching_result = Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
+        target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge: fee.charge, filter: fee.charge_filter)
+      )
       filters[:charge_filter] = fee.charge_filter if fee.charge_filter
-      filters[:matching_filters] = result.matching_filters
-      filters[:ignored_filters] = result.ignored_filters
+      filters[:matching_filters] = matching_result.matching_filters
+      filters[:ignored_filters] = matching_result.ignored_filters
     end
 
+    boundaries = {
+      from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
+      to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
+      charges_duration: fee.properties["charges_duration"]
+    }
+
+    billing_context = Billing::Context.from(subscription: fee.subscription)
+    provider = Events::Stores::Provider.new(organization:, billing_context:)
+
+    metered_item = Fees::ChargeService::MeteredItem.from_charge(
+      charge: fee.charge,
+      boundaries: BillingPeriodBoundaries.from_fee(fee),
+      charge_filter: fee.charge_filter
+    )
+
     service.new(
-      event_store_class: Events::Stores::StoreFactory.store_class(organization:),
-      metered_item: Fees::ChargeService::MeteredItem.from_charge(
-        charge: fee.charge,
-        boundaries: BillingPeriodBoundaries.from_fee(fee),
-        charge_filter: fee.charge_filter
-      ),
-      context: Events::Stores::EventContext.from(subscription: fee.subscription),
-      boundaries: {
-        from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
-        to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
-        charges_duration: fee.properties["charges_duration"]
-      },
+      event_store: provider.store_for(metered_item:, boundaries:, filters:),
+      metered_item:,
+      billing_context:,
+      boundaries:,
       filters:
     ).breakdown.breakdown
   end

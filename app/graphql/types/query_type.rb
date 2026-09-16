@@ -124,6 +124,8 @@ module Types
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver
+    field :usage_attribution_type, resolver: Resolvers::UsageAttributionTypeResolver
+    field :usage_attribution_types, resolver: Resolvers::UsageAttributionTypesResolver
     field :wallet, resolver: Resolvers::WalletResolver
     field :wallet_alert, resolver: Resolvers::Wallets::AlertResolver
     field :wallet_alerts, resolver: Resolvers::Wallets::AlertsResolver
@@ -145,7 +147,6 @@ module Types
     field :data_api_revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
     field :data_api_usages, resolver: Resolvers::DataApi::UsagesResolver
     field :data_api_usages_aggregated_amounts, resolver: Resolvers::DataApi::Usages::AggregatedAmountsResolver
-    field :data_api_usages_forecasted, resolver: Resolvers::DataApi::Usages::ForecastedResolver
     field :data_api_usages_invoiced, resolver: Resolvers::DataApi::Usages::InvoicedResolver
     field :superset_dashboards, resolver: Resolvers::Superset::DashboardsResolver
   end
