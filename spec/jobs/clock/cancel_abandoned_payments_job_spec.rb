@@ -73,6 +73,18 @@ RSpec.describe Clock::CancelAbandonedPaymentsJob, job: true do
     end
   end
 
+  context "when the payment belongs to another provider" do
+    let(:gocardless) { create(:gocardless_provider, organization:) }
+    let(:elsewhere) { build_payment(payment_provider: gocardless) }
+
+    before { elsewhere }
+
+    it "skips it, since only Stripe intents are read and cancelled here" do
+      expect { job.perform_now }
+        .not_to have_enqueued_job(Invoices::Payments::CancelAbandonedJob).with(elsewhere)
+    end
+  end
+
   context "when the payable is a payment request" do
     let(:payment_request) { create(:payment_request, organization:, customer:) }
     let(:request_payment) { build_payment(payable: payment_request) }

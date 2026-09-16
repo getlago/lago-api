@@ -140,6 +140,33 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
     end
   end
 
+  context "when the provider has already cancelled the intent" do
+    let(:live_status) { "canceled" }
+
+    it "does not try to cancel what is already gone" do
+      result
+
+      expect(::PaymentProviders::CancelPaymentService).not_to have_received(:call!)
+    end
+
+    it "brings the payment in line with the provider" do
+      expect { result }.to change { payment.reload.payable_payment_status }
+        .from("processing").to("failed")
+    end
+
+    it "releases the invoice, which the missing webhook never did" do
+      expect { result }.to change { invoice.reload.ready_for_payment_processing }.from(false).to(true)
+    end
+  end
+
+  context "when the provider is waiting for a new payment method" do
+    let(:live_status) { "requires_payment_method" }
+
+    it "releases the invoice too, since the intent is over either way" do
+      expect { result }.to change { invoice.reload.ready_for_payment_processing }.from(false).to(true)
+    end
+  end
+
   context "when the provider says the payment is not a card" do
     let(:live_method) { "crypto" }
 
@@ -150,13 +177,28 @@ RSpec.describe Invoices::Payments::CancelAbandonedService do
     end
   end
 
-  context "when the provider says the intent already moved on" do
+  context "when the provider says the customer has paid" do
     let(:live_status) { "succeeded" }
 
     it "does not cancel anything" do
       result
 
       expect(::PaymentProviders::CancelPaymentService).not_to have_received(:call!)
+    end
+
+    it "leaves the invoice locked, since only the webhook can settle a payment" do
+      expect { result }.not_to change { invoice.reload.ready_for_payment_processing }
+    end
+  end
+
+  context "when the cancellation itself fails" do
+    before do
+      allow(::PaymentProviders::CancelPaymentService)
+        .to receive(:call!).and_raise(Stripe::InvalidRequestError.new("nope", nil))
+    end
+
+    it "surfaces it instead of logging it as an unreadable intent" do
+      expect { result }.to raise_error(Stripe::InvalidRequestError)
     end
   end
 
