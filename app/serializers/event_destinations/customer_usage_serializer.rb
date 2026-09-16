@@ -38,8 +38,11 @@ module EventDestinations
       end
     end
 
+    # A plan carries a charge per feature, so a customer using a handful of them would otherwise
+    # ship a long tail of zeroes on every record. Dropping them keeps headroom under the 1MB cap.
+    # Fee#non_zero? is the trim daily usage already applies, so both payloads agree on what counts.
     def charges_usage
-      model.fees.group_by(&:charge_id).map do |_charge_id, fees|
+      model.fees.select(&:non_zero?).group_by(&:charge_id).map do |_charge_id, fees|
         fee = fees.first
 
         {
