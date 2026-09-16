@@ -9668,6 +9668,16 @@ type Mutation {
   ): AppliedCoupon
 
   """
+  Terminates a live contract
+  """
+  terminateContract(
+    """
+    Parameters for TerminateContract
+    """
+    input: TerminateContractInput!
+  ): Contract
+
+  """
   Deletes a coupon
   """
   terminateCoupon(
@@ -13934,6 +13944,21 @@ input TerminateAppliedCouponInput {
   """
   clientMutationId: String
   id: ID!
+}
+
+"""
+Terminate contract input arguments
+"""
+input TerminateContractInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  External id of the contract to terminate
+  """
+  externalId: String!
 }
 
 """
