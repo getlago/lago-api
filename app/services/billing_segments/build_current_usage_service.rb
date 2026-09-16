@@ -72,7 +72,7 @@ module BillingSegments
         .where(effective_date: ..date)
         .where("ended_date IS NULL OR ended_date >= ?", date)
         .joins(rate_card: :product)
-        .where(products: {product_type: :usage})
+        .where(products: {product_type: :metered})
         .includes(:contract, rate_phases: :rate_override,
           product: {billable_metric: :organization, filters: {values: :billable_metric_filter}},
           rate_card: [:rates, {
