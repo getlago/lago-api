@@ -21,16 +21,13 @@ module Clock
 
     # Narrowed to what the service can ever act on
     def candidates
-      service = Invoices::Payments::CancelAbandonedService
-      window = service::RECOVERY_WINDOW.ago..service::ABANDONED_PERIOD.ago
-
       Payment
         .payment_type_provider
         .joins(:payment_provider)
         .where(payable_type: "Invoice")
         .where(payment_providers: {type: PaymentProviders::StripeProvider.to_s})
         .where(payable_payment_status: :processing, status: "requires_action")
-        .where(updated_at: window)
+        .where(updated_at: Invoices::Payments::CancelAbandonedService.recovery_range)
     end
   end
 end

@@ -10,6 +10,10 @@ module Invoices
       ABANDONED_PERIOD = 24.hours
       RECOVERY_WINDOW = 1.month
 
+      def self.recovery_range
+        RECOVERY_WINDOW.ago..ABANDONED_PERIOD.ago
+      end
+
       def initialize(payment:)
         @payment = payment
         super
@@ -76,7 +80,7 @@ module Invoices
         payment.status == "requires_action" &&
           payment.processing? &&
           payment.provider_payment_data&.dig("type") == "redirect_to_url" &&
-          payment.updated_at.between?(RECOVERY_WINDOW.ago, ABANDONED_PERIOD.ago)
+          self.class.recovery_range.cover?(payment.updated_at)
       end
 
       # The invoice payment status is left alone. A failed payment on a pending invoice is what
