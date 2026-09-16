@@ -168,8 +168,6 @@ module Wallets
       customer.organization.feature_flag_enabled?(flag)
     end
 
-    # Runs before validation, so the customer may be missing entirely; leave that to valid?, which
-    # reports customer_not_found rather than letting the flag lookup raise.
     def organization_flag_disabled?(flag)
       return false if customer.nil?
 

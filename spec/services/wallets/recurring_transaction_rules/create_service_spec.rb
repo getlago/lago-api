@@ -476,8 +476,6 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
       end
 
       context "when the code does not resolve" do
-        # The rescue below the attach call returns the raising service's result; returning the local
-        # one would report success while silently dropping the routing.
         it "surfaces connection_not_found rather than swallowing it" do
           result = create_service.call
 

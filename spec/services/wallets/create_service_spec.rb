@@ -1347,7 +1347,6 @@ RSpec.describe Wallets::CreateService do
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
 
-      # The flag check runs before valid?, so it must tolerate a customer that was never found.
       context "when the customer does not exist" do
         let(:params) { super().merge(customer: nil) }
 
