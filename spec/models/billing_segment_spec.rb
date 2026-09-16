@@ -11,7 +11,7 @@ RSpec.describe BillingSegment do
         .backed_by_column_of_type(:enum)
         .validating
         .with_prefix(:status)
-        .with_values(pending: "pending", processing: "processing", done: "done", failed: "failed")
+        .with_values(pending: "pending", collecting: "collecting", processing: "processing", done: "done", failed: "failed")
     end
   end
 

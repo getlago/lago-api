@@ -14,6 +14,7 @@ class BillingSegment < ApplicationRecord
 
   STATUSES = {
     pending: "pending",
+    collecting: "collecting",
     processing: "processing",
     done: "done",
     failed: "failed"

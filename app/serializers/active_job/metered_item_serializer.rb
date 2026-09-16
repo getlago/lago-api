@@ -40,7 +40,7 @@ module ActiveJob
       case payload["source_type"]
       when "billing_segment"
         Fees::ChargeService::MeteredItem.from_billing_segment(
-          payload["billing_segment"],
+          billing_segment: payload["billing_segment"],
           product_filter: payload["product_filter"],
           event:
         )

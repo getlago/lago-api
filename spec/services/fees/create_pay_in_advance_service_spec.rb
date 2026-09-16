@@ -108,7 +108,65 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         expect(result).to be_success
         expect(result.fees).to eq([])
         expect(Fee.count).to eq(0)
-        expect(Rails.logger).to have_received(:warn).with(/no active subscription for event/)
+        expect(Rails.logger).to have_received(:warn).with(/no active subscription for event.*charge_id=#{charge.id}/)
+      end
+    end
+
+    context "when the metered item is backed by a billing segment" do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: false) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "10"}
+        )
+      end
+      let(:event) do
+        source = create(
+          :event,
+          external_subscription_id: contract.external_id,
+          external_customer_id: customer.external_id,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          properties: event_properties
+        )
+        Events::CommonFactory.new_instance(source:)
+      end
+      let(:metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:)
+      end
+
+      before do
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_return(aggregation_result)
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_return(charge_result)
+      end
+
+      it "creates a product fee without a subscription or legacy charge" do
+        allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
+
+        result = fee_service.call
+
+        expect(result).to be_success
+        expect(Fees::ApplyTaxesService).to have_received(:call!).with(fee: an_instance_of(Fee), customer:)
+        expect(result.fees.sole).to have_attributes(
+          subscription: nil,
+          charge: nil,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          amount_currency: "EUR",
+          fee_type: "product",
+          invoiceable: product,
+          properties: {},
+          rate_card_rate: billing_segment.rate_card_rate,
+          rate_override: billing_segment.rate_override
+        )
       end
     end
 
@@ -851,9 +909,12 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:, invoiceable: false) }
 
       it "applies local taxes eagerly" do
+        allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
+
         result = fee_service.call
 
         expect(result).to be_success
+        expect(Fees::ApplyTaxesService).to have_received(:call!).with(fee: an_instance_of(Fee), customer:)
 
         fee = result.fees.first
         expect(fee.applied_taxes.count).to eq(1)
@@ -904,9 +965,16 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         end
 
         it "applies provider taxes instead of local taxes" do
+          allow(Fees::ApplyProviderTaxesToStandaloneFeesService).to receive(:call!).and_call_original
+
           result = fee_service.call
 
           expect(result).to be_success
+          expect(Fees::ApplyProviderTaxesToStandaloneFeesService).to have_received(:call!).with(
+            customer:,
+            fees: [an_instance_of(Fee)],
+            currency: "EUR"
+          )
 
           fee = result.fees.first
           # Provider returns 2 tax breakdown entries (tax_exempt + exempt)

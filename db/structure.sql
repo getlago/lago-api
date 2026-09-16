@@ -1520,6 +1520,7 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 CREATE TYPE public.billing_segment_status AS ENUM (
     'pending',
+    'collecting',
     'processing',
     'done',
     'failed'
@@ -14905,6 +14906,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260916122921'),
 ('20260914145333'),
 ('20260914145022'),
 ('20260911144853'),

@@ -23,7 +23,7 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment, product_filter: nil, event: nil)
+      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
         new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
       end
 

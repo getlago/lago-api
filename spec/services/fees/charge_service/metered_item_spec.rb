@@ -68,7 +68,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
 
     it "builds a metered item backed by a billing segment source" do
-      metered_item = described_class.from_billing_segment(billing_segment)
+      metered_item = described_class.from_billing_segment(billing_segment:)
 
       expect(metered_item.billing_segment).to eq(billing_segment)
       expect(metered_item.charge_id).to be_nil
@@ -88,14 +88,14 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
 
     it "defaults absent attributes without masking segment references" do
-      expect(described_class.from_billing_segment(billing_segment)).to have_attributes(
+      expect(described_class.from_billing_segment(billing_segment:)).to have_attributes(
         charge_filter: nil, product_filter: nil, contract: billing_segment.contract,
         rate_card_rate:, rate_override: nil, fee_type: :product, invoiceable: product
       )
     end
 
     it "reflects the segment rate model and prefers the override model" do
-      metered_item = described_class.from_billing_segment(billing_segment)
+      metered_item = described_class.from_billing_segment(billing_segment:)
       rate_card_rate.rate_model = "dynamic"
       expect(metered_item).to be_dynamic
 
@@ -107,7 +107,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     it "uses the selected product filter and supports an explicit default bucket" do
       product_filter = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
       rate_card.product_filter = product_filter
-      metered_item = described_class.from_billing_segment(billing_segment)
+      metered_item = described_class.from_billing_segment(billing_segment:)
 
       expect(metered_item).to have_attributes(product_filter: nil, selected_filter: nil, filter_id: nil)
 
@@ -123,7 +123,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       }
       rate_card.billing_timing = :advance
 
-      expect(described_class.from_billing_segment(billing_segment).aggregation_options(current_usage: false)).to eq(
+      expect(described_class.from_billing_segment(billing_segment:).aggregation_options(current_usage: false)).to eq(
         free_units_per_events: 2,
         free_units_per_total_aggregation: 3.to_d,
         is_current_usage: false,

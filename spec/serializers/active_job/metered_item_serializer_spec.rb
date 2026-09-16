@@ -45,7 +45,7 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
   end
   let(:billing_segment_metered_item) do
     Fees::ChargeService::MeteredItem.from_billing_segment(
-      billing_segment, event: Events::CommonFactory.new_instance(source: event)
+      billing_segment:, event: Events::CommonFactory.new_instance(source: event)
     )
   end
   let(:product_filter) { create(:product_filter, organization:, product:) }

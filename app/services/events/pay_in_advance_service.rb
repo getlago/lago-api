@@ -23,15 +23,14 @@ module Events
         return result if event.id.nil? && !event.organization.clickhouse_events_store?
       end
 
-      charges.where(invoiceable: false).find_each do |charge|
-        Fees::CreatePayInAdvanceJob.perform_later(metered_item: metered_item_for(charge))
+      charges.find_each do |charge|
+        metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, event:)
+        enqueue_pay_in_advance_job(metered_item)
       end
 
-      charges.where(invoiceable: true).find_each do |charge|
-        Invoices::CreatePayInAdvanceChargeJob.perform_later(
-          metered_item: metered_item_for(charge),
-          timestamp: event.timestamp
-        )
+      pay_in_advance_billing_segments.find_each do |billing_segment|
+        metered_item = Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:)
+        enqueue_pay_in_advance_job(metered_item)
       end
 
       result.event = event
@@ -55,6 +54,12 @@ module Events
         .where(billable_metrics: {id: event.billable_metric.id})
     end
 
+    def pay_in_advance_billing_segments
+      @pay_in_advance_billing_segments ||= Events::PayInAdvanceBillingSegmentResolver
+        .call!(event:)
+        .billing_segments
+    end
+
     def already_processed?
       Fee.from_organization_pay_in_advance(event.organization).where(pay_in_advance_event_transaction_id: event.transaction_id).exists?
     end
@@ -66,8 +71,12 @@ module Events
       billable_metric.count_agg? || billable_metric.custom_agg? || properties[billable_metric.field_name].present?
     end
 
-    def metered_item_for(charge)
-      Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, event:)
+    def enqueue_pay_in_advance_job(metered_item)
+      if metered_item.invoiceable?
+        Invoices::CreatePayInAdvanceChargeJob.perform_later(metered_item:, timestamp: event.timestamp)
+      else
+        Fees::CreatePayInAdvanceJob.perform_later(metered_item:)
+      end
     end
 
     def boundaries

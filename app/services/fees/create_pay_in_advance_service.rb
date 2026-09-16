@@ -15,7 +15,7 @@ module Fees
     end
 
     def call
-      return skip_missing_subscription if subscription.nil?
+      return skip_missing_billing_context if billing_context.nil?
 
       fees = []
 
@@ -32,7 +32,7 @@ module Fees
 
         if !metered_item.invoiceable? && customer_provider_taxation?
           Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
-            customer:, fees: result.fees, currency: subscription.plan.amount_currency
+            customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
           )
         end
       end
@@ -48,17 +48,22 @@ module Fees
 
     private
 
-    def skip_missing_subscription
+    def skip_missing_billing_context
       # NOTE: `event.subscription` is nil when the subscription was terminated before the
       # event's timestamp (e.g. enqueued while active, terminated before the job ran).
       message = "Fees::CreatePayInAdvanceService skipped: no active subscription for event"
       context = {
         organization_id: event.organization_id,
         external_subscription_id: event.external_subscription_id,
-        charge_id: charge.id,
         event_transaction_id: event.transaction_id,
         event_timestamp: billing_at.iso8601
-      }
+      }.merge(
+        if metered_item.billing_segment
+          {billing_segment_id: metered_item.billing_segment.id}
+        else
+          {charge_id: charge.id}
+        end
+      )
 
       Rails.logger.warn("#{message} #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
 
@@ -69,7 +74,6 @@ module Fees
     attr_reader :metered_item, :billing_at, :estimate
 
     delegate :charge, :event, :billable_metric, to: :metered_item
-    delegate :subscription, to: :event
 
     def init_fee(selected_metered_item:)
       properties = selected_metered_item.properties
@@ -80,26 +84,29 @@ module Fees
       charge_model_result = apply_charge_model(selected_metered_item:, aggregation_result:, properties:)
 
       amount = Fees::AmountsService.call(
-        currency: subscription.plan.amount.currency,
+        currency: selected_metered_item.currency,
         charge_model_result:,
         applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(selected_metered_item.applied_pricing_unit)
       ).amount
 
       fee = Fee.new(
-        subscription:,
-        charge: selected_metered_item.charge,
-        organization_id: customer.organization_id,
-        billing_entity_id: customer.billing_entity_id,
+        organization_id: billing_context.organization_id,
+        billing_entity_id: billing_context.applicable_billing_entity_id,
+        subscription: billing_context.subscription,
+        charge: selected_metered_item.billing_segment ? nil : selected_metered_item.charge,
         amount_cents: amount.amount_cents,
         precise_amount_cents: amount.precise_amount_cents,
-        amount_currency: subscription.plan.amount_currency,
-        fee_type: :charge,
-        invoiceable: selected_metered_item.charge,
+        amount_currency: selected_metered_item.currency,
+        fee_type: selected_metered_item.fee_type,
+        invoiceable: selected_metered_item.invoiceable,
+        rate_card_rate: selected_metered_item.rate_card_rate,
+        rate_override: selected_metered_item.rate_override,
+        product_filter: selected_metered_item.product_filter,
         units: charge_model_result.units,
         total_aggregated_units: charge_model_result.units,
-        properties: selected_metered_item.boundaries.to_h,
+        properties: selected_metered_item.billing_segment ? {} : selected_metered_item.filtered_for_charge_boundaries,
         events_count: charge_model_result.count,
-        charge_filter_id: charge_filter&.id,
+        charge_filter: charge_filter&.persisted? ? charge_filter : nil,
         pay_in_advance_event_id: selected_metered_item.event.id,
         pay_in_advance_event_transaction_id: selected_metered_item.event.transaction_id,
         payment_status: :pending,
@@ -132,8 +139,8 @@ module Fees
         # there is no ComputeTaxesAndTotalsService step for them.
         # Provider-taxed customers get taxes via apply_provider_taxes after persist.
         # Invoiceable fees get taxes applied later via ComputeTaxesAndTotalsService.
-        if !fee.charge.invoiceable? && !customer_provider_taxation?
-          Fees::ApplyTaxesService.call!(fee:)
+        if !metered_item.invoiceable? && !customer_provider_taxation?
+          Fees::ApplyTaxesService.call!(fee:, customer: billing_context.customer)
         end
 
         fee.save! unless estimate
@@ -199,20 +206,26 @@ module Fees
 
     def format_grouped_by(selected_metered_item:)
       grouped_by = selected_metered_item.properties["pricing_group_keys"].presence || selected_metered_item.properties["grouped_by"] || []
-      grouped_by << "target_wallet_code" if selected_metered_item.charge.accepts_target_wallet && selected_metered_item.event.properties["target_wallet_code"].present?
+      grouped_by << "target_wallet_code" if selected_metered_item.charge&.accepts_target_wallet && selected_metered_item.event.properties["target_wallet_code"].present?
       return {} if grouped_by.blank?
 
       grouped_by.index_with { |key| selected_metered_item.event.properties[key] }
     end
 
-    def customer
-      @customer ||= subscription.customer
+    def billing_context
+      return @billing_context if defined?(@billing_context)
+
+      @billing_context = if metered_item.billing_segment
+        Billing::Context.from(contract: metered_item.contract)
+      elsif event.subscription
+        Billing::Context.from(subscription: event.subscription)
+      end
     end
 
     def customer_provider_taxation?
       return @customer_provider_taxation if defined?(@customer_provider_taxation)
 
-      @customer_provider_taxation = customer.tax_customer.present?
+      @customer_provider_taxation = billing_context.customer.tax_customer.present?
     end
 
     def isolation_mode
