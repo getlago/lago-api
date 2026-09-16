@@ -131,11 +131,13 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       end
     end
 
-    context "when the rate is zero" do
-      let(:wallet) { build(:wallet, customer:, organization:, rate_amount: "0.0", currency: "EUR") }
+    context "when a wallet has absorbed nothing" do
+      let(:wallet) { create(:wallet, customer:, organization:, currency: "EUR") }
 
-      it "sends no credits rather than dividing by zero" do
-        expect(result[:credits]).to be_nil
+      it "reports it at zero rather than dropping it from the list" do
+        expect(result[:wallets]).to eq(
+          [{lago_id: wallet.id, credits: "0.0", amount_cents: 0, amount_currency: "EUR"}]
+        )
       end
     end
   end
