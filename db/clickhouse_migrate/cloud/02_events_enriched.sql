@@ -10,7 +10,8 @@ CREATE TABLE default.events_enriched
     `enriched_at` DateTime64(3) DEFAULT now64(3),
     `value` Nullable(String),
     `decimal_value` Nullable(Decimal(38, 26)) DEFAULT toDecimal128OrZero(value, 26),
-    `precise_total_amount_cents` Nullable(Decimal(40, 15))
+    `precise_total_amount_cents` Nullable(Decimal(40, 15)),
+    `attribution_labels` Map(String, String)
 )
 ENGINE = SharedReplacingMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}', timestamp)
 PRIMARY KEY (organization_id, code, external_subscription_id, toDate(timestamp))
