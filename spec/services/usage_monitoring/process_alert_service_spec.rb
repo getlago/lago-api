@@ -21,6 +21,26 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "when the metric changed after the caller measured usage" do
+      subject(:result) do
+        described_class.call(alert:, alertable: subscription, current_metrics:, expected_billable_metric_id: measured_metric.id)
+      end
+
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 50) }
+      let(:measured_metric) { create(:billable_metric, organization:) }
+
+      it "skips the evaluation rather than measuring it against the new configuration" do
+        expect(result).to be_success
+        expect(organization.triggered_alerts.count).to eq 0
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+
+      it "leaves the evaluation time untouched, so the next run picks it up" do
+        expect(result).to be_success
+        expect(alert.reload.last_processed_at).to be_nil
+      end
+    end
+
     context "when no thresholds are crossed" do
       let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
 
