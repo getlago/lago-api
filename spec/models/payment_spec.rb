@@ -411,44 +411,6 @@ RSpec.describe Payment do
     end
   end
 
-  describe "#awaiting_redirect?" do
-    subject { payment.awaiting_redirect? }
-
-    let(:payment) do
-      build(:payment, status:, payable_payment_status:, provider_payment_data:)
-    end
-
-    let(:status) { "requires_action" }
-    let(:payable_payment_status) { :processing }
-    let(:provider_payment_data) { {"type" => "redirect_to_url"} }
-
-    it { is_expected.to be(true) }
-
-    context "when the provider is waiting on money rather than on the customer" do
-      let(:provider_payment_data) { {"type" => "display_bank_transfer_instructions"} }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "when the payment predates the provider data column" do
-      let(:provider_payment_data) { nil }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "when the provider is not waiting on anything" do
-      let(:status) { "requires_capture" }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "when the payment already settled" do
-      let(:payable_payment_status) { :succeeded }
-
-      it { is_expected.to be(false) }
-    end
-  end
-
   describe "#payment_provider_type" do
     subject(:payment_provider_type) { payment.payment_provider_type }
 

@@ -82,15 +82,6 @@ class Payment < ApplicationRecord
       customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 
-  # The provider sent the customer off site and is still waiting for them. It says nothing about
-  # how long, which is the caller's policy, and nothing about the method: alternative methods
-  # redirect the same way and only the provider can tell them apart.
-  def awaiting_redirect?
-    status == "requires_action" &&
-      processing? &&
-      provider_payment_data&.dig("type") == "redirect_to_url"
-  end
-
   def payment_provider_type
     payment_provider&.payment_type
   end
