@@ -403,7 +403,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         statements = capture_sql { result }
 
         inserted_alert = statements.index { it.start_with?("INSERT INTO \"usage_monitoring_alerts\"") }
-        locked_wallet = statements.index { it.include?("\"wallets\"") && it.include?("FOR UPDATE") }
+        locked_wallet = statements.index { it.include?("\"wallets\"") && it.include?("FOR NO KEY UPDATE") }
 
         expect(inserted_alert).not_to be_nil
         expect(locked_wallet).not_to be_nil
@@ -429,6 +429,27 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         created = creator.value
         expect(created).to be_success
         expect(created.alert.previous_value).to eq(400)
+      end
+
+      # Both creates hold a key-share lock on the wallet from their own insert's foreign-key check, so an
+      # exclusive lock here would deadlock as each waits for the other to release it.
+      it "does not deadlock when two alerts are created for the same wallet at once", transaction: false do
+        wallet_id = wallet.id # materialize on this connection before the threads read it
+
+        results = Array.new(2) do |i|
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              described_class.call(
+                organization:,
+                alertable: Wallet.find(wallet_id),
+                params: params.merge(code: "wallet-concurrent-#{i}", alert_type: (i.zero? ? "wallet_balance_amount" : "wallet_credits_balance"))
+              )
+            end
+          end
+        end.map(&:value)
+
+        expect(results).to all(be_success)
+        expect(results.map { it.alert.previous_value }).to all(eq(wallet.balance_cents))
       end
 
       it "baselines from the stored balance, not from the caller's copy" do

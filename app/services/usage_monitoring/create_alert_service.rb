@@ -85,7 +85,9 @@ module UsageMonitoring
 
         # NOTE: the alert row is inserted before the alertable is locked, so this takes the same order as
         #       evaluation; the lock is what keeps the baseline in step with concurrent balance changes.
-        alert.update!(previous_value: alert.find_value(alertable.lock!)) if alert.decreasing?
+        # NOTE: FOR NO KEY UPDATE still conflicts with a balance update, but not with the key-share lock the
+        #       insert above took on the same row, which two concurrent creates would otherwise deadlock upgrading
+        alert.update!(previous_value: alert.find_value(alertable.lock!("FOR NO KEY UPDATE"))) if alert.decreasing?
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
         seed_alarms_already_past(alert, alertable)
 
