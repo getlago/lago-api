@@ -36,7 +36,12 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
         usage_filters: an_instance_of(UsageFilters)
       )
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-        .with(alert:, alertable: an_object_having_attributes(id: subscription.id), current_metrics: mocked_usage)
+        .with(
+          alert:,
+          alertable: an_object_having_attributes(id: subscription.id),
+          current_metrics: mocked_usage,
+          expected_billable_metric_id: alert.billable_metric_id
+        )
     end
   end
 

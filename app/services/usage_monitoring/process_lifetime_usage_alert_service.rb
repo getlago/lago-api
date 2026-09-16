@@ -32,7 +32,12 @@ module UsageMonitoring
       # changed in between would be measured against usage it does not appear in and read as no usage at all.
       return result unless Alert.where(id: alert.id, billable_metric_id:).exists?
 
-      ProcessAlertService.call(alert:, alertable: subscription, current_metrics: usage_for_charges_result.usage)
+      ProcessAlertService.call(
+        alert:,
+        alertable: subscription,
+        current_metrics: usage_for_charges_result.usage,
+        expected_billable_metric_id: billable_metric_id
+      )
 
       result
     end
