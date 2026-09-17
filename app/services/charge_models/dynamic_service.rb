@@ -9,7 +9,7 @@ module ChargeModels
       return 0 if total_units.zero?
 
       amount_cents = aggregation_result.precise_total_amount_cents
-      amount_cents / currency.subunit_to_unit
+      amount_cents / currency.subunit_to_unit.to_d
     end
 
     def unit_amount
