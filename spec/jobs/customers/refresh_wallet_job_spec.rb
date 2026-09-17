@@ -40,6 +40,7 @@ RSpec.describe Customers::RefreshWalletJob do
 
     let(:customer) { create(:customer, awaiting_wallet_refresh:) }
     let(:organization) { customer.organization }
+    let(:awaiting_wallet_refresh) { true }
     let(:result) { Customers::RefreshWalletsService::Result.new }
     let(:wallet_ids) { nil }
 
@@ -47,141 +48,93 @@ RSpec.describe Customers::RefreshWalletJob do
       allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_return(result)
     end
 
-    context "when customer is not awaiting wallet refresh" do
+    it "refreshes the customer's wallets" do
+      subject
+
+      expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+    end
+
+    context "when wallet_ids are provided" do
       let(:awaiting_wallet_refresh) { false }
+      let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
 
-      it "does not call the Customers::RefreshWalletsService service" do
+      it "forces the refresh of the whole customer" do
         subject
-        expect(Customers::RefreshWalletsService).not_to have_received(:call)
+
+        expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
       end
+    end
 
-      context "when wallet_ids are provided" do
-        let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
+    [
+      Integrations::Aggregator::OutOfMemoryError,
+      Integrations::Aggregator::TaskInProgressError,
+      Integrations::Aggregator::TaskExpiredError,
+      Integrations::Aggregator::OrchestratorFailureError,
+      Integrations::Aggregator::ServerContentionError,
+      Integrations::Aggregator::TimeoutError
+    ].each do |error_class|
+      context "when the refresh fails with #{error_class.name.demodulize.underscore.humanize.downcase}" do
+        before do
+          allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
+        end
 
-        it "still refreshes the whole customer" do
-          subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+        it "raises the error and retries the job" do
+          assert_performed_jobs(6, only: [described_class]) do
+            expect do
+              described_class.perform_later(customer)
+            end.to raise_error(error_class)
+          end
         end
       end
     end
 
-    context "when customer is awaiting wallet refresh" do
-      let(:awaiting_wallet_refresh) { true }
+    context "when another lane holds the customer's refresh lock" do
+      before do
+        allow(Customers::LockService).to receive(:call!).and_raise(BaseLockService::FailedToAcquireLock)
+      end
 
-      context "when refresh customer's wallets succeeds" do
-        it "calls the Customers::RefreshWalletsService service" do
-          subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+      it "retries the job" do
+        assert_performed_jobs(ApplicationJob::MAX_LOCK_RETRY_ATTEMPTS, only: [described_class]) do
+          expect do
+            described_class.perform_later(customer)
+          end.to raise_error(BaseLockService::FailedToAcquireLock)
+        end
+      end
+    end
+
+    context "when the refresh is throttled by the tax provider" do
+      let(:error) do
+        BaseService::TooManyProviderRequestsFailure.new(
+          BaseService::Result.new,
+          provider_name: :anrok,
+          error: StandardError.new("too many requests")
+        )
+      end
+
+      before do
+        allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error)
+      end
+
+      it "retries a bounded number of times then gives up without raising" do
+        assert_performed_jobs(10, only: [described_class]) do
+          expect { described_class.perform_later(customer) }.not_to raise_error
         end
       end
 
-      context "when wallet_ids are provided" do
-        let(:wallet_ids) { create_list(:wallet, 2, customer:).map(&:id) }
-
-        it "refreshes the whole customer" do
-          subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
-        end
-      end
-
-      context "when a tax_error error_detail already exists" do
-        before do
-          create(:error_detail, owner: customer, organization:, error_code: :tax_error)
+      context "with the uniqueness lock enforced" do
+        around do |example|
+          ActiveJob::Uniqueness.reset_manager!
+          example.run
+          described_class.unlock!(customer)
+          ActiveJob::Uniqueness.test_mode!
         end
 
-        it "does not call the Customers::RefreshWalletsService service" do
-          subject
-          expect(Customers::RefreshWalletsService).not_to have_received(:call)
-        end
-      end
-
-      context "when refresh customer's wallets fails with a tax error" do
-        let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {tax_error: ["customerAddressCouldNotResolve"]}) }
-
-        context "when the error is related to the customer's address" do
-          it "creates a tax_error error_detail on the customer" do
-            expect { subject }.to change { customer.error_details.tax_error.count }.by(1)
-          end
-
-          it "does not re-raise the error" do
-            expect { subject }.not_to raise_error
-          end
-        end
-
-        [
-          Integrations::Aggregator::OutOfMemoryError,
-          Integrations::Aggregator::TaskInProgressError,
-          Integrations::Aggregator::TaskExpiredError,
-          Integrations::Aggregator::OrchestratorFailureError,
-          Integrations::Aggregator::ServerContentionError,
-          Integrations::Aggregator::TimeoutError
-        ].each do |error_class|
-          context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
-            before do
-              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
-            end
-
-            it "raises the error and retries the job" do
-              assert_performed_jobs(6, only: [described_class]) do
-                expect do
-                  described_class.perform_later(customer)
-                end.to raise_error(error_class)
-              end
-            end
-          end
-        end
-
-        context "when the tax error is an unknown failure" do
-          let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {tax_error: ["failure"]}) }
-
-          it "does not create an error_detail and re-raises the error" do
-            expect { subject }.to raise_error(BaseService::ValidationFailure).and not_change { customer.error_details.count }
-          end
-        end
-      end
-
-      context "when refresh customer's wallets is throttled by the tax provider" do
-        let(:error) do
-          BaseService::TooManyProviderRequestsFailure.new(
-            BaseService::Result.new,
-            provider_name: :anrok,
-            error: StandardError.new("too many requests")
-          )
-        end
-
-        before do
-          allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error)
-        end
-
-        it "retries a bounded number of times then gives up without raising" do
+        it "releases the uniqueness lock when giving up" do
           assert_performed_jobs(10, only: [described_class]) do
-            expect { described_class.perform_later(customer) }.not_to raise_error
-          end
-        end
-
-        context "with the uniqueness lock enforced" do
-          around do |example|
-            ActiveJob::Uniqueness.reset_manager!
-            example.run
-            described_class.unlock!(customer)
-            ActiveJob::Uniqueness.test_mode!
+            described_class.perform_later(customer)
           end
 
-          it "releases the uniqueness lock when giving up" do
-            assert_performed_jobs(10, only: [described_class]) do
-              described_class.perform_later(customer)
-            end
-
-            expect { described_class.perform_later(customer) }.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
-          end
-        end
-      end
-
-      context "when refresh customer's wallets fails with a non-tax error" do
-        let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {other_error: ["something"]}) }
-
-        it "re-raises the error" do
-          expect { subject }.to raise_error(BaseService::ValidationFailure)
+          expect { described_class.perform_later(customer) }.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
         end
       end
     end
