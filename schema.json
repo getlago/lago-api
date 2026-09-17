@@ -2690,6 +2690,18 @@
               "deprecationReason": null
             },
             {
+              "name": "lastProcessedAt",
+              "description": "When the alert was last evaluated. Null means it never has been.",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "name",
               "description": null,
               "args": [],
@@ -2697,6 +2709,22 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "previousValue",
+              "description": "Last observed value, judged against the threshold values and carrying the same scale.",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
