@@ -37,10 +37,11 @@ end
 # Indexes
 #
 #  index_credit_notes_taxes_on_credit_note_id               (credit_note_id)
-#  index_credit_notes_taxes_on_credit_note_id_and_tax_code  (credit_note_id,tax_code) UNIQUE
+#  index_credit_notes_taxes_on_credit_note_id_and_tax_id    (credit_note_id,tax_id) UNIQUE WHERE (tax_id IS NOT NULL)
 #  index_credit_notes_taxes_on_organization_id              (organization_id)
 #  index_credit_notes_taxes_on_tax_code                     (tax_code)
 #  index_credit_notes_taxes_on_tax_id                       (tax_id)
+#  index_credit_notes_taxes_on_tax_identity                 (credit_note_id,tax_code,tax_rate,tax_description) UNIQUE WHERE (tax_id IS NULL)
 #
 # Foreign Keys
 #

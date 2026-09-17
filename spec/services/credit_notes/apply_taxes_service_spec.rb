@@ -201,6 +201,18 @@ RSpec.describe CreditNotes::ApplyTaxesService do
       fee_applied_tax22
     end
 
+    context "when provider taxes share a code and rate but have different types" do
+      let(:provider_tax_2) { build(:tax_breakdown_item, name: "provider tax 1", type: "providerTax2", rate: 12.0) }
+
+      it "keeps each type's taxable base separate" do
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map { |tax| [tax.tax_description, tax.amount_cents] })
+          .to match_array([["providerTax1", 7], ["providerTax2", 5]])
+      end
+    end
+
     context "when coupons are applied" do
       describe "call" do
         it "creates applied taxes" do

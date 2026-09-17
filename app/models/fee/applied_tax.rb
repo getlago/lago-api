@@ -11,6 +11,15 @@ class Fee
     # NOTE: Tax isn't really optional, but we used to hard deleted taxes,
     #       so some AppliedTax had no tax relation
     belongs_to :tax, -> { with_discarded }, optional: true
+
+    def tax_identity
+      if tax_id.present?
+        slice(:tax_id)
+      else
+        # Provider taxes can share a code across different rates and types.
+        slice(:tax_id, :tax_code, :tax_rate, :tax_description)
+      end
+    end
   end
 end
 

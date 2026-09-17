@@ -846,10 +846,11 @@ DROP INDEX IF EXISTS public.index_credits_on_organization_id;
 DROP INDEX IF EXISTS public.index_credits_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credits_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credits_on_applied_coupon_id;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_identity;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_code;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_organization_id;
-DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id_and_tax_code;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id_and_sequential_id;
@@ -8875,10 +8876,10 @@ CREATE INDEX index_credit_notes_taxes_on_credit_note_id ON public.credit_notes_t
 
 
 --
--- Name: index_credit_notes_taxes_on_credit_note_id_and_tax_code; Type: INDEX; Schema: public; Owner: -
+-- Name: index_credit_notes_taxes_on_credit_note_id_and_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_credit_notes_taxes_on_credit_note_id_and_tax_code ON public.credit_notes_taxes USING btree (credit_note_id, tax_code);
+CREATE UNIQUE INDEX index_credit_notes_taxes_on_credit_note_id_and_tax_id ON public.credit_notes_taxes USING btree (credit_note_id, tax_id) WHERE (tax_id IS NOT NULL);
 
 
 --
@@ -8900,6 +8901,13 @@ CREATE INDEX index_credit_notes_taxes_on_tax_code ON public.credit_notes_taxes U
 --
 
 CREATE INDEX index_credit_notes_taxes_on_tax_id ON public.credit_notes_taxes USING btree (tax_id);
+
+
+--
+-- Name: index_credit_notes_taxes_on_tax_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_credit_notes_taxes_on_tax_identity ON public.credit_notes_taxes USING btree (credit_note_id, tax_code, tax_rate, tax_description) NULLS NOT DISTINCT WHERE (tax_id IS NULL);
 
 
 --
@@ -15043,6 +15051,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260917185736'),
 ('20260910095513'),
 ('20260909103355'),
 ('20260908222044'),
