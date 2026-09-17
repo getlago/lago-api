@@ -21191,6 +21191,12 @@
               "deprecationReason": null
             },
             {
+              "name": "SYP",
+              "description": "Syrian Pound",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "SZL",
               "description": "Swazi Lilangeni",
               "isDeprecated": false,
