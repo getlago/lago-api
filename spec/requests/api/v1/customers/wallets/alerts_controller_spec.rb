@@ -109,6 +109,26 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       })
     end
 
+    context "when a threshold opts in to resolved" do
+      let(:params) do
+        {
+          code: "test",
+          name: "New Wallet Alert",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "stores the opt-in and returns it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:alert][:thresholds]).to contain_exactly(
+          include(code: "notice", notify_on: %w[triggered resolved])
+        )
+      end
+    end
+
     context "when alert_type is wallet_credits_balance" do
       let(:params) do
         {
@@ -239,6 +259,17 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
     it_behaves_like "returns error if customer not found"
     it_behaves_like "returns error if wallet not found"
 
+    context "when a threshold opts in to resolved" do
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, notify_on: %w[triggered resolved]}]} }
+
+      it "stores the opt-in" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+    end
+
     it "updates the alert" do
       subject
 
@@ -321,6 +352,26 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         include(code: "alert1"),
         include(code: "alert2")
       ])
+    end
+
+    context "when a threshold opts in to resolved" do
+      let(:params) do
+        {
+          alerts: [{
+            code: "alert1",
+            alert_type: "wallet_balance_amount",
+            thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+          }]
+        }
+      end
+
+      it "stores the opt-in" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(UsageMonitoring::Alert.find_by(code: "alert1").thresholds.sole.notify_on)
+          .to eq(%w[triggered resolved])
+      end
     end
 
     context "when alerts are empty" do
