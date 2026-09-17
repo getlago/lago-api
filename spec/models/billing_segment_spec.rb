@@ -110,6 +110,32 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "#target_key" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:product) { create(:product, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:
+      )
+    end
+
+    it "includes the contract and product identities" do
+      expect(billing_segment.target_key).to eq(
+        "contract-#{billing_segment.contract_id}-#{billing_segment.contract_rate_card.product.target_key}"
+      )
+    end
+  end
+
   describe "#duration_in_days" do
     subject(:segment) { described_class.new(customer:, started_at:, ended_at:) }
 

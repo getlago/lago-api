@@ -53,7 +53,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
   describe ".for_billing_segments!" do
     subject(:filter_result) do
-      described_class.for_billing_segments!(contract:, billing_segments: [billing_segment])
+      described_class.for_billing_segments!(billing_segments: [billing_segment])
     end
 
     let(:contract) { create(:contract, organization:, customer:, external_id: "contract_external_id") }
@@ -86,7 +86,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
     context "without billing segments" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(contract:, billing_segments: [])
+        described_class.for_billing_segments!(billing_segments: [])
       end
 
       it "succeeds with no filter targets" do
@@ -104,6 +104,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           organization_id: organization.id,
           external_subscription_id: contract.external_id,
           timestamp: billing_segment.started_at + 5.days,
+          created_at: Time.zone.parse("2026-08-10 00:00:00"),
           code: billable_metric.code,
           properties: {"region" => "eu"}
         )
@@ -114,7 +115,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_result
 
           expect(result).to be_success
-          expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [nil]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({billing_segment.target_key => [nil]})
         end
       end
 
@@ -131,13 +132,13 @@ RSpec.describe Events::BillingPeriodFilterService do
           result = filter_result
 
           expect(result).to be_success
-          expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [product_filter.id]})
+          expect(result.filter_targets.transform_values(&:keys)).to eq({billing_segment.target_key => [product_filter.id]})
         end
 
         it "returns the last seen timestamp for the product filter" do
           result = filter_result
 
-          expect(result.filter_targets[product.target_key][product_filter.id]).to be_present
+          expect(result.filter_targets[billing_segment.target_key][product_filter.id]).to be_present
         end
 
         context "when the product filter selects the key only" do
@@ -149,7 +150,7 @@ RSpec.describe Events::BillingPeriodFilterService do
             result = filter_result
 
             expect(result).to be_success
-            expect(result.filter_targets.transform_values(&:keys)).to eq({product.target_key => [product_filter.id]})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({billing_segment.target_key => [product_filter.id]})
           end
         end
       end
@@ -170,7 +171,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
     context "with a relation containing segments sharing a billable metric" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(contract:, billing_segments: contract.billing_segments)
+        described_class.for_billing_segments!(billing_segments: contract.billing_segments)
       end
 
       before do
@@ -192,11 +193,70 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
     end
 
+    context "with segments using the same product across contracts" do
+      subject(:filter_result) do
+        described_class.for_billing_segments!(billing_segments: [billing_segment, second_segment])
+      end
+
+      let(:second_contract) { create(:contract, organization:, customer:, external_id: "second_contract_external_id") }
+      let(:first_contract_event_created_at) { Time.zone.parse("2026-08-12 00:00:00") }
+      let(:second_contract_event_created_at) { Time.zone.parse("2026-08-13 00:00:00") }
+      let(:second_contract_rate_card) { create(:contract_rate_card, organization:, contract: second_contract, rate_card:) }
+      let(:second_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract: second_contract,
+          contract_rate_card: second_contract_rate_card,
+          rate_card_rate:,
+          cycle_started_at: billing_segment.cycle_started_at,
+          started_at: billing_segment.started_at,
+          ended_at: billing_segment.ended_at
+        )
+      end
+
+      before do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          timestamp: billing_segment.started_at + 1.day, created_at: first_contract_event_created_at,
+          code: billable_metric.code, properties: {region: "eu"})
+        create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+          timestamp: second_segment.started_at + 1.day, created_at: second_contract_event_created_at,
+          code: billable_metric.code, properties: {region: "us"})
+      end
+
+      it "keeps each contract's product bucket separate" do
+        result = filter_result
+
+        expect(result.filter_targets.keys).to match_array([billing_segment.target_key, second_segment.target_key])
+        expect(result.filter_targets[billing_segment.target_key].keys).to eq([nil])
+        expect(result.filter_targets[second_segment.target_key].keys).to eq([nil])
+      end
+
+      context "with a product filter" do
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+
+        before do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+        end
+
+        it "matches events and timestamps only within their contract" do
+          result = filter_result
+
+          expect(result.filter_targets[billing_segment.target_key].keys).to eq([product_filter.id])
+          expect(result.filter_targets[second_segment.target_key].keys).to eq([nil])
+          expect(result.filter_targets[billing_segment.target_key][product_filter.id]).to eq(first_contract_event_created_at)
+          expect(result.filter_targets[second_segment.target_key][nil]).to eq(second_contract_event_created_at)
+        end
+      end
+    end
+
     context "with recurring product usage" do
       let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
       it "seeds the default bucket without events" do
-        expect(filter_result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
+        expect(filter_result.filter_targets).to eq({billing_segment.target_key => {nil => billing_segment.started_at}})
       end
 
       it "uses the combined period start for segments sharing a product" do
@@ -204,9 +264,9 @@ RSpec.describe Events::BillingPeriodFilterService do
           cycle_started_at: billing_segment.cycle_started_at + 1.month,
           started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
 
-        result = described_class.for_billing_segments!(contract:, billing_segments: [later_segment, billing_segment])
+        result = described_class.for_billing_segments!(billing_segments: [later_segment, billing_segment])
 
-        expect(result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
+        expect(result.filter_targets).to eq({billing_segment.target_key => {nil => billing_segment.started_at}})
       end
 
       context "with product filters" do
@@ -218,7 +278,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
 
         it "seeds current filters and the default bucket without events" do
-          expect(filter_result.filter_targets).to eq({product.target_key => {
+          expect(filter_result.filter_targets).to eq({billing_segment.target_key => {
             product_filter.id => billing_segment.started_at,
             nil => billing_segment.started_at
           }})
@@ -234,7 +294,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           end
 
           it "updates the historical usage bucket with the ingestion timestamp" do
-            expect(filter_result.filter_targets).to eq({product.target_key => {
+            expect(filter_result.filter_targets).to eq({billing_segment.target_key => {
               product_filter.id => ingested_at,
               nil => billing_segment.started_at
             }})
@@ -242,11 +302,11 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           context "when timestamp aggregation is disabled" do
             subject(:filter_result) do
-              described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], with_last_seen_at: false)
+              described_class.for_billing_segments!(billing_segments: [billing_segment], with_last_seen_at: false)
             end
 
             it "retains the seeded timestamps" do
-              expect(filter_result.filter_targets).to eq({product.target_key => {
+              expect(filter_result.filter_targets).to eq({billing_segment.target_key => {
                 product_filter.id => billing_segment.started_at,
                 nil => billing_segment.started_at
               }})
@@ -259,7 +319,7 @@ RSpec.describe Events::BillingPeriodFilterService do
         event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
 
-        described_class.for_billing_segments!(contract:, billing_segments: [billing_segment],
+        described_class.for_billing_segments!(billing_segments: [billing_segment],
           codes: [billable_metric.code, "other_code"], with_last_seen_at: false)
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
@@ -269,7 +329,7 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "does not seed recurring products excluded by explicit codes" do
-        result = described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
+        result = described_class.for_billing_segments!(billing_segments: [billing_segment], codes: ["unknown_code"])
 
         expect(result.filter_targets).to eq({})
       end
@@ -279,7 +339,7 @@ RSpec.describe Events::BillingPeriodFilterService do
           code: billable_metric.code, timestamp: billing_segment.ended_at + 1.day,
           created_at: billing_segment.ended_at + 2.days)
 
-        expect(filter_result.filter_targets).to eq({product.target_key => {nil => billing_segment.started_at}})
+        expect(filter_result.filter_targets).to eq({billing_segment.target_key => {nil => billing_segment.started_at}})
       end
     end
 
@@ -296,7 +356,7 @@ RSpec.describe Events::BillingPeriodFilterService do
 
     context "when codes restrict the lookup" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(contract:, billing_segments: [billing_segment], codes: ["unknown_code"])
+        described_class.for_billing_segments!(billing_segments: [billing_segment], codes: ["unknown_code"])
       end
 
       before do

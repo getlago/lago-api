@@ -30,7 +30,7 @@ module Events
       end
 
       def non_recurring_metric_codes
-        @non_recurring_metric_codes ||= metric_codes.to_a - recurring_metric_codes
+        @non_recurring_metric_codes ||= metric_codes(record_id: nil).to_a - recurring_metric_codes
       end
 
       def recurring_event_filter_targets
