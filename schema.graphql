@@ -3901,6 +3901,7 @@ input CreateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  connections: ConnectionsInput
   consolidateInvoice: Boolean
   customerId: ID!
   endingAt: ISO8601DateTime
@@ -15793,6 +15794,7 @@ input UpdateSubscriptionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  connections: ConnectionsInput
   consolidateInvoice: Boolean
   endingAt: ISO8601DateTime
   id: ID!
