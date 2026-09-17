@@ -52,8 +52,8 @@ module Events
       end
 
       def filter_target_for(billing_segment)
-        @filter_targets ||= {}
-        @filter_targets[billing_segment.id] ||= Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
+        @filter_targets ||= {}.compare_by_identity
+        @filter_targets[billing_segment] ||= Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:)
       end
 
       def target_segments

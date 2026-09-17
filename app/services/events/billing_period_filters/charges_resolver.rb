@@ -38,8 +38,8 @@ module Events
       end
 
       def filter_target_for(charge)
-        @filter_target_for ||= {}
-        @filter_target_for[charge.id] ||= Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
+        @filter_targets ||= {}.compare_by_identity
+        @filter_targets[charge] ||= Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
       end
 
       def targets_with_events(codes)
