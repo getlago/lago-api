@@ -47,7 +47,7 @@ RSpec.describe Events::PayInAdvanceMeteredItemsResolver do
         customer:,
         contract:,
         contract_rate_card:,
-        status: :collecting,
+        status: :processing,
         started_at: timestamp.beginning_of_day,
         ended_at: timestamp.end_of_day
       )

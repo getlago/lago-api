@@ -240,8 +240,6 @@ To create a webhook:
 
 ## Factories
 
-- Prefer `build` or `build_stubbed` over `create` when the test does not require database persistence.
-- Build the target factory directly and rely on its associations instead of manually creating the full associated object graph.
 - Some factories have been renamed for clarity.
   - To create Entitlement::Feature model, use `:feature`
   - To create Entitlement::Privilege model, use `:privilege`

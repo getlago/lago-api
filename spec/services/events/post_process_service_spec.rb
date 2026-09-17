@@ -145,7 +145,7 @@ RSpec.describe Events::PostProcessService do
         create(:billing_segment, organization:, customer:, contract:, contract_rate_card:,
           started_at: effective_date.beginning_of_day,
           ended_at: effective_date.end_of_day + 1.month,
-          status: :collecting)
+          status: :processing)
       end
 
       context "when the rate card is effective at the event timestamp" do

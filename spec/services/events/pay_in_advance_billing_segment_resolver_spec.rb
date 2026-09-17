@@ -35,7 +35,7 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
   let(:billing_timing) { :advance }
   let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
-  let(:segment_status) { :collecting }
+  let(:segment_status) { :processing }
   let(:segment_started_at) { timestamp.beginning_of_day }
   let(:segment_ended_at) { timestamp.end_of_day }
   let(:billing_segment) do
@@ -61,7 +61,7 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
     end
   end
 
-  it "returns a collecting segment for an active contract and advance rate card" do
+  it "returns a processing segment for an active contract and advance rate card" do
     expect(billing_segments).to contain_exactly(billing_segment)
   end
 
@@ -105,7 +105,7 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
     end
   end
 
-  context "when the segment is not collecting" do
+  context "when the segment is not processing" do
     let(:segment_status) { :pending }
 
     it "does not return the billing segment" do

@@ -26,7 +26,7 @@ module Events
     delegate :billable_metric, :organization, to: :event
 
     def billing_segments
-      BillingSegment.status_collecting
+      BillingSegment.status_processing
         .joins(:contract, contract_rate_card: {rate_card: :product})
         .where(
           contracts: {

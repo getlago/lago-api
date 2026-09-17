@@ -126,7 +126,7 @@ RSpec.describe Events::PayInAdvanceService do
           contract_rate_card:,
           started_at: timestamp.beginning_of_day,
           ended_at: timestamp.end_of_day,
-          status: :collecting
+          status: :processing
         )
       end
 
