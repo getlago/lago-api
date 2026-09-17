@@ -47,10 +47,7 @@ module Charges
       # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = {event: metered_item.event, charge_id: metered_item.charge_id}
 
-      grouped_by_values = metered_item.pricing_group_keys.index_with { metered_item.event.properties[it] }
-      if metered_item.charge&.accepts_target_wallet && metered_item.event.properties["target_wallet_code"].present?
-        grouped_by_values["target_wallet_code"] = metered_item.event.properties["target_wallet_code"]
-      end
+      grouped_by_values = metered_item.grouped_by_values
       filters[:grouped_by_values] = grouped_by_values if grouped_by_values.present?
 
       presentation_group_keys_values = metered_item.presentation_group_keys_values

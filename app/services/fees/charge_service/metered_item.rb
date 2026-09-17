@@ -89,6 +89,13 @@ module Fees
         }
       end
 
+      def grouped_by_values
+        return {} unless event
+
+        event_properties = event.properties || {}
+        pricing_group_keys.index_with { |key| event_properties[key] }
+      end
+
       def with_event(event:)
         with(event:)
       end

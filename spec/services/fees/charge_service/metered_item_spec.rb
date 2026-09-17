@@ -219,6 +219,76 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
   end
 
+  describe "#grouped_by_values" do
+    let(:event_properties) { {} }
+    let(:event) do
+      Events::CommonFactory.new_instance(source: create(:event, organization:, properties: event_properties))
+    end
+    let(:metered_item) { described_class.from_charge(charge:, boundaries:, event:) }
+
+    it "returns an empty hash without an event" do
+      metered_item = described_class.from_charge(charge:, boundaries:)
+
+      expect(metered_item.grouped_by_values).to eq({})
+    end
+
+    it "returns an empty hash without grouping properties" do
+      expect(metered_item.grouped_by_values).to eq({})
+    end
+
+    context "with pricing_group_keys properties" do
+      let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
+
+      before { charge.properties = {"pricing_group_keys" => ["cloud", "region"]} }
+
+      it "uses values from the event properties" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => "us-east-1")
+      end
+
+      it "keeps configured keys when an event property is absent" do
+        event_properties.delete("region")
+
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
+      end
+    end
+
+    context "with legacy grouped_by properties" do
+      let(:event_properties) { {"cloud" => "aws"} }
+
+      before { charge.properties = {"grouped_by" => ["cloud"]} }
+
+      it "uses the legacy grouping keys" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws")
+      end
+    end
+
+    context "with both grouping property formats" do
+      let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
+
+      before { charge.properties = {"pricing_group_keys" => ["cloud"], "grouped_by" => ["region"]} }
+
+      it "prefers pricing group keys" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws")
+      end
+    end
+
+    context "when the charge accepts a target wallet", :premium do
+      let(:event_properties) { {"cloud" => "aws", "target_wallet_code" => "wallet-1"} }
+
+      before do
+        organization.update!(premium_integrations: ["events_targeting_wallets"])
+        charge.update!(
+          accepts_target_wallet: true,
+          properties: {"pricing_group_keys" => ["cloud"], "amount" => "10"}
+        )
+      end
+
+      it "includes the target wallet code" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "target_wallet_code" => "wallet-1")
+      end
+    end
+  end
+
   describe "#with_filter" do
     let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "30"}) }
 

@@ -118,7 +118,7 @@ module Fees
         taxes_precise_amount_cents: 0.to_d,
         unit_amount_cents: amount.unit_amount_cents,
         precise_unit_amount: amount.precise_unit_amount,
-        grouped_by: format_grouped_by(selected_metered_item:),
+        grouped_by: selected_metered_item.grouped_by_values,
         amount_details: charge_model_result.amount_details || {},
         pricing_unit_usage: amount.pricing_unit_usage
       )
@@ -195,7 +195,7 @@ module Fees
         current_amount: aggregation_result.current_amount,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
-        grouped_by: format_grouped_by(selected_metered_item:),
+        grouped_by: selected_metered_item.grouped_by_values,
         presentation_breakdowns: remove_formated_grouped_by_keys(
           aggregation_result.breakdowns,
           selected_metered_item:
@@ -205,16 +205,8 @@ module Fees
 
     def remove_formated_grouped_by_keys(breakdowns, selected_metered_item:)
       Array(breakdowns).map do |breakdown|
-        breakdown.merge(groups: breakdown[:groups].except(*format_grouped_by(selected_metered_item:).keys))
+        breakdown.merge(groups: breakdown[:groups].except(*selected_metered_item.grouped_by_values.keys))
       end
-    end
-
-    def format_grouped_by(selected_metered_item:)
-      grouped_by = selected_metered_item.properties["pricing_group_keys"].presence || selected_metered_item.properties["grouped_by"] || []
-      grouped_by << "target_wallet_code" if selected_metered_item.charge&.accepts_target_wallet && selected_metered_item.event.properties["target_wallet_code"].present?
-      return {} if grouped_by.blank?
-
-      grouped_by.index_with { |key| selected_metered_item.event.properties[key] }
     end
 
     def billing_context
