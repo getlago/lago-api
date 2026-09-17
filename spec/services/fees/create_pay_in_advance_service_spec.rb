@@ -84,7 +84,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
-        .with(charge:, aggregation_result:, properties: Hash)
+        .with(metered_item: have_attributes(charge:, event:), aggregation_result:, properties: Hash)
         .and_return(charge_result)
     end
 

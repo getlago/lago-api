@@ -157,7 +157,7 @@ module Fees
 
     def apply_charge_model(selected_metered_item:, aggregation_result:, properties:)
       Charges::ApplyPayInAdvanceChargeModelService.call!(
-        charge: selected_metered_item.charge, aggregation_result:, properties:
+        metered_item: selected_metered_item, aggregation_result:, properties:
       )
     end
 

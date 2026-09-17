@@ -51,6 +51,7 @@ module Fees
         to: :source
 
       delegate :filters, to: :invoiceable
+      delegate :charge_model, to: :pricing_structure
 
       %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
@@ -59,7 +60,15 @@ module Fees
       end
 
       def dynamic?
-        pricing_structure.charge_model == "dynamic"
+        charge_model == "dynamic"
+      end
+
+      def percentage?
+        charge_model == "percentage"
+      end
+
+      def graduated_percentage?
+        charge_model == "graduated_percentage"
       end
 
       def filter_id

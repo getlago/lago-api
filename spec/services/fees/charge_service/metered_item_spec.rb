@@ -104,6 +104,18 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item.rate_override).to eq(billing_segment.rate_override)
     end
 
+    context "when the billing segment rate model is percentage" do
+      let(:rate_card_rate) do
+        build(:rate_card_rate, organization:, rate_card:, rate_model: "percentage", rate_properties: {"rate" => "0.1"})
+      end
+
+      it "identifies the percentage rate model" do
+        metered_item = described_class.from_billing_segment(billing_segment:)
+
+        expect(metered_item).to have_attributes(charge_model: "percentage", percentage?: true, graduated_percentage?: false)
+      end
+    end
+
     it "uses the selected product filter and supports an explicit default bucket" do
       product_filter = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
       rate_card.product_filter = product_filter
@@ -146,7 +158,10 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item.pricing_structure).to be_a(ChargeModels::PricingStructure)
       expect(metered_item).to have_attributes(
         charge_id: charge.id,
+        charge_model: "standard",
         dynamic?: false,
+        percentage?: false,
+        graduated_percentage?: false,
         charge_filter: nil,
         pay_in_advance?: false,
         prorated?: false,
@@ -161,6 +176,24 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       charge.charge_model = "dynamic"
 
       expect(metered_item).to be_dynamic
+    end
+  end
+
+  describe "rate model predicates" do
+    context "when the charge model is percentage" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "identifies the percentage rate model" do
+        expect(metered_item).to have_attributes(charge_model: "percentage", percentage?: true, graduated_percentage?: false)
+      end
+    end
+
+    context "when the charge model is graduated percentage", :premium do
+      let(:charge) { create(:graduated_percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "identifies the graduated percentage rate model" do
+        expect(metered_item).to have_attributes(charge_model: "graduated_percentage", percentage?: false, graduated_percentage?: true)
+      end
     end
   end
 

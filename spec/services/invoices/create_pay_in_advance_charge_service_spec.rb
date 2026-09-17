@@ -76,7 +76,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
-        .with(charge:, aggregation_result:, properties: Hash)
+        .with(metered_item: have_attributes(charge:, event:), aggregation_result:, properties: Hash)
         .and_return(charge_result)
 
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
@@ -167,7 +167,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
           .with(metered_item:)
           .and_return(aggregation_result)
         allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
-          .with(charge: nil, aggregation_result:, properties: Hash)
+          .with(metered_item:, aggregation_result:, properties: Hash)
           .and_return(charge_result)
       end
 

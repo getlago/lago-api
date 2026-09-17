@@ -3,9 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
-  let(:amount_details_calculator) { described_class.new(charge:, applied_charge_model:, applied_charge_model_excluding_event:) }
+  let(:amount_details_calculator) do
+    described_class.new(metered_item:, applied_charge_model:, applied_charge_model_excluding_event:)
+  end
 
   let(:charge) { create(:standard_charge, :pay_in_advance) }
+  let(:metered_item) { build(:metered_item, charge:) }
   let(:applied_charge_model) { instance_double("AppliedChargeModel", amount_details: all_charges_details) }
   let(:applied_charge_model_excluding_event) { instance_double("AppliedChargeModel", amount_details: charges_details_without_last_event) }
 
@@ -20,7 +23,6 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
 
   context "when charge model is percentage" do
     let(:charge) { create(:percentage_charge, :pay_in_advance) }
-    let(:charge_model) { "percentage" }
     let(:all_charges_details) do
       {
         rate: 0.1,
@@ -122,6 +124,64 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
         }
         expect(amount_details_calculator.call).to eq(expected_details)
       end
+    end
+  end
+
+  context "when the metered item is backed by a billing segment" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:rate_card_rate) do
+      create(:rate_card_rate, organization:, rate_card:, rate_model: "percentage", rate_properties: {"rate" => "0.1"})
+    end
+    let(:billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:,
+        currency: "EUR",
+        rate_properties: {"rate" => "0.1"}
+      )
+    end
+    let(:metered_item) { build(:metered_item, billing_segment:) }
+    let(:all_charges_details) do
+      {
+        rate: 0.1,
+        fixed_fee_unit_amount: 100,
+        units: 10,
+        free_units: 2,
+        paid_units: 8,
+        free_events: 1,
+        paid_events: 9,
+        fixed_fee_total_amount: 1000,
+        min_max_adjustment_total_amount: 50,
+        per_unit_total_amount: 800
+      }
+    end
+    let(:charges_details_without_last_event) do
+      {
+        rate: 0.1,
+        fixed_fee_unit_amount: 100,
+        units: 8,
+        free_units: 1,
+        paid_units: 7,
+        free_events: 1,
+        paid_events: 8,
+        fixed_fee_total_amount: 800,
+        min_max_adjustment_total_amount: 40,
+        per_unit_total_amount: 700
+      }
+    end
+
+    it "calculates percentage rate details" do
+      expect(amount_details_calculator.call).to include(units: "2.0", paid_units: "1.0")
     end
   end
 end
