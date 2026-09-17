@@ -455,4 +455,101 @@ RSpec.describe Mutations::Wallets::Create, :premium do
       )
     end
   end
+
+  context "with connections" do
+    let(:organization) { membership.organization }
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+
+    let(:connections_mutation) do
+      <<-GQL
+        mutation($input: CreateCustomerWalletInput!) {
+          createCustomerWallet(input: $input) {
+            id
+            recurringTransactionRules { lagoId }
+          }
+        }
+      GQL
+    end
+
+    def create_wallet(connections:, rule_connections: nil)
+      rules = if rule_connections
+        [{trigger: "interval", interval: "monthly", method: "fixed", connections: rule_connections}]
+      end
+
+      input = {
+        customerId: customer.id,
+        name: "Connected Wallet",
+        priority: 1,
+        rateAmount: "1",
+        paidCredits: "10.00",
+        grantedCredits: "0.00",
+        currency: "EUR",
+        connections:
+      }
+      input[:recurringTransactionRules] = rules if rules
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_mutation,
+        variables: {input:}
+      )
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+      netsuite_connection
+    end
+
+    it "persists one connection per category" do
+      result = create_wallet(
+        connections: {
+          payment: {code: "stripe_us"},
+          tax: {behavior: "skip"},
+          accounting: {code: "netsuite_main"},
+          crm: {behavior: "skip"}
+        }
+      )
+
+      wallet = Wallet.find(result["data"]["createCustomerWallet"]["id"])
+      expect(wallet.billing_object_connections.pluck(:category)).to match_array(%w[payment tax accounting crm])
+      expect(wallet.effective_payment_connection).to eq(stripe_connection)
+      expect(wallet.effective_accounting_connection).to eq(netsuite_connection)
+      expect(wallet.effective_tax_connection).to be_nil
+    end
+
+    it "pins a per-rule connection on the rule rather than the wallet" do
+      result = create_wallet(
+        connections: {tax: {behavior: "skip"}},
+        rule_connections: {payment: {code: "stripe_us"}}
+      )
+
+      wallet = Wallet.find(result["data"]["createCustomerWallet"]["id"])
+      rule = wallet.recurring_transaction_rules.sole
+
+      expect(wallet.billing_object_connections.pluck(:category)).to eq(%w[tax])
+      expect(rule.billing_object_connections.sole).to have_attributes(
+        category: "payment",
+        behavior: "specific",
+        payment_provider_customer_id: stripe_connection.id
+      )
+    end
+
+    it "returns a validation error when the code does not resolve" do
+      result = create_wallet(connections: {payment: {code: "unknown_connection"}})
+
+      expect(result["errors"].first["extensions"]["details"]["connections"]).to include("connection_not_found")
+    end
+
+    it "returns a forbidden error when the multi_connection flag is disabled" do
+      organization.disable_feature_flag!(:multi_connection)
+
+      result = create_wallet(connections: {payment: {code: "stripe_us"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
+    end
+  end
 end
