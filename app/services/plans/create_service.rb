@@ -15,7 +15,21 @@ module Plans
       record: -> { result.plan }
     )
 
+    # Plan-level pricing and chargeables belong to the legacy engine.
+    LEGACY_PRICING_FIELDS = %i[interval amount_cents pay_in_advance charges fixed_charges].freeze
+
     def call
+      organization = Organization.find_by(id: args[:organization_id])
+      if organization&.product_catalog_enabled?
+        legacy_field = LEGACY_PRICING_FIELDS.find { args[it].present? }
+        if legacy_field
+          return result.single_validation_failure!(field: legacy_field, error_code: "legacy_billing_disabled")
+        end
+
+        # Blank no-ops (pay_in_advance: false) are tolerated but never persisted.
+        @args = args.except(*LEGACY_PRICING_FIELDS)
+      end
+
       plan = Plan.new(
         organization_id: args[:organization_id],
         name: args[:name],

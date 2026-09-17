@@ -109,12 +109,26 @@ RSpec.describe FinanceAssistant::AskService do
   context "when the request to the finance assistant times out" do
     before do
       stub_request(:post, "#{finance_assistant_url}/ask").to_timeout
+      allow(Rails.logger).to receive(:warn)
     end
 
     it "returns a service failure" do
       expect(result).to be_failure
       expect(result.error).to be_a(BaseService::ServiceFailure)
       expect(result.error.code).to eq("finance_assistant_error")
+    end
+
+    it "logs the failure with the time spent waiting for the assistant" do
+      result
+
+      expect(Rails.logger).to have_received(:warn).with(
+        a_string_including(
+          "FinanceAssistant::AskService failed",
+          "organization_id=#{organization.id}",
+          "code=finance_assistant_error",
+          "duration="
+        )
+      )
     end
   end
 
@@ -172,12 +186,24 @@ RSpec.describe FinanceAssistant::AskService do
     before do
       stub_request(:post, "#{finance_assistant_url}/ask")
         .to_return(status: 200, body: {explanation: "Missing the rest"}.to_json)
+      allow(Rails.logger).to receive(:warn)
     end
 
     it "returns an invalid response failure" do
       expect(result).to be_failure
       expect(result.error).to be_a(BaseService::ServiceFailure)
       expect(result.error.code).to eq("finance_assistant_invalid_response")
+    end
+
+    it "logs the failure" do
+      result
+
+      expect(Rails.logger).to have_received(:warn).with(
+        a_string_including(
+          "FinanceAssistant::AskService failed",
+          "code=finance_assistant_invalid_response"
+        )
+      )
     end
   end
 
@@ -189,6 +215,74 @@ RSpec.describe FinanceAssistant::AskService do
     it "returns an invalid response failure" do
       expect(result).to be_failure
       expect(result.error.code).to eq("finance_assistant_invalid_response")
+    end
+  end
+
+  describe "http timeouts" do
+    before do
+      stub_request(:post, "#{finance_assistant_url}/ask").to_return(
+        status: 200,
+        body: {
+          explanation: "Here is the result.",
+          results: "| Month | MRR |",
+          session_id:,
+          message_id:,
+          session_expired: false
+        }.to_json
+      )
+
+      allow(LagoHttpClient::Client).to receive(:new).and_call_original
+    end
+
+    it "leaves room for the agent deadline by default" do
+      result
+
+      expect(LagoHttpClient::Client).to have_received(:new).with(
+        "#{finance_assistant_url}/ask",
+        open_timeout: 5,
+        read_timeout: 60
+      )
+    end
+
+    context "when timeouts are set in the environment" do
+      around do |example|
+        previous_open = ENV["LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT"]
+        previous_read = ENV["LAGO_FINANCE_ASSISTANT_READ_TIMEOUT"]
+        ENV["LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT"] = "3"
+        ENV["LAGO_FINANCE_ASSISTANT_READ_TIMEOUT"] = "90"
+        example.run
+        ENV["LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT"] = previous_open
+        ENV["LAGO_FINANCE_ASSISTANT_READ_TIMEOUT"] = previous_read
+      end
+
+      it "uses the configured values" do
+        result
+
+        expect(LagoHttpClient::Client).to have_received(:new).with(
+          "#{finance_assistant_url}/ask",
+          open_timeout: 3,
+          read_timeout: 90
+        )
+      end
+    end
+
+    context "when a timeout is set to a non positive value" do
+      around do |example|
+        previous_read = ENV["LAGO_FINANCE_ASSISTANT_READ_TIMEOUT"]
+        ENV["LAGO_FINANCE_ASSISTANT_READ_TIMEOUT"] = "0"
+        example.run
+        ENV["LAGO_FINANCE_ASSISTANT_READ_TIMEOUT"] = previous_read
+      end
+
+      it "falls back to the default" do
+        result
+
+        expect(LagoHttpClient::Client).to have_received(:new).with(
+          "#{finance_assistant_url}/ask",
+          open_timeout: 5,
+          read_timeout: 60
+        )
+      end
     end
   end
 end

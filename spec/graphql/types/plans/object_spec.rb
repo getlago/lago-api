@@ -7,19 +7,19 @@ RSpec.describe Types::Plans::Object do
 
   it { is_expected.to have_field(:id).of_type("ID!") }
   it { is_expected.to have_field(:organization).of_type("Organization") }
-  it { is_expected.to have_field(:amount_cents).of_type("BigInt!") }
+  it { is_expected.to have_field(:amount_cents).of_type("BigInt") }
   it { is_expected.to have_field(:amount_currency).of_type("CurrencyEnum!") }
   it { is_expected.to have_field(:bill_charges_monthly).of_type("Boolean") }
   it { is_expected.to have_field(:bill_fixed_charges_monthly).of_type("Boolean") }
   it { is_expected.to have_field(:code).of_type("String!") }
   it { is_expected.to have_field(:description).of_type("String") }
   it { is_expected.to have_field(:has_overridden_plans).of_type("Boolean") }
-  it { is_expected.to have_field(:interval).of_type("PlanInterval!") }
+  it { is_expected.to have_field(:interval).of_type("PlanInterval") }
   it { is_expected.to have_field(:invoice_display_name).of_type("String") }
   it { is_expected.to have_field(:minimum_commitment).of_type("Commitment") }
   it { is_expected.to have_field(:name).of_type("String!") }
   it { is_expected.to have_field(:parent).of_type("Plan") }
-  it { is_expected.to have_field(:pay_in_advance).of_type("Boolean!") }
+  it { is_expected.to have_field(:pay_in_advance).of_type("Boolean") }
   it { is_expected.to have_field(:trial_period).of_type("Float") }
   it { is_expected.to have_field(:activity_logs).of_type("[ActivityLog!]") }
   it { is_expected.to have_field(:charges).of_type("[Charge!]") }

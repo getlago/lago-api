@@ -108,6 +108,19 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
+    context "when consent collection is enabled on the provider" do
+      let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:, require_terms_of_service_consent: true) }
+
+      it "does not add consent collection to the payment intent" do
+        create_service.call
+
+        expect(Stripe::PaymentIntent).to have_received(:create).with(
+          hash_excluding(:consent_collection),
+          anything
+        )
+      end
+    end
+
     context "when the invoice has already been paid" do
       before { invoice.update!(payment_status: :succeeded) }
 
@@ -481,6 +494,39 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
               expect(invoice.reload.payment_status).to eq "pending"
             end
           end
+        end
+      end
+
+      context "when the payment activates a payment-gated subscription without 3ds support" do
+        let(:subscription) { create(:subscription, :incomplete, organization:, customer:) }
+        let(:invoice) do
+          create(
+            :invoice,
+            :open,
+            :with_subscriptions,
+            subscriptions: [subscription],
+            organization:,
+            customer:,
+            total_amount_cents: 200,
+            currency:,
+            ready_for_payment_processing: true
+          )
+        end
+
+        before { create(:subscription_activation_rule, subscription:, status: "pending") }
+
+        it "retries the payment to offer the authentication challenge" do
+          WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .to_return(
+              status: 400,
+              body: get_stripe_fixtures("payment_intent_authentication_required_response.json", version: "2025-04-30.basil")
+            )
+
+          result = create_service.call
+
+          expect(result).to be_failure
+          expect(result.error_code).to eq "authentication_required"
+          expect(result.should_retry).to eq true
         end
       end
     end

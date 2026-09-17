@@ -5,19 +5,34 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: false do
   subject(:count_service) do
     described_class.new(
-      event_store_class:,
-      charge:,
-      subscription:,
-      boundaries: {
-        from_datetime:,
-        to_datetime:
-      },
+      event_store:,
+      metered_item:,
+      billing_context:,
+      boundaries:,
       filters:,
       bypass_aggregation:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime: from_datetime,
+        charges_to_datetime: to_datetime,
+        charges_duration: (to_datetime.to_date - from_datetime.to_date).to_i + 1,
+        timestamp: to_datetime
+      )
+    )
+  end
+  let(:boundaries) { {from_datetime:, to_datetime:} }
+  let(:billing_context) { Billing::Context.from(subscription:) }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, billing_context:, boundaries:, filters:)
+  end
   let(:bypass_aggregation) { false }
   let(:filters) do
     {event: pay_in_advance_event, grouped_by:, presentation_by:, charge_filter:, matching_filters:, ignored_filters:}

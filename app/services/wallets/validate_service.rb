@@ -15,6 +15,7 @@ module Wallets
       valid_limitations? if args[:applies_to]
       valid_wallet_limit?
       valid_payment_method? if args[:payment_method]
+      valid_connections? if args[:connections].present?
 
       if errors?
         result.validation_failure!(errors:)
@@ -107,22 +108,24 @@ module Wallets
     end
 
     def valid_limitations?
-      limitation_result = BaseService::Result.new
-      limitation_result.billable_metrics = result.billable_metrics
-      limitation_result.billable_metric_identifiers = result.billable_metric_identifiers
-
-      return true if Wallets::ValidateLimitationsService.new(limitation_result, **args).valid?
+      return true if Wallets::ValidateLimitationsService.new(result, **args).valid?
 
       add_error(field: :applies_to, error_code: "invalid_limitations")
     end
 
     def valid_payment_method?
-      pm_result = BaseService::Result.new
-      pm_result.payment_method = result.payment_method
-
-      return true if PaymentMethods::ValidateService.new(pm_result, **args).valid?
+      return true if PaymentMethods::ValidateService.new(result, **args).valid?
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
+    end
+
+    def valid_connections?
+      validator = BillingObjectConnections::ValidateService.new(result, **args)
+      return true if validator.valid?
+
+      validator.error_codes.each { |error_code| add_error(field: :connections, error_code:) }
+
+      false
     end
   end
 end

@@ -12,20 +12,23 @@ RSpec.describe Fees::ChargeService, :premium do
   subject(:charge_subscription_service) do
     described_class.new(
       invoice:,
-      charge:,
-      subscription:,
-      boundaries:,
-      context:,
-      apply_taxes:,
+      metered_item:,
+      billing_context:,
+      options:,
+      plan: subscription.plan,
+      customer:,
       filtered_aggregations:
     )
   end
 
   let(:customer) { create(:customer, organization:) }
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:organization) { create(:organization) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:filtered_aggregations) { nil }
+  let(:metered_item) { described_class::MeteredItem.from_charge(charge:, boundaries:) }
+  let(:options) { described_class::Options.new(context:, apply_taxes:) }
 
   let(:subscription) do
     create(
@@ -66,7 +69,84 @@ RSpec.describe Fees::ChargeService, :premium do
     )
   end
 
+  describe "validations" do
+    it "validates the billing context" do
+      expect do
+        described_class.call(invoice:, metered_item:, billing_context: nil)
+      end.to raise_error(ArgumentError, "billing_context must be a Billing::Context")
+    end
+
+    it "validates the metered item" do
+      expect do
+        described_class.new(invoice:, metered_item: nil, billing_context:)
+      end.to raise_error(ArgumentError, "metered_item must be a Fees::ChargeService::MeteredItem")
+    end
+
+    it "validates the options" do
+      expect do
+        described_class.new(invoice:, metered_item:, billing_context:, options: Object.new)
+      end.to raise_error(ArgumentError, "options must be a Fees::ChargeService::Options")
+    end
+
+    it "requires plan and customer when applying taxes" do
+      tax_options = described_class::Options.new(apply_taxes: true)
+
+      expect do
+        described_class.new(invoice:, metered_item:, billing_context:, options: tax_options, customer:)
+      end.to raise_error(ArgumentError, "plan is required when applying taxes")
+
+      expect do
+        described_class.new(invoice:, metered_item:, billing_context:, options: tax_options, plan: subscription.plan)
+      end.to raise_error(ArgumentError, "customer is required when applying taxes")
+    end
+  end
+
   describe ".call" do
+    it "passes the shared billing context to aggregation" do
+      allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+
+      expect(charge_subscription_service.call).to be_success
+      expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+        .with(hash_including(billing_context:))
+    end
+
+    context "with a contract for current usage" do
+      let(:contract) { create(:contract, customer:, organization:) }
+      let(:billing_context) { Billing::Context.from(contract:) }
+
+      it "builds fees with the contract billing entity and no subscription" do
+        create(
+          :event,
+          organization:,
+          customer:,
+          external_subscription_id: contract.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.hour
+        )
+
+        result = described_class.call(
+          invoice: nil,
+          metered_item:,
+          billing_context:,
+          options: described_class::Options.new(context: :current_usage, skip_adjusted_fees: true)
+        )
+
+        expect(result).to be_success
+        expect(result.fees.size).to eq(1)
+        expect(result.fees.first.subscription_id).to be_nil
+        expect(result.fees.first.organization_id).to eq(contract.organization_id)
+        expect(result.fees.first.billing_entity_id).to eq(contract.applicable_billing_entity_id)
+        expect(result.fees.first.units).to eq(1)
+        expect(result.fees.first).to be_new_record
+      end
+
+      it "rejects subscription-only invoice lookups for a contract" do
+        expect do
+          described_class.call(invoice:, metered_item:, billing_context:)
+        end.to raise_error(NotImplementedError, "contract-backed billing contexts do not have a subscription id")
+      end
+    end
+
     context "without filters" do
       it "creates a fee" do
         result = charge_subscription_service.call
@@ -1140,12 +1220,9 @@ RSpec.describe Fees::ChargeService, :premium do
           subject(:charge_subscription_service) do
             described_class.new(
               invoice:,
-              charge:,
-              subscription:,
-              boundaries:,
-              context:,
-              apply_taxes:,
-              skip_adjusted_fees: true,
+              metered_item:,
+              billing_context:,
+              options: described_class::Options.new(context:, apply_taxes:, skip_adjusted_fees: true),
               filtered_aggregations:
             )
           end
@@ -3462,11 +3539,9 @@ RSpec.describe Fees::ChargeService, :premium do
           subject(:charge_subscription_service) do
             described_class.new(
               invoice:,
-              charge:,
-              subscription:,
-              boundaries:,
-              context: :current_usage,
-              apply_taxes: false,
+              metered_item:,
+              billing_context:,
+              options: described_class::Options.new(context: :current_usage),
               filtered_aggregations: nil,
               cache_middleware:
             )
@@ -4027,17 +4102,17 @@ RSpec.describe Fees::ChargeService, :premium do
         let(:filtered_aggregations) { [eu_charge_filter.id] }
 
         it "does not compute matching and ignored filters for bypassed aggregations" do
-          allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+          allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
 
           result = charge_subscription_service.call
           expect(result).to be_success
 
-          expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-            .with(charge:, filter: eu_charge_filter)
-          expect(ChargeFilters::MatchingAndIgnoredService).not_to have_received(:call)
-            .with(charge:, filter: us_charge_filter)
-          expect(ChargeFilters::MatchingAndIgnoredService).not_to have_received(:call)
-            .with(charge:, filter: asia_charge_filter)
+          expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+            .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: eu_charge_filter))
+          expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).not_to have_received(:call)
+            .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: us_charge_filter))
+          expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).not_to have_received(:call)
+            .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: asia_charge_filter))
         end
       end
 
@@ -4099,17 +4174,17 @@ RSpec.describe Fees::ChargeService, :premium do
           let(:filtered_aggregations) { [eu_charge_filter.id] }
 
           it "computes matching and ignored filters for all filters" do
-            allow(ChargeFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+            allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
 
             result = charge_subscription_service.call
             expect(result).to be_success
 
-            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-              .with(charge:, filter: eu_charge_filter)
-            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-              .with(charge:, filter: us_charge_filter)
-            expect(ChargeFilters::MatchingAndIgnoredService).to have_received(:call)
-              .with(charge:, filter: asia_charge_filter)
+            expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: eu_charge_filter))
+            expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: us_charge_filter))
+            expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+              .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: asia_charge_filter))
           end
         end
       end
@@ -4118,13 +4193,13 @@ RSpec.describe Fees::ChargeService, :premium do
         subject(:charge_subscription_service) do
           described_class.new(
             invoice:,
-            charge:,
-            subscription:,
-            boundaries:,
-            context: :current_usage,
-            apply_taxes: false,
+            metered_item:,
+            billing_context:,
+            options: described_class::Options.new(
+              context: :current_usage,
+              with_zero_units_filters:
+            ),
             filtered_aggregations:,
-            with_zero_units_filters:,
             cache_middleware:
           )
         end
@@ -4199,13 +4274,13 @@ RSpec.describe Fees::ChargeService, :premium do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
-          charge:,
-          subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
+          metered_item:,
+          billing_context:,
           filtered_aggregations: nil,
-          usage_filters: UsageFilters.new(filter_by_group:)
+          options: described_class::Options.new(
+            context: :current_usage,
+            usage_filters: UsageFilters.new(filter_by_group:)
+          )
         )
       end
 
@@ -4306,13 +4381,13 @@ RSpec.describe Fees::ChargeService, :premium do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
-          charge:,
-          subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
+          metered_item:,
+          billing_context:,
           filtered_aggregations: nil,
-          usage_filters: UsageFilters.new(filter_by_presentation: filter_by_presentation)
+          options: described_class::Options.new(
+            context: :current_usage,
+            usage_filters: UsageFilters.new(filter_by_presentation: filter_by_presentation)
+          )
         )
       end
 
@@ -4452,13 +4527,13 @@ RSpec.describe Fees::ChargeService, :premium do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
-          charge:,
-          subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
+          metered_item:,
+          billing_context:,
           filtered_aggregations: nil,
-          usage_filters: UsageFilters.new(skip_grouping: true)
+          options: described_class::Options.new(
+            context: :current_usage,
+            usage_filters: UsageFilters.new(skip_grouping: true)
+          )
         )
       end
 

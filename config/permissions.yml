@@ -38,6 +38,10 @@ charges:
   create:
   update:
   delete:
+contracts:
+  view:
+  create:
+  update:
 coupons:
   view:
     - finance
@@ -116,6 +120,7 @@ invoices:
   void:
     - finance
     - manager
+  delete:
   export:
     - finance
     - manager
@@ -219,6 +224,26 @@ pricing_units:
     - finance
   create:
   update:
+product_filters:
+  view:
+  create:
+  update:
+  delete:
+products:
+  view:
+  create:
+  update:
+  delete:
+product_categories:
+  view:
+  create:
+  update:
+  delete:
+rate_cards:
+  view:
+  create:
+  update:
+  delete:
 roles:
   view:
   create:
@@ -234,6 +259,11 @@ subscriptions:
     - manager
   update:
     - manager
+usage_attribution_types:
+  view:
+  create:
+  update:
+  delete:
 wallets:
   create:
     - manager

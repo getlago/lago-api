@@ -61,7 +61,7 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
 
         message = messages.first
         expect(message[:topic]).to eq("test-topic")
-        expect(message[:key]).to eq("#{organization.id}-#{subscription.external_id}")
+        expect(message).not_to have_key(:key)
 
         payload = JSON.parse(message[:payload])
         expect(payload).to include(
@@ -253,7 +253,7 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
 
           message = messages.first
           expect(message[:topic]).to eq("test-topic")
-          expect(message[:key]).to eq("#{organization.id}-#{subscription.external_id}")
+          expect(message).not_to have_key(:key)
 
           payload = JSON.parse(message[:payload])
           expect(payload).to include(

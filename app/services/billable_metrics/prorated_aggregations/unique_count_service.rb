@@ -6,7 +6,11 @@ module BillableMetrics
       def initialize(**args)
         super
 
-        @base_aggregator = BillableMetrics::Aggregations::UniqueCountService.new(**args)
+        # NOTE: the base aggregator gets its own store instance for the same window: both
+        #       aggregators write their own per-charge state into the store they hold.
+        @base_aggregator = BillableMetrics::Aggregations::UniqueCountService.new(
+          **args.merge(event_store: event_store.for_window(**boundaries))
+        )
         @base_aggregator.result = result
 
         event_store.aggregation_property = billable_metric.field_name
@@ -73,7 +77,7 @@ module BillableMetrics
             group_result_without_proration.grouped_by = aggregation.groups
           end
 
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
           group_result.full_units_number = group_result_without_proration&.aggregation || 0
 

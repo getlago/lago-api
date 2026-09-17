@@ -63,5 +63,26 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
         expect(apply_service.proration_coefficient).to eq(1 / days_in_month.to_f)
       end
     end
+
+    context "when subscription is downgraded right after the period ended" do
+      let(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
+      let(:from_datetime) { DateTime.parse("2024-07-01T00:00:00") }
+      let(:to_datetime) { DateTime.parse("2024-07-31T23:59:59") }
+      let(:charges_from_datetime) { from_datetime }
+      let(:charges_to_datetime) { to_datetime }
+      let(:terminated_at) { DateTime.parse("2024-08-01T00:15:49") }
+      let(:timestamp) { terminated_at }
+
+      let(:cheaper_plan) { create(:plan, organization:, amount_cents: plan.amount_cents / 2) }
+
+      before do
+        create(:subscription, :pending, customer:, plan: cheaper_plan, previous_subscription: subscription)
+        subscription.update!(status: :terminated, terminated_at:)
+      end
+
+      it "returns the coefficient of the whole period that was billed" do
+        expect(apply_service.proration_coefficient).to eq(1.0)
+      end
+    end
   end
 end

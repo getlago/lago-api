@@ -107,6 +107,10 @@ RSpec.describe Customers::UpsertFromApiService do
     expect(Utils::ActivityLog).to have_produced("customer.created").after_commit.with(result.customer)
   end
 
+  it "does not refresh the invoices search terms" do
+    expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+  end
+
   context "when organization has multiple billing entities" do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
@@ -279,20 +283,10 @@ RSpec.describe Customers::UpsertFromApiService do
         create(:invoice, customer: customer)
       end
 
-      it "does not update the billing_entity of the customer" do
+      it "updates the billing_entity of the customer" do
         expect(result).to be_success
         expect(result.customer).to eq(customer)
-        expect(result.customer.billing_entity).to eq(billing_entity_2)
-      end
-
-      context "when multi_entity_billing feature flag is enabled" do
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
-        it "updates the billing_entity of the customer" do
-          expect(result).to be_success
-          expect(result.customer).to eq(customer)
-          expect(result.customer.billing_entity).to eq(billing_entity)
-        end
+        expect(result.customer.billing_entity).to eq(billing_entity)
       end
     end
 
@@ -638,6 +632,19 @@ RSpec.describe Customers::UpsertFromApiService do
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(result.customer)
     end
 
+    it "refreshes the invoices search terms when a searchable field changes" do
+      expect { result }
+        .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+    end
+
+    context "when no searchable field changes" do
+      let(:create_args) { {external_id:, city: "Paris"} }
+
+      it "does not refresh the invoices search terms" do
+        expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+      end
+    end
+
     context "with provider customer" do
       let(:payment_provider) { create(:stripe_provider, organization:) }
       let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider:) }
@@ -842,11 +849,9 @@ RSpec.describe Customers::UpsertFromApiService do
         customer.update!(currency: subscription.plan.amount_currency)
       end
 
-      it "fails is we change the subscription" do
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:currency)
-        expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+      it "updates the customer currency (it is now a default preference)" do
+        expect(result).to be_success
+        expect(customer.reload.currency).to eq("CAD")
       end
     end
 

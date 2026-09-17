@@ -40,6 +40,24 @@ RSpec.describe QuoteVersions::CloneService do
           expect(quote_version.void_reason).to eq("manual")
           expect(quote_version.voided_at).not_to eq(nil)
         end
+
+        it "produces a quote.version_created activity log for the clone" do
+          expect(Utils::ActivityLog)
+            .to have_produced("quote.version_created").after_commit.with(result.quote_version)
+        end
+
+        # The snapshot belongs to the approval the source went through, not to the clone. Carrying it
+        # over would leave the new draft rendering the source's values whatever it is edited to.
+        context "when the source carries an approval snapshot" do
+          before do
+            quote_version.update!(mention_variables: {"billing_entity_name" => "Globex SARL"})
+          end
+
+          it "leaves the clone without one, so its variables are computed live" do
+            expect(result).to be_success
+            expect(result.quote_version.mention_variables).to eq(nil)
+          end
+        end
       end
 
       context "when the source version is draft" do
@@ -64,6 +82,18 @@ RSpec.describe QuoteVersions::CloneService do
           expect(quote_version.voided?).to eq(true)
           expect(quote_version.void_reason).to eq("superseded")
           expect(quote_version.voided_at).not_to eq(nil)
+        end
+
+        it "enqueues a quote.voided webhook for the superseded source" do
+          expect { clone_service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("quote.voided", quote_version)
+        end
+
+        it "produces a quote.voided activity log for the superseded source" do
+          clone_service.call
+
+          expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
         end
       end
     end
@@ -187,6 +217,18 @@ RSpec.describe QuoteVersions::CloneService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
       end
     end
   end

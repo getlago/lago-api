@@ -443,7 +443,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
     end
 
     context "when grouping subscriptions by currency" do
-      let(:organization) { create(:organization, feature_flags: ["multi_currency"]) }
+      let(:organization) { create(:organization) }
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
       let(:current_date) { subscription_at.next_month }
@@ -494,21 +494,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
           expect(BillNonInvoiceableFeesJob).to have_been_enqueued
             .with([eur_subscription], current_date)
         end
-
-        context "without feature flag" do
-          let(:organization) { create(:organization) }
-
-          it "groups them into a single billing job" do
-            billing_service.call
-
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with(
-                contain_exactly(usd_subscription, eur_subscription),
-                current_date.to_i,
-                invoicing_reason: :subscription_periodic
-              )
-          end
-        end
       end
 
       context "when subscriptions share the same currency" do
@@ -556,7 +541,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when combined with payment method grouping" do
-        let(:organization) { create(:organization, feature_flags: %w[multi_currency]) }
+        let(:organization) { create(:organization) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
 
@@ -914,7 +899,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
     end
 
     context "when grouping subscriptions by billing entity" do
-      let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
+      let(:organization) { create(:organization) }
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:other_billing_entity) { create(:billing_entity, organization:) }
       let(:interval) { :monthly }
@@ -964,21 +949,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([subscription_default_entity], current_date)
           expect(BillNonInvoiceableFeesJob).to have_been_enqueued
             .with([subscription_other_entity], current_date)
-        end
-
-        context "without feature flag" do
-          let(:organization) { create(:organization) }
-
-          it "groups them into a single billing job" do
-            billing_service.call
-
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with(
-                contain_exactly(subscription_default_entity, subscription_other_entity),
-                current_date.to_i,
-                invoicing_reason: :subscription_periodic
-              )
-          end
         end
       end
 
@@ -1213,7 +1183,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when combined with currency grouping" do
-        let(:organization) { create(:organization, feature_flags: ["multi_currency"]) }
+        let(:organization) { create(:organization) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
         let(:eur_plan) { create(:plan, organization:, interval:, amount_currency: "EUR") }
 
@@ -1285,7 +1255,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
 
       context "when combined with billing entity grouping" do
-        let(:organization) { create(:organization, feature_flags: ["multi_entity_billing"]) }
+        let(:organization) { create(:organization) }
         let(:other_billing_entity) { create(:billing_entity, organization:) }
 
         let(:default_entity_consolidated) do
@@ -1433,7 +1403,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
 
       context "when combined with payment method, currency and billing entity grouping" do
         let(:organization) do
-          create(:organization, feature_flags: %w[multi_currency multi_entity_billing])
+          create(:organization)
         end
         let(:other_billing_entity) { create(:billing_entity, organization:) }
         let(:usd_plan) { create(:plan, organization:, interval:, amount_currency: "USD") }
@@ -1551,6 +1521,32 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([default_usd_provider_opted_out], current_date)
         end
       end
+    end
+  end
+
+  describe "database routing" do
+    let(:billing_entity) { create(:billing_entity) }
+    let(:organization) { billing_entity.organization }
+    let(:billing_at) { Time.current }
+
+    it "wraps the >16 KB billable-subscriptions CTE in ApplicationRecord.connected_to(role: :direct)" do
+      # The rendered SQL is ~28 KB and would session-pin RDS Proxy for
+      # Postgres. Verify the query executes on the :direct role so it
+      # bypasses the pooler regardless of which Sidekiq worker picks
+      # the job up. We yield through the stub instead of `and_call_original`
+      # so the underlying query still runs on the default pool — that
+      # keeps this test independent of cross-pool transaction visibility
+      # in the test env, where :direct and :writing resolve to the same URL.
+      wrapped_role = nil
+      allow(ApplicationRecord).to receive(:connected_to) do |role:, &block|
+        wrapped_role = role
+        block.call
+      end
+
+      billing_service.call
+
+      expect(wrapped_role).to eq(:direct)
+      expect(ApplicationRecord).to have_received(:connected_to).with(role: :direct).at_least(:once)
     end
   end
 end

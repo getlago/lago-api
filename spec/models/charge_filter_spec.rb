@@ -456,4 +456,82 @@ RSpec.describe ChargeFilter do
       end
     end
   end
+
+  describe ".generate_code" do
+    it "is independent of key and value order" do
+      a = described_class.generate_code({"type" => %w[pages], "model" => %w[b a]})
+      b = described_class.generate_code({"model" => %w[a b], "type" => %w[pages]})
+
+      expect(a).to eq(b)
+    end
+
+    it "differs for different values" do
+      a = described_class.generate_code({"model" => %w[ocr-2411]})
+      b = described_class.generate_code({"model" => %w[ocr-2503]})
+
+      expect(a).not_to eq(b)
+    end
+
+    it "stays readable and bounded" do
+      code = described_class.generate_code({"type" => %w[pages], "model" => %w[ocr-2411]})
+
+      expect(code).to start_with("model_ocr-2411_type_pages_")
+      expect(code.length).to be <= described_class::CODE_SLUG_LIMIT + 9
+    end
+
+    it "keeps long values distinct once the readable part is truncated" do
+      long = "m" * 200
+      a = described_class.generate_code({"model" => ["#{long}a"]})
+      b = described_class.generate_code({"model" => ["#{long}b"]})
+
+      expect(a).not_to eq(b)
+    end
+  end
+
+  describe "#assign_code!" do
+    let(:charge) { create(:standard_charge) }
+    let(:bm_filter) { create(:billable_metric_filter, billable_metric: charge.billable_metric, key: "model", values: %w[a b]) }
+
+    def filter_with(values)
+      filter = create(:charge_filter, charge:)
+      create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values:)
+      filter.assign_code!
+      filter
+    end
+
+    it "derives the code from the values" do
+      expect(filter_with(%w[a]).code).to eq(described_class.generate_code({"model" => %w[a]}))
+    end
+
+    it "suffixes a code already taken on the charge" do
+      first = filter_with(%w[a])
+      second = filter_with(%w[a])
+
+      expect(second.code).to eq("#{first.code}_2")
+    end
+
+    it "leaves an existing code alone, so a copied filter keeps the one it came with" do
+      filter = filter_with(%w[a])
+
+      expect { filter.assign_code! }.not_to change { filter.reload.code }
+    end
+
+    # updated_at orders a charge's filters, and the cascade pairs plan and override by it
+    it "does not touch updated_at" do
+      filter = create(:charge_filter, charge:)
+      create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: %w[a])
+
+      expect { filter.assign_code! }.not_to change { filter.reload.updated_at }
+    end
+
+    # The code freezes the values the filter was born with: a later metric edit that trims a
+    # value must not change it, or two filters collapsing onto one predicate would collide
+    it "survives a value being discarded" do
+      filter = filter_with(%w[a])
+
+      filter.values.each(&:discard!)
+
+      expect { filter.assign_code! }.not_to change { filter.reload.code }
+    end
+  end
 end

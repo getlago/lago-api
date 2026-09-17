@@ -97,11 +97,7 @@ module Api
       # NOTE: We can't destroy a subscription, it will terminate it
       def terminate
         query = current_organization.subscriptions.where(external_id: params[:external_id])
-        subscription = if params[:status] == "pending"
-          query.pending
-        else
-          query.active
-        end.first
+        subscription = subscriptions_matching_status(query).first
 
         kwargs = params.permit(:on_termination_credit_note, :on_termination_invoice).to_h.symbolize_keys
 
@@ -118,17 +114,7 @@ module Api
         query = current_organization.subscriptions
           .where(external_id: params[:external_id])
           .order(subscription_at: :desc)
-        subscription = if query.count > 1
-          if params[:status] == "pending"
-            query.pending
-          elsif params[:status] == "incomplete"
-            query.incomplete
-          else
-            query.active
-          end
-        else
-          query
-        end.first
+        subscription = ((query.count > 1) ? subscriptions_matching_status(query) : query).first
 
         result = ::Subscriptions::UpdateService.call(
           subscription:,
@@ -162,6 +148,14 @@ module Api
 
       private
 
+      def subscriptions_matching_status(query)
+        case params[:status]
+        when "pending" then query.pending
+        when "incomplete" then query.incomplete
+        else query.active
+        end
+      end
+
       def create_params
         params.require(:subscription)
           .permit(
@@ -176,6 +170,7 @@ module Api
             :ending_at,
             :progressive_billing_disabled,
             :consolidate_invoice,
+            :purchase_order_number,
             invoice_custom_section: [
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
@@ -201,6 +196,7 @@ module Api
           :billing_entity_id,
           :billing_entity_code,
           :consolidate_invoice,
+          :purchase_order_number,
           activation_rules: [:type, :timeout_hours],
           invoice_custom_section: [
             :skip_invoice_custom_sections,

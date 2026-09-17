@@ -340,6 +340,52 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with a unicode local-part in email" do
+      let(:external_id) { SecureRandom.uuid }
+      let(:create_params) do
+        {
+          external_id:,
+          name: "Foo Bar Inc.",
+          email: "joão.silva@example.com"
+        }
+      end
+
+      it "creates the customer and preserves the email" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:email]).to eq("joão.silva@example.com")
+      end
+
+      context "when the customer already exists" do
+        before { create(:customer, organization:, external_id:, email: "ascii@example.com") }
+
+        it "updates the email" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer][:email]).to eq("joão.silva@example.com")
+        end
+      end
+
+      context "when the email is malformed" do
+        let(:create_params) do
+          {
+            external_id:,
+            name: "Foo Bar Inc.",
+            email: "joão.silva@"
+          }
+        end
+
+        it "returns an unprocessable_entity" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:email]).to include("invalid_email_format")
+        end
+      end
+    end
+
     [
       {
         params: "customer",

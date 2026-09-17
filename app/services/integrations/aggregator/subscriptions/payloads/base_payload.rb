@@ -22,7 +22,7 @@ module Integrations
           attr_reader :integration_customer, :subscription
 
           def subscription_url
-            url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+            url = Rails.application.config.lago_front_url
 
             URI.join(url, "/#{integration_customer.customer.organization.slug}/customer/#{integration_customer.customer.id}/subscription/#{subscription.id}/overview").to_s
           end

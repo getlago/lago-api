@@ -46,7 +46,7 @@ module BillableMetrics
         last_events = event_store.grouped_last_event if billable_metric.recurring?
 
         result.aggregations = counts.map do |aggregation|
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
           group_result.count = aggregation.events_count
 
@@ -82,7 +82,7 @@ module BillableMetrics
       def custom_properties
         return charge_filter.properties["custom_properties"] if charge_filter.present?
 
-        charge.properties["custom_properties"]
+        metered_item.properties["custom_properties"]
       end
 
       def current_state(grouped_by_values:)
@@ -96,8 +96,8 @@ module BillableMetrics
 
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: subscription.external_id)
-          .where(charge_id: charge.id)
+          .where(external_subscription_id: billing_context.external_id)
+          .where(charge_id: metered_item.charge_id)
           .where("cached_aggregations.timestamp < ?", truncated_datetime)
           .where(grouped_by: grouped_by_values.presence || {})
           .order(timestamp: :desc, created_at: :desc)
@@ -121,25 +121,13 @@ module BillableMetrics
         total_batches = (target_result.count.to_f / BATCH_SIZE).ceil
         state = current_state(grouped_by_values:)
 
-        # NOTE: for grouped_by aggregations we need to initialize
-        #       the event store with the grouped_by values to only fetch the events
-        #       of the group
-        store = event_store
-        if grouped_by_values
-          store = event_store_class.new(
-            code: billable_metric.code,
-            subscription:,
-            boundaries:,
-            filters: filters.merge(grouped_by_values:)
-          )
-        end
+        event_store.with_grouped_by_values(grouped_by_values) do
+          (1..total_batches).each do |batch|
+            events_properties = event_store.events(ordered: true).page(batch).per(BATCH_SIZE)
+              .map { |event| {timestamp: event.timestamp, properties: event.properties} }
 
-        # NOTE: Loop over events by batch
-        (1..total_batches).each do |batch|
-          events_properties = store.events(ordered: true).page(batch).per(BATCH_SIZE)
-            .map { |event| {timestamp: event.timestamp, properties: event.properties} }
-
-          state = sandboxed_aggregation(events_properties, state)
+            state = sandboxed_aggregation(events_properties, state)
+          end
         end
 
         state

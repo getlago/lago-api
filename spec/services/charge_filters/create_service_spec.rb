@@ -108,6 +108,89 @@ RSpec.describe ChargeFilters::CreateService do
       end
     end
 
+    context "with cascade_updates" do
+      subject(:service) { described_class.call(charge:, params:, cascade_updates: true) }
+
+      let(:child_plan) { create(:plan, organization: charge.organization, parent: charge.plan) }
+      let(:child_charge) do
+        create(:standard_charge, plan: child_plan, organization: charge.organization, billable_metric: charge.billable_metric, parent: charge)
+      end
+
+      let(:params) do
+        {
+          invoice_display_name: "Domestic Visa",
+          properties: {amount: "50"},
+          values: {card_location_filter.key => ["domestic"]}
+        }
+      end
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+      end
+
+      # The children are matched on this code, so the filter created here has to hand over
+      # the one it was just given rather than let the cascade fall back to the predicate
+      it "triggers filter-level cascade carrying the new filter's code" do
+        result = service
+
+        expect(result.charge_filter.code).to be_present
+        expect(ChargeFilters::CascadeJob).to have_been_enqueued.with(
+          charge.id,
+          "create",
+          hash_including("card_location"),
+          nil,
+          hash_including("amount"),
+          "Domestic Visa",
+          result.charge_filter.code
+        )
+      end
+    end
+
+    context "without cascade_updates when charge has children" do
+      let(:child_plan) { create(:plan, organization: charge.organization, parent: charge.plan) }
+      let(:child_charge) do
+        create(:standard_charge, plan: child_plan, organization: charge.organization, billable_metric: charge.billable_metric, parent: charge)
+      end
+
+      let(:params) do
+        {
+          invoice_display_name: "Domestic Visa",
+          properties: {amount: "50"},
+          values: {card_location_filter.key => ["domestic"]}
+        }
+      end
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+      end
+
+      it "does not trigger cascade update" do
+        service
+
+        expect(ChargeFilters::CascadeJob).not_to have_been_enqueued
+      end
+    end
+
+    # Nothing to cascade to, so the job would find no children and do nothing
+    context "with cascade_updates when charge has no children" do
+      subject(:service) { described_class.call(charge:, params:, cascade_updates: true) }
+
+      let(:params) do
+        {
+          invoice_display_name: "Domestic Visa",
+          properties: {amount: "50"},
+          values: {card_location_filter.key => ["domestic"]}
+        }
+      end
+
+      it "creates the filter without enqueuing a cascade job" do
+        expect { service }.to change(ChargeFilter, :count).by(1)
+        expect(ChargeFilters::CascadeJob).not_to have_been_enqueued
+      end
+    end
+
     context "with graduated charge model" do
       let(:charge) { create(:graduated_charge) }
       let(:params) do

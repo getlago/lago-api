@@ -8,6 +8,14 @@ module Quotes
 
     Result = BaseResult[:quote]
 
+    # The middleware is used rather than an inline produce because the diff is what makes this
+    # entry useful, and object_changes is only computed when produce wraps the call.
+    activity_loggable(
+      action: "quote.updated",
+      record: -> { quote },
+      condition: -> { params.has_key?(:owners) }
+    )
+
     def initialize(quote:, params:)
       @quote = quote
       @params = params

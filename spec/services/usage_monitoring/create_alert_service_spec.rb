@@ -148,6 +148,96 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "with notify_on" do
+      let(:base) { {alert_type: "current_usage_amount", code: "ok"} }
+
+      it "accepts opting a coded threshold in to resolution" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+
+      it "defaults to notifying on trigger only" do
+        params = base.merge(thresholds: [{code: "warn", value: 10}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
+      end
+
+      it "rejects an unknown transition" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[triggered exploded]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("value_is_invalid")
+      end
+
+      it "rejects dropping triggered" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+
+      it "rejects opting in without a code" do
+        params = base.merge(thresholds: [{value: 10, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:code"]).to include("value_is_mandatory")
+      end
+
+      it "rejects a code reused within the alert" do
+        params = base.merge(thresholds: [
+          {code: "warn", value: 10, notify_on: %w[triggered resolved]},
+          {code: "warn", value: 20}
+        ])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:thresholds]).to include("duplicate_threshold_codes")
+      end
+
+      it "allows a code shared between thresholds that do not opt in" do
+        params = base.merge(thresholds: [
+          {code: "final", value: 30, notify_on: %w[triggered resolved]},
+          {code: "tier", value: 10},
+          {code: "tier", value: 20}
+        ])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+      end
+
+      it "falls back to the default when notify_on is explicitly null" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: nil}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
+      end
+
+      it "rejects an explicitly emptied list" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: []}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+
+      it "rejects opting a recurring threshold in to resolution" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: true, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("recurring_not_supported")
+      end
+    end
+
     context "when thresholds have duplicate values with falsy recurring variants" do
       [
         [{value: 1, recurring: false}, {value: 1, recurring: "0"}],
@@ -377,6 +467,41 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "does not create a subscription activity" do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when the code is already used on the same wallet" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1") }
+
+        it "rejects it before reaching the database" do
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never builds the alert, so no insert is attempted" do
+          allow(UsageMonitoring::Alert).to receive(:new).and_call_original
+
+          expect(result).to be_failure
+          expect(UsageMonitoring::Alert).not_to have_received(:new)
+        end
+      end
+
+      context "when the same code is used on another wallet" do
+        before do
+          other = create(:wallet, organization:)
+          create(:wallet_credits_balance_alert, organization:, wallet: other, code: "wallet1")
+        end
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when a discarded alert holds the code" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
       end
 
       context "when processing wallet alerts", :premium do

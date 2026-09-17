@@ -47,12 +47,16 @@ class Plan < ApplicationRecord
     semiannual
   ].freeze
 
-  enum :interval, INTERVALS, validate: true
+  enum :interval, INTERVALS, validate: {allow_nil: true}
 
-  monetize :amount_cents
+  monetize :amount_cents, allow_nil: true
 
   validates :name, :code, presence: true
   validates :amount_currency, inclusion: {in: currency_list}
+  # A blank interval keeps the historical "value_is_invalid" error (the enum used
+  # to reject nil as an out-of-range value) rather than a "value_is_mandatory" one.
+  validates :interval, presence: {message: "value_is_invalid"}
+  validates :amount_cents, presence: true
   validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
 
@@ -79,6 +83,8 @@ class Plan < ApplicationRecord
     !pay_in_advance
   end
 
+  # A legacy plan is frozen once it has subscriptions. Catalog plans live in
+  # their own table and freeze on contracts (CatalogPlan#attached_to_contracts?).
   def attached_to_subscriptions?
     subscriptions.exists?
   end
@@ -117,9 +123,13 @@ class Plan < ApplicationRecord
 
   def active_subscriptions_count
     count = subscriptions.active.count
-    return count unless children
+    active_count_per_child = Subscription.active
+      .where(Subscription.arel_table[:plan_id].eq(Plan.arel_table[:id]))
+      .select("COUNT(*)")
 
-    count + children.joins(:subscriptions).merge(Subscription.active).select("subscriptions.id").distinct.count
+    # Count through the (plan_id, status) index for each override instead of
+    # joining all active subscriptions before filtering by the parent plan.
+    count + children.sum(Arel::Nodes::Grouping.new(active_count_per_child.arel)).to_i
   end
 
   def customers_count
@@ -130,10 +140,10 @@ class Plan < ApplicationRecord
   end
 
   def draft_invoices_count
-    count = subscriptions.joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
-    return count unless children
+    draft_invoices = Invoice.draft.where(organization_id:)
+    count = subscriptions.joins(:invoices).merge(draft_invoices).select(:invoice_id).distinct.count
 
-    count + children.joins(:subscriptions).joins(:invoices).merge(Invoice.draft).select(:invoice_id).distinct.count
+    count + children.joins(subscriptions: :invoices).merge(draft_invoices).select(:invoice_id).distinct.count
   end
 
   private
@@ -153,17 +163,17 @@ end
 # Database name: primary
 #
 #  id                         :uuid             not null, primary key
-#  amount_cents               :bigint           not null
+#  amount_cents               :bigint
 #  amount_currency            :string           not null
 #  bill_charges_monthly       :boolean
 #  bill_fixed_charges_monthly :boolean          default(FALSE)
 #  code                       :string           not null
 #  deleted_at                 :datetime
 #  description                :string
-#  interval                   :integer          not null
+#  interval                   :integer
 #  invoice_display_name       :string
 #  name                       :string           not null
-#  pay_in_advance             :boolean          default(FALSE), not null
+#  pay_in_advance             :boolean          default(FALSE)
 #  pending_deletion           :boolean          default(FALSE), not null
 #  trial_period               :float
 #  created_at                 :datetime         not null

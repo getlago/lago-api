@@ -4,10 +4,11 @@ module Fees
   class CreateTrueUpService < BaseService
     Result = BaseResult[:true_up_fee]
 
-    def initialize(fee:, used_amount_cents:, used_precise_amount_cents:)
+    def initialize(fee:, used_amount_cents:, used_precise_amount_cents:, billing_segment: nil)
       @fee = fee
       @used_amount_cents = used_amount_cents
       @used_precise_amount_cents = used_precise_amount_cents
+      @billing_segment = billing_segment
       @boundaries = BillingPeriodBoundaries.from_fee(fee)
 
       super
@@ -15,31 +16,28 @@ module Fees
 
     def call
       return result unless fee
-      return result if used_amount_cents >= prorated_min_amount_cents
+      amount = Fees::AmountsService.call(
+        currency: billing_segment ? Money::Currency.new(billing_segment.currency) : charge.plan.amount.currency,
+        charge_model_result: ChargeModels::BaseService::Result.new,
+        applied_pricing_unit:,
+        true_up:
+      ).true_up_amount
 
-      if charge.applied_pricing_unit
-        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
-          .to_fiat_currency_cents(charge.plan.amount.currency)
-          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
-      else
-        amount_cents = (prorated_min_amount_cents - used_amount_cents).round
-        precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
-        unit_amount_cents = amount_cents
-        precise_unit_amount = precise_amount_cents / charge.plan.amount.currency.subunit_to_unit
-      end
+      return result unless amount
 
       true_up_fee = fee.dup
       true_up_fee.assign_attributes(
-        amount_cents:,
-        precise_amount_cents:,
+        amount_cents: amount.amount_cents,
+        precise_amount_cents: amount.precise_amount_cents,
+        unit_amount_cents: amount.unit_amount_cents,
+        precise_unit_amount: amount.precise_unit_amount,
+        pricing_unit_usage: amount.pricing_unit_usage,
         units: 1,
         total_aggregated_units: 1,
         events_count: 0,
         charge_filter_id: nil,
-        true_up_parent_fee: fee,
-        unit_amount_cents:,
-        precise_unit_amount:,
-        pricing_unit_usage:
+        product_filter_id: nil,
+        true_up_parent_fee: fee
       )
 
       result.true_up_fee = true_up_fee
@@ -48,35 +46,37 @@ module Fees
 
     private
 
-    attr_reader :fee, :used_amount_cents, :used_precise_amount_cents, :boundaries
+    attr_reader :fee, :used_amount_cents, :used_precise_amount_cents, :boundaries, :billing_segment
 
     delegate :charge, :subscription, to: :fee
 
-    def prorated_min_amount_cents
-      # NOTE: number of days between beginning of the period and the termination date
-      from_datetime = boundaries.charges_from_datetime.to_time
-      to_datetime = boundaries.charges_to_datetime.to_time
-      number_of_day_to_bill = subscription.date_diff_with_timezone(from_datetime, to_datetime)
-
-      charge.min_amount_cents.fdiv(boundaries.charges_duration) * number_of_day_to_bill
+    def applied_pricing_unit
+      if billing_segment
+        Fees::AmountsService::AppliedPricingUnit.from_pricing_unit(
+          pricing_unit: billing_segment.pricing_unit,
+          conversion_rate: billing_segment.pricing_unit_conversion_rate
+        )
+      else
+        Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(charge.applied_pricing_unit)
+      end
     end
 
-    def pricing_unit_usage
-      return @pricing_unit_usage if defined?(@pricing_unit_usage)
-
-      unless charge.applied_pricing_unit
-        @pricing_unit_usage = nil
-        return
+    def true_up
+      if billing_segment
+        Fees::AmountsService::TrueUp.new(
+          minimum_amount_cents: billing_segment.prorated_min_amount_cents,
+          used_amount_cents:,
+          used_precise_amount_cents:
+        )
+      else
+        Fees::AmountsService::TrueUp.new(
+          minimum_amount_cents: charge.min_amount_cents,
+          billed_days: subscription.date_diff_with_timezone(boundaries.charges_from_datetime.to_time, boundaries.charges_to_datetime.to_time),
+          period_days: boundaries.charges_duration,
+          used_amount_cents:,
+          used_precise_amount_cents:
+        )
       end
-
-      amount_cents = prorated_min_amount_cents - used_amount_cents
-      precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
-
-      @pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
-        amount: amount_cents / charge.pricing_unit.subunit_to_unit.to_d,
-        unit_amount: precise_amount_cents / charge.pricing_unit.subunit_to_unit.to_d,
-        applied_pricing_unit: charge.applied_pricing_unit
-      )
     end
   end
 end

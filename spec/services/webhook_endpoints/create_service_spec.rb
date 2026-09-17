@@ -19,13 +19,11 @@ RSpec.describe WebhookEndpoints::CreateService do
     it "creates the webhook endpoint" do
       result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.webhook_endpoint.webhook_url).to eq("http://foo.bar")
-        expect(result.webhook_endpoint.signature_algo).to eq("hmac")
-        expect(result.webhook_endpoint.name).to eq("Test Webhook")
-        expect(result.webhook_endpoint.event_types).to eq(["customer.created"])
-      end
+      expect(result).to be_success
+      expect(result.webhook_endpoint.webhook_url).to eq("http://foo.bar")
+      expect(result.webhook_endpoint.signature_algo).to eq("hmac")
+      expect(result.webhook_endpoint.name).to eq("Test Webhook")
+      expect(result.webhook_endpoint.event_types).to eq(["customer.created"])
     end
 
     context "when creating with partial params" do
@@ -39,15 +37,13 @@ RSpec.describe WebhookEndpoints::CreateService do
       it "adds only the provided fields" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          # added fields
-          expect(result.webhook_endpoint.webhook_url).to eq("http://foo.bar")
-          expect(result.webhook_endpoint.signature_algo).to eq("hmac")
-          # default fields
-          expect(result.webhook_endpoint.name).to be_nil
-          expect(result.webhook_endpoint.event_types).to be_nil
-        end
+        expect(result).to be_success
+        # added fields
+        expect(result.webhook_endpoint.webhook_url).to eq("http://foo.bar")
+        expect(result.webhook_endpoint.signature_algo).to eq("hmac")
+        # default fields
+        expect(result.webhook_endpoint.name).to be_nil
+        expect(result.webhook_endpoint.event_types).to be_nil
       end
     end
 
@@ -61,10 +57,8 @@ RSpec.describe WebhookEndpoints::CreateService do
       it "returns a validation failure" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.class).to eq(BaseService::ValidationFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error.class).to eq(BaseService::ValidationFailure)
       end
     end
 
@@ -79,10 +73,8 @@ RSpec.describe WebhookEndpoints::CreateService do
       it "returns a validation failure" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.class).to eq(BaseService::ValidationFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error.class).to eq(BaseService::ValidationFailure)
       end
     end
   end

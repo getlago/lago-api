@@ -25,6 +25,12 @@ RSpec.describe PaymentIntents::ExpireService do
         expect { result }.to change { payment_intent.reload.status }.from("active").to("expired")
         expect(payment_provider_service).to have_received(:call!).with(:expire_payment_url, invoice, payment_intent)
       end
+
+      it "retires the payment intent from the reuse window" do
+        result
+
+        expect(PaymentIntent.non_expired.where(invoice:)).to be_empty
+      end
     end
 
     context "when an active payment intent has no provider session id" do

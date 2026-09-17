@@ -528,7 +528,8 @@ RSpec.describe Payment do
   describe "#should_sync_payment?" do
     subject(:method_call) { payment.should_sync_payment? }
 
-    let(:payment) { create(:payment, payable: invoice) }
+    let(:payment) { create(:payment, payable: invoice, payable_payment_status:) }
+    let(:payable_payment_status) { :succeeded }
     let(:invoice) { create(:invoice, customer:, organization:, status:) }
     let(:organization) { create(:organization) }
 
@@ -592,6 +593,14 @@ RSpec.describe Payment do
           it "returns true" do
             expect(method_call).to eq(true)
           end
+
+          context "when the payment has not succeeded" do
+            let(:payable_payment_status) { %i[pending processing failed].sample }
+
+            it "returns false" do
+              expect(method_call).to eq(false)
+            end
+          end
         end
 
         context "when sync payments is false" do
@@ -601,6 +610,48 @@ RSpec.describe Payment do
             expect(method_call).to eq(false)
           end
         end
+      end
+    end
+  end
+
+  describe "#gated_subscription_activation?" do
+    subject(:method_call) { payment.gated_subscription_activation? }
+
+    let(:payment) { create(:payment, payable:) }
+    let(:subscription) { create(:subscription, :incomplete) }
+
+    context "when the payable is the activation invoice of a payment-gated subscription" do
+      let(:payable) do
+        create(
+          :invoice,
+          :open,
+          :with_subscriptions,
+          subscriptions: [subscription],
+          organization: subscription.organization,
+          customer: subscription.customer
+        )
+      end
+
+      before { create(:subscription_activation_rule, subscription:, status: "pending") }
+
+      it "returns true" do
+        expect(method_call).to eq(true)
+      end
+    end
+
+    context "when the payable is a regular invoice" do
+      let(:payable) { create(:invoice) }
+
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+    end
+
+    context "when the payable is a payment request" do
+      let(:payable) { create(:payment_request) }
+
+      it "returns false" do
+        expect(method_call).to eq(false)
       end
     end
   end

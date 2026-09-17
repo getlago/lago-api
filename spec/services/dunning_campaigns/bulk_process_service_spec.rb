@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe DunningCampaigns::BulkProcessService do
-  subject(:result) { described_class.call }
+  subject(:result) do
+    perform_enqueued_jobs(only: DunningCampaigns::ProcessCustomerJob) do
+      described_class.call
+    end
+  end
 
   let(:currency) { "EUR" }
 
@@ -32,6 +36,52 @@ RSpec.describe DunningCampaigns::BulkProcessService do
         payment_overdue: true,
         total_amount_cents: 1_00
       )
+    end
+
+    it "enqueues a ProcessCustomerJob for an eligible customer" do
+      invoice_1
+
+      expect { described_class.call }
+        .to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
+        .with(customer)
+    end
+
+    context "when customer eligibility changes after dispatch" do
+      let(:dunning_campaign) { create :dunning_campaign, organization:, max_attempts: 1 }
+      let(:dunning_campaign_threshold) do
+        create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 50_00
+      end
+
+      before do
+        dunning_campaign_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        invoice_1
+        described_class.call
+      end
+
+      context "when the customer is excluded" do
+        before { customer.update!(exclude_from_dunning_campaign: true) }
+
+        it "does not process the customer" do
+          expect { perform_enqueued_jobs(only: DunningCampaigns::ProcessCustomerJob) }
+            .to not_change { customer.reload.dunning_currency_attempts }
+            .and not_change { customer.reload.last_dunning_campaign_attempt_at }
+          expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when auto dunning is disabled" do
+        before { organization.update!(premium_integrations: []) }
+
+        it "does not process the customer" do
+          expect { perform_enqueued_jobs(only: DunningCampaigns::ProcessCustomerJob) }
+            .to not_change { customer.reload.dunning_currency_attempts }
+            .and not_change { customer.reload.last_dunning_campaign_attempt_at }
+          expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
     end
 
     context "when billing_entity has an applied dunning campaign" do

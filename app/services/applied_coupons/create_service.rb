@@ -18,9 +18,27 @@ module AppliedCoupons
     )
 
     def call
-      check_preconditions
-      return result if result.error
+      return result.not_found_failure!(resource: "customer") unless customer
 
+      Customers::LockService.call(customer:, scope: :coupon) do
+        check_preconditions
+        return result if result.error
+
+        result.applied_coupon = apply_coupon
+      end
+
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
+    end
+
+    private
+
+    attr_reader :customer, :coupon, :params
+
+    def apply_coupon
       applied_coupon = AppliedCoupon.new(
         customer:,
         coupon:,
@@ -33,32 +51,20 @@ module AppliedCoupons
         frequency_duration_remaining: params[:frequency_duration] || coupon.frequency_duration
       )
 
-      if coupon.fixed_amount?
-        ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction do
+        if coupon.fixed_amount?
           Customers::UpdateCurrencyService
             .call(customer:, currency: params[:amount_currency] || coupon.amount_currency)
             .raise_if_error!
-
-          applied_coupon.save!
         end
-      else
+
         applied_coupon.save!
       end
 
-      result.applied_coupon = applied_coupon
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      e.result
+      applied_coupon
     end
 
-    private
-
-    attr_reader :customer, :coupon, :params
-
     def check_preconditions
-      return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "coupon") unless coupon&.active?
       return result.not_allowed_failure!(code: "plan_overlapping") if plan_limitation_overlapping?
       return if reusable_coupon?

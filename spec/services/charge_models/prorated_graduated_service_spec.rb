@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::ProratedGraduatedService do
   subject(:apply_graduated_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
@@ -15,18 +14,32 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: subscription.started_at,
+        to_datetime: subscription.started_at.end_of_month,
+        charges_from_datetime: subscription.started_at,
+        charges_to_datetime: subscription.started_at.end_of_month,
+        charges_duration: subscription.started_at.end_of_month.day - subscription.started_at.day + 1,
+        timestamp: subscription.started_at.end_of_month
+      )
+    )
+  end
 
   let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
   let(:aggregation) { 5.96667 }
   let(:aggregator) do
     BillableMetrics::ProratedAggregations::SumService.new(
-      event_store_class:,
-      charge:,
-      subscription:,
+      event_store: event_store_class.new(billing_context:, boundaries: nil),
+      metered_item:,
+      billing_context:,
       boundaries: nil
     )
   end
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:per_event_aggregation) do
     BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|

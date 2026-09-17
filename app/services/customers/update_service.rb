@@ -32,6 +32,7 @@ module Customers
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
       original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+      original_searchable_values = customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS)
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         shipping_address = args[:shipping_address]&.to_h || {}
@@ -96,11 +97,9 @@ module Customers
       end
 
       # NOTE: Some fields are not editable if customer is attached to subscriptions:
-      #       external_id,
-      #       account_type,
-      #       billing_entity_id (gated by editable? unless multi_entity_billing flag is enabled)
+      #       external_id, account_type
       billing_entity_changed = false
-      if args.key?(:billing_entity_code) && allow_billing_entity_update?
+      if args.key?(:billing_entity_code)
         customer.billing_entity = billing_entity
         billing_entity_changed = customer.billing_entity_id_changed?
       end
@@ -155,6 +154,10 @@ module Customers
         customer.error_details.tax_error.delete_all if @address_changed
         customer.reload
 
+        if customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS) != original_searchable_values
+          Customers::RefreshInvoicesSearchTermsJob.perform_after_commit(customer.id)
+        end
+
         tax_attributes_changed = original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
 
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
@@ -183,15 +186,23 @@ module Customers
         Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
       end
 
-      # NOTE: if payment provider is updated, we need to create/update the provider customer
-      if args.key?(:provider_customer) || args.key?(:payment_provider)
-        payment_provider = old_payment_provider || customer.payment_provider
-        create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
-      end
+      # NOTE: the payment_provider_customers array (new shape) takes precedence over the singular
+      # provider_customer (deprecated). Only fall back to the legacy path when the array is absent.
+      if args.key?(:payment_provider_customers)
+        PaymentProviderCustomers::CreateOrUpdateBatchService.call(
+          payment_provider_customers: args[:payment_provider_customers],
+          customer:
+        ).raise_if_error!
+      else
+        if args.key?(:provider_customer) || args.key?(:payment_provider)
+          payment_provider = old_payment_provider || customer.payment_provider
+          create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
+        end
 
-      if args.dig(:provider_customer, :provider_customer_id)
-        update_result = PaymentProviderCustomers::UpdateService.call(customer)
-        update_result.raise_if_error!
+        if args.dig(:provider_customer, :provider_customer_id)
+          update_result = PaymentProviderCustomers::UpdateService.call(customer)
+          update_result.raise_if_error!
+        end
       end
 
       result.customer = customer
@@ -229,10 +240,6 @@ module Customers
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
 
       false
-    end
-
-    def allow_billing_entity_update?
-      organization.feature_flag_enabled?(:multi_entity_billing) || customer.editable?
     end
 
     def assign_premium_attributes(customer, args)

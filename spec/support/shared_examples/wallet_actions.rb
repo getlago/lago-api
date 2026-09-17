@@ -15,6 +15,7 @@ RSpec.shared_examples "a wallet create endpoint" do
       paid_top_up_min_amount_cents: 5_00,
       paid_top_up_max_amount_cents: 100_00,
       ignore_paid_top_up_limits_on_creation: "true",
+      purchase_order_number: "PO-123",
       payment_method: {
         payment_method_type: "provider",
         payment_method_id: payment_method.id
@@ -45,6 +46,7 @@ RSpec.shared_examples "a wallet create endpoint" do
     expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
     expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
     expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
+    expect(json[:wallet][:purchase_order_number]).to eq("PO-123")
     expect(json[:wallet][:payment_method][:payment_method_type]).to eq("provider")
     expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
 
@@ -61,7 +63,8 @@ RSpec.shared_examples "a wallet create endpoint" do
         wallet_id: json[:wallet][:lago_id],
         paid_credits: "10",
         granted_credits: "10",
-        source: :manual
+        source: :manual,
+        purchase_order_number: "PO-123"
       )
     )
   end
@@ -217,11 +220,13 @@ RSpec.shared_examples "a wallet create endpoint" do
         paid_credits: "10",
         granted_credits: "10",
         expiration_at:,
+        purchase_order_number: "PO-WALLET-123",
         recurring_transaction_rules: [
           {
             trigger: "interval",
             interval: "monthly",
             ignore_paid_top_up_limits: true,
+            purchase_order_number: "PO-RULE-123",
             invoice_custom_section: {invoice_custom_section_codes: [section_1.code]},
             payment_method: {
               payment_method_type: "provider",
@@ -246,10 +251,21 @@ RSpec.shared_examples "a wallet create endpoint" do
       expect(recurring_rules.first[:method]).to eq("fixed")
       expect(recurring_rules.first[:trigger]).to eq("interval")
       expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
+      expect(recurring_rules.first[:purchase_order_number]).to eq("PO-RULE-123")
       custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
       expect(custom_section[:invoice_custom_section][:lago_id]).to eq(section_1.id)
       expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
       expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
+
+      expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
+        organization_id: organization.id,
+        params: hash_including(
+          wallet_id: json[:wallet][:lago_id],
+          paid_credits: "10",
+          granted_credits: "10",
+          purchase_order_number: "PO-RULE-123"
+        )
+      )
     end
 
     context "when grants_target_top_up is true on a target rule" do
@@ -667,8 +683,6 @@ RSpec.shared_examples "a wallet create endpoint" do
   end
 
   context "when multi_entity_billing is enabled" do
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
     context "when billing_entity_code is provided" do
       let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
 
@@ -706,19 +720,135 @@ RSpec.shared_examples "a wallet create endpoint" do
     end
   end
 
-  context "when multi_entity_billing is not enabled" do
-    context "when billing_entity_code is provided" do
-      let(:billing_entity) { create(:billing_entity, organization:, code: "be_wallet") }
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+    let(:create_params) do
+      {
+        external_customer_id: customer.external_id,
+        rate_amount: "1",
+        name: "Wallet1",
+        currency: "EUR",
+        paid_credits: "10",
+        granted_credits: "10",
+        connections: {
+          payment: {code: "stripe_us"},
+          tax: {behavior: "skip"},
+          accounting: {code: "netsuite_main"},
+          crm: {behavior: "skip"}
+        }
+      }
+    end
 
-      before { create_params[:billing_entity_code] = billing_entity.code }
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+      netsuite_connection
+    end
 
-      it "does not assign a billing entity" do
+    it "persists one connection per category" do
+      expect { subject }.to change(BillingObjectConnection, :count).by(4)
+
+      expect(response).to have_http_status(:success)
+
+      wallet = Wallet.find(json[:wallet][:lago_id])
+      expect(wallet.billing_object_connections.pluck(:category)).to match_array(%w[payment tax accounting crm])
+      expect(wallet.effective_payment_connection).to eq(stripe_connection)
+      expect(wallet.effective_accounting_connection).to eq(netsuite_connection)
+      expect(wallet.effective_tax_connection).to be_nil
+    end
+
+    it "keeps the top-level payment_method working alongside connections" do
+      create_params[:payment_method] = {payment_method_type: "provider", payment_method_id: payment_method.id}
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
+      expect(Wallet.find(json[:wallet][:lago_id]).billing_object_connections.count).to eq(4)
+    end
+
+    context "when a code does not resolve" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          connections: {payment: {code: "unknown_connection"}}
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:connections]).to include("connection_not_found")
+      end
+    end
+
+    context "when the behavior is invalid" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          connections: {payment: {behavior: "nonsense"}}
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:connections]).to include("invalid_connection_behavior")
+      end
+    end
+
+    context "when the multi_connection flag is disabled" do
+      before { organization.disable_feature_flag!(:multi_connection) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+
+    context "with connections on a recurring transaction rule", :premium do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          recurring_transaction_rules: [
+            {
+              trigger: "interval",
+              interval: "monthly",
+              connections: {payment: {code: "stripe_us"}}
+            }
+          ]
+        }
+      end
+
+      it "owns the connection by the rule, not the wallet" do
         subject
 
         expect(response).to have_http_status(:success)
 
         wallet = Wallet.find(json[:wallet][:lago_id])
-        expect(wallet.billing_entity_id).to be_nil
+        expect(wallet.billing_object_connections).to be_empty
+
+        rule = wallet.recurring_transaction_rules.sole
+        expect(rule.billing_object_connections.sole).to have_attributes(
+          category: "payment",
+          behavior: "specific",
+          payment_provider_customer_id: stripe_connection.id
+        )
       end
     end
   end
@@ -735,8 +865,6 @@ RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
   end
 
   context "when multi_entity_billing is enabled" do
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
     context "when billing_entity_id is provided" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
@@ -762,23 +890,6 @@ RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
       end
     end
   end
-
-  context "when multi_entity_billing is not enabled" do
-    context "when billing_entity_id is provided" do
-      let(:billing_entity) { create(:billing_entity, organization:) }
-
-      before { create_params[:billing_entity_id] = billing_entity.id }
-
-      it "does not assign a billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-
-        wallet = Wallet.find(json[:wallet][:lago_id])
-        expect(wallet.billing_entity_id).to be_nil
-      end
-    end
-  end
 end
 
 RSpec.shared_examples "a wallet update endpoint" do
@@ -792,6 +903,7 @@ RSpec.shared_examples "a wallet update endpoint" do
       invoice_requires_successful_payment: true,
       paid_top_up_min_amount_cents: 6_00,
       paid_top_up_max_amount_cents: 10_00,
+      purchase_order_number: "PO-456",
       payment_method: {
         payment_method_type: "provider",
         payment_method_id: payment_method.id
@@ -815,6 +927,7 @@ RSpec.shared_examples "a wallet update endpoint" do
     expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
     expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(6_00)
     expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(10_00)
+    expect(json[:wallet][:purchase_order_number]).to eq("PO-456")
     expect(json[:wallet][:payment_method][:payment_method_type]).to eq("provider")
     expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
 
@@ -853,6 +966,21 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
 
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+    end
+  end
+
+  context "when applies_to is omitted" do
+    let(:bm) { create(:billable_metric, organization:) }
+    let(:update_params) { {name: "wallet1"} }
+
+    before { create(:wallet_target, wallet:, billable_metric: bm) }
+
+    it "keeps the existing billable metric limitations" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
+      expect(wallet.reload.billable_metrics).to eq([bm])
     end
   end
 
@@ -913,6 +1041,7 @@ RSpec.shared_examples "a wallet update endpoint" do
             target_ongoing_balance: "300",
             invoice_requires_successful_payment: true,
             ignore_paid_top_up_limits: true,
+            purchase_order_number: "PO-RULE-456",
             invoice_custom_section: {invoice_custom_section_codes: [section_1.code]},
             payment_method: {
               payment_method_type: "provider",
@@ -942,6 +1071,7 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(recurring_rules.first[:trigger]).to eq("interval")
       expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
       expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
+      expect(recurring_rules.first[:purchase_order_number]).to eq("PO-RULE-456")
       custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
       expect(custom_section[:invoice_custom_section][:lago_id]).to eq(section_1.id)
       expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
@@ -1246,8 +1376,6 @@ RSpec.shared_examples "a wallet update endpoint" do
     let(:wallet) { create(:wallet, customer:, billing_entity: initial_billing_entity) }
 
     context "when multi_entity_billing is enabled" do
-      before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
       context "when billing_entity_code matches an entity" do
         let(:update_params) { {billing_entity_code: target_billing_entity.code} }
 
@@ -1271,15 +1399,46 @@ RSpec.shared_examples "a wallet update endpoint" do
         end
       end
     end
+  end
 
-    context "when multi_entity_billing is not enabled" do
-      let(:update_params) { {billing_entity_code: target_billing_entity.code} }
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:update_params) { {name: "wallet1", connections: {payment: {code: "stripe_us"}}} }
 
-      it "ignores billing_entity_code and leaves the wallet untouched" do
-        subject
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+    end
+
+    it "pins the connection on the wallet" do
+      expect { subject }.to change(BillingObjectConnection, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(wallet.reload.effective_payment_connection).to eq(stripe_connection)
+    end
+
+    context "when inherit is sent for a category that has an override" do
+      let(:update_params) { {name: "wallet1", connections: {payment: {behavior: "inherit"}}} }
+
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment", behavior: "skip")
+      end
+
+      it "clears the override so resolution falls back to the customer" do
+        expect { subject }.to change(BillingObjectConnection, :count).by(-1)
 
         expect(response).to have_http_status(:success)
-        expect(wallet.reload.billing_entity_id).to eq(initial_billing_entity.id)
+        expect(wallet.reload.billing_object_connections).to be_empty
+      end
+    end
+
+    context "when the multi_connection flag is disabled" do
+      before { organization.disable_feature_flag!(:multi_connection) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
       end
     end
   end

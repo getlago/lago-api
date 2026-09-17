@@ -10,10 +10,13 @@ module IntegrationCustomers
     def call
       result = super
       return result if result.error
+      return result.not_found_failure!(resource: "integration_customer") unless integration_customer
+
+      integration_customer.code = code if code.present?
+      integration_customer.save! if integration_customer.changed?
 
       return result if integration_customer.type == "IntegrationCustomers::AnrokCustomer"
       return result if integration_customer.type == "IntegrationCustomers::SalesforceCustomer"
-      return result.not_found_failure!(resource: "integration_customer") unless integration_customer
 
       integration_customer.external_customer_id = external_customer_id if external_customer_id.present?
       integration_customer.targeted_object = targeted_object if targeted_object.present?

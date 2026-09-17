@@ -84,6 +84,44 @@ RSpec.describe OrderForms::VoidService do
           expect(quote_version.reload).to be_voided
           expect(quote_version.void_reason).to eq("cascade_of_voided")
         end
+
+        it "enqueues an order_form.voided webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order_form.voided", order_form)
+        end
+
+        it "enqueues a cascaded quote.voided webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("quote.voided", quote_version)
+        end
+
+        it "produces an order_form.voided activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.voided").after_commit.with(order_form)
+        end
+
+        it "produces a cascaded quote.voided activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
+        end
+      end
+    end
+
+    context "when the quote lock cannot be acquired", :premium do
+      before do
+        allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+      end
+
+      it "returns a concurrency conflict instead of raising" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(base: ["concurrency_conflict"])
       end
     end
   end

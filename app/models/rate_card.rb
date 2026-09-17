@@ -1,0 +1,156 @@
+# frozen_string_literal: true
+
+class RateCard < ApplicationRecord
+  include PaperTrailTraceable
+  include Currencies
+  include Discard::Model
+  include CatalogAttachable
+  include CatalogCodeFormat
+
+  self.discard_column = :deleted_at
+
+  BILLING_TIMINGS = {
+    arrears: "arrears",
+    advance: "advance"
+  }.freeze
+
+  # nil means the paid fee stays standalone; `invoice` folds it into the
+  # invoice. This mirrors the legacy charge `regroup_paid_fees` contract.
+  REGROUP_PAID_FEES = {
+    invoice: "invoice"
+  }.freeze
+
+  belongs_to :organization
+  belongs_to :product
+  belongs_to :product_filter, optional: true
+
+  has_many :rates, class_name: "RateCardRate"
+  has_many :plan_applied_rate_cards, class_name: "PlanRateCard"
+  has_many :contract_applied_rate_cards, class_name: "ContractRateCard"
+  has_many :applied_taxes, class_name: "RateCard::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+
+  enum :billing_timing, BILLING_TIMINGS, validate: true
+  # nil is a valid value (fee stays standalone); prefix keeps the predicate
+  # explicit (regroup_paid_fees_invoice?).
+  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}, prefix: true
+
+  validates :name, presence: true
+  validates :code,
+    presence: true,
+    uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
+  # allow_nil keeps a missing currency on the presence error only; the
+  # inclusion error fires for a provided-but-unknown currency.
+  validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
+  validate :validate_filter_belongs_to_item
+  validate :validate_display_on_invoice
+  validate :validate_proration
+  validate :validate_regroup_paid_fees
+
+  default_scope -> { kept }
+
+  # A card scoped to a filter must price a slice of its own item.
+  def validate_filter_belongs_to_item
+    return if product_filter.nil?
+    return if product_filter.product_id == product_id
+
+    errors.add(:product_filter, :does_not_belong_to_product)
+  end
+
+  def validate_display_on_invoice
+    return if display_on_invoice?
+
+    # A fixed product bills one fee per period, so its line must always show —
+    # hiding it charges the customer an amount with nothing to reconcile it to.
+    # This holds on both timings; the flag only makes sense for metered on advance.
+    if product&.fixed?
+      errors.add(:display_on_invoice, :not_allowed_for_product_type)
+    elsif !advance?
+      errors.add(:display_on_invoice, :not_allowed_for_billing_timing)
+    end
+  end
+
+  # Metered proration spreads a recurring quantity across the period, so it
+  # needs a recurring metric — and not weighted_sum, which prorates by design
+  def validate_proration
+    return unless proration?
+    return unless product&.metered?
+
+    metric = product.billable_metric
+    return if metric.nil?
+
+    errors.add(:proration, :requires_recurring_metric) unless metric.recurring?
+    errors.add(:proration, :not_allowed_for_aggregation_type) if metric.weighted_sum_agg?
+  end
+
+  # Paid-fee regrouping only exists for advance fees kept off the invoice. The
+  # pairing checks apply only to the `invoice` value — a nil (standalone) or an
+  # invalid value skips them, so an invalid value fails on its inclusion error
+  # alone instead of also reporting a pairing conflict.
+  def validate_regroup_paid_fees
+    return unless regroup_paid_fees_invoice?
+
+    errors.add(:regroup_paid_fees, :not_allowed_for_billing_timing) unless advance?
+    errors.add(:regroup_paid_fees, :not_allowed_with_display_on_invoice) if display_on_invoice?
+  end
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
+
+  # The card bills someone once it belongs to a catalog plan that has contracts
+  # or is attached directly to a contract. From that point the billed timeline
+  # freezes — card fields, active and past rates — and price changes go
+  # through appended rates.
+  def attached_to_subscriptions?
+    contract_applied_rate_cards.exists? ||
+      Contract.where(catalog_plan_id: plan_applied_rate_cards.select(:catalog_plan_id)).exists?
+  end
+
+  def ordered_rates
+    rates.order(:effective_from)
+  end
+
+  # The active rate is the latest effective rate; later rates are pending and
+  # earlier ones have been superseded (terminated).
+  def active_rate
+    rates.effective.order(effective_from: :desc).first
+  end
+end
+
+# == Schema Information
+#
+# Table name: rate_cards
+# Database name: primary
+#
+#  id                        :uuid             not null, primary key
+#  applied_pricing_unit_code :string
+#  billing_timing            :enum             default("arrears"), not null
+#  code                      :string           not null
+#  currency                  :string           not null
+#  deleted_at                :datetime
+#  description               :string
+#  display_on_invoice        :boolean          default(TRUE), not null
+#  name                      :string           not null
+#  proration                 :boolean          default(FALSE), not null
+#  regroup_paid_fees         :enum
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  organization_id           :uuid             not null
+#  product_filter_id         :uuid
+#  product_id                :uuid             not null
+#
+# Indexes
+#
+#  index_rate_cards_on_deleted_at                (deleted_at)
+#  index_rate_cards_on_organization_id           (organization_id)
+#  index_rate_cards_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  index_rate_cards_on_product_filter_id         (product_filter_id)
+#  index_rate_cards_on_product_id                (product_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (product_filter_id => product_filters.id)
+#  fk_rails_...  (product_id => products.id)
+#

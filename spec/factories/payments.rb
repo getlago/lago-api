@@ -34,7 +34,18 @@ FactoryBot.define do
       status { "requires_action" }
       provider_payment_data do
         {
+          type: "redirect_to_url",
           redirect_to_url: {url: "https://foo.bar"}
+        }
+      end
+    end
+
+    trait :awaiting_bank_transfer do
+      status { "requires_action" }
+      provider_payment_data do
+        {
+          type: "display_bank_transfer_instructions",
+          display_bank_transfer_instructions: {amount_remaining: 2170}
         }
       end
     end

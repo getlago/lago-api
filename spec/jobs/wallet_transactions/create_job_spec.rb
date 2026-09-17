@@ -48,15 +48,26 @@ RSpec.describe WalletTransactions::CreateJob do
     end
 
     context "when unique_transaction is true" do
-      it "returns a stable lock key array" do
+      def lock_key_for(job_params)
         job = described_class.new
         allow(job).to receive(:arguments).and_return([{
           organization_id: organization_id,
-          params: params,
+          params: job_params,
           unique_transaction: true
         }])
+        job.lock_key_arguments
+      end
 
-        expect(job.lock_key_arguments).to eq([
+      it "keys an automatic top-up on the wallet and the source, ignoring the amount" do
+        expect(lock_key_for(params)).to eq([organization_id, wallet_id, "threshold"])
+      end
+
+      it "keys two automatic top-ups of different amounts the same" do
+        expect(lock_key_for(params)).to eq(lock_key_for(params.merge(paid_credits: "450.0")))
+      end
+
+      it "keys a manual top-up on the amounts" do
+        expect(lock_key_for(params.merge(source: :manual))).to eq([
           organization_id,
           wallet_id,
           "10.0",

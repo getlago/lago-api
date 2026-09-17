@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+module Invoices
+  module Payments
+    class CancelAbandonedJob < ApplicationJob
+      queue_as do
+        if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PAYMENTS"])
+          :payments
+        else
+          :providers
+        end
+      end
+
+      unique :until_executed, on_conflict: :log
+
+      retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
+      retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
+
+      def perform(payment)
+        Invoices::Payments::CancelAbandonedService.call!(payment:)
+      end
+    end
+  end
+end

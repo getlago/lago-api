@@ -131,8 +131,6 @@ RSpec.describe Invoices::SubscriptionService do
     context "when a subscription is moved between billing entities mid-lifecycle" do
       let(:eu_entity) { create(:billing_entity, organization:) }
 
-      before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
       it "stamps the past invoice with the original entity, then the next billing cycle with the new one" do
         past_invoice = described_class.call(
           subscriptions:,
@@ -1009,6 +1007,33 @@ RSpec.describe Invoices::SubscriptionService do
 
           expect { invoice_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
         end
+      end
+    end
+
+    context "when activation billing fails after fees were created" do
+      subject(:invoice_service) do
+        described_class.new(
+          subscriptions:,
+          timestamp: timestamp.to_i,
+          invoicing_reason:,
+          skip_charges: true
+        )
+      end
+
+      let(:invoicing_reason) { :subscription_starting }
+      let(:pay_in_advance) { true }
+
+      before do
+        allow(Invoices::ApplyInvoiceCustomSectionsService)
+          .to receive(:call).and_raise(StandardError.new("boom"))
+      end
+
+      it "rolls the fees back instead of committing them with the lock" do
+        result = nil
+
+        expect { result = invoice_service.call }.not_to change(Fee, :count)
+
+        expect(result).to be_failure
       end
     end
   end

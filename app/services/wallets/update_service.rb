@@ -19,12 +19,15 @@ module Wallets
 
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
+      return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
+      return result unless valid_connections?
 
-      if organization_flag_enabled?(:multi_entity_billing) && billing_entity_param_sent?
+      if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
           return result.not_found_failure!(resource: "billing_entity")
         end
@@ -47,7 +50,14 @@ module Wallets
           Wallets::RecurringTransactionRules::UpdateService.call!(wallet:, params: params[:recurring_transaction_rules])
         end
 
-        wallet.recurring_transaction_rules.find_each { |rule| validate_rule!(rule:) }
+        # NOTE: validate through the .active scope (fresh query) rather than
+        # the bare association: the activity-log middleware serializes the
+        # wallet BEFORE the update, caching recurring_transaction_rules with
+        # their pre-update values — iterating the cached target validated the
+        # STALE rule against the freshly assigned min/max bounds (false
+        # invalid_recurring_rule) and never the values just written. The scope
+        # also skips terminated rules, which must not block the update.
+        wallet.recurring_transaction_rules.active.find_each { |rule| validate_rule!(rule:) }
 
         if params.key?(:applies_to)
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
@@ -58,7 +68,7 @@ module Wallets
           wallet.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
-        process_billable_metrics
+        process_billable_metrics if billable_metric_limitations_sent?
 
         wallet.save!
 
@@ -70,6 +80,8 @@ module Wallets
         end
 
         InvoiceCustomSections::AttachToResourceService.call!(resource: wallet, params:)
+
+        BillingObjectConnections::AttachToResourceService.call!(resource: wallet, params:) if connections_requested?
         SendWebhookJob.perform_after_commit("wallet.updated", wallet)
       end
 
@@ -126,6 +138,15 @@ module Wallets
       PaymentMethods::ValidateService.new(result, **params).valid?
     end
 
+    def valid_connections?
+      validator = BillingObjectConnections::ValidateService.new(result, **params)
+      return true if validator.valid?
+
+      result.validation_failure!(errors: {connections: validator.error_codes})
+
+      false
+    end
+
     def process_billable_metrics
       # In case of adding new type of limitation in wallet_targets, query from below should use compact to avoid nil values in the array
       existing_wallet_billable_metric_ids = wallet.wallet_targets.pluck(:billable_metric_id)
@@ -157,10 +178,23 @@ module Wallets
       (wallet.saved_changes.keys & Wallet::REFRESH_RELEVANT_ATTRIBUTES).any?
     end
 
+    # Billable metric limitations are only processed when the payload explicitly carries the
+    # identifiers key: omitting it leaves the existing wallet targets untouched, while sending
+    # an empty array still clears them.
+    def billable_metric_limitations_sent?
+      return false if params[:applies_to].nil?
+
+      params[:applies_to].key?(billable_metric_identifiers_key)
+    end
+
+    def billable_metric_identifiers_key
+      api_context? ? :billable_metric_codes : :billable_metric_ids
+    end
+
     def billable_metric_identifiers
       return [] if params[:applies_to].blank?
 
-      key = api_context? ? :billable_metric_codes : :billable_metric_ids
+      key = billable_metric_identifiers_key
 
       return [] if params[:applies_to][key].blank?
 
@@ -193,6 +227,16 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       wallet.customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def organization_flag_disabled?(flag)
+      !organization_flag_enabled?(flag)
+    end
+
+    def connections_requested?
+      return true if params[:connections].present?
+
+      Array(params[:recurring_transaction_rules]).any? { |rule| rule[:connections].present? }
     end
 
     def billing_entity_param_sent?

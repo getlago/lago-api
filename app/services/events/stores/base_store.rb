@@ -56,9 +56,9 @@ module Events
         :events_count
       )
 
-      def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      def initialize(billing_context:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
-        @subscription = subscription
+        @billing_context = billing_context
         @boundaries = boundaries
 
         @filters = filters
@@ -91,6 +91,17 @@ module Events
         @grouped_by_values = previous_grouped_by_values
       end
 
+      # NOTE: mints a sibling store for another window, aggregating the same property.
+      #       `use_from_boundary` is left to the caller: a window with no lower bound must
+      #       not apply one.
+      def for_window(filters: nil, **boundaries)
+        store = self.class.new(code:, billing_context:, boundaries:, filters: filters || self.filters, deduplicate:)
+
+        store.aggregation_property = aggregation_property
+        store.numeric_property = numeric_property
+        store
+      end
+
       def events(force_from: false)
         raise NotImplementedError
       end
@@ -103,7 +114,7 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
         []
       end
 
@@ -211,18 +222,14 @@ module Events
 
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
+      attr_reader :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
-
-      delegate :customer, to: :subscription
+      delegate :customer, to: :billing_context
 
       def period_duration
-        @period_duration ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?
-        ).charges_duration_in_days
+        @period_duration ||= billing_context.charges_duration_at(to_datetime + 1.day)
       end
 
       def build_aggregation_result(row)

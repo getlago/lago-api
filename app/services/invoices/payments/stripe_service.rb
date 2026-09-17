@@ -43,11 +43,9 @@ module Invoices
         payment.save!
 
         deliver_webhook if payable_payment_status.to_sym == :succeeded
+        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
-        if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
-          # We don't update the invoice status because it's likely the webhook of a failed payment
-          # but there is already a retry in progress with 3DSecure authentication
-        else
+        unless authentication_retry_pending?(payment, status)
           update_invoice_payment_status(
             payment_status: payable_payment_status,
             processing: status == "processing"
@@ -61,6 +59,13 @@ module Invoices
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
+      end
+
+      def authentication_retry_pending?(payment, status)
+        return false unless status.to_s == "failed"
+
+        payment.payment_provider&.retriable_authentication_failure?(payment.error_code, payment:) ||
+          payment.payable.payments.excluding(payment).where(status: :requires_action).any?
       end
 
       def generate_payment_url(invoice, payment_intent)
@@ -148,7 +153,7 @@ module Invoices
       end
 
       def payment_url_payload(payment_intent)
-        {
+        payload = {
           line_items: [
             {
               quantity: 1,
@@ -178,6 +183,12 @@ module Invoices
             }
           }
         }
+
+        if stripe_payment_provider.require_terms_of_service_consent
+          payload[:consent_collection] = {terms_of_service: "required"}
+        end
+
+        payload
       end
 
       def description

@@ -19,6 +19,7 @@ module Wallets
       result.billable_metrics = billable_metrics
       result.payment_method = payment_method
 
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid?
 
       code = params[:code]
@@ -59,7 +60,7 @@ module Wallets
         attributes[:payment_method_id] = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if organization_flag_enabled?(:multi_entity_billing) && (params[:billing_entity_id].present? || params[:billing_entity_code].present?)
+      if params[:billing_entity_id].present? || params[:billing_entity_code].present?
         return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
         attributes[:billing_entity_id] = billing_entity.id
@@ -69,11 +70,11 @@ module Wallets
       recurring_transaction_rule = nil
 
       ActiveRecord::Base.transaction do
-        if currency.present? && (!organization_flag_enabled?(:multi_currency) || customer.currency.blank?)
+        if currency.present? && customer.currency.blank?
           Customers::UpdateCurrencyService.call!(customer: customer, currency:)
         end
 
-        wallet.currency = organization_flag_enabled?(:multi_currency) ? (currency || wallet.customer.currency) : wallet.customer.currency
+        wallet.currency = currency || wallet.customer.currency
         wallet.save!
 
         validate_wallet_initial_amount! wallet
@@ -86,6 +87,10 @@ module Wallets
 
         if params[:invoice_custom_section].present?
           InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
+        end
+
+        if connections_requested?
+          BillingObjectConnections::AttachToResourceService.call!(resource: wallet, params:)
         end
 
         billable_metrics.each do |bm|
@@ -126,7 +131,7 @@ module Wallets
         name: params[:transaction_name],
         priority: params[:transaction_priority],
         ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation],
-        purchase_order_number: recurring_transaction_rule&.resolved_purchase_order_number
+        purchase_order_number: recurring_transaction_rule&.resolved_purchase_order_number || wallet.purchase_order_number
       }
 
       WalletTransactions::CreateJob.perform_after_commit(
@@ -161,6 +166,18 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def organization_flag_disabled?(flag)
+      return false if customer.nil?
+
+      !organization_flag_enabled?(flag)
+    end
+
+    def connections_requested?
+      return true if params[:connections].present?
+
+      Array(params[:recurring_transaction_rules]).any? { |rule| rule[:connections].present? }
     end
 
     def valid?

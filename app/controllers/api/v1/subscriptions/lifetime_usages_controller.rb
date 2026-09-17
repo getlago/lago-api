@@ -3,19 +3,17 @@
 module Api
   module V1
     module Subscriptions
-      class LifetimeUsagesController < Api::BaseController
+      class LifetimeUsagesController < BaseController
         def show
           # Note: lifetime usage is counted against all sub upgrades-downgrades
-          lifetime_usage = current_organization.subscriptions
-            .find_by(external_id: params[:subscription_external_id])&.lifetime_usage
+          lifetime_usage = subscription&.lifetime_usage
 
           return not_found_error(resource: "lifetime_usage") unless lifetime_usage
           render_lifetime_usage lifetime_usage
         end
 
         def update
-          lifetime_usage = current_organization.subscriptions
-            .find_by(external_id: params[:subscription_external_id])&.lifetime_usage
+          lifetime_usage = subscription&.lifetime_usage
 
           result = LifetimeUsages::UpdateService.call(
             lifetime_usage:,

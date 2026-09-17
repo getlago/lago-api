@@ -33,19 +33,6 @@ namespace :upgrade do
       end
     end
 
-    pp "- Checking Subscription#last_received_event_on: 🔎"
-    backfill_org_ids = Organization
-      .joins(:subscriptions)
-      .where(subscriptions: {status: :active, last_received_event_on: nil})
-      .distinct
-      .pluck(:id)
-
-    if backfill_org_ids.any?
-      pp "  -> #{backfill_org_ids.size} organizations to process 🧮"
-    else
-      pp "  -> Nothing to do ✅"
-    end
-
     if to_fill.any?
       puts "\n#### Enqueue jobs in the low_priority queue ####"
       to_fill.each do |resource|
@@ -54,15 +41,7 @@ namespace :upgrade do
       end
     end
 
-    if backfill_org_ids.any?
-      puts "\n#### Enqueue BackfillLastReceivedEventOnJob per organization ####"
-      backfill_org_ids.each do |organization_id|
-        pp "- Enqueuing BackfillLastReceivedEventOnJob for org #{organization_id}"
-        DatabaseMigrations::BackfillLastReceivedEventOnJob.perform_later(organization_id)
-      end
-    end
-
-    while to_fill.present? || backfill_org_ids.any?
+    while to_fill.present?
       sleep 5
       puts "\n#### Checking status ####"
 
@@ -80,18 +59,42 @@ namespace :upgrade do
         end
       end
       to_delete.each { to_fill.delete(it) }
-
-      if backfill_org_ids.any?
-        pp "- Checking BackfillLastReceivedEventOnJob: 🔎"
-        still_running = backfill_last_received_event_on_jobs_running?
-        if still_running
-          pp "  -> Jobs still running 🧮"
-        else
-          backfill_org_ids = []
-          pp "  -> Done ✅"
-        end
-      end
     end
+
+    # One walk. Each plan charge hands its own overrides on as it finishes, so the ordering the two
+    # passes need is the order those two jobs run in — there is no barrier here to get wrong, and
+    # no second pass to trigger. A charge cleaned up by hand later is picked up the same way, since
+    # it goes back to having filters without a code and the walk selects it again.
+    #
+    # So waiting below is about not telling the operator they are ready while work is in flight,
+    # not about correctness. Sidekiq reports busy workers from a heartbeat that lags a few seconds,
+    # so this can call it done a moment early; the cost of that is nothing.
+    puts "\n#### Backfilling charge filter codes ####"
+
+    DatabaseMigrations::EnqueueChargeFilterCodeBackfillService.call
+
+    codeless = -> { ChargeFilter.unscoped.where(code: nil, deleted_at: nil).count }
+    jobs = [DatabaseMigrations::BackfillChargeFilterCodesJob, DatabaseMigrations::BackfillChildChargeFilterCodesJob]
+    remaining = codeless.call
+
+    room = DatabaseMigrations::EnqueueChargeFilterCodeBackfillService::MAX_QUEUE_SIZE
+    queue = Sidekiq::Queue.new(DatabaseMigrations::BackfillChargeFilterCodesJob.queue_name)
+
+    loop do
+      sleep 10
+      next if queue.size > room
+
+      next if jobs.any? { backfill_jobs_running?(it) }
+
+      still = codeless.call
+      break if still == remaining
+
+      remaining = still
+      pp "  -> #{remaining} filters still without a code 🧮"
+    end
+
+    pp "  -> Done ✅"
+    pp "   #{remaining} filters were left without one on purpose: rake filters:report_codes"
 
     puts "\n#### All good, ready to Upgrade! ✅ ####"
   end
@@ -216,14 +219,15 @@ namespace :upgrade do
     queue.size == 0
   end
 
-  def backfill_last_received_event_on_jobs_running?
-    job_class = "DatabaseMigrations::BackfillLastReceivedEventOnJob"
-
-    queued = Sidekiq::Queue.new("low_priority").any? { |job| job.klass == job_class }
-    return true if queued
+  # Sidekiq stores ActiveJob entries under the adapter's wrapper class, so `klass` reads
+  # "ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper" and never matches a job name. The
+  # job's own name lives in `wrapped`, which `display_class` reads back off a queue entry.
+  def backfill_jobs_running?(job_class)
+    return true if Sidekiq::Queue.new(job_class.queue_name).any? { |job| job.display_class == job_class.name }
+    return true if Sidekiq::ScheduledSet.new.any? { |job| job.display_class == job_class.name }
 
     Sidekiq::Workers.new.any? do |_process_id, _thread_id, work|
-      work.dig("payload", "class") == job_class
+      work.payload["wrapped"] == job_class.name
     end
   end
 end

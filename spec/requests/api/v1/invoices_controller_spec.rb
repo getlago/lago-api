@@ -146,7 +146,6 @@ RSpec.describe Api::V1::InvoicesController do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
       before do
-        organization.enable_feature_flag!(:multi_entity_billing)
         create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
       end
 
@@ -202,25 +201,6 @@ RSpec.describe Api::V1::InvoicesController do
         end
       end
     end
-
-    context "when multi_entity_billing feature flag is disabled" do
-      let(:other_billing_entity) { create(:billing_entity, organization:) }
-      let(:create_params) do
-        {
-          external_customer_id: customer_external_id,
-          currency: "EUR",
-          billing_entity_code: other_billing_entity.code,
-          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}]
-        }
-      end
-
-      it "ignores billing_entity_code and falls back to the customer's billing entity" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:invoice][:billing_entity_code]).to eq(customer.billing_entity.code)
-      end
-    end
   end
 
   describe "PUT /api/v1/invoices/:id" do
@@ -252,6 +232,17 @@ RSpec.describe Api::V1::InvoicesController do
         subject
 
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when invoice is voided" do
+      let(:invoice) { create(:invoice, :voided, customer:, organization:) }
+
+      it "returns a method not allowed error and does not update the invoice" do
+        expect { subject }.not_to change { invoice.reload.payment_status }
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("update_on_voided_invoice")
       end
     end
 
@@ -470,6 +461,22 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when the result set exceeds the graphql cap" do
+      before do
+        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
+        create(:invoice, customer:, organization:)
+        create(:invoice, customer:, organization:)
+      end
+
+      it "still returns the exact total count" do
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta]).not_to have_key(:total_count_capped)
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
@@ -678,6 +685,70 @@ RSpec.describe Api::V1::InvoicesController do
     end
   end
 
+  describe "DELETE /api/v1/invoices/:id" do
+    subject { delete_with_token(organization, "/api/v1/invoices/#{invoice_id}") }
+
+    let(:invoice) { create(:invoice, status:, customer:, organization:) }
+    let(:invoice_id) { invoice.id }
+    let(:status) { :draft }
+
+    before { invoice }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    context "when the invoice is a draft" do
+      it "marks the invoice as deleted" do
+        expect { subject }.to change { invoice.reload.status }.from("draft").to("deleted")
+      end
+
+      it "returns the deleted invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        expect(json[:invoice][:status]).to eq("deleted")
+      end
+    end
+
+    context "when the invoice does not exist" do
+      let(:invoice_id) { SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when the invoice is not a draft" do
+      let(:status) { :finalized }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("not_deletable")
+      end
+    end
+
+    context "when the invoice is already deleted" do
+      let(:status) { :deleted }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when invoices belongs to another organization" do
+      let(:invoice) { create(:invoice, status: :draft) }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe "POST /api/v1/invoices/:id/lose_dispute" do
     subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/lose_dispute") }
 
@@ -873,10 +944,8 @@ RSpec.describe Api::V1::InvoicesController do
       it "calls retry service" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(retry_service).to have_received(:call)
-        end
+        expect(response).to have_http_status(:success)
+        expect(retry_service).to have_received(:call)
       end
     end
 
@@ -1101,6 +1170,62 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with an invoiceable recurring pay-in-advance charge" do
+      let(:timestamp) { Time.zone.parse("2024-03-15") }
+      let(:customer) { create(:customer, organization:) }
+      let(:billing_time) { "calendar" }
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          billing_time:,
+          subscription_at: Time.zone.parse("2024-02-10"),
+          started_at: Time.zone.parse("2024-02-10")
+        )
+      end
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id]}
+        }
+      end
+      let(:expected_from_date) { "2024-04-01T00:00:00+00:00" }
+      let(:expected_to_date) { "2024-04-30T23:59:59+00:00" }
+
+      before do
+        create(:standard_charge, plan:, billable_metric:, pay_in_advance: true, invoiceable: true, properties: {amount: "1"})
+        create(:event, organization:, customer:, subscription:, code: billable_metric.code, timestamp: timestamp - 1.day, properties: {item_id: "3"})
+      end
+
+      shared_examples "a preview with pay-in-advance date boundaries" do
+        it "serializes the charge's upcoming period without saving an invoice", transaction: false do
+          travel_to(timestamp) do
+            expect { subject }.not_to change(Invoice, :count)
+
+            expect(response).to have_http_status(:success)
+            charge_fee = json[:invoice][:fees].find { |fee| fee[:item][:type] == "charge" }
+            expect(charge_fee).to include(
+              amount_cents: 300,
+              from_date: expected_from_date,
+              to_date: expected_to_date
+            )
+          end
+        end
+      end
+
+      include_examples "a preview with pay-in-advance date boundaries"
+
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
+        let(:expected_from_date) { "2024-04-10T00:00:00+00:00" }
+        let(:expected_to_date) { "2024-05-09T23:59:59+00:00" }
+
+        include_examples "a preview with pay-in-advance date boundaries"
+      end
+    end
+
     context "when sending billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
@@ -1165,8 +1290,6 @@ RSpec.describe Api::V1::InvoicesController do
           }
         end
 
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
-
         it "creates a preview invoice under the requested billing entity" do
           subject
 
@@ -1191,8 +1314,6 @@ RSpec.describe Api::V1::InvoicesController do
             billing_entity_code: billing_entity.code
           }
         end
-
-        before { organization.enable_feature_flag!(:multi_entity_billing) }
 
         it "stamps the invoice with the requested billing entity" do
           subject

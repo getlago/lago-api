@@ -78,11 +78,16 @@ class Payment < ApplicationRecord
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
 
-    payable.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
+    payable.finalized? && succeeded? &&
+      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 
   def payment_provider_type
     payment_provider&.payment_type
+  end
+
+  def gated_subscription_activation?
+    payable.subscription_payment_gated?
   end
 
   def method_display_name

@@ -39,6 +39,11 @@ module UsageMonitoring
       dependent: :delete_all
 
     has_many :triggered_alerts,
+      -> { triggered },
+      foreign_key: :usage_monitoring_alert_id,
+      class_name: "UsageMonitoring::TriggeredAlert"
+
+    has_many :all_triggered_alerts,
       foreign_key: :usage_monitoring_alert_id,
       class_name: "UsageMonitoring::TriggeredAlert"
 

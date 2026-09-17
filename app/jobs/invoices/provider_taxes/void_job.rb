@@ -5,6 +5,8 @@ module Invoices
     class VoidJob < ApplicationJob
       queue_as "integrations"
 
+      retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
+
       def perform(invoice:)
         return unless invoice.customer.tax_customer
 

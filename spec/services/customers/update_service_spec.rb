@@ -67,23 +67,16 @@ RSpec.describe Customers::UpdateService do
       expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
     end
 
-    context "when Meilisearch is enabled" do
-      before do
-        customer
-        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
-      end
+    it "refreshes the invoices search terms when a searchable field changes" do
+      expect { customers_service.call }
+        .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+    end
 
-      it "reindexes the customer's invoices when a searchable field changes" do
-        expect { customers_service.call }
-          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
-      end
+    context "when no searchable field changes" do
+      let(:update_args) { {id: customer.id, net_payment_term: 8} }
 
-      context "when no searchable field changes" do
-        let(:update_args) { {id: customer.id, net_payment_term: 8} }
-
-        it "does not reindex" do
-          expect { customers_service.call }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
-        end
+      it "does not refresh the invoices search terms" do
+        expect { customers_service.call }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
       end
     end
 
@@ -135,20 +128,10 @@ RSpec.describe Customers::UpdateService do
           create(:subscription, customer:)
         end
 
-        it "does not update the billing entity" do
+        it "updates the billing entity" do
           result = customers_service.call
           expect(result).to be_success
-          expect(result.customer.billing_entity).to eq(billing_entity)
-        end
-
-        context "when multi_entity_billing feature flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_entity_billing) }
-
-          it "updates the billing entity" do
-            result = customers_service.call
-            expect(result).to be_success
-            expect(result.customer.billing_entity).to eq(billing_entity_2)
-          end
+          expect(result.customer.billing_entity).to eq(billing_entity_2)
         end
       end
     end
@@ -324,13 +307,11 @@ RSpec.describe Customers::UpdateService do
           }
         end
 
-        it "fails" do
+        it "updates the currency" do
           result = customers_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
+          expect(result).to be_success
+          expect(result.customer.currency).to eq("CAD")
         end
       end
     end

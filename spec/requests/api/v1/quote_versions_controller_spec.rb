@@ -64,6 +64,14 @@ RSpec.describe Api::V1::QuoteVersionsController do
   describe "POST /api/v1/quote_versions/:id/approve" do
     subject { post_with_token(organization, "/api/v1/quote_versions/#{quote_version_id}/approve") }
 
+    let(:quote_version) do
+      create(
+        :quote_version,
+        :with_subscription_creation_billing_items,
+        quote:,
+        organization:
+      )
+    end
     let(:quote_version_id) { quote_version.id }
 
     before { quote_version }
@@ -76,6 +84,19 @@ RSpec.describe Api::V1::QuoteVersionsController do
       expect(response).to have_http_status(:ok)
       expect(json[:quote_version][:lago_id]).to eq(quote_version.id)
       expect(json[:quote_version][:status]).to eq("approved")
+    end
+
+    # The service turns lock contention into a validation failure, so every transport reports it
+    # rather than only the mutations.
+    context "when the quote lock cannot be acquired", :premium do
+      before { allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency conflict" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({base: ["concurrency_conflict"]})
+      end
     end
 
     context "with an expires_at in the future", :premium do

@@ -636,6 +636,22 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    context "when a fixed charge fee has zero units and a positive amount" do
+      before do
+        arrears_fixed_charge_fee.update!(units: 0, unit_amount_cents: 0, precise_unit_amount: 0)
+      end
+
+      it "renders the fee line" do
+        fee_row = Nokogiri::HTML.fragment(rendered_template).css("tr.fee").find do |row|
+          row.text.include?("Standard Pay in Arrears Fixed Charge Fee")
+        end
+
+        expect(fee_row.css("td").map { |cell| cell.text.squish }).to eq(
+          ["Standard Pay in Arrears Fixed Charge Fee", "0", "$0.00", "0.0%", "$85.00"]
+        )
+      end
+    end
   end
 
   context "when invoice has different boundaries for fixed charges" do

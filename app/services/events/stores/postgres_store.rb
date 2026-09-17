@@ -4,8 +4,8 @@ module Events
   module Stores
     class PostgresStore < BaseStore
       def events(force_from: false, ordered: false)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
+        scope = Event.where(external_subscription_id: billing_context.external_id)
+          .where(organization_id: billing_context.organization.id)
           .where(code:)
 
         scope = scope.order(timestamp: :asc) if ordered
@@ -22,40 +22,32 @@ module Events
         filters_scope(scope)
       end
 
-      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
-      # enriched_at of the most recent event for that charge/filter in the period.
-      def distinct_charges_and_filters(codes: nil)
-        scope = EnrichedEvent.where(organization_id: subscription.organization_id)
-          .where(subscription_id: subscription.id)
-          .where(timestamp: from_datetime..to_datetime)
-
-        scope = scope.where(code: codes) unless codes.nil?
-        scope.group(:charge_id, :charge_filter_id)
-          .pluck(:charge_id, :charge_filter_id, Arel.sql("MAX(enriched_at)"))
-      end
-
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
       # of the period. Only properties present in the filter_keys are considered, so the result
       # holds only the dimensions that can be matched against charge filters.
       # An empty hash represents the default (no filter) bucket.
-      # last_seen_at is the created_at of the most recent event in the combination.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization_id)
+      # last_seen_at is the created_at of the most recent event in the combination. With
+      # with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
+      # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+        scope = Event.where(external_subscription_id: billing_context.external_id)
+          .where(organization_id: billing_context.organization_id)
           .where(code: codes)
-          .from_datetime(from_datetime)
           .to_datetime(applicable_to_datetime)
+        scope = scope.from_datetime(from_datetime) unless include_all_history
+
+        selects = [<<~SQL.squish]
+          events.code AS code,
+          coalesce((
+            SELECT jsonb_object_agg(props.key, props.value)
+            FROM jsonb_each_text(events.properties) AS props(key, value)
+            WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
+          ), '{}'::jsonb) AS combination
+        SQL
+        selects << (with_last_seen_at ? "MAX(events.created_at) AS last_seen_at" : "NULL AS last_seen_at")
 
         scope
-          .select(Arel.sql(<<~SQL.squish))
-            events.code AS code,
-            coalesce((
-              SELECT jsonb_object_agg(props.key, props.value)
-              FROM jsonb_each_text(events.properties) AS props(key, value)
-              WHERE props.key = ANY(#{filter_keys_array_sql(filter_keys)})
-            ), '{}'::jsonb) AS combination,
-            MAX(events.created_at) AS last_seen_at
-          SQL
+          .select(Arel.sql(selects.join(", ")))
           .group("code, combination")
           .map { |row| [row.code, parse_combination(row), row.last_seen_at] }
       end
@@ -505,7 +497,9 @@ module Events
       end
 
       def presence_condition
-        "events.properties::jsonb ? '#{sanitize_sql_for_conditions(aggregation_property)}'"
+        sanitize_sql_for_conditions(
+          ["jsonb_exists(events.properties::jsonb, ?)", aggregation_property]
+        )
       end
 
       def numeric_condition

@@ -4,7 +4,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   subject(:event_store) do
     described_class.new(
       code:,
-      subscription:,
+      billing_context: Billing::Context.from(subscription:),
       boundaries:,
       filters: {
         grouped_by:,
@@ -271,6 +271,68 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  describe "#for_window" do
+    it "mints a sibling store for another window" do
+      sibling = event_store.for_window(to_datetime: boundaries[:from_datetime] - 1.second)
+
+      expect(sibling).to be_an_instance_of(described_class)
+      expect(sibling).not_to be(event_store)
+      expect(sibling.code).to eq(event_store.code)
+      expect(sibling.billing_context).to eq(event_store.billing_context)
+      expect(sibling.filters).to eq(event_store.filters)
+      expect(sibling.deduplicate).to eq(event_store.deduplicate)
+      expect(sibling.boundaries).to eq({to_datetime: boundaries[:from_datetime] - 1.second})
+    end
+
+    it "aggregates the same property as the store it was minted from" do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.aggregation_property).to eq("value")
+      expect(sibling.numeric_property).to be(true)
+    end
+
+    it "leaves use_from_boundary to the caller, which declares what the window means" do
+      event_store.use_from_boundary = false
+
+      expect(event_store.for_window(to_datetime: boundaries[:to_datetime]).use_from_boundary).to be(true)
+    end
+
+    it "deduplicates like the store it was minted from" do
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.deduplicate).to eq(event_store.deduplicate)
+    end
+
+    it "forwards the boundaries it was given, whatever keys they carry" do
+      sibling = event_store.for_window(**boundaries)
+
+      expect(sibling.boundaries).to eq(boundaries)
+    end
+
+    it "narrows the filters when asked to" do
+      sibling = event_store.for_window(**boundaries, filters: event_store.filters.merge(grouped_by_values: {"region" => "europe"}))
+
+      expect(sibling.boundaries).to eq(boundaries)
+      expect(sibling.grouped_by_values).to eq({"region" => "europe"})
+    end
+
+    # NOTE: the sibling must actually query, on a window carrying no lower bound, and
+    #       deduplicate exactly as the store it was minted from. Asserting only that the
+    #       attributes were copied would pass on a sibling that returns nothing.
+    it "aggregates over its own window, deduplicating like the store it was minted from" do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+      sibling.use_from_boundary = false
+
+      expect(sibling.sum(with_count: false).value).to eq(event_store.sum(with_count: false).value)
+    end
+  end
+
   if include_feature?(:count)
     describe "#count" do
       it "returns the number of unique events" do
@@ -454,7 +516,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   if include_feature?(:sum_precise_total_amount_cents)
     describe "#sum_precise_total_amount_cents" do
       it "returns the sum of precise_total_amount_cent values" do
-        expect(event_store.sum_precise_total_amount_cents).to eq(15)
+        result = event_store.sum_precise_total_amount_cents
+
+        expect(result).to eq(15)
+        expect(result).to be_a(BigDecimal)
       end
 
       context "without events" do
@@ -475,6 +540,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         result = event_store.grouped_sum_precise_total_amount_cents
 
         expect(result).to match_array([{groups: {"region" => nil}, value: 6}, {groups: {"region" => "europe"}, value: 9}])
+        expect(result.map { it[:value] }).to all(be_a(BigDecimal))
       end
 
       context "with multiple groups" do
@@ -824,7 +890,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         subject(:event_store) do
           described_class.new(
             code:,
-            subscription:,
+            billing_context: Billing::Context.from(subscription:),
             boundaries:,
             filters: {
               grouped_by:,
@@ -1580,7 +1646,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1645,7 +1711,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1705,7 +1771,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1768,7 +1834,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1833,7 +1899,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1900,7 +1966,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -2712,46 +2778,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  if include_feature?(:distinct_charges_and_filters)
-    describe "#distinct_charges_and_filters" do
-      let(:charge_filter) { create(:charge_filter, charge:) }
-
-      let(:events) { nil }
-
-      before do
-        create_enriched_event(
-          timestamp: boundaries[:from_datetime] + 12.days,
-          value: 12,
-          properties: {billable_metric.field_name => 12},
-          charge_filter:
-        )
-      end
-
-      it "returns distinct charges and filters with the last seen timestamp" do
-        result = event_store.distinct_charges_and_filters
-
-        expect(result.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-        expect(result.map(&:last)).to all(be_present)
-      end
-
-      context "when charge_filter is nil" do
-        let(:charge_filter) { nil }
-
-        it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters.map { |row| row[0..1] }).to match_array([[charge.id, nil]])
-        end
-      end
-
-      context "when codes are provided" do
-        it "returns only the charges and filters matching the provided codes" do
-          matching = event_store.distinct_charges_and_filters(codes: [code])
-          expect(matching.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
-        end
-      end
-    end
-  end
-
   if include_feature?(:distinct_codes_and_property_combinations)
     describe "#distinct_codes_and_property_combinations" do
       let(:events) { nil }
@@ -2799,6 +2825,23 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
       end
 
+      context "when the last seen timestamp is not requested" do
+        it "returns the same combinations without the timestamp" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code],
+            filter_keys: %w[region provider],
+            with_last_seen_at: false
+          )
+
+          expect(result.map { |row| row[0..1] }).to match_array(
+            event_store
+              .distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+              .map { |row| row[0..1] }
+          )
+          expect(result.map(&:last)).to all(be_nil)
+        end
+      end
+
       context "with events outside the boundaries" do
         before do
           create_event(
@@ -2812,6 +2855,30 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
 
           expect(result.map { |row| row[0..1] }).not_to include([code, {"region" => "apac", "provider" => "azure"}])
+        end
+      end
+
+      context "with an event before from_datetime" do
+        before do
+          create_event(
+            timestamp: subscription_started_at - 1.day,
+            value: 1,
+            properties: {"region" => "apac", "provider" => "azure"}
+          )
+        end
+
+        it "excludes it by default" do
+          result = event_store.distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+
+          expect(result.map { |row| row[0..1] }).not_to include([code, {"region" => "apac", "provider" => "azure"}])
+        end
+
+        it "includes it when include_all_history is true" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code], filter_keys: %w[region provider], include_all_history: true
+          )
+
+          expect(result.map { |row| row[0..1] }).to include([code, {"region" => "apac", "provider" => "azure"}])
         end
       end
     end

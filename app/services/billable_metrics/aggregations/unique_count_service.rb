@@ -48,7 +48,7 @@ module BillableMetrics
         return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
 
           if options[:is_pay_in_advance] && options[:is_current_usage]

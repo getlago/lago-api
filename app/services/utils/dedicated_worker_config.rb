@@ -22,6 +22,13 @@ module Utils
       ORGANIZATION_IDS.include?(organization_id.downcase.to_s)
     end
 
+    # Resolves the queue for an organization: the dedicated queue when the organization is
+    # pinned to a dedicated worker, otherwise the default queue the caller resolves itself
+    # (e.g. from the SIDEKIQ_* env flag).
+    def self.queue_for(organization_id, dedicated:, default:)
+      enabled_for?(organization_id) ? dedicated : default
+    end
+
     def self.any?
       ORGANIZATION_IDS.any?
     end

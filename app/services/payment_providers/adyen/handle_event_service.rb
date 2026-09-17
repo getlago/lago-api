@@ -49,8 +49,10 @@ module PaymentProviders
           return result unless payment
 
           metadata = {lago_payable_type: payment.payable_type}
-          payment_service_klass(metadata).call!(
+          service_klass = payment_service_klass(metadata)
+          service_klass.call!(
             :update_payment_status,
+            **organization_params(service_klass),
             provider_payment_id:,
             status: "Cancelled",
             metadata:
@@ -98,13 +100,25 @@ module PaymentProviders
           lago_payable_type: event.dig("additionalData", "metadata.lago_payable_type")
         }
 
-        payment_service_klass(metadata).call!(
+        service_klass = payment_service_klass(metadata)
+        service_klass.call!(
           :update_payment_status,
+          **organization_params(service_klass),
           provider_payment_id:,
           status:,
           amount_cents: event.dig("amount", "value"),
           metadata:
         )
+      end
+
+      # NOTE: only the invoice service scopes its payable lookup by organization,
+      #       the payment request one still resolves its payable without it.
+      def organization_params(service_klass)
+        if service_klass == Invoices::Payments::AdyenService
+          {organization_id: organization.id}
+        else
+          {}
+        end
       end
 
       def payment_service_klass(metadata)

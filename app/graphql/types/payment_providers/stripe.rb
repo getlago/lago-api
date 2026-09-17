@@ -9,6 +9,7 @@ module Types
       field :id, ID, null: false
       field :name, String, null: false
 
+      field :require_terms_of_service_consent, Boolean, null: true
       field :secret_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
       field :success_redirect_url, String, null: true, permission: "organization:integrations:view"
       field :supports_3ds, Boolean, null: true

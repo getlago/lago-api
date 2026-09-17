@@ -78,16 +78,32 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
 
     let(:aggregator) do
       described_class.new(
-        event_store_class: Events::Stores::PostgresStore,
-        charge:,
-        subscription:,
-        boundaries: {from_datetime: Time.current, to_datetime: Time.current},
+        event_store: Events::Stores::PostgresStore.new(billing_context:, boundaries:, filters:),
+        metered_item:,
+        billing_context:,
+        boundaries:,
         filters:
       )
     end
 
+    let(:boundaries) { {from_datetime: Time.current, to_datetime: Time.current} }
+    let(:billing_context) { Billing::Context.from(subscription:) }
+
     let(:subscription) { create(:subscription) }
     let(:charge) { create(:standard_charge, plan: subscription.plan) }
+    let(:metered_item) do
+      Fees::ChargeService::MeteredItem.from_charge(
+        charge:,
+        boundaries: BillingPeriodBoundaries.new(
+          from_datetime: Time.current,
+          to_datetime: Time.current,
+          charges_from_datetime: Time.current,
+          charges_to_datetime: Time.current,
+          charges_duration: 1,
+          timestamp: Time.current
+        )
+      )
+    end
     let(:filters) { {} }
 
     context "without grouped_by" do

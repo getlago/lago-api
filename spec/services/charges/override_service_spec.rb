@@ -202,5 +202,40 @@ RSpec.describe Charges::OverrideService do
         end
       end
     end
+
+    # The code is the link between a plan's filter and the copy on an override: the copy must
+    # carry the same one, never a freshly generated one.
+    context "with filter codes", :premium do
+      let(:params) { {id: charge.id, plan:, properties: {amount: "200"}} }
+
+      let(:bm_filter) do
+        create(:billable_metric_filter, billable_metric:, key: "model", values: %w[a b])
+      end
+
+      before do
+        %w[a b].each do |value|
+          filter = create(:charge_filter, charge:)
+          create(:charge_filter_value, charge_filter: filter, billable_metric_filter: bm_filter, values: [value])
+          filter.assign_code!
+        end
+      end
+
+      it "copies the parent codes onto the override" do
+        result = override_service.call
+
+        expect(result).to be_success
+        expect(result.charge.filters.map(&:code).sort).to eq(charge.filters.reload.map(&:code).sort)
+      end
+
+      it "gives the copies the code of the filter they came from" do
+        result = override_service.call
+
+        parent_codes = charge.filters.reload.to_h { |f| [f.to_h, f.code] }
+
+        result.charge.filters.each do |child_filter|
+          expect(child_filter.code).to eq(parent_codes[child_filter.to_h])
+        end
+      end
+    end
   end
 end

@@ -43,11 +43,7 @@ module Invoices
     end
 
     def new_customer_billing_entity
-      if organization.feature_flag_enabled?(:multi_entity_billing)
-        organization.default_billing_entity
-      else
-        billing_entity
-      end
+      organization.default_billing_entity
     end
 
     def find_or_build_customer

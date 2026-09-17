@@ -5,6 +5,8 @@ module QuoteVersions
     module OneOff
       class BusinessValidator < ::BaseValidator
         include Currencies
+        include CurrencyValidation
+        include BillingEntityValidation
 
         def initialize(result, quote_version:, billing_items:, scope:)
           @quote_version = quote_version
@@ -16,6 +18,7 @@ module QuoteVersions
 
         def valid?
           validate_currency
+          validate_billing_entity
           validate_add_ons
 
           if errors?
@@ -29,16 +32,6 @@ module QuoteVersions
         private
 
         attr_reader :quote_version, :billing_items, :scope
-
-        def validate_currency
-          currency = quote_version.currency
-
-          if currency.blank?
-            add_error(field: :currency, error_code: "value_is_mandatory") if scope == :approve
-          elsif self.class.currency_list.exclude?(currency)
-            add_error(field: :currency, error_code: "invalid_currency")
-          end
-        end
 
         def validate_add_ons
           add_ons.each_with_index do |add_on, index|

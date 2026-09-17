@@ -6,7 +6,7 @@ RSpec.describe ChargeFilters::DestroyService do
   subject(:service) { described_class.call(charge_filter:) }
 
   let(:charge) { create(:standard_charge) }
-  let(:charge_filter) { create(:charge_filter, charge:) }
+  let(:charge_filter) { create(:charge_filter, charge:, code: "card_location_domestic_9f2a1c7b") }
 
   let(:card_location_filter) do
     create(
@@ -73,7 +73,8 @@ RSpec.describe ChargeFilters::DestroyService do
           hash_including("card_location"),
           nil,
           nil,
-          nil
+          nil,
+          "card_location_domestic_9f2a1c7b"
         )
       end
     end
@@ -92,7 +93,7 @@ RSpec.describe ChargeFilters::DestroyService do
       it "does not trigger cascade update" do
         service
 
-        expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
+        expect(ChargeFilters::CascadeJob).not_to have_been_enqueued
       end
     end
   end

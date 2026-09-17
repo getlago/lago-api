@@ -425,6 +425,19 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when invoice is closed" do
+      before { invoice.closed! }
+
+      it "does not create a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when invoice amount is 0" do
       let(:invoice) do
         create(
@@ -474,8 +487,116 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
-    it_behaves_like "syncs payment" do
-      let(:service_call) { create_service.call }
+    context "when the stripe customer only uses customer_balance" do
+      let(:default_payment_method) { nil }
+      let(:provider_customer) do
+        create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[customer_balance])
+      end
+
+      it "creates a payment so an awaiting-funds payment intent is opened" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_present
+        expect(result.payment.payment_method_id).to be_nil
+        expect(provider_class).to have_received(:new)
+      end
+
+      context "when the customer only uses crypto" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[crypto])
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
+      context "when the customer also uses a payment method requiring setup" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[card crypto])
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
+      context "when the customer has no provider payment methods" do
+        before { provider_customer.update_column(:settings, {}) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+    end
+
+    context "when a non-stripe provider customer has no payment method" do
+      let(:provider) { "adyen" }
+      let(:provider_class) { PaymentProviders::Adyen::Payments::CreateService }
+      let(:payment_provider) { create(:adyen_provider, code: payment_provider_code, organization:) }
+      let(:provider_customer) { create(:adyen_customer, payment_provider:, customer:) }
+      let(:default_payment_method) { nil }
+
+      it "does not create a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when the provider updates the payment during the charge" do
+      let(:provider_payment_status) { "succeeded" }
+      let(:result) do
+        PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
+          r.payment = instance_double(Payment, payable_payment_status: provider_payment_status)
+        end
+      end
+
+      before do
+        provider_payment = nil
+
+        allow(provider_class).to receive(:new) do |payment:, **|
+          provider_payment = payment
+          provider_service
+        end
+
+        # NOTE: The provider service writes the resolved status back onto the payment it was given.
+        allow(provider_service).to receive(:call!) do
+          provider_payment.update!(payable_payment_status: provider_payment_status)
+          result
+        end
+      end
+
+      it_behaves_like "syncs payment" do
+        let(:service_call) { create_service.call }
+      end
+
+      context "when the payment is left processing" do
+        let(:provider_payment_status) { "processing" }
+        let(:integration) { create(:netsuite_integration, organization:, sync_payments: true) }
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "does not enqueue Integrations::Aggregator::Payments::CreateJob" do
+          expect { create_service.call }.not_to have_enqueued_job(Integrations::Aggregator::Payments::CreateJob)
+        end
+      end
     end
 
     context "when the provider raises AlreadyPaidError" do
@@ -790,6 +911,19 @@ RSpec.describe Invoices::Payments::CreateService do
         end
       end
 
+      context "when the organization skips the credit invoice auto-payment delay" do
+        before { organization.enable_feature_flag!(:skip_credit_invoice_auto_payment_delay) }
+
+        it "still delays a non-credit invoice" do
+          freeze_time do
+            expect { ApplicationRecord.transaction { create_service.call_async } }
+              .to have_enqueued_job(Invoices::Payments::CreateJob)
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+              .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+          end
+        end
+      end
+
       context "when it is not the first payment attempt (retry)" do
         before { invoice.update!(payment_attempts: 1) }
 
@@ -846,6 +980,17 @@ RSpec.describe Invoices::Payments::CreateService do
               .to have_enqueued_job(Invoices::Payments::CreateJob)
               .with(invoice:, payment_provider: :stripe, payment_method_params: {})
               .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+          end
+        end
+
+        context "when the organization skips the credit invoice auto-payment delay" do
+          before { organization.enable_feature_flag!(:skip_credit_invoice_auto_payment_delay) }
+
+          it "enqueues the payment immediately" do
+            expect { ApplicationRecord.transaction { create_service.call_async } }
+              .to have_enqueued_job(Invoices::Payments::CreateJob)
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+              .at(:no_wait)
           end
         end
       end

@@ -97,11 +97,11 @@ module Types
       end
 
       def current_billing_period_started_at
-        dates_service.charges_from_datetime
+        dates_service&.charges_from_datetime
       end
 
       def current_billing_period_ending_at
-        dates_service.charges_to_datetime
+        dates_service&.charges_to_datetime
       end
 
       def charges

@@ -22,31 +22,42 @@ RSpec.describe Events::Stores::PostgresStore do
       create(:event, **attributes)
     end
 
-    def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
-      event = create(
-        :event,
-        transaction_id:,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        external_customer_id: customer.external_id,
-        code:,
-        timestamp:,
-        properties:
-      )
-
-      create(
-        :enriched_event,
-        subscription:,
-        event:,
-        charge:,
-        charge_filter_id: charge_filter&.id,
-        value:,
-        decimal_value: value&.to_i&.to_d
-      )
-    end
-
     def format_timestamp(timestamp, precision: nil)
       Time.zone.parse(timestamp)
+    end
+  end
+
+  describe "#sum" do
+    let(:field_name) { "value' OR FALSE) --" }
+    let(:billable_metric) { create(:sum_billable_metric, field_name:) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: 1.day.ago) }
+    let(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries: {
+          from_datetime: subscription.started_at.beginning_of_day,
+          to_datetime: Time.current.end_of_day
+        }
+      ).tap do |store|
+        store.aggregation_property = field_name
+        store.numeric_property = true
+      end
+    end
+
+    it "safely handles special characters in the aggregation property" do
+      create(
+        :event,
+        organization:,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: Time.current,
+        properties: {field_name => 2}
+      )
+
+      expect(event_store.sum.value).to eq(2)
     end
   end
 
@@ -75,7 +86,7 @@ RSpec.describe Events::Stores::PostgresStore do
       def store_for(event)
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -108,7 +119,7 @@ RSpec.describe Events::Stores::PostgresStore do
 
         event_store = described_class.new(
           code: billable_metric.code,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -133,7 +144,7 @@ RSpec.describe Events::Stores::PostgresStore do
       let(:event_store) do
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: datetime,
             to_datetime: datetime,
@@ -149,6 +160,43 @@ RSpec.describe Events::Stores::PostgresStore do
 
         expect(result.events_count).to eq(0)
       end
+    end
+  end
+
+  describe "#grouped_weighted_sum" do
+    let(:group_value) { "europe' OR TRUE --" }
+    let(:billable_metric) { create(:weighted_sum_billable_metric) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:started_at) { Time.zone.parse("2023-03-01") }
+    let(:subscription) { create(:subscription, customer:, started_at:) }
+    let(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries: {
+          from_datetime: started_at,
+          to_datetime: started_at.end_of_month.end_of_day,
+          charges_duration: 31
+        },
+        filters: {grouped_by: ["region"]}
+      ).tap do |store|
+        store.aggregation_property = billable_metric.field_name
+        store.numeric_property = true
+      end
+    end
+
+    it "safely handles special characters in grouped values" do
+      create(
+        :event,
+        organization:,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: started_at + 1.day,
+        properties: {billable_metric.field_name => 2, "region" => group_value}
+      )
+
+      expect(event_store.grouped_weighted_sum.sole.groups).to eq("region" => group_value)
     end
   end
 end

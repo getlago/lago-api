@@ -27,6 +27,10 @@ module Types
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
     field :billing_entity, resolver: Resolvers::BillingEntityResolver
     field :billing_entity_taxes, resolver: Resolvers::BillingEntityTaxesResolver
+    field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
+    field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
+    field :contract, resolver: Resolvers::ContractResolver
+    field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :credit_note, resolver: Resolvers::CreditNoteResolver
@@ -89,16 +93,29 @@ module Types
     field :payment_requests, resolver: Resolvers::PaymentRequestsResolver
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
+    field :plan_applied_rate_cards, resolver: Resolvers::PlanAppliedRateCardsResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
+    field :product, resolver: Resolvers::ProductResolver
+    field :product_categories, resolver: Resolvers::ProductCategoriesResolver
+    field :product_category, resolver: Resolvers::ProductCategoryResolver
+    field :product_filter, resolver: Resolvers::ProductFilterResolver
+    field :product_filters, resolver: Resolvers::ProductFiltersResolver
+    field :products, resolver: Resolvers::ProductsResolver
     field :quote, resolver: Resolvers::QuoteResolver
     field :quote_version, resolver: Resolvers::QuoteVersionResolver
     field :quotes, resolver: Resolvers::QuotesResolver
+    field :rate_card, resolver: Resolvers::RateCardResolver
+    field :rate_card_rate, resolver: Resolvers::RateCardRateResolver
+    field :rate_card_rates, resolver: Resolvers::RateCardRatesResolver
+    field :rate_cards, resolver: Resolvers::RateCardsResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver
     field :security_logs, resolver: Resolvers::SecurityLogsResolver
+    field :selectable_billable_metrics, resolver: Resolvers::SelectableBillableMetricsResolver
+    field :selectable_plans, resolver: Resolvers::SelectablePlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscription_alert, resolver: Resolvers::Subscriptions::AlertResolver
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
@@ -107,6 +124,8 @@ module Types
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver
+    field :usage_attribution_type, resolver: Resolvers::UsageAttributionTypeResolver
+    field :usage_attribution_types, resolver: Resolvers::UsageAttributionTypesResolver
     field :wallet, resolver: Resolvers::WalletResolver
     field :wallet_alert, resolver: Resolvers::Wallets::AlertResolver
     field :wallet_alerts, resolver: Resolvers::Wallets::AlertsResolver
@@ -128,7 +147,6 @@ module Types
     field :data_api_revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
     field :data_api_usages, resolver: Resolvers::DataApi::UsagesResolver
     field :data_api_usages_aggregated_amounts, resolver: Resolvers::DataApi::Usages::AggregatedAmountsResolver
-    field :data_api_usages_forecasted, resolver: Resolvers::DataApi::Usages::ForecastedResolver
     field :data_api_usages_invoiced, resolver: Resolvers::DataApi::Usages::InvoicedResolver
     field :superset_dashboards, resolver: Resolvers::Superset::DashboardsResolver
   end

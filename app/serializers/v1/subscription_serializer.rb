@@ -24,12 +24,13 @@ module V1
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
         downgrade_plan_date: model.downgrade_plan_date&.iso8601,
-        current_billing_period_started_at: dates_service.charges_from_datetime&.iso8601,
-        current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
+        current_billing_period_started_at: dates_service&.charges_from_datetime&.iso8601,
+        current_billing_period_ending_at: dates_service&.charges_to_datetime&.iso8601,
         on_termination_credit_note: model.on_termination_credit_note,
         on_termination_invoice: model.on_termination_invoice,
         progressive_billing_disabled: model.progressive_billing_disabled,
         consolidate_invoice: model.consolidate_invoice,
+        purchase_order_number: model.purchase_order_number,
         cancellation_reason: model.cancellation_reason,
         activated_at: model.activated_at&.iso8601
       }

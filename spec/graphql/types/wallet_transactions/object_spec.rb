@@ -102,4 +102,27 @@ RSpec.describe Types::WalletTransactions::Object do
       end
     end
   end
+
+  describe "#purchase_order_number" do
+    subject { run_graphql_field("WalletTransaction.purchaseOrderNumber", wallet_transaction) }
+
+    let(:wallet) { create(:wallet, purchase_order_number: wallet_purchase_order_number) }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, purchase_order_number: transaction_purchase_order_number) }
+    let(:wallet_purchase_order_number) { "PO-WALLET-123" }
+    let(:transaction_purchase_order_number) { nil }
+
+    context "when transaction has no purchase_order_number" do
+      it "returns the wallet's purchase_order_number" do
+        expect(subject).to eq("PO-WALLET-123")
+      end
+    end
+
+    context "when transaction has a purchase_order_number" do
+      let(:transaction_purchase_order_number) { "PO-TRANSACTION-123" }
+
+      it "returns the transaction's purchase_order_number" do
+        expect(subject).to eq("PO-TRANSACTION-123")
+      end
+    end
+  end
 end

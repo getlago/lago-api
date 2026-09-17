@@ -14,7 +14,7 @@ RSpec.describe Admin::InvoicesController, type: [:request, :admin] do
 
   describe "POST /admin/invoices/:id/regenerate" do
     it "regenerates the invoice PDF" do
-      admin_post("/admin/invoices/#{invoice.id}/regenerate")
+      admin_post("/admin/invoices/#{invoice.id}/regenerate", {}, admin_headers)
 
       expect(Invoices::GeneratePdfService).to have_received(:call)
       expect(response).to have_http_status(:success)

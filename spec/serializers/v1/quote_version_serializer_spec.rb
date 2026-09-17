@@ -22,6 +22,21 @@ RSpec.describe ::V1::QuoteVersionSerializer do
     )
   end
 
+  it "exposes the customer's billing entity code when the deal names none" do
+    expect(quote_version.billing_entity_id).to eq(nil)
+    expect(result["quote_version"]["billing_entity_code"]).to eq(quote_version.customer.billing_entity.code)
+  end
+
+  context "when the deal names its own billing entity" do
+    let(:billing_entity) { create(:billing_entity, organization: quote_version.organization) }
+
+    before { quote_version.update!(billing_entity:) }
+
+    it "exposes that entity's code" do
+      expect(result["quote_version"]["billing_entity_code"]).to eq(billing_entity.code)
+    end
+  end
+
   it "does not expose content or billing_items by default" do
     expect(result["quote_version"].keys).not_to include("content", "billing_items")
   end

@@ -2,11 +2,12 @@
 
 class PaymentMethodsQuery < BaseQuery
   Result = BaseResult[:payment_methods]
-  Filters = BaseFilters[:external_customer_id, :with_deleted]
+  Filters = BaseFilters[:external_customer_id, :payment_provider_customer_id, :with_deleted]
 
   def call
     payment_methods = base_scope
     payment_methods = with_external_customer(payment_methods) if filters.external_customer_id.present?
+    payment_methods = with_payment_provider_customer(payment_methods) if filters.payment_provider_customer_id.present?
 
     payment_methods = apply_consistent_ordering(payment_methods)
     payment_methods = paginate(payment_methods)
@@ -22,6 +23,10 @@ class PaymentMethodsQuery < BaseQuery
     scope.joins(:customer)
       .where(customers: {external_id: filters.external_customer_id})
       .where("customers.deleted_at IS NULL")
+  end
+
+  def with_payment_provider_customer(scope)
+    scope.where(payment_provider_customer_id: filters.payment_provider_customer_id)
   end
 
   def base_scope

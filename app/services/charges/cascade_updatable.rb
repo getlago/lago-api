@@ -24,7 +24,8 @@ module Charges
         {
           values: f[:values].deep_stringify_keys,
           properties: f[:properties]&.deep_stringify_keys,
-          invoice_display_name: f[:invoice_display_name]
+          invoice_display_name: f[:invoice_display_name],
+          code: f[:code]
         }
       end
 
@@ -33,7 +34,8 @@ module Charges
         {
           values: filter.to_h.deep_stringify_keys,
           properties: filter.properties.deep_stringify_keys,
-          invoice_display_name: filter.invoice_display_name
+          invoice_display_name: filter.invoice_display_name,
+          code: filter.code
         }
       end
 
@@ -50,7 +52,7 @@ module Charges
 
     def capture_old_filters_attrs
       charge.filters.includes(values: :billable_metric_filter).map do |f|
-        {id: f.id, properties: f.properties, invoice_display_name: f.invoice_display_name, values: f.to_h}
+        {id: f.id, code: f.code, properties: f.properties, invoice_display_name: f.invoice_display_name, values: f.to_h}
       end
     end
 

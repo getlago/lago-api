@@ -104,6 +104,7 @@ module WalletActions
       :paid_top_up_min_amount_cents,
       :paid_top_up_max_amount_cents,
       :ignore_paid_top_up_limits_on_creation,
+      :purchase_order_number,
       :transaction_name,
       :transaction_priority,
       :billing_entity_code,
@@ -126,6 +127,7 @@ module WalletActions
         :trigger,
         :invoice_requires_successful_payment,
         :ignore_paid_top_up_limits,
+        :purchase_order_number,
         :transaction_name,
         invoice_custom_section: [
           :skip_invoice_custom_sections,
@@ -138,6 +140,12 @@ module WalletActions
         payment_method: [
           :payment_method_type,
           :payment_method_id
+        ],
+        connections: [
+          payment: [:behavior, :code],
+          tax: [:behavior, :code],
+          accounting: [:behavior, :code],
+          crm: [:behavior, :code]
         ]
       ],
       applies_to: [
@@ -151,6 +159,12 @@ module WalletActions
       payment_method: [
         :payment_method_type,
         :payment_method_id
+      ],
+      connections: [
+        payment: [:behavior, :code],
+        tax: [:behavior, :code],
+        accounting: [:behavior, :code],
+        crm: [:behavior, :code]
       ]
     )
   end
@@ -165,6 +179,7 @@ module WalletActions
       :paid_top_up_min_amount_cents,
       :paid_top_up_max_amount_cents,
       :billing_entity_code,
+      :purchase_order_number,
       metadata: {},
       recurring_transaction_rules: [
         :lago_id,
@@ -180,6 +195,7 @@ module WalletActions
         :grants_target_top_up,
         :invoice_requires_successful_payment,
         :ignore_paid_top_up_limits,
+        :purchase_order_number,
         :transaction_name,
         invoice_custom_section: [
           :skip_invoice_custom_sections,
@@ -192,6 +208,12 @@ module WalletActions
         payment_method: [
           :payment_method_type,
           :payment_method_id
+        ],
+        connections: [
+          payment: [:behavior, :code],
+          tax: [:behavior, :code],
+          accounting: [:behavior, :code],
+          crm: [:behavior, :code]
         ]
       ],
       applies_to: [
@@ -205,6 +227,12 @@ module WalletActions
       payment_method: [
         :payment_method_type,
         :payment_method_id
+      ],
+      connections: [
+        payment: [:behavior, :code],
+        tax: [:behavior, :code],
+        accounting: [:behavior, :code],
+        crm: [:behavior, :code]
       ]
     )
   end

@@ -12,6 +12,7 @@ module Subscriptions
       valid_on_termination_invoice?
       valid_payment_method?
       valid_activation_rules?
+      valid_consolidate_invoice?
 
       if errors?
         result.validation_failure!(errors:)
@@ -117,6 +118,14 @@ module Subscriptions
         codes.each { |code| add_error(field:, error_code: code) }
       end
 
+      false
+    end
+
+    def valid_consolidate_invoice?
+      return true unless args[:consolidate_invoice_provided]
+      return true if [true, false, "true", "false"].include?(args[:consolidate_invoice])
+
+      add_error(field: :consolidate_invoice, error_code: "invalid_value")
       false
     end
   end

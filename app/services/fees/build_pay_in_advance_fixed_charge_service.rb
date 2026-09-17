@@ -147,15 +147,14 @@ module Fees
 
     def calculate_amount_for_units(units)
       # Create a mock aggregation result for the charge model
-      aggregation_result = BaseService::Result.new
+      aggregation_result = BillableMetrics::Aggregations::BaseService::Result.new
       aggregation_result.aggregation = units
       aggregation_result.full_units_number = units
       aggregation_result.count = 1
 
       charge_model_result = ChargeModels::Factory.new_instance(
-        chargeable: fixed_charge,
+        pricing_structure: ChargeModels::PricingStructure.from_fixed_charge(fixed_charge),
         aggregation_result:,
-        properties: fixed_charge.properties,
         period_ratio: 1.0,
         calculate_projected_usage: false
       ).apply

@@ -15,6 +15,51 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
   it { is_expected.to belong_to(:customer) }
   it { is_expected.to belong_to(:organization) }
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:category)
+        .backed_by_column_of_type(:enum)
+        .validating(allowing_nil: true)
+        .with_values(payment: "payment", tax: "tax", accounting: "accounting", crm: "crm")
+    end
+  end
+
+  describe "derivation callbacks" do
+    it "derives the category from the STI type" do
+      integration_customer.category = nil
+      integration_customer.valid?
+
+      expect(integration_customer.category).to eq("accounting")
+    end
+
+    it "derives the code from the integration when absent" do
+      integration.update!(code: "ns_eu")
+      integration_customer.code = nil
+      integration_customer.valid?
+
+      expect(integration_customer.code).to eq("ns_eu")
+    end
+
+    it "keeps an explicit code" do
+      integration_customer.code = "custom_code"
+      integration_customer.valid?
+
+      expect(integration_customer.code).to eq("custom_code")
+    end
+  end
+
+  describe ".category_for" do
+    it "returns the connection category of the given customer type" do
+      expect(described_class.category_for("IntegrationCustomers::AnrokCustomer")).to eq("tax")
+      expect(described_class.category_for("IntegrationCustomers::AvalaraCustomer")).to eq("tax")
+      expect(described_class.category_for("IntegrationCustomers::NetsuiteCustomer")).to eq("accounting")
+      expect(described_class.category_for("IntegrationCustomers::XeroCustomer")).to eq("accounting")
+      expect(described_class.category_for("IntegrationCustomers::HubspotCustomer")).to eq("crm")
+      expect(described_class.category_for("IntegrationCustomers::SalesforceCustomer")).to eq("crm")
+      expect(described_class.category_for("IntegrationCustomers::OktaCustomer")).to be_nil
+    end
+  end
+
   describe ".accounting_kind" do
     let(:netsuite_customer) { create(:netsuite_customer) }
     let(:xero_customer) { create(:xero_customer) }
@@ -187,6 +232,12 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
   end
 
   describe "validations" do
+    describe "of code uniqueness" do
+      subject { create(:netsuite_customer, code: "netsuite_main", category: "accounting") }
+
+      it { is_expected.to validate_uniqueness_of(:code).scoped_to(:customer_id, :category).allow_nil }
+    end
+
     describe "of customer id uniqueness" do
       let(:errors) { another_integration_customer.errors }
 

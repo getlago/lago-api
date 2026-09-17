@@ -5,6 +5,8 @@ module Api
     module Plans
       module Charges
         class FiltersController < Plans::BaseController
+          include Api::ForbidsLegacyBilling
+
           before_action :find_charge
           before_action :find_charge_filter, only: %i[show update destroy]
 

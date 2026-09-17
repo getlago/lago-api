@@ -21,9 +21,10 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
             expect(messages.size).to eq(2)
 
             events.each_with_index do |event, index|
+              expect(messages[index]).not_to have_key(:key)
+
               expect(messages[index]).to eq(
                 topic: "raw_events",
-                key: "#{organization.id}-#{event.external_subscription_id}",
                 payload: {
                   organization_id: organization.id,
                   external_customer_id: event.external_customer_id,
@@ -33,7 +34,7 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
                   code: event.code,
                   precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
                   properties: event.properties,
-                  ingested_at: Time.zone.now.iso8601[...-1],
+                  ingested_at: Time.zone.now.iso8601(3)[...-1],
                   source: "http_ruby",
                   source_metadata: {
                     api_post_processed: true

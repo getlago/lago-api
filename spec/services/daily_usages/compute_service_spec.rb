@@ -205,6 +205,19 @@ RSpec.describe DailyUsages::ComputeService do
         end
       end
 
+      context "when the daily usage cannot be persisted" do
+        before do
+          allow_any_instance_of(DailyUsage).to receive(:save!) # rubocop:disable RSpec/AnyInstance
+            .and_raise(ActiveRecord::RecordInvalid.new(DailyUsage.new))
+        end
+
+        it "does not swallow the error into a failed result" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to raise_error(ActiveRecord::RecordInvalid)
+          end
+        end
+      end
+
       context "with customer timezone" do
         let(:customer) { create(:customer, organization:, timezone: "Australia/Sydney") }
         let(:timestamp) { Time.zone.parse("2024-10-21 15:05:00") }

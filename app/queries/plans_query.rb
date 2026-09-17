@@ -19,7 +19,8 @@ class PlansQuery < BaseQuery
   private
 
   def base_scope
-    Plan.parents.where(organization:).ransack(search_params)
+    scope = Plan.parents.where(organization:)
+    scope.ransack(search_params)
   end
 
   def search_params

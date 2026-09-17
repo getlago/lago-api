@@ -42,6 +42,12 @@ module PaymentProviders
     def payment_type
       "stripe"
     end
+
+    def retriable_authentication_failure?(error_code, payment:)
+      return false unless error_code == NEED_3DS_ERROR_CODE
+
+      supports_3ds.present? || payment.gated_subscription_activation?
+    end
   end
 end
 

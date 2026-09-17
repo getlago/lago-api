@@ -129,6 +129,38 @@ RSpec.describe PaymentProviders::StripeService do
       end
     end
 
+    context "when consent collection changes on an existing provider" do
+      let(:stripe_provider) do
+        create(:stripe_provider, organization:, code:, name:, secret_key: "secret", require_terms_of_service_consent: false)
+      end
+
+      before { stripe_provider }
+
+      it "enqueues a job to expire the connection's payment intents" do
+        stripe_service.create_or_update(
+          id: stripe_provider.id,
+          organization_id: organization.id,
+          code:,
+          name:,
+          require_terms_of_service_consent: true
+        )
+
+        expect(PaymentProviders::Stripe::ExpirePaymentIntentsJob).to have_been_enqueued.with(stripe_provider)
+      end
+
+      it "does not enqueue the job when the value is unchanged" do
+        stripe_service.create_or_update(
+          id: stripe_provider.id,
+          organization_id: organization.id,
+          code:,
+          name:,
+          require_terms_of_service_consent: false
+        )
+
+        expect(PaymentProviders::Stripe::ExpirePaymentIntentsJob).not_to have_been_enqueued
+      end
+    end
+
     context "with validation error" do
       it "returns an error result" do
         result = stripe_service.create_or_update(

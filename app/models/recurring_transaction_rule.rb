@@ -3,11 +3,15 @@
 class RecurringTransactionRule < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
+  include ConnectionResolvable
 
   belongs_to :wallet
   belongs_to :organization
   belongs_to :payment_method, optional: true
 
+  delegate :customer, to: :wallet
+
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :applied_invoice_custom_sections,
     class_name: "RecurringTransactionRule::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -73,6 +77,14 @@ class RecurringTransactionRule < ApplicationRecord
     end
   end
 
+  def apply_max_top_up_limits(credit_amount:)
+    if ignore_paid_top_up_limits?
+      credit_amount
+    else
+      credit_amount.clamp(nil, wallet.paid_top_up_max_credits)
+    end
+  end
+
   def invoice_custom_section_params
     section_ids = applied_invoice_custom_sections.pluck(:invoice_custom_section_id)
     return if section_ids.none? && !skip_invoice_custom_sections
@@ -80,11 +92,13 @@ class RecurringTransactionRule < ApplicationRecord
     {skip_invoice_custom_sections:, invoice_custom_section_ids: section_ids}
   end
 
-  def compute_paid_credits(ongoing_balance:)
+  def compute_paid_credits(ongoing_balance:, pending_credits: 0)
     if target?
       return 0.0 if grants_target_top_up?
 
       compute_target_top_up_amount(ongoing_balance:)
+    elsif threshold?
+      compute_fixed_top_up_amount(ongoing_balance:, pending_credits:)
     else
       paid_credits
     end
@@ -113,6 +127,15 @@ class RecurringTransactionRule < ApplicationRecord
     if target_ongoing_balance < threshold_credits
       errors.add(:target_ongoing_balance, :must_be_greater_than_or_equal_threshold)
     end
+  end
+
+  def compute_fixed_top_up_amount(ongoing_balance:, pending_credits:)
+    return paid_credits if paid_credits.zero? || threshold_credits.nil?
+
+    gap = threshold_credits - ongoing_balance - granted_credits - pending_credits
+    return paid_credits if gap < paid_credits
+
+    apply_max_top_up_limits(credit_amount: paid_credits * ((gap / paid_credits).floor + 1))
   end
 
   def compute_target_top_up_amount(ongoing_balance:)

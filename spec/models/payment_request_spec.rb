@@ -80,6 +80,12 @@ RSpec.describe PaymentRequest do
     end
   end
 
+  describe "#subscription_payment_gated?" do
+    it "returns false because a payment request settles finalized invoices" do
+      expect(payment_request.subscription_payment_gated?).to eq(false)
+    end
+  end
+
   describe "#increment_payment_attempts!" do
     let(:payment_request) { create :payment_request }
 

@@ -146,13 +146,7 @@ class BaseService
     end
   end
 
-  # DEPRECATED: This is a legacy result class that should
-  #             be replaced be defining a Result in every service, using the BaseResult
-  class LegacyResult < OpenStruct
-    include ::Result
-  end
-
-  Result = LegacyResult
+  Result = BaseResult
 
   def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: true)
     use(Middlewares::ActivityLogMiddleware, action:, record:, condition:, after_commit:)

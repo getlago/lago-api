@@ -40,7 +40,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
 
     context "with both structural and business errors" do
       let(:payload) { super().merge("units" => 0) }
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "DOUBLOON", billing_items:) }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "DOUBLOON", billing_items:) }
 
       it "returns the structural errors first" do
         expect(validator).not_to be_valid

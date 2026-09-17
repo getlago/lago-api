@@ -22,5 +22,11 @@ RSpec.describe Wallets::ApplyPaidCreditsService do
 
       expect(result.wallet_transaction.status).to eq("settled")
     end
+
+    it "produces an activity log for the settled wallet transaction" do
+      service.call
+
+      expect(Utils::ActivityLog).to have_produced("wallet_transaction.updated").after_commit.with(wallet_transaction)
+    end
   end
 end

@@ -241,7 +241,11 @@ RSpec.shared_examples "an invoice index endpoint" do
       create(:invoice, customer:, number: SecureRandom.uuid, organization:)
     end
 
-    before { create(:invoice, customer:, number: "not-relevant-number", organization:) }
+    before do
+      create(:invoice, customer:, number: "not-relevant-number", organization:)
+      # The factory does not go through the services, so the denormalized column is empty.
+      organization.invoices.find_each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
+    end
 
     it "returns invoices matching the search terms" do
       subject

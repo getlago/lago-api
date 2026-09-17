@@ -27,6 +27,9 @@ module OrderForms
             void_reason: :manual
           )
 
+          SendWebhookJob.perform_after_commit("order_form.voided", order_form)
+          Utils::ActivityLog.produce_after_commit(order_form, "order_form.voided")
+
           QuoteVersions::VoidService.call!(quote_version: order_form.quote_version, reason: :cascade_of_voided)
 
           result.order_form = order_form
@@ -34,6 +37,8 @@ module OrderForms
       end
 
       result
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private

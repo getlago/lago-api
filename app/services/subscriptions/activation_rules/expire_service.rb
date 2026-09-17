@@ -11,26 +11,22 @@ module Subscriptions
       end
 
       def call
-        subscription.with_lock do
-          # Race protection: a payment webhook may resolve the subscription
-          # concurrently. If it already did so by the time we acquired the
-          # lock, bail.
-          next unless subscription.incomplete?
+        cancel_result = CancelService.call(
+          subscription:,
+          rule_status: :expired,
+          cancellation_reason: :timeout
+        )
 
-          payment_rule = subscription.activation_rules.payment.sole
-          Payment::EvaluateService.call!(rule: payment_rule, status: :expired)
+        if cancel_result.failure?
+          if subscription_already_resolved?(cancel_result)
+            result.subscription = subscription
+            return result
+          end
 
-          invoice = subscription.invoices.open.subscription.sole
-          invoice.closed!
-
-          ResolveSubscriptionStatusService.call!(subscription:)
-          subscription.update!(cancellation_reason: :timeout)
-
-          enqueue_psp_cancel(invoice)
-          enqueue_recredit_jobs(invoice)
+          cancel_result.raise_if_error!
         end
 
-        result.subscription = subscription
+        result.subscription = cancel_result.subscription
         result
       end
 
@@ -38,32 +34,9 @@ module Subscriptions
 
       attr_reader :subscription
 
-      def enqueue_recredit_jobs(invoice)
-        invoice.credits.coupon_kind.find_each do |credit|
-          AppliedCoupons::RecreditJob.perform_after_commit(credit)
-        end
-
-        invoice.credits.credit_note_kind.find_each do |credit|
-          CreditNotes::RecreditJob.perform_after_commit(credit)
-        end
-
-        invoice.wallet_transactions.outbound.find_each do |wallet_transaction|
-          WalletTransactions::RecreditJob.perform_after_commit(wallet_transaction)
-        end
-      end
-
-      def enqueue_psp_cancel(invoice)
-        # A partial unique index on payments guarantees at most one
-        # provider payment in (pending, processing) per invoice, and the
-        # payment-gated lifecycle ensures the first failure already
-        # cancels the subscription before any retry could create a second
-        # one — so this find returns the single live payment when present.
-        payment = invoice.payments
-          .where(payable_payment_status: %w[pending processing])
-          .first
-        return unless payment
-
-        PaymentProviders::CancelPaymentJob.perform_after_commit(payment)
+      def subscription_already_resolved?(cancel_result)
+        cancel_result.error.is_a?(BaseService::ValidationFailure) &&
+          cancel_result.error.messages == {subscription: ["subscription_already_resolved"]}
       end
     end
   end

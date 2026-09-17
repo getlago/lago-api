@@ -61,6 +61,16 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
           .to include("missing_graduated_percentage_ranges")
       end
 
+      context "when the ranges key is absent" do
+        let(:charge) { build(:graduated_percentage_charge, properties: {}) }
+
+        it "fails validation instead of raising" do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error.messages[:graduated_percentage_ranges])
+            .to include("missing_graduated_percentage_ranges")
+        end
+      end
+
       context "when ranges does not starts at 0" do
         let(:ranges) { [{from_value: -1, to_value: 100}] }
 

@@ -46,6 +46,22 @@ RSpec.describe ApplicationJob do
     end
   end
 
+  describe ".linear_delay" do
+    it "grows the delay linearly with the number of executions" do
+      delay = described_class.linear_delay(10)
+
+      expect(delay.call(1)).to be_between(10, 20)
+      expect(delay.call(2)).to be_between(20, 30)
+      expect(delay.call(3)).to be_between(30, 40)
+    end
+
+    it "caps the delay at max_seconds" do
+      delay = described_class.linear_delay(5, max_seconds: 12)
+
+      expect(delay.call(10)).to be_between(12, 17)
+    end
+  end
+
   describe "#perform_after_commit" do
     it "performs the job after the commit" do
       ApplicationRecord.transaction do

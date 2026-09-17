@@ -14,7 +14,7 @@ module Wallets
       return result if wallet_transaction.status == "settled"
 
       ActiveRecord::Base.transaction do
-        WalletTransactions::SettleService.new(wallet_transaction:).call
+        WalletTransactions::SettleService.call(wallet_transaction:)
         Wallets::Balance::IncreaseService
           .new(wallet: wallet_transaction.wallet, wallet_transaction: wallet_transaction).call
       end

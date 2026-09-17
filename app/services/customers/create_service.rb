@@ -99,14 +99,24 @@ module Customers
         args[:metadata].each { |m| create_metadata(customer:, args: m) } if args[:metadata].present?
       end
 
-      # NOTE: handle configuration for configured payment providers
-      billing_configuration = args[:provider_customer]&.to_h&.merge(
-        payment_provider: args[:payment_provider],
-        payment_provider_code: args[:payment_provider_code]
-      )
-      create_billing_configuration(customer, billing_configuration)
+      # NOTE: the payment_provider_customers array (new shape) takes precedence over the singular
+      # provider_customer (deprecated). Only fall back to the legacy path when the array is absent.
+      unless args.key?(:payment_provider_customers)
+        billing_configuration = args[:provider_customer]&.to_h&.merge(
+          payment_provider: args[:payment_provider],
+          payment_provider_code: args[:payment_provider_code]
+        )
+        create_billing_configuration(customer, billing_configuration)
+      end
 
       result.customer = customer
+
+      if args.key?(:payment_provider_customers)
+        PaymentProviderCustomers::CreateOrUpdateBatchService.call(
+          payment_provider_customers: args[:payment_provider_customers],
+          customer:
+        ).raise_if_error!
+      end
 
       IntegrationCustomers::CreateOrUpdateBatchService.call(
         integration_customers: args[:integration_customers],

@@ -1,0 +1,64 @@
+# frozen_string_literal: true
+
+module Types
+  module Contracts
+    class Object < Types::BaseObject
+      graphql_name "Contract"
+      description "The agreement a customer signed: an optional plan, a validity window and the billing anchor"
+
+      dataload_association :customer, :billing_entity, :payment_method
+
+      field :external_id, String, null: false
+      field :id, ID, null: false
+      field :name, String, null: true
+
+      field :billing_time, Types::Contracts::BillingTimeEnum, null: false
+      field :status, Types::Contracts::StatusEnum, null: false
+
+      field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: true
+
+      field :canceled_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :ended_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :started_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
+
+      # Settings. billing_entity and payment_method are the explicitly-set
+      # overrides (nil = inherit from the customer); the others carry the
+      # stored value.
+      field :billing_entity, Types::BillingEntities::Object, null: true
+      # Also exposed as the bare id, matching the subscription read side.
+      field :billing_entity_id, ID, null: true
+      field :consolidate_invoice, Boolean, null: false
+      field :payment_method, Types::PaymentMethods::Object, null: true
+      field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false
+      field :purchase_order_number, String, null: true
+
+      field :customer, Types::Customers::Object, null: false
+      # Nullable by design: a plan-less contract prices through directly
+      # attached rate cards. Exposed as `plan`, but the record lives in
+      # catalog_plans, so it carries the CatalogPlan type.
+      field :plan, Types::CatalogPlans::Object, null: true
+
+      field :applied_rate_cards, [Types::ContractAppliedRateCards::Object], null: false
+      field :applied_rate_cards_count, Integer, null: false
+
+      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      # Ended attachments are history, not cards the contract currently
+      # carries. Batched across the collection so a list of contracts does not
+      # fire one query per contract; both fields read the same loaded set.
+      def plan
+        dataloader.with(Sources::ActiveRecordAssociation, :catalog_plan).load(object)
+      end
+
+      def applied_rate_cards
+        dataloader.with(Sources::ContractCurrentRateCards).load(object.id)
+      end
+
+      def applied_rate_cards_count
+        dataloader.with(Sources::ContractCurrentRateCards).load(object.id).size
+      end
+    end
+  end
+end

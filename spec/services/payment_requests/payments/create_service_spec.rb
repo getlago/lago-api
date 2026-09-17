@@ -20,9 +20,11 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       customer:,
       amount_cents: 799,
       amount_currency: "USD",
-      invoices: [invoice_1, invoice_2]
+      invoices:
     )
   end
+
+  let(:invoices) { [invoice_1, invoice_2] }
 
   let(:invoice_1) do
     create(
@@ -58,6 +60,8 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       end
     end
 
+    let(:expected_reference) { "#{billing_entity.name} - Overdue invoices" }
+
     before do
       provider_customer
       default_payment_method
@@ -66,7 +70,7 @@ RSpec.describe PaymentRequests::Payments::CreateService do
         .to receive(:new)
         .with(
           payment: an_instance_of(Payment),
-          reference: "#{billing_entity.name} - Overdue invoices",
+          reference: expected_reference,
           metadata: {
             lago_customer_id: customer.id,
             lago_payable_id: payment_request.id,
@@ -307,6 +311,26 @@ RSpec.describe PaymentRequests::Payments::CreateService do
           expect(result).to be_success
           expect(result.payment.payment_method_id).to eq(default_payment_method.id)
         end
+      end
+    end
+
+    context "when the payment request is related to a single overdue invoice" do
+      let(:invoices) { [invoice_1] }
+      let(:expected_reference) { "#{billing_entity.name} - Overdue invoices: #{invoice_1.number}" }
+
+      it "includes the invoice number in the payment reference" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(provider_class).to have_received(:new).with(
+          payment: an_instance_of(Payment),
+          reference: expected_reference,
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest"
+          }
+        )
       end
     end
 

@@ -917,6 +917,21 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
           expect(result).to eq(plan.amount_cents.fdiv(29))
         end
       end
+
+      # NOTE: a subscription created by an upgrade inherits the anniversary of the one it replaces, so it
+      #       starts in the middle of its first period. The termination and trial fees pass the boundary
+      #       start, which is clamped to `started_at`, and must still be prorated on the whole period.
+      context "when subscription started in the middle of a period" do
+        let(:result) { date_service.single_day_price(optional_from_date: started_at.to_date) }
+
+        let(:subscription_at) { Time.zone.parse("10 Jan 2024") }
+        let(:started_at) { Time.zone.parse("20 Mar 2024") }
+        let(:billing_at) { Time.zone.parse("01 Apr 2024") }
+
+        it "returns the price of single day of the whole period" do
+          expect(result).to eq(plan.amount_cents.fdiv(31))
+        end
+      end
     end
   end
 

@@ -16,7 +16,8 @@ module Subscriptions
 
     def call
       return result.not_found_failure!(resource: "subscription") if subscription.blank?
-      return result.single_validation_failure!(error_code: "subscription_incomplete") if subscription.incomplete?
+      return cancel_incomplete if subscription.incomplete?
+      return result.single_validation_failure!(error_code: "subscription_canceled") if subscription.canceled?
       return result.single_validation_failure!(error_code: "next_subscription_incomplete") if !upgrade && subscription.next_subscription&.incomplete?
 
       ActiveRecord::Base.transaction do
@@ -91,6 +92,17 @@ module Subscriptions
     private
 
     attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
+
+    def cancel_incomplete
+      cancel_result = Subscriptions::ActivationRules::CancelService.call!(
+        subscription:,
+        rule_status: :declined,
+        cancellation_reason: :manual
+      )
+
+      result.subscription = cancel_result.subscription
+      result
+    end
 
     def cancel_next_subscription
       # NOTE: Upgrade path: next_subscription is the new subscription we just persisted, not a stale scheduled change

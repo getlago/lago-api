@@ -24,8 +24,7 @@
 # The target methods should be declared `private` to discourage direct
 # invocation; `call` reaches them via `send`, so routing still works.
 #
-# The class-level `call` returns a typed Result instead of the
-# deprecated LegacyResult (OpenStruct):
+# The class-level `call` returns a typed Result:
 #
 #   Auth::GoogleService.call(:login, code)
 #   Auth::GoogleService.call(:register_user, code, organization_name)

@@ -54,4 +54,12 @@ RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice do
     expect(::Integrations::Aggregator::Invoices::Hubspot::CreateService).to have_received(:new).with(invoice:)
     expect(service).to have_received(:call_async)
   end
+
+  context "when the invoice is not visible" do
+    let(:invoice) { create(:invoice, customer:, organization:, status: :closed) }
+
+    it "does not sync the invisible invoice" do
+      expect(::Integrations::Aggregator::Invoices::Hubspot::CreateService).to have_received(:new).with(invoice: nil)
+    end
+  end
 end

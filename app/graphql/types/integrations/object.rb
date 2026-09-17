@@ -7,6 +7,7 @@ module Types
 
       possible_types Types::Integrations::Netsuite,
         Types::Integrations::Okta,
+        Types::Integrations::EntraId,
         Types::Integrations::Anrok,
         Types::Integrations::Avalara,
         Types::Integrations::Xero,
@@ -19,6 +20,8 @@ module Types
           Types::Integrations::Netsuite
         when "Integrations::OktaIntegration"
           Types::Integrations::Okta
+        when "Integrations::EntraIdIntegration"
+          Types::Integrations::EntraId
         when "Integrations::AnrokIntegration"
           Types::Integrations::Anrok
         when "Integrations::AvalaraIntegration"

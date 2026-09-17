@@ -36,6 +36,10 @@ module PaymentProviders
 
       payment_status
     end
+
+    def retriable_authentication_failure?(_error_code, payment: nil)
+      false
+    end
   end
 end
 

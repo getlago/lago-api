@@ -23,7 +23,7 @@ module Auth
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback"
+        "#{Rails.application.config.lago_front_url}/auth/google/callback"
       )
 
       result.url = authorizer.get_authorization_url(request:)
@@ -171,7 +171,7 @@ module Auth
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback"
+        "#{Rails.application.config.lago_front_url}/auth/google/callback"
       )
 
       credentials = authorizer.get_credentials_from_code(code:)

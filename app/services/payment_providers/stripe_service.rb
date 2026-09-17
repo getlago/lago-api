@@ -24,6 +24,7 @@ module PaymentProviders
 
       is_new = stripe_provider.new_record?
       old_code = stripe_provider.code
+      consent_before = stripe_provider.require_terms_of_service_consent
 
       stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key) && is_new
       stripe_provider.code = args[:code] if args.key?(:code)
@@ -35,6 +36,12 @@ module PaymentProviders
 
       if is_new
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
+      end
+
+      if !is_new && stripe_provider.require_terms_of_service_consent != consent_before
+        # NOTE: the consent setting shapes the checkout payload, so outstanding payment links
+        #       must be rebuilt with the new setting on the next generation.
+        PaymentProviders::Stripe::ExpirePaymentIntentsJob.perform_later(stripe_provider)
       end
 
       if payment_provider_code_changed?(stripe_provider, old_code, args)

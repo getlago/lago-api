@@ -10,15 +10,24 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
+    argument :search_term, String, required: false
+
+    argument :role_ids, [ID], required: false
+
     type Types::MembershipType.collection_type(metadata_type: Types::Memberships::Metadata), null: false
 
-    def resolve(page: nil, limit: nil)
-      current_organization
-        .memberships
-        .includes(:user)
-        .active
-        .page(page)
-        .per(limit)
+    def resolve(search_term: nil, page: nil, limit: nil, **filters)
+      result = MembershipsQuery.call(
+        organization: current_organization,
+        search_term:,
+        pagination: {
+          page:,
+          limit:
+        },
+        filters:
+      )
+
+      result.memberships.includes(:user)
     end
   end
 end

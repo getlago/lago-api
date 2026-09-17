@@ -8,7 +8,10 @@ module Api
         before_action :find_quote
 
         def index
+          # Each serialized version resolves its billing entity, falling back to the customer's own,
+          # which inverse_of keeps on the quote already loaded here.
           versions = @quote.versions
+            .includes(:billing_entity)
             .page(params[:page])
             .per(params[:per_page] || PER_PAGE)
 

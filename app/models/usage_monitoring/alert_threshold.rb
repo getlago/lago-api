@@ -2,11 +2,18 @@
 
 class UsageMonitoring::AlertThreshold < ApplicationRecord
   SOFT_LIMIT = 20
+  NOTIFY_ON_TRIGGERED = "triggered"
+  NOTIFY_ON_RESOLVED = "resolved"
+  NOTIFY_ON_VALUES = [NOTIFY_ON_TRIGGERED, NOTIFY_ON_RESOLVED].freeze
 
   belongs_to :organization
   belongs_to :alert,
     foreign_key: "usage_monitoring_alert_id",
     class_name: "UsageMonitoring::Alert"
+
+  def notify_on_resolved?
+    notify_on.include?(NOTIFY_ON_RESOLVED)
+  end
 end
 
 # == Schema Information
@@ -16,6 +23,7 @@ end
 #
 #  id                        :uuid             not null, primary key
 #  code                      :string
+#  notify_on                 :string           default(["triggered"]), not null, is an Array
 #  recurring                 :boolean          default(FALSE), not null
 #  value                     :decimal(30, 5)   not null
 #  created_at                :datetime         not null

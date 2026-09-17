@@ -8,10 +8,10 @@ RSpec.describe Webhooks::WalletTransactions::CreatedService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:) }
-  let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+  let(:wallet_transaction) { create(:wallet_transaction, :with_purchase_order_number, wallet:) }
 
   describe ".call" do
     it_behaves_like "creates webhook", "wallet_transaction.created", "wallet_transaction",
-      {"lago_id" => String, "wallet" => Hash}
+      {"lago_id" => String, "purchase_order_number" => "PO-123", "wallet" => Hash}
   end
 end

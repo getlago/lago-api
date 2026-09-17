@@ -454,6 +454,7 @@ RSpec.shared_examples "a lago diagnostics report" do
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("LAGO_SMTP_ADDRESS").and_return("smtp.example.com")
       allow(ENV).to receive(:[]).with("LAGO_SMTP_PORT").and_return("587")
+      allow(ENV).to receive(:[]).with("LAGO_SMTP_USERNAME").and_return("smtp-user")
       allow(ENV).to receive(:[]).with("LAGO_SMTP_PASSWORD").and_return("smtppw")
     end
 

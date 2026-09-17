@@ -11,7 +11,7 @@ module Mutations
       graphql_name "RetryAllInvoices"
       description "Retry all failed invoices"
 
-      type Types::Invoices::Object.collection_type
+      type Types::Invoices::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata)
 
       def resolve
         result = ::Invoices::RetryBatchService.new(organization: current_organization).call_async

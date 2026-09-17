@@ -47,6 +47,45 @@ RSpec.describe PaymentProviders::StripeProvider do
     end
   end
 
+  describe "#retriable_authentication_failure?" do
+    subject(:method_call) { stripe_provider.retriable_authentication_failure?(error_code, payment:) }
+
+    let(:error_code) { described_class::NEED_3DS_ERROR_CODE }
+    let(:payment) { create(:payment, payable: create(:invoice)) }
+
+    context "when the error is not an authentication failure" do
+      let(:error_code) { "card_declined" }
+
+      before { stripe_provider.supports_3ds = true }
+
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+    end
+
+    context "when the connection supports 3DS" do
+      before { stripe_provider.supports_3ds = true }
+
+      it "returns true" do
+        expect(method_call).to eq(true)
+      end
+    end
+
+    context "when the connection does not support 3DS" do
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+
+      context "when the payment activates a payment-gated subscription" do
+        before { allow(payment).to receive(:gated_subscription_activation?).and_return(true) }
+
+        it "returns true" do
+          expect(method_call).to eq(true)
+        end
+      end
+    end
+  end
+
   describe "require_terms_of_service_consent" do
     it "assigns and retrieve a setting" do
       stripe_provider.require_terms_of_service_consent = true

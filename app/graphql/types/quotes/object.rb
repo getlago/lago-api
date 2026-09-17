@@ -5,12 +5,14 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Quote"
 
+      field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :current_version, Types::QuoteVersions::Object, null: false
       field :customer, Types::Customers::Object, null: false
       field :id, ID, null: false
       field :images, GraphQL::Types::JSON, null: false
       field :number, String, null: false
+      field :order_forms, [Types::OrderForms::Object], null: false
       field :order_type, Types::Quotes::OrderTypeEnum, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
       field :owners, [Types::UserType], null: true
@@ -18,7 +20,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :versions, [Types::QuoteVersions::Object], null: false
 
-      dataload_association :customer, :organization, :subscription, :owners, :versions, :current_version
+      dataload_association :customer, :organization, :subscription, :owners, :versions, :current_version, :order_forms
 
       def images
         dataloader.with(Sources::ActiveRecordAssociation, :images_blobs).load(object).each_with_object({}) do |blob, urls|

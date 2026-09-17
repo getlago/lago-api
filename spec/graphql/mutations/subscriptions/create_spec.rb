@@ -143,8 +143,6 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
     end
 
     context "when multi_entity_billing flag is enabled" do
-      before { organization.enable_feature_flag!(:multi_entity_billing) }
-
       it "binds the subscription to the resolved entity" do
         result = execute_graphql(
           current_user: membership.user,
@@ -186,29 +184,6 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
           "code" => "not_found",
           "details" => {"billingEntity" => ["not_found"]}
         )
-      end
-    end
-
-    context "when multi_entity_billing flag is disabled" do
-      it "ignores the billing entity binding" do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query: mutation,
-          variables: {
-            input: {
-              customerId: customer.id,
-              planId: plan.id,
-              billingTime: "anniversary",
-              billingEntityId: billing_entity.id
-            }
-          }
-        )
-
-        external_id = result["data"]["createSubscription"]["externalId"]
-        subscription = Subscription.find_by(external_id:)
-        expect(subscription.billing_entity_id).to be_nil
       end
     end
   end

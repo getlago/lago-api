@@ -130,12 +130,18 @@ module PaymentProviderCustomers
     end
 
     def checkout_link_params
-      {
+      params = {
         success_url: success_redirect_url,
         mode: "setup",
         payment_method_types: stripe_customer.provider_payment_methods_with_setup,
         customer: stripe_customer.provider_customer_id
       }
+
+      if stripe_payment_provider.require_terms_of_service_consent
+        params[:consent_collection] = {terms_of_service: "required"}
+      end
+
+      params
     end
 
     def success_redirect_url

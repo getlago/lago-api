@@ -9,6 +9,7 @@ module Types
 
       possible_types Types::BillableMetrics::Object,
         Types::Plans::Object,
+        Types::CatalogPlans::Object,
         Types::Customers::Object,
         Types::Invoices::Object,
         Types::CreditNotes::Object,
@@ -18,7 +19,14 @@ module Types
         Types::Coupons::Object,
         Types::PaymentRequests::Object,
         Types::PaymentReceipts::Object,
-        Types::Entitlement::FeatureObject
+        Types::Entitlement::FeatureObject,
+        Types::ProductCategories::Object,
+        Types::Products::Object,
+        Types::ProductFilters::Object,
+        Types::RateCards::Object,
+        Types::Quotes::Object,
+        Types::OrderForms::Object,
+        Types::Orders::Object
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -26,6 +34,8 @@ module Types
           Types::BillableMetrics::Object
         when "Plan"
           Types::Plans::Object
+        when "CatalogPlan"
+          Types::CatalogPlans::Object
         when "Customer"
           Types::Customers::Object
         when "Invoice"
@@ -46,6 +56,20 @@ module Types
           Types::PaymentReceipts::Object
         when "Entitlement::Feature"
           Types::Entitlement::FeatureObject
+        when "ProductCategory"
+          Types::ProductCategories::Object
+        when "Product"
+          Types::Products::Object
+        when "ProductFilter"
+          Types::ProductFilters::Object
+        when "RateCard"
+          Types::RateCards::Object
+        when "Quote"
+          Types::Quotes::Object
+        when "OrderForm"
+          Types::OrderForms::Object
+        when "Order"
+          Types::Orders::Object
         else
           raise "Unexpected activity log resource type: #{object.inspect}"
         end

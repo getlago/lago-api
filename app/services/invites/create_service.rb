@@ -62,7 +62,7 @@ module Invites
     end
 
     def build_invite_url(token)
-      frontend_url = ENV.fetch("LAGO_FRONT_URL", "http://localhost:3000")
+      frontend_url = Rails.application.config.lago_front_url
       "#{frontend_url}/invitation/#{token}"
     end
   end

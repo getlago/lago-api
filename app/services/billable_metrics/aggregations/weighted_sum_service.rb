@@ -64,7 +64,7 @@ module BillableMetrics
         end
 
         result.aggregations = aggregations.map do |aggregation|
-          group_result = BaseService::Result.new
+          group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation.groups
 
           group_result.aggregation = aggregation.value
@@ -101,7 +101,7 @@ module BillableMetrics
           return @latest_value = latest_cached_aggregation.current_aggregation
         end
 
-        if subscription.previous_subscription_id?
+        if billing_context.previous_subscription_id?
           return @latest_value = latest_value_from_events.first
         end
 
@@ -115,7 +115,7 @@ module BillableMetrics
           return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
         end
 
-        if subscription.previous_subscription_id?
+        if billing_context.previous_subscription_id?
           return @latest_breakdowns = latest_value_from_events.second
         end
 
@@ -135,8 +135,8 @@ module BillableMetrics
 
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: subscription.external_id)
-          .where(charge_id: charge.id)
+          .where(external_subscription_id: billing_context.external_id)
+          .where(charge_id: metered_item.charge_id)
           .where(timestamp: ...from_datetime)
           .order(timestamp: :desc, created_at: :desc)
 
@@ -150,20 +150,12 @@ module BillableMetrics
       def latest_value_from_events
         return @latest_value_from_events if defined?(@latest_value_from_events)
 
-        event_store = event_store_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries: {to_datetime: from_datetime - 1.second},
-          filters:
-        )
+        store = event_store.for_window(to_datetime: from_datetime - 1.second)
+        store.use_from_boundary = false
 
-        event_store.use_from_boundary = false
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
+        breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
-
-        @latest_value_from_events = [BigDecimal(event_store.sum(with_count: false).value), breakdowns]
+        @latest_value_from_events = [BigDecimal(store.sum(with_count: false).value), breakdowns]
       end
 
       def grouped_latest_values
@@ -178,7 +170,7 @@ module BillableMetrics
           end
         end
 
-        if subscription.previous_subscription_id?
+        if billing_context.previous_subscription_id?
           return @grouped_latest_values = grouped_latest_values_from_events.first
         end
 
@@ -192,7 +184,7 @@ module BillableMetrics
           return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map(&:presentation_breakdowns)
         end
 
-        if subscription.previous_subscription_id?
+        if billing_context.previous_subscription_id?
           return @grouped_latest_breakdowns = grouped_latest_values_from_events.second
         end
 
@@ -212,20 +204,12 @@ module BillableMetrics
       end
 
       def grouped_latest_values_from_events
-        event_store = event_store_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries: {to_datetime: from_datetime - 1.second},
-          filters:
-        )
+        store = event_store.for_window(to_datetime: from_datetime - 1.second)
+        store.use_from_boundary = false
 
-        event_store.use_from_boundary = false
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
+        breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        breakdowns = presentation_by.present? ? event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
-
-        [event_store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
+        [store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
       end
     end
   end

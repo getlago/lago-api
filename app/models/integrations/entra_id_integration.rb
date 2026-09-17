@@ -1,0 +1,65 @@
+# frozen_string_literal: true
+
+module Integrations
+  class EntraIdIntegration < BaseIntegration
+    validates :client_secret, :client_id, :domain, :tenant_id, presence: true
+    validate :domain_uniqueness
+    validate :tenant_id_and_host_format
+
+    settings_accessors :client_id, :domain, :tenant_id, :host
+    secrets_accessors :client_secret
+
+    def host
+      get_from_settings("host").presence || "login.microsoftonline.com"
+    end
+
+    private
+
+    def domain_uniqueness
+      return if domain.blank?
+
+      entra_id_integration = ::Integrations::EntraIdIntegration
+        .where("settings->>'domain' IS NOT NULL")
+        .where("settings->>'domain' = ?", domain)
+        .where.not(id:)
+        .exists?
+
+      errors.add(:domain, "domain_not_unique") if entra_id_integration
+    end
+
+    def tenant_id_and_host_format
+      # tenant_id and host are interpolated into the Entra authorize/token URLs
+      # (host + path); reject anything but a safe URL segment so a user-provided
+      # value cannot inject into the URL.
+      url_segment = /\A[a-zA-Z0-9.-]+\z/
+
+      errors.add(:tenant_id, "tenant_id_invalid") if tenant_id.present? && !tenant_id.match?(url_segment)
+      errors.add(:host, "host_invalid") if host.present? && !host.match?(url_segment)
+    end
+  end
+end
+
+# == Schema Information
+#
+# Table name: integrations
+# Database name: primary
+#
+#  id              :uuid             not null, primary key
+#  code            :string           not null
+#  name            :string           not null
+#  secrets         :string
+#  settings        :jsonb            not null
+#  type            :string           not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  organization_id :uuid             not null
+#
+# Indexes
+#
+#  index_integrations_on_code_and_organization_id  (code,organization_id) UNIQUE
+#  index_integrations_on_organization_id           (organization_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#

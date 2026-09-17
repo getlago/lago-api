@@ -7,9 +7,11 @@ RSpec.describe Webhooks::Wallets::DepletedOngoingBalanceService do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, :with_purchase_order_number, customer:) }
 
   describe ".call" do
-    it_behaves_like "creates webhook", "wallet.depleted_ongoing_balance", "wallet"
+    it_behaves_like "creates webhook", "wallet.depleted_ongoing_balance", "wallet", {
+      "purchase_order_number" => "PO-123"
+    }
   end
 end

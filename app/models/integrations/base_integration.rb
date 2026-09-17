@@ -42,6 +42,8 @@ module Integrations
         "Integrations::NetsuiteIntegration"
       when "okta"
         "Integrations::OktaIntegration"
+      when "entra_id"
+        "Integrations::EntraIdIntegration"
       when "anrok"
         "Integrations::AnrokIntegration"
       when "avalara"

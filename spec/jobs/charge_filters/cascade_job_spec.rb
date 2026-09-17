@@ -22,7 +22,16 @@ RSpec.describe ChargeFilters::CascadeJob do
       filter_values:,
       old_properties:,
       new_properties:,
-      invoice_display_name:
+      invoice_display_name:,
+      parent_code: nil
+    )
+  end
+
+  it "passes the parent code through when it is given" do
+    described_class.perform_now(charge.id, "create", filter_values, nil, new_properties, invoice_display_name, "a-parent-code")
+
+    expect(ChargeFilters::CascadeService).to have_received(:call!).with(
+      hash_including(parent_code: "a-parent-code")
     )
   end
 

@@ -89,5 +89,26 @@ RSpec.describe Charges::CreateChildrenService do
         )
       end
     end
+
+    context "when the child plan already has a charge for this parent" do
+      let(:payload) { {billable_metric_id: billable_metric.id, charge_model: "standard"} }
+
+      before do
+        create(:standard_charge, organization:, plan: child_plan, billable_metric:, parent_id: charge.id)
+      end
+
+      it "does not create a second copy" do
+        result = nil
+
+        expect { result = create_service.call }.not_to change(Charge, :count)
+        expect(result).to be_success
+      end
+
+      it "creates the charge again when the existing copy is discarded" do
+        child_plan.charges.find_by(parent_id: charge.id).discard!
+
+        expect { create_service.call }.to change(Charge, :count).by(1)
+      end
+    end
   end
 end

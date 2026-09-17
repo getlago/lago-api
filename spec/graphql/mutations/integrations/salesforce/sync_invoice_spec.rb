@@ -38,4 +38,16 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice do
   it "sends resync invoice webhook" do
     expect(SendWebhookJob).to have_been_enqueued.with("invoice.resynced", invoice)
   end
+
+  context "when the invoice is not visible" do
+    let(:invoice) { create(:invoice, customer:, organization:, status: :closed) }
+
+    it "does not enqueue the resync webhook" do
+      expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.resynced", invoice)
+    end
+
+    it "returns a not found error" do
+      expect_graphql_error(result: execute_graphql_call, message: "Resource not found")
+    end
+  end
 end

@@ -14,8 +14,6 @@ RSpec.describe Resolvers::QuoteVersionResolver do
           content
           billingItems
           currency
-          startDate
-          endDate
           quote { id }
           organization { id }
         }
@@ -34,9 +32,7 @@ RSpec.describe Resolvers::QuoteVersionResolver do
       quote:,
       content: "Some content",
       billing_items: {"foo" => "bar"},
-      currency: "EUR",
-      start_date: Date.new(2024, 1, 1),
-      end_date: Date.new(2024, 12, 31)
+      currency: "EUR"
     )
   end
 
@@ -62,8 +58,6 @@ RSpec.describe Resolvers::QuoteVersionResolver do
       expect(response.dig("content")).to eq("Some content")
       expect(response.dig("billingItems")).to eq({"foo" => "bar"})
       expect(response.dig("currency")).to eq("EUR")
-      expect(response.dig("startDate")).to eq("2024-01-01")
-      expect(response.dig("endDate")).to eq("2024-12-31")
       expect(response.dig("quote", "id")).to eq(quote.id)
       expect(response.dig("organization", "id")).to eq(organization.id)
     end
