@@ -93,11 +93,19 @@ RSpec.describe ContractsQuery do
         create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, rate_override_id: nil)
       end
     end
+    # An override on an ended (historical) card must not flip the flag: that
+    # card is dropped from the applied-card count, so it does not count here.
+    let!(:ended_override_contract) do
+      create(:contract, organization:).tap do |c|
+        card = create(:contract_rate_card, organization:, contract: c, effective_date: 10.days.ago.to_date, ended_date: 1.day.ago.to_date)
+        create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, rate_override: create(:rate_override, organization:))
+      end
+    end
 
     context "when true" do
       let(:filters) { {has_rate_overrides: true} }
 
-      it "returns only contracts carrying a rate override" do
+      it "returns only contracts carrying an override on a current or scheduled card" do
         expect(result.contracts).to contain_exactly(overridden_contract)
       end
     end
@@ -105,8 +113,8 @@ RSpec.describe ContractsQuery do
     context "when false" do
       let(:filters) { {has_rate_overrides: false} }
 
-      it "returns contracts whose phases carry no override" do
-        expect(result.contracts).to contain_exactly(plain_phase_contract)
+      it "returns contracts with no current override, including one whose only override is on an ended card" do
+        expect(result.contracts).to contain_exactly(plain_phase_contract, ended_override_contract)
       end
     end
   end
