@@ -39,5 +39,23 @@ RSpec.describe IntegrationCustomers::DestroyService do
         expect(result.error.error_code).to eq("integration_customer_not_found")
       end
     end
+
+    context "when billing objects route to the connection" do
+      let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+      let(:subscription) { create(:subscription, customer:, organization:) }
+
+      before do
+        create(:billing_object_connection, owner: subscription, organization:,
+          category: "accounting", behavior: "specific", integration_customer:)
+      end
+
+      it "destroys the override rows along with the connection" do
+        expect { destroy_service.call }.to change(BillingObjectConnection, :count).by(-1)
+      end
+
+      it "does not raise on the foreign key" do
+        expect { destroy_service.call }.not_to raise_error
+      end
+    end
   end
 end
