@@ -21,4 +21,28 @@ RSpec.describe CreditNotes::Refunds::StripeCreateJob do
     expect(CreditNotes::Refunds::StripeService).to have_received(:new)
     expect(refund_service).to have_received(:create)
   end
+
+  describe "retry_on" do
+    [
+      ::Stripe::RateLimitError.new("rate limited"),
+      ::Stripe::APIConnectionError.new("connection reset")
+    ].each do |error|
+      error_class = error.class
+
+      context "when a #{error_class} error is raised" do
+        before do
+          allow(CreditNotes::Refunds::StripeService).to receive(:new).and_return(refund_service)
+          allow(refund_service).to receive(:create).and_raise(error)
+        end
+
+        it "raises a #{error_class.name} error and retries" do
+          assert_performed_jobs(6, only: [described_class]) do
+            expect do
+              described_class.perform_later(credit_note)
+            end.to raise_error(error_class)
+          end
+        end
+      end
+    end
+  end
 end
