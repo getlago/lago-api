@@ -13,7 +13,8 @@ module Invoices
       max_timestamp: nil,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      usage_filters: UsageFilters::NONE
+      usage_filters: UsageFilters::NONE,
+      use_usage_buckets: false
     )
       super
 
@@ -25,24 +26,25 @@ module Invoices
       @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
       @usage_filters = usage_filters
+      @use_usage_buckets = use_usage_buckets
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
-      calculate_projected_usage: false, usage_filters: UsageFilters::NONE)
+      calculate_projected_usage: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
 
-    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false)
+    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false, use_usage_buckets: false)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -63,7 +65,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
-    attr_reader :usage_filters
+    attr_reader :usage_filters, :use_usage_buckets
 
     delegate :plan, to: :subscription
     delegate :billing_entity, to: :customer
@@ -146,6 +148,7 @@ module Invoices
           billing_context: Billing::Context.from(subscription:),
           cache_middleware:,
           filtered_aggregations: applied_filters.keys,
+          provider:,
           options: Fees::ChargeService::Options.new(
             context: :current_usage,
             calculate_projected_usage:,
@@ -156,6 +159,19 @@ module Invoices
           )
         )
         .fees
+    end
+
+    # A lifetime window is refused here, as it opens on `subscription.started_at`, which nothing
+    # downstream can tell apart from a first billing period.
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization:,
+        billing_context: Billing::Context.from(subscription:),
+        current_usage: true,
+        boundaries:,
+        serve_from_buckets: use_usage_buckets && !usage_filters.full_usage,
+        narrowed_read: usage_filters.filter_by_group.present?
+      )
     end
 
     def boundaries

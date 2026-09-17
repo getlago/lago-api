@@ -133,7 +133,10 @@ module Fees
 
     def compute_fees_with_cache(selected_metered_item:)
       if cache_middleware
-        cache_middleware.call(charge_filter: selected_metered_item.charge_filter) do
+        cache_middleware.call(
+          charge_filter: selected_metered_item.charge_filter,
+          bypass: bypass_cache?(selected_metered_item:)
+        ) do
           fees = compute_fees(selected_metered_item:)
           if fees.nil?
             return
@@ -440,8 +443,18 @@ module Fees
       true
     end
 
-    # One instance per pricing bucket, shared by the aggregation and the zero-units hydration, so
-    # the two cannot disagree on where the units come from.
+    # The aggregator answers from a source that is already fresh, so caching its fees would put
+    # back the staleness that source removes. Asking it means building it, which a cache hit
+    # would otherwise not need, so the provider is asked first whether any answer of its own
+    # could be precomputed.
+    def bypass_cache?(selected_metered_item:)
+      return false unless provider.may_precompute?
+
+      aggregator(selected_metered_item:).precomputed?
+    end
+
+    # One instance per pricing bucket, shared by the cache bypass decision, the aggregation and
+    # the zero-units hydration, so the three cannot disagree on where the units come from.
     def aggregator(selected_metered_item:)
       @aggregators ||= {}
       @aggregators[selected_metered_item] ||= build_aggregator(selected_metered_item)
@@ -468,7 +481,8 @@ module Fees
       @provider ||= Events::Stores::Provider.new(
         organization: billing_context.organization,
         billing_context:,
-        current_usage: options.current_usage?
+        current_usage: options.current_usage?,
+        narrowed_read: options.usage_filters.filter_by_group.present?
       )
     end
 

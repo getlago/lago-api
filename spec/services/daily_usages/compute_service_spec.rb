@@ -51,6 +51,14 @@ RSpec.describe DailyUsages::ComputeService do
     context "when there is usage" do
       before { event }
 
+      it "computes the usage from the events, as the row it persists cannot be corrected later" do
+        allow(Invoices::CustomerUsageService).to receive(:call).and_call_original
+
+        travel_to(timestamp) { compute_service.call }
+
+        expect(Invoices::CustomerUsageService).to have_received(:call).with(hash_excluding(use_usage_buckets: true))
+      end
+
       context "when usage contains charges with no consumption due to filters" do
         it "does not include fees with no consumption" do
           billable_metric_filter = create(:billable_metric_filter, billable_metric:)
