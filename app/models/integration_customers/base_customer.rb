@@ -11,6 +11,8 @@ module IntegrationCustomers
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
     belongs_to :organization
 
+    has_many :billing_object_connections, foreign_key: :integration_customer_id, dependent: :destroy
+
     TAX_INTEGRATION_TYPES = %w[
       IntegrationCustomers::AnrokCustomer
       IntegrationCustomers::AvalaraCustomer

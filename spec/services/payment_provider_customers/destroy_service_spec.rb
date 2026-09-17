@@ -85,5 +85,26 @@ RSpec.describe PaymentProviderCustomers::DestroyService do
         end
       end
     end
+
+    context "when billing objects route to the connection" do
+      let(:subscription) { create(:subscription, customer:, organization:) }
+
+      before do
+        create(:billing_object_connection, owner: subscription, organization:,
+          category: "payment", behavior: "specific", payment_provider_customer:)
+      end
+
+      it "removes the override rows" do
+        expect { result }.to change(BillingObjectConnection, :count).by(-1)
+      end
+
+      it "lets the object fall back to the customer default instead of resolving to nothing" do
+        result
+
+        fallback = create(:gocardless_customer, customer:, organization:, is_default: true)
+
+        expect(subscription.reload.effective_payment_connection).to eq(fallback)
+      end
+    end
   end
 end
