@@ -11,6 +11,7 @@ RSpec.describe BillableMetricFilter do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:filter_values).dependent(:destroy) }
   it { is_expected.to have_many(:charge_filters).through(:filter_values) }
+  it { is_expected.to have_many(:product_filter_values) }
 
   it { is_expected.to validate_presence_of(:key) }
   it { is_expected.to validate_presence_of(:values) }

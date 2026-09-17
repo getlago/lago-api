@@ -126,6 +126,7 @@ module Currencies
     SZL: "Swazi Lilangeni",
     THB: "Thai Baht",
     TJS: "Tajikistani Somoni",
+    TND: "Tunisian Dinar",
     TOP: "Tongan Paʻanga",
     TRY: "Turkish Lira",
     TTD: "Trinidad and Tobago Dollar",

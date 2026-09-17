@@ -8,8 +8,11 @@ module EventDestinations
       EVENT_TYPE = "customer_usage.refreshed.v1"
       OBJECT_TYPE = "customer_usage"
 
-      def initialize(object:)
+      # usages lets a caller that has already computed the usage hand it over, keyed by
+      # subscription, so it is not computed a second time. Absent, it is computed here.
+      def initialize(object:, usages: nil)
         @customer = object
+        @usages = usages || {}
 
         super
       end
@@ -30,7 +33,7 @@ module EventDestinations
 
       private
 
-      attr_reader :customer
+      attr_reader :customer, :usages
 
       def destination
         return @destination if defined?(@destination)
@@ -40,14 +43,8 @@ module EventDestinations
           .first
       end
 
-      def wallet_for(currency)
-        wallets_by_currency[currency]
-      end
-
-      def wallets_by_currency
-        @wallets_by_currency ||= customer.wallets.active.in_application_order
-          .group_by(&:balance_currency)
-          .transform_values(&:first)
+      def active_wallets
+        @active_wallets ||= customer.wallets.active.in_application_order.to_a
       end
 
       def producer
@@ -55,20 +52,26 @@ module EventDestinations
       end
 
       def deliver(subscription)
-        usage_result = ::Invoices::CustomerUsageService.call(
-          customer:,
-          subscription:,
-          apply_taxes: false,
-          with_cache: true
-        )
+        usage = usages[subscription]
 
-        unless usage_result.success?
-          log(:skipped, subscription, error: usage_result.error.class, message: usage_result.error)
-          return
+        if usage.nil?
+          usage_result = ::Invoices::CustomerUsageService.call(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: true
+          )
+
+          unless usage_result.success?
+            log(:skipped, subscription, error: usage_result.error.class, message: usage_result.error)
+            return
+          end
+
+          usage = usage_result.usage
         end
 
         producer.produce(
-          data: envelope(subscription, usage_result.usage),
+          data: envelope(subscription, usage),
           partition_key: destination.partition_key_for(customer:)
         )
       end
@@ -105,7 +108,7 @@ module EventDestinations
         EventDestinations::CustomerUsageSerializer.new(
           usage,
           root_name: OBJECT_TYPE,
-          wallet: wallet_for(usage.currency)
+          wallets: active_wallets
         ).serialize
       end
     end

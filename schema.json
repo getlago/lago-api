@@ -2836,6 +2836,30 @@
               "deprecationReason": null
             },
             {
+              "name": "notifyOn",
+              "description": "Transitions this threshold notifies on. Always includes triggered; resolved is opt in.",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "NotifyOnEnum",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "recurring",
               "description": null,
               "args": [],
@@ -8965,6 +8989,30 @@
               "deprecationReason": null
             },
             {
+              "name": "billingEntity",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "BillingEntity",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "billingTime",
               "description": null,
               "args": [],
@@ -8988,6 +9036,22 @@
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "consolidateInvoice",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -9081,12 +9145,52 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentMethod",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "PaymentMethod",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentMethodType",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "PaymentMethodTypeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "plan",
               "description": null,
               "args": [],
               "type": {
                 "kind": "OBJECT",
                 "name": "CatalogPlan",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "purchaseOrderNumber",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -12919,6 +13023,54 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "consolidateInvoice",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "purchaseOrderNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentMethod",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentMethodReferenceInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -21053,6 +21205,12 @@
             {
               "name": "TJS",
               "description": "Tajikistani Somoni",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TND",
+              "description": "Tunisian Dinar",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -49103,6 +49261,29 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "NotifyOnEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "triggered",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "resolved",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
           "kind": "SCALAR",
           "name": "ObfuscatedString",
           "description": null,
@@ -68052,6 +68233,100 @@
               "deprecationReason": null
             },
             {
+              "name": "usageAttributionType",
+              "description": "Query a single usage attribution type of an organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the usage attribution type",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "UsageAttributionType",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "usageAttributionTypes",
+              "description": "Query usage attribution types of an organization",
+              "args": [
+                {
+                  "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "page",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "role",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "UsageAttributionTypeRoleEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "searchTerm",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "UsageAttributionTypeCollection",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "wallet",
               "description": "Query a single wallet of an organization",
               "args": [
@@ -76190,6 +76465,26 @@
               "deprecationReason": null
             },
             {
+              "name": "notifyOn",
+              "description": "Transitions this threshold notifies on. Must include triggered. Adding resolved requires a code that is unique within the alert, and is not supported on recurring thresholds.",
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "NotifyOnEnum",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "recurring",
               "description": null,
               "type": {
@@ -78456,6 +78751,54 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "consolidateInvoice",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentMethod",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentMethodReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "purchaseOrderNumber",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -84882,6 +85225,57 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "UsageAttributionTypeCollection",
+          "description": "UsageAttributionTypeCollection type",
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated UsageAttributionTypeCollection",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "UsageAttributionType",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
                   "ofType": null
                 }
               },

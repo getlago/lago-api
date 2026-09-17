@@ -46,22 +46,47 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       expect(producer).to have_received(:produce).with(hash_including(partition_key: customer.external_id))
     end
 
-    describe "choosing the wallet credits are converted through" do
-      let(:service) { described_class.new(object: customer) }
+    describe "the wallets the usage is attributed to" do
+      let(:producer_calls) { [] }
 
-      it "takes the first in application order within the usage currency" do
-        create(:wallet, customer:, organization:, rate_amount: "2.0", currency: "EUR", priority: 50)
-        first = create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR", priority: 10)
+      before { allow(producer).to receive(:produce) { |args| producer_calls << args } }
 
-        expect(service.send(:wallet_for, "EUR")).to eq(first)
+      it "reports every active wallet in application order, not one picked by currency" do
+        second = create(:wallet, customer:, organization:, currency: "EUR", priority: 50,
+          ongoing_usage_balance_cents: 500, credits_ongoing_usage_balance: "5.0")
+        first = create(:wallet, customer:, organization:, currency: "EUR", priority: 10,
+          ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
+
+        described_class.new(object: customer).call
+
+        expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:lago_id] })
+          .to eq([first.id, second.id])
       end
 
-      it "ignores a wallet in another currency" do
-        create(:wallet, customer:, organization:, rate_amount: "2.0", currency: "USD", priority: 10)
-        eur = create(:wallet, customer:, organization:, rate_amount: "1.0", currency: "EUR", priority: 50)
+      it "includes a wallet in another currency, since each entry names its own" do
+        create(:wallet, customer:, organization:, currency: "USD", priority: 10,
+          ongoing_usage_balance_cents: 200, credits_ongoing_usage_balance: "2.0")
 
-        expect(service.send(:wallet_for, "EUR")).to eq(eur)
-        expect(service.send(:wallet_for, "GBP")).to be_nil
+        described_class.new(object: customer).call
+
+        expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:amount_currency] })
+          .to eq(["USD"])
+      end
+
+      # The refresh allocates across every subscription at once, so there is no per-subscription
+      # share to report. Each record carries the same customer wide totals, deliberately.
+      it "repeats the same customer totals on each subscription's record" do
+        create(:wallet, customer:, organization:, currency: "EUR", priority: 10,
+          ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
+        create(:subscription, customer:, plan: create(:plan, organization:))
+
+        described_class.new(object: customer).call
+
+        wallets = producer_calls.map { it[:data][:customer_usage][:wallets] }
+
+        expect(wallets.size).to eq(2)
+        expect(wallets.uniq.size).to eq(1)
+        expect(wallets.first.sum { it[:amount_cents] }).to eq(1500)
       end
     end
 
@@ -110,6 +135,47 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
 
       it "carries a fixed-width UTC version with microseconds" do
         expect(envelope[:version]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\z/)
+      end
+    end
+
+    describe "when the caller supplies the usage it already computed" do
+      let(:producer_calls) { [] }
+      let(:precomputed) do
+        Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER).usage
+      end
+
+      before do
+        allow(producer).to receive(:produce) { |args| producer_calls << args }
+      end
+
+      it "does not compute the usage again" do
+        usage = precomputed
+        allow(Invoices::CustomerUsageService).to receive(:call)
+
+        described_class.new(object: customer, usages: {subscription => usage}).call
+
+        expect(Invoices::CustomerUsageService).not_to have_received(:call)
+        expect(producer).to have_received(:produce).once
+      end
+
+      it "produces the same envelope as computing it here would" do
+        described_class.new(object: customer).call
+        computed = producer_calls.first[:data]
+
+        producer_calls.clear
+        described_class.new(object: customer, usages: {subscription => precomputed}).call
+        supplied = producer_calls.first[:data]
+
+        expect(supplied.except(:event_id, :version)).to eq(computed.except(:event_id, :version))
+      end
+
+      it "falls back to computing a subscription the caller did not supply" do
+        other = create(:subscription, customer:, plan: create(:plan, organization:))
+
+        described_class.new(object: customer, usages: {subscription => precomputed}).call
+
+        expect(producer_calls.map { it[:data][:subscription_external_id] })
+          .to match_array([subscription.external_id, other.external_id])
       end
     end
 

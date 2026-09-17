@@ -11,6 +11,7 @@ class BillableMetricFilter < ApplicationRecord
 
   has_many :filter_values, class_name: "ChargeFilterValue", dependent: :destroy
   has_many :charge_filters, through: :filter_values
+  has_many :product_filter_values
 
   validates :key, presence: true
   validates :values, presence: true

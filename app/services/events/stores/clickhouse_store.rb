@@ -501,7 +501,7 @@ module Events
             FROM events
           SQL
 
-          connection.select_value(sql)
+          BigDecimal(connection.select_value(sql).presence || 0)
         end
       end
 
@@ -522,7 +522,7 @@ module Events
             GROUP BY #{group_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, decimal: true)
         end
       end
 
