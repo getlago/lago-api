@@ -16,79 +16,17 @@ module Admin
     end
 
     def call
-      return result.not_found_failure!(resource: "organization") unless organization
-      return result.validation_failure!(errors: {feature_type: ["invalid"]}) unless toggleable_feature_type?
-      return result.validation_failure!(errors: {feature_key: ["invalid"]}) unless valid_feature_key?
-
-      before_value = currently_enabled?
-
-      ActiveRecord::Base.transaction do
-        toggle_feature!
-
-        audit_log = CsAdminAuditLog.create!(
-          actor_user: actor,
-          actor_email: actor.email,
-          action: enabled ? :toggle_on : :toggle_off,
-          organization: organization,
-          feature_type: feature_type,
-          feature_key: feature_key,
-          before_value: before_value,
-          after_value: enabled,
-          reason: reason
-        )
-
-        result.audit_log = audit_log
-
-        after_commit do
-          Admin::SlackNotificationJob.perform_later(audit_log.id)
-
-          if notify_org_admin
-            Admin::EmailNotificationJob.perform_later(audit_log.id, actor.email)
-          end
-        end
-      end
+      result.audit_log = ApplyFeatureChangeService.call!(
+        actor:, organization:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin:
+      ).audit_log
 
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
 
     attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin
-
-    def toggleable_feature_type?
-      CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES.include?(feature_type.to_s)
-    end
-
-    def valid_feature_key?
-      if feature_type == "premium_integration"
-        Organization::PREMIUM_INTEGRATIONS.include?(feature_key)
-      else
-        FeatureFlag.valid?(feature_key)
-      end
-    end
-
-    def currently_enabled?
-      if feature_type == "premium_integration"
-        organization.premium_integrations.include?(feature_key)
-      else
-        organization.feature_flag_enabled?(feature_key)
-      end
-    end
-
-    def toggle_feature!
-      if feature_type == "premium_integration"
-        if enabled
-          organization.update!(premium_integrations: (organization.premium_integrations + [feature_key]).uniq)
-        else
-          organization.update!(premium_integrations: organization.premium_integrations - [feature_key])
-        end
-      elsif enabled
-        organization.enable_feature_flag!(feature_key)
-      else
-        organization.disable_feature_flag!(feature_key)
-      end
-    end
   end
 end

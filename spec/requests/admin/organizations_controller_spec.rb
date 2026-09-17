@@ -53,6 +53,7 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
         expect(json[:organization][:name]).to eq("NewCo")
         expect(json[:invite_url]).to be_present
         expect(json[:organization][:premium_integrations]).to include("okta")
+        expect(Organization.find_by!(name: "NewCo").default_billing_entity.document_numbering).to eq("per_customer")
       end
     end
 

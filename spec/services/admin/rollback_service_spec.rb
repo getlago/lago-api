@@ -270,4 +270,109 @@ RSpec.describe Admin::RollbackService do
       end
     end
   end
+
+  describe "rollback safeguards" do
+    let(:original_log) do
+      create(:cs_admin_audit_log, actor_user: actor, organization:,
+        feature_key: "okta", before_value: false, after_value: true)
+    end
+
+    before { organization.update!(premium_integrations: ["okta"]) }
+
+    def rollback(log = original_log)
+      described_class.call(actor:, audit_log: log, reason: "Restore the previous feature state")
+    end
+
+    it "rechecks rollback status even when the association was cached as empty" do
+      first = original_log
+      second = CsAdminAuditLog.find(first.id)
+      expect(first.rolled_back?).to be(false)
+      expect(second.rolled_back?).to be(false)
+
+      expect(rollback(first)).to be_success
+      result = rollback(second)
+
+      expect(result.error.messages[:audit_log]).to eq(["already_rolled_back"])
+      expect(CsAdminAuditLog.where(rollback_of_id: first.id).count).to eq(1)
+    end
+
+    it "preserves unrelated changes when the original log has a stale organization" do
+      original_log.organization
+      Organization.find(organization.id).update!(premium_integrations: %w[okta netsuite])
+
+      expect(rollback).to be_success
+      expect(organization.reload.premium_integrations).to eq(["netsuite"])
+    end
+
+    it "rejects an older change even when a newer off/on cycle restores the same value" do
+      original_log.update!(created_at: 2.days.ago)
+      create(:cs_admin_audit_log, organization:, feature_key: "okta",
+        action: :toggle_off, before_value: true, after_value: false, created_at: 1.day.ago)
+      create(:cs_admin_audit_log, organization:, feature_key: "okta",
+        action: :toggle_on, before_value: false, after_value: true)
+
+      expect(rollback.error.messages[:audit_log]).to eq(["change_has_been_superseded"])
+      expect(organization.reload.premium_integrations).to eq(["okta"])
+    end
+
+    it "rejects ambiguous changes with the same timestamp" do
+      create(:cs_admin_audit_log, organization:, feature_key: "okta", created_at: original_log.created_at)
+
+      expect(rollback.error.messages[:audit_log]).to eq(["change_has_been_superseded"])
+      expect(organization.reload.premium_integrations).to eq(["okta"])
+    end
+
+    it "rejects a feature whose state changed outside the panel" do
+      original_log
+      organization.update!(premium_integrations: [])
+
+      expect(rollback.error.messages[:audit_log]).to eq(["change_has_been_superseded"])
+      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
+    end
+
+    it "does not let a legacy no-op entry disable an existing feature" do
+      original_log.update!(before_value: true)
+
+      expect(rollback).not_to be_success
+      expect(organization.reload.premium_integrations).to eq(["okta"])
+      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
+    end
+
+    it "rejects rollback of a rollback" do
+      reverted = rollback.audit_log
+
+      expect(rollback(reverted).error.messages[:audit_log]).to eq(["cannot_rollback_a_rollback"])
+      expect(organization.reload.premium_integrations).to eq([])
+    end
+
+    it "restores creation-time grants with legacy nil before values to disabled" do
+      original_log.update!(action: :org_created, before_value: nil)
+
+      result = rollback
+
+      expect(result).to be_success
+      expect(result.audit_log.after_value).to be(false)
+      expect(organization.reload.premium_integrations).to eq([])
+    end
+
+    it "rejects retired feature keys with a validation error" do
+      original_log.update!(feature_type: :feature_flag, feature_key: "retired_flag")
+
+      expect(rollback.error.messages[:feature_key]).to eq(["feature_no_longer_available"])
+      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
+      expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+    end
+
+    it "does not enqueue notifications when an outer transaction rolls back" do
+      original_log
+      ActiveRecord::Base.transaction(requires_new: true) do
+        expect(rollback).to be_success
+        raise ActiveRecord::Rollback
+      end
+
+      expect(organization.reload.premium_integrations).to eq(["okta"])
+      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
+      expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+    end
+  end
 end

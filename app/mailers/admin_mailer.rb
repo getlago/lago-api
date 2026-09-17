@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class AdminMailer < ApplicationMailer
-  def feature_toggled(audit_log:, actor_email:)
+  def feature_toggled(audit_log:, actor_email: audit_log.actor_email)
     @audit_log = audit_log
     @organization = audit_log.organization
     @actor_email = actor_email

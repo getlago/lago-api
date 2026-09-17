@@ -52,9 +52,9 @@ end
 #  idx_cs_audit_batch                            (batch_id)
 #  idx_cs_audit_feature_created                  (feature_key,created_at DESC)
 #  idx_cs_audit_org_created                      (organization_id,created_at DESC)
+#  idx_cs_audit_unique_rollback                  (rollback_of_id) UNIQUE WHERE (rollback_of_id IS NOT NULL)
 #  index_cs_admin_audit_logs_on_actor_user_id    (actor_user_id)
 #  index_cs_admin_audit_logs_on_organization_id  (organization_id)
-#  index_cs_admin_audit_logs_on_rollback_of_id   (rollback_of_id)
 #
 # Foreign Keys
 #

@@ -841,7 +841,6 @@ DROP INDEX IF EXISTS public.index_customers_by_cursor;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
-DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_rollback_of_id;
 DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_organization_id;
 DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_actor_user_id;
 DROP INDEX IF EXISTS public.index_credits_on_progressive_billing_invoice_id;
@@ -1054,6 +1053,7 @@ DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
 DROP INDEX IF EXISTS public.idx_events_billing_lookup;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
+DROP INDEX IF EXISTS public.idx_cs_audit_unique_rollback;
 DROP INDEX IF EXISTS public.idx_cs_audit_org_created;
 DROP INDEX IF EXISTS public.idx_cs_audit_feature_created;
 DROP INDEX IF EXISTS public.idx_cs_audit_batch;
@@ -7453,6 +7453,13 @@ CREATE INDEX idx_cs_audit_org_created ON public.cs_admin_audit_logs USING btree 
 
 
 --
+-- Name: idx_cs_audit_unique_rollback; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_cs_audit_unique_rollback ON public.cs_admin_audit_logs USING btree (rollback_of_id) WHERE (rollback_of_id IS NOT NULL);
+
+
+--
 -- Name: idx_enqueued_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8938,13 +8945,6 @@ CREATE INDEX index_cs_admin_audit_logs_on_actor_user_id ON public.cs_admin_audit
 --
 
 CREATE INDEX index_cs_admin_audit_logs_on_organization_id ON public.cs_admin_audit_logs USING btree (organization_id);
-
-
---
--- Name: index_cs_admin_audit_logs_on_rollback_of_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_cs_admin_audit_logs_on_rollback_of_id ON public.cs_admin_audit_logs USING btree (rollback_of_id);
 
 
 --
@@ -15055,6 +15055,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260918103214'),
 ('20260917164501'),
+('20260917114904'),
 ('20260916141523'),
 ('20260914145333'),
 ('20260914145022'),

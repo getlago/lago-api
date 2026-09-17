@@ -80,22 +80,7 @@ RSpec.describe Mutations::Admin::RollbackChange do
     end
   end
 
-  context "when the license is not premium" do
-    it "returns an unauthorized error" do
-      result = rollback
-
-      expect_graphql_error(result:, message: "unauthorized")
-      expect(CsAdminAuditLog.where(action: :rollback)).to be_empty
-    end
-  end
-
-  context "when the user is not a CS admin" do
-    let(:regular_user) { create(:user, email: "user@acme.test") }
-
-    it "returns an unauthorized error" do
-      result = rollback(current_user: regular_user)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
+  it_behaves_like "a CS admin operation" do
+    subject(:response) { rollback(current_user:) }
   end
 end

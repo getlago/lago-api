@@ -158,36 +158,50 @@ RSpec.describe Admin::SlackNotificationService do
       end
     end
 
-    context "when Slack returns an HTTP error" do
-      before do
-        stub_const("ENV", ENV.to_h.merge("CS_ADMIN_SLACK_WEBHOOK_URL" => webhook_url))
-        stub_request(:post, webhook_url).to_return(status: 500, body: "Internal Server Error")
-      end
+    [429, 500, 503].each do |status|
+      context "when Slack returns HTTP #{status}" do
+        before do
+          stub_const("ENV", ENV.to_h.merge("CS_ADMIN_SLACK_WEBHOOK_URL" => webhook_url))
+          stub_request(:post, webhook_url).to_return(status:, body: "temporarily unavailable")
+        end
 
-      it "logs the error and does not raise" do
-        allow(Rails.logger).to receive(:error)
-
-        expect { service.call }.not_to raise_error
-
-        expect(Rails.logger).to have_received(:error).with(
-          include(audit_log.id.to_s)
-        )
-      end
-
-      it "does not log the webhook url" do
-        allow(Rails.logger).to receive(:error)
-
-        service.call
-
-        expect(Rails.logger).to have_received(:error) do |message|
-          expect(message).not_to include(webhook_url)
+        it "raises a retryable error without disclosing the webhook" do
+          expect { service.call }.to raise_error(described_class::DeliveryError) do |error|
+            expect(error.message).to include(audit_log.id, status.to_s)
+            expect(error.message).not_to include(webhook_url)
+            expect(error.cause).to be_nil
+          end
         end
       end
+    end
 
-      it "still returns a success result" do
+    context "when Slack times out" do
+      before do
+        stub_const("ENV", ENV.to_h.merge("CS_ADMIN_SLACK_WEBHOOK_URL" => webhook_url))
+        stub_request(:post, webhook_url).to_timeout
+      end
+
+      it "raises a retryable error without disclosing the webhook" do
+        expect { service.call }.to raise_error(described_class::DeliveryError) do |error|
+          expect(error.message).not_to include(webhook_url)
+          expect(error.cause).to be_nil
+        end
+      end
+    end
+
+    context "when Slack rejects the payload" do
+      before do
+        stub_const("ENV", ENV.to_h.merge("CS_ADMIN_SLACK_WEBHOOK_URL" => webhook_url))
+        stub_request(:post, webhook_url).to_return(status: 400, body: "invalid_payload")
+      end
+
+      it "returns a failure without retrying or disclosing the webhook" do
         result = service.call
 
-        expect(result).to be_success
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("slack_notification_failed")
+        expect(result.error.message).not_to include(webhook_url)
+        expect(a_request(:post, webhook_url)).to have_been_made.once
       end
     end
   end

@@ -33,19 +33,7 @@ RSpec.describe Resolvers::Admin::CsAdminsResolver do
     expect(ids).not_to include(regular_user.id)
   end
 
-  context "when the license is not premium" do
-    it "returns an unauthorized error" do
-      result = execute_graphql(current_user: admin_user, query:)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
-  end
-
-  context "when the user is not a CS admin" do
-    it "returns an unauthorized error" do
-      result = execute_graphql(current_user: regular_user, query:)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
+  it_behaves_like "a CS admin operation" do
+    subject(:response) { execute_graphql(current_user:, query:) }
   end
 end

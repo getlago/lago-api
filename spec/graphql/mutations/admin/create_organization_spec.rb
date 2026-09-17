@@ -57,22 +57,7 @@ RSpec.describe Mutations::Admin::CreateOrganization do
     end
   end
 
-  context "when the license is not premium" do
-    it "returns an unauthorized error" do
-      result = create_organization
-
-      expect_graphql_error(result:, message: "unauthorized")
-      expect(Organization.find_by(name: "Hooli Inc")).to be_nil
-    end
-  end
-
-  context "when the user is not a CS admin" do
-    let(:regular_user) { create(:user, email: "user@acme.test") }
-
-    it "returns an unauthorized error" do
-      result = create_organization(current_user: regular_user)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
+  it_behaves_like "a CS admin operation" do
+    subject(:response) { create_organization(current_user:) }
   end
 end

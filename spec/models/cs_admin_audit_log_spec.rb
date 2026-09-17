@@ -65,4 +65,17 @@ RSpec.describe CsAdminAuditLog, type: :model do
       expect(subject).to validate_length_of(:reason).is_at_least(10).is_at_most(500)
     end
   end
+
+  describe "rollback uniqueness" do
+    it "rejects duplicate rollback records at the database level" do
+      original = create(:cs_admin_audit_log)
+      create(:cs_admin_audit_log, action: :rollback, rollback_of: original, organization: original.organization)
+
+      expect do
+        described_class.transaction(requires_new: true) do
+          create(:cs_admin_audit_log, action: :rollback, rollback_of: original, organization: original.organization)
+        end
+      end.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
 end
