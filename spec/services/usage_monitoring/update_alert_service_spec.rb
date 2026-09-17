@@ -70,6 +70,29 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "with notify_on" do
+      it "accepts opting a coded threshold in to resolution" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}]})
+
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+
+      it "rejects opting in without a code" do
+        result = described_class.call(alert:, params: {thresholds: [{value: 10, notify_on: %w[triggered resolved]}]})
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:code"]).to include("value_is_mandatory")
+      end
+
+      it "rejects dropping triggered" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, notify_on: %w[resolved]}]})
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+    end
+
     context "with too many thresholds" do
       let(:params) do
         {
@@ -219,6 +242,32 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
       it "does not create a subscription activity" do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when renaming it to a code already used on the same wallet" do
+        let(:params) { {code: "taken"} }
+
+        before { create(:wallet_credits_balance_alert, organization:, wallet: alert.wallet, code: "taken") }
+
+        it "rejects it before reaching the database" do
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never saves the alert, so no update is attempted" do
+          allow(alert).to receive(:save!).and_call_original
+
+          expect(result).to be_failure
+          expect(alert).not_to have_received(:save!)
+        end
+      end
+
+      context "when keeping its own code" do
+        let(:params) { {code: alert.code} }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
       end
 
       context "when processing wallet alerts", :premium do

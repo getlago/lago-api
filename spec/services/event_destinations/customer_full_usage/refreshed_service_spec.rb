@@ -58,6 +58,22 @@ RSpec.describe EventDestinations::CustomerFullUsage::RefreshedService do
       expect(Time.zone.parse(usage[:from_datetime])).to be_within(1.second).of(subscription.started_at)
     end
 
+    it "attributes the usage across the customer's wallets, like the current period record does" do
+      wallet = create(:wallet, customer:, organization:, currency: "EUR", priority: 10,
+        ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
+      other = create(:wallet, customer:, organization:, currency: "EUR", priority: 50,
+        ongoing_usage_balance_cents: 500, credits_ongoing_usage_balance: "5.0")
+
+      service.call
+
+      expect(producer_calls.first[:data][:customer_usage][:wallets]).to eq(
+        [
+          {lago_id: wallet.id, credits: "15.0", amount_cents: 1500, amount_currency: "EUR"},
+          {lago_id: other.id, credits: "5.0", amount_cents: 500, amount_currency: "EUR"}
+        ]
+      )
+    end
+
     it "carries the full usage event type and the shared object type" do
       service.call
 

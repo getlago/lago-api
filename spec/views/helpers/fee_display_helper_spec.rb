@@ -43,6 +43,27 @@ RSpec.describe FeeDisplayHelper do
         expect(subject).to eq("Compute • eu • EU Premium")
       end
     end
+
+    context "when product filter is present" do
+      let(:product) { create(:product, organization: charge.organization, name: "Compute") }
+      let(:product_filter) { create(:product_filter, product:, invoice_display_name: "EU Premium") }
+      let(:fee) do
+        build(
+          :fee,
+          charge: nil,
+          fee_type: "product",
+          invoiceable: product,
+          subscription: nil,
+          product_filter:,
+          grouped_by: {},
+          invoice_display_name: nil
+        )
+      end
+
+      it "returns invoice_name appended with the product filter display name" do
+        expect(subject).to eq("Compute • EU Premium")
+      end
+    end
   end
 
   describe ".should_display_subscription_fee?" do

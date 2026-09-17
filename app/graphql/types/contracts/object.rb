@@ -6,7 +6,7 @@ module Types
       graphql_name "Contract"
       description "The agreement a customer signed: an optional plan, a validity window and the billing anchor"
 
-      dataload_association :customer
+      dataload_association :customer, :billing_entity, :payment_method
 
       field :external_id, String, null: false
       field :id, ID, null: false
@@ -21,6 +21,17 @@ module Types
       field :ended_at, GraphQL::Types::ISO8601DateTime, null: true
       field :started_at, GraphQL::Types::ISO8601DateTime, null: true
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
+
+      # Settings. billing_entity and payment_method are the explicitly-set
+      # overrides (nil = inherit from the customer); the others carry the
+      # stored value.
+      field :billing_entity, Types::BillingEntities::Object, null: true
+      # Also exposed as the bare id, matching the subscription read side.
+      field :billing_entity_id, ID, null: true
+      field :consolidate_invoice, Boolean, null: false
+      field :payment_method, Types::PaymentMethods::Object, null: true
+      field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false
+      field :purchase_order_number, String, null: true
 
       field :customer, Types::Customers::Object, null: false
       # Nullable by design: a plan-less contract prices through directly

@@ -7,8 +7,9 @@ module Contracts
   # billing side-effects — lifecycle transitions live in their own services.
   class UpdateService < BaseService
     include CustomerTimezone
+    include SettingsResolvable
 
-    Result = BaseResult[:contract]
+    Result = BaseResult[:contract, :payment_method]
 
     def initialize(contract:, params:)
       @contract = contract
@@ -25,6 +26,10 @@ module Contracts
 
       if params[:plan_code].present? && catalog_plan.nil?
         return result.not_found_failure!(resource: "plan")
+      end
+
+      if (failure = settings_references_failure)
+        return failure
       end
 
       # Reject malformed dates, but let an explicit null clear the field. A bare
@@ -53,6 +58,7 @@ module Contracts
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
         contract.ended_at = ended_at_in_customer_timezone if params.key?(:ended_at)
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
+        apply_settings(contract)
         contract.save!
 
         # Replace the old plan's materialised cards. The destroy service also

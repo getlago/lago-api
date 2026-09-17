@@ -7,6 +7,8 @@ RSpec.describe RateCardRate do
 
   it_behaves_like "paper_trail traceable"
 
+  it_behaves_like "a catalog code", :rate_card_rate
+
   describe "enums" do
     it do
       expect(rate_card_rate).to define_enum_for(:rate_model)

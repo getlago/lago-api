@@ -7,6 +7,8 @@ RSpec.describe RatePhase do
 
   it_behaves_like "paper_trail traceable"
 
+  it_behaves_like "a catalog code", :rate_phase
+
   describe "associations" do
     it do
       expect(rate_phase).to belong_to(:organization)
