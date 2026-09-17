@@ -4,8 +4,9 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     Result = BaseResult[:invoice, :invoice_id]
 
-    def initialize(timestamp:, metered_item:)
+    def initialize(timestamp:, metered_item:, billing_context:)
       @metered_item = metered_item
+      @billing_context = billing_context
       @timestamp = timestamp
 
       super
@@ -28,7 +29,7 @@ module Invoices
 
         # NOTE: Custom sections are applied before computing taxes so they are persisted even when
         #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [subscription])
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [billing_context.subscription].compact)
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
@@ -73,33 +74,35 @@ module Invoices
 
     private
 
-    attr_accessor :timestamp, :invoice, :metered_item
+    attr_reader :timestamp, :invoice, :metered_item, :billing_context
 
-    delegate :charge, :event, to: :metered_item
-    delegate :subscription, to: :event
-    delegate :customer, to: :subscription
+    delegate :event, to: :metered_item
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
-        customer:,
+        customer: billing_context.customer,
         invoice_type: :subscription,
-        currency: subscription.plan_amount_currency,
+        currency: metered_item.currency.iso_code,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true,
         invoice_id: result.invoice_id,
-        billing_entity: subscription.billing_entity || customer.billing_entity,
-        purchase_order_number: subscription.purchase_order_number
+        billing_entity: billing_context.applicable_billing_entity,
+        purchase_order_number: billing_context.purchase_order_number
       ) do |invoice|
-        Invoices::CreateInvoiceSubscriptionService
-          .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
-          .raise_if_error!
+        create_invoice_subscription(invoice:) if billing_context.subscription?
       end
       invoice_result.raise_if_error!
       @invoice = invoice_result.invoice
     end
 
+    def create_invoice_subscription(invoice:)
+      Invoices::CreateInvoiceSubscriptionService
+        .call(invoice:, subscriptions: [billing_context.subscription], timestamp:, invoicing_reason: :in_advance_charge)
+        .raise_if_error!
+    end
+
     def generate_fees
-      Fees::CreatePayInAdvanceService.call!(metered_item:, estimate: true).tap do |fee_result|
+      Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, estimate: true).tap do |fee_result|
         result.invoice_id = fee_result.invoice_id
       end
     end

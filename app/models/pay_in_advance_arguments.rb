@@ -26,16 +26,27 @@ class PayInAdvanceArguments
 
   def lock_key_arguments
     [
-      metered_item.charge,
+      item_lock_key,
       metered_item.event.organization_id,
       metered_item.event.external_subscription_id,
       metered_item.event.transaction_id
     ]
   end
 
+  def billing_context
+    return Billing::Context.from(contract: metered_item.contract) if metered_item.billing_segment
+
+    subscription = metered_item.event.subscription
+    Billing::Context.from(subscription:) if subscription
+  end
+
   private
 
   attr_reader :charge, :event
+
+  def item_lock_key
+    metered_item.billing_segment&.id || metered_item.charge
+  end
 
   def normalized_event
     @normalized_event ||= Events::CommonFactory.new_instance(source: event)

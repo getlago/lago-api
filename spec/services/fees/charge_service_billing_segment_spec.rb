@@ -27,7 +27,7 @@ RSpec.describe Fees::ChargeService do
     )
   end
   let(:product_filter) { nil }
-  let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment) }
+  let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment:) }
   let(:options) { described_class::Options.new(context: :finalize) }
 
   before do
@@ -66,7 +66,7 @@ RSpec.describe Fees::ChargeService do
       currency: "USD", rate_properties: {"amount" => "3"}, cycle_started_at: billing_segment.cycle_started_at,
       started_at: Time.utc(2026, 8, 15), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1))
     )
-    later_item = described_class::MeteredItem.from_billing_segment(later_segment)
+    later_item = described_class::MeteredItem.from_billing_segment(billing_segment: later_segment)
 
     later_result = described_class.call!(invoice:, metered_item: later_item, billing_context:, options:)
 

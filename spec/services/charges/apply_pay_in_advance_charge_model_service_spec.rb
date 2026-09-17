@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
-  let(:charge_service) { described_class.new(charge:, aggregation_result:, properties:) }
+  let(:charge_service) { described_class.new(metered_item:, aggregation_result:, properties:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -194,6 +194,46 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       let(:charge_model_class) { ChargeModels::PackageService }
 
       it_behaves_like "a charge model"
+    end
+
+    context "when the metered item is backed by a billing segment" do
+      let(:customer) { create(:customer, organization:) }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "2"}
+        )
+      end
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
+      let(:charge_model_result) do
+        ChargeModels::StandardService::Result.new.tap do |result|
+          result.amount = 10
+        end
+      end
+
+      before do
+        allow(ChargeModels::StandardService).to receive(:apply).and_return(charge_model_result)
+      end
+
+      it "applies the billing segment pricing structure" do
+        result = charge_service.call
+
+        expect(result).to be_success
+        expect(ChargeModels::StandardService).to have_received(:apply).with(
+          pricing_structure: ChargeModels::PricingStructure.from_billing_segment(billing_segment).with(properties:),
+          aggregation_result:
+        )
+      end
     end
 
     describe "when percentage charge model" do

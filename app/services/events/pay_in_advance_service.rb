@@ -23,15 +23,8 @@ module Events
         return result if event.id.nil? && !event.organization.clickhouse_events_store?
       end
 
-      charges.where(invoiceable: false).find_each do |charge|
-        Fees::CreatePayInAdvanceJob.perform_later(metered_item: metered_item_for(charge))
-      end
-
-      charges.where(invoiceable: true).find_each do |charge|
-        Invoices::CreatePayInAdvanceChargeJob.perform_later(
-          metered_item: metered_item_for(charge),
-          timestamp: event.timestamp
-        )
+      metered_item_selections.each do |selection|
+        enqueue_pay_in_advance_job(selection)
       end
 
       result.event = event
@@ -44,15 +37,8 @@ module Events
 
     delegate :billable_metric, :properties, to: :event
 
-    def charges
-      return Charge.none unless event.subscription
-
-      event.subscription
-        .plan
-        .charges
-        .pay_in_advance
-        .joins(:billable_metric)
-        .where(billable_metrics: {id: event.billable_metric.id})
+    def metered_item_selections
+      @metered_item_selections ||= Events::PayInAdvanceMeteredItemsResolver.call!(event:).selections
     end
 
     def already_processed?
@@ -66,27 +52,14 @@ module Events
       billable_metric.count_agg? || billable_metric.custom_agg? || properties[billable_metric.field_name].present?
     end
 
-    def metered_item_for(charge)
-      Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, event:)
-    end
+    def enqueue_pay_in_advance_job(selection)
+      metered_item = selection.metered_item
 
-    def boundaries
-      @boundaries ||= BillingPeriodBoundaries.new(
-        from_datetime: date_service.from_datetime,
-        to_datetime: date_service.to_datetime,
-        charges_from_datetime: date_service.charges_from_datetime,
-        charges_to_datetime: date_service.charges_to_datetime,
-        charges_duration: date_service.charges_duration_in_days,
-        timestamp: event.timestamp
-      )
-    end
-
-    def date_service
-      @date_service ||= Subscriptions::DatesService.new_instance(
-        event.subscription,
-        event.timestamp,
-        current_usage: true
-      )
+      if metered_item.invoiceable?
+        Invoices::CreatePayInAdvanceChargeJob.perform_later(metered_item:, timestamp: event.timestamp)
+      else
+        Fees::CreatePayInAdvanceJob.perform_later(metered_item:)
+      end
     end
 
     def kafka_producer_enabled?

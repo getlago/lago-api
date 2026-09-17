@@ -108,6 +108,14 @@ RSpec.describe Fee do
         expect(fee.item_code).to eq(fee.fixed_charge.add_on.code)
       end
     end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns the product code" do
+        expect(described_class.new(fee_type: "product", invoiceable: product).item_code).to eq(product.code)
+      end
+    end
   end
 
   describe "#invoice_name" do
@@ -270,6 +278,14 @@ RSpec.describe Fee do
       end
     end
 
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns the product name" do
+        expect(described_class.new(fee_type: "product", invoiceable: product).item_name).to eq(product.name)
+      end
+    end
+
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -345,6 +361,14 @@ RSpec.describe Fee do
       end
     end
 
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns product" do
+        expect(described_class.new(fee_type: "product", invoiceable: product).item_type).to eq("Product")
+      end
+    end
+
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -394,6 +418,14 @@ RSpec.describe Fee do
 
       it "returns fixed charge" do
         expect(fee.item_type).to eq("AddOn")
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns the product id" do
+        expect(described_class.new(fee_type: "product", invoiceable: product).item_id).to eq(product.id)
       end
     end
 

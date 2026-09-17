@@ -23,7 +23,7 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment, product_filter: nil, event: nil)
+      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
         new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
       end
 
@@ -51,6 +51,7 @@ module Fees
         to: :source
 
       delegate :filters, to: :invoiceable
+      delegate :charge_model, to: :pricing_structure
 
       %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
@@ -59,7 +60,15 @@ module Fees
       end
 
       def dynamic?
-        pricing_structure.charge_model == "dynamic"
+        charge_model == "dynamic"
+      end
+
+      def percentage?
+        charge_model == "percentage"
+      end
+
+      def graduated_percentage?
+        charge_model == "graduated_percentage"
       end
 
       def filter_id
@@ -78,6 +87,13 @@ module Fees
           is_current_usage: current_usage,
           is_pay_in_advance: pay_in_advance?
         }
+      end
+
+      def grouped_by_values
+        return {} unless event
+
+        event_properties = event.properties || {}
+        pricing_group_keys.index_with { |key| event_properties[key] }
       end
 
       def with_event(event:)

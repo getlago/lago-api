@@ -4,8 +4,8 @@ module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
     Result = BaseResult[:aggregation, :aggregator, :amount, :amount_details, :count, :options, :pay_in_advance_event, :precise_amount, :precise_total_amount_cents, :unit_amount, :units]
 
-    def initialize(charge:, aggregation_result:, properties:)
-      @charge = charge
+    def initialize(metered_item:, aggregation_result:, properties:)
+      @metered_item = metered_item
       @aggregation_result = aggregation_result
       @properties = properties
 
@@ -13,7 +13,7 @@ module Charges
     end
 
     def call
-      unless charge.pay_in_advance?
+      unless metered_item.pay_in_advance?
         return result.service_failure!(code: "apply_charge_model_error", message: "Charge is not pay_in_advance")
       end
 
@@ -39,7 +39,9 @@ module Charges
 
     private
 
-    attr_reader :charge, :aggregation_result, :properties
+    attr_reader :metered_item, :aggregation_result, :properties
+
+    delegate :charge, to: :metered_item
 
     def with_persisted_event?
       aggregation_result.pay_in_advance_event.persisted
@@ -47,13 +49,13 @@ module Charges
 
     def charge_model
       @charge_model ||= ChargeModels::Factory.in_advance_charge_model_class(
-        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:)
+        pricing_structure: metered_item.pricing_structure.with(properties:)
       )
     end
 
     def applied_charge_model
       @applied_charge_model ||= charge_model.apply(
-        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+        pricing_structure: metered_item.pricing_structure.with(properties:),
         aggregation_result:
       )
     end
@@ -77,7 +79,7 @@ module Charges
       )
 
       @applied_charge_model_excluding_persisted_event ||= charge_model.apply(
-        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(
+        pricing_structure: metered_item.pricing_structure.with(
           properties: (properties || {}).merge(exclude_event: true)
         ),
         aggregation_result: result_without_event
@@ -103,7 +105,7 @@ module Charges
       )
 
       @applied_charge_model_including_non_persisted_event ||= charge_model.apply(
-        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(
+        pricing_structure: metered_item.pricing_structure.with(
           properties: (properties || {}).merge(include_event_value: true)
         ),
         aggregation_result: result_with_event
@@ -115,14 +117,14 @@ module Charges
     end
 
     def currency
-      @currency ||= charge.plan.amount.currency
+      @currency ||= metered_item.currency
     end
 
     def compute_units
       if display_applied_units_for_zero_invoice?
         units_applied = BigDecimal(aggregation_result.units_applied)
         units_applied.negative? ? 0 : units_applied
-      elsif charge.prorated?
+      elsif metered_item.prorated?
         aggregation_result.full_units_number
       else
         aggregation_result.pay_in_advance_aggregation
@@ -138,7 +140,7 @@ module Charges
 
     def calculated_single_event_amount_details
       PayInAdvance::AmountDetailsCalculator.call(
-        charge:,
+        metered_item:,
         applied_charge_model:,
         applied_charge_model_excluding_event: applied_charge_model_excluding_persisted_event
       )

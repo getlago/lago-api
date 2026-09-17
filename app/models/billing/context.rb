@@ -19,7 +19,7 @@ module Billing
       :organization,
       :organization_id,
       :customer,
-      :plan,
+      :purchase_order_number,
       :started_at,
       :terminated_at,
       :terminated?,
@@ -37,6 +37,12 @@ module Billing
 
     def contract_id
       contract&.id
+    end
+
+    def applicable_billing_entity
+      return record.applicable_billing_entity if contract?
+
+      record.billing_entity || record.customer.billing_entity
     end
 
     def subscription

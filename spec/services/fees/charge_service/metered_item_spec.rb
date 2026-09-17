@@ -68,7 +68,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
 
     it "builds a metered item backed by a billing segment source" do
-      metered_item = described_class.from_billing_segment(billing_segment)
+      metered_item = described_class.from_billing_segment(billing_segment:)
 
       expect(metered_item.billing_segment).to eq(billing_segment)
       expect(metered_item.charge_id).to be_nil
@@ -88,14 +88,14 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
 
     it "defaults absent attributes without masking segment references" do
-      expect(described_class.from_billing_segment(billing_segment)).to have_attributes(
+      expect(described_class.from_billing_segment(billing_segment:)).to have_attributes(
         charge_filter: nil, product_filter: nil, contract: billing_segment.contract,
         rate_card_rate:, rate_override: nil, fee_type: :product, invoiceable: product
       )
     end
 
     it "reflects the segment rate model and prefers the override model" do
-      metered_item = described_class.from_billing_segment(billing_segment)
+      metered_item = described_class.from_billing_segment(billing_segment:)
       rate_card_rate.rate_model = "dynamic"
       expect(metered_item).to be_dynamic
 
@@ -104,10 +104,22 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item.rate_override).to eq(billing_segment.rate_override)
     end
 
+    context "when the billing segment rate model is percentage" do
+      let(:rate_card_rate) do
+        build(:rate_card_rate, organization:, rate_card:, rate_model: "percentage", rate_properties: {"rate" => "0.1"})
+      end
+
+      it "identifies the percentage rate model" do
+        metered_item = described_class.from_billing_segment(billing_segment:)
+
+        expect(metered_item).to have_attributes(charge_model: "percentage", percentage?: true, graduated_percentage?: false)
+      end
+    end
+
     it "uses the selected product filter and supports an explicit default bucket" do
       product_filter = build(:product_filter, organization:, product:, id: SecureRandom.uuid)
       rate_card.product_filter = product_filter
-      metered_item = described_class.from_billing_segment(billing_segment)
+      metered_item = described_class.from_billing_segment(billing_segment:)
 
       expect(metered_item).to have_attributes(product_filter: nil, selected_filter: nil, filter_id: nil)
 
@@ -123,7 +135,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       }
       rate_card.billing_timing = :advance
 
-      expect(described_class.from_billing_segment(billing_segment).aggregation_options(current_usage: false)).to eq(
+      expect(described_class.from_billing_segment(billing_segment:).aggregation_options(current_usage: false)).to eq(
         free_units_per_events: 2,
         free_units_per_total_aggregation: 3.to_d,
         is_current_usage: false,
@@ -146,7 +158,10 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item.pricing_structure).to be_a(ChargeModels::PricingStructure)
       expect(metered_item).to have_attributes(
         charge_id: charge.id,
+        charge_model: "standard",
         dynamic?: false,
+        percentage?: false,
+        graduated_percentage?: false,
         charge_filter: nil,
         pay_in_advance?: false,
         prorated?: false,
@@ -161,6 +176,24 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       charge.charge_model = "dynamic"
 
       expect(metered_item).to be_dynamic
+    end
+  end
+
+  describe "rate model predicates" do
+    context "when the charge model is percentage" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "identifies the percentage rate model" do
+        expect(metered_item).to have_attributes(charge_model: "percentage", percentage?: true, graduated_percentage?: false)
+      end
+    end
+
+    context "when the charge model is graduated percentage", :premium do
+      let(:charge) { create(:graduated_percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "identifies the graduated percentage rate model" do
+        expect(metered_item).to have_attributes(charge_model: "graduated_percentage", percentage?: false, graduated_percentage?: true)
+      end
     end
   end
 
@@ -183,6 +216,76 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         is_current_usage: false,
         is_pay_in_advance: false
       )
+    end
+  end
+
+  describe "#grouped_by_values" do
+    let(:event_properties) { {} }
+    let(:event) do
+      Events::CommonFactory.new_instance(source: create(:event, organization:, properties: event_properties))
+    end
+    let(:metered_item) { described_class.from_charge(charge:, boundaries:, event:) }
+
+    it "returns an empty hash without an event" do
+      metered_item = described_class.from_charge(charge:, boundaries:)
+
+      expect(metered_item.grouped_by_values).to eq({})
+    end
+
+    it "returns an empty hash without grouping properties" do
+      expect(metered_item.grouped_by_values).to eq({})
+    end
+
+    context "with pricing_group_keys properties" do
+      let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
+
+      before { charge.properties = {"pricing_group_keys" => ["cloud", "region"]} }
+
+      it "uses values from the event properties" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => "us-east-1")
+      end
+
+      it "keeps configured keys when an event property is absent" do
+        event_properties.delete("region")
+
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
+      end
+    end
+
+    context "with legacy grouped_by properties" do
+      let(:event_properties) { {"cloud" => "aws"} }
+
+      before { charge.properties = {"grouped_by" => ["cloud"]} }
+
+      it "uses the legacy grouping keys" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws")
+      end
+    end
+
+    context "with both grouping property formats" do
+      let(:event_properties) { {"cloud" => "aws", "region" => "us-east-1"} }
+
+      before { charge.properties = {"pricing_group_keys" => ["cloud"], "grouped_by" => ["region"]} }
+
+      it "prefers pricing group keys" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws")
+      end
+    end
+
+    context "when the charge accepts a target wallet", :premium do
+      let(:event_properties) { {"cloud" => "aws", "target_wallet_code" => "wallet-1"} }
+
+      before do
+        organization.update!(premium_integrations: ["events_targeting_wallets"])
+        charge.update!(
+          accepts_target_wallet: true,
+          properties: {"pricing_group_keys" => ["cloud"], "amount" => "10"}
+        )
+      end
+
+      it "includes the target wallet code" do
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "target_wallet_code" => "wallet-1")
+      end
     end
   end
 
