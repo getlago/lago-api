@@ -134,6 +134,58 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       expect { invoice_service.call.invoice }.to change(InvoiceSubscription, :count).by(1)
     end
 
+    context "when the metered item is backed by a billing segment" do
+      let(:contract) { create(:contract, organization:, customer:, billing_entity:, purchase_order_number: "PO-CONTRACT-123") }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: false) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "10"}
+        )
+      end
+      let(:event) do
+        source = create(
+          :event,
+          external_subscription_id: contract.external_id,
+          external_customer_id: customer.external_id,
+          organization_id: organization.id,
+          code: billable_metric.code
+        )
+        Events::CommonFactory.new_instance(source:)
+      end
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:) }
+
+      before do
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call)
+          .with(metered_item:)
+          .and_return(aggregation_result)
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
+          .with(charge: nil, aggregation_result:, properties: Hash)
+          .and_return(charge_result)
+      end
+
+      it "creates an invoice from the contract billing context" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to have_attributes(
+          customer:,
+          billing_entity:,
+          currency: "EUR",
+          purchase_order_number: "PO-CONTRACT-123"
+        )
+        expect(result.invoice.invoice_subscriptions).to be_empty
+        expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")
+      end
+    end
+
     context "with billing entity resolution" do
       it "stamps the customer's billing_entity when subscription has none" do
         invoice = invoice_service.call.invoice
