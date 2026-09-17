@@ -80,12 +80,40 @@ RSpec.describe PayInAdvanceArguments do
   end
 
   describe "#lock_key_arguments" do
-    it "returns the charge and event identity arguments" do
+    it "returns the charge pricing source and event identity arguments" do
       arguments = described_class.new(metered_item:)
 
       expect(arguments.lock_key_arguments).to eq(
-        [charge, event.organization_id, event.external_subscription_id, event.transaction_id]
+        [
+          charge,
+          event.organization_id,
+          event.external_subscription_id,
+          event.transaction_id
+        ]
       )
+    end
+
+    context "with a billing segment metered item" do
+      let(:billing_segment) { build_stubbed(:billing_segment, organization:) }
+      let(:segment_metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(
+          billing_segment:,
+          event: common_event
+        )
+      end
+
+      it "returns the billing segment pricing source and event identity arguments" do
+        arguments = described_class.new(metered_item: segment_metered_item)
+
+        expect(arguments.lock_key_arguments).to eq(
+          [
+            billing_segment.id,
+            event.organization_id,
+            event.external_subscription_id,
+            event.transaction_id
+          ]
+        )
+      end
     end
   end
 end
