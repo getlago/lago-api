@@ -76,5 +76,22 @@ RSpec.describe AdminMailer do
         expect(mail.to).to be_nil
       end
     end
+
+    it "uses the audit snapshot when no actor email is passed separately" do
+      message = described_class.feature_toggled(audit_log:)
+
+      expect(message.body.to_s).to include(audit_log.actor_email)
+    end
+
+    it "retries transient delivery failures through SendEmailJob" do
+      message = described_class.feature_toggled(audit_log:)
+      message.send(:processed_mailer)
+      allow(message).to receive(:deliver_now).and_raise(Net::ReadTimeout)
+      allow(described_class).to receive(:feature_toggled).with(audit_log:).and_return(message)
+
+      expect do
+        SendEmailJob.perform_now("AdminMailer", "feature_toggled", "deliver_now", args: [], kwargs: {audit_log:})
+      end.to have_enqueued_job(SendEmailJob).once
+    end
   end
 end

@@ -36,19 +36,7 @@ RSpec.describe Resolvers::Admin::OrganizationResolver do
     expect(result["data"]["adminOrganization"]).to be_nil
   end
 
-  context "when the license is not premium" do
-    it "returns an unauthorized error" do
-      expect_graphql_error(result: fetch, message: "unauthorized")
-    end
-  end
-
-  context "when the user is not a CS admin" do
-    let(:regular_user) { create(:user, email: "user@acme.test") }
-
-    it "returns an unauthorized error" do
-      result = fetch(current_user: regular_user)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
+  it_behaves_like "a CS admin operation" do
+    subject(:response) { fetch(current_user:) }
   end
 end

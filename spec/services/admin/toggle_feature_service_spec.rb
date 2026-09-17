@@ -111,6 +111,8 @@ RSpec.describe Admin::ToggleFeatureService do
         )
       end
 
+      before { organization.enable_feature_flag!("order_forms") }
+
       it "calls disable_feature_flag! and creates an audit log" do
         allow(organization).to receive(:disable_feature_flag!).and_call_original
 
@@ -183,10 +185,11 @@ RSpec.describe Admin::ToggleFeatureService do
       end
 
       it "enqueues an email notification job" do
-        result = service.call
+        result = nil
+        expect { result = service.call }.to have_enqueued_mail(AdminMailer, :feature_toggled)
+          .with { |args| args[:audit_log] == result.audit_log }
 
         expect(result).to be_success
-        expect(Admin::EmailNotificationJob).to have_been_enqueued.with(result.audit_log.id, "cs@getlago.com")
       end
     end
 
@@ -206,7 +209,7 @@ RSpec.describe Admin::ToggleFeatureService do
       it "does not enqueue an email notification job" do
         service.call
 
-        expect(Admin::EmailNotificationJob).not_to have_been_enqueued
+        expect(SendEmailJob).not_to have_been_enqueued
       end
     end
   end

@@ -55,50 +55,7 @@ RSpec.describe Mutations::Admin::ToggleFeature do
     end
   end
 
-  context "when the license is not premium" do
-    it "returns an unauthorized error" do
-      result = toggle
-
-      expect_graphql_error(result:, message: "unauthorized")
-      expect(organization.reload.premium_integrations).not_to include("okta")
-    end
-  end
-
-  context "when the user is not a CS admin" do
-    let(:regular_user) { create(:user, email: "user@acme.test") }
-
-    it "returns an unauthorized error" do
-      result = toggle(current_user: regular_user)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
-  end
-
-  context "when the user is a CS admin outside of Lago" do
-    let(:external_cs_admin) { create(:user, email: "cs@acme.test", cs_admin: true) }
-
-    it "returns an unauthorized error" do
-      result = toggle(current_user: external_cs_admin)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
-  end
-
-  context "when the user is a Lago employee without the CS admin flag" do
-    let(:lago_user) { create(:user, email: "sales@getlago.com", cs_admin: false) }
-
-    it "returns an unauthorized error" do
-      result = toggle(current_user: lago_user)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
-  end
-
-  context "when there is no current user" do
-    it "returns an unauthorized error" do
-      result = toggle(current_user: nil)
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
+  it_behaves_like "a CS admin operation" do
+    subject(:response) { toggle(current_user:) }
   end
 end

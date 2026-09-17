@@ -19,33 +19,21 @@ module Admin
     end
 
     def create
-      organization = nil
-      invite_url = nil
+      result = ::Organizations::CreateWithInviteService.call(
+        name: create_params[:name],
+        owner_email: create_params[:email],
+        document_numbering: "per_customer",
+        premium_integrations: create_params[:premium_integrations] || []
+      )
 
-      ActiveRecord::Base.transaction do
-        organization = ::Organizations::CreateService
-          .call(
-            name: create_params[:name],
-            document_numbering: "per_customer",
-            premium_integrations: create_params[:premium_integrations]
-          )
-          .raise_if_error!
-          .organization
-
-        invite_url = ::Invites::CreateService.call(
-          current_organization: organization,
-          email: create_params[:email],
-          roles: %w[admin],
-          skip_admin_check: true
-        ).raise_if_error!.invite_url
+      if result.success?
+        render json: {
+          organization: ::Admin::OrganizationSerializer.new(result.organization).serialize,
+          invite_url: result.invite_url
+        }, status: :created
+      else
+        render_error_response(result)
       end
-
-      render json: {
-        organization: ::Admin::OrganizationSerializer.new(organization).serialize,
-        invite_url: invite_url
-      }, status: :created
-    rescue BaseService::FailedResult => e
-      render_error_response(e.result)
     end
 
     private

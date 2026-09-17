@@ -2,6 +2,10 @@
 
 module Admin
   class SlackNotificationService < ::BaseService
+    Result = BaseResult
+
+    class DeliveryError < StandardError; end
+
     def initialize(audit_log:)
       @audit_log = audit_log
       super()
@@ -12,15 +16,19 @@ module Admin
       return result if webhook_url.blank?
 
       payload = build_payload
-      LagoHttpClient::Client.new(webhook_url).post_with_response(payload, {})
+      LagoHttpClient::Client.new(webhook_url, open_timeout: 5, read_timeout: 10, write_timeout: 10)
+        .post_with_response(payload, {})
 
       result
     rescue LagoHttpClient::HttpError => e
-      Rails.logger.error("Slack notification failed for audit log #{audit_log.id}: HTTP #{e.error_code} - #{e.error_body}")
-      result
-    rescue => e
-      Rails.logger.error("Slack notification failed for audit log #{audit_log.id}: #{e.class}")
-      result
+      message = "Slack notification failed for audit log #{audit_log.id}: HTTP #{e.error_code}"
+      if e.error_code.to_i == 429 || e.error_code.to_i >= 500
+        raise DeliveryError, message, cause: nil
+      end
+
+      result.service_failure!(code: "slack_notification_failed", message:)
+    rescue *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES => e
+      raise DeliveryError, "Slack notification failed for audit log #{audit_log.id}: #{e.class}", cause: nil
     end
 
     private

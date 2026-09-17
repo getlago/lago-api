@@ -209,21 +209,7 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
     expect(logs["collection"].map { |log| log["rolledBack"] }).to eq([true])
   end
 
-  context "when the license is not premium" do
-    it "returns an unauthorized error" do
-      result = execute_graphql(current_user: admin_user, query:, variables: {})
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
-  end
-
-  context "when the user is not a CS admin" do
-    let(:regular_user) { create(:user, email: "user@acme.test") }
-
-    it "returns an unauthorized error" do
-      result = execute_graphql(current_user: regular_user, query:, variables: {})
-
-      expect_graphql_error(result:, message: "unauthorized")
-    end
+  it_behaves_like "a CS admin operation" do
+    subject(:response) { execute_graphql(current_user:, query:, variables: {}) }
   end
 end

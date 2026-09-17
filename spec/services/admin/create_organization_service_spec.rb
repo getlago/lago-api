@@ -35,6 +35,7 @@ RSpec.describe Admin::CreateOrganizationService do
       organization = result.organization
       expect(organization).to be_a(Organization)
       expect(organization.name).to eq("Hooli Inc")
+      expect(organization.reload.default_billing_entity.document_numbering).to eq("per_billing_entity")
     end
 
     context "when a timezone is provided", :premium do
@@ -89,7 +90,7 @@ RSpec.describe Admin::CreateOrganizationService do
       logs.each do |log|
         expect(log.actor_user).to eq(actor)
         expect(log.actor_email).to eq("cs@getlago.com")
-        expect(log.before_value).to be_nil
+        expect(log.before_value).to eq((log.feature_type == "organization") ? nil : false)
         expect(log.after_value).to be(true)
         expect(log.reason).to eq("New enterprise customer onboarding")
       end
@@ -169,10 +170,62 @@ RSpec.describe Admin::CreateOrganizationService do
         expect(log.action).to eq("org_created")
         expect(log.feature_type).to eq("organization")
         expect(log.feature_key).to eq("organization")
-        expect(log.before_value).to be_nil
+        expect(log.before_value).to eq((log.feature_type == "organization") ? nil : false)
         expect(log.after_value).to be(true)
         expect(Admin::SlackNotificationJob).to have_been_enqueued.with(log.id)
       end
+    end
+
+    context "with duplicate feature inputs" do
+      let(:premium_integrations) { %w[okta okta] }
+      let(:feature_flags) { %w[order_forms order_forms] }
+
+      it "creates one grant and audit record per feature" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.organization.premium_integrations).to eq(["okta"])
+        expect(result.organization.feature_flags).to eq(["order_forms"])
+        expect(CsAdminAuditLog.where(organization: result.organization).pluck(:feature_key))
+          .to match_array(%w[organization okta order_forms])
+      end
+    end
+
+    context "with invalid premium integrations" do
+      let(:premium_integrations) { ["invalid_integration"] }
+
+      it "does not persist an organization, invite or audit record" do
+        expect { service.call }.not_to change(Organization, :count)
+
+        expect(Invite.count).to eq(0)
+        expect(CsAdminAuditLog.count).to eq(0)
+        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+      end
+    end
+
+    context "with an invalid reason" do
+      let(:reason) { "short" }
+
+      it "rolls back creation and suppresses notifications" do
+        expect { service.call }.not_to change(Organization, :count)
+
+        expect(Invite.count).to eq(0)
+        expect(CsAdminAuditLog.count).to eq(0)
+        expect(Admin::SlackNotificationJob).not_to have_been_enqueued
+      end
+    end
+
+    it "does not notify Slack if the outer transaction rolls back" do
+      actor
+      ActiveRecord::Base.transaction(requires_new: true) do
+        expect(service.call).to be_success
+        raise ActiveRecord::Rollback
+      end
+
+      expect(Organization.count).to eq(0)
+      expect(Invite.count).to eq(0)
+      expect(CsAdminAuditLog.count).to eq(0)
+      expect(Admin::SlackNotificationJob).not_to have_been_enqueued
     end
   end
 end
