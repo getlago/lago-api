@@ -32,9 +32,29 @@ RSpec.describe Billing::Context do
       expect(context.customer).to eq(subscription.customer)
       expect(context.external_id).to eq(subscription.external_id)
       expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
+      expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
       expect(context.anniversary?).to eq(subscription.anniversary?)
+    end
+
+    context "when the subscription has a billing entity" do
+      let(:billing_entity) { build_stubbed(:billing_entity) }
+      let(:subscription) { build_stubbed(:subscription, billing_entity:) }
+
+      it "uses the subscription billing entity" do
+        expect(context.applicable_billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when the subscription has no billing entity" do
+      let(:billing_entity) { build_stubbed(:billing_entity) }
+      let(:customer) { build_stubbed(:customer, billing_entity:) }
+      let(:subscription) { build_stubbed(:subscription, customer:, organization: customer.organization) }
+
+      it "uses the customer billing entity" do
+        expect(context.applicable_billing_entity).to eq(billing_entity)
+      end
     end
 
     it "preserves subscription charge duration calculation" do
@@ -63,7 +83,9 @@ RSpec.describe Billing::Context do
       expect(context.organization_id).to eq(contract.organization_id)
       expect(context.customer).to eq(contract.customer)
       expect(context.external_id).to eq(contract.external_id)
+      expect(context.applicable_billing_entity).to eq(contract.applicable_billing_entity)
       expect(context.applicable_billing_entity_id).to eq(contract.applicable_billing_entity_id)
+      expect(context.purchase_order_number).to eq(contract.purchase_order_number)
       expect(context.subscription_at).to eq(contract.started_at)
       expect(context.started_at).to eq(contract.started_at)
       expect(context.organization).to eq(contract.organization)
