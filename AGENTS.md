@@ -188,6 +188,7 @@ To create a webhook:
 - `SIDEKIQ_WALLETS` — when true, wallet jobs (e.g. `Customers::RefreshWalletJob`) are routed to the `wallets` queue, processed by the dedicated wallet worker (`scripts/start.wallets.worker.sh`). Example: `SIDEKIQ_WALLETS=true`
 - `SIDEKIQ_AI_AGENT` — when true, AI conversation jobs (`AiConversations::StreamJob`) are routed to the `ai_agent` queue. Example: `SIDEKIQ_AI_AGENT=true`
 - The `streaming` queue (`config/sidekiq/sidekiq_streaming.yml`, `scripts/start.streaming.worker.sh`) has no `SIDEKIQ_*` flag on purpose. `DeliverEventJob` is pinned to it unconditionally, because its worker needs an AWS identity the general workers do not have, and a wallet-refresh burst arrives as one job per customer and must not compete with billing work. Nothing is enqueued unless the organization has a `streaming_destinations` row, so a deployment that runs no streaming worker never fills the queue.
+- `LAGO_REALTIME_USAGE_ENABLED` — when true, allows current usage to be served from the pre-aggregated ClickHouse usage buckets. The value is cast as a boolean, so `false` or `0` disables serving. Deployment-wide kill switch: serving also requires a premium license, `LAGO_CLICKHOUSE_ENABLED`, the organization reading the ClickHouse events store, and the per-organization `realtime_usage` feature flag. Example: `LAGO_REALTIME_USAGE_ENABLED=true`
 - `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
 - `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
@@ -213,11 +214,17 @@ To create a webhook:
 - to test a "resource not found error" from an `Api::V1` controller, use the custom match `be_not_found_error` like this:
   `expect(response).to be_not_found_error("alert")`
 - Prefer `expect(...).to have_received()` instead of `expect(...).to receive()`
+- Configure mocks and stubs with `allow` in `before` blocks, never directly in an `it` block. When setup applies to only one example, wrap it in a dedicated context with its own `before` block.
 - never use `aggregate_failure` in new test. Do not edit existing tests to remove it.
 - After making changes to the tests, always run the tests to ensure they pass.
 - When doing array comparison in tests, use `eq` or `match_array` instead of multiple `include`/`not_to include` assertions when the expected array is small enough to be readable
 - Use single-line `let` statements when they fit on one line without breaking Rubocop rules
-- Use `let!` only for objects that need to be created before the test runs; if not referencing the object in tests, consider creating them directly in a `before` block instead of using `let`
+- Start RSpec `context` descriptions with `when`, `with`, or `without` to satisfy `RSpec/ContextWording` (e.g. `context "when the segment starts after the rate change"`).
+- Define the object under test with a named `subject` instead of constructing `described_class` inside `it` blocks. Keep examples focused on exercising behavior and asserting results.
+- Define shared setup objects with `let` instead of repeating factory calls across examples. Extract inputs that vary between scenarios (e.g. `timezone`, `started_at`, and `ended_at`) into `let` declarations, and override only those inputs in nested `context` blocks while reusing the same subject.
+- Declare test fixtures with `let` or `before`; do not call `build` or `create` inside an `it` block.
+- Define scenario state through factory arguments in nested contexts instead of using `assign_attributes`, `update!`, or direct attribute assignment inside examples.
+- Mutate records inside examples only when the mutation itself is the behavior under test.
 - Run as minimum number of tests as possible. Narrow down run tests for specific describe or file.
 
 ## Models
@@ -240,6 +247,8 @@ To create a webhook:
 
 ## Factories
 
+- Prefer `build` or `build_stubbed` over `create` when the test does not require database persistence. Prefer `build_stubbed` when identity assertions need IDs.
+- Build the target factory directly and rely on its associations instead of manually creating the full associated object graph.
 - Some factories have been renamed for clarity.
   - To create Entitlement::Feature model, use `:feature`
   - To create Entitlement::Privilege model, use `:privilege`
