@@ -326,7 +326,7 @@ class Fee < ApplicationRecord
   end
 
   def taxable?
-    amount_cents.positive?
+    !sub_total_excluding_taxes_amount_cents.zero?
   end
 
   def date_boundaries

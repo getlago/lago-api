@@ -516,7 +516,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   if include_feature?(:sum_precise_total_amount_cents)
     describe "#sum_precise_total_amount_cents" do
       it "returns the sum of precise_total_amount_cent values" do
-        expect(event_store.sum_precise_total_amount_cents).to eq(15)
+        result = event_store.sum_precise_total_amount_cents
+
+        expect(result).to eq(15)
+        expect(result).to be_a(BigDecimal)
       end
 
       context "without events" do
@@ -537,6 +540,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         result = event_store.grouped_sum_precise_total_amount_cents
 
         expect(result).to match_array([{groups: {"region" => nil}, value: 6}, {groups: {"region" => "europe"}, value: 9}])
+        expect(result.map { it[:value] }).to all(be_a(BigDecimal))
       end
 
       context "with multiple groups" do

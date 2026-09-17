@@ -232,4 +232,24 @@ RSpec.describe ProductFilters::CreateService do
     filter = result.product_filter
     expect(Utils::ActivityLog).to have_produced("product_filter.created").after_commit.with(filter)
   end
+
+  # Deleting a metric discards its filters asynchronously; a create landing in
+  # that window would otherwise be orphaned when the cleanup job runs.
+  context "when the billable metric was just deleted" do
+    before { billable_metric.discard! }
+
+    let(:params) do
+      {
+        name: "US",
+        code: "us",
+        values: [{billable_metric_filter_id: region_filter.id, value: "us"}]
+      }
+    end
+
+    it "blocks the create instead of orphaning a reference" do
+      expect { result }.not_to change(ProductFilter, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages[:"values.billable_metric_filter"]).to eq(["billable_metric_deleted"])
+    end
+  end
 end

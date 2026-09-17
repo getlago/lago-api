@@ -7,8 +7,9 @@ module Contracts
   # — lifecycle state lives in the status, the dates only carry the window.
   class CreateService < BaseService
     include CustomerTimezone
+    include SettingsResolvable
 
-    Result = BaseResult[:contract]
+    Result = BaseResult[:contract, :payment_method]
 
     def initialize(organization:, params:)
       @organization = organization
@@ -45,10 +46,14 @@ module Contracts
         return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
       end
 
+      if (failure = settings_references_failure)
+        return failure
+      end
+
       started_at = params[:started_at].present? ? started_at_in_customer_timezone : Time.current
 
       ActiveRecord::Base.transaction do
-        contract = organization.contracts.create!(
+        contract = organization.contracts.new(
           customer:,
           catalog_plan:,
           external_id: params[:external_id],
@@ -59,6 +64,8 @@ module Contracts
           ended_at: ended_at_in_customer_timezone,
           status: started_at.future? ? :pending : :active
         )
+        apply_settings(contract)
+        contract.save!
 
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
 

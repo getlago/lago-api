@@ -28,6 +28,15 @@ RSpec.describe ChargeModels::DynamicService do
     expect(apply_dynamic_service.unit_amount).to eq(0.0201)
   end
 
+  context "when precise total amount cents is an integer" do
+    let(:precise_total_amount_cents) { 4312 }
+
+    it "preserves the fractional currency amount" do
+      expect(apply_dynamic_service.amount).to eq(43.12)
+      expect(apply_dynamic_service.unit_amount).to eq(2.156)
+    end
+  end
+
   context "when aggregation is zero" do
     let(:aggregation) { 0 }
 

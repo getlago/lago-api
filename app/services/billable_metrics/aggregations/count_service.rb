@@ -6,7 +6,7 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        count_result = event_store.count
+        count_result = options[:precomputed_aggregation] || event_store.count
         result.aggregation = count_result.value
         result.current_usage_units = count_result.value
         result.count = count_result.events_count
@@ -32,7 +32,7 @@ module BillableMetrics
       def compute_grouped_by_aggregation(options: {})
         return empty_results if should_bypass_aggregation?
 
-        aggregations = event_store.grouped_count
+        aggregations = options[:precomputed_grouped_aggregations] || event_store.grouped_count
         return empty_results if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|

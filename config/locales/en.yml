@@ -3,6 +3,7 @@ en:
   activerecord:
     errors:
       messages:
+        billable_metric_deleted: billable_metric_deleted
         blank: value_is_mandatory
         cannot_be_empty: cannot_be_empty
         cannot_form_a_cycle: cannot_form_a_cycle
