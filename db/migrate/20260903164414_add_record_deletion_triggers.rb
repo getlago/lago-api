@@ -9,14 +9,10 @@ class AddRecordDeletionTriggers < ActiveRecord::Migration[8.0]
         CREATE OR REPLACE FUNCTION record_deletion() RETURNS trigger
         LANGUAGE plpgsql AS $$
         DECLARE
-          -- All three timestamps come from one value: leaving created_at/updated_at to the
-          -- column defaults would stamp them with the transaction start, which can be far
-          -- behind the delete and behind the pipeline cursor by the time the row commits.
-          deleted_time timestamp := statement_timestamp() AT TIME ZONE 'UTC';
+          deleted_time timestamp := clock_timestamp() AT TIME ZONE 'UTC';
         BEGIN
           INSERT INTO record_deletions (organization_id, record_table, record_id, deleted_at, created_at, updated_at)
-          SELECT deleted_rows.organization_id, TG_TABLE_NAME, deleted_rows.id, deleted_time, deleted_time, deleted_time
-          FROM deleted_rows;
+          VALUES (OLD.organization_id, TG_TABLE_NAME, OLD.id, deleted_time, deleted_time, deleted_time);
 
           RETURN NULL;
         END;
@@ -24,11 +20,15 @@ class AddRecordDeletionTriggers < ActiveRecord::Migration[8.0]
       SQL
 
       TRACKED_TABLES.each do |table|
+        # Deferred so the tombstone is stamped as the transaction commits. An immediate
+        # trigger stamps it when the row is deleted, which on a long transaction is far
+        # enough ahead of the commit that an incremental export can advance its cursor
+        # past the tombstone before the row is ever visible to it.
         execute <<~SQL
-          CREATE TRIGGER record_deletions_on_#{table}
+          CREATE CONSTRAINT TRIGGER record_deletions_on_#{table}
           AFTER DELETE ON #{table}
-          REFERENCING OLD TABLE AS deleted_rows
-          FOR EACH STATEMENT
+          DEFERRABLE INITIALLY DEFERRED
+          FOR EACH ROW
           EXECUTE FUNCTION record_deletion();
         SQL
       end
