@@ -28,8 +28,8 @@ module UsageMonitoring
         usage_filters:
       )
 
-      # The usage was filtered for one metric, and evaluation reloads the alert under its lock, so a metric
-      # changed in between would be measured against usage it does not appear in and read as no usage at all.
+      # Checked after the usage is built, not before: building it is the slow part, so that is the window a
+      # metric change or a deletion can land in. Before it the alert has only just been loaded by the job.
       return result unless Alert.where(id: alert.id, billable_metric_id:).exists?
 
       ProcessAlertService.call(
