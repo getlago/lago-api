@@ -13,9 +13,15 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:is_charge_refundable) { false }
 
+  # NOTE: by default stripe reports the same state as the event payload
+  let(:current_is_charge_refundable) { is_charge_refundable }
+
   before do
     allow(::Payments::OpenDisputeService).to receive(:call).and_call_original
     allow(::Payments::CloseDisputeService).to receive(:call).and_call_original
+    allow(::Stripe::Dispute).to receive(:retrieve).and_return(
+      ::Stripe::Dispute.construct_from(id: "dp_123456", is_charge_refundable: current_is_charge_refundable)
+    )
   end
 
   ["2020-08-27", "2025-04-30.basil"].each do |version|
@@ -79,6 +85,35 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
 
           it "does not block refunds on the invoice" do
             expect { service.call && payable.reload }.not_to change(payable, :payment_refund_blocked_at).from(nil)
+          end
+        end
+
+        context "when a stale non-refundable event arrives after the dispute closed" do
+          # NOTE: the replayed payload still says the charge is not refundable, while stripe
+          #       now reports the closed dispute as refundable.
+          let(:is_charge_refundable) { false }
+          let(:current_is_charge_refundable) { true }
+
+          it "does not re-block refunds" do
+            expect { service.call && payable.reload }
+              .not_to change(payable, :payment_refund_blocked_at).from(nil)
+          end
+
+          it "does not open a dispute" do
+            service.call
+
+            expect(::Payments::OpenDisputeService).not_to have_received(:call)
+          end
+        end
+
+        context "when stripe cannot be reached" do
+          before do
+            allow(::Stripe::Dispute).to receive(:retrieve).and_raise(::Stripe::APIConnectionError.new("boom"))
+          end
+
+          it "falls back to the event payload and blocks refunds" do
+            expect { service.call && payable.reload }
+              .to change(payable, :payment_refund_blocked_at).from(nil)
           end
         end
 

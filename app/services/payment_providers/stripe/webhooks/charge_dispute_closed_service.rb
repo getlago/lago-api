@@ -9,7 +9,9 @@ module PaymentProviders
           reason = event.data.object.reason
           provider_payment_id = event.data.object.payment_intent
 
-          payment = Payment.find_by(provider_payment_id:)
+          # NOTE: scoped to the organization, a stripe api key can be shared across several
+          #       of them, and the dispute must not reach another organization's invoices.
+          payment = Payment.where(organization_id: organization.id).find_by(provider_payment_id:)
           return result unless payment
 
           # NOTE: on a lost dispute the charge stays unrefundable, so the open flag is left in
