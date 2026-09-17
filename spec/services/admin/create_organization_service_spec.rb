@@ -227,5 +227,75 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(CsAdminAuditLog.count).to eq(0)
       expect(Admin::SlackNotificationJob).not_to have_been_enqueued
     end
+
+    context "with security logging enabled", :premium, transaction: false do
+      include_context "with security log infrastructure"
+
+      let(:premium_integrations) { ["security_logs"] }
+      let(:security_events) { [] }
+
+      before do
+        allow(Utils::KafkaProducer).to receive(:produce_async) do |topic:, payload:, **|
+          security_events << JSON.parse(payload) if topic == kafka_security_logs_topic
+        end
+      end
+
+      it "publishes both security events only after the outer transaction commits" do
+        result = nil
+        ActiveRecord::Base.transaction do
+          result = service.call
+
+          expect(result).to be_success
+          expect(security_events).to eq([])
+        end
+
+        expect(security_events.map { |event| event.slice("organization_id", "log_event", "resources") }).to match_array([
+          {
+            "organization_id" => result.organization.id,
+            "log_event" => "billing_entity.created",
+            "resources" => {"billing_entity_name" => name, "billing_entity_code" => "hooli_inc"}
+          },
+          {
+            "organization_id" => result.organization.id,
+            "log_event" => "user.invited",
+            "resources" => {"invitee_email" => owner_email}
+          }
+        ])
+      end
+
+      context "with an invalid reason" do
+        let(:reason) { "short" }
+
+        it "does not publish security events for rolled-back records" do
+          expect(service.call).not_to be_success
+
+          expect(Organization.count).to eq(0)
+          expect(Invite.count).to eq(0)
+          expect(security_events).to eq([])
+        end
+      end
+
+      context "with an invalid owner email" do
+        let(:owner_email) { "not-an-email" }
+
+        it "does not publish the rolled-back billing entity event" do
+          expect(service.call).not_to be_success
+
+          expect(Organization.count).to eq(0)
+          expect(security_events).to eq([])
+        end
+      end
+
+      it "does not publish security events when the caller rolls back" do
+        ActiveRecord::Base.transaction do
+          expect(service.call).to be_success
+          raise ActiveRecord::Rollback
+        end
+
+        expect(Organization.count).to eq(0)
+        expect(Invite.count).to eq(0)
+        expect(security_events).to eq([])
+      end
+    end
   end
 end
