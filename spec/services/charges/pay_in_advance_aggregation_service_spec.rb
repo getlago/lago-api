@@ -76,6 +76,51 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       end
     end
 
+    context "when the metered item is backed by a billing segment" do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "10"}
+        )
+      end
+      let(:event) do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: contract.external_id,
+          external_customer_id: customer.external_id,
+          code: billable_metric.code
+        )
+      end
+      let(:common_event) { Events::CommonFactory.new_instance(source: event) }
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: common_event) }
+      let(:aggregator) { instance_double(BillableMetrics::Aggregations::BaseService, aggregate: agg_result) }
+
+      before do
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
+      end
+
+      it "uses the contract billing context" do
+        agg_service.call
+
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+          metered_item:,
+          billing_context: have_attributes(contract:),
+          boundaries: aggregation_boundaries,
+          filters: anything
+        )
+      end
+    end
+
     describe "when count aggregation" do
       let(:count_service) { instance_double(BillableMetrics::Aggregations::CountService, aggregate: agg_result) }
 

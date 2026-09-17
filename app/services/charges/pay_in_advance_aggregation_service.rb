@@ -13,7 +13,7 @@ module Charges
     def call
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         metered_item:,
-        billing_context: Billing::Context.from(subscription:),
+        billing_context:,
         boundaries: {
           from_datetime: metered_item.boundaries.charges_from_datetime,
           to_datetime: metered_item.boundaries.charges_to_datetime,
@@ -37,10 +37,6 @@ module Charges
       }
     end
 
-    def subscription
-      metered_item.event.subscription
-    end
-
     def aggregation_filters
       # BaseStore reads charge_id; ClickhouseEnrichedStore uses it to select pre-enriched events.
       # Raw Postgres/ClickHouse aggregation uses metric code, billing context, and property filters instead.
@@ -51,9 +47,8 @@ module Charges
       # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = {event: metered_item.event, charge_id: metered_item.charge_id}
 
-      model = metered_item.charge_filter.presence || metered_item.charge
-      grouped_by_values = model.pricing_group_keys&.index_with { metered_item.event.properties[it] } || {}
-      if metered_item.charge.accepts_target_wallet && metered_item.event.properties["target_wallet_code"].present?
+      grouped_by_values = metered_item.pricing_group_keys.index_with { metered_item.event.properties[it] }
+      if metered_item.charge&.accepts_target_wallet && metered_item.event.properties["target_wallet_code"].present?
         grouped_by_values["target_wallet_code"] = metered_item.event.properties["target_wallet_code"]
       end
       filters[:grouped_by_values] = grouped_by_values if grouped_by_values.present?
@@ -76,6 +71,16 @@ module Charges
       end
 
       filters
+    end
+
+    def billing_context
+      return @billing_context if defined?(@billing_context)
+
+      @billing_context = if metered_item.billing_segment
+        Billing::Context.from(contract: metered_item.contract)
+      else
+        Billing::Context.from(subscription: metered_item.event.subscription)
+      end
     end
   end
 end
