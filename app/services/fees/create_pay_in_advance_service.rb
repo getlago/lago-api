@@ -4,8 +4,9 @@ module Fees
   class CreatePayInAdvanceService < BaseService
     Result = BaseResult[:fees, :invoice_id]
 
-    def initialize(metered_item:, billing_at: nil, estimate: false)
+    def initialize(metered_item:, billing_context:, billing_at: nil, estimate: false)
       @metered_item = metered_item
+      @billing_context = billing_context
       @billing_at = billing_at || metered_item.event.timestamp
 
       @estimate = estimate
@@ -15,8 +16,6 @@ module Fees
     end
 
     def call
-      return skip_missing_billing_context if billing_context.nil?
-
       fees = []
 
       ActiveRecord::Base.transaction(**isolation_mode) do
@@ -48,30 +47,7 @@ module Fees
 
     private
 
-    def skip_missing_billing_context
-      # NOTE: `billing_context` is nil when the subscription/contract was terminated before the
-      # event's timestamp (e.g. enqueued while active, terminated before the job ran).
-      message = "Fees::CreatePayInAdvanceService skipped: no active subscription for event"
-      context = {
-        organization_id: event.organization_id,
-        external_subscription_id: event.external_subscription_id,
-        event_transaction_id: event.transaction_id,
-        event_timestamp: billing_at.iso8601
-      }.merge(
-        if metered_item.billing_segment
-          {billing_segment_id: metered_item.billing_segment.id}
-        else
-          {charge_id: charge.id}
-        end
-      )
-
-      Rails.logger.warn("#{message} #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
-
-      result.fees = []
-      result
-    end
-
-    attr_reader :metered_item, :billing_at, :estimate
+    attr_reader :metered_item, :billing_context, :billing_at, :estimate
 
     delegate :charge, :event, :billable_metric, to: :metered_item
 
@@ -152,7 +128,7 @@ module Fees
     end
 
     def aggregate(selected_metered_item:, properties:, charge_filter: nil)
-      Charges::PayInAdvanceAggregationService.call!(metered_item: selected_metered_item)
+      Charges::PayInAdvanceAggregationService.call!(metered_item: selected_metered_item, billing_context:)
     end
 
     def apply_charge_model(selected_metered_item:, aggregation_result:, properties:)
@@ -206,16 +182,6 @@ module Fees
     def remove_formated_grouped_by_keys(breakdowns, selected_metered_item:)
       Array(breakdowns).map do |breakdown|
         breakdown.merge(groups: breakdown[:groups].except(*selected_metered_item.grouped_by_values.keys))
-      end
-    end
-
-    def billing_context
-      return @billing_context if defined?(@billing_context)
-
-      @billing_context = if metered_item.billing_segment
-        Billing::Context.from(contract: metered_item.contract)
-      elsif event.subscription
-        Billing::Context.from(subscription: event.subscription)
       end
     end
 

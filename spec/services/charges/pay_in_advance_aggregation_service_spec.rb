@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Charges::PayInAdvanceAggregationService do
   subject(:agg_service) do
-    described_class.new(metered_item:)
+    described_class.new(metered_item:, billing_context:)
   end
 
   let(:organization) { create(:organization) }
@@ -21,6 +21,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
   let(:subscription) do
     create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
   end
+  let(:billing_context) { Billing::Context.from(subscription:) }
 
   let(:boundaries) do
     BillingPeriodBoundaries.new(
@@ -103,6 +104,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       end
       let(:common_event) { Events::CommonFactory.new_instance(source: event) }
       let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: common_event) }
+      let(:billing_context) { Billing::Context.from(contract:) }
       let(:aggregator) { instance_double(BillableMetrics::Aggregations::BaseService, aggregate: agg_result) }
 
       before do

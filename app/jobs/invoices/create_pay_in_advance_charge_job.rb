@@ -21,8 +21,17 @@ module Invoices
     unique :until_executed, on_conflict: :log
 
     def perform(timestamp:, charge: nil, metered_item: nil, event: nil, invoice: nil)
+      resolved_metered_item = pay_in_advance_arguments.metered_item
+      billing_context = pay_in_advance_arguments.billing_context
+
+      unless billing_context
+        skip_missing_billing_context(metered_item: resolved_metered_item, timestamp: Time.zone.at(timestamp))
+        return
+      end
+
       result = Invoices::CreatePayInAdvanceChargeService.call(
-        metered_item: pay_in_advance_arguments.metered_item,
+        metered_item: resolved_metered_item,
+        billing_context:,
         timestamp:
       )
       return if result.success?
@@ -49,6 +58,25 @@ module Invoices
       return false unless result.error.is_a?(BaseService::ValidationFailure)
 
       result.error&.messages&.dig(:tax_error).present?
+    end
+
+    def skip_missing_billing_context(metered_item:, timestamp:)
+      event = metered_item.event
+      message = "Invoices::CreatePayInAdvanceChargeJob skipped: no billing context for event"
+      context = {
+        organization_id: event.organization_id,
+        external_subscription_id: event.external_subscription_id,
+        event_transaction_id: event.transaction_id,
+        event_timestamp: timestamp.iso8601
+      }.merge(
+        if metered_item.billing_segment
+          {billing_segment_id: metered_item.billing_segment.id}
+        else
+          {charge_id: metered_item.charge.id}
+        end
+      )
+
+      Rails.logger.error("#{message} #{context.map { |key, value| "#{key}=#{value}" }.join(" ")}")
     end
   end
 end

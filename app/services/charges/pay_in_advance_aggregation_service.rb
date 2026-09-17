@@ -4,8 +4,9 @@ module Charges
   class PayInAdvanceAggregationService < BaseService
     Result = BaseResult
 
-    def initialize(metered_item:)
+    def initialize(metered_item:, billing_context:)
       @metered_item = metered_item
+      @billing_context = billing_context
 
       super
     end
@@ -28,7 +29,7 @@ module Charges
 
     private
 
-    attr_reader :metered_item
+    attr_reader :metered_item, :billing_context
 
     def aggregation_options
       {
@@ -68,16 +69,6 @@ module Charges
       end
 
       filters
-    end
-
-    def billing_context
-      return @billing_context if defined?(@billing_context)
-
-      @billing_context = if metered_item.billing_segment
-        Billing::Context.from(contract: metered_item.contract)
-      else
-        Billing::Context.from(subscription: metered_item.event.subscription)
-      end
     end
   end
 end

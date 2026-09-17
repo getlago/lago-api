@@ -33,6 +33,13 @@ class PayInAdvanceArguments
     ]
   end
 
+  def billing_context
+    return Billing::Context.from(contract: metered_item.contract) if metered_item.billing_segment
+
+    subscription = metered_item.event.subscription
+    Billing::Context.from(subscription:) if subscription
+  end
+
   private
 
   attr_reader :charge, :event

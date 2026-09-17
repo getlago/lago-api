@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+
 RSpec.describe PayInAdvanceArguments do
   let(:organization) { create(:organization) }
   let(:charge) { create(:standard_charge, :pay_in_advance, organization:) }
@@ -113,6 +114,24 @@ RSpec.describe PayInAdvanceArguments do
             event.transaction_id
           ]
         )
+      end
+    end
+  end
+
+  describe "#billing_context" do
+    it "uses the event subscription" do
+      expect(described_class.new(metered_item:).billing_context.subscription).to eq(subscription)
+    end
+
+    context "with a billing segment metered item" do
+      let(:billing_segment) { build_stubbed(:billing_segment, organization:) }
+      let(:segment_metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: common_event)
+      end
+
+      it "uses the billing segment contract" do
+        expect(described_class.new(metered_item: segment_metered_item).billing_context.contract)
+          .to eq(billing_segment.contract)
       end
     end
   end

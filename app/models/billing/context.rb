@@ -20,7 +20,6 @@ module Billing
       :organization_id,
       :customer,
       :purchase_order_number,
-      :plan,
       :started_at,
       :terminated_at,
       :terminated?,

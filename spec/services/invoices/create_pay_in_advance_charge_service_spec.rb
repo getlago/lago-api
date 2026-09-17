@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeService do
   subject(:invoice_service) do
-    described_class.new(metered_item:, timestamp: timestamp.to_i)
+    described_class.new(metered_item:, billing_context:, timestamp: timestamp.to_i)
   end
 
   let(:timestamp) { Time.zone.now.beginning_of_month }
@@ -14,6 +14,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
   let(:charge_filter) { nil }
 
@@ -72,7 +73,10 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(metered_item: have_attributes(charge:, event:))
+        .with(
+          metered_item: have_attributes(charge:, event:),
+          billing_context: instance_of(Billing::Context)
+        )
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
@@ -161,10 +165,11 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         Events::CommonFactory.new_instance(source:)
       end
       let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:) }
+      let(:billing_context) { Billing::Context.from(contract:) }
 
       before do
         allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-          .with(metered_item:)
+          .with(metered_item:, billing_context: an_object_having_attributes(contract:))
           .and_return(aggregation_result)
         allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
           .with(metered_item:, aggregation_result:, properties: Hash)
@@ -253,7 +258,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     end
 
     it "produces an activity log" do
-      invoice = described_class.call(metered_item:, timestamp: timestamp.to_i).invoice
+      invoice = described_class.call(metered_item:, billing_context:, timestamp: timestamp.to_i).invoice
 
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end

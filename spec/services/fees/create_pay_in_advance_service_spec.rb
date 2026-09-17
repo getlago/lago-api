@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceService do
-  subject(:fee_service) { described_class.new(metered_item:, billing_at:, estimate:) }
+  subject(:fee_service) { described_class.new(metered_item:, billing_context:, billing_at:, estimate:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
@@ -11,6 +11,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:estimate) { false }
 
@@ -80,36 +81,15 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(metered_item: have_attributes(charge:, event:))
+        .with(
+          metered_item: have_attributes(charge:, event:),
+          billing_context: instance_of(Billing::Context)
+        )
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
         .with(metered_item: have_attributes(charge:, event:), aggregation_result:, properties: Hash)
         .and_return(charge_result)
-    end
-
-    context "when the event has no matching subscription" do
-      let(:event) do
-        source = create(
-          :event,
-          external_subscription_id: "unknown-#{SecureRandom.uuid}",
-          external_customer_id: customer.external_id,
-          organization_id: organization.id,
-          properties: event_properties
-        )
-        Events::CommonFactory.new_instance(source:)
-      end
-
-      before { allow(Rails.logger).to receive(:warn) }
-
-      it "skips without creating a fee and logs a warning" do
-        result = fee_service.call
-
-        expect(result).to be_success
-        expect(result.fees).to eq([])
-        expect(Fee.count).to eq(0)
-        expect(Rails.logger).to have_received(:warn).with(/no active subscription for event.*charge_id=#{charge.id}/)
-      end
     end
 
     context "when the metered item is backed by a billing segment" do
@@ -142,6 +122,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       let(:metered_item) do
         Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:)
       end
+      let(:billing_context) { Billing::Context.from(contract:) }
 
       before do
         allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_return(aggregation_result)

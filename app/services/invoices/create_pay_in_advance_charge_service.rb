@@ -4,8 +4,9 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     Result = BaseResult[:invoice, :invoice_id]
 
-    def initialize(timestamp:, metered_item:)
+    def initialize(timestamp:, metered_item:, billing_context:)
       @metered_item = metered_item
+      @billing_context = billing_context
       @timestamp = timestamp
 
       super
@@ -73,7 +74,7 @@ module Invoices
 
     private
 
-    attr_reader :timestamp, :invoice, :metered_item
+    attr_reader :timestamp, :invoice, :metered_item, :billing_context
 
     delegate :event, to: :metered_item
 
@@ -101,7 +102,7 @@ module Invoices
     end
 
     def generate_fees
-      Fees::CreatePayInAdvanceService.call!(metered_item:, estimate: true).tap do |fee_result|
+      Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, estimate: true).tap do |fee_result|
         result.invoice_id = fee_result.invoice_id
       end
     end
@@ -137,16 +138,6 @@ module Invoices
 
     def refresh_amounts(credit_amount_cents:)
       invoice.total_amount_cents -= credit_amount_cents
-    end
-
-    def billing_context
-      return @billing_context if defined?(@billing_context)
-
-      @billing_context = if metered_item.billing_segment
-        Billing::Context.from(contract: metered_item.contract)
-      else
-        Billing::Context.from(subscription: event.subscription)
-      end
     end
   end
 end

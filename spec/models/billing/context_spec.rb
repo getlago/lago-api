@@ -36,6 +36,7 @@ RSpec.describe Billing::Context do
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
       expect(context.anniversary?).to eq(subscription.anniversary?)
+      expect(context).not_to respond_to(:plan)
     end
 
     context "when the subscription has a billing entity" do
