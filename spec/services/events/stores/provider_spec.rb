@@ -290,7 +290,7 @@ RSpec.describe Events::Stores::Provider do
     end
   end
 
-  describe "#serves?" do
+  describe "#served_from_buckets?" do
     subject(:provider) do
       described_class.new(organization:, billing_context:, usage_buckets: bucket_set, current_usage: true)
     end
@@ -302,7 +302,7 @@ RSpec.describe Events::Stores::Provider do
     end
 
     it "answers the same question as the precomputed options, so the charge cache cannot disagree" do
-      expect(provider.serves?(charge:, boundaries:)).to be(true)
+      expect(provider.served_from_buckets?(charge:, boundaries:)).to be(true)
       expect(provider.precomputed_options_for(charge:, boundaries:)).not_to eq({})
     end
 
@@ -310,7 +310,7 @@ RSpec.describe Events::Stores::Provider do
       let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
 
       it "answers false, and the options stay empty" do
-        expect(provider.serves?(charge:, boundaries:)).to be(false)
+        expect(provider.served_from_buckets?(charge:, boundaries:)).to be(false)
         expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
       end
     end

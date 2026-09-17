@@ -19,8 +19,6 @@ module Events
         totals.empty? && grouped_totals.empty?
       end
 
-      # The pipeline values a count metric's events at 1 apiece, so units is the
-      # aggregation for both count and sum. A missing row means no usage, hence zero.
       def aggregation_result_for(charge_id:, charge_filter_id:)
         bucket_totals = totals_for(charge_id:, charge_filter_id:)
 
