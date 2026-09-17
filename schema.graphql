@@ -4697,6 +4697,11 @@ enum CurrencyEnum {
   TJS
 
   """
+  Tunisian Dinar
+  """
+  TND
+
+  """
   Tongan Paʻanga
   """
   TOP

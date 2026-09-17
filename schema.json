@@ -21209,6 +21209,12 @@
               "deprecationReason": null
             },
             {
+              "name": "TND",
+              "description": "Tunisian Dinar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "TOP",
               "description": "Tongan Paʻanga",
               "isDeprecated": false,
