@@ -82,6 +82,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:create_billing_segments", at: "*:12") do
+    Clock::CreateBillingSegmentsJob
+      .set(sentry: {"slug" => "lago_create_billing_segments", "cron" => "12 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:api_keys_track_usage", at: "*:15") do
     Clock::ApiKeys::TrackUsageJob
       .set(sentry: {"slug" => "lago_api_keys_track_usage", "cron" => "15 */1 * * *"})

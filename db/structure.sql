@@ -875,9 +875,9 @@ DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
-DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_billing_clock;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
@@ -2637,7 +2637,7 @@ CREATE TABLE public.contract_rate_cards (
     contract_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
-    next_billing_at timestamp without time zone NOT NULL,
+    next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
     ended_date date,
     units numeric,
@@ -8576,6 +8576,13 @@ CREATE INDEX index_commitments_taxes_on_tax_id ON public.commitments_taxes USING
 
 
 --
+-- Name: index_contract_rate_cards_on_billing_clock; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_on_billing_clock ON public.contract_rate_cards USING btree (next_billing_at, ended_date) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_contract_rate_cards_on_contract_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8587,13 +8594,6 @@ CREATE INDEX index_contract_rate_cards_on_contract_id ON public.contract_rate_ca
 --
 
 CREATE INDEX index_contract_rate_cards_on_deleted_at ON public.contract_rate_cards USING btree (deleted_at);
-
-
---
--- Name: index_contract_rate_cards_on_next_billing_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_contract_rate_cards_on_next_billing_at ON public.contract_rate_cards USING btree (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL));
 
 
 --
@@ -14937,6 +14937,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260918103214'),
+('20260917164501'),
 ('20260916141523'),
 ('20260914145333'),
 ('20260914145022'),
@@ -16077,3 +16079,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
