@@ -10,9 +10,7 @@ module CreditNotes
       #       the original refund instead of issuing a second one. We enforce nothing on our
       #       side, and stripe only honours that key for 24h; the backoff below tops out around
       #       20 minutes, so raising `attempts` much further would void the guarantee.
-      retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
-      retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
-      retry_on ::Stripe::APIError, wait: :polynomially_longer, attempts: 6
+      retry_on(*PaymentProviders::StripeProvider::TRANSIENT_ERRORS, wait: :polynomially_longer, attempts: 6)
 
       def perform(credit_note)
         result = CreditNotes::Refunds::StripeService.new(credit_note).create

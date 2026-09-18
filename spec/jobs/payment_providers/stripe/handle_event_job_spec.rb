@@ -25,7 +25,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob do
     expect(PaymentProviders::Stripe::HandleEventService).to have_received(:call)
   end
 
-  [::Stripe::APIError, ::Stripe::RateLimitError, ::Stripe::APIConnectionError].each do |error_class|
+  PaymentProviders::StripeProvider::TRANSIENT_ERRORS.each do |error_class|
     context "when the service raises #{error_class}" do
       before do
         allow(PaymentProviders::Stripe::HandleEventService).to receive(:call).and_raise(error_class.new("boom"))

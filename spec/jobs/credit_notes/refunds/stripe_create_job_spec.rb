@@ -23,12 +23,8 @@ RSpec.describe CreditNotes::Refunds::StripeCreateJob do
   end
 
   describe "retry_on" do
-    [
-      ::Stripe::RateLimitError.new("rate limited"),
-      ::Stripe::APIConnectionError.new("connection reset"),
-      ::Stripe::APIError.new("stripe is down")
-    ].each do |error|
-      error_class = error.class
+    PaymentProviders::StripeProvider::TRANSIENT_ERRORS.each do |error_class|
+      error = error_class.new("boom")
 
       context "when a #{error_class} error is raised" do
         before do

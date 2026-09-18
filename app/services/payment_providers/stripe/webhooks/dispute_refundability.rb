@@ -24,7 +24,7 @@ module PaymentProviders
             {payment_intent: provider_payment_id, limit: 100},
             {api_key: stripe_api_key}
           ).data
-        rescue ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, ::Stripe::PermissionError => e
+        rescue *PaymentProviders::StripeProvider::PERMANENT_ERRORS => e
           # NOTE: retrying these never changes the answer, so fall back to the payload rather
           #       than dead-queueing the event. Transient errors are deliberately left to
           #       propagate: HandleEventJob retries them, and acting on a possibly stale payload

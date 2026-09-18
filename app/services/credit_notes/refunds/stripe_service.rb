@@ -163,18 +163,24 @@ module CreditNotes
         end
       end
 
+      # NOTE: manual payments carry no provider payment id, and a stripe list filtered on nil
+      #       does not filter at all, it returns the whole account.
+      def stripe_payment_intent_id
+        payment.provider_payment_id.presence
+      end
+
       def existing_stripe_refund
         return @existing_stripe_refund if defined?(@existing_stripe_refund)
-        return @existing_stripe_refund = nil if payment.provider_payment_id.blank?
+        return @existing_stripe_refund = nil if stripe_payment_intent_id.nil?
 
         refunds = ::Stripe::Refund.list(
-          {payment_intent: payment.provider_payment_id, limit: 100},
+          {payment_intent: stripe_payment_intent_id, limit: 100},
           {api_key: stripe_api_key}
         )
         @existing_stripe_refund = refunds.data.detect do |refund|
           refund[:metadata] && refund[:metadata][:lago_credit_note_id] == credit_note.id
         end
-      rescue ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, ::Stripe::PermissionError => e
+      rescue *PaymentProviders::StripeProvider::PERMANENT_ERRORS => e
         # NOTE: transient errors are left to propagate so the job retries and can still find the
         #       refund. Failing here would mark the credit note failed for a refund stripe may
         #       already hold.
@@ -184,17 +190,19 @@ module CreditNotes
 
       def stripe_charge
         return @stripe_charge if defined?(@stripe_charge)
-        # NOTE: manual payments have no provider payment id, and Stripe::Charge.list would then
-        #       silently return the whole account's charges instead of filtering.
-        return @stripe_charge = nil if payment.provider_payment_id.blank?
+        return @stripe_charge = nil if stripe_payment_intent_id.nil?
 
         charges = ::Stripe::Charge.list(
-          {payment_intent: payment.provider_payment_id, limit: 10},
+          {payment_intent: stripe_payment_intent_id, limit: 10},
           {api_key: stripe_api_key}
         )
         # NOTE: a payment intent can carry failed attempts alongside the successful charge.
         @stripe_charge = charges.data.detect { |charge| charge[:status] == "succeeded" }
       rescue ::Stripe::StripeError => e
+        # NOTE: deliberately broader than PERMANENT_ERRORS. This pre-check only saves a doomed
+        #       call, so proceeding is safe: stripe rejects a bad refund and the rescue below
+        #       handles it without raising. Retrying transient errors here would risk
+        #       dead-queueing a refund that would otherwise have gone through.
         Rails.logger.warn("Unable to retrieve stripe charge for payment #{payment.id}: #{e.message}")
         @stripe_charge = nil
       end

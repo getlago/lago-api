@@ -13,9 +13,7 @@ module PaymentProviders
 
       # NOTE: Sometimes, the stripe webhook is received before the DB update of the impacted resource
       retry_on BaseService::NotFoundFailure
-      retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
-      retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
-      retry_on ::Stripe::APIError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
+      retry_on(*PaymentProviders::StripeProvider::TRANSIENT_ERRORS, wait: :polynomially_longer, attempts: 6, jitter: 0.75)
       retry_on BaseService::LockAcquisitionFailure, ActiveRecord::Deadlocked, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
       def perform(organization:, event:)
