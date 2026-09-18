@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::PaystackService do
-  subject(:service) { described_class.new(invoice) }
-
   let(:organization) { create(:organization) }
   let(:code) { "paystack_1" }
   let(:payment_provider) { create(:paystack_provider, organization:, code:) }
@@ -39,13 +37,19 @@ RSpec.describe Invoices::Payments::PaystackService do
   end
 
   describe "#update_payment_status" do
-    it "creates a one-time payment and marks the invoice succeeded" do
-      result = service.update_payment_status(
+    subject(:result) do
+      described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         status: paystack_payment.status,
-        paystack_payment:
+        paystack_payment:,
+        amount_cents:
       )
+    end
 
+    let(:amount_cents) { nil }
+
+    it "creates a one-time payment and marks the invoice succeeded" do
       expect(result).to be_success
       expect(result.payment).to have_attributes(
         provider_payment_id: "4099260516",
@@ -60,17 +64,14 @@ RSpec.describe Invoices::Payments::PaystackService do
       )
     end
 
-    it "uses the provider-reported amount for a partial payment" do
-      result = service.update_payment_status(
-        organization_id: organization.id,
-        status: paystack_payment.status,
-        paystack_payment:,
-        amount_cents: 20_000
-      )
+    context "when the payment is partial" do
+      let(:amount_cents) { 20_000 }
 
-      expect(result).to be_success
-      expect(result.payment.amount_cents).to eq(20_000)
-      expect(invoice.reload.total_paid_amount_cents).to eq(20_000)
+      it "uses the provider-reported amount" do
+        expect(result).to be_success
+        expect(result.payment.amount_cents).to eq(20_000)
+        expect(invoice.reload.total_paid_amount_cents).to eq(20_000)
+      end
     end
 
     context "when the charge failed" do
@@ -88,12 +89,6 @@ RSpec.describe Invoices::Payments::PaystackService do
       end
 
       it "marks the invoice failed" do
-        result = service.update_payment_status(
-          organization_id: organization.id,
-          status: paystack_payment.status,
-          paystack_payment:
-        )
-
         expect(result).to be_success
         expect(result.payment.payable_payment_status).to eq("failed")
         expect(invoice.reload).to have_attributes(payment_status: "failed", ready_for_payment_processing: true)
@@ -102,6 +97,8 @@ RSpec.describe Invoices::Payments::PaystackService do
   end
 
   describe "#generate_payment_url" do
+    subject(:result) { described_class.call(:generate_payment_url, invoice, payment_intent) }
+
     let(:payment_intent) { create(:payment_intent, invoice:) }
     let(:client) { instance_double(PaymentProviders::Paystack::Client) }
 
@@ -113,10 +110,9 @@ RSpec.describe Invoices::Payments::PaystackService do
     end
 
     it "initializes hosted checkout" do
-      result = service.generate_payment_url(payment_intent)
-
       expect(result).to be_success
       expect(result.payment_url).to eq("https://checkout.paystack.com/test")
+      expect(result.provider_session_id).to be_nil
       expect(client).to have_received(:initialize_transaction).with(
         hash_including(amount: 50_000, currency: "NGN", reference: "lago-invoice-#{payment_intent.id}")
       )
@@ -126,8 +122,6 @@ RSpec.describe Invoices::Payments::PaystackService do
       before { invoice.update!(currency: "EUR") }
 
       it "returns a validation failure without calling Paystack" do
-        result = service.generate_payment_url(payment_intent)
-
         expect(result).not_to be_success
         expect(result.error.messages[:currency]).to eq(["unsupported_currency"])
         expect(client).not_to have_received(:initialize_transaction)

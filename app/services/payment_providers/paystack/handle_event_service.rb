@@ -51,10 +51,12 @@ module PaymentProviders
         payable = find_payable(verified_metadata)
         return result unless payable
         return result if payable.payment_succeeded?
-        return amount_mismatch_failure(payable, verified_transaction) unless amount_matches?(payable, verified_transaction)
         return currency_mismatch_failure(payable, verified_transaction) unless currency_matches?(payable, verified_transaction)
 
-        payment_service_class(verified_metadata).new(payable).update_payment_status(
+        log_amount_mismatch(payable, verified_transaction) unless amount_matches?(payable, verified_transaction)
+
+        payment_service_class(verified_metadata).call!(
+          :update_payment_status,
           organization_id: organization.id,
           status: verified_transaction["status"],
           amount_cents: verified_transaction["amount"],
@@ -68,7 +70,7 @@ module PaymentProviders
             currency: verified_transaction["currency"],
             gateway_response: verified_transaction["gateway_response"]
           )
-        ).raise_if_error!
+        )
 
         result
       end
@@ -183,23 +185,16 @@ module PaymentProviders
       end
 
       def amount_matches?(payable, transaction)
-        expected_amount = if payable.is_a?(Invoice)
-          payable.total_due_amount_cents
-        else
-          payable.total_amount_cents
-        end
-
-        transaction["amount"].to_i == expected_amount.to_i
+        transaction["amount"].to_i == payable_amount(payable).to_i
       end
 
       def currency_matches?(payable, transaction)
         transaction["currency"].to_s.upcase == payable.currency.to_s.upcase
       end
 
-      def amount_mismatch_failure(payable, transaction)
-        result.service_failure!(
-          code: "webhook_error",
-          message: "Paystack amount mismatch for #{payable.class.name} #{payable.id}: expected #{payable_amount(payable)}, got #{transaction["amount"]}"
+      def log_amount_mismatch(payable, transaction)
+        Rails.logger.warn(
+          "Paystack amount mismatch for #{payable.class.name} #{payable.id}: expected #{payable_amount(payable)}, got #{transaction["amount"]}"
         )
       end
 

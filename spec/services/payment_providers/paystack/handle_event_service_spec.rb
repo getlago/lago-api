@@ -156,11 +156,39 @@ RSpec.describe PaymentProviders::Paystack::HandleEventService do
         }
       end
 
-      it "rejects the event without creating a payment" do
-        expect { result }.not_to change(Payment, :count)
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("webhook_error")
-        expect(result.error.error_message).to include("Paystack amount mismatch")
+      before { allow(Rails.logger).to receive(:warn) }
+
+      it "logs the mismatch and records the verified amount" do
+        expect { result }.to change(Payment, :count).by(1)
+        expect(result).to be_success
+        expect(Payment.find_by(provider_payment_id: verified_transaction["id"].to_s).amount_cents).to eq(49_999)
+        expect(invoice.reload.total_paid_amount_cents).to eq(49_999)
+        expect(Rails.logger).to have_received(:warn).with(
+          "Paystack amount mismatch for Invoice #{invoice.id}: expected 50000, got 49999"
+        )
+      end
+    end
+
+    context "when the invoice balance changes after checkout starts" do
+      before do
+        create(
+          :payment,
+          organization:,
+          customer:,
+          payable: invoice,
+          amount_cents: 10_000,
+          amount_currency: "NGN",
+          payable_payment_status: "succeeded"
+        )
+        invoice.update!(total_paid_amount_cents: 10_000)
+      end
+
+      it "records the verified payment without retrying the event" do
+        expect(invoice.total_due_amount_cents).to eq(40_000)
+        expect { result }.to change(Payment, :count).by(1)
+        expect(result).to be_success
+        expect(Payment.find_by(provider_payment_id: verified_transaction["id"].to_s).amount_cents).to eq(50_000)
+        expect(invoice.reload.total_paid_amount_cents).to eq(60_000)
       end
     end
 

@@ -28,4 +28,10 @@ RSpec.describe PaymentProviderCustomers::PaystackCustomer do
       expect(described_class::PAYMENT_METHODS).to eq(["card"])
     end
   end
+
+  describe "#provider_payment_methods" do
+    it "returns the supported payment methods" do
+      expect(paystack_customer.provider_payment_methods).to eq(["card"])
+    end
+  end
 end

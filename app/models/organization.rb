@@ -254,8 +254,6 @@ class Organization < ApplicationRecord
       cashfree_payment_provider
     when "adyen"
       adyen_payment_provider
-    when "paystack"
-      paystack_payment_provider
     end
   end
 

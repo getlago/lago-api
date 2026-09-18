@@ -5,16 +5,20 @@ module PaymentRequests
     class PaystackService < BaseService
       include Customers::PaymentProviderFinder
       include Updatable
+      include TypedResults
 
       PROVIDER_NAME = "Paystack"
 
-      def initialize(payable = nil)
+      RESULTS = {
+        generate_payment_url: BaseResult[:payment_url],
+        update_payment_status: BaseResult[:payment, :payable]
+      }.freeze
+
+      private
+
+      def generate_payment_url(payable)
         @payable = payable
 
-        super(nil)
-      end
-
-      def generate_payment_url
         return unsupported_currency_result unless supported_currency?(payable.currency)
 
         paystack_result = client.initialize_transaction(payment_url_payload)
@@ -37,6 +41,7 @@ module PaymentRequests
         payment ||= handle_missing_payment(organization_id, paystack_payment, amount_cents:)
         return result unless payment
 
+        @payable = payment.payable
         if payment.payable.payment_succeeded?
           if payment.persisted?
             result.payment = payment
@@ -75,8 +80,6 @@ module PaymentRequests
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
       end
-
-      private
 
       attr_accessor :payable
 

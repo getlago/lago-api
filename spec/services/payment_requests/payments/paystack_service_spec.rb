@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::PaystackService do
-  subject(:service) { described_class.new(payment_request) }
-
   let(:organization) { create(:organization) }
   let(:code) { "paystack_1" }
   let(:payment_provider) { create(:paystack_provider, organization:, code:) }
@@ -40,13 +38,16 @@ RSpec.describe PaymentRequests::Payments::PaystackService do
   end
 
   describe "#update_payment_status" do
-    it "creates a one-time payment and marks the payment request succeeded" do
-      result = service.update_payment_status(
+    subject(:result) do
+      described_class.call(
+        :update_payment_status,
         organization_id: organization.id,
         status: paystack_payment.status,
         paystack_payment:
       )
+    end
 
+    it "creates a one-time payment and marks the payment request succeeded" do
       expect(result).to be_success
       expect(result.payment).to have_attributes(
         provider_payment_id: "4099260516",
@@ -59,6 +60,8 @@ RSpec.describe PaymentRequests::Payments::PaystackService do
   end
 
   describe "#generate_payment_url" do
+    subject(:result) { described_class.call(:generate_payment_url, payment_request) }
+
     let(:client) { instance_double(PaymentProviders::Paystack::Client) }
 
     before do
@@ -69,8 +72,6 @@ RSpec.describe PaymentRequests::Payments::PaystackService do
     end
 
     it "initializes hosted checkout" do
-      result = service.generate_payment_url
-
       expect(result).to be_success
       expect(result.payment_url).to eq("https://checkout.paystack.com/test")
       expect(client).to have_received(:initialize_transaction).with(
@@ -82,8 +83,6 @@ RSpec.describe PaymentRequests::Payments::PaystackService do
       before { payment_request.update!(amount_currency: "EUR") }
 
       it "returns a validation failure without calling Paystack" do
-        result = service.generate_payment_url
-
         expect(result).not_to be_success
         expect(result.error.messages[:currency]).to eq(["unsupported_currency"])
         expect(client).not_to have_received(:initialize_transaction)

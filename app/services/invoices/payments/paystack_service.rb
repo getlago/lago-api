@@ -4,14 +4,16 @@ module Invoices
   module Payments
     class PaystackService < BaseService
       include Customers::PaymentProviderFinder
+      include TypedResults
 
       PROVIDER_NAME = "Paystack"
 
-      def initialize(invoice = nil)
-        @invoice = invoice
+      RESULTS = {
+        update_payment_status: BaseResult[:payment, :invoice],
+        generate_payment_url: BaseResult[:payment_url, :provider_session_id]
+      }.freeze
 
-        super
-      end
+      private
 
       def update_payment_status(organization_id:, status:, paystack_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: paystack_payment.id)
@@ -24,6 +26,7 @@ module Invoices
         payment ||= handle_missing_payment(organization_id, paystack_payment, amount_cents:)
         return result unless payment
 
+        @invoice = payment.payable
         result.payment = payment
         result.invoice = payment.payable
         return result if payment.payable.payment_succeeded?
@@ -56,7 +59,9 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
+      def generate_payment_url(invoice, payment_intent)
+        @invoice = invoice
+
         return unsupported_currency_result unless supported_currency?(invoice.currency)
 
         paystack_result = client.initialize_transaction(payment_url_payload(payment_intent))
@@ -67,8 +72,6 @@ module Invoices
       rescue LagoHttpClient::HttpError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.error_body)
       end
-
-      private
 
       attr_accessor :invoice
 
