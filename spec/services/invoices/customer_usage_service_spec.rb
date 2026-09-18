@@ -1065,8 +1065,6 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         )
       end
 
-      # Started on a bucket wall, so nothing but the lifetime window itself keeps this read
-      # off the buckets: the alignment guard passes.
       let(:subscription) { create(:subscription, plan:, customer:, started_at: window_start) }
 
       before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
@@ -1080,7 +1078,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       context "when the buckets are reachable" do
         before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
 
-        it "is refused for the window itself, rather than for the alignment guard it passes" do
+        it "is refused for the window itself, which the provider rules out before the fetch" do
           usage_service.call
 
           expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
