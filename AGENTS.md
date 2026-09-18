@@ -173,7 +173,8 @@ To create a webhook:
 
 ## Clickhouse migrations
 
-- Clickhouse migrations live in `db/clickhouse_migrate/` (self-hosted). The DDL for ClickHouse Cloud is kept separately in `db/clickhouse_migrate/cloud/*.sql`; those files are executed manually when creating a new cluster, so they are edited in place to reflect the current schema.
+- Clickhouse migrations live in `db/clickhouse_migrate/` (self-hosted). The DDL for ClickHouse Cloud is kept separately in `db/clickhouse_migrate/cloud/*.sql`; those files are executed manually, in filename order, when creating a new cluster.
+- Changing the schema of a Clickhouse Cloud table that already exists in production requires a new numbered `db/clickhouse_migrate/cloud/*.sql` script holding the `ALTER`, not an edit to the original creation script: creation scripts only ever run on new clusters, so an in-place edit never reaches an existing one. Edit a creation script in place only when it does not change a deployed table (e.g. fixing invalid DDL).
 - Clickhouse DDL is not transactional. Keep one DDL concern per migration (e.g. one index): if a migration runs several statements and a later one fails, the earlier ones are already applied while the migration is marked as failed.
 - Define explicit `up` and `down` methods (not `change`), and make `down` revert the DDL (e.g. `DROP INDEX IF EXISTS`). Use `IF NOT EXISTS` / `IF EXISTS` guards so retries are idempotent.
 
