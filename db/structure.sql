@@ -160,6 +160,7 @@ ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_8eeaaf6494;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_8da4c18005;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
@@ -194,6 +195,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_775eb0ecd8;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_7734750af9;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_7616c2aca1;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_752665cc51;
@@ -372,6 +374,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_fees_contract_rate_card_contract;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
@@ -771,6 +774,8 @@ DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
 DROP INDEX IF EXISTS public.index_fees_on_group_id;
 DROP INDEX IF EXISTS public.index_fees_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_fees_on_deleted_at;
+DROP INDEX IF EXISTS public.index_fees_on_contract_rate_card_id;
+DROP INDEX IF EXISTS public.index_fees_on_contract_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_id_and_invoice_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
@@ -874,6 +879,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_id_and_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
@@ -1520,6 +1526,7 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 CREATE TYPE public.billing_segment_status AS ENUM (
     'pending',
+    'collecting',
     'processing',
     'done',
     'failed'
@@ -2633,7 +2640,7 @@ CREATE TABLE public.contract_rate_cards (
     contract_id uuid NOT NULL,
     rate_card_id uuid NOT NULL,
     billing_anchor_date date NOT NULL,
-    next_billing_at timestamp without time zone NOT NULL,
+    next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
     ended_date date,
     units numeric,
@@ -3742,7 +3749,11 @@ CREATE TABLE public.fees (
     original_fee_id uuid,
     rate_card_rate_id uuid,
     rate_override_id uuid,
-    product_filter_id uuid
+    product_filter_id uuid,
+    contract_id uuid,
+    contract_rate_card_id uuid,
+    display_on_invoice boolean DEFAULT true NOT NULL,
+    CONSTRAINT fees_contract_provenance_present_together CHECK (((contract_id IS NULL) = (contract_rate_card_id IS NULL)))
 );
 
 
@@ -8572,6 +8583,13 @@ CREATE INDEX index_contract_rate_cards_on_deleted_at ON public.contract_rate_car
 
 
 --
+-- Name: index_contract_rate_cards_on_id_and_contract_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contract_rate_cards_on_id_and_contract_id ON public.contract_rate_cards USING btree (id, contract_id);
+
+
+--
 -- Name: index_contract_rate_cards_on_next_billing_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9290,6 +9308,20 @@ CREATE INDEX index_fees_on_charge_id ON public.fees USING btree (charge_id);
 --
 
 CREATE INDEX index_fees_on_charge_id_and_invoice_id ON public.fees USING btree (charge_id, invoice_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_fees_on_contract_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_contract_id ON public.fees USING btree (contract_id);
+
+
+--
+-- Name: index_fees_on_contract_rate_card_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_contract_rate_card_id ON public.fees USING btree (contract_rate_card_id);
 
 
 --
@@ -11995,6 +12027,14 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 
 --
+-- Name: fees fk_fees_contract_rate_card_contract; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_fees_contract_rate_card_contract FOREIGN KEY (contract_rate_card_id, contract_id) REFERENCES public.contract_rate_cards(id, contract_id);
+
+
+--
 -- Name: payment_methods fk_rails_00e7a45b0b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13419,6 +13459,14 @@ ALTER TABLE ONLY public.integrations
 
 
 --
+-- Name: fees fk_rails_7616c2aca1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_7616c2aca1 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: commitments fk_rails_76ceb88c74; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13688,6 +13736,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 
 ALTER TABLE ONLY public.usage_monitoring_alerts
     ADD CONSTRAINT fk_rails_8c18828b53 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: fees fk_rails_8da4c18005; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_8da4c18005 FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -14905,6 +14961,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260918125239'),
+('20260918124413'),
+('20260916122921'),
 ('20260914145333'),
 ('20260914145022'),
 ('20260911144853'),
@@ -14912,6 +14971,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260910124306'),
 ('20260910124234'),
 ('20260910095513'),
+('20260909154904'),
 ('20260909103355'),
 ('20260908222044'),
 ('20260908211313'),

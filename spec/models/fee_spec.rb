@@ -10,6 +10,8 @@ RSpec.describe Fee do
   it { is_expected.to belong_to(:fixed_charge).optional }
   it { is_expected.to belong_to(:rate_card_rate).optional }
   it { is_expected.to belong_to(:rate_override).optional }
+  it { is_expected.to belong_to(:contract).optional }
+  it { is_expected.to belong_to(:contract_rate_card).optional }
   it { is_expected.to have_many(:presentation_breakdowns) }
   it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
   it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
@@ -18,6 +20,57 @@ RSpec.describe Fee do
   it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
   it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
+
+  describe "Scopes" do
+    describe ".displayed_on_invoice" do
+      let(:displayed_fee) { create(:fee, display_on_invoice: true) }
+      let(:hidden_fee) { create(:fee, display_on_invoice: false) }
+
+      before do
+        displayed_fee
+        hidden_fee
+      end
+
+      it "returns only displayed fees" do
+        expect(described_class.displayed_on_invoice).to eq([displayed_fee])
+      end
+    end
+  end
+
+  describe "contract provenance validation" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:other_contract) { create(:contract, organization:, customer:, external_id: "other-contract") }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract) }
+    let(:fee) { build(:fee, contract:, contract_rate_card:) }
+
+    it "rejects a contract rate card owned by another contract" do
+      expect(fee).not_to be_valid
+      expect(fee.errors[:contract_rate_card]).to eq(["must belong to the fee contract"])
+    end
+  end
+
+  describe "contract rate card history" do
+    let(:contract_rate_card) { create(:contract_rate_card) }
+    let(:fee) do
+      create(
+        :fee,
+        contract: contract_rate_card.contract,
+        contract_rate_card:,
+        organization: contract_rate_card.organization
+      )
+    end
+
+    before do
+      fee
+      contract_rate_card.discard!
+    end
+
+    it "resolves a discarded pricing attachment" do
+      expect(fee.reload.contract_rate_card).to eq(contract_rate_card)
+    end
+  end
 
   describe "#ordered_by_period" do
     let(:fee1) do

@@ -35,6 +35,8 @@ RSpec.describe Billing::Context do
       expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
+      expect(context.currency).to eq(subscription.plan.amount_currency)
+      expect(context.fees.proxy_association.owner).to eq(subscription)
       expect(context.anniversary?).to eq(subscription.anniversary?)
       expect(context).not_to respond_to(:plan)
     end
@@ -90,6 +92,8 @@ RSpec.describe Billing::Context do
       expect(context.subscription_at).to eq(contract.started_at)
       expect(context.started_at).to eq(contract.started_at)
       expect(context.organization).to eq(contract.organization)
+      expect(context.currency).to eq(contract.currency)
+      expect(context.fees.proxy_association.owner).to eq(contract)
     end
 
     it "prevents using contract identity in subscription queries" do

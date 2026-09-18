@@ -47,13 +47,16 @@ module Fees
         :pay_in_advance?,
         :prorated?,
         :invoiceable?,
+        :regroup_paid_fees_invoice?,
+        :display_on_invoice?,
+        :fee_match_attributes,
         :applied_pricing_unit,
         to: :source
 
       delegate :filters, to: :invoiceable
       delegate :charge_model, to: :pricing_structure
 
-      %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
+      %i[billing_segment charge_filter product_filter contract contract_rate_card rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
           source.public_send(attribute) if source.respond_to?(attribute)
         end
@@ -110,6 +113,12 @@ module Fees
 
       def filtered_for_charge_boundaries
         properties = boundaries.to_h
+        if billing_segment
+          %w[from_datetime to_datetime charges_from_datetime charges_to_datetime].each do |key|
+            value = properties[key]
+            properties[key] = value.iso8601(6) if value.respond_to?(:usec)
+          end
+        end
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil

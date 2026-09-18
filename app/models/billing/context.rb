@@ -27,6 +27,7 @@ module Billing
       :date_diff_with_timezone,
       :calendar?,
       :anniversary?,
+      :fees,
       to: :record
 
     def subscription_id
@@ -37,6 +38,12 @@ module Billing
 
     def contract_id
       contract&.id
+    end
+
+    def currency
+      return subscription.plan.amount_currency if subscription?
+
+      contract.currency
     end
 
     def applicable_billing_entity

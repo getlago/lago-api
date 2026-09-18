@@ -297,6 +297,8 @@ module Fees
         organization_id: billing_context.organization_id,
         billing_entity_id: billing_context.applicable_billing_entity_id,
         subscription:,
+        contract: selected_metered_item.contract,
+        contract_rate_card: selected_metered_item.contract_rate_card,
         # A segment's product can have an optional legacy charge (including discarded charges).
         # TODO: Decide whether to assign that charge here; segment-backed fees currently receive nil.
         charge: selected_metered_item.billing_segment ? nil : selected_metered_item.charge,
@@ -311,10 +313,10 @@ module Fees
         rate_card_rate: selected_metered_item.rate_card_rate,
         rate_override: selected_metered_item.rate_override,
         product_filter: selected_metered_item.product_filter,
+        display_on_invoice: selected_metered_item.billing_segment ? selected_metered_item.display_on_invoice? : true,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
-        # TODO: Review which fee properties billing segments should expose.
-        properties: selected_metered_item.billing_segment ? {} : selected_metered_item.filtered_for_charge_boundaries,
+        properties: selected_metered_item.filtered_for_charge_boundaries,
         events_count: amount_result.count,
         payment_status: :pending,
         taxes_amount_cents: 0,

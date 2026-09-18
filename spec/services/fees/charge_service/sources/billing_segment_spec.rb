@@ -56,8 +56,27 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     it "exposes product fee attributes individually" do
       expect(source).to have_attributes(
         fee_type: :product, invoiceable: product, contract: billing_segment.contract,
-        rate_card_rate:, rate_override: nil
+        contract_rate_card:, rate_card_rate:, rate_override: nil
       )
+    end
+  end
+
+  describe "invoice policy" do
+    let(:rate_card) do
+      build(
+        :rate_card,
+        :advance,
+        organization:,
+        product:,
+        currency: "USD",
+        display_on_invoice: false,
+        regroup_paid_fees: :invoice
+      )
+    end
+
+    it "reads visibility and regrouping from the segment rate card" do
+      expect(source.display_on_invoice?).to be(false)
+      expect(source.regroup_paid_fees_invoice?).to be(true)
     end
   end
 

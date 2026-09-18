@@ -21,6 +21,7 @@ module Fees
           :elapsed_period_ratio,
           :rate,
           :contract,
+          :contract_rate_card,
           :rate_card_rate,
           :rate_override,
           :pricing_unit,
@@ -28,6 +29,7 @@ module Fees
 
         delegate :charge, :charge_id, to: :product
         delegate :billable_metric, to: :product
+        delegate :display_on_invoice?, :regroup_paid_fees_invoice?, to: :rate_card
 
         def fee_type
           :product
@@ -112,7 +114,19 @@ module Fees
         end
 
         def invoiceable?
-          rate_card.display_on_invoice?
+          display_on_invoice?
+        end
+
+        def fee_match_attributes
+          {
+            contract_id: billing_segment.contract_id,
+            contract_rate_card_id: billing_segment.contract_rate_card_id,
+            invoiceable_type: product.class.polymorphic_name,
+            invoiceable_id: product.id,
+            product_filter_id: rate_card.product_filter_id,
+            rate_card_rate_id: billing_segment.rate_card_rate_id,
+            rate_override_id: billing_segment.rate_override_id
+          }
         end
 
         def applied_pricing_unit
