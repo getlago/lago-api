@@ -57,7 +57,7 @@ RSpec.describe RealtimeUsage::HourlyBreakdownService, clickhouse: {clean_before:
       )
       expect(result.usage.hours.map { |hour| hour.units.to_f }).to eq([15.0, 0.0, 3.0, 1.0])
       expect(result.usage.from_datetime).to eq(Time.zone.parse("2026-08-24 09:00:00"))
-      expect(result.usage.to_datetime).to eq(to_datetime)
+      expect(result.usage.to_datetime).to eq(Time.zone.parse("2026-08-24 12:15:00"))
     end
 
     it "breaks every hour down by charge filter, biggest filter first" do
@@ -114,6 +114,43 @@ RSpec.describe RealtimeUsage::HourlyBreakdownService, clickhouse: {clean_before:
       expect(result.usage.timezone).to eq("Asia/Kolkata")
       expect(result.usage.hours.first.time).to eq(Time.zone.parse("2026-08-24 08:30:00"))
       expect(result.usage.hours.map { |hour| hour.units.to_f }).to eq([2.0, 8.0, 0.0, 0.0])
+    end
+  end
+
+  context "when to_datetime sits inside a bucket" do
+    let(:to_datetime) { Time.zone.parse("2026-08-24 12:05:00") }
+
+    before { insert_bucket(bucket: Time.zone.parse("2026-08-24 12:00:00"), units: 7) }
+
+    it "reports the end of that bucket, the span the summed units describe" do
+      expect(result.usage.to_datetime).to eq(Time.zone.parse("2026-08-24 12:15:00"))
+      expect(result.usage.hours.last.units.to_f).to eq(7.0)
+    end
+  end
+
+  context "when to_datetime sits on a bucket wall" do
+    let(:to_datetime) { Time.zone.parse("2026-08-24 12:00:00") }
+
+    before { insert_bucket(bucket: Time.zone.parse("2026-08-24 12:00:00"), units: 7) }
+
+    it "keeps the requested end and leaves out the bucket opening on it" do
+      expect(result.usage.to_datetime).to eq(to_datetime)
+      expect(result.usage.hours.map(&:time).last).to eq(Time.zone.parse("2026-08-24 11:00:00"))
+      expect(result.usage.filters).to be_empty
+    end
+  end
+
+  context "when clickhouse is unreachable" do
+    before do
+      allow(Clickhouse::UsageBucket).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(Sentry).to receive(:capture_exception)
+    end
+
+    it "fails rather than raising, and reports the outage" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ServiceFailure)
+      expect(result.error.code).to eq("usage_buckets_read_failure")
+      expect(Sentry).to have_received(:capture_exception).with(an_instance_of(ActiveRecord::ConnectionNotEstablished))
     end
   end
 

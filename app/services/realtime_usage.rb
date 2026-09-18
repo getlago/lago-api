@@ -5,6 +5,16 @@
 module RealtimeUsage
   SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg max_agg latest_agg].freeze
 
+  BUCKET_DURATION = 15.minutes
+
+  # What the ClickHouse driver raises on a connection it cannot use, plus the two errors the
+  # retry helper and the row mapping raise on their own.
+  READ_ERRORS = [
+    *Events::Stores::Utils::ClickhouseConnection::RETRYABLE_ERRORS,
+    Events::Stores::Clickhouse::MemoryLimitError,
+    JSON::ParserError
+  ].freeze
+
   # percentage and custom walk individual events; dynamic needs precise amounts the buckets
   # do not carry.
   SUPPORTED_CHARGE_MODELS = %w[standard graduated package volume graduated_percentage].freeze
