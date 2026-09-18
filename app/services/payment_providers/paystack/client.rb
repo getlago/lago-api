@@ -79,6 +79,7 @@ module PaymentProviders
         if parsed_response["status"] == false
           raise Error.new(
             message: parsed_response["message"].presence || "Paystack request failed",
+            code: parsed_response["code"].presence || "paystack_error",
             response: parsed_response
           )
         end

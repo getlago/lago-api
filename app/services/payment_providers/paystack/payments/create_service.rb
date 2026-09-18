@@ -8,7 +8,8 @@ module PaymentProviders
 
         def initialize(payment:, reference:, metadata:)
           @payment = payment
-          @reference = reference
+          # The shared factory passes a display label; Paystack needs a stable transaction reference.
+          @reference = "lago-payment-#{payment.id}"
           @metadata = metadata
           @provider_customer = payment.payment_provider_customer
 
@@ -17,18 +18,42 @@ module PaymentProviders
 
         def call
           result.payment = payment
+          return result if payment.reload.succeeded?
           return unsupported_currency_result unless supported_currency?
+          return reconcile_payment if payment.provider_payment_data&.dig("verification_required")
           return create_hosted_checkout_payment if authorization_code.blank?
 
-          paystack_result = client.charge_authorization(charge_authorization_payload)
+          process_payment(client.charge_authorization(charge_authorization_payload))
+        rescue PaymentProviders::Paystack::Client::Error => e
+          return reconcile_payment if duplicate_reference?(e.message, code: e.code)
+
+          prepare_failed_result(error_message: e.message, error_code: e.code)
+        rescue LagoHttpClient::HttpError => e
+          return reconcile_payment if duplicate_reference?(e.json_message["message"], code: e.json_message["code"])
+          raise RetriableError, e.message if e.error_code.to_i == 429 || e.error_code.to_i >= 500
+
+          prepare_failed_result(error_message: e.error_body, error_code: e.error_code)
+        rescue *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES, Net::WriteTimeout => e
+          raise RetriableError, e.message
+        end
+
+        private
+
+        attr_reader :payment, :reference, :metadata, :provider_customer
+
+        def process_payment(paystack_result)
           paystack_payment = paystack_result["data"] || {}
           status = paystack_payment["status"].presence || "failed"
 
-          payment.provider_payment_id = paystack_payment["id"]&.to_s || paystack_payment["reference"]
-          payment.status = status
-          payment.payable_payment_status = paystack_payment_provider.payable_payment_status(status)
-          payment.provider_payment_data = provider_payment_data(paystack_payment)
-          payment.save!
+          payment.with_lock do
+            return result if payment.succeeded?
+
+            payment.provider_payment_id = paystack_payment["id"]&.to_s || paystack_payment["reference"]
+            payment.status = status
+            payment.payable_payment_status = paystack_payment_provider.payable_payment_status(status)
+            payment.provider_payment_data = provider_payment_data(paystack_payment)
+            payment.save!
+          end
 
           update_payment_method(paystack_payment["authorization"]) if payment.payable_payment_status == "succeeded"
           return result if payment.payable_payment_status != "failed"
@@ -37,18 +62,52 @@ module PaymentProviders
             error_message: paystack_payment["gateway_response"].presence || paystack_result["message"].presence || "Paystack payment failed",
             error_code: status
           )
-        rescue PaymentProviders::Paystack::Client::Error => e
-          prepare_failed_result(error_message: e.message, error_code: e.code)
-        rescue LagoHttpClient::HttpError => e
-          raise Invoices::Payments::RateLimitError, e if e.error_code.to_i == 429
-          raise Invoices::Payments::ConnectionError, e if e.error_code.to_i >= 500
-
-          prepare_failed_result(error_message: e.error_body, error_code: e.error_code)
         end
 
-        private
+        def duplicate_reference?(message, code:)
+          code == "duplicate_reference" ||
+            message.to_s.downcase.start_with?("duplicate transaction reference", "duplicate charge request for reference")
+        end
 
-        attr_reader :payment, :reference, :metadata, :provider_customer
+        def reconcile_payment
+          payment.with_lock do
+            return result if payment.succeeded?
+
+            payment.update!(provider_payment_data: payment.provider_payment_data.to_h.merge("verification_required" => true))
+          end
+
+          response = client.verify_transaction(reference)
+          transaction = response["data"]
+          unless verified_payment_matches?(transaction)
+            raise RetriableError, "Paystack verification does not match payment #{payment.id}"
+          end
+
+          status = paystack_payment_provider.payable_payment_status(transaction["status"])
+          unless %w[succeeded failed].include?(status)
+            raise RetriableError, "Paystack transaction #{reference} is not settled"
+          end
+
+          process_payment(response)
+        rescue PaymentProviders::Paystack::Client::Error, LagoHttpClient::HttpError, JSON::ParserError,
+          *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES, Net::WriteTimeout => e
+          raise RetriableError, e.message
+        end
+
+        def verified_payment_matches?(transaction)
+          return false unless transaction.is_a?(Hash)
+
+          transaction_metadata = transaction["metadata"]
+          transaction_metadata = JSON.parse(transaction_metadata) if transaction_metadata.is_a?(String)
+          return false unless transaction_metadata.is_a?(Hash)
+
+          identity_keys = %i[lago_payment_id lago_customer_id lago_organization_id lago_payment_provider_id]
+
+          transaction["id"].present? &&
+            transaction["reference"] == reference &&
+            transaction["amount"].to_s == payment.amount_cents.to_s &&
+            transaction["currency"].to_s.upcase == payment.amount_currency.upcase &&
+            transaction_metadata.symbolize_keys.slice(*identity_keys) == enriched_metadata.slice(*identity_keys)
+        end
 
         def create_hosted_checkout_payment
           paystack_result = client.initialize_transaction(hosted_checkout_payload)
@@ -149,11 +208,15 @@ module PaymentProviders
         end
 
         def prepare_failed_result(error_message:, error_code:, reraise: false)
+          payment.with_lock do
+            return result if payment.succeeded?
+
+            payment.update!(status: "failed", payable_payment_status: "failed")
+          end
+
           result.error_message = error_message
           result.error_code = error_code
           result.reraise = reraise
-
-          payment.update!(status: "failed", payable_payment_status: "failed")
 
           result.service_failure!(code: "paystack_error", message: error_message)
         end
