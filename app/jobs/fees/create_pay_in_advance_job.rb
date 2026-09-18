@@ -22,21 +22,28 @@ module Fees
 
     unique :until_executed, on_conflict: :log
 
-    def perform(charge:, event:, billing_at: nil)
-      result = Fees::CreatePayInAdvanceService.call(charge:, event:, billing_at:)
+    def perform(charge: nil, metered_item: nil, event: nil, billing_at: nil)
+      result = Fees::CreatePayInAdvanceService.call(
+        metered_item: pay_in_advance_arguments.metered_item,
+        billing_at:
+      )
 
       return if !result.success? && tax_error?(result)
 
       result.raise_if_error!
     end
 
-    def lock_key_arguments
-      args = arguments.first
-      event = Events::CommonFactory.new_instance(source: args[:event])
-      [args[:charge], event.organization_id, event.external_subscription_id, event.transaction_id]
-    end
+    delegate :lock_key_arguments, to: :pay_in_advance_arguments
 
     private
+
+    def pay_in_advance_arguments
+      @pay_in_advance_arguments ||= PayInAdvanceArguments.new(
+        metered_item: arguments.first.with_indifferent_access[:metered_item],
+        charge: arguments.first.with_indifferent_access[:charge],
+        event: arguments.first.with_indifferent_access[:event]
+      )
+    end
 
     def tax_error?(result)
       return false unless result.error.is_a?(BaseService::ValidationFailure)

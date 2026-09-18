@@ -2,20 +2,29 @@
 
 module Fees
   class ChargeService
-    MeteredItem = Data.define(:source) do
-      def self.from_charge(charge:, boundaries:, charge_filter: nil, properties: nil)
+    MeteredItem = Data.define(:source, :event) do
+      def initialize(source:, event: nil)
+        if event && !event.is_a?(Events::Common)
+          raise ArgumentError, "event must be wrapped in Events::Common"
+        end
+
+        super
+      end
+
+      def self.from_charge(charge:, boundaries:, charge_filter: nil, properties: nil, event: nil)
         new(
           source: Sources::Charge.new(
             charge:,
             boundaries:,
             charge_filter:,
             properties_override: properties
-          )
+          ),
+          event:
         )
       end
 
-      def self.from_billing_segment(billing_segment)
-        new(source: Sources::BillingSegment.new(billing_segment:))
+      def self.from_billing_segment(billing_segment, product_filter: nil, event: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
       end
 
       delegate :charge,
@@ -57,9 +66,9 @@ module Fees
         selected_filter&.id
       end
 
-      # The source determines which buckets have pricing, independently of the matching filter set.
+      # Charge sources resolve the event's matching filter before selecting the bucket.
       def pricing_buckets
-        source.pricing_buckets.map { |bucket| with(source: bucket) }
+        source.pricing_buckets(event:).map { |bucket| with(source: bucket) }
       end
 
       def aggregation_options(current_usage:)
@@ -69,6 +78,10 @@ module Fees
           is_current_usage: current_usage,
           is_pay_in_advance: pay_in_advance?
         }
+      end
+
+      def with_event(event:)
+        with(event:)
       end
 
       def with_filter(filter, **options)

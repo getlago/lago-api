@@ -5,12 +5,11 @@ require "rails_helper"
 RSpec.describe Fees::CreatePayInAdvanceJob do
   let(:charge) { create(:standard_charge, :pay_in_advance) }
   let(:event) { create(:event) }
-
   let(:result) { Fees::CreatePayInAdvanceService::Result.new }
 
   it "delegates to the pay_in_advance aggregation service" do
     allow(Fees::CreatePayInAdvanceService).to receive(:call)
-      .with(charge:, event:, billing_at: nil)
+      .with(metered_item: instance_of(Fees::ChargeService::MeteredItem), billing_at: nil)
       .and_return(result)
 
     described_class.perform_now(charge:, event:)

@@ -13,7 +13,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
 
     before do
       allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call)
-        .with(charge:, event:, timestamp:)
+        .with(metered_item: instance_of(Fees::ChargeService::MeteredItem), timestamp:)
         .and_return(result)
     end
 

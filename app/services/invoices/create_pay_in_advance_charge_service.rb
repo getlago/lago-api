@@ -4,9 +4,8 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     Result = BaseResult[:invoice, :invoice_id]
 
-    def initialize(charge:, event:, timestamp:)
-      @charge = charge
-      @event = Events::CommonFactory.new_instance(source: event)
+    def initialize(timestamp:, metered_item:)
+      @metered_item = metered_item
       @timestamp = timestamp
 
       super
@@ -74,8 +73,9 @@ module Invoices
 
     private
 
-    attr_accessor :timestamp, :charge, :event, :invoice
+    attr_accessor :timestamp, :invoice, :metered_item
 
+    delegate :charge, :event, to: :metered_item
     delegate :subscription, to: :event
     delegate :customer, to: :subscription
 
@@ -99,7 +99,7 @@ module Invoices
     end
 
     def generate_fees
-      Fees::CreatePayInAdvanceService.call!(charge:, event:, estimate: true).tap do |fee_result|
+      Fees::CreatePayInAdvanceService.call!(metered_item:, estimate: true).tap do |fee_result|
         result.invoice_id = fee_result.invoice_id
       end
     end

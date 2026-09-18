@@ -100,7 +100,31 @@ module Fees
     end
 
     def estimated_charge_fees(charge)
-      Fees::CreatePayInAdvanceService.call!(charge:, event:, estimate: true).fees
+      metered_item = Fees::ChargeService::MeteredItem.from_charge(
+        charge:,
+        boundaries:,
+        event:
+      )
+      Fees::CreatePayInAdvanceService.call!(metered_item:, estimate: true).fees
+    end
+
+    def boundaries
+      @boundaries ||= begin
+        date_service = Subscriptions::DatesService.new_instance(
+          subscriptions.first,
+          event.timestamp,
+          current_usage: true
+        )
+
+        BillingPeriodBoundaries.new(
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+          charges_duration: date_service.charges_duration_in_days,
+          timestamp: event.timestamp
+        )
+      end
     end
 
     def apply_taxes(fees)
