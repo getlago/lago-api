@@ -102,7 +102,7 @@ RSpec.describe Events::Stores::Provider do
     context "when the read is narrower than a whole charge and filter" do
       subject(:provider) do
         described_class.new(
-          organization:, billing_context:, current_usage: true, serve_from_buckets: true, narrowed_read: true
+          organization:, billing_context:, current_usage: true, serve_from_buckets: true, partial_charge_read: true
         )
       end
 
@@ -399,7 +399,7 @@ RSpec.describe Events::Stores::Provider do
           current_usage: true,
           serve_from_buckets: true,
           boundaries: billing_boundaries,
-          narrowed_read: true
+          partial_charge_read: true
         )
       end
 

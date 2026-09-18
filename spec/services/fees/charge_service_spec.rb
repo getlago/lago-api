@@ -4740,7 +4740,7 @@ RSpec.describe Fees::ChargeService, :premium do
         current_usage: true,
         serve_from_buckets: true,
         boundaries:,
-        narrowed_read: usage_filters.filter_by_group.present?
+        partial_charge_read: usage_filters.filter_by_group.present?
       )
     end
 

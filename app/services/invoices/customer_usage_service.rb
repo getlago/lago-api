@@ -170,7 +170,7 @@ module Invoices
         current_usage: true,
         boundaries:,
         serve_from_buckets: use_usage_buckets && !usage_filters.full_usage,
-        narrowed_read: usage_filters.filter_by_group.present?
+        partial_charge_read: usage_filters.filter_by_group.present?
       )
     end
 

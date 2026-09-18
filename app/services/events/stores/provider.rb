@@ -3,16 +3,14 @@
 module Events
   module Stores
     class Provider
-      # `narrowed_read` says the computation asks for less than the whole usage of a charge and
-      # its filter, which is the granularity a precomputed source answers at.
       def initialize(organization:, billing_context:, current_usage: false, serve_from_buckets: false,
-        boundaries: nil, narrowed_read: false)
+        boundaries: nil, partial_charge_read: false)
         @organization = organization
         @billing_context = billing_context
         @current_usage = current_usage
         @serve_from_buckets = serve_from_buckets
         @boundaries = boundaries
-        @narrowed_read = narrowed_read
+        @partial_charge_read = partial_charge_read
       end
 
       attr_reader :billing_context
@@ -48,7 +46,7 @@ module Events
 
         @may_precompute = current_usage &&
           serve_from_buckets &&
-          !narrowed_read &&
+          !partial_charge_read &&
           RealtimeUsage.enabled?(organization) &&
           !RealtimeUsage.deduplicated?(organization)
       end
@@ -70,7 +68,7 @@ module Events
 
       private
 
-      attr_reader :organization, :current_usage, :serve_from_buckets, :boundaries, :narrowed_read
+      attr_reader :organization, :current_usage, :serve_from_buckets, :boundaries, :partial_charge_read
 
       def served_from_buckets?(metered_item:, boundaries:, filters: {})
         return false unless may_precompute?

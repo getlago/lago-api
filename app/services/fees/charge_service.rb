@@ -491,7 +491,7 @@ module Fees
         organization: billing_context.organization,
         billing_context:,
         current_usage: options.current_usage?,
-        narrowed_read: options.usage_filters.filter_by_group.present?
+        partial_charge_read: options.usage_filters.filter_by_group.present?
       )
     end
 
