@@ -9,16 +9,6 @@ module RealtimeUsage
   class FetchBucketsService < BaseService
     Result = BaseResult[:usage_buckets]
 
-    BUCKET_SIZE = 15.minutes
-
-    # What the ClickHouse driver raises on a connection it cannot use, plus the two errors the
-    # retry helper and the row mapping raise on their own.
-    READ_ERRORS = [
-      *Events::Stores::Utils::ClickhouseConnection::RETRYABLE_ERRORS,
-      Events::Stores::Clickhouse::MemoryLimitError,
-      JSON::ParserError
-    ].freeze
-
     def initialize(subscription:, boundaries:)
       @subscription = subscription
       @boundaries = boundaries
