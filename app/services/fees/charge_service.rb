@@ -123,10 +123,8 @@ module Fees
     #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
     #       on draft invoices can target filters without any usage.
     #       Recurring metrics always aggregate as usage carries over from previous periods.
-    #
-    #       The pre-filtering reads the events store, which lags the pre-aggregated buckets
-    #       independently, so a filter the buckets already hold usage for has to be aggregated
-    #       rather than zeroed.
+    #       The pre-filtering reads the events store, which lags the buckets independently, so a
+    #       filter the buckets already hold usage for is aggregated rather than zeroed.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
@@ -140,7 +138,8 @@ module Fees
       if cache_middleware
         cache_middleware.call(
           charge_filter: selected_metered_item.charge_filter,
-          bypass: bypass_cache?(selected_metered_item:)
+          # Precomputed usage is already fresh, caching it would put back the staleness it removes.
+          bypass: precomputed?(selected_metered_item:)
         ) do
           fees = compute_fees(selected_metered_item:)
           if fees.nil?
@@ -448,22 +447,16 @@ module Fees
       true
     end
 
-    # The aggregator answers from a source that is already fresh, so caching its fees would put
-    # back the staleness that source removes.
-    def bypass_cache?(selected_metered_item:)
-      precomputed?(selected_metered_item:)
-    end
-
-    # Asking the aggregator means building it, which a cache hit would otherwise not need, so the
-    # provider is asked first whether any answer of its own could be precomputed.
+    # The provider is asked first: building the aggregator is wasted work when no answer of the
+    # provider could be precomputed anyway.
     def precomputed?(selected_metered_item:)
       return false unless provider.may_precompute?
 
       aggregator(selected_metered_item:).precomputed?
     end
 
-    # One instance per pricing bucket, shared by the cache bypass decision, the aggregation and
-    # the zero-units hydration, so the three cannot disagree on where the units come from.
+    # One instance per pricing bucket, shared by the cache bypass, the aggregation and the
+    # zero-units hydration, so the three cannot disagree on where the units come from.
     def aggregator(selected_metered_item:)
       @aggregators ||= {}
       @aggregators[selected_metered_item] ||= build_aggregator(selected_metered_item)

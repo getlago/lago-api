@@ -27,9 +27,7 @@ module Events
             store,
             usage_buckets:,
             charge_id: metered_item.charge.id,
-            # The sink writes `COALESCE(charge_filter_id, '')`, while the unfiltered fee carries an
-            # unpersisted ChargeFilter whose id is nil.
-            charge_filter_id: filters[:charge_filter]&.id || ""
+            charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
           )
         else
           store
@@ -65,8 +63,8 @@ module Events
 
       attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters
 
-      # A lifetime window opens on `subscription.started_at`, which the window guard below cannot
-      # tell apart from a first billing period.
+      # A full usage window opens on `subscription.started_at`, which `same_window_as_prefetch?`
+      # cannot tell apart from a first billing period.
       def whole_charge_read?
         !usage_filters.full_usage && usage_filters.filter_by_group.blank?
       end
@@ -86,8 +84,7 @@ module Events
           filters[:event].blank? &&
           filters[:presentation_by].blank?
 
-        # Asked last, so the ClickHouse read stays off a plan no charge of which can use it. A set
-        # holding no row for this charge is served as no usage, never as a pipeline that lags.
+        # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
         !usage_buckets.nil?
       end
 
@@ -99,7 +96,7 @@ module Events
       end
 
       # `call` rather than `call!`: an unreachable ClickHouse has to make current usage slow,
-      # not broken, and a nil set reads events.
+      # not broken. A nil set falls back to the events store.
       def usage_buckets
         return @usage_buckets if defined?(@usage_buckets)
 
