@@ -99,10 +99,30 @@ RSpec.describe Events::Stores::Provider do
       end
     end
 
-    context "when the read is narrower than a whole charge and filter" do
+    context "when the read is restricted to some pricing group values" do
       subject(:provider) do
         described_class.new(
-          organization:, billing_context:, current_usage: true, serve_from_buckets: true, partial_charge_read: true
+          organization:,
+          billing_context:,
+          current_usage: true,
+          serve_from_buckets: true,
+          usage_filters: UsageFilters.new(filter_by_group: {"region" => "us"})
+        )
+      end
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the read covers the whole lifetime of the subscription" do
+      subject(:provider) do
+        described_class.new(
+          organization:,
+          billing_context:,
+          current_usage: true,
+          serve_from_buckets: true,
+          usage_filters: UsageFilters.new(full_usage: true)
         )
       end
 
@@ -391,7 +411,7 @@ RSpec.describe Events::Stores::Provider do
       end
     end
 
-    context "when the read is narrowed to one pricing group" do
+    context "when the read is restricted to some pricing group values" do
       subject(:provider) do
         described_class.new(
           organization:,
@@ -399,7 +419,7 @@ RSpec.describe Events::Stores::Provider do
           current_usage: true,
           serve_from_buckets: true,
           boundaries: billing_boundaries,
-          partial_charge_read: true
+          usage_filters: UsageFilters.new(filter_by_group: {"region" => "us"})
         )
       end
 

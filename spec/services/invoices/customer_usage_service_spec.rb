@@ -1073,12 +1073,14 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(usage.fees.first).to have_attributes(units: 2)
       end
 
-      it "keeps the provider off the buckets, rather than relying on the window alignment" do
-        allow(Events::Stores::Provider).to receive(:new).and_call_original
+      context "when the buckets are reachable" do
+        before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
 
-        usage_service.call
+        it "is refused for the window itself, rather than for the alignment guard it passes" do
+          usage_service.call
 
-        expect(Events::Stores::Provider).to have_received(:new).with(hash_including(serve_from_buckets: false))
+          expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+        end
       end
     end
 

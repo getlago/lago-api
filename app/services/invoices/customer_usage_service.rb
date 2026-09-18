@@ -161,16 +161,14 @@ module Invoices
         .fees
     end
 
-    # A lifetime window is refused here, as it opens on `subscription.started_at`, which nothing
-    # downstream can tell apart from a first billing period.
     def provider
       @provider ||= Events::Stores::Provider.new(
         organization:,
         billing_context: Billing::Context.from(subscription:),
         current_usage: true,
         boundaries:,
-        serve_from_buckets: use_usage_buckets && !usage_filters.full_usage,
-        partial_charge_read: usage_filters.filter_by_group.present?
+        serve_from_buckets: use_usage_buckets,
+        usage_filters:
       )
     end
 

@@ -4,13 +4,13 @@ module Events
   module Stores
     class Provider
       def initialize(organization:, billing_context:, current_usage: false, serve_from_buckets: false,
-        boundaries: nil, partial_charge_read: false)
+        boundaries: nil, usage_filters: UsageFilters::NONE)
         @organization = organization
         @billing_context = billing_context
         @current_usage = current_usage
         @serve_from_buckets = serve_from_buckets
         @boundaries = boundaries
-        @partial_charge_read = partial_charge_read
+        @usage_filters = usage_filters
       end
 
       attr_reader :billing_context
@@ -46,7 +46,7 @@ module Events
 
         @may_precompute = current_usage &&
           serve_from_buckets &&
-          !partial_charge_read &&
+          whole_charge_read? &&
           RealtimeUsage.enabled?(organization) &&
           !RealtimeUsage.deduplicated?(organization)
       end
@@ -68,7 +68,14 @@ module Events
 
       private
 
-      attr_reader :organization, :current_usage, :serve_from_buckets, :boundaries, :partial_charge_read
+      attr_reader :organization, :current_usage, :serve_from_buckets, :boundaries, :usage_filters
+
+      # A lifetime window opens on `subscription.started_at`, which nothing downstream tells apart
+      # from a first billing period. A read restricted to some pricing group values asks for less
+      # than the charge total the buckets hold.
+      def whole_charge_read?
+        !usage_filters.full_usage && usage_filters.filter_by_group.blank?
+      end
 
       def served_from_buckets?(metered_item:, boundaries:, filters: {})
         return false unless may_precompute?
