@@ -1053,6 +1053,27 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
+    context "with a projected read" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          calculate_projected_usage: true,
+          use_usage_buckets: true
+        )
+      end
+
+      before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+
+      it "counts the events, which the projection re-aggregates from at presentation time" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
+    end
+
     context "with a lifetime window", :premium do
       subject(:usage_service) do
         described_class.new(
