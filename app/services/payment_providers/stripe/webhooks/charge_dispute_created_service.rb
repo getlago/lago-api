@@ -40,9 +40,11 @@ module PaymentProviders
           return @current_dispute = nil if api_key.blank?
 
           @current_dispute = ::Stripe::Dispute.retrieve(event.data.object.id, {api_key:})
-        rescue ::Stripe::StripeError => e
-          # NOTE: best effort, fall back to the payload so that a stripe outage never stops us
-          #       from recording the dispute.
+        rescue ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, ::Stripe::PermissionError => e
+          # NOTE: retrying these never changes the answer, so fall back to the payload rather
+          #       than dead-queueing the event. Transient errors are deliberately left to
+          #       propagate: HandleEventJob retries them, and falling back to a possibly stale
+          #       payload is what this lookup exists to prevent.
           Rails.logger.warn("Unable to retrieve stripe dispute #{event.data.object.id}: #{e.message}")
           @current_dispute = nil
         end

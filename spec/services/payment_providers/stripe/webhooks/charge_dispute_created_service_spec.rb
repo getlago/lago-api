@@ -106,11 +106,33 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
           end
         end
 
-        context "when stripe cannot be reached" do
+        [::Stripe::APIConnectionError, ::Stripe::RateLimitError].each do |error_class|
+          context "when the dispute lookup raises a transient #{error_class} error" do
+            before do
+              allow(::Stripe::Dispute).to receive(:retrieve).and_raise(error_class.new("boom"))
+            end
+
+            # NOTE: HandleEventJob retries these, so propagating gets us the authoritative
+            #       state instead of acting on a payload that may be stale.
+            it "propagates the error instead of using the payload" do
+              expect { service.call }.to raise_error(error_class)
+            end
+
+            it "leaves the invoice untouched" do
+              suppress(error_class) { service.call }
+
+              expect(payable.reload.payment_refund_blocked_at).to be_nil
+            end
+          end
+        end
+
+        context "when the dispute cannot be read at all" do
           before do
-            allow(::Stripe::Dispute).to receive(:retrieve).and_raise(::Stripe::APIConnectionError.new("boom"))
+            allow(::Stripe::Dispute).to receive(:retrieve)
+              .and_raise(::Stripe::InvalidRequestError.new("no such dispute", {}))
           end
 
+          # NOTE: retrying never changes the answer, so the payload is the best we have.
           it "falls back to the event payload and blocks refunds" do
             expect { service.call && payable.reload }
               .to change(payable, :payment_refund_blocked_at).from(nil)
