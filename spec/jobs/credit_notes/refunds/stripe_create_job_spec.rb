@@ -25,7 +25,8 @@ RSpec.describe CreditNotes::Refunds::StripeCreateJob do
   describe "retry_on" do
     [
       ::Stripe::RateLimitError.new("rate limited"),
-      ::Stripe::APIConnectionError.new("connection reset")
+      ::Stripe::APIConnectionError.new("connection reset"),
+      ::Stripe::APIError.new("stripe is down")
     ].each do |error|
       error_class = error.class
 
