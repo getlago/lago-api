@@ -3,20 +3,25 @@
 require "rails_helper"
 
 RSpec.describe WalletsQuery do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end
 
   let(:returned_ids) { result.wallets.pluck(:id) }
-  let(:organization) { create :organization }
-  let(:customer_1) { create :customer, organization:, external_id: "customer_1" }
-  let(:customer_2) { create :customer, organization:, external_id: "customer_2" }
   let(:wallet_1) { create :wallet, customer: customer_1 }
   let(:wallet_2) { create :wallet, customer: customer_1 }
   let(:wallet_3) { create :wallet, customer: customer_2 }
   let(:wallet_4) { create :wallet }
   let(:pagination) { {page: 1, limit: 10} }
   let(:filters) { nil }
+
+  let_it_be(:organization) { create :organization }
+  let_it_be(:customer_1) { create :customer, organization:, external_id: "customer_1" }
+  let_it_be(:customer_2) { create :customer, organization:, external_id: "customer_2" }
 
   before do
     wallet_1
@@ -110,11 +115,11 @@ RSpec.describe WalletsQuery do
   end
 
   context "when filtering by billing_entity_ids" do
-    let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
-    let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+    let_it_be(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+    let_it_be(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
 
-    let(:customer_eu) { create(:customer, organization:, billing_entity: billing_entity_eu) }
-    let(:customer_us) { create(:customer, organization:, billing_entity: billing_entity_us) }
+    let_it_be(:customer_eu) { create(:customer, organization:, billing_entity: billing_entity_eu) }
+    let_it_be(:customer_us) { create(:customer, organization:, billing_entity: billing_entity_us) }
 
     let(:wallet_eu_direct) { create(:wallet, customer: customer_us, billing_entity: billing_entity_eu) }
     let(:wallet_eu_fallback) { create(:wallet, customer: customer_eu, billing_entity: nil) }

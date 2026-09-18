@@ -8,15 +8,15 @@ RSpec.describe PaymentRequestsQuery do
   end
 
   let(:returned_ids) { result.payment_requests.pluck(:id) }
+  let(:payment_request_first) { create(:payment_request, organization:) }
+  let(:payment_request_second) { create(:payment_request, organization:, customer:) }
 
   let(:pagination) { nil }
   let(:filters) { {} }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:payment_request_first) { create(:payment_request, organization:) }
-  let(:payment_request_second) { create(:payment_request, organization:, customer:) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     payment_request_first
@@ -97,14 +97,14 @@ RSpec.describe PaymentRequestsQuery do
   end
 
   context "when filtering by billing_entity_ids" do
-    let(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
-    let(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
+    let_it_be(:billing_entity_eu) { create(:billing_entity, organization:, code: "EU") }
+    let_it_be(:billing_entity_us) { create(:billing_entity, organization:, code: "US") }
 
-    let(:customer_first) { create(:customer, organization:) }
-    let(:customer_second) { create(:customer, organization:) }
+    let_it_be(:customer_first) { create(:customer, organization:) }
+    let_it_be(:customer_second) { create(:customer, organization:) }
 
-    let(:invoice_eu) { create(:invoice, organization:, customer: customer_first, billing_entity: billing_entity_eu) }
-    let(:invoice_us) { create(:invoice, organization:, customer: customer_second, billing_entity: billing_entity_us) }
+    let_it_be(:invoice_eu) { create(:invoice, organization:, customer: customer_first, billing_entity: billing_entity_eu) }
+    let_it_be(:invoice_us) { create(:invoice, organization:, customer: customer_second, billing_entity: billing_entity_us) }
 
     let(:payment_request_first) do
       create(:payment_request, organization:, customer: customer_first, invoices: [invoice_eu])

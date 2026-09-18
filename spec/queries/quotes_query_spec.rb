@@ -8,13 +8,14 @@ RSpec.describe QuotesQuery do
   end
 
   let(:returned_ids) { result.quotes.pluck(:id) }
-  let(:pagination) { nil }
-  let(:filters) { {} }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote_draft) { create(:quote, :with_version, organization:, customer:, created_at: 8.days.ago) }
   let(:quote_approved) { create(:quote, :with_version, version_trait: :approved, organization:, customer:, created_at: 6.days.ago) }
   let(:quote_voided) { create(:quote, :with_version, version_trait: :voided, organization:, customer:, created_at: 4.days.ago) }
+  let(:pagination) { nil }
+  let(:filters) { {} }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     quote_draft

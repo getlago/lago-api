@@ -8,16 +8,16 @@ RSpec.describe PaymentMethodsQuery do
   end
 
   let(:returned_ids) { result.payment_methods.pluck(:id) }
+  let(:payment_method_first) { create(:payment_method, organization:) }
+  let(:payment_method_second) { create(:payment_method, organization:, customer:) }
+  let(:payment_method_third) { create(:payment_method, organization:, deleted_at: Time.current) }
 
   let(:pagination) { nil }
   let(:filters) { {} }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:payment_method_first) { create(:payment_method, organization:) }
-  let(:payment_method_second) { create(:payment_method, organization:, customer:) }
-  let(:payment_method_third) { create(:payment_method, organization:, deleted_at: Time.current) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     payment_method_first

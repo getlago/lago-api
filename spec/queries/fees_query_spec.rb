@@ -3,14 +3,18 @@
 require "rails_helper"
 
 RSpec.describe FeesQuery do
+  before_all do
+    create_default(:invoice)
+  end
+
   subject(:fees_query) { described_class.new(organization:, pagination:, filters:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:pagination) { nil }
   let(:filters) { {} }
 
   describe "call" do
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let(:fee) { create(:fee, subscription:, invoice: nil) }
 
@@ -104,7 +108,7 @@ RSpec.describe FeesQuery do
 
     context "with billable metric code filter" do
       let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:plan) { create(:plan, organization:) }
+      let(:plan) { create_default(:plan) }
       let(:charge) { create(:standard_charge, billable_metric:, plan:) }
 
       let(:fee) { create(:charge_fee, charge:, subscription:, invoice: nil) }
