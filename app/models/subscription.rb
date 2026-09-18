@@ -8,7 +8,7 @@ class Subscription < ApplicationRecord
   include Terminatable
   include ConnectionResolvable
 
-  self.ignored_columns += %w[incompleted_at cancelation_reason]
+  self.ignored_columns += %w[incompleted_at]
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
