@@ -1,0 +1,26 @@
+-- case: customer_light (list) phase: after selective: true
+-- filters: {"external_customer_id":"perf-cust-0-23830"} search_term: nil page: 1
+-- runs_ms: [0.1, 0.1, 0.1]
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."customer_id" = '<uuid>' ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=604.70..604.75 rows=20 width=330) (actual time=0.099..0.101 rows=20 loops=1)
+  Buffers: shared hit=265
+  ->  Sort  (cost=604.70..604.85 rows=60 width=330) (actual time=0.099..0.100 rows=20 loops=1)
+        Sort Key: payments.created_at DESC, payments.id
+        Sort Method: top-N heapsort  Memory: 35kB
+        Buffers: shared hit=265
+        ->  Index Scan using index_payments_on_customer_id on payments  (cost=0.43..603.11 rows=60 width=330) (actual time=0.015..0.089 rows=52 loops=1)
+              Index Cond: ((customer_id IS NOT NULL) AND (customer_id = '<uuid>'::uuid))
+              Filter: ((payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 2
+              Buffers: shared hit=265
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.001..0.001 rows=1 loops=52)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=208
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.156 ms
+Execution Time: 0.127 ms

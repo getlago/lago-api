@@ -1,0 +1,49 @@
+-- case: provider_common (count) phase: baseline selective: false
+-- filters: {"payment_provider_type":["stripe"]} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payment_provider_id" IN (SELECT "payment_providers"."id" FROM "payment_providers" WHERE "payment_providers"."type" = 'PaymentProviders::StripeProvider')
+
+Aggregate  (cost=10310486.17..10310486.18 rows=1 width=8) (actual time=23418.391..23418.393 rows=1 loops=1)
+  Buffers: shared hit=15222443 read=177244
+  I/O Timings: shared/local read=1926.515
+  ->  Nested Loop  (cost=40674.58..10306746.30 rows=1495948 width=0) (actual time=325.795..23282.201 rows=3962686 loops=1)
+        Buffers: shared hit=15222443 read=177244
+        I/O Timings: shared/local read=1926.515
+        ->  Seq Scan on payment_providers  (cost=0.00..6.06 rows=51 width=16) (actual time=74.349..74.595 rows=51 loops=1)
+              Filter: ((type)::text = 'PaymentProviders::StripeProvider'::text)
+              Rows Removed by Filter: 34
+              Buffers: shared hit=1 read=4
+              I/O Timings: shared/local read=0.031
+        ->  Bitmap Heap Scan on payments  (cost=40674.58..201800.16 rows=29279 width=16) (actual time=183.153..450.675 rows=77700 loops=51)
+              Recheck Cond: ((payment_provider_id = payment_providers.id) AND (organization_id = '<org-uuid>'::uuid))
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 744
+              Heap Blocks: exact=157639
+              Buffers: shared hit=15222442 read=177240
+              I/O Timings: shared/local read=1926.484
+              ->  BitmapAnd  (cost=40674.58..40674.58 rows=58557 width=0) (actual time=182.868..182.868 rows=0 loops=51)
+                    Buffers: shared hit=33756 read=5279
+                    I/O Timings: shared/local read=30.058
+                    ->  Bitmap Index Scan on index_payments_on_payment_provider_id  (cost=0.00..634.21 rows=76961 width=0) (actual time=1.782..1.782 rows=104764 loops=51)
+                          Index Cond: (payment_provider_id = payment_providers.id)
+                          Buffers: shared hit=106 read=4606
+                          I/O Timings: shared/local read=26.728
+                    ->  Bitmap Index Scan on idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (cost=0.00..39409.49 rows=4986492 width=0) (actual time=180.599..180.599 rows=5000000 loops=51)
+                          Index Cond: (organization_id = '<org-uuid>'::uuid)
+                          Buffers: shared hit=33650 read=673
+                          I/O Timings: shared/local read=3.331
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=3800752)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=15177885 read=25123
+                      I/O Timings: shared/local read=953.838
+Planning:
+  Buffers: shared hit=16 read=4
+  I/O Timings: shared/local read=0.038
+Planning Time: 0.703 ms
+JIT:
+  Functions: 18
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.965 ms, Inlining 9.764 ms, Optimization 32.404 ms, Emission 32.281 ms, Total 76.415 ms
+Execution Time: 23420.570 ms
