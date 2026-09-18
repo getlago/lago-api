@@ -15,12 +15,17 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
 
   # NOTE: by default stripe reports the same state as the event payload
   let(:current_is_charge_refundable) { is_charge_refundable }
+  let(:current_disputes) do
+    [{id: "dp_123456", object: "dispute", is_charge_refundable: current_is_charge_refundable}]
+  end
 
   before do
     allow(::Payments::OpenDisputeService).to receive(:call).and_call_original
     allow(::Payments::CloseDisputeService).to receive(:call).and_call_original
-    allow(::Stripe::Dispute).to receive(:retrieve).and_return(
-      ::Stripe::Dispute.construct_from(id: "dp_123456", is_charge_refundable: current_is_charge_refundable)
+    allow(::Stripe::Dispute).to receive(:list).and_return(
+      ::Stripe::ListObject.construct_from(
+        object: "list", url: "/v1/disputes", has_more: false, data: current_disputes
+      )
     )
   end
 
@@ -109,7 +114,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
         [::Stripe::APIConnectionError, ::Stripe::RateLimitError].each do |error_class|
           context "when the dispute lookup raises a transient #{error_class} error" do
             before do
-              allow(::Stripe::Dispute).to receive(:retrieve).and_raise(error_class.new("boom"))
+              allow(::Stripe::Dispute).to receive(:list).and_raise(error_class.new("boom"))
             end
 
             # NOTE: HandleEventJob retries these, so propagating gets us the authoritative
@@ -128,7 +133,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
 
         context "when the dispute cannot be read at all" do
           before do
-            allow(::Stripe::Dispute).to receive(:retrieve)
+            allow(::Stripe::Dispute).to receive(:list)
               .and_raise(::Stripe::InvalidRequestError.new("no such dispute", {}))
           end
 
@@ -136,6 +141,31 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
           it "falls back to the event payload and blocks refunds" do
             expect { service.call && payable.reload }
               .to change(payable, :payment_refund_blocked_at).from(nil)
+          end
+        end
+
+        context "when another dispute on the payment intent still blocks refunds" do
+          # NOTE: this dispute went refundable, but a second one on the same charge did not.
+          let(:is_charge_refundable) { true }
+          let(:current_disputes) do
+            [
+              {id: "dp_refundable", object: "dispute", is_charge_refundable: true},
+              {id: "dp_blocking", object: "dispute", is_charge_refundable: false}
+            ]
+          end
+          let(:payable) do
+            create(:invoice, :refund_blocked, customer:, organization:, status:, payment_status: "succeeded")
+          end
+
+          it "keeps refunds blocked" do
+            expect { service.call && payable.reload }
+              .not_to change(payable, :payment_refund_blocked_at)
+          end
+
+          it "does not unblock refunds" do
+            service.call
+
+            expect(::Payments::CloseDisputeService).not_to have_received(:call)
           end
         end
 

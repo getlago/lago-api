@@ -13,7 +13,21 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
   let(:payment) { create(:payment, payable:, provider_payment_id: intent_id) }
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
 
-  before { allow(::Payments::LoseDisputeService).to receive(:call).and_call_original }
+  # NOTE: by default stripe reports the same state as the closing event
+  let(:current_is_charge_refundable) { true }
+  let(:current_disputes) do
+    [{id: "dp_123456", object: "dispute", is_charge_refundable: current_is_charge_refundable}]
+  end
+
+  before do
+    allow(::Payments::LoseDisputeService).to receive(:call).and_call_original
+    allow(::Payments::CloseDisputeService).to receive(:call).and_call_original
+    allow(::Stripe::Dispute).to receive(:list).and_return(
+      ::Stripe::ListObject.construct_from(
+        object: "list", url: "/v1/disputes", has_more: false, data: current_disputes
+      )
+    )
+  end
 
   ["2020-08-27", "2025-04-30.basil"].each do |version|
     describe "#call" do
@@ -160,6 +174,37 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
         end
       end
 
+      context "when a stale close arrives while another dispute still blocks refunds" do
+        let(:payable) do
+          create(:invoice, :refund_blocked, customer:, organization:, status: "finalized", payment_status: "succeeded")
+        end
+        # NOTE: the closing dispute reports the charge as refundable, but a newer dispute on the
+        #       same payment intent does not.
+        let(:current_disputes) do
+          [
+            {id: "dp_closed", object: "dispute", is_charge_refundable: true},
+            {id: "dp_newer", object: "dispute", is_charge_refundable: false}
+          ]
+        end
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/charge_dispute_closed.json", version:) do |h|
+            h[:data][:object][:payment_intent] = intent_id
+            h[:data][:object][:status] = "won"
+            h[:data][:object][:is_charge_refundable] = true
+          end
+        end
+
+        it "does not unblock refunds" do
+          expect { service.call && payable.reload }.not_to change(payable, :payment_refund_blocked_at)
+        end
+
+        it "does not call CloseDisputeService" do
+          service.call
+
+          expect(::Payments::CloseDisputeService).not_to have_received(:call)
+        end
+      end
+
       context "when the payment belongs to another organization" do
         let(:other_organization) { create(:organization) }
         let(:other_customer) { create(:customer, organization: other_organization) }
@@ -222,6 +267,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
         context "when the dispute is lost" do
           let(:status) { "lost" }
           let(:is_charge_refundable) { false }
+          let(:current_is_charge_refundable) { false }
 
           # NOTE: the charge stays unrefundable, so the flag must survive and keep blocking refunds
           #       even if marking the invoice as dispute lost fails.

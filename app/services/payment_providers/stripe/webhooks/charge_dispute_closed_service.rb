@@ -4,22 +4,22 @@ module PaymentProviders
   module Stripe
     module Webhooks
       class ChargeDisputeClosedService < BaseService
-        def call
-          status = event.data.object.status
-          reason = event.data.object.reason
-          provider_payment_id = event.data.object.payment_intent
+        include DisputeRefundability
 
-          # NOTE: scoped to the organization, a stripe api key can be shared across several
-          #       of them, and the dispute must not reach another organization's invoices.
-          payment = Payment.where(organization_id: organization.id).find_by(provider_payment_id:)
+        def call
           return result unless payment
 
-          # NOTE: on a lost dispute the charge stays unrefundable, so the open flag is left in
-          #       place and payment_dispute_lost_at takes over as the permanent refund block.
-          ::Payments::CloseDisputeService.call(payment:) if event.data.object[:is_charge_refundable]
+          # NOTE: unblock only once no dispute on the payment blocks refunds any more. On a lost
+          #       dispute the charge stays unrefundable, and payment_dispute_lost_at takes over
+          #       as the permanent refund block.
+          ::Payments::CloseDisputeService.call(payment:) if charge_refundable?
 
-          if status == "lost"
-            return ::Payments::LoseDisputeService.call(payment:, payment_dispute_lost_at:, reason:)
+          if event.data.object.status == "lost"
+            return ::Payments::LoseDisputeService.call(
+              payment:,
+              payment_dispute_lost_at:,
+              reason: event.data.object.reason
+            )
           end
 
           result
