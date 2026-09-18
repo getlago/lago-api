@@ -29,6 +29,10 @@ module Customers
         )
       end
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: args[:payment_term], net_payment_term: args[:net_payment_term]).valid?
+        return result
+      end
+
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
       original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys

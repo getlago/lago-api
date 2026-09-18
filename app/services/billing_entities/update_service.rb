@@ -19,6 +19,10 @@ module BillingEntities
     def call
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term], net_payment_term: params[:net_payment_term]).valid?
+        return result
+      end
+
       original_attributes = billing_entity.attributes
       old_tax_codes = billing_entity.taxes.pluck(:code)
 
