@@ -55,10 +55,8 @@ module EventDestinations
         usage = usages[subscription]
 
         if usage.nil?
-          # Same source as the usage Customers::RefreshWalletsService hands over when it delivers
-          # inline, so one event does not carry a different number depending on where it ran. The
-          # presentation breakdowns this drops are not serialized, and keeping them would make the
-          # provider refuse to serve the charges that carry them.
+          # Same arguments as the inline delivery in Customers::RefreshWalletsService: the event must
+          # not differ by path, and the presentation breakdowns would keep the buckets from serving.
           usage_result = ::Invoices::CustomerUsageService.call(
             customer:,
             subscription:,

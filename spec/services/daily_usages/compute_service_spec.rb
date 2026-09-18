@@ -54,7 +54,7 @@ RSpec.describe DailyUsages::ComputeService do
       context "with the usage service spied on" do
         before { allow(Invoices::CustomerUsageService).to receive(:call).and_call_original }
 
-        it "computes the usage from the events, as the row it persists cannot be corrected later" do
+        it "computes the usage from the events, not the buckets" do
           travel_to(timestamp) { compute_service.call }
 
           expect(Invoices::CustomerUsageService).to have_received(:call).with(hash_excluding(use_usage_buckets: true))

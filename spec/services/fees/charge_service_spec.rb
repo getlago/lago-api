@@ -4754,14 +4754,28 @@ RSpec.describe Fees::ChargeService, :premium do
         .and_return(RealtimeUsage::FetchBucketsService::Result.new.tap { it.usage_buckets = usage_buckets })
     end
 
-    it "bills what the store answers without reading a single event" do
-      result = charge_subscription_service.call
-      expect(result).to be_success
+    context "with an event in the window the buckets do not account for" do
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+      end
 
-      expect(result.fees.first).to have_attributes(units: 12, events_count: 3, amount_cents: 24_000)
+      it "bills what the buckets answer without reading a single event" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first).to have_attributes(units: 12, events_count: 3, amount_cents: 24_000)
+      end
     end
 
-    it "bypasses the charge cache, whose staleness the precomputed store removes" do
+    it "bypasses the charge cache" do
       charge_subscription_service.call
 
       expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
