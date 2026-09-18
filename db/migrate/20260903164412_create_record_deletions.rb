@@ -12,9 +12,9 @@ class CreateRecordDeletions < ActiveRecord::Migration[8.0]
       t.datetime :deleted_at, null: false, default: -> { "CURRENT_TIMESTAMP" }
       t.timestamps default: -> { "CURRENT_TIMESTAMP" }
 
-      t.index %i[organization_id deleted_at], name: "idx_lookup_on_record_deletions"
-      t.index :deleted_at, name: "idx_retention_on_record_deletions"
-      t.index :updated_at, name: "idx_sync_cursor_on_record_deletions"
+      t.index %i[organization_id deleted_at]
+      t.index :deleted_at
+      t.index :updated_at
     end
   end
 end

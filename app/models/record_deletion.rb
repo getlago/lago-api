@@ -22,9 +22,9 @@ end
 #
 # Indexes
 #
-#  idx_lookup_on_record_deletions       (organization_id,deleted_at)
-#  idx_retention_on_record_deletions    (deleted_at)
-#  idx_sync_cursor_on_record_deletions  (updated_at)
+#  index_record_deletions_on_deleted_at                      (deleted_at)
+#  index_record_deletions_on_organization_id_and_deleted_at  (organization_id,deleted_at)
+#  index_record_deletions_on_updated_at                      (updated_at)
 #
 # Foreign Keys
 #

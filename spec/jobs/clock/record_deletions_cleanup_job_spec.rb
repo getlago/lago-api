@@ -12,7 +12,7 @@ describe Clock::RecordDeletionsCleanupJob do
   describe ".perform" do
     context "when tombstones are older than the retention period" do
       it "removes them" do
-        create(:record_deletion, deleted_at: 3.months.ago)
+        create(:record_deletion, deleted_at: 2.months.ago)
 
         expect { cleanup_job.perform_now }.to change(RecordDeletion, :count).to(0)
       end
@@ -20,7 +20,7 @@ describe Clock::RecordDeletionsCleanupJob do
 
     context "when tombstones are newer than the retention period" do
       it "keeps them" do
-        create(:record_deletion, deleted_at: 7.weeks.ago)
+        create(:record_deletion, deleted_at: 3.weeks.ago)
 
         expect { cleanup_job.perform_now }.not_to change(RecordDeletion, :count)
       end
@@ -30,7 +30,7 @@ describe Clock::RecordDeletionsCleanupJob do
       before { stub_const("#{described_class}::BATCH_SIZE", 2) }
 
       it "removes them all" do
-        create_list(:record_deletion, 3, deleted_at: 3.months.ago)
+        create_list(:record_deletion, 3, deleted_at: 2.months.ago)
 
         expect { cleanup_job.perform_now }.to change(RecordDeletion, :count).to(0)
       end

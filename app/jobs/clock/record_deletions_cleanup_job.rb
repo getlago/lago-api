@@ -5,7 +5,7 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     BATCH_SIZE = 10_000
-    RETENTION_PERIOD = 2.months
+    RETENTION_PERIOD = 1.month
 
     def perform
       loop do

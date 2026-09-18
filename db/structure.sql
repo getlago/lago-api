@@ -515,6 +515,9 @@ DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
+DROP INDEX IF EXISTS public.index_record_deletions_on_updated_at;
+DROP INDEX IF EXISTS public.index_record_deletions_on_organization_id_and_deleted_at;
+DROP INDEX IF EXISTS public.index_record_deletions_on_deleted_at;
 DROP INDEX IF EXISTS public.index_rate_phases_on_rate_override_id;
 DROP INDEX IF EXISTS public.index_rate_phases_on_plan_rate_card_id_and_position;
 DROP INDEX IF EXISTS public.index_rate_phases_on_plan_rate_card_id_and_code;
@@ -994,9 +997,7 @@ DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
-DROP INDEX IF EXISTS public.idx_sync_cursor_on_record_deletions;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
-DROP INDEX IF EXISTS public.idx_retention_on_record_deletions;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_pif_values_on_filter_metric_filter_and_value;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge_filter;
@@ -1046,7 +1047,6 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_b
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
-DROP INDEX IF EXISTS public.idx_lookup_on_record_deletions;
 DROP INDEX IF EXISTS public.idx_invoices_organization_id_status;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
@@ -7489,13 +7489,6 @@ CREATE INDEX idx_invoices_organization_id_status ON public.invoices USING btree 
 
 
 --
--- Name: idx_lookup_on_record_deletions; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_lookup_on_record_deletions ON public.record_deletions USING btree (organization_id, deleted_at);
-
-
---
 -- Name: idx_on_billing_entity_id_724373e5ae; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7839,24 +7832,10 @@ CREATE UNIQUE INDEX idx_privileges_code_unique_per_feature ON public.entitlement
 
 
 --
--- Name: idx_retention_on_record_deletions; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_retention_on_record_deletions ON public.record_deletions USING btree (deleted_at);
-
-
---
 -- Name: idx_subscription_unique; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_subscription_unique ON public.usage_monitoring_subscription_activities USING btree (subscription_id);
-
-
---
--- Name: idx_sync_cursor_on_record_deletions; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_sync_cursor_on_record_deletions ON public.record_deletions USING btree (updated_at);
 
 
 --
@@ -11214,6 +11193,27 @@ CREATE UNIQUE INDEX index_rate_phases_on_plan_rate_card_id_and_position ON publi
 --
 
 CREATE UNIQUE INDEX index_rate_phases_on_rate_override_id ON public.rate_phases USING btree (rate_override_id) WHERE ((rate_override_id IS NOT NULL) AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_record_deletions_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_record_deletions_on_deleted_at ON public.record_deletions USING btree (deleted_at);
+
+
+--
+-- Name: index_record_deletions_on_organization_id_and_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_record_deletions_on_organization_id_and_deleted_at ON public.record_deletions USING btree (organization_id, deleted_at);
+
+
+--
+-- Name: index_record_deletions_on_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_record_deletions_on_updated_at ON public.record_deletions USING btree (updated_at);
 
 
 --
