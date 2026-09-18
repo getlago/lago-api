@@ -4876,6 +4876,42 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(result.fees.first.units).to eq(0)
         expect(Subscriptions::ChargeCacheService).to have_received(:call)
       end
+
+      context "when the cache is warm" do
+        let(:read_at) { boundaries.charges_from_datetime + 2.days }
+
+        let(:second_computation) do
+          described_class.new(
+            invoice:,
+            metered_item:,
+            billing_context:,
+            cache_middleware:,
+            provider:,
+            options: described_class::Options.new(context: :current_usage, usage_filters:)
+          )
+        end
+
+        before do
+          create(
+            :clickhouse_events_enriched,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: boundaries.charges_from_datetime + 1.day,
+            value: "4.0",
+            decimal_value: 4.0
+          )
+
+          travel_to(read_at) { charge_subscription_service.call }
+          allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+        end
+
+        it "reads the warm cache without building an aggregator the provider would refuse" do
+          travel_to(read_at) { expect(second_computation.call).to be_success }
+
+          expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+        end
+      end
     end
 
     context "when the read is narrowed to one pricing group" do

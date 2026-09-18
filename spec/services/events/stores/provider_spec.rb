@@ -330,16 +330,15 @@ RSpec.describe Events::Stores::Provider do
     context "when the window holds no bucket at all" do
       let(:bucket_set) { Events::Stores::UsageBucketSet.new }
 
-      it "serves no usage, rather than asking the events store whether the pipeline lags" do
-        expect(store).to be_a(Events::Stores::UsageBucketStore)
-        expect(store.sum.value).to eq(0)
+      it "reads events, as an empty set is no proof the pipeline wrote this window" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
     context "when the window holds buckets for another charge only" do
       let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[create(:standard_charge).id, ""] => totals}) }
 
-      it "serves no usage for this one, on the same rule" do
+      it "serves no usage for this one, the written window proving the pipeline is not lagging" do
         expect(store).to be_a(Events::Stores::UsageBucketStore)
         expect(store.sum.value).to eq(0)
       end

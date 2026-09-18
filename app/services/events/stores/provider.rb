@@ -44,6 +44,22 @@ module Events
           !RealtimeUsage.deduplicated?(organization)
       end
 
+      # Every gate a charge can be ruled out by before an aggregator and a store exist, so that
+      # a charge the buckets cannot answer costs nothing to skip.
+      def may_precompute_charge?(metered_item:, boundaries:)
+        return false unless may_precompute?
+        # The buckets are keyed by charge, and a billing segment is priced from its product
+        # rather than from the optional legacy charge that product may carry.
+        return false if metered_item.billing_segment
+
+        charge = metered_item.charge
+        return false if charge.nil?
+        return false if boundaries[:max_timestamp].present?
+        return false unless same_window_as_prefetch?(boundaries)
+
+        RealtimeUsage.supported_charge?(charge)
+      end
+
       def store_class
         @store_class ||= Events::Stores::StoreFactory.store_class(organization:)
       end
@@ -70,22 +86,15 @@ module Events
       end
 
       def served_from_buckets?(metered_item:, boundaries:, filters: {})
-        return false unless may_precompute?
-        # The buckets are keyed by charge, and a billing segment is priced from its product
-        # rather than from the optional legacy charge that product may carry.
-        return false if metered_item.billing_segment
-
-        charge = metered_item.charge
-        return false if charge.nil?
-        return false if boundaries[:max_timestamp].present?
-        return false unless same_window_as_prefetch?(boundaries)
-        return false unless RealtimeUsage.supported_charge?(charge)
+        return false unless may_precompute_charge?(metered_item:, boundaries:)
         return false unless filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&
           filters[:presentation_by].blank?
 
         # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
-        !usage_buckets.nil?
+        # An empty set is no proof the pipeline wrote this window, so it falls back to the events
+        # store rather than serving a zero a lagging pipeline cannot be told apart from.
+        usage_buckets.present?
       end
 
       def same_window_as_prefetch?(window)

@@ -447,10 +447,14 @@ module Fees
       true
     end
 
-    # The provider is asked first: building the aggregator is wasted work when no answer of the
-    # provider could be precomputed anyway.
+    # The provider is asked first, down to the per-charge gates: building the aggregator and its
+    # store is wasted work for a charge the buckets could never answer, and this runs before the
+    # charge cache is even read.
     def precomputed?(selected_metered_item:)
-      return false unless provider.may_precompute?
+      return false unless provider.may_precompute_charge?(
+        metered_item: selected_metered_item,
+        boundaries: aggregation_boundaries(selected_metered_item)
+      )
 
       aggregator(selected_metered_item:).precomputed?
     end

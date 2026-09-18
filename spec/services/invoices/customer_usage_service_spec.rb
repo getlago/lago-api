@@ -1019,14 +1019,18 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
     end
 
-    it "builds one provider for the whole computation, which reads clickhouse once" do
-      allow(Events::Stores::Provider).to receive(:new).and_call_original
-      allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original
+    context "with the provider and the bucket fetch spied on" do
+      before do
+        allow(Events::Stores::Provider).to receive(:new).and_call_original
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original
+      end
 
-      usage_service.call
+      it "builds one provider for the whole computation, which reads clickhouse once" do
+        usage_service.call
 
-      expect(Events::Stores::Provider).to have_received(:new).once
-      expect(RealtimeUsage::FetchBucketsService).to have_received(:call).once
+        expect(Events::Stores::Provider).to have_received(:new).once
+        expect(RealtimeUsage::FetchBucketsService).to have_received(:call).once
+      end
     end
 
     context "when the organization flag is off" do
