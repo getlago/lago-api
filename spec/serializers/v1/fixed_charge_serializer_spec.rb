@@ -9,6 +9,9 @@ RSpec.describe ::V1::FixedChargeSerializer do
   let(:fixed_charge) { create(:fixed_charge, properties:) }
   let(:properties) { {"amount" => "1000"} }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+
   it "serializes the object" do
     expect(result["fixed_charge"]["lago_id"]).to eq(fixed_charge.id)
     expect(result["fixed_charge"]["lago_add_on_id"]).to eq(fixed_charge.add_on_id)

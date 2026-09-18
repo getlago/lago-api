@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::OrderSerializer do
   subject(:serializer) { described_class.new(order, root_name: "order", includes:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) { create(:quote_version, organization:, quote:, currency: "EUR") }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }

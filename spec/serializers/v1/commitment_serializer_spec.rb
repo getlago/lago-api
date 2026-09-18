@@ -7,6 +7,8 @@ RSpec.describe ::V1::CommitmentSerializer do
     described_class.new(commitment, root_name: "commitment", includes: %i[taxes])
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
   let(:commitment) { create(:commitment) }
   let(:tax) { create(:tax, organization: commitment.plan.organization) }
   let(:commitment_applied_tax) { create(:commitment_applied_tax, commitment:, tax:) }

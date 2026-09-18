@@ -10,7 +10,9 @@ RSpec.describe EInvoices::Cii::TradeSettlement do
     end
   end
 
-  let(:resource) { create(:invoice, currency: "EUR") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:resource) { create_default(:invoice, currency: "EUR") }
 
   let(:root) { "//ram:ApplicableHeaderTradeSettlement" }
 
