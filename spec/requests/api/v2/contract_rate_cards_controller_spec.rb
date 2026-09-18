@@ -102,6 +102,17 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_card][:lago_id]).to eq(contract_rate_card.id)
     end
 
+    # A finished schedule has no next instant, and the payload has to say so rather than raise.
+    context "when the schedule has run out" do
+      it "serializes a blank clock as null" do
+        contract_rate_card.update!(next_billing_at: nil)
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_rate_card][:next_billing_at]).to be_nil
+      end
+    end
+
     context "when the card does not exist" do
       let(:code) { "unknown" }
 
