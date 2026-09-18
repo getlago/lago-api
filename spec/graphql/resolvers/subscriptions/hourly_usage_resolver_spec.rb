@@ -85,7 +85,7 @@ RSpec.describe Resolvers::Subscriptions::HourlyUsageResolver, clickhouse: {clean
     usage = result["data"]["subscriptionHourlyUsage"]
 
     expect(usage["fromDatetime"]).to eq(Time.zone.parse("2026-08-24 09:00:00").iso8601)
-    expect(usage["toDatetime"]).to eq(to_datetime.iso8601)
+    expect(usage["toDatetime"]).to eq(Time.zone.parse("2026-08-24 11:15:00").iso8601)
     expect(usage["timezone"]).to eq("TZ_UTC")
     expect(usage["aggregationType"]).to eq("count_agg")
     expect(usage["lastIngestedAt"]).to eq(Time.zone.parse("2026-08-24 09:45:12").iso8601)
