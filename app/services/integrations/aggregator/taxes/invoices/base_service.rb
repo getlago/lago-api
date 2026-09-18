@@ -28,6 +28,48 @@ module Integrations
             @taxable_fees ||= fees.select(&:taxable?).presence || Array(fees.first)
           end
 
+          # NOTE: A charge split by charge filters or by grouped_by yields one fee per
+          #       combination, so a single charge could take dozens of the 1200 line items both
+          #       providers accept. Taxation is identical across the split, and equally across
+          #       the subscriptions and periods one charge may be billed for on one invoice, so
+          #       those collapse into the same line.
+          def payload_fees
+            @payload_fees ||= ChargeFeeGroup.build(taxable_fees)
+          end
+
+          def fee_groups
+            @fee_groups ||= payload_fees.grep(ChargeFeeGroup).index_by(&:item_key)
+          end
+
+          def process_response(body)
+            super
+
+            result.fees = split_group_taxes(result.fees) if result.success?
+          end
+
+          def split_group_taxes(fee_taxes)
+            fee_taxes.flat_map do |item|
+              group = fee_groups[item.item_key] || fee_groups[item.item_id]
+
+              group ? group.split_taxes(item) : [stamped_with_charge(item)]
+            end
+          end
+
+          # NOTE: A charge billing a single fee keeps its own line, so the provider echoes the
+          #       fee's identity rather than the charge's. Stamping the charge here keeps the
+          #       attribute meaning the same for every charge fee, grouped or not.
+          def stamped_with_charge(item)
+            charge_id = charge_ids[item.item_key] || charge_ids[item.item_id]
+
+            charge_id ? item.with(charge_id:) : item
+          end
+
+          def charge_ids
+            @charge_ids ||= taxable_fees.each_with_object({}) do |fee, output|
+              output[fee.item_key] = fee.charge_id if fee.charge?
+            end
+          end
+
           # NOTE: Only an invoice carrying no fee at all reaches this, and it has nothing to
           #       report.
           def no_taxable_fees_result

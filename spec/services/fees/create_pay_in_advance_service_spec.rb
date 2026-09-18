@@ -842,6 +842,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           response_data["succeededInvoices"].first["fees"].first["item_id"] = fee_id
           response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["rate"] = "0.10"
           response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["tax_amount"] = 1
+          response_data["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 1
 
           response_data.to_json
         end

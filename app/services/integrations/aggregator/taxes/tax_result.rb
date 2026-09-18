@@ -9,8 +9,11 @@ module Integrations
         :item_code,
         :amount_cents,
         :tax_amount_cents,
-        :tax_breakdown
-      )
+        :tax_breakdown,
+        :charge_id
+      ) do
+        def initialize(charge_id: nil, **) = super
+      end
 
       TaxResult::TaxBreakdownItem = Data.define(
         :name,
