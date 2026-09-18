@@ -34,6 +34,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
     )
   end
 
+  let(:existing_stripe_refunds) { [] }
   let(:charge_amount_captured) { 200 }
   let(:charge_amount_refunded) { 0 }
   let(:stripe_charges) do
@@ -60,6 +61,11 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       payment
 
       allow(Stripe::Charge).to receive(:list).and_return(stripe_charges)
+      allow(Stripe::Refund).to receive(:list).and_return(
+        Stripe::ListObject.construct_from(
+          object: "list", url: "/v1/refunds", has_more: false, data: existing_stripe_refunds
+        )
+      )
 
       allow(Stripe::Refund).to receive(:create)
         .and_return(
@@ -391,6 +397,66 @@ RSpec.describe CreditNotes::Refunds::StripeService do
               error_code: described_class::CHARGE_ALREADY_REFUNDED_ERROR
             }
           )
+      end
+    end
+
+    context "when a previous attempt already refunded at stripe" do
+      # NOTE: Stripe::Refund.create succeeded but the response was lost, the job retried, and
+      #       the charge now shows the refund we ourselves issued.
+      let(:charge_amount_refunded) { 200 }
+      let(:existing_stripe_refunds) do
+        [
+          {
+            id: "re_recovered",
+            object: "refund",
+            status: "succeeded",
+            amount: 134,
+            currency: "chf",
+            metadata: {lago_credit_note_id: credit_note.id}
+          }
+        ]
+      end
+
+      it "adopts the existing refund instead of failing the credit note" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund.provider_refund_id).to eq("re_recovered")
+        expect(credit_note.reload.refund_status).to eq("succeeded")
+      end
+
+      it "does not issue a second refund" do
+        stripe_service.create
+
+        expect(Stripe::Refund).not_to have_received(:create)
+      end
+
+      it "does not deliver an error webhook" do
+        expect { stripe_service.create }
+          .not_to have_enqueued_job(SendWebhookJob).with("credit_note.provider_refund_failure", any_args)
+      end
+
+      context "when the existing refund belongs to another credit note" do
+        let(:existing_stripe_refunds) do
+          [
+            {
+              id: "re_other",
+              object: "refund",
+              status: "succeeded",
+              amount: 200,
+              currency: "chf",
+              metadata: {lago_credit_note_id: SecureRandom.uuid}
+            }
+          ]
+        end
+
+        it "fails the credit note" do
+          result = stripe_service.create
+
+          expect(result).to be_success
+          expect(result.refund).to be_nil
+          expect(credit_note.reload.refund_status).to eq("failed")
+        end
       end
     end
 

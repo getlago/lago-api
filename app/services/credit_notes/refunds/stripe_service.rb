@@ -30,12 +30,15 @@ module CreditNotes
         return result unless should_process_refund?
 
         blocking_error_code = refund_blocked_error_code
-        if blocking_error_code
+        # NOTE: an earlier attempt can reach stripe without us ever seeing its response, and the
+        #       refund it created is exactly what the amount check then trips on. Adopt that
+        #       refund rather than failing the credit note for money we already refunded.
+        stripe_result = blocking_error_code ? existing_stripe_refund : create_stripe_refund
+
+        if stripe_result.nil?
           handle_refund_failure(message: refund_blocked_message(blocking_error_code), code: blocking_error_code)
           return result
         end
-
-        stripe_result = create_stripe_refund
 
         refund = Refund.new(
           organization_id: credit_note.organization_id,
@@ -158,6 +161,25 @@ module CreditNotes
         else
           captured - refunded
         end
+      end
+
+      def existing_stripe_refund
+        return @existing_stripe_refund if defined?(@existing_stripe_refund)
+        return @existing_stripe_refund = nil if payment.provider_payment_id.blank?
+
+        refunds = ::Stripe::Refund.list(
+          {payment_intent: payment.provider_payment_id, limit: 100},
+          {api_key: stripe_api_key}
+        )
+        @existing_stripe_refund = refunds.data.detect do |refund|
+          refund[:metadata] && refund[:metadata][:lago_credit_note_id] == credit_note.id
+        end
+      rescue ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, ::Stripe::PermissionError => e
+        # NOTE: transient errors are left to propagate so the job retries and can still find the
+        #       refund. Failing here would mark the credit note failed for a refund stripe may
+        #       already hold.
+        Rails.logger.warn("Unable to list stripe refunds for payment #{payment.id}: #{e.message}")
+        @existing_stripe_refund = nil
       end
 
       def stripe_charge
