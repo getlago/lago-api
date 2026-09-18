@@ -2,17 +2,17 @@
 #
 # Hardened Wolfi-based build for lago-api.
 #
-# Consumes two apko-built bases that carry ruby-4 from Lago's private Wolfi
-# overlay (s3://lago-wolfi-packages/os, IAM-gated). Both are produced by the
-# `Wolfi apko bases` workflow in this repo and pushed to GHCR:
+# Consumes two apko-built bases from https://github.com/getlago/lago-packages.
+# Both are public, multi-arch and cosign-signed, so building this file needs no
+# registry credentials:
 #   - ghcr.io/getlago/lago-api-build:latest  — ruby-4-dev, rust, build-base, node
 #   - ghcr.io/getlago/lago-api-base:latest   — ruby-4, jemalloc, libpq, pdfcpu, git
 #
 # The bases carry no shell history, no apt, no distro cruft; every package
 # has an SBOM and is signed. This Dockerfile just bundles gems and copies code.
 
-ARG BUILD_IMAGE=201661579678.dkr.ecr.us-east-1.amazonaws.com/lago-api-build:latest
-ARG RUNTIME_IMAGE=201661579678.dkr.ecr.us-east-1.amazonaws.com/lago-api-base:latest
+ARG BUILD_IMAGE=ghcr.io/getlago/lago-api-build:latest
+ARG RUNTIME_IMAGE=ghcr.io/getlago/lago-api-base:latest
 
 FROM ${BUILD_IMAGE} AS build
 
