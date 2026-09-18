@@ -27,6 +27,38 @@ RSpec.describe User do
     end
   end
 
+  describe "#login_method_allowed?" do
+    let(:user) { create(:user) }
+    let(:organization) { create(:organization) }
+
+    context "when an active organization of the user allows the login method" do
+      before { create(:membership, organization:, user:) }
+
+      it "returns true" do
+        expect(user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)).to be true
+      end
+    end
+
+    context "when no active organization of the user allows the login method" do
+      before do
+        create(:membership, organization:, user:)
+        organization.disable_email_password_authentication!
+      end
+
+      it "returns false" do
+        expect(user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)).to be false
+      end
+    end
+
+    context "when the membership of the user is revoked" do
+      before { create(:membership, :revoked, organization:, user:) }
+
+      it "returns false" do
+        expect(user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)).to be false
+      end
+    end
+  end
+
   describe "Validations" do
     it "is valid with valid attributes" do
       expect(subject).to be_valid
