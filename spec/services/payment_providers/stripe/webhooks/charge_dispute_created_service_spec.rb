@@ -195,6 +195,27 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
         end
       end
 
+      context "when the dispute has no payment intent" do
+        # NOTE: the payment stores a null provider_payment_id, as manual payments do, so an
+        #       unguarded lookup would match it.
+        let(:intent_id) { nil }
+        let(:payable) { create(:invoice, customer:, organization:, status: "finalized") }
+
+        before { payment }
+
+        it "does not touch the payment's invoice" do
+          expect { service.call && payable.reload }
+            .not_to change(payable, :payment_refund_blocked_at).from(nil)
+        end
+
+        it "does not open or close a dispute" do
+          service.call
+
+          expect(::Payments::OpenDisputeService).not_to have_received(:call)
+          expect(::Payments::CloseDisputeService).not_to have_received(:call)
+        end
+      end
+
       context "when the payment does not exist" do
         let(:payable) { create(:invoice, customer:, organization:, status: "finalized") }
 

@@ -35,6 +35,10 @@ module PaymentProviders
 
         def payment
           return @payment if defined?(@payment)
+          # NOTE: a dispute on a charge created outside a payment intent carries a null
+          #       payment_intent, and manual payments store a null provider_payment_id, so an
+          #       unguarded lookup would match an unrelated payment in the organization.
+          return @payment = nil if provider_payment_id.blank?
 
           # NOTE: scoped to the organization, a stripe api key can be shared across several
           #       of them, and the dispute must not reach another organization's invoices.

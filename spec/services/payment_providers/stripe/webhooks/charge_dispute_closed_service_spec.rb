@@ -205,6 +205,27 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
         end
       end
 
+      context "when the dispute has no payment intent" do
+        let(:intent_id) { nil }
+        let(:payable) { create(:invoice, customer:, organization:, status: "finalized") }
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/charge_dispute_closed.json", version:) do |h|
+            h[:data][:object][:payment_intent] = nil
+            h[:data][:object][:status] = "lost"
+          end
+        end
+
+        it "does not mark the payment's invoice as dispute lost" do
+          expect { service.call && payable.reload }.not_to change(payable, :payment_dispute_lost_at).from(nil)
+        end
+
+        it "does not call LoseDisputeService" do
+          service.call
+
+          expect(::Payments::LoseDisputeService).not_to have_received(:call)
+        end
+      end
+
       context "when the payment belongs to another organization" do
         let(:other_organization) { create(:organization) }
         let(:other_customer) { create(:customer, organization: other_organization) }
