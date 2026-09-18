@@ -89,7 +89,7 @@ module UsageMonitoring
         triggered_at: now
       )
 
-      after_commit { SendWebhookJob.perform_later("alert.resolved", resolved_alert) }
+      SendWebhookJob.perform_after_commit("alert.resolved", resolved_alert)
     end
   end
 end
