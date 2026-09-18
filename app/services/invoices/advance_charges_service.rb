@@ -18,8 +18,7 @@ module Invoices
 
     def call
       return result unless has_charges_with_statement?
-
-      return result if subscriptions.empty?
+      return result if pending_billing_contexts_with_fees.empty?
 
       invoices = create_group_invoices
 
@@ -60,11 +59,11 @@ module Invoices
       relation.where("(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?", billing_at)
     end
 
-    def subscriptions
+    def pending_billing_contexts_with_fees
       return [] unless customer
 
       # NOTE: filter all active/terminated subscriptions having non-invoiceable (in advance) fees not yet attached to an invoice
-      @subscriptions ||= customer.subscriptions
+      @pending_billing_contexts_with_fees ||= customer.subscriptions
         .where(
           id: Fee.joins(:subscription)
             .where(invoice_id: nil, payment_status: :succeeded)
@@ -77,10 +76,16 @@ module Invoices
             })
             .select("DISTINCT(subscriptions.id)")
         )
+        .map { |subscription| Billing::Context.from(subscription:) }
     end
 
     def has_charges_with_statement?
-      Charge.where(plan_id: subscriptions.pluck(:plan_id).uniq, pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice).any?
+      Charge.where(
+        plan_id: pending_billing_contexts_with_fees.filter_map(&:plan_id).uniq,
+        pay_in_advance: true,
+        invoiceable: false,
+        regroup_paid_fees: :invoice
+      ).any?
     end
 
     def create_manual_payment(invoice)
@@ -97,16 +102,16 @@ module Invoices
     #       purchase order numbers — e.g. a terminated and an active subscription sharing
     #       an external_id after an upgrade. Each PO must produce its own invoice.
     def create_group_invoices
-      subscriptions.group_by(&:purchase_order_number).values.filter_map do |subscriptions_group|
-        create_group_invoice(subscriptions_group)
+      pending_billing_contexts_with_fees.group_by(&:purchase_order_number).values.filter_map do |billing_contexts_group|
+        create_group_invoice(billing_contexts_group)
       end
     end
 
-    def create_group_invoice(subscriptions_group)
+    def create_group_invoice(billing_contexts_group)
       invoice = nil
 
       ActiveRecord::Base.transaction do
-        invoice = create_generating_invoice(subscriptions_group)
+        invoice = create_generating_invoice(billing_contexts_group)
         invoice.invoice_subscriptions.each do |is|
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
@@ -136,19 +141,19 @@ module Invoices
       invoice
     end
 
-    def create_generating_invoice(subscriptions_group)
+    def create_generating_invoice(billing_contexts_group)
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
         billing_entity: billing_contexts.first&.billing_entity || customer.billing_entity,
-        purchase_order_number: subscriptions_group.first&.purchase_order_number
+        purchase_order_number: billing_contexts_group.first&.purchase_order_number
       ) do |invoice|
-        Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
+        Invoices::CreateAdvanceChargesInvoiceService.call!(
           invoice:,
-          subscriptions_with_fees: subscriptions_group,
-          all_subscriptions: subscriptions_group + billing_contexts.map(&:subscription),
+          billing_contexts_with_fees: billing_contexts_group,
+          all_billing_contexts: (billing_contexts_group + billing_contexts).uniq(&:subscription_id),
           timestamp: billing_at
         )
       end

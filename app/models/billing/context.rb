@@ -20,6 +20,7 @@ module Billing
       :organization,
       :organization_id,
       :customer,
+      :purchase_order_number,
       :started_at,
       :terminated_at,
       :terminated?,
@@ -44,6 +45,12 @@ module Billing
       return subscription.plan.amount_currency if subscription?
 
       contract.currency
+    end
+
+    def plan_id
+      return record.plan_id if subscription?
+
+      nil
     end
 
     def subscription
