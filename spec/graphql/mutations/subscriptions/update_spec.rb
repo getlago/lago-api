@@ -302,4 +302,57 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       end
     end
   end
+
+  context "with connections" do
+    let(:customer) { subscription.customer }
+    let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+    let(:connections_query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) { id }
+        }
+      GQL
+    end
+
+    def update_subscription(connections:)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_query,
+        variables: {input: {id: subscription.id, connections:}}
+      )
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+    end
+
+    it "pins the connection on the subscription" do
+      expect { update_subscription(connections: {payment: {code: "stripe_us"}}) }
+        .to change(BillingObjectConnection, :count).by(1)
+
+      expect(subscription.reload.effective_payment_connection).to eq(stripe_connection)
+    end
+
+    it "clears the override when inherit is sent" do
+      create(:billing_object_connection, owner: subscription, organization:,
+        category: "payment", behavior: "skip")
+
+      expect { update_subscription(connections: {payment: {behavior: "inherit"}}) }
+        .to change(BillingObjectConnection, :count).by(-1)
+
+      expect(subscription.reload.billing_object_connections).to be_empty
+    end
+
+    it "returns a forbidden error when the multi_connection flag is disabled" do
+      organization.disable_feature_flag!(:multi_connection)
+
+      result = update_subscription(connections: {payment: {code: "stripe_us"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
+    end
+  end
 end
