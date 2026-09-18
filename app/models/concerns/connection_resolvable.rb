@@ -89,9 +89,9 @@ module ConnectionResolvable
     return unless customer
 
     if category == CATEGORIES[:payment]
-      customer.payment_connection
+      customer.payment_provider_customers.detect(&:is_default?)
     else
-      customer.integration_connection(category)
+      customer.integration_customers.detect { it.category == category && it.is_default? }
     end
   end
 end
