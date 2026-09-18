@@ -123,12 +123,17 @@ module Fees
     #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
     #       on draft invoices can target filters without any usage.
     #       Recurring metrics always aggregate as usage carries over from previous periods.
+    #
+    #       The pre-filtering reads the events store, which lags the pre-aggregated buckets
+    #       independently, so a filter the buckets already hold usage for has to be aggregated
+    #       rather than zeroed. Asked last, as it is the only branch that builds an aggregator.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
       return false if selected_metered_item.billable_metric.recurring?
+      return false if filtered_aggregations.include?(selected_metered_item.filter_id)
 
-      !filtered_aggregations.include?(selected_metered_item.filter_id)
+      !precomputed?(selected_metered_item:)
     end
 
     def compute_fees_with_cache(selected_metered_item:)
@@ -444,10 +449,14 @@ module Fees
     end
 
     # The aggregator answers from a source that is already fresh, so caching its fees would put
-    # back the staleness that source removes. Asking it means building it, which a cache hit
-    # would otherwise not need, so the provider is asked first whether any answer of its own
-    # could be precomputed.
+    # back the staleness that source removes.
     def bypass_cache?(selected_metered_item:)
+      precomputed?(selected_metered_item:)
+    end
+
+    # Asking the aggregator means building it, which a cache hit would otherwise not need, so the
+    # provider is asked first whether any answer of its own could be precomputed.
+    def precomputed?(selected_metered_item:)
       return false unless provider.may_precompute?
 
       aggregator(selected_metered_item:).precomputed?

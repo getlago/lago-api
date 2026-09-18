@@ -25,23 +25,32 @@ module Events
           filters:,
           deduplicate:
         )
-        return store unless served_from_buckets?(metered_item:, boundaries:, filters:)
-
-        UsageBucketStore.new(
-          store,
-          usage_buckets:,
-          charge_id: metered_item.charge.id,
-          # The sink writes `COALESCE(charge_filter_id, '')`, while the unfiltered fee carries an
-          # unpersisted ChargeFilter whose id is nil.
-          charge_filter_id: filters[:charge_filter]&.id || ""
-        )
+        if served_from_buckets?(metered_item:, boundaries:, filters:)
+          UsageBucketStore.new(
+            store,
+            usage_buckets:,
+            charge_id: metered_item.charge.id,
+            # The sink writes `COALESCE(charge_filter_id, '')`, while the unfiltered fee carries an
+            # unpersisted ChargeFilter whose id is nil.
+            charge_filter_id: filters[:charge_filter]&.id || ""
+          )
+        else
+          store
+        end
       end
 
-      # Whether any store this provider mints could answer from a precomputed source. Cheap by
-      # construction — no query, no per-charge work — so a caller can skip the work it would only
-      # need in order to ask a single store the same question.
+      # Whether any store this provider mints could answer from a precomputed source. Every gate
+      # that does not depend on the charge is asked here, so a caller can skip the per-charge work
+      # it would only need in order to ask a single store the same question. Cheap by
+      # construction: no query, no per-charge work.
       def may_precompute?
-        current_usage && serve_from_buckets && !narrowed_read
+        return @may_precompute if defined?(@may_precompute)
+
+        @may_precompute = current_usage &&
+          serve_from_buckets &&
+          !narrowed_read &&
+          RealtimeUsage.enabled?(organization) &&
+          !RealtimeUsage.deduplicated?(organization)
       end
 
       def store_class
@@ -71,10 +80,8 @@ module Events
 
         charge = metered_item.charge
         return false if charge.nil?
-        return false unless RealtimeUsage.enabled?(organization)
         return false if boundaries[:max_timestamp].present?
         return false unless same_window_as_prefetch?(boundaries)
-        return false if RealtimeUsage.deduplicated?(organization)
         return false unless RealtimeUsage.supported_charge?(charge)
         return false unless filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&

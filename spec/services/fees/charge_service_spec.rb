@@ -4811,6 +4811,64 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "when the events store has not caught up with the buckets" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          metered_item:,
+          billing_context:,
+          cache_middleware:,
+          provider:,
+          filtered_aggregations: [],
+          options: described_class::Options.new(context: :current_usage, usage_filters:)
+        )
+      end
+
+      it "bills what the buckets hold, rather than the zero the pre-filtering implies" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first).to have_attributes(units: 12, events_count: 3)
+      end
+    end
+
+    context "when serving is opted into by an organization the feature is off for" do
+      let(:realtime_usage_enabled) { "false" }
+      let(:read_at) { boundaries.charges_from_datetime + 2.days }
+
+      let(:second_computation) do
+        described_class.new(
+          invoice:,
+          metered_item:,
+          billing_context:,
+          cache_middleware:,
+          provider:,
+          options: described_class::Options.new(context: :current_usage, usage_filters:)
+        )
+      end
+
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+
+        travel_to(read_at) { charge_subscription_service.call }
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "reads the warm cache without building an aggregator to ask about the bypass" do
+        travel_to(read_at) { expect(second_computation.call.fees.first.units).to eq(4) }
+
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+    end
+
     context "with a charge the provider cannot serve" do
       let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
 

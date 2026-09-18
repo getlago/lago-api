@@ -66,30 +66,74 @@ RSpec.describe Events::Stores::Provider do
   end
 
   describe "#may_precompute?" do
-    it "is false for a provider that was not asked to serve the buckets" do
-      expect(provider.may_precompute?).to be(false)
+    subject(:provider) do
+      described_class.new(organization:, billing_context:, current_usage: true, serve_from_buckets: true)
     end
 
-    it "is false when the computation is not current usage" do
-      provider = described_class.new(organization:, billing_context:, serve_from_buckets: true)
+    include_context "with realtime usage availability"
 
-      expect(provider.may_precompute?).to be(false)
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
     end
 
-    it "is false for a read narrower than a whole charge and filter" do
-      provider = described_class.new(
-        organization:, billing_context:, current_usage: true, serve_from_buckets: true, narrowed_read: true
-      )
+    before { allow(RealtimeUsage::FetchBucketsService).to receive(:call) }
 
-      expect(provider.may_precompute?).to be(false)
-    end
-
-    it "is true when both hold, without reading clickhouse" do
-      allow(RealtimeUsage::FetchBucketsService).to receive(:call)
-      provider = described_class.new(organization:, billing_context:, current_usage: true, serve_from_buckets: true)
-
+    it "is true when every gate that does not depend on a charge holds, without reading clickhouse" do
       expect(provider.may_precompute?).to be(true)
       expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+    end
+
+    context "when the provider was not asked to serve the buckets" do
+      subject(:provider) { described_class.new(organization:, billing_context:, current_usage: true) }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the computation is not current usage" do
+      subject(:provider) { described_class.new(organization:, billing_context:, serve_from_buckets: true) }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the read is narrower than a whole charge and filter" do
+      subject(:provider) do
+        described_class.new(
+          organization:, billing_context:, current_usage: true, serve_from_buckets: true, narrowed_read: true
+        )
+      end
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    # The caller skips per-charge work on the strength of this answer, so an organization the
+    # feature is off for has to be refused here rather than one store at a time.
+    context "when realtime usage is disabled for the organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the organization deduplicates its events" do
+      let(:organization) do
+        create(
+          :organization,
+          clickhouse_events_store: true,
+          clickhouse_deduplication_enabled: true,
+          feature_flags: ["realtime_usage"]
+        )
+      end
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
     end
   end
 
