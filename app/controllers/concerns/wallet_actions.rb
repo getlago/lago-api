@@ -73,9 +73,13 @@ module WalletActions
             :billing_entity,
             :metadata,
             :billable_metrics,
-            {customer: :billing_entity},
+            :billing_object_connections,
+            {customer: [:billing_entity, :payment_provider_customers, :integration_customers]},
             {applied_invoice_custom_sections: :invoice_custom_section},
-            {recurring_transaction_rules: {applied_invoice_custom_sections: :invoice_custom_section}}
+            {recurring_transaction_rules: [
+              :billing_object_connections,
+              {applied_invoice_custom_sections: :invoice_custom_section}
+            ]}
           ),
           ::V1::WalletSerializer,
           collection_name: "wallets",

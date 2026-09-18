@@ -8,6 +8,8 @@ module Types
 
         field :lago_id, ID, null: false, method: :id
 
+        field :connections, [Types::Connections::Object], null: false, method: :connection_routing
+
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
         field :granted_credits, String, null: false
