@@ -55,11 +55,17 @@ module EventDestinations
         usage = usages[subscription]
 
         if usage.nil?
+          # Same source as the usage Customers::RefreshWalletsService hands over when it delivers
+          # inline, so one event does not carry a different number depending on where it ran. The
+          # presentation breakdowns this drops are not serialized, and keeping them would make the
+          # provider refuse to serve the charges that carry them.
           usage_result = ::Invoices::CustomerUsageService.call(
             customer:,
             subscription:,
             apply_taxes: false,
-            with_cache: true
+            with_cache: true,
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+            use_usage_buckets: true
           )
 
           unless usage_result.success?
