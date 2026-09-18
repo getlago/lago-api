@@ -61,14 +61,8 @@ module BillingEntities
 
         BillingEntities::UpdateInvoiceIssuingDateSettingsService.call(billing_entity:, params: billing)
 
-        if params.key?(:net_payment_term)
-          # note: this service only assigns new net_payment_term to the billing_entity but doesn't save it
-          BillingEntities::UpdateInvoicePaymentDueDateService.call(
-            billing_entity:,
-            net_payment_term: params[:net_payment_term]
-          )
-        end
-
+        # NOTE: A term change never rewrites open drafts (snapshot-freeze):
+        #       it applies to future drafts only.
         PaymentTerms::AssignService.call(record: billing_entity, params:)
 
         if params.key?(:tax_codes)
