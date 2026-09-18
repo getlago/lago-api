@@ -865,6 +865,8 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_contracts_on_payment_method_id;
+DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
@@ -905,6 +907,8 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_code_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_deleted_at;
@@ -8355,6 +8359,20 @@ CREATE UNIQUE INDEX index_catalog_plans_on_organization_id_and_code ON public.ca
 
 
 --
+-- Name: index_catalog_plans_on_organization_id_code_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_on_organization_id_code_gin_trgm_ops ON public.catalog_plans USING gin (organization_id, code public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_catalog_plans_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_on_organization_id_name_gin_trgm_ops ON public.catalog_plans USING gin (organization_id, name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_charge_filter_values_on_billable_metric_filter_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8632,6 +8650,20 @@ CREATE INDEX index_contracts_on_organization_id ON public.contracts USING btree 
 --
 
 CREATE INDEX index_contracts_on_organization_id_and_external_id ON public.contracts USING btree (organization_id, external_id);
+
+
+--
+-- Name: index_contracts_on_organization_id_external_id_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_on_organization_id_external_id_gin_trgm_ops ON public.contracts USING gin (organization_id, external_id public.gin_trgm_ops);
+
+
+--
+-- Name: index_contracts_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_on_organization_id_name_gin_trgm_ops ON public.contracts USING gin (organization_id, name public.gin_trgm_ops);
 
 
 --
@@ -14905,6 +14937,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260916141523'),
 ('20260914145333'),
 ('20260914145022'),
 ('20260911144853'),

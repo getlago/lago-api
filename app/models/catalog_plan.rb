@@ -58,9 +58,11 @@ end
 #
 # Indexes
 #
-#  index_catalog_plans_on_deleted_at                (deleted_at)
-#  index_catalog_plans_on_organization_id           (organization_id)
-#  index_catalog_plans_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  index_catalog_plans_on_deleted_at                         (deleted_at)
+#  index_catalog_plans_on_organization_id                    (organization_id)
+#  index_catalog_plans_on_organization_id_and_code           (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  index_catalog_plans_on_organization_id_code_gin_trgm_ops  (organization_id,code) WHERE (deleted_at IS NULL) USING gin
+#  index_catalog_plans_on_organization_id_name_gin_trgm_ops  (organization_id,name) WHERE (deleted_at IS NULL) USING gin
 #
 # Foreign Keys
 #
