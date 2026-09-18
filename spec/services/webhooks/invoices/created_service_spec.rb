@@ -5,8 +5,14 @@ require "rails_helper"
 RSpec.describe Webhooks::Invoices::CreatedService do
   subject(:webhook_service) { described_class.new(object: invoice) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+
+  before_all do
+    create_default(:billable_metric)
+    create_default(:plan)
+  end
+
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 

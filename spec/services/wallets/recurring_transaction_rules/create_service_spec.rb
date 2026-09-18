@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Wallets::RecurringTransactionRules::CreateService do
   subject(:create_service) { described_class.new(wallet:, wallet_params:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 15_00) }
   let(:wallet_params) do
     {

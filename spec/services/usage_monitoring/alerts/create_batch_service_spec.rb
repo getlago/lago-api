@@ -6,9 +6,8 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, alertable:, alerts_params:) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let(:alertable) { create(:subscription, organization:) }
-    let(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
     let(:alerts_params) do
       [
         {
@@ -26,6 +25,13 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
           thresholds: [{code: "critical", value: 100}]
         }
       ]
+    end
+
+    let_it_be(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
+
+    before_all do
+      create_default(:customer)
+      create_default(:plan)
     end
 
     it "creates multiple alerts" do

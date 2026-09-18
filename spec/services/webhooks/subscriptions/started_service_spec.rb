@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Webhooks::Subscriptions::StartedService do
   subject(:webhook_service) { described_class.new(object: subscription) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization:) }
 
   describe ".call" do

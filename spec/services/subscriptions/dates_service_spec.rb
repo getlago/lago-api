@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Subscriptions::DatesService do
   subject(:date_service) { described_class.new(subscription, billing_date, false) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:subscription) do
     create(
       :subscription,
@@ -15,7 +20,7 @@ RSpec.describe Subscriptions::DatesService do
     )
   end
 
-  let(:plan) { create(:plan, interval:, pay_in_advance:) }
+  let(:plan) { create_default(:plan, interval:, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
   let(:subscription_at) { DateTime.parse("02 Feb 2021") }

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Wallets::Balance::UpdateOngoingService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, awaiting_wallet_refresh: true) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:, awaiting_wallet_refresh: true) }
 
   let(:wallet) do
     create(

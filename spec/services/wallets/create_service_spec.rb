@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Wallets::CreateService do
   subject(:create_service) { described_class.new(params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, external_id: "foobar", currency: customer_currency) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let(:customer) { create_default(:customer, organization:, external_id: "foobar", currency: customer_currency) }
   let(:customer_currency) { "EUR" }
 
   describe "#call" do
