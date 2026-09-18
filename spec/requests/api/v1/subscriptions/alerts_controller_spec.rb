@@ -84,6 +84,25 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
     it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if subscription not found"
 
+    context "when a threshold opts in to resolved" do
+      let(:params) do
+        {
+          code: "test",
+          name: "New Alert",
+          alert_type: "current_usage_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "stores the opt-in" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(UsageMonitoring::Alert.find(json[:alert][:lago_id]).thresholds.sole.notify_on)
+          .to eq(%w[triggered resolved])
+      end
+    end
+
     it do
       subject
 
