@@ -21191,6 +21191,12 @@
               "deprecationReason": null
             },
             {
+              "name": "SYP",
+              "description": "Syrian Pound",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "SZL",
               "description": "Swazi Lilangeni",
               "isDeprecated": false,
@@ -46922,6 +46928,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "AppliedCoupon",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "terminateContract",
+              "description": "Terminates a live contract",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for TerminateContract",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "TerminateContractInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Contract",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -76301,6 +76336,45 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "TerminateContractInput",
+          "description": "Terminate contract input arguments",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "externalId",
+              "description": "External id of the contract to terminate",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

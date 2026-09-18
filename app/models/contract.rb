@@ -57,6 +57,17 @@ class Contract < ApplicationRecord
       .first
   end
 
+  def self.terminatable_by_external_id(external_id)
+    # Termination ends the agreement in force, so it prefers the active
+    # contract over a pending replacement — the reverse of live_by_external_id.
+    # Ending the active row leaves the future replacement to start on its own;
+    # with no active sibling the pending row is the one to cancel.
+    # started_at/created_at break ties deterministically within a status.
+    live.where(external_id:)
+      .order(Arel.sql("status = 'active' DESC"), started_at: :desc, created_at: :desc)
+      .first
+  end
+
   validates :external_id, presence: true
 
   validate :validate_started_before_ended
