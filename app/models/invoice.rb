@@ -737,6 +737,7 @@ end
 #  payment_dispute_lost_at                 :datetime
 #  payment_due_date                        :date
 #  payment_overdue                         :boolean          default(FALSE)
+#  payment_refund_blocked_at               :datetime
 #  payment_status                          :integer          default("pending"), not null
 #  payment_term                            :jsonb
 #  payment_term_source                     :string
