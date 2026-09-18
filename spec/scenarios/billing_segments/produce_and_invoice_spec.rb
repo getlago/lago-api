@@ -46,8 +46,11 @@ describe "Billing segments produced by the clock and invoiced" do
       status: "pending"
     )
 
-    invoice = BillingSegments::ProcessService.call!(customer:).invoices.sole.reload
+    travel_to(Time.zone.parse("2026-02-01 00:17:00")) do
+      perform_enqueued_jobs { Clock::ProcessBillingSegmentsJob.perform_now }
+    end
 
+    invoice = Invoice.where(customer:).sole
     expect(invoice).to have_attributes(status: "finalized", currency: "EUR", total_amount_cents: 15_000)
     expect(segment.reload).to have_attributes(status: "done", invoice_id: invoice.id)
   end

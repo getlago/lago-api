@@ -88,6 +88,14 @@ module Clockwork
       .perform_later
   end
 
+  # Five minutes behind the producer, so a card that comes due is invoiced in the same hour.
+  # A fan-out that runs long only defers its stragglers to the next tick; nothing is lost.
+  every(1.hour, "schedule:process_billing_segments", at: "*:17") do
+    Clock::ProcessBillingSegmentsJob
+      .set(sentry: {"slug" => "lago_process_billing_segments", "cron" => "17 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:api_keys_track_usage", at: "*:15") do
     Clock::ApiKeys::TrackUsageJob
       .set(sentry: {"slug" => "lago_api_keys_track_usage", "cron" => "15 */1 * * *"})

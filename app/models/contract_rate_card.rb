@@ -45,15 +45,21 @@ class ContractRateCard < ApplicationRecord
     )
   }
 
-  scope :due_for_billing, ->(timestamp) {
+  # The attachments the calendar can build a schedule for at all. Being *due* adds the clock
+  # and the contract's own status on top; a preview asks only for this.
+  scope :schedulable, ->(timestamp) {
     current_and_scheduled(timestamp)
-      .where(next_billing_at: ..timestamp)
-      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
       # Only a priced card owes anything: a period with no price is not one to be paid for.
       .where(rate_card_id: RateCardRate.select(:rate_card_id))
       # And only a card with a window: one that starts after its contract ends has no period
       # to owe anything in, which is an ordinary outcome of bringing a termination forward.
       .where("contracts.ended_at IS NULL OR contracts.ended_at > contract_rate_cards.effective_date")
+  }
+
+  scope :due_for_billing, ->(timestamp) {
+    schedulable(timestamp)
+      .where(next_billing_at: ..timestamp)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
   }
 
   def edit_error_code
