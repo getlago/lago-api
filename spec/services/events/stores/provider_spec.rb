@@ -67,7 +67,7 @@ RSpec.describe Events::Stores::Provider do
 
   describe "#may_precompute?" do
     subject(:provider) do
-      described_class.new(organization:, billing_context:, current_usage: true, serve_from_buckets: true)
+      described_class.new(organization:, billing_context:, serve_current_usage_from_buckets: true)
     end
 
     include_context "with realtime usage availability"
@@ -84,15 +84,7 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "when the provider was not asked to serve the buckets" do
-      subject(:provider) { described_class.new(organization:, billing_context:, current_usage: true) }
-
-      it "is false" do
-        expect(provider.may_precompute?).to be(false)
-      end
-    end
-
-    context "when the computation is not current usage" do
-      subject(:provider) { described_class.new(organization:, billing_context:, serve_from_buckets: true) }
+      subject(:provider) { described_class.new(organization:, billing_context:) }
 
       it "is false" do
         expect(provider.may_precompute?).to be(false)
@@ -104,8 +96,7 @@ RSpec.describe Events::Stores::Provider do
         described_class.new(
           organization:,
           billing_context:,
-          current_usage: true,
-          serve_from_buckets: true,
+          serve_current_usage_from_buckets: true,
           usage_filters: UsageFilters.new(filter_by_group: {"region" => "us"})
         )
       end
@@ -120,8 +111,7 @@ RSpec.describe Events::Stores::Provider do
         described_class.new(
           organization:,
           billing_context:,
-          current_usage: true,
-          serve_from_buckets: true,
+          serve_current_usage_from_buckets: true,
           usage_filters: UsageFilters.new(full_usage: true)
         )
       end
@@ -162,8 +152,7 @@ RSpec.describe Events::Stores::Provider do
       described_class.new(
         organization:,
         billing_context:,
-        current_usage: true,
-        serve_from_buckets: true,
+        serve_current_usage_from_buckets: true,
         boundaries: billing_boundaries
       )
     end
@@ -200,7 +189,7 @@ RSpec.describe Events::Stores::Provider do
 
     context "without the opt-in" do
       subject(:provider) do
-        described_class.new(organization:, billing_context:, current_usage: true, boundaries: billing_boundaries)
+        described_class.new(organization:, billing_context:, boundaries: billing_boundaries)
       end
 
       it "reads events, without asking clickhouse for buckets" do
@@ -282,16 +271,6 @@ RSpec.describe Events::Stores::Provider do
       it "reads events, without asking clickhouse for buckets" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
         expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
-      end
-    end
-
-    context "when the computation is not current usage" do
-      subject(:provider) do
-        described_class.new(organization:, billing_context:, serve_from_buckets: true, boundaries: billing_boundaries)
-      end
-
-      it "reads events, because the buckets always lag behind the window they close" do
-        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
@@ -416,8 +395,7 @@ RSpec.describe Events::Stores::Provider do
         described_class.new(
           organization:,
           billing_context:,
-          current_usage: true,
-          serve_from_buckets: true,
+          serve_current_usage_from_buckets: true,
           boundaries: billing_boundaries,
           usage_filters: UsageFilters.new(filter_by_group: {"region" => "us"})
         )
@@ -440,7 +418,7 @@ RSpec.describe Events::Stores::Provider do
 
     context "when the provider was built without a window" do
       subject(:provider) do
-        described_class.new(organization:, billing_context:, current_usage: true, serve_from_buckets: true)
+        described_class.new(organization:, billing_context:, serve_current_usage_from_buckets: true)
       end
 
       it "reads events, having no window to have fetched buckets for" do

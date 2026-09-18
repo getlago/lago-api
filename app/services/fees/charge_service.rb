@@ -126,7 +126,7 @@ module Fees
     #
     #       The pre-filtering reads the events store, which lags the pre-aggregated buckets
     #       independently, so a filter the buckets already hold usage for has to be aggregated
-    #       rather than zeroed. Asked last, as it is the only branch that builds an aggregator.
+    #       rather than zeroed.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
@@ -490,7 +490,6 @@ module Fees
       @provider ||= Events::Stores::Provider.new(
         organization: billing_context.organization,
         billing_context:,
-        current_usage: options.current_usage?,
         usage_filters: options.usage_filters
       )
     end

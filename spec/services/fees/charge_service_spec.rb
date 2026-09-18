@@ -4731,14 +4731,11 @@ RSpec.describe Fees::ChargeService, :premium do
       )
     end
 
-    # The provider is what decides whether a charge is answered from an up-to-date source; this
-    # service only asks the aggregator it got back.
     let(:provider) do
       Events::Stores::Provider.new(
         organization:,
         billing_context:,
-        current_usage: true,
-        serve_from_buckets: true,
+        serve_current_usage_from_buckets: true,
         boundaries:,
         usage_filters:
       )
@@ -4771,7 +4768,7 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     context "when the provider was never asked to serve a precomputed source" do
-      let(:provider) { Events::Stores::Provider.new(organization:, billing_context:, current_usage: true) }
+      let(:provider) { Events::Stores::Provider.new(organization:, billing_context:) }
       let(:read_at) { boundaries.charges_from_datetime + 2.days }
 
       let(:second_computation) do

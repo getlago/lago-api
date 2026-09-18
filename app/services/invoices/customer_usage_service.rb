@@ -165,9 +165,8 @@ module Invoices
       @provider ||= Events::Stores::Provider.new(
         organization:,
         billing_context: Billing::Context.from(subscription:),
-        current_usage: true,
         boundaries:,
-        serve_from_buckets: use_usage_buckets,
+        serve_current_usage_from_buckets: use_usage_buckets,
         usage_filters:
       )
     end
