@@ -4,13 +4,14 @@ module Invoices
   class AdvanceChargesService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(initial_subscriptions:, billing_at:)
-      @initial_subscriptions = initial_subscriptions
+    def initialize(billing_contexts:, billing_at:, metered_items: [])
+      @billing_contexts = billing_contexts
       @billing_at = billing_at
+      @metered_items = metered_items
 
-      @customer = initial_subscriptions&.first&.customer
+      @customer = billing_contexts&.first&.customer
       @organization = customer&.organization
-      @currency = initial_subscriptions&.first&.plan&.amount_currency
+      @currency = billing_contexts&.first&.currency
 
       super
     end
@@ -41,15 +42,15 @@ module Invoices
 
     private
 
-    attr_accessor :initial_subscriptions, :billing_at, :customer, :organization, :currency
+    attr_reader :billing_contexts, :billing_at, :metered_items, :customer, :organization, :currency
 
     # Apply the charges_to_datetime upper-bound only for regular periodic billing
     # (i.e., no upgrade/downgrade/termination context). We consider it regular when
-    # every initial subscription is active AND has no pending next subscription AND
+    # every source subscription is active AND has no pending next subscription AND
     # is not being terminated.
     def apply_charges_to_datetime_condition?
-      initial_subscriptions.all? do |s|
-        s.active? && s.next_subscription.nil? && !s.terminated?
+      billing_contexts.all? do |billing_context|
+        billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
       end
     end
 
@@ -71,7 +72,7 @@ module Invoices
             .then { |rel| filter_charges_to_datetime(rel) }
             .where(subscriptions: {
               customer_id: customer.id,
-              external_id: initial_subscriptions.pluck(:external_id).uniq,
+              external_id: billing_contexts.map(&:external_id).uniq,
               status: [:active, :terminated]
             })
             .select("DISTINCT(subscriptions.id)")
@@ -79,8 +80,7 @@ module Invoices
     end
 
     def has_charges_with_statement?
-      plan_ids = subscriptions.pluck(:plan_id)
-      Charge.where(plan_id: plan_ids, pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice).any?
+      Charge.where(plan_id: subscriptions.pluck(:plan_id).uniq, pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice).any?
     end
 
     def create_manual_payment(invoice)
@@ -145,13 +145,13 @@ module Invoices
         currency:,
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true,
-        billing_entity: initial_subscriptions.first&.billing_entity || customer.billing_entity,
+        billing_entity: billing_contexts.first&.billing_entity || customer.billing_entity,
         purchase_order_number: subscriptions_group.first&.purchase_order_number
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
           invoice:,
           subscriptions_with_fees: subscriptions_group,
-          all_subscriptions: subscriptions_group + initial_subscriptions,
+          all_subscriptions: subscriptions_group + billing_contexts.map(&:subscription),
           timestamp: billing_at
         )
       end

@@ -4,7 +4,8 @@ require "rails_helper"
 
 RSpec.describe Invoices::AdvanceChargesService do
   subject(:invoice_service) do
-    described_class.new(initial_subscriptions: subscriptions, billing_at:)
+    billing_contexts = subscriptions.map { |subscription| Billing::Context.from(subscription:) }
+    described_class.new(billing_contexts:, billing_at:)
   end
 
   let(:organization) { create(:organization) }

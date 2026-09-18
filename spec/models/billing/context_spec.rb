@@ -32,9 +32,13 @@ RSpec.describe Billing::Context do
       expect(context.customer).to eq(subscription.customer)
       expect(context.external_id).to eq(subscription.external_id)
       expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
+      expect(context.billing_entity).to eq(subscription.billing_entity)
+      expect(context.active?).to eq(subscription.active?)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
+      expect(context.currency).to eq(subscription.plan.amount_currency)
       expect(context.anniversary?).to eq(subscription.anniversary?)
+      expect(context).not_to respond_to(:plan)
     end
 
     it "preserves subscription charge duration calculation" do
@@ -64,9 +68,12 @@ RSpec.describe Billing::Context do
       expect(context.customer).to eq(contract.customer)
       expect(context.external_id).to eq(contract.external_id)
       expect(context.applicable_billing_entity_id).to eq(contract.applicable_billing_entity_id)
+      expect(context.billing_entity).to eq(contract.billing_entity)
+      expect(context.active?).to eq(contract.active?)
       expect(context.subscription_at).to eq(contract.started_at)
       expect(context.started_at).to eq(contract.started_at)
       expect(context.organization).to eq(contract.organization)
+      expect(context.currency).to eq(contract.currency)
     end
 
     it "prevents using contract identity in subscription queries" do
