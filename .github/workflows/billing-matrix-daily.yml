@@ -1,0 +1,258 @@
+name: Billing Matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run the suite and print the report without committing, opening a PR, or posting to Slack"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: billing-matrix
+  cancel-in-progress: false
+
+jobs:
+  billing-matrix:
+    name: Billing Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: getlago/postgres-partman:15.0-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: lago
+          POSTGRES_USER: lago
+          POSTGRES_PASSWORD: lago
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
+      DATABASE_TEST_URL: "postgres://lago:lago@localhost:5432/lago_matrix_test"
+      LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
+      LAGO_REDIS_STORE_URL: "localhost:6379"
+      RAILS_MASTER_KEY: N+XcWoGDzKjuoxrU8BIPN5D0/GSuqx9s
+      SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
+      LAGO_API_URL: https://api.lago.dev
+      LAGO_PDF_URL: https://pdf.lago.dev
+      LAGO_DATA_API_URL: http://data_api
+      LAGO_FROM_EMAIL: noreply@getlago.com
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ruby and gems
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.6"
+          bundler-cache: true
+
+      - name: Generate RSA keys
+        run: ./scripts/generate.rsa.sh
+
+      - name: Set up billing matrix database
+        run: |
+          bin/rails db:create db:schema:load:primary
+
+      - name: Run billing matrix
+        id: run_matrix
+        run: |
+          mkdir -p tmp/billing_matrix
+          set +e
+          bundle exec ruby billing_matrix/run.rb 2>&1 | tee tmp/billing_matrix/run.log
+          rc=${PIPESTATUS[0]}
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+        env:
+          GIT_SHA: ${{ github.sha }}
+
+      - name: Alarm on void run
+        if: steps.run_matrix.outputs.exit_code == '2' && env.DRY_RUN != 'true' && env.SLACK_BOT_TOKEN != '' && env.SLACK_DM_USER_ID != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
+        run: |
+          curl --fail-with-body -sS https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" \
+              '{channel: $channel, text: ":rotating_light: Billing matrix canary passed — the suite'\''s assertions can no longer be trusted. This run is void; investigate the harness before trusting any result."}')" | jq -e '.ok == true'
+
+      # Exit 3 is the harness not running at all, which is worse than a void run: exit 2 at
+      # least proves the rows executed. It gets its own alarm rather than a silently red job.
+      - name: Alarm on harness failure
+        if: steps.run_matrix.outputs.exit_code != '' && steps.run_matrix.outputs.exit_code != '0' && steps.run_matrix.outputs.exit_code != '2' && env.DRY_RUN != 'true' && env.SLACK_BOT_TOKEN != '' && env.SLACK_DM_USER_ID != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl --fail-with-body -sS https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" --arg url "$RUN_URL" \
+              '{channel: $channel, text: (":rotating_light: Billing matrix could not run — the harness failed before executing any row, so no billing was checked at all today. " + $url)}')" | jq -e '.ok == true'
+
+      # `has_news` is a boolean rather than a test on the report string: an empty report
+      # still writes a newline through the heredoc, so comparing the text to '' is not a
+      # reliable "nothing happened today" signal.
+      # Gated on success, not on "not void": exit 3 means the harness never ran, so
+      # results.json is either absent or left over from a previous run. Reading it would
+      # let yesterday's verdicts move today's ledger.
+      - name: Check that every row executed
+        id: verification
+        if: steps.run_matrix.outputs.exit_code == '0'
+        run: |
+          if jq -e '.run.summary | .canaries_total > 0 and .canaries_unproven == 0 and .errored == 0' tmp/billing_matrix/results.json; then
+            echo "complete=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "complete=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Keep executing the checked-out code; only the pending PR's ledger is input state.
+      - name: Load current ledger
+        id: ledger_state
+        if: steps.run_matrix.outputs.exit_code == '0'
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ledger_ref=refs/heads/billing-matrix/ledger
+          ledger_head="$(git ls-remote origin "$ledger_ref" | cut -f1)"
+          echo "head=$ledger_head" >> "$GITHUB_OUTPUT"
+          if [[ -n "$ledger_head" ]]; then
+            git fetch --no-tags origin "$ledger_head"
+            pending_pr="$(gh pr list --head billing-matrix/ledger --base main --state open --json number --jq '.[0].number')"
+            if [[ -n "$pending_pr" ]]; then
+              git show "$ledger_head:billing_matrix/ledger.yml" > billing_matrix/ledger.yml
+            fi
+          fi
+          cp billing_matrix/ledger.yml tmp/billing_matrix/ledger-before.yml
+
+      - name: Build ledger report
+        id: ledger
+        if: steps.run_matrix.outputs.exit_code == '0'
+        env:
+          RUN_COMPLETE: ${{ steps.verification.outputs.complete }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          pr_url="https://github.com/$GH_REPO/compare/main...billing-matrix/ledger?expand=1"
+          args=(--format slack)
+          if [[ "$RUN_COMPLETE" == 'true' ]]; then
+            args+=(--apply --pr-url "$pr_url")
+          fi
+          output="$(ruby billing_matrix/ledger.rb "${args[@]}")"
+          if [[ -z "${output//[[:space:]]/}" ]]; then
+            echo "has_news=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_news=true" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "report<<LEDGER_EOF"
+            echo "$output"
+            echo "LEDGER_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # Compare with the input state, including an unmerged ledger PR. Comparing only
+      # with main would re-publish unchanged failures or miss cleanup back to main's state.
+      - name: Commit and push ledger
+        id: commit
+        if: steps.verification.outputs.complete == 'true' && env.DRY_RUN != 'true'
+        env:
+          LEDGER_HEAD: ${{ steps.ledger_state.outputs.head }}
+        run: |
+          if cmp -s tmp/billing_matrix/ledger-before.yml billing_matrix/ledger.yml; then
+            echo "ledger unchanged; nothing to push"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B billing-matrix/ledger
+            git add billing_matrix/ledger.yml
+            if git diff --cached --quiet; then
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+              git commit -m "chore(billing-matrix): update ledger" \
+                -m $'## Context\n\nA manual billing matrix run updated the recorded findings.\n\n## Description\n\nRecord the current billing matrix statuses.'
+            fi
+            git push --force-with-lease="refs/heads/billing-matrix/ledger:$LEDGER_HEAD" origin HEAD:refs/heads/billing-matrix/ledger
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Reusing one fixed branch is what makes tomorrow amend today's pull request instead
+      # of opening a second one.
+      - name: Open PR if needed
+        if: steps.commit.outputs.pushed == 'true' && steps.commit.outputs.has_changes == 'true'
+        run: |
+          existing_pr="$(gh pr list --repo "${{ github.repository }}" --head billing-matrix/ledger --base main --state open --json number --jq '.[0].number')"
+          if [[ -z "$existing_pr" ]]; then
+            gh pr create --repo "${{ github.repository }}" \
+              --base main \
+              --head billing-matrix/ledger \
+              --title "chore(billing-matrix): update ledger" \
+              --body "Opened by Billing Matrix. Contains only \`billing_matrix/ledger.yml\` — the day's status changes. Amended in place while it stays open."
+          fi
+
+      - name: Post report to Slack
+        if: steps.ledger.outputs.has_news == 'true' && env.DRY_RUN != 'true' && env.SLACK_BOT_TOKEN != '' && env.SLACK_DM_USER_ID != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_USER_ID: ${{ secrets.SLACK_DM_USER_ID }}
+          REPORT: ${{ steps.ledger.outputs.report }}
+        run: |
+          curl --fail-with-body -sS https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d "$(jq -n --arg channel "$SLACK_DM_USER_ID" --arg text "$REPORT" '{channel: $channel, text: $text}')" | jq -e '.ok == true'
+
+      # Through the environment, not string-interpolated into the script: report text is
+      # built from row ids and mismatch values, and interpolating it directly is the
+      # standard Actions command-injection hole.
+      - name: Show run report
+        if: always() && steps.run_matrix.outputs.exit_code == '0'
+        env:
+          REPORT: ${{ steps.ledger.outputs.report }}
+        run: |
+          printf '%s\n' "${REPORT:-No new billing transitions.}"
+          {
+            echo '## Billing matrix results'
+            jq -r '.run.summary | "\(.passed) passed · \(.failed) failed · \(.errored) errored (counts include canaries)"' tmp/billing_matrix/results.json
+            echo
+            printf '%s\n' "${REPORT:-No new billing transitions.}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload billing matrix results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-matrix-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tmp/billing_matrix/
+          if-no-files-found: warn
+
+      - name: Fail when the harness could not verify the run
+        if: always() && (steps.run_matrix.outputs.exit_code != '0' || steps.verification.outputs.complete != 'true')
+        env:
+          MATRIX_EXIT_CODE: ${{ steps.run_matrix.outputs.exit_code }}
+        run: |
+          echo "::error::Billing matrix did not verify every row (exit ${MATRIX_EXIT_CODE:-not started}). See the run report and log."
+          exit 1

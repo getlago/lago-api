@@ -1,0 +1,166 @@
+# Findings inherited from the previous suite (archive linked in README.md) that are not yet covered
+# by a row in billing_matrix/rows/*.yml. These are known or suspected defects awaiting a row, not
+# ledger entries — nothing here is pruned automatically, because a lead never "passes" or "fails".
+# The maintainer skill picks from this file when choosing new cells to cover.
+#
+# Every date below is a quoted ISO string, never a bare YAML date, so Psych does not emit `&`/`*`
+# anchors for repeated values.
+---
+- id: interactions/advance_charge-progressive_billing
+  finding: F07
+  noted: "2026-08-26"
+  area: interactions
+  note: >-
+    Pay-in-advance charges skip Credits::ProgressiveBillingService entirely, billing usage in full
+    mid-period even after a threshold invoice already collected it.
+
+- id: interactions/charge-equal-preview
+  finding: F72
+  noted: "2026-08-26"
+  area: interactions
+  note: >-
+    Multi-charge invoice preview 500s on a nil fee.subscription inside Fees::ApplyTaxesService, and
+    when it doesn't raise it leaks the caller's DB connection across Parallel blocks (see also F73),
+    corrupting later queries in the same run.
+
+- id: interactions/reducer_stack-preview-progressive_billing_credit
+  finding: F100
+  noted: "2026-08-31"
+  area: interactions
+  note: >-
+    Invoice preview never applies the progressive-billing credit (only coupons), so a preview of a
+    period with an unconsumed threshold invoice quotes the full fee as owed.
+
+- id: mid_flight/preview-progressive_billing_credit
+  finding: F100
+  noted: "2026-08-31"
+  area: mid_flight
+  note: >-
+    Same missing progressive-billing-credit gap as interactions/reducer_stack-preview-*, observed
+    across mid-flight rows on the preview surface.
+
+- id: identity_churn/filter-changed-progressive_billing_credit
+  finding: F70
+  noted: "2026-08-26"
+  area: identity_churn
+  note: >-
+    A charge-filter edit rewrites charge_filter_id but the progressive-billing credit distribution
+    join is never re-pointed, so the invoice taxes gross fees while the credit is reported in full.
+
+- id: identity_churn/plan-override-coupon_application-preview
+  finding: F71
+  noted: "2026-08-26"
+  area: identity_churn
+  note: >-
+    Coupons::PreviewService tests plan_id exactly with no override-children lookup, so a preview
+    refuses a plan-limited coupon that the real invoice then applies.
+
+- id: identity_churn/plan-override-paid_advance_fee-regenerated
+  finding: F75
+  noted: "2026-08-26"
+  ticket: BIL-537
+  area: identity_churn
+  note: >-
+    The two already-paid-fee lookups for an advance fixed charge disagree about parent scoping, so
+    refreshing a draft after a plan clone deletes the correctly priced fee.
+
+- id: identity_churn/charge-replaced-paid_advance_fee
+  finding: F76
+  noted: "2026-08-26"
+  area: identity_churn
+  note: >-
+    CachedAggregation is found by charge_id alone, so replacing a charge loses the paid-peak cache
+    and the next pay-in-advance event is priced from zero.
+
+- id: identity_churn/metric-deleted-paid_advance_fee
+  finding: F77
+  noted: "2026-08-26"
+  area: identity_churn
+  note: >-
+    Deleting a billable metric makes the pay-in-advance charge lookup return empty (kept default
+    scope), so subsequent events bill nothing with no error or webhook.
+
+- id: identity_churn/metric-deleted-progressive_billing_credit
+  finding: F78
+  noted: "2026-08-26"
+  area: identity_churn
+  note: >-
+    Deleting a metric removes the charge fee a progressive-billing credit must land on, diverting
+    the whole amount into an over-sized credit note instead of the correct partial refund.
+
+- id: identity_churn/paid_advance_fee-preview-blind
+  finding: F79
+  noted: "2026-08-26"
+  area: identity_churn
+  note: >-
+    Invoice preview excludes pay-in-advance charges on non-recurring metrics entirely, so every
+    churn in this column is invisible on the preview surface.
+
+- id: identity_churn/preview-progressive_billing_credit
+  finding: F100
+  noted: "2026-08-31"
+  area: identity_churn
+  note: >-
+    Same missing progressive-billing-credit gap as interactions/reducer_stack-preview-*, observed
+    on identity-churn rows.
+
+- id: surface_parity/b5-preview-double_tax
+  finding: F84
+  noted: "2026-08-26"
+  area: surface_parity
+  note: >-
+    Preview's (unapplied) progressive-billing-credit fix taxes the gross sub-total before the
+    credit lands on any fee, double-taxing already-billed usage relative to the invoice it
+    forecasts.
+
+- id: surface_parity/b5-preview-progressive_billing_credit
+  finding: F100
+  noted: "2026-08-31"
+  area: surface_parity
+  note: >-
+    Same missing progressive-billing-credit gap as interactions/reducer_stack-preview-*, on the
+    surface-parity b5/preview row.
+
+- id: wallets/target-method-negative-total
+  finding: F38
+  noted: "2026-08-26"
+  area: wallets
+  note: >-
+    Target top-ups size themselves against gross usage with no coupon term, so a customer with a
+    recurring coupon is topped up beyond what any invoice can ever consume, every cycle.
+
+- id: wallets/target-method-partial-cover
+  finding: F39
+  noted: "2026-08-26"
+  area: wallets
+  note: >-
+    ThresholdTopUpService enqueues a no-op WalletTransactions::CreateJob whenever the target is
+    already met (a `>` not `>=` gate), costing an enqueue and its uniqueness-lock round trip.
+
+- id: wallets/threshold-rule-partial-cover
+  finding: F42
+  noted: "2026-08-26"
+  area: wallets
+  note: >-
+    A threshold rule only fires after credits are applied, so it always lands one step late and
+    can never cover the invoice that emptied the wallet.
+
+- id: wallets/target-wallet-code-negative-total
+  finding: F56
+  noted: "2026-08-26"
+  area: wallets
+  note: >-
+    A fee tagged to a zero-balance, terminated, or foreign-currency wallet passes validation and
+    is billed as cash with no error anywhere, while a funded unrestricted wallet sits unused.
+
+- id: identity_churn/plan-override-usage_thresholds
+  sibling_of: F69
+  noted: "2026-09-07"
+  area: identity_churn
+  note: >-
+    Plans::OverrideService carries usage thresholds onto the cloned plan only when
+    params[:usage_thresholds].present? && License.premium? && progressive_billing_enabled?
+    (override_service.rb:57) — the same gate that drops minimum_commitment at line 64 (F69).
+    plan.dup copies columns, not associations, so an override that does not restate its thresholds
+    loses them, while charges and fixed_charges are carried over unconditionally a few lines
+    earlier: the clone keeps every charge and silently stops progressive billing.

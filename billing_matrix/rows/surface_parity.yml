@@ -1,0 +1,103 @@
+# The same period computed on a surface other than the finalized invoice, declared only where a
+# reducer is gated on finalization and can therefore answer differently. Each row names the
+# finalized-surface row that proves the reducer itself.
+
+- id: surface_parity/progressive-billing-credit/preview
+  area: surface_parity
+  axes: {subject_block: B5, surface: preview}
+  pins: [F100]
+  control: interactions/arrears-charge/progressive-billing
+  setup:
+    organization: {premium_integrations: [preview, progressive_billing]}
+    metrics: [{code: m_sp_pb, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_sp_pb, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges: [{metric: m_sp_pb, charge_model: standard, properties: {amount: "1"}}]
+    thresholds: [{amount_cents: 5000}]
+    customer: {external_id: cust_sp_pb}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_sp_pb, plan_code: p_sp_pb}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 50}, count: 2}]
+    - {at: 2026-03-05T11:00:00Z, do: perform_usage_update}
+    - at: 2026-03-20T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 20}}]
+    - {at: 2026-03-25T10:00:00Z, do: preview_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: progressive_billing
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+    preview:
+      invoice_type: subscription
+      fees_amount_cents: 12000
+      progressive_billing_credit_amount_cents: 10000
+      sub_total_excluding_taxes_amount_cents: 2000
+      total_amount_cents: 2000
+  math: >-
+    Same period as the control. 100 units on 5 March cross the 5_000¢ threshold and a
+    progressive_billing invoice collects 10_000¢. By 25 March the period holds 120 units, so a preview
+    of the March invoice (Invoices::PreviewService bills at end_of_period + 1 day) prices 12_000¢ of
+    charge fees, and — exactly as Credits::ProgressiveBillingService does on the real invoice — must
+    credit the 10_000¢ already invoiced: sub_total 2_000¢, total 2_000¢. LAGO INSTEAD:
+    PreviewService#compute_tax_and_totals runs Coupons::PreviewService, Preview::CreditsService and
+    Credits::AllocatePrepaidCreditsByWalletsService but never Credits::ProgressiveBillingService, so
+    the preview quotes progressive_billing_credit 0¢ and 12_000¢ owed, 10_000¢ of which the customer
+    has already been invoiced for.
+
+- id: surface_parity/prepaid-credit/draft
+  area: surface_parity
+  axes: {subject_block: prepaid_credit, surface: draft}
+  control: surface_parity/prepaid-credit/finalized
+  setup:
+    plan: {code: p_sp_pc, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_sp_pc, invoice_grace_period: 5}
+    wallets: [{code: w_sp_pc, rate_amount: "1", granted_credits: "30"}]
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_sp_pc, plan_code: p_sp_pc}
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: draft
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 0
+      total_amount_cents: 5000
+    wallet:
+      balance_cents: 3000
+  math: >-
+    30 granted credits at 1.00 = 3_000¢ of settled balance. The 5-day grace period makes
+    Invoices::SubscriptionService call CalculateFeesService with context :draft, and
+    should_create_applied_prepaid_credit? is false whenever not_in_finalizing_process?, so the draft
+    carries 0¢ of prepaid credit at a 5_000¢ total and the wallet is untouched at 3_000¢. Prepaid
+    credit is the gated reducer that makes this surface differ from the finalized invoice.
+
+- id: surface_parity/prepaid-credit/finalized
+  area: surface_parity
+  axes: {subject_block: prepaid_credit, surface: invoice}
+  setup:
+    plan: {code: p_sp_pc_f, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_sp_pc_f, invoice_grace_period: 5}
+    wallets: [{code: w_sp_pc_f, rate_amount: "1", granted_credits: "30"}]
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_sp_pc_f, plan_code: p_sp_pc_f}
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+    - {at: 2026-04-02T10:00:00Z, do: finalize_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 2000
+    wallet:
+      balance_cents: 0
+  math: >-
+    Control for the draft row: the same draft, finalized. PUT /invoices/:id/finalize runs
+    Invoices::RefreshDraftAndFinalizeService, which refreshes with context :finalize, so
+    CalculateFeesService now creates the applied prepaid credit: 3_000¢ of the 5_000¢ fee is drawn
+    from the wallet, total 2_000¢, wallet 0¢.
