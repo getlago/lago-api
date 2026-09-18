@@ -55,11 +55,15 @@ module EventDestinations
         usage = usages[subscription]
 
         if usage.nil?
+          # Same arguments as the inline delivery in Customers::RefreshWalletsService: the event must
+          # not differ by path, and the presentation breakdowns would keep the buckets from serving.
           usage_result = ::Invoices::CustomerUsageService.call(
             customer:,
             subscription:,
             apply_taxes: false,
-            with_cache: true
+            with_cache: true,
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+            use_usage_buckets: true
           )
 
           unless usage_result.success?

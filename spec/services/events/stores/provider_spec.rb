@@ -26,12 +26,6 @@ RSpec.describe Events::Stores::Provider do
     )
   end
 
-  let(:bucket_set) do
-    Events::Stores::UsageBucketSet.new(
-      totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(10), events_count: 2)}
-    )
-  end
-
   describe "#store_for" do
     it "returns a store configured for the metered item and the given window" do
       store = provider.store_for(metered_item:, boundaries:)
@@ -60,12 +54,6 @@ RSpec.describe Events::Stores::Provider do
       expect(provider.store_for(metered_item:, boundaries: other_boundaries).boundaries).to eq(other_boundaries)
     end
 
-    it "returns a plain store even when the computation carries usage buckets" do
-      provider = described_class.new(organization:, billing_context:, usage_buckets: bucket_set)
-
-      expect(provider.store_for(metered_item:, boundaries:)).to be_a(Events::Stores::PostgresStore)
-    end
-
     it "mints one instance per call, so aggregators cannot share per-charge state" do
       first = provider.store_for(metered_item:, boundaries:)
       second = provider.store_for(metered_item:, boundaries:)
@@ -77,28 +65,9 @@ RSpec.describe Events::Stores::Provider do
     end
   end
 
-  describe "#usage_buckets" do
-    it "is nil when the computation was built without buckets" do
-      expect(provider.usage_buckets).to be_nil
-    end
-
-    it "exposes the set it was built with" do
-      provider = described_class.new(organization:, billing_context:, usage_buckets: bucket_set)
-
-      expect(provider.usage_buckets).to eq(bucket_set)
-    end
-
-    it "keeps an empty set, which the prefetch built after finding no usage" do
-      empty_set = Events::Stores::UsageBucketSet.new
-      provider = described_class.new(organization:, billing_context:, usage_buckets: empty_set)
-
-      expect(provider.usage_buckets).to eq(empty_set)
-    end
-  end
-
-  describe "#precomputed_options_for" do
+  describe "#may_precompute?" do
     subject(:provider) do
-      described_class.new(organization:, billing_context:, usage_buckets: bucket_set, current_usage: true)
+      described_class.new(organization:, billing_context:, serve_current_usage_from_buckets: true)
     end
 
     include_context "with realtime usage availability"
@@ -106,14 +75,135 @@ RSpec.describe Events::Stores::Provider do
     let(:organization) do
       create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
     end
+
+    before { allow(RealtimeUsage::FetchBucketsService).to receive(:call) }
+
+    it "is true when every gate that does not depend on a charge holds, without reading clickhouse" do
+      expect(provider.may_precompute?).to be(true)
+      expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+    end
+
+    context "when the provider was not asked to serve the buckets" do
+      subject(:provider) { described_class.new(organization:, billing_context:) }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the read is restricted to some pricing group values" do
+      subject(:provider) do
+        described_class.new(
+          organization:,
+          billing_context:,
+          serve_current_usage_from_buckets: true,
+          usage_filters: UsageFilters.new(filter_by_group: {"region" => "us"})
+        )
+      end
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the read covers the whole lifetime of the subscription" do
+      subject(:provider) do
+        described_class.new(
+          organization:,
+          billing_context:,
+          serve_current_usage_from_buckets: true,
+          usage_filters: UsageFilters.new(full_usage: true)
+        )
+      end
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    # The caller skips per-charge work on the strength of this answer, so an organization the
+    # feature is off for has to be refused here rather than one store at a time.
+    context "when realtime usage is disabled for the organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+
+    context "when the organization deduplicates its events" do
+      let(:organization) do
+        create(
+          :organization,
+          clickhouse_events_store: true,
+          clickhouse_deduplication_enabled: true,
+          feature_flags: ["realtime_usage"]
+        )
+      end
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
+  end
+
+  describe "#store_for, with the usage buckets" do
+    subject(:provider) do
+      described_class.new(
+        organization:,
+        billing_context:,
+        serve_current_usage_from_buckets: true,
+        boundaries: billing_boundaries
+      )
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:billing_boundaries) { metered_item.boundaries }
     let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("42.5"), events_count: 7) }
     let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}) }
+    let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
+    let(:filters) { {} }
+
+    before do
+      allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+        .and_return(RealtimeUsage::FetchBucketsService::Result.new.tap { it.usage_buckets = bucket_set })
+    end
+
+    it "wraps the store in the bucket-backed one" do
+      expect(store).to be_a(Events::Stores::UsageBucketStore)
+      expect(store.sum.value).to eq(BigDecimal("42.5"))
+      expect(store.__getobj__).to be_a(Events::Stores::ClickhouseStore)
+    end
+
+    it "reads the buckets once, however many charges it is asked about" do
+      provider.store_for(metered_item:, boundaries:)
+      provider.store_for(metered_item:, boundaries:)
+
+      expect(RealtimeUsage::FetchBucketsService).to have_received(:call).once
+    end
+
+    context "without the opt-in" do
+      subject(:provider) do
+        described_class.new(organization:, billing_context:, boundaries: billing_boundaries)
+      end
+
+      it "reads events, without asking clickhouse for buckets" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
+    end
 
     context "when the organization is not enabled for realtime usage" do
       let(:organization) { create(:organization, clickhouse_events_store: true) }
 
-      it "reads events" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+      it "reads events, without asking clickhouse for buckets" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
       end
     end
 
@@ -121,7 +211,7 @@ RSpec.describe Events::Stores::Provider do
       let(:organization) { create(:organization, feature_flags: ["realtime_usage"]) }
 
       it "reads events, because the buckets and the postgres events would disagree" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+        expect(store).to be_a(Events::Stores::PostgresStore)
       end
     end
 
@@ -129,28 +219,16 @@ RSpec.describe Events::Stores::Provider do
       let(:realtime_usage_enabled) { nil }
 
       it "reads events" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
-      end
-    end
-
-    context "with a sum_agg charge" do
-      let(:billable_metric) { create(:sum_billable_metric, organization:) }
-
-      it "serves the units" do
-        options = provider.precomputed_options_for(charge:, boundaries:)
-
-        expect(options[:precomputed_aggregation].value).to eq(BigDecimal("42.5"))
-        expect(options[:precomputed_grouped_aggregations]).to eq([])
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
     context "with a count_agg charge" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
       let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(7), events_count: 7) }
 
       it "serves the units, which the pipeline already counts one per event" do
-        options = provider.precomputed_options_for(charge:, boundaries:)
-
-        expect(options[:precomputed_aggregation].value).to eq(7)
+        expect(store.count.value).to eq(7)
       end
     end
 
@@ -159,7 +237,7 @@ RSpec.describe Events::Stores::Provider do
       let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true) }
 
       it "reads events" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
@@ -167,7 +245,7 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
       it "reads events, because the units carry over from before this window" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
@@ -175,7 +253,7 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:max_billable_metric, organization:) }
 
       it "reads events" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
@@ -183,23 +261,16 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:unique_count_billable_metric, organization:) }
 
       it "reads events, because distincts do not recompose across buckets" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
-    context "when the computation carries no buckets" do
-      subject(:provider) { described_class.new(organization:, billing_context:, current_usage: true) }
+    context "with an excluded charge model" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
 
-      it "reads events" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
-      end
-    end
-
-    context "when the computation is not current usage" do
-      subject(:provider) { described_class.new(organization:, billing_context:, usage_buckets: bucket_set) }
-
-      it "reads events, because the buckets always lag behind the window they close" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+      it "reads events, without asking clickhouse for buckets" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
       end
     end
 
@@ -214,54 +285,88 @@ RSpec.describe Events::Stores::Provider do
       end
 
       it "reads events, because the stream and the events store disagree by construction" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
     context "when the store is already scoped to one group" do
-      it "reads events, because the totals answer for the whole charge" do
-        options = provider.precomputed_options_for(charge:, boundaries:, filters: {grouped_by_values: {"region" => "us"}})
+      let(:filters) { {grouped_by_values: {"region" => "us"}} }
 
-        expect(options).to eq({})
+      it "reads events, because the totals answer for the whole charge" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
     context "with a pay-in-advance event" do
-      it "reads events" do
-        event = create(:event, organization_id: organization.id, subscription_id: subscription.id)
+      let(:filters) { {event: create(:event, organization_id: organization.id, subscription_id: subscription.id)} }
 
-        expect(provider.precomputed_options_for(charge:, boundaries:, filters: {event:})).to eq({})
+      it "reads events" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
     context "with no charge filter" do
-      it "looks the charge up under the empty-string sentinel the pipeline writes" do
-        options = provider.precomputed_options_for(charge:, boundaries:, filters: {charge_filter: ChargeFilter.new(charge:)})
+      let(:filters) { {charge_filter: ChargeFilter.new(charge:)} }
 
-        expect(options[:precomputed_aggregation].value).to eq(BigDecimal("42.5"))
+      it "looks the charge up under the empty-string sentinel the pipeline writes" do
+        expect(store.sum.value).to eq(BigDecimal("42.5"))
       end
     end
 
     context "with a persisted charge filter" do
       let(:charge_filter) { create(:charge_filter, charge:) }
       let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, charge_filter.id] => totals}) }
+      let(:filters) { {charge_filter:} }
 
       it "serves the row of that filter" do
-        options = provider.precomputed_options_for(charge:, boundaries:, filters: {charge_filter:})
-
-        expect(options[:precomputed_aggregation].value).to eq(BigDecimal("42.5"))
+        expect(store.sum.value).to eq(BigDecimal("42.5"))
       end
 
       it "answers zero for the unfiltered charge" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)[:precomputed_aggregation].value).to eq(0)
+        expect(provider.store_for(metered_item:, boundaries:).sum.value).to eq(0)
       end
     end
 
     context "when the window holds no bucket at all" do
       let(:bucket_set) { Events::Stores::UsageBucketSet.new }
 
-      it "reads events, because a pipeline gap and an absence of usage look the same" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+      it "reads events, as an empty set is no proof the pipeline wrote this window" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the window holds buckets for another charge only" do
+      let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[create(:standard_charge).id, ""] => totals}) }
+
+      it "serves no usage for this one, the written window proving the pipeline is not lagging" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.sum.value).to eq(0)
+      end
+    end
+
+    context "when the prefetch refused the window" do
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+          .and_return(RealtimeUsage::FetchBucketsService::Result.new)
+      end
+
+      it "reads events, as nothing was fetched to serve from" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the prefetch failed to read clickhouse" do
+      let(:failed_result) do
+        RealtimeUsage::FetchBucketsService::Result.new
+          .service_failure!(code: "usage_buckets_read_failure", message: "connection reset")
+      end
+
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(failed_result)
+      end
+
+      it "reads events rather than raising, as an unreachable clickhouse makes usage slow, not broken" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
@@ -270,48 +375,62 @@ RSpec.describe Events::Stores::Provider do
         {from_datetime: Time.current.beginning_of_month, to_datetime: Time.current, max_timestamp: 1.hour.ago}
       end
 
-      it "reads events, because the totals cover the window the frozen read cuts short" do
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+      it "reads events, without asking clickhouse for buckets" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
       end
     end
 
     context "with a presentation breakdown" do
+      let(:filters) { {presentation_by: ["region"]} }
+
       it "reads events, which the breakdown queries anyway" do
-        expect(provider.precomputed_options_for(charge:, boundaries:, filters: {presentation_by: ["region"]})).to eq({})
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
 
-    context "when the read is narrowed to one pricing group" do
-      it "reads events, because the totals answer for every group of the charge" do
-        options = provider.precomputed_options_for(charge:, boundaries:, filters: {filter_by_group: {"workspace" => ["A"]}})
+    context "when the read is restricted to some pricing group values" do
+      subject(:provider) do
+        described_class.new(
+          organization:,
+          billing_context:,
+          serve_current_usage_from_buckets: true,
+          boundaries: billing_boundaries,
+          usage_filters: UsageFilters.new(filter_by_group: {"region" => "us"})
+        )
+      end
 
-        expect(options).to eq({})
+      it "reads events, because the totals answer for the whole charge" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
       end
     end
-  end
 
-  describe "#served_from_buckets?" do
-    subject(:provider) do
-      described_class.new(organization:, billing_context:, usage_buckets: bucket_set, current_usage: true)
+    context "when the store is asked for another window than the one prefetched" do
+      let(:other_window) { boundaries.merge(to_datetime: boundaries[:to_datetime] + 1.day) }
+
+      it "reads events, as the buckets cover the window they were fetched for" do
+        expect(provider.store_for(metered_item:, boundaries: other_window)).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
     end
 
-    include_context "with realtime usage availability"
+    context "when the provider was built without a window" do
+      subject(:provider) do
+        described_class.new(organization:, billing_context:, serve_current_usage_from_buckets: true)
+      end
 
-    let(:organization) do
-      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+      it "reads events, having no window to have fetched buckets for" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
     end
 
-    it "answers the same question as the precomputed options, so the charge cache cannot disagree" do
-      expect(provider.served_from_buckets?(charge:, boundaries:)).to be(true)
-      expect(provider.precomputed_options_for(charge:, boundaries:)).not_to eq({})
-    end
+    context "with a billing segment" do
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment) }
+      let(:billing_segment) { create(:billing_segment) }
 
-    context "with an excluded charge" do
-      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
-
-      it "answers false, and the options stay empty" do
-        expect(provider.served_from_buckets?(charge:, boundaries:)).to be(false)
-        expect(provider.precomputed_options_for(charge:, boundaries:)).to eq({})
+      it "reads events, because the buckets are keyed by charge" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
   end
