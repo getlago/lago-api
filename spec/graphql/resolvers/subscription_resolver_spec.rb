@@ -316,4 +316,53 @@ RSpec.describe Resolvers::SubscriptionResolver do
       end
     end
   end
+
+  context "with payment connection routing" do
+    subject(:payment_routing) do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {subscriptionId: subscription.id}
+      )
+      result.fetch("data").fetch("subscription").fetch("connections").find { |row| row["category"] == "payment" }
+    end
+
+    let(:query) do
+      <<~GQL
+        query($subscriptionId: ID!) {
+          subscription(id: $subscriptionId) {
+            connections { category behavior code }
+          }
+        }
+      GQL
+    end
+    let!(:default_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true) }
+
+    it "reports the inherited default" do
+      expect(payment_routing).to eq({"category" => "payment", "behavior" => "inherit", "code" => "stripe_default"})
+    end
+
+    context "when the default connection is explicitly selected" do
+      before do
+        create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+          behavior: "specific", payment_provider_customer: default_connection)
+      end
+
+      it "preserves the explicit selection" do
+        expect(payment_routing).to eq({"category" => "payment", "behavior" => "specific", "code" => "stripe_default"})
+      end
+    end
+
+    context "when payment is skipped" do
+      before do
+        create(:billing_object_connection, owner: subscription, organization:, category: "payment", behavior: "skip")
+      end
+
+      it "reports skip without a connection code" do
+        expect(payment_routing).to eq({"category" => "payment", "behavior" => "skip", "code" => nil})
+      end
+    end
+  end
 end
