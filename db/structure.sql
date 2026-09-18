@@ -4025,6 +4025,7 @@ CREATE TABLE public.invoices (
     search_terms text,
     x402_payment_token character varying,
     x402_connection_id uuid,
+    payment_refund_blocked_at timestamp(6) without time zone,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -15820,6 +15821,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260902143604'),
 ('20260902120100'),
 ('20260902120000'),
+('20260831110847'),
 ('20260826235314'),
 ('20260826235313'),
 ('20260826235312'),
