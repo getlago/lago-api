@@ -10,6 +10,7 @@ module Fees
       billing_context:,
       cache_middleware: nil,
       filtered_aggregations: nil,
+      provider: nil,
       options: nil,
       plan: nil,
       customer: nil
@@ -17,6 +18,7 @@ module Fees
       @invoice = invoice
       @metered_item = metered_item
       @billing_context = billing_context
+      @provider = provider
       @options = options || Options.default
       @plan = plan
       @customer = customer
@@ -438,7 +440,14 @@ module Fees
       true
     end
 
+    # One instance per pricing bucket, shared by the aggregation and the zero-units hydration, so
+    # the two cannot disagree on where the units come from.
     def aggregator(selected_metered_item:)
+      @aggregators ||= {}
+      @aggregators[selected_metered_item] ||= build_aggregator(selected_metered_item)
+    end
+
+    def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
 
@@ -446,15 +455,30 @@ module Fees
         metered_item: selected_metered_item,
         current_usage: options.current_usage?,
         billing_context:,
-        boundaries: {
-          from_datetime: selected_metered_item.boundaries.charges_from_datetime,
-          to_datetime: selected_metered_item.boundaries.charges_to_datetime,
-          charges_duration: selected_metered_item.boundaries.charges_duration,
-          max_timestamp: selected_metered_item.boundaries.max_timestamp
-        },
+        provider:,
+        boundaries: aggregation_boundaries(selected_metered_item),
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate
       )
+    end
+
+    # Callers that run one provider for the whole computation pass theirs; the others get one
+    # scoped to this single charge.
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization: billing_context.organization,
+        billing_context:,
+        current_usage: options.current_usage?
+      )
+    end
+
+    def aggregation_boundaries(selected_metered_item)
+      {
+        from_datetime: selected_metered_item.boundaries.charges_from_datetime,
+        to_datetime: selected_metered_item.boundaries.charges_to_datetime,
+        charges_duration: selected_metered_item.boundaries.charges_duration,
+        max_timestamp: selected_metered_item.boundaries.max_timestamp
+      }
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
