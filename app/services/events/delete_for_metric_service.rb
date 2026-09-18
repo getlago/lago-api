@@ -43,8 +43,7 @@ module Events
     CLICKHOUSE_BATCH_SIZE = BATCH_SIZE / 2
     CLICKHOUSE_TABLES = {
       events_raw: :ingested_at,
-      events_enriched: :enriched_at,
-      events_enriched_expanded: :enriched_at
+      events_enriched: :enriched_at
     }.freeze
     CLICKHOUSE_MUTATIONS_SYNC = "0" # Async
 
