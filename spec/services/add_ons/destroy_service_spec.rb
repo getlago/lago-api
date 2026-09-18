@@ -17,6 +17,12 @@ RSpec.describe AddOns::DestroyService do
         .and change { add_on.reload.deleted_at }.from(nil)
     end
 
+    it "enqueues an add_on.deleted webhook" do
+      result = destroy_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("add_on.deleted", result.add_on)
+    end
+
     context "when there are fixed charges associated with the add-on" do
       let(:fixed_charges) { create_list(:fixed_charge, 2, add_on:) }
 
