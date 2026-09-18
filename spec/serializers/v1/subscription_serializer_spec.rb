@@ -8,7 +8,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
   let(:started_at) { Time.zone.parse("2024-04-23 10:02:03") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
   let(:subscription) do
-    create(:subscription, created_at: started_at, started_at:, ending_at:, purchase_order_number: "PO-123")
+    create(:subscription, created_at: started_at, started_at:, ending_at:, purchase_order_number: "PO-123", payment_term: {term_type: "net", days: 45})
   end
 
   let(:includes) { %i[customer plan entitlements] }
@@ -35,6 +35,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "billing_time" => subscription.billing_time,
           "created_at" => "2024-04-23T10:02:03Z",
           "purchase_order_number" => "PO-123",
+          "payment_term" => {"term_type" => "net", "days" => 45},
           "ending_at" => ending_at.iso8601,
           "trial_ended_at" => nil,
           "started_at" => "2024-04-23T10:02:03.000Z",
