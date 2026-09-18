@@ -25,14 +25,14 @@ module RealtimeUsage
     def call
       return result.forbidden_failure! unless servable?
       return result.validation_failure!(errors: {from_datetime: ["invalid_window"]}) if from_datetime >= to_datetime
-      return result.validation_failure!(errors: {to_datetime: ["window_too_long"]}) if to_datetime > window_start + MAX_WINDOW
+      return result.validation_failure!(errors: {to_datetime: ["window_too_long"]}) if window_end > window_start + MAX_WINDOW
 
       rows = bucket_rows
       filters = build_filters(rows)
 
       result.usage = Usage.new(
         window_start,
-        to_datetime,
+        window_end,
         timezone,
         charge.billable_metric.aggregation_type,
         rows.filter_map { |row| row[:last_ingested_at] }.max,
@@ -40,6 +40,9 @@ module RealtimeUsage
         hours(rows, filters)
       )
       result
+    rescue *READ_ERRORS => e
+      Sentry.capture_exception(e)
+      result.service_failure!(code: "usage_buckets_read_failure", message: e.message, error: e)
     end
 
     private
@@ -64,6 +67,21 @@ module RealtimeUsage
       @window_start ||= Time.use_zone(timezone) { from_datetime.in_time_zone(timezone).beginning_of_hour }
     end
 
+    # A bucket is summed whole, so an end inside one would report less than what was counted.
+    # Both ends widen to the wall they sit on rather than cutting the bucket, and the window
+    # the caller reads back is the span the units describe.
+    def window_end
+      @window_end ||= begin
+        seconds = BUCKET_DURATION.to_i
+
+        aligned?(to_datetime) ? to_datetime : Time.zone.at(to_datetime.to_i - (to_datetime.to_i % seconds) + seconds)
+      end
+    end
+
+    def aligned?(time)
+      (time.to_i % BUCKET_DURATION.to_i).zero? && time.usec.zero?
+    end
+
     def bucket_rows
       Events::Stores::Utils::ClickhouseConnection.with_retry { fetch_rows }
     end
@@ -75,7 +93,7 @@ module RealtimeUsage
           subscription_id: subscription.id,
           charge_id: charge.id
         )
-        .where("bucket >= ? AND bucket < ?", window_start, to_datetime)
+        .where("bucket >= ? AND bucket < ?", window_start, window_end)
         .group(Arel.sql("hour, charge_filter_id"))
         .pluck(Arel.sql(<<~SQL.squish))
           toUnixTimestamp(toStartOfInterval(bucket, INTERVAL 1 hour, #{Clickhouse::UsageBucket.connection.quote(timezone)})) AS hour,
@@ -131,7 +149,7 @@ module RealtimeUsage
       walls = []
       wall = window_start
 
-      while wall < to_datetime
+      while wall < window_end
         walls << wall
         wall += 1.hour
       end
