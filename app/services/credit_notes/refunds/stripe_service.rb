@@ -123,6 +123,8 @@ module CreditNotes
       end
 
       def refund_blocked_error_code
+        return CHARGE_DISPUTED_ERROR if invoice.payment_refund_blocked_at?
+
         remaining = stripe_refundable_amount_cents
         # NOTE: nil means stripe could not be asked. The pre-check is an optimisation, never a
         #       gate: when in doubt we let Stripe::Refund.create decide.
@@ -135,6 +137,8 @@ module CreditNotes
 
       def refund_blocked_message(code)
         case code
+        when CHARGE_DISPUTED_ERROR
+          "The charge is disputed and cannot be refunded"
         when CHARGE_ALREADY_REFUNDED_ERROR
           "The charge has already been fully refunded"
         when INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR
