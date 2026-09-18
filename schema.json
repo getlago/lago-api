@@ -31931,6 +31931,12 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "alert_resolved",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "alert_triggered",
               "description": null,
               "isDeprecated": false,

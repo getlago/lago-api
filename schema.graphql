@@ -6531,6 +6531,7 @@ type EventCollection {
 }
 
 enum EventTypeEnum {
+  alert_resolved
   alert_triggered
   all
   billable_metric_created
