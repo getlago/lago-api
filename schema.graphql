@@ -13658,6 +13658,7 @@ type Subscription {
   canceledAt: ISO8601DateTime
   cancellationReason: CancellationReasonEnum
   charges: [Charge!]
+  connections: [ConnectionRouting!]!
   consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   currentBillingPeriodEndingAt: ISO8601DateTime
