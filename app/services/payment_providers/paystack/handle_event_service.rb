@@ -43,11 +43,6 @@ module PaymentProviders
         verified_transaction = verify_transaction
         return result unless metadata_belongs_to_organization?(verified_metadata)
 
-        if verified_metadata[:payment_type] == "setup"
-          update_customer_payment_method(verified_transaction["authorization"], verified_metadata)
-          return result
-        end
-
         payable = find_payable(verified_metadata)
         return result unless payable
         return result if payable.payment_succeeded?
@@ -103,45 +98,6 @@ module PaymentProviders
         end
 
         @verified_transaction
-      end
-
-      def update_customer_payment_method(authorization, metadata)
-        return result unless reusable_card_authorization?(authorization)
-
-        paystack_customer = PaymentProviderCustomers::PaystackCustomer.find_by(
-          id: metadata[:lago_paystack_customer_id],
-          customer_id: metadata[:lago_customer_id],
-          payment_provider_id: payment_provider.id
-        )
-        return result unless paystack_customer
-
-        PaymentProviderCustomers::PaystackService.call!(
-          :update_payment_method,
-          organization_id: organization.id,
-          customer_id: paystack_customer.customer_id,
-          payment_method_id: authorization["authorization_code"],
-          metadata: metadata.stringify_keys,
-          card_details: card_details(authorization)
-        )
-      end
-
-      def reusable_card_authorization?(authorization)
-        authorization.present? &&
-          authorization["authorization_code"].present? &&
-          authorization["reusable"] == true &&
-          authorization["channel"] == "card"
-      end
-
-      def card_details(authorization)
-        {
-          type: "card",
-          last4: authorization["last4"],
-          brand: authorization["brand"].presence || authorization["card_type"],
-          expiration_month: authorization["exp_month"],
-          expiration_year: authorization["exp_year"],
-          issuer: authorization["bank"],
-          country: authorization["country_code"]
-        }.compact
       end
 
       def metadata_belongs_to_organization?(metadata)

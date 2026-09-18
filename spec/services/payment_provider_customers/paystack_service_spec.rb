@@ -10,51 +10,24 @@ RSpec.describe PaymentProviderCustomers::PaystackService do
     create(:paystack_customer, customer:, organization:, payment_provider:, provider_customer_id: "CUS_test")
   end
 
-  describe "constants" do
-    it "defines an authorization amount for every Paystack-supported setup currency" do
-      expect(described_class::AUTHORIZATION_AMOUNTS_CENTS.keys)
-        .to match_array(PaymentProviders::PaystackProvider::SUPPORTED_CURRENCIES)
-    end
-  end
-
   describe "#generate_checkout_url" do
-    let(:client) { instance_double(PaymentProviders::Paystack::Client) }
+    subject(:result) { described_class.call(:generate_checkout_url, paystack_customer, send_webhook:) }
 
     before do
-      allow(PaymentProviders::Paystack::Client).to receive(:new).and_return(client)
-      allow(client).to receive(:initialize_transaction).and_return(
-        "data" => {"authorization_url" => "https://checkout.paystack.com/test"}
-      )
+      allow(PaymentProviders::Paystack::Client).to receive(:new).and_call_original
     end
 
-    it "initializes a card-only setup transaction" do
-      result = described_class.call(:generate_checkout_url, paystack_customer, send_webhook: false)
+    [true, false].each do |send_webhook|
+      context "with send_webhook set to #{send_webhook}" do
+        let(:send_webhook) { send_webhook }
 
-      expect(result).to be_success
-      expect(result.checkout_url).to eq("https://checkout.paystack.com/test")
-      expect(client).to have_received(:initialize_transaction) do |payload|
-        metadata = JSON.parse(payload[:metadata])
-
-        expect(payload[:channels]).to eq(["card"])
-        expect(payload[:amount]).to eq(5000)
-        expect(payload[:currency]).to eq("NGN")
-        expect(metadata).to include(
-          "lago_customer_id" => customer.id,
-          "lago_paystack_customer_id" => paystack_customer.id,
-          "payment_type" => "setup"
-        )
-      end
-    end
-
-    context "when currency is unsupported" do
-      let(:customer) { create(:customer, organization:, email: "customer@example.com", currency: "EUR") }
-
-      it "returns a validation failure without calling Paystack" do
-        result = described_class.call(:generate_checkout_url, paystack_customer, send_webhook: false)
-
-        expect(result).not_to be_success
-        expect(result.error.messages[:currency]).to eq(["unsupported_currency"])
-        expect(client).not_to have_received(:initialize_transaction)
+        it "returns an unsupported feature error without requesting checkout or sending a webhook" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("feature_not_supported")
+          expect(PaymentProviders::Paystack::Client).not_to have_received(:new)
+          expect(SendWebhookJob).not_to have_been_enqueued.with("customer.checkout_url_generated", customer, anything)
+        end
       end
     end
   end

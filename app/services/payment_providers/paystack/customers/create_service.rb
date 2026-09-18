@@ -36,8 +36,6 @@ module PaymentProviders
 
           if should_create_provider_customer?
             create_customer_on_provider_service(async)
-          elsif should_generate_checkout_url?
-            generate_checkout_url(async)
           end
 
           result
@@ -57,23 +55,10 @@ module PaymentProviders
           PaymentProviderCustomers::PaystackCreateJob.perform_now(result.provider_customer)
         end
 
-        def generate_checkout_url(async)
-          return PaymentProviderCustomers::PaystackCheckoutUrlJob.perform_after_commit(result.provider_customer) if async
-
-          PaymentProviderCustomers::PaystackCheckoutUrlJob.perform_now(result.provider_customer)
-        end
-
         def should_create_provider_customer?
           !result.provider_customer.provider_customer_id? &&
             !result.provider_customer.provider_customer_id_previously_changed? &&
             result.provider_customer.sync_with_provider.present?
-        end
-
-        def should_generate_checkout_url?
-          !result.provider_customer.id_previously_changed?(from: nil) &&
-            result.provider_customer.provider_customer_id_previously_changed? &&
-            result.provider_customer.provider_customer_id? &&
-            result.provider_customer.sync_with_provider.blank?
         end
       end
     end

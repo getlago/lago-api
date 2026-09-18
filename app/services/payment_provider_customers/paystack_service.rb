@@ -8,17 +8,8 @@ module PaymentProviderCustomers
     RESULTS = {
       create: BaseResult[:paystack_customer],
       update: BaseResult,
-      generate_checkout_url: BaseResult[:paystack_customer, :checkout_url],
+      generate_checkout_url: BaseResult,
       update_payment_method: BaseResult[:paystack_customer, :payment_method]
-    }.freeze
-
-    AUTHORIZATION_AMOUNTS_CENTS = {
-      "NGN" => 5000,
-      "GHS" => 10,
-      "ZAR" => 100,
-      "KES" => 300,
-      "USD" => 200,
-      "XOF" => 100
     }.freeze
 
     private
@@ -60,27 +51,7 @@ module PaymentProviderCustomers
 
     def generate_checkout_url(paystack_customer, send_webhook: true)
       @paystack_customer = paystack_customer
-      return result unless customer
-      return result.not_found_failure!(resource: "paystack_payment_provider") unless paystack_payment_provider
-      return unsupported_currency_result unless supported_currency?(authorization_currency)
-
-      create(paystack_customer) if paystack_customer.provider_customer_id.blank?
-      return result unless result.success?
-
-      paystack_result = client.initialize_transaction(setup_transaction_payload)
-      result.checkout_url = paystack_result.dig("data", "authorization_url")
-
-      if send_webhook
-        SendWebhookJob.perform_later("customer.checkout_url_generated", customer, checkout_url: result.checkout_url)
-      end
-
-      result
-    rescue PaymentProviders::Paystack::Client::Error => e
-      deliver_error_webhook(e)
-      result.third_party_failure!(third_party: "Paystack", error_code: e.code, error_message: e.message)
-    rescue LagoHttpClient::HttpError => e
-      deliver_error_webhook(e)
-      result.service_failure!(code: e.error_code, message: e.message)
+      result.not_allowed_failure!(code: "feature_not_supported")
     end
 
     def update_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {}, card_details: {})
@@ -146,47 +117,8 @@ module PaymentProviderCustomers
       }.compact
     end
 
-    def setup_transaction_payload
-      {
-        amount: authorization_amount_cents,
-        email: paystack_email,
-        currency: authorization_currency,
-        reference: "lago-setup-#{paystack_customer.id}-#{SecureRandom.hex(6)}",
-        callback_url: success_redirect_url,
-        channels: ["card"],
-        metadata: {
-          lago_customer_id: customer.id,
-          lago_paystack_customer_id: paystack_customer.id,
-          lago_payment_provider_id: paystack_payment_provider.id,
-          lago_payment_provider_code: paystack_payment_provider.code,
-          payment_type: "setup"
-        }.to_json
-      }
-    end
-
     def paystack_email
       customer.email&.strip&.split(",")&.first
-    end
-
-    def authorization_currency
-      (customer.currency.presence || customer.organization_default_currency).to_s.upcase
-    end
-
-    def authorization_amount_cents
-      AUTHORIZATION_AMOUNTS_CENTS.fetch(authorization_currency)
-    end
-
-    def supported_currency?(currency)
-      PaymentProviders::PaystackProvider.supported_currency?(currency)
-    end
-
-    def unsupported_currency_result
-      result.single_validation_failure!(error_code: "unsupported_currency", field: :currency)
-    end
-
-    def success_redirect_url
-      paystack_payment_provider.success_redirect_url.presence ||
-        PaymentProviders::PaystackProvider::SUCCESS_REDIRECT_URL
     end
 
     def deliver_success_webhook

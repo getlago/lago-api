@@ -304,10 +304,9 @@ RSpec.describe PaymentProviders::Paystack::HandleEventService do
       allow(client).to receive(:verify_transaction).with(reference).and_return("data" => verified_transaction)
     end
 
-    it "stores the reusable authorization without creating a payment" do
-      expect { result }.not_to change(Payment, :count)
+    it "ignores the setup charge without changing payments or payment methods" do
+      expect { result }.not_to change { [Payment.count, PaymentMethod.count, paystack_customer.reload.attributes] }
       expect(result).to be_success
-      expect(paystack_customer.reload.authorization_code).to eq("AUTH_setup")
     end
   end
 

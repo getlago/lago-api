@@ -42,12 +42,26 @@ RSpec.describe PaymentProviders::Paystack::Customers::CreateService do
     let!(:provider_customer) { create(:paystack_customer, customer:, organization:, payment_provider:, provider_customer_id: nil) }
     let(:params) { {provider_customer_id: "CUS_test"} }
 
-    it "enqueues checkout URL generation" do
-      result
+    it "updates the provider customer without scheduling checkout" do
+      expect { result }.not_to have_enqueued_job
 
+      expect(result).to be_success
       expect(result.provider_customer).to eq(provider_customer)
-      expect(PaymentProviderCustomers::PaystackCheckoutUrlJob)
-        .to have_been_enqueued.with(provider_customer)
+      expect(provider_customer.reload.provider_customer_id).to eq("CUS_test")
+    end
+
+    context "when processing synchronously" do
+      let(:async) { false }
+
+      before do
+        allow(PaymentProviderCustomers::PaystackService).to receive(:call!).and_return(BaseResult.new)
+      end
+
+      it "updates the provider customer without requesting checkout" do
+        expect(result).to be_success
+        expect(provider_customer.reload.provider_customer_id).to eq("CUS_test")
+        expect(PaymentProviderCustomers::PaystackService).not_to have_received(:call!)
+      end
     end
   end
 end
