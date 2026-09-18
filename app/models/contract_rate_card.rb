@@ -45,11 +45,10 @@ class ContractRateCard < ApplicationRecord
     )
   }
 
-  scope :due_for_billing, ->(timestamp) {
+  # The attachments the calendar can build a schedule for at all. Being *due* adds the clock
+  # and the contract's own status on top; a preview asks only for this.
+  scope :schedulable, ->(timestamp) {
     current_and_scheduled(timestamp)
-      .where(next_billing_at: ..timestamp)
-      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
-      .where(customers: {deleted_at: nil})
       # Only a priced card owes anything: a period with no price is not one to be paid for.
       .where(rate_card_id: RateCardRate.select(:rate_card_id))
       # And only a card with a window: one that starts after its contract ends has no period
@@ -59,6 +58,17 @@ class ContractRateCard < ApplicationRecord
         "(contract_rate_cards.effective_date::timestamp AT TIME ZONE " \
         "COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))"
       )
+  }
+
+  scope :due_for_billing, ->(timestamp) {
+    schedulable(timestamp)
+      .where(next_billing_at: ..timestamp)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      # A deleted customer is not billed. Deleting one does not terminate their contracts, so
+      # their cards would stay due forever and the producer would raise loading the customer
+      # back through its kept-only default scope. A preview still resolves them, which is why
+      # this sits here rather than in schedulable.
+      .where(customers: {deleted_at: nil})
   }
 
   def edit_error_code
