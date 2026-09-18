@@ -98,7 +98,7 @@ RSpec.describe Invoices::AdvanceChargesService do
           invoice_type: "advance_charges",
           currency: "EUR",
           issuing_date: billing_at.to_date,
-          skip_charges: true,
+          skip_charges: false,
           taxes_rate: (16.0 * 100 / 61).round(2)
         }))
 
@@ -236,7 +236,7 @@ RSpec.describe Invoices::AdvanceChargesService do
             invoice_type: "advance_charges",
             currency: "EUR",
             issuing_date: billing_at.to_date,
-            skip_charges: true
+            skip_charges: false
           )
 
         expect(result.invoice.invoice_subscriptions.count).to eq(1)

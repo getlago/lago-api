@@ -137,14 +137,11 @@ module Invoices
     end
 
     def create_generating_invoice(subscriptions_group)
-      # TODO: seems that skip_charges here might be deleted. Performed one test locally - worked without any additional charges.
-      # Following the code - also did not find calling any service that would use this skip_charges
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
-        skip_charges: true,
         billing_entity: billing_contexts.first&.billing_entity || customer.billing_entity,
         purchase_order_number: subscriptions_group.first&.purchase_order_number
       ) do |invoice|
