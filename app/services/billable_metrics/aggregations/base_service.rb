@@ -129,6 +129,8 @@ module BillableMetrics
         result
       end
 
+      delegate :precomputed?, to: :event_store
+
       protected
 
       attr_accessor :event_store,

@@ -4423,7 +4423,7 @@ RSpec.describe Fees::ChargeService, :premium do
               presentation_by: ["department", "region"]
             )
           )
-        ).twice
+        ).once
       end
 
       context "when presentation_group_keys is empty" do
@@ -4438,7 +4438,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 charge_id: charge.id
               )
             )
-          ).twice
+          ).once
         end
       end
 
@@ -4454,7 +4454,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 presentation_by: []
               )
             )
-          ).twice
+          ).once
         end
 
         context "when presentation_group_keys is empty" do
@@ -4469,7 +4469,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   charge_id: charge.id
                 )
               )
-            ).twice
+            ).once
           end
         end
       end
@@ -4486,7 +4486,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 presentation_by: ["region"]
               )
             )
-          ).twice
+          ).once
         end
 
         context "when presentation_group_keys is empty" do
@@ -4501,7 +4501,7 @@ RSpec.describe Fees::ChargeService, :premium do
                   charge_id: charge.id
                 )
               )
-            ).twice
+            ).once
           end
         end
       end
@@ -4518,7 +4518,7 @@ RSpec.describe Fees::ChargeService, :premium do
                 presentation_by: []
               )
             )
-          ).twice
+          ).once
         end
       end
     end
