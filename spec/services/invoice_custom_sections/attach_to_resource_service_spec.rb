@@ -87,6 +87,13 @@ RSpec.describe InvoiceCustomSections::AttachToResourceService do
         it_behaves_like "section attachable"
         it_behaves_like "section skippable"
       end
+
+      context "when Contract" do
+        let(:resource) { create(:contract) }
+
+        it_behaves_like "section attachable"
+        it_behaves_like "section skippable"
+      end
     end
 
     describe "params attribute" do

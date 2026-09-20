@@ -36,6 +36,8 @@ RSpec.describe Contract do
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
       expect(contract).to have_many(:invoices).through(:billing_segments)
+      expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
+      expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
     end
 
     it "resolves a discarded customer and catalog plan" do

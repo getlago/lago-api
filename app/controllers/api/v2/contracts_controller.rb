@@ -107,7 +107,7 @@ module Api
           json: ::V2::ContractSerializer.new(
             contract,
             root_name: "contract",
-            includes: %i[applied_rate_cards]
+            includes: %i[applied_rate_cards applied_invoice_custom_sections]
           )
         )
       end
@@ -133,7 +133,8 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
 
@@ -146,12 +147,13 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
 
       def render_contract(contract)
-        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards]))
+        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards applied_invoice_custom_sections]))
       end
 
       def resource_name

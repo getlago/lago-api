@@ -60,6 +60,7 @@ module Contracts
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
         apply_settings(contract)
         contract.save!
+        InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
 
         # Replace the old plan's materialised cards. The destroy service also
         # discards each card's soft-deletable phases and overrides, which a bare

@@ -6,7 +6,7 @@ module Types
       graphql_name "Contract"
       description "The agreement a customer signed: an optional plan, a validity window and the billing anchor"
 
-      dataload_association :customer, :billing_entity, :payment_method
+      dataload_association :customer, :billing_entity, :payment_method, :selected_invoice_custom_sections
 
       field :external_id, String, null: false
       field :id, ID, null: false
@@ -32,6 +32,8 @@ module Types
       field :payment_method, Types::PaymentMethods::Object, null: true
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false
       field :purchase_order_number, String, null: true
+      field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
+      field :skip_invoice_custom_sections, Boolean, null: false
 
       field :customer, Types::Customers::Object, null: false
       # Nullable by design: a plan-less contract prices through directly
