@@ -33,6 +33,8 @@ RSpec.describe Mutations::Contracts::Create do
       mutation($input: CreateContractInput!) {
         createContract(input: $input) {
           id externalId status billingTime
+          selectedInvoiceCustomSections { id }
+          skipInvoiceCustomSections
           plan { id }
           appliedRateCards { id }
           appliedRateCardsCount
@@ -56,6 +58,18 @@ RSpec.describe Mutations::Contracts::Create do
     expect(result_data["billingTime"]).to eq("calendar")
     expect(result_data["plan"]["id"]).to eq(catalog_plan.id)
     expect(result_data["appliedRateCardsCount"]).to eq(1)
+  end
+
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:input) { super().merge(invoiceCustomSection: {invoiceCustomSectionIds: [section.id]}) }
+
+    it "attaches the sections to the contract" do
+      result_data = execution["data"]["createContract"]
+
+      expect(result_data["selectedInvoiceCustomSections"].map { it["id"] }).to eq([section.id])
+      expect(result_data["skipInvoiceCustomSections"]).to be(false)
+    end
   end
 
   context "without a plan" do
