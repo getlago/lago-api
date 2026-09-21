@@ -173,7 +173,8 @@ To create a webhook:
 
 ## Clickhouse migrations
 
-- Clickhouse migrations live in `db/clickhouse_migrate/` (self-hosted). The DDL for ClickHouse Cloud is kept separately in `db/clickhouse_migrate/cloud/*.sql`; those files are executed manually when creating a new cluster, so they are edited in place to reflect the current schema.
+- Clickhouse migrations live in `db/clickhouse_migrate/` (self-hosted). The DDL for ClickHouse Cloud is kept separately in `db/clickhouse_migrate/cloud/*.sql`; those files are executed manually, in filename order, when creating a new cluster.
+- Changing the schema of a Clickhouse Cloud table that already exists in production requires a new numbered `db/clickhouse_migrate/cloud/*.sql` script holding the `ALTER`, not an edit to the original creation script: creation scripts only ever run on new clusters, so an in-place edit never reaches an existing one. Edit a creation script in place only when it does not change a deployed table (e.g. fixing invalid DDL).
 - Clickhouse DDL is not transactional. Keep one DDL concern per migration (e.g. one index): if a migration runs several statements and a later one fails, the earlier ones are already applied while the migration is marked as failed.
 - Define explicit `up` and `down` methods (not `change`), and make `down` revert the DDL (e.g. `DROP INDEX IF EXISTS`). Use `IF NOT EXISTS` / `IF EXISTS` guards so retries are idempotent.
 
@@ -194,6 +195,7 @@ To create a webhook:
 - `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
 - `LAGO_SMTP_AUTHENTICATION` — SMTP authentication method, one of `login` (default), `plain`, `cram_md5` or `xoauth2`. `none` or `disabled` turn authentication off and drop `LAGO_SMTP_USERNAME`/`LAGO_SMTP_PASSWORD` from the mailer settings, which is required because net-smtp authenticates with PLAIN as soon as a username is present; use it only for a trusted self-hosted relay. A blank value keeps the default, so a variable left empty by a compose file or a Helm chart cannot silently change authentication. Any other value makes every delivery fail — `rails lago:diagnostics` flags it. Example: `LAGO_SMTP_AUTHENTICATION=none`
 - `LAGO_SMTP_ENABLE_STARTTLS_AUTO` — whether SMTP automatically uses STARTTLS. Defaults to true; set it to false only for a trusted self-hosted relay without TLS. Example: `LAGO_SMTP_ENABLE_STARTTLS_AUTO=false`
+- `LAGO_STREAMING_INTERMEDIATE_ROLE_ARN` — IAM role that a streaming worker assumes before it assumes the destination role of a `streaming_destinations` row. Set it when the worker's own Pod Identity role is not the principal the destination trusts: the destination then sees this role as the caller, so the trust policy of the stream owner needs no change. Blank keeps the single-hop path, where the worker assumes the destination role directly from its ambient credentials. The value is read at class load, so a worker must restart before a change takes effect. Example: `LAGO_STREAMING_INTERMEDIATE_ROLE_ARN=arn:aws:iam::123456789012:role/SharedKinesis`
 - Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
 
 # Service

@@ -109,6 +109,38 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contracts].map { |c| c[:lago_id] }).to eq([pending_contract.id])
       end
     end
+
+    context "with a billing entity filter" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let!(:matching) { create(:contract, organization:, billing_entity:) }
+
+      it "returns only contracts on that billing entity" do
+        get_with_token(organization, "/api/v2/contracts?billing_entity_ids[]=#{billing_entity.id}")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([matching.id])
+      end
+    end
+
+    context "with a has_rate_overrides filter" do
+      it "returns only contracts carrying a rate override" do
+        card = create(:contract_rate_card, organization:, contract:)
+        create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, rate_override: create(:rate_override, organization:))
+
+        get_with_token(organization, "/api/v2/contracts?has_rate_overrides=true")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([contract.id])
+      end
+    end
+
+    context "with a search term" do
+      let!(:matching) { create(:contract, organization:, external_id: "needle-1") }
+
+      it "returns only the matching contracts" do
+        get_with_token(organization, "/api/v2/contracts?search_term=needle")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([matching.id])
+      end
+    end
   end
 
   describe "GET /api/v2/contracts/:external_id" do
@@ -229,6 +261,55 @@ RSpec.describe Api::V2::ContractsController do
 
     context "when it does not exist" do
       subject { put_with_token(organization, "/api/v2/contracts/unknown", {contract: update_params}) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+
+  describe "DELETE /api/v2/contracts/:external_id" do
+    subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
+
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "terminates the active contract and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq(contract.external_id)
+      expect(json[:contract][:status]).to eq("terminated")
+    end
+
+    context "when the contract is pending" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+      it "cancels it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("canceled")
+      end
+    end
+
+    context "when a pending replacement coexists with the active contract" do
+      it "terminates the active contract and leaves the replacement live" do
+        replacement = create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id)
+
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("terminated")
+        expect(replacement.reload.status).to eq("pending")
+      end
+    end
+
+    context "when no live contract matches the external id" do
+      subject { delete_with_token(organization, "/api/v2/contracts/unknown") }
 
       it "returns a not found error" do
         subject

@@ -43,6 +43,10 @@ class Contract < ApplicationRecord
 
   LIVE_STATUSES = %w[pending active].freeze
 
+  # Which contracts the billing clock may produce segments for. A terminated contract's
+  # final arrears period is the termination path's, so it is not billable from the clock.
+  BILLABLE_STATUSES = %w[active].freeze
+
   # The live contracts for an external id: at most one per status (the partial
   # unique index is per status), so a pending replacement can coexist with the
   # active contract. Terminated and canceled siblings are history.
@@ -54,6 +58,17 @@ class Contract < ApplicationRecord
     # ties deterministically within a status.
     live.where(external_id:)
       .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
+      .first
+  end
+
+  def self.terminatable_by_external_id(external_id)
+    # Termination ends the agreement in force, so it prefers the active
+    # contract over a pending replacement — the reverse of live_by_external_id.
+    # Ending the active row leaves the future replacement to start on its own;
+    # with no active sibling the pending row is the one to cancel.
+    # started_at/created_at break ties deterministically within a status.
+    live.where(external_id:)
+      .order(Arel.sql("status = 'active' DESC"), started_at: :desc, created_at: :desc)
       .first
   end
 
@@ -146,13 +161,15 @@ end
 #
 # Indexes
 #
-#  index_contracts_on_billing_entity_id                (billing_entity_id)
-#  index_contracts_on_catalog_plan_id                  (catalog_plan_id)
-#  index_contracts_on_customer_id                      (customer_id)
-#  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
-#  index_contracts_on_organization_id                  (organization_id)
-#  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
-#  index_contracts_on_payment_method_id                (payment_method_id)
+#  index_contracts_on_billing_entity_id                         (billing_entity_id)
+#  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
+#  index_contracts_on_customer_id                               (customer_id)
+#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
+#  index_contracts_on_organization_id                           (organization_id)
+#  index_contracts_on_organization_id_and_external_id           (organization_id,external_id)
+#  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
+#  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
+#  index_contracts_on_payment_method_id                         (payment_method_id)
 #
 # Foreign Keys
 #

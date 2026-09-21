@@ -10,6 +10,7 @@ module Fees
       billing_context:,
       cache_middleware: nil,
       filtered_aggregations: nil,
+      provider: nil,
       options: nil,
       plan: nil,
       customer: nil
@@ -17,6 +18,7 @@ module Fees
       @invoice = invoice
       @metered_item = metered_item
       @billing_context = billing_context
+      @provider = provider
       @options = options || Options.default
       @plan = plan
       @customer = customer
@@ -121,17 +123,24 @@ module Fees
     #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
     #       on draft invoices can target filters without any usage.
     #       Recurring metrics always aggregate as usage carries over from previous periods.
+    #       The pre-filtering reads the events store, which lags the buckets independently, so a
+    #       filter the buckets already hold usage for is aggregated rather than zeroed.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
       return false if selected_metered_item.billable_metric.recurring?
+      return false if filtered_aggregations.include?(selected_metered_item.filter_id)
 
-      !filtered_aggregations.include?(selected_metered_item.filter_id)
+      !precomputed?(selected_metered_item:)
     end
 
     def compute_fees_with_cache(selected_metered_item:)
       if cache_middleware
-        cache_middleware.call(charge_filter: selected_metered_item.charge_filter) do
+        cache_middleware.call(
+          charge_filter: selected_metered_item.charge_filter,
+          # Precomputed usage is already fresh, caching it would put back the staleness it removes.
+          bypass: precomputed?(selected_metered_item:)
+        ) do
           fees = compute_fees(selected_metered_item:)
           if fees.nil?
             return
@@ -438,7 +447,26 @@ module Fees
       true
     end
 
+    # The provider is asked first, down to the per-charge gates: building the aggregator and its
+    # store is wasted work for a charge the buckets could never answer, and this runs before the
+    # charge cache is even read.
+    def precomputed?(selected_metered_item:)
+      return false unless provider.may_precompute_charge?(
+        metered_item: selected_metered_item,
+        boundaries: aggregation_boundaries(selected_metered_item)
+      )
+
+      aggregator(selected_metered_item:).precomputed?
+    end
+
+    # One instance per pricing bucket, shared by the cache bypass, the aggregation and the
+    # zero-units hydration, so the three cannot disagree on where the units come from.
     def aggregator(selected_metered_item:)
+      @aggregators ||= {}
+      @aggregators[selected_metered_item] ||= build_aggregator(selected_metered_item)
+    end
+
+    def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
 
@@ -446,15 +474,30 @@ module Fees
         metered_item: selected_metered_item,
         current_usage: options.current_usage?,
         billing_context:,
-        boundaries: {
-          from_datetime: selected_metered_item.boundaries.charges_from_datetime,
-          to_datetime: selected_metered_item.boundaries.charges_to_datetime,
-          charges_duration: selected_metered_item.boundaries.charges_duration,
-          max_timestamp: selected_metered_item.boundaries.max_timestamp
-        },
+        provider:,
+        boundaries: aggregation_boundaries(selected_metered_item),
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate
       )
+    end
+
+    # Callers that run one provider for the whole computation pass theirs; the others get one
+    # scoped to this single charge.
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization: billing_context.organization,
+        billing_context:,
+        usage_filters: options.usage_filters
+      )
+    end
+
+    def aggregation_boundaries(selected_metered_item)
+      {
+        from_datetime: selected_metered_item.boundaries.charges_from_datetime,
+        to_datetime: selected_metered_item.boundaries.charges_to_datetime,
+        charges_duration: selected_metered_item.boundaries.charges_duration,
+        max_timestamp: selected_metered_item.boundaries.max_timestamp
+      }
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)

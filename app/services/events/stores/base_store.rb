@@ -81,6 +81,10 @@ module Events
         grouped_by_values.present?
       end
 
+      def precomputed?
+        false
+      end
+
       def with_grouped_by_values(grouped_by_values, &block)
         previous_grouped_by_values = @grouped_by_values
         return yield block if grouped_by_values.nil?

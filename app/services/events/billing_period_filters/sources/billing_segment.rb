@@ -32,7 +32,7 @@ module Events
           filter.to_h[key] == [nil]
         end
 
-        delegate :target_key, to: :product
+        delegate :target_key, to: :billing_segment
 
         def with_filter(filter)
           self.class.new(billing_segment:, filter:)
