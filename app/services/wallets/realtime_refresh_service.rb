@@ -30,7 +30,10 @@ module Wallets
       return result unless customer.wallets.active.exists?
       return result if customer.error_details.tax_error.exists?
 
-      wait_for_buckets
+      # Refreshing on buckets that have not caught up writes a stale balance and clears
+      # awaiting_wallet_refresh, which is what the sweep keys on: nothing would ever correct it.
+      # Leaving the customer flagged hands it back to the sweep instead.
+      return result unless wait_for_buckets
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?
         Rails.logger.warn(
@@ -51,10 +54,9 @@ module Wallets
     attr_reader :organization_id, :customer_id, :wallet_codes, :expected_ingested_at
 
     def wait_for_buckets
-      pending = expected_ingested_at
-        .reject { |_sub, ms| ms.to_i < ((Time.current - STALE_WATERMARK_CUTOFF).to_f * 1000).to_i }
-        .dup
-      return if pending.empty?
+      stale_cutoff_ms = ((Time.current - STALE_WATERMARK_CUTOFF).to_f * 1000).to_i
+      pending = expected_ingested_at.reject { |_sub, ms| ms.to_i < stale_cutoff_ms }
+      return true if pending.empty?
 
       deadline = Time.current + BUCKET_WAIT_TIMEOUT
 
@@ -72,14 +74,14 @@ module Wallets
               .exists?
           end
         end
-        break if pending.empty?
+        return true if pending.empty?
 
         if Time.current > deadline
           Rails.logger.warn(
             "[wallets] usage buckets did not catch up before refresh " \
             "customer_id=#{customer_id} pending=#{pending.keys.inspect}"
           )
-          break
+          return false
         end
 
         sleep BUCKET_WAIT_INTERVAL

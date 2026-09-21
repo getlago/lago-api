@@ -68,7 +68,8 @@ class KarafkaApp < Karafka::App
           max_wait_time 100
           # A batch collapses to one refresh per customer, so the collapse ratio has to be free to
           # grow with the backlog: under a small cap the consumer never catches up (measured: 98k
-          # lag at a sustained 500 ev/s with 500).
+          # lag at a sustained 500 ev/s with 500). The distinct-customer count is what costs time,
+          # and the consumer bounds it with its own deadline (WalletRefreshTriggersConsumer).
           max_messages 10_000
         end
       end

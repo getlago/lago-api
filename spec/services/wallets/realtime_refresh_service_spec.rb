@@ -92,6 +92,19 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
         expect(service_result).to be_success
         expect(Rails.logger).to have_received(:warn).with(/usage buckets did not catch up/)
       end
+
+      it "leaves the refresh to the sweep" do
+        expect(service_result).to be_success
+        expect(Customers::RefreshWalletsService).not_to have_received(:call)
+      end
+    end
+
+    context "when the buckets never catch up" do
+      it "does not refresh, so the customer stays flagged for the sweep" do
+        expect(service_result).to be_success
+        expect(Customers::RefreshWalletsService).not_to have_received(:call)
+        expect(Rails.logger).to have_received(:warn).with(/usage buckets did not catch up/)
+      end
     end
 
     context "when the watermark is older than the stale cutoff" do
@@ -99,6 +112,7 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
 
       it "does not wait for the buckets" do
         expect(service_result).to be_success
+        expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         expect(Rails.logger).not_to have_received(:warn).with(/usage buckets did not catch up/)
       end
     end

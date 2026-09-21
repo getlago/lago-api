@@ -111,4 +111,47 @@ RSpec.describe WalletRefreshTriggersConsumer do
       expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
     end
   end
+
+  context "when a refresh raises" do
+    let(:other_customer) { create(:customer, organization:) }
+
+    before do
+      create(:wallet, customer: other_customer, organization:)
+      karafka.produce(trigger.merge(customer_id: other_customer.id).to_json)
+
+      allow(Wallets::RealtimeRefreshService).to receive(:call)
+        .with(hash_including(customer_id: customer.id))
+        .and_raise(ActiveRecord::StaleObjectError.new(nil, "update"))
+      allow(Rails.logger).to receive(:error)
+      allow(Sentry).to receive(:capture_exception)
+    end
+
+    it "keeps consuming the batch" do
+      expect { consumer.consume }.not_to raise_error
+
+      expect(Wallets::RealtimeRefreshService).to have_received(:call)
+        .with(hash_including(customer_id: other_customer.id))
+    end
+
+    it "reports the error" do
+      consumer.consume
+
+      expect(Sentry).to have_received(:capture_exception)
+        .with(ActiveRecord::StaleObjectError, extra: {customer_id: customer.id})
+    end
+  end
+
+  context "when the batch hits its deadline" do
+    before do
+      stub_const("#{described_class}::CONSUME_DEADLINE", -1.second)
+      allow(Rails.logger).to receive(:warn)
+    end
+
+    it "leaves the remaining customers to the sweep" do
+      consumer.consume
+
+      expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
+      expect(Rails.logger).to have_received(:warn).with(/hit its deadline/)
+    end
+  end
 end
