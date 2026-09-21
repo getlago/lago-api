@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 
-# Refreshing inline rather than through a job preserves the partition's ordering: the topic is
-# keyed by (organization_id, customer_id), so one customer is never refreshed concurrently.
+# Refreshing inline rather than through a job keeps the partition's ordering: the topic is keyed
+# by (organization_id, customer_id), so the consumer never refreshes one customer twice at once.
 class WalletRefreshTriggersConsumer < ApplicationConsumer
-  # Karafka holds the listener until #consume returns, so a batch that outlives
-  # max.poll.interval.ms (5 minutes by default) gets the member evicted, its offsets dropped and
-  # the whole batch replayed by the next owner — a loop that never drains. The customers left
-  # over stay flagged and the sweep picks them up.
+  # A batch outliving max.poll.interval.ms gets the member evicted and the batch replayed by its
+  # next owner, forever. What the deadline cuts stays flagged for the sweep.
   CONSUME_DEADLINE = 2.minutes
 
   def consume
@@ -47,8 +45,8 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
     )
     Sentry.capture_message("wallet realtime refresh failed", extra: {customer_id:, error: result.error.to_s})
   rescue => e
-    # Letting this out of #consume pauses the partition and replays the batch, re-refreshing every
-    # customer already done. StaleObjectError against the sweep is the expected occurrence.
+    # Raising out of #consume pauses the partition and replays the batch, re-refreshing every
+    # customer already done. StaleObjectError against the sweep is the expected one.
     Rails.logger.error(
       "[wallets] realtime refresh raised customer_id=#{customer_id}: #{e.class} #{e.message}"
     )
@@ -62,9 +60,8 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
     true
   end
 
-  # The pipeline emits for every organization, but the buckets are only served for the ones
-  # realtime usage is on for: elsewhere the refresh would wait out its grace on buckets no read
-  # path would use anyway, and the sweep already covers those customers.
+  # Off the realtime path no read path uses the buckets, so the refresh would wait out its grace
+  # for nothing and the sweep already covers those customers.
   def realtime_organization_ids(payloads)
     Organization
       .where(id: payloads.filter_map { it["organization_id"] }.uniq)
