@@ -273,7 +273,6 @@ RSpec.describe PastUsageQuery do
     it "excludes payable, zero-unit, discarded and other-period fees" do
       create(:charge_fee, **free_fee_attributes, amount_cents: 50, precise_amount_cents: 50)
       create(:charge_fee, **free_fee_attributes, payment_status: :failed, amount_cents: 50, precise_amount_cents: 50)
-      create(:charge_fee, **free_fee_attributes, precise_amount_cents: 0.1)
       create(:charge_fee, **free_fee_attributes, units: 0)
       create(:charge_fee, **free_fee_attributes, deleted_at: Time.current)
       create(:charge_fee, **free_fee_attributes, properties: {
@@ -283,6 +282,14 @@ RSpec.describe PastUsageQuery do
       create(:charge_fee, **free_fee_attributes, properties: {})
 
       expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+    end
+
+    context "when a fee rounds down to zero cents" do
+      let!(:rounded_fee) { create(:charge_fee, **free_fee_attributes, precise_amount_cents: 0.1) }
+
+      it "includes it as it can never be paid and regrouped" do
+        expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee, rounded_fee])
+      end
     end
 
     it "excludes other subscriptions and organizations even when external IDs match" do

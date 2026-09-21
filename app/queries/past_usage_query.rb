@@ -96,7 +96,7 @@ class PastUsageQuery < BaseQuery
         .where("fees.properties ->> 'charges_from_datetime' = ?", usage_period_start(period.charges_from_datetime))
     end.reduce { |scope, condition| scope.or(condition) }
 
-    Fee.where(organization:, charge_id: charge_ids, invoice_id: nil, pay_in_advance: true, amount_cents: 0, precise_amount_cents: 0)
+    Fee.where(organization:, charge_id: charge_ids, invoice_id: nil, pay_in_advance: true, amount_cents: 0)
       .charge.positive_units
       .merge(conditions)
       .includes(:charge_filter, :presentation_breakdowns)
