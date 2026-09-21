@@ -423,6 +423,17 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
       end
     end
 
+    context "when the object is a catalog plan" do
+      let(:object) { create(:catalog_plan, organization:) }
+      let(:tax) { create(:tax, organization:) }
+
+      before { create(:plan_applied_tax, :catalog_plan, catalog_plan: object, tax:, organization:) }
+
+      it "serializes the taxes" do
+        expect(method_call[:taxes].pluck(:code)).to eq([tax.code])
+      end
+    end
+
     context "when the object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
       let(:plan) { create(:plan, organization:) }

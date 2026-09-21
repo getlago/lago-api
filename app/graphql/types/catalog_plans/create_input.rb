@@ -11,6 +11,7 @@ module Types
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
       argument :name, String, required: true
+      argument :tax_codes, [String], required: false
     end
   end
 end
