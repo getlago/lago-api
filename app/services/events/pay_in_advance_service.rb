@@ -24,14 +24,11 @@ module Events
       end
 
       charges.where(invoiceable: false).find_each do |charge|
-        Fees::CreatePayInAdvanceJob.perform_later(metered_item: metered_item_for(charge))
+        Fees::CreatePayInAdvanceJob.perform_later(charge:, event: event.as_json)
       end
 
       charges.where(invoiceable: true).find_each do |charge|
-        Invoices::CreatePayInAdvanceChargeJob.perform_later(
-          metered_item: metered_item_for(charge),
-          timestamp: event.timestamp
-        )
+        Invoices::CreatePayInAdvanceChargeJob.perform_later(charge:, event: event.as_json, timestamp: event.timestamp)
       end
 
       result.event = event
@@ -64,29 +61,6 @@ module Events
       #       that don't require a field set in property.
       #       For other aggregation, if the field isn't set we shouldn't create a fee/invoice.
       billable_metric.count_agg? || billable_metric.custom_agg? || properties[billable_metric.field_name].present?
-    end
-
-    def metered_item_for(charge)
-      Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:, event:)
-    end
-
-    def boundaries
-      @boundaries ||= BillingPeriodBoundaries.new(
-        from_datetime: date_service.from_datetime,
-        to_datetime: date_service.to_datetime,
-        charges_from_datetime: date_service.charges_from_datetime,
-        charges_to_datetime: date_service.charges_to_datetime,
-        charges_duration: date_service.charges_duration_in_days,
-        timestamp: event.timestamp
-      )
-    end
-
-    def date_service
-      @date_service ||= Subscriptions::DatesService.new_instance(
-        event.subscription,
-        event.timestamp,
-        current_usage: true
-      )
     end
 
     def kafka_producer_enabled?

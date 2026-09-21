@@ -38,10 +38,11 @@ module Fees
     private
 
     def pay_in_advance_arguments
+      job_arguments = arguments.first
       @pay_in_advance_arguments ||= PayInAdvanceArguments.new(
-        metered_item: arguments.first.with_indifferent_access[:metered_item],
-        charge: arguments.first.with_indifferent_access[:charge],
-        event: arguments.first.with_indifferent_access[:event]
+        metered_item: job_arguments[:metered_item] || job_arguments["metered_item"],
+        charge: job_arguments[:charge] || job_arguments["charge"],
+        event: job_arguments[:event] || job_arguments["event"]
       )
     end
 

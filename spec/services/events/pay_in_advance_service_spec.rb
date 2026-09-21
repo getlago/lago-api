@@ -38,7 +38,9 @@ RSpec.describe Events::PayInAdvanceService do
     before { charge }
 
     it "enqueues a job to perform the pay_in_advance aggregation" do
-      expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+      expect { in_advance_service.call }
+        .to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        .with(charge:, event: event.as_json)
     end
 
     context "when charge is invoiceable" do
@@ -68,7 +70,9 @@ RSpec.describe Events::PayInAdvanceService do
       before { charge }
 
       it "enqueues a job to create the pay_in_advance charge invoice" do
-        expect { in_advance_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        expect { in_advance_service.call }
+          .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          .with(charge:, event: event.as_json, timestamp: event.timestamp)
       end
 
       context "when charge is not invoiceable" do
