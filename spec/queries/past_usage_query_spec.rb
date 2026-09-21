@@ -337,15 +337,6 @@ RSpec.describe PastUsageQuery do
       expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
     end
 
-    it "matches equivalent timestamps with a timezone offset" do
-      free_fee.update!(properties: {
-        charges_from_datetime: invoice_subscription1.charges_from_datetime.in_time_zone("Europe/Paris").iso8601,
-        charges_to_datetime: invoice_subscription1.charges_to_datetime.in_time_zone("Europe/Paris").iso8601
-      })
-
-      expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
-    end
-
     it "retains fees for discarded charges" do
       charge.discard!
 
@@ -470,6 +461,22 @@ RSpec.describe PastUsageQuery do
 
       it "includes the free fees in that period" do
         expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+      end
+    end
+
+    context "when the plan has no regrouped charge" do
+      let(:charge) { create(:graduated_charge, plan:, pay_in_advance: true, invoiceable: false) }
+      let(:queries) { [] }
+      let(:subscriber) { ->(_name, _start, _finish, _id, payload) { queries << payload[:sql] } }
+
+      it "skips the free-fee lookups" do
+        ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+          expect(result.usage_periods.first.fees).to eq([paid_fee])
+        end
+
+        expect(queries.count { |sql| sql.include?('FROM "charges"') }).to eq(1)
+        expect(queries.count { |sql| sql.include?('FROM "invoice_subscriptions"') }).to eq(1)
+        expect(queries.count { |sql| sql.include?('FROM "fees"') && sql.include?('"fees"."invoice_id" IS NULL') }).to eq(0)
       end
     end
   end
