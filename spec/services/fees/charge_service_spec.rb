@@ -4737,7 +4737,8 @@ RSpec.describe Fees::ChargeService, :premium do
         billing_context:,
         serve_current_usage_from_buckets: true,
         boundaries:,
-        usage_filters:
+        usage_filters:,
+        charges: [charge]
       )
     end
 

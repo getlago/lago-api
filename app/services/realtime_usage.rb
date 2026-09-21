@@ -37,8 +37,7 @@ module RealtimeUsage
       return false if charge.prorated?
       return false if billable_metric.recurring?
 
-      # The buckets carry the target wallet in its own column, not as a group key, so the
-      # served groups would miss it.
+      # `target_wallet_code` will be handled later.
       return false if charge.accepts_target_wallet
 
       # The pipeline does not evaluate custom expressions yet.

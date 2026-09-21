@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: true} do
-  subject(:fetch) { described_class.call(subscription:, boundaries:) }
+  subject(:fetch) { described_class.call(subscription:, boundaries:, charges:) }
 
   include_context "with realtime usage availability"
 
@@ -15,6 +15,7 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
   let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at: 2.months.ago) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+  let(:charges) { [charge] }
 
   let(:from_datetime) { Time.current.beginning_of_day - 1.day }
   let(:to_datetime) { from_datetime + 1.month }
@@ -30,13 +31,25 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
     )
   end
 
-  def create_bucket(bucket:, units: "10.0", events_count: 2, grouped_by: "{}", charge_filter_id: "", **attributes)
+  def create_bucket(bucket:, units: "10.0", events_count: 2, grouped_by: "{}", charge_filter_id: "", billed_charge: nil, **attributes)
     create(
       :clickhouse_usage_bucket,
-      organization:, customer:, subscription:, charge:, billable_metric:,
+      organization:, customer:, subscription:, billable_metric:,
+      charge: billed_charge || charge,
       bucket:, units:, events_count:, grouped_by:, charge_filter_id:,
       **attributes
     )
+  end
+
+  def capture_queries
+    queries = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
+      queries << payload[:sql]
+    end
+    yield
+    queries
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber)
   end
 
   describe "#call" do
@@ -116,6 +129,19 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       end
     end
 
+    context "when the plan carries no servable charge" do
+      let(:charges) { [] }
+
+      it "reads nothing" do
+        create_bucket(bucket: from_datetime)
+
+        queries = capture_queries { fetch }
+
+        expect(queries.count { |sql| sql.include?("usage_buckets_15m") }).to eq(0)
+        expect(fetch.usage_buckets).to be_nil
+      end
+    end
+
     context "when clickhouse is unreachable" do
       before do
         allow(Clickhouse::UsageBucket).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
@@ -162,6 +188,31 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
         expect(fetch.usage_buckets).not_to be_nil
         expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:with_retry)
       end
+    end
+  end
+
+  describe "the emitted query" do
+    let(:other_charge) { create(:standard_charge, plan:, billable_metric:) }
+    let(:charges) { [charge, other_charge] }
+
+    it "seeks the sort order prefix and states the delete marker" do
+      create_bucket(bucket: from_datetime)
+
+      queries = capture_queries { fetch }
+      sql = queries.find { |query| query.include?("sum(units)") }.delete('"')
+
+      expect(sql).to include("organization_id", "subscription_id", "charge_id IN", "FINAL", "is_deleted")
+    end
+
+    it "leaves out the charges the computation is not about" do
+      create_bucket(bucket: from_datetime, units: "10.0")
+      create_bucket(bucket: from_datetime, units: "7.0", billed_charge: other_charge)
+
+      queries = capture_queries { described_class.call(subscription:, boundaries:, charges: [charge]) }
+      sql = queries.find { |query| query.include?("sum(units)") }
+
+      expect(sql).to include(charge.id)
+      expect(sql).not_to include(other_charge.id)
     end
   end
 

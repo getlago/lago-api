@@ -4,12 +4,13 @@ module Events
   module Stores
     class Provider
       def initialize(organization:, billing_context:, serve_current_usage_from_buckets: false,
-        boundaries: nil, usage_filters: UsageFilters::NONE)
+        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [])
         @organization = organization
         @billing_context = billing_context
         @serve_current_usage_from_buckets = serve_current_usage_from_buckets
         @boundaries = boundaries
         @usage_filters = usage_filters
+        @charges = charges
       end
 
       attr_reader :billing_context
@@ -77,7 +78,7 @@ module Events
 
       private
 
-      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters
+      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges
 
       # A full usage window opens on `subscription.started_at`, which `same_window_as_prefetch?`
       # cannot tell apart from a first billing period.
@@ -109,9 +110,18 @@ module Events
       def usage_buckets
         return @usage_buckets if defined?(@usage_buckets)
 
-        @usage_buckets = if serve_current_usage_from_buckets
-          RealtimeUsage::FetchBucketsService.call(subscription: billing_context.subscription, boundaries:).usage_buckets
+        @usage_buckets = if serve_current_usage_from_buckets && bucket_charges.any?
+          RealtimeUsage::FetchBucketsService
+            .call(subscription: billing_context.subscription, boundaries:, charges: bucket_charges)
+            .usage_buckets
         end
+      end
+
+      # The charges the buckets could answer. A plan whose charges are all recurring, prorated or
+      # pay-in-advance pays no bucket read at all, and the ones left scope that read to the
+      # table's `organization_id, subscription_id, charge_id` prefix.
+      def bucket_charges
+        @bucket_charges ||= charges.select { RealtimeUsage.supported_charge?(it) }
       end
     end
   end
