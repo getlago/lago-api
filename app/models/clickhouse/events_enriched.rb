@@ -12,6 +12,7 @@ end
 # Table name: events_enriched
 # Database name: clickhouse
 #
+#  attribution_labels         :string           not null
 #  code                       :string           not null, primary key
 #  decimal_value              :decimal(38, 26)
 #  enriched_at                :datetime         not null
