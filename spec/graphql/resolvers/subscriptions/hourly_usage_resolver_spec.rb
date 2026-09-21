@@ -18,8 +18,8 @@ RSpec.describe Resolvers::Subscriptions::HourlyUsageResolver, clickhouse: {clean
           timezone
           aggregationType
           lastIngestedAt
-          filters { chargeFilterId invoiceDisplayName units eventsCount values }
-          hours { time units eventsCount breakdown { chargeFilterId units eventsCount } }
+          filters { chargeFilterId invoiceDisplayName units eventsCount values other }
+          hours { time units eventsCount breakdown { chargeFilterId units eventsCount other } }
         }
       }
     GQL
@@ -97,7 +97,8 @@ RSpec.describe Resolvers::Subscriptions::HourlyUsageResolver, clickhouse: {clean
           "invoiceDisplayName" => "Europe",
           "units" => 12.0,
           "eventsCount" => 12,
-          "values" => {"region" => ["eu"]}
+          "values" => {"region" => ["eu"]},
+          "other" => false
         }
       ]
     )
@@ -111,7 +112,7 @@ RSpec.describe Resolvers::Subscriptions::HourlyUsageResolver, clickhouse: {clean
     )
     expect(usage["hours"].map { |hour| hour["units"] }).to eq([12.0, 0.0, 0.0])
     expect(usage["hours"].first["breakdown"]).to eq(
-      [{"chargeFilterId" => charge_filter.id, "units" => 12.0, "eventsCount" => 12}]
+      [{"chargeFilterId" => charge_filter.id, "units" => 12.0, "eventsCount" => 12, "other" => false}]
     )
   end
 
