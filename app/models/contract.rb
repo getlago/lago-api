@@ -43,6 +43,10 @@ class Contract < ApplicationRecord
 
   LIVE_STATUSES = %w[pending active].freeze
 
+  # Which contracts the billing clock may produce segments for. A terminated contract's
+  # final arrears period is the termination path's, so it is not billable from the clock.
+  BILLABLE_STATUSES = %w[active].freeze
+
   # The live contracts for an external id: at most one per status (the partial
   # unique index is per status), so a pending replacement can coexist with the
   # active contract. Terminated and canceled siblings are history.
