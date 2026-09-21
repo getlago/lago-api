@@ -57,6 +57,23 @@ class KarafkaApp < Karafka::App
       end
     end
   end
+
+  if ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_wallet_refresh_triggers_consumer do
+        topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
+          consumer WalletRefreshTriggersConsumer
+
+          # Wallet freshness: don't sit on a sparse batch (the default is 1000ms).
+          max_wait_time 100
+          # A batch collapses to one refresh per customer, so the collapse ratio has to be free to
+          # grow with the backlog: under a small cap the consumer never catches up (measured: 98k
+          # lag at a sustained 500 ev/s with 500).
+          max_messages 10_000
+        end
+      end
+    end
+  end
 end
 
 Karafka::Process.tags.add(:application_name, "lago-api")
