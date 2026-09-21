@@ -48,6 +48,17 @@ class ContractRateCard < ApplicationRecord
     "contract_locked" unless contract.editable?
   end
 
+  # The plan entry this card was materialized from; nil for a directly attached
+  # card or a plan-less contract. Matched in Ruby so a preloaded
+  # catalog_plan.applied_rate_cards resolves a whole list without a query per card.
+  def plan_rate_card
+    contract.catalog_plan&.applied_rate_cards&.find { it.rate_card_id == rate_card_id }
+  end
+
+  def resolved_rate_phases
+    ContractRateCards::ResolveRatePhasesService.call!(contract_rate_card: self, plan_rate_card:).rate_phases
+  end
+
   private
 
   def validate_effective_before_ended

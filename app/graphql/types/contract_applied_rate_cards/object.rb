@@ -27,11 +27,11 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def rate_phases_count
-        dataloader.with(Sources::CountByForeignKey, RatePhase, :contract_rate_card_id).load(object.id)
+        dataloader.with(Sources::ContractResolvedRatePhases).load(object).size
       end
 
       def rate_phases
-        dataloader.with(Sources::ActiveRecordAssociation, :rate_phases).load(object).sort_by(&:position)
+        dataloader.with(Sources::ContractResolvedRatePhases).load(object)
       end
     end
   end

@@ -35,6 +35,17 @@ RSpec.describe Resolvers::ContractsResolver do
 
   before { create(:contract) }
 
+  def count_queries(table)
+    queries = []
+    sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
+    end
+    yield
+    queries
+  ensure
+    ActiveSupport::Notifications.unsubscribe(sub)
+  end
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "contracts:view"
@@ -124,6 +135,42 @@ RSpec.describe Resolvers::ContractsResolver do
     end
   end
 
+  context "when the applied rate cards were materialized from a plan" do
+    let(:query) do
+      <<~GQL
+        query {
+          contracts(limit: 10) {
+            collection { id appliedRateCards { ratePhasesCount ratePhases { code } } }
+          }
+        }
+      GQL
+    end
+
+    let(:rate_card) { create(:rate_card, organization:) }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
+    let!(:third_contract) { create(:contract, organization:, catalog_plan:) }
+
+    before do
+      create(:rate_phase, organization:, plan_rate_card:, code: "default", position: 1)
+      [active_contract, pending_contract, third_contract].each do |c|
+        c.update!(catalog_plan:)
+        create(:contract_rate_card, organization:, contract: c, rate_card:)
+      end
+    end
+
+    it "resolves the plan entry's phases for every card, batched for the page" do
+      phase_queries = count_queries("rate_phases") { execution }
+
+      cards = execution["data"]["contracts"]["collection"].flat_map { it["appliedRateCards"] }
+      expect(cards.size).to eq(3)
+      expect(cards.map { it["ratePhasesCount"] }).to all(eq(1))
+      expect(cards.map { |c| c["ratePhases"].map { it["code"] } }).to all(eq(%w[default]))
+      # owned phases for the page + the plan entries' phases: never one per card
+      expect(phase_queries.size).to be <= 2
+    end
+  end
+
   context "when the applied rate cards are requested for several contracts" do
     let(:query) do
       <<~GQL
@@ -139,17 +186,6 @@ RSpec.describe Resolvers::ContractsResolver do
       [active_contract, pending_contract].each do |c|
         create(:contract_rate_card, organization:, contract: c)
       end
-    end
-
-    def count_queries(table)
-      queries = []
-      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-        queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
-      end
-      yield
-      queries
-    ensure
-      ActiveSupport::Notifications.unsubscribe(sub)
     end
 
     it "loads the cards in one query, not one per contract" do

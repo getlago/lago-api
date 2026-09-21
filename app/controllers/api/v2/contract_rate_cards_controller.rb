@@ -68,7 +68,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.contract_rate_cards.includes(:contract, :rate_card, :rate_phases),
+              result.contract_rate_cards.includes(:rate_card, :rate_phases, contract: {catalog_plan: {applied_rate_cards: :rate_phases}}),
               ::V2::ContractAppliedRateCardSerializer,
               collection_name: "applied_rate_cards",
               meta: pagination_metadata(result.contract_rate_cards)

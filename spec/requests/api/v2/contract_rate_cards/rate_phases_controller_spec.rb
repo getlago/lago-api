@@ -13,25 +13,49 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}/rate_phases"
   end
 
-  before do
-    create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: 1)
-  end
-
   describe "GET .../rate_phases" do
     subject { get_with_token(organization, base_path) }
 
     include_examples "requires API permission", "contract_rate_card", "read"
 
-    it "lists the phases" do
-      subject
+    context "with phases of its own" do
+      before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: 1) }
 
-      expect(response).to have_http_status(:success)
-      expect(json[:rate_phases].map { it[:code] }).to eq(%w[default])
+      it "lists the phases" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phases].map { it[:code] }).to eq(%w[default])
+      end
+    end
+
+    context "when the card was materialized from a plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+      let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
+
+      before do
+        create(:contract_rate_card, organization:, contract:, rate_card:)
+        %w[p1 p2 p3 p4].each_with_index do |code, index|
+          create(:rate_phase, organization:, plan_rate_card:, code:, position: index + 1, billing_interval_cycle_count: 2)
+        end
+        create(:rate_phase, organization:, plan_rate_card:, code: "tail", position: 5, billing_interval_cycle_count: nil)
+      end
+
+      it "lists the plan entry's phases in order with the indefinite tail intact" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phases].map { it[:code] }).to eq(%w[p1 p2 p3 p4 tail])
+        expect(json[:rate_phases].last[:billing_interval_cycle_count]).to be_nil
+      end
     end
   end
 
   describe "POST .../rate_phases" do
     subject { post_with_token(organization, base_path, {rate_phase: {code: "ramp", position: 1, billing_interval_cycle_count: 2}}) }
+
+    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: 1) }
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
@@ -70,6 +94,8 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
   describe "PUT .../rate_phases/:code" do
     subject { put_with_token(organization, "#{base_path}/default", {rate_phase: {name: "Renamed"}}) }
 
+    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: 1) }
+
     include_examples "requires API permission", "contract_rate_card", "write"
 
     it "updates the phase" do
@@ -96,7 +122,10 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
     let(:phase_code) { "extra" }
 
-    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 2) }
+    before do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: 1)
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 2)
+    end
 
     include_examples "requires API permission", "contract_rate_card", "write"
 

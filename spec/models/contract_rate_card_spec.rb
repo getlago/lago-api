@@ -102,6 +102,54 @@ RSpec.describe ContractRateCard do
     end
   end
 
+  describe "#plan_rate_card" do
+    subject(:plan_entry) { contract_rate_card.plan_rate_card }
+
+    let(:organization) { create(:organization) }
+    let(:rate_card) { create(:rate_card, organization:) }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:contract) { create(:contract, organization:, catalog_plan:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let!(:matching_entry) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
+
+    before { create(:plan_rate_card, organization:, catalog_plan:) }
+
+    it "returns the plan entry pricing the same rate card" do
+      expect(plan_entry).to eq(matching_entry)
+    end
+
+    context "when the contract has no plan" do
+      let(:contract) { create(:contract, organization:, catalog_plan: nil) }
+      let!(:matching_entry) { nil }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
+  describe "#resolved_rate_phases" do
+    subject(:resolved) { contract_rate_card.resolved_rate_phases }
+
+    let(:organization) { create(:organization) }
+    let(:rate_card) { create(:rate_card, organization:) }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:contract) { create(:contract, organization:, catalog_plan:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
+    let!(:plan_phase) { create(:rate_phase, organization:, plan_rate_card:, code: "default", position: 1) }
+
+    it "falls back to the plan entry's phases when the card has none of its own" do
+      expect(resolved).to eq([plan_phase])
+    end
+
+    context "with phases of its own" do
+      let!(:own_phase) { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "custom", position: 1) }
+
+      it "returns only the card's own phases" do
+        expect(resolved).to eq([own_phase])
+      end
+    end
+  end
+
   describe "#edit_error_code" do
     it "is nil while the contract is pending" do
       card = create(:contract_rate_card, contract: create(:contract, :pending))

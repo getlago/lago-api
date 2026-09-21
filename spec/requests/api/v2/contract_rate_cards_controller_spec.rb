@@ -76,6 +76,39 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
     before { create(:contract_rate_card, organization:) }
 
+    context "when cards were materialized from a plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+      before do
+        3.times do
+          card = create(:rate_card, organization:, currency: "EUR")
+          entry = create(:plan_rate_card, organization:, catalog_plan:, rate_card: card)
+          create(:rate_phase, organization:, plan_rate_card: entry, code: "default", position: 1)
+          create(:contract_rate_card, organization:, contract:, rate_card: card)
+        end
+      end
+
+      def count_queries(table)
+        queries = []
+        sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+          queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
+        end
+        yield
+        queries
+      ensure
+        ActiveSupport::Notifications.unsubscribe(sub)
+      end
+
+      it "resolves every card's phases without a query per card" do
+        phase_queries = count_queries("rate_phases") { subject }
+
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_rate_cards].map { it[:rate_phases_count] }).to match_array([0, 1, 1, 1])
+        expect(phase_queries.size).to be <= 2
+      end
+    end
+
     include_examples "requires API permission", "contract_rate_card", "read"
 
     it "returns the contract's applied rate cards" do

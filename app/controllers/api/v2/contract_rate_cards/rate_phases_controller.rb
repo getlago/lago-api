@@ -9,7 +9,9 @@ module Api
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 
-          render_rate_phases(contract_rate_card.rate_phases.includes(:rate_override))
+          rate_phases = contract_rate_card.resolved_rate_phases
+          ActiveRecord::Associations::Preloader.new(records: rate_phases, associations: :rate_override).call
+          render_rate_phases(rate_phases)
         end
 
         def create

@@ -45,7 +45,7 @@ module V2
 
     def applied_rate_cards
       ::CollectionSerializer.new(
-        model.applied_rate_cards.current_and_scheduled.includes(:rate_phases, :rate_card, :contract),
+        model.applied_rate_cards.current_and_scheduled.includes(:rate_phases, :rate_card, contract: {catalog_plan: {applied_rate_cards: :rate_phases}}),
         ::V2::ContractAppliedRateCardSerializer,
         collection_name: "applied_rate_cards"
       ).serialize[:applied_rate_cards]

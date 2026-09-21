@@ -78,8 +78,7 @@ module Billing
 
       def resolved_plan_rate_card
         if plan_rate_card.nil?
-          contract_rate_card.contract.catalog_plan&.applied_rate_cards
-            &.find { it.rate_card_id == contract_rate_card.rate_card_id }
+          contract_rate_card.plan_rate_card
         elsif plan_rate_card.rate_card_id != contract_rate_card.rate_card_id
           raise MismatchedPlanRateCard, "plan_rate_card #{plan_rate_card.id} prices rate card " \
             "#{plan_rate_card.rate_card_id}, not #{contract_rate_card.rate_card_id}"
