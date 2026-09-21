@@ -110,10 +110,24 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     context "when the watermark is older than the stale cutoff" do
       let(:watermark) { 1.minute.ago }
 
-      it "does not wait for the buckets" do
-        expect(service_result).to be_success
-        expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
-        expect(Rails.logger).not_to have_received(:warn).with(/usage buckets did not catch up/)
+      context "when the bucket landed" do
+        before do
+          create(:clickhouse_usage_bucket, organization:, customer:, subscription:, last_ingested_at: watermark + 1.second)
+        end
+
+        it "refreshes without waiting for the buckets" do
+          expect(service_result).to be_success
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+          expect(Rails.logger).not_to have_received(:warn).with(/usage buckets/)
+        end
+      end
+
+      context "without a bucket at the watermark" do
+        it "leaves the refresh to the sweep rather than waiting it out" do
+          expect(service_result).to be_success
+          expect(Customers::RefreshWalletsService).not_to have_received(:call)
+          expect(Rails.logger).to have_received(:warn).with(/behind a stale watermark/)
+        end
       end
     end
   end

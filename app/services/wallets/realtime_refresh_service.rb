@@ -51,37 +51,48 @@ module Wallets
     attr_reader :organization_id, :customer_id, :wallet_codes, :expected_ingested_at
 
     def wait_for_buckets
-      stale_cutoff_ms = ((Time.current - STALE_WATERMARK_CUTOFF).to_f * 1000).to_i
-      pending = expected_ingested_at.reject { |_sub, ms| ms.to_i < stale_cutoff_ms }
+      pending = expected_ingested_at.dup
       return true if pending.empty?
 
+      stale_cutoff_ms = ((Time.current - STALE_WATERMARK_CUTOFF).to_f * 1000).to_i
       deadline = Time.current + BUCKET_WAIT_TIMEOUT
 
       loop do
-        pending.delete_if do |subscription_id, watermark_ms|
-          # unscoped: any row version at the watermark proves the epoch landed, and FINAL would be
-          # paid every cycle. uncached: the executor turns the AR query cache on, and a cached miss
-          # can only time out. organization_id leads the ORDER BY, without it there is no key scan.
-          Clickhouse::UsageBucket.uncached do
-            Clickhouse::UsageBucket
-              .unscoped
-              .where(organization_id:, subscription_id:)
-              .where("toUnixTimestamp64Milli(last_ingested_at) >= ?", watermark_ms.to_i)
-              .exists?
-          end
-        end
+        pending.delete_if { |subscription_id, watermark_ms| bucket_caught_up?(subscription_id, watermark_ms) }
         return true if pending.empty?
 
+        # An old watermark means the consumer is behind, not ClickHouse: sleeping on it spends the
+        # batch's deadline for nothing, so it gets one check and goes back to the sweep.
+        stale = pending.select { |_sub, ms| ms.to_i < stale_cutoff_ms }
+        if stale.any?
+          log_pending("usage buckets behind a stale watermark", stale)
+          return false
+        end
+
         if Time.current > deadline
-          Rails.logger.warn(
-            "[wallets] usage buckets did not catch up before refresh " \
-            "customer_id=#{customer_id} pending=#{pending.keys.inspect}"
-          )
+          log_pending("usage buckets did not catch up before refresh", pending)
           return false
         end
 
         sleep BUCKET_WAIT_INTERVAL
       end
+    end
+
+    def bucket_caught_up?(subscription_id, watermark_ms)
+      # unscoped: any row version at the watermark proves the epoch landed, and FINAL would be
+      # paid every cycle. uncached: the executor turns the AR query cache on, and a cached miss
+      # can only time out. organization_id leads the ORDER BY, without it there is no key scan.
+      Clickhouse::UsageBucket.uncached do
+        Clickhouse::UsageBucket
+          .unscoped
+          .where(organization_id:, subscription_id:)
+          .where("toUnixTimestamp64Milli(last_ingested_at) >= ?", watermark_ms.to_i)
+          .exists?
+      end
+    end
+
+    def log_pending(reason, pending)
+      Rails.logger.warn("[wallets] #{reason} customer_id=#{customer_id} pending=#{pending.keys.inspect}")
     end
   end
 end
