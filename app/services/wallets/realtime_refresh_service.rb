@@ -1,14 +1,13 @@
 # frozen_string_literal: true
 
 module Wallets
-  # wallet_codes carries the targeting intent of the events (properties.target_wallet_code): it
-  # forces the refresh, it does not narrow it — the allocation cascade makes wallets interdependent.
+  # wallet_codes carries the events' targeting intent (properties.target_wallet_code): it forces
+  # the refresh, it does not narrow it — the allocation cascade makes wallets interdependent.
   class RealtimeRefreshService < BaseService
     Result = BaseResult[:wallets]
 
-    # The Kafka trigger and the ClickHouse bucket upsert are two sinks of the same RisingWave
-    # epoch with no ordering between them, so without the wait a fast consumer reads the
-    # previous epoch's usage.
+    # Trigger and bucket upsert are two sinks of the same RisingWave epoch, unordered between
+    # them: without the wait a fast consumer reads the previous epoch's usage.
     BUCKET_WAIT_TIMEOUT = 5.seconds
     BUCKET_WAIT_INTERVAL = 0.1
     STALE_WATERMARK_CUTOFF = 30.seconds
@@ -31,8 +30,7 @@ module Wallets
       return result if customer.error_details.tax_error.exists?
 
       # Refreshing on buckets that have not caught up writes a stale balance and clears
-      # awaiting_wallet_refresh, which is what the sweep keys on: nothing would ever correct it.
-      # Leaving the customer flagged hands it back to the sweep instead.
+      # awaiting_wallet_refresh, the flag the sweep selects on: nothing would correct it after.
       return result unless wait_for_buckets
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?
@@ -62,10 +60,9 @@ module Wallets
 
       loop do
         pending.delete_if do |subscription_id, watermark_ms|
-          # unscoped: any row version at the watermark proves the epoch's upsert landed, and FINAL
-          # would be paid on every cycle. uncached: Karafka consumes inside the Rails executor,
-          # which turns the AR query cache on, and a cached miss can only time out. organization_id
-          # is the table's first ORDER BY column, without which the poll cannot use the primary key.
+          # unscoped: any row version at the watermark proves the epoch landed, and FINAL would be
+          # paid every cycle. uncached: the executor turns the AR query cache on, and a cached miss
+          # can only time out. organization_id leads the ORDER BY, without it there is no key scan.
           Clickhouse::UsageBucket.uncached do
             Clickhouse::UsageBucket
               .unscoped
