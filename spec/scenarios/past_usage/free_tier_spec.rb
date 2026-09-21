@@ -220,6 +220,21 @@ describe "Past usage for regrouped advance charges", transaction: false do
         )
         expect(periods.fetch(june_invoice_id)[:charges_usage]).to be_empty
         expect(periods.fetch(august_invoice_id)[:charges_usage].sole).to include(units: "30.0", amount_cents: 0)
+
+        get_with_token(organization, "/api/v1/customers/#{customer.external_id}/past_usage",
+          {external_subscription_id:, page: 1, per_page: 2})
+
+        expect(response).to have_http_status(:success)
+        periods = json[:usage_periods].index_by { |period| period[:lago_invoice_id] }
+        expect(periods.keys).to match_array([advance_invoice.id, august_invoice_id])
+        expect(periods.fetch(advance_invoice.id)[:charges_usage].sole).to include(units: "50.0", amount_cents: 500)
+
+        get_with_token(organization, "/api/v1/customers/#{customer.external_id}/past_usage",
+          {external_subscription_id:, page: 2, per_page: 2})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:usage_periods].map { |period| period[:lago_invoice_id] }).to include(june_invoice_id)
+        expect(json[:usage_periods].flat_map { |period| period[:charges_usage] }).to be_empty
       end
     end
   end

@@ -99,7 +99,7 @@ class PastUsageQuery < BaseQuery
   # regular invoice of the period. Owners are resolved for the whole page, including
   # invoices outside it, so a fee is never counted on two pages.
   def free_usage_period_ids(periods, charge_ids)
-    regrouped = regrouped_period_keys(periods.map { |period| usage_period_key(period) }, charge_ids)
+    regrouped = regrouped_period_keys(periods, charge_ids)
 
     conditions = periods.map do |period|
       InvoiceSubscription.where(
@@ -134,9 +134,14 @@ class PastUsageQuery < BaseQuery
     owners
   end
 
-  def regrouped_period_keys(keys, charge_ids)
+  # Regrouped fees are found both by the periods on the page and by the invoices on
+  # the page, since a fee paid late is regrouped on an invoice stamped with a later period.
+  def regrouped_period_keys(periods, charge_ids)
+    held_on_page = Fee.where(invoice_id: periods.map(&:invoice_id).uniq, subscription_id: periods.map(&:subscription_id).uniq)
+    conditions = fee_period_conditions(periods.map { |period| usage_period_key(period) }).or(held_on_page)
+
     Fee.where(organization:, charge_id: charge_ids).where.not(invoice_id: nil).charge
-      .merge(fee_period_conditions(keys))
+      .merge(conditions)
       .distinct
       .pluck(:invoice_id, :subscription_id, Arel.sql("fees.properties ->> 'charges_from_datetime'"))
       .group_by(&:first)
