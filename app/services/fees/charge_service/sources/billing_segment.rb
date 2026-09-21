@@ -117,18 +117,6 @@ module Fees
           display_on_invoice?
         end
 
-        def fee_match_attributes
-          {
-            contract_id: billing_segment.contract_id,
-            contract_rate_card_id: billing_segment.contract_rate_card_id,
-            invoiceable_type: product.class.polymorphic_name,
-            invoiceable_id: product.id,
-            product_filter_id: rate_card.product_filter_id,
-            rate_card_rate_id: billing_segment.rate_card_rate_id,
-            rate_override_id: billing_segment.rate_override_id
-          }
-        end
-
         def applied_pricing_unit
           return nil unless pricing_unit
 

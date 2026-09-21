@@ -49,7 +49,6 @@ module Fees
         :invoiceable?,
         :regroup_paid_fees_invoice?,
         :display_on_invoice?,
-        :fee_match_attributes,
         :applied_pricing_unit,
         to: :source
 
