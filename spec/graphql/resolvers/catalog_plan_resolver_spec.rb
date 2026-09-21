@@ -23,6 +23,7 @@ RSpec.describe Resolvers::CatalogPlanResolver do
       query($catalogPlanId: ID!) {
         catalogPlan(id: $catalogPlanId) {
           id code name currency
+          taxes { id code }
           appliedRateCardsCount contractsCount attachedToContracts
         }
       }
@@ -45,6 +46,13 @@ RSpec.describe Resolvers::CatalogPlanResolver do
       "contractsCount" => 0,
       "attachedToContracts" => false
     )
+  end
+
+  it "returns the assigned taxes" do
+    tax = create(:tax, organization:)
+    create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:)
+
+    expect(result.dig("data", "catalogPlan", "taxes")).to eq([{"id" => tax.id, "code" => tax.code}])
   end
 
   context "when the plan has rate cards and contracts" do

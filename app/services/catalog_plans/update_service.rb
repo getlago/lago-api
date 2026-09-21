@@ -33,23 +33,35 @@ module CatalogPlans
         return result.single_validation_failure!(field: :currency, error_code: "not_editable_with_applied_rate_cards")
       end
 
-      catalog_plan.name = params[:name] if params.key?(:name)
-      catalog_plan.code = params[:code] if params.key?(:code)
-      catalog_plan.description = params[:description] if params.key?(:description)
-      catalog_plan.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
-      catalog_plan.currency = params[:currency] if params.key?(:currency)
-      catalog_plan.save!
+      ActiveRecord::Base.transaction do
+        catalog_plan.name = params[:name] if params.key?(:name)
+        catalog_plan.code = params[:code] if params.key?(:code)
+        catalog_plan.description = params[:description] if params.key?(:description)
+        catalog_plan.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+        catalog_plan.currency = params[:currency] if params.key?(:currency)
+        catalog_plan.save!
+
+        apply_taxes
+      end
 
       result.catalog_plan = catalog_plan
       SendWebhookJob.perform_after_commit("plan.updated", catalog_plan) if send_webhook
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e.result.error)
     end
 
     private
 
     attr_reader :catalog_plan, :params, :send_webhook
+
+    def apply_taxes
+      return unless params.key?(:tax_codes) && !params[:tax_codes].nil?
+
+      CatalogPlans::ApplyTaxesService.call!(catalog_plan:, tax_codes: params[:tax_codes])
+    end
 
     def code_change_requested?
       params.key?(:code) && params[:code] != catalog_plan.code

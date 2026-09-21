@@ -22,7 +22,7 @@ RSpec.describe Mutations::CatalogPlans::Update do
   let(:query) do
     <<~GQL
       mutation($input: UpdateCatalogPlanInput!) {
-        updateCatalogPlan(input: $input) { id name }
+        updateCatalogPlan(input: $input) { id name taxes { id code } }
       }
     GQL
   end
@@ -47,5 +47,17 @@ RSpec.describe Mutations::CatalogPlans::Update do
   it "updates the plan" do
     expect(result["data"]["updateCatalogPlan"]["name"]).to eq("Renamed")
     expect(catalog_plan.reload.name).to eq("Renamed")
+  end
+
+  context "with taxes" do
+    let(:tax) { create(:tax, organization:) }
+    let(:input) { {id: catalog_plan.id, taxCodes: [tax.code]} }
+
+    it "assigns and returns the taxes" do
+      plan_response = result["data"]["updateCatalogPlan"]
+
+      expect(plan_response["taxes"]).to eq([{"id" => tax.id, "code" => tax.code}])
+      expect(catalog_plan.reload.taxes).to eq([tax])
+    end
   end
 end

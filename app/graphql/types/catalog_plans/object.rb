@@ -6,6 +6,8 @@ module Types
       graphql_name "CatalogPlan"
       description "A product-catalog plan"
 
+      dataload_association :taxes
+
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
 
@@ -24,6 +26,7 @@ module Types
       # editing and deletion off this flag.
       field :attached_to_contracts, Boolean, null: false
       field :contracts_count, Integer, null: false, description: "Number of contracts on the plan"
+      field :taxes, [Types::Taxes::Object], null: false
 
       # Batched: a plan list resolves one grouped COUNT per association instead
       # of a query per row. attached_to_contracts shares the contracts count.
