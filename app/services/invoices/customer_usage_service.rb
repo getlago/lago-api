@@ -166,9 +166,16 @@ module Invoices
         organization:,
         billing_context: Billing::Context.from(subscription:),
         boundaries:,
-        serve_current_usage_from_buckets: use_usage_buckets,
+        serve_current_usage_from_buckets: serve_from_buckets?,
         usage_filters:
       )
+    end
+
+    # A projected read keeps counting events: Fees::ProjectionService re-aggregates the charge
+    # from the events at presentation time, so serving the units from the buckets would render
+    # a projection below the usage it projects.
+    def serve_from_buckets?
+      use_usage_buckets && !calculate_projected_usage
     end
 
     def boundaries
