@@ -7,7 +7,7 @@ module RealtimeUsage
   class FetchBucketsService < BaseService
     Result = BaseResult[:usage_buckets]
 
-    BUCKET_SIZE = 15.minutes
+    BUCKET_DURATION = 15.minutes
 
     # What the ClickHouse driver raises on a connection it cannot use, plus the two errors the
     # retry helper and the row mapping raise on their own.
@@ -93,13 +93,13 @@ module RealtimeUsage
     end
 
     def floor_to_bucket(time)
-      Time.zone.at(time.to_i - (time.to_i % BUCKET_SIZE.to_i))
+      Time.zone.at(time.to_i - (time.to_i % BUCKET_DURATION.to_i))
     end
 
     def ceil_to_bucket(time)
       floor = floor_to_bucket(time)
 
-      (floor == time) ? floor : floor + BUCKET_SIZE
+      (floor == time) ? floor : floor + BUCKET_DURATION
     end
   end
 end
