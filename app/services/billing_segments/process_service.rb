@@ -57,7 +57,9 @@ module BillingSegments
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
       if advance_metered
-        :processing_advance_segments if segment.status_processing?
+        if segment.status_processing?
+          :processing_advance_segments
+        end
       elsif segment.status_pending?
         :pending_segments
       end
@@ -66,7 +68,7 @@ module BillingSegments
     def invoice_key(segment)
       contract = segment.contract
       [
-        segment.billing_at.in_time_zone(customer.applicable_timezone).to_date,
+        segment.cycle_started_at.in_time_zone(customer.applicable_timezone).to_date,
         contract.consolidate_invoice ? :shared : segment.id,
         segment.currency,
         contract.billing_entity_id || customer.billing_entity_id,

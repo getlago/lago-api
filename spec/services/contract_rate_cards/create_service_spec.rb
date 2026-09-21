@@ -56,6 +56,19 @@ RSpec.describe ContractRateCards::CreateService do
     end
   end
 
+  context "with a priced metered advance rate card" do
+    let(:rate_card) { create(:rate_card, :advance, organization:, currency: "EUR") }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at.beginning_of_day)
+    end
+
+    it "persists its first processing billing segment" do
+      expect { result }.to change(BillingSegment.status_processing, :count).by(1)
+      expect(result.contract_rate_card.billing_segments.sole.status).to eq("processing")
+    end
+  end
+
   context "when the contract is locked (active)" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 

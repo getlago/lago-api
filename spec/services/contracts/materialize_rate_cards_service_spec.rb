@@ -76,6 +76,19 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     end
   end
 
+  context "with a priced metered advance plan rate card" do
+    let(:rate_card) { create(:rate_card, :advance, organization:) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at.beginning_of_day)
+    end
+
+    it "persists its first processing billing segment" do
+      expect { result }.to change(BillingSegment.status_processing, :count).by(1)
+      expect(result.contract_rate_cards.sole.billing_segments.sole.status).to eq("processing")
+    end
+  end
+
   describe "next_billing_at" do
     subject(:next_billing_at) { result.contract_rate_cards.sole.next_billing_at }
 

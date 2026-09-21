@@ -64,6 +64,9 @@ module BillingSegments
       ).billing_segments
 
       ContractRateCards::AdvanceBillingClockService.call!(contract_rate_card: card, schedule:, timestamp:)
+      if card.next_billing_at
+        BillingSegments::EnsureAdvanceService.call!(contract_rate_card: card, timestamp: card.next_billing_at)
+      end
       written
     end
 

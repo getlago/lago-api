@@ -41,6 +41,7 @@ module RatePhases
         end
       end
 
+      ensure_advance_segment
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -73,6 +74,12 @@ module RatePhases
         rate_card: applied_rate_card.rate_card,
         params: phase[:rate_override]
       ).raise_if_error!.rate_override
+    end
+
+    def ensure_advance_segment
+      return unless contract_rate_card
+
+      BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
     end
 
     def ordered_params

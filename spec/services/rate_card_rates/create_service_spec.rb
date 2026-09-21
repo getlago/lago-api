@@ -109,6 +109,24 @@ RSpec.describe RateCardRates::CreateService do
     end
   end
 
+  context "when an attached metered advance card receives its first rate" do
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+
+    before do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1)
+    end
+
+    it "persists the card's first processing billing segment" do
+      contract_rate_card
+
+      expect { result }.to change(BillingSegment.status_processing, :count).by(1)
+      expect(contract_rate_card.billing_segments.sole.status).to eq("processing")
+    end
+  end
+
   context "when a rate is already active" do
     let!(:previous_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day) }
 

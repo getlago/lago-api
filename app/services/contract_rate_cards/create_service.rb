@@ -62,6 +62,8 @@ module ContractRateCards
           RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1})
         end
 
+        BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
+
         result.contract_rate_card = contract_rate_card
       end
 

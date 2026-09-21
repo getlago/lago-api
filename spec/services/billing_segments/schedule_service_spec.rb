@@ -93,8 +93,9 @@ RSpec.describe BillingSegments::ScheduleService do
         add_rate(rate_card, Time.zone.parse("2026-02-10 00:00:00"))
       end
 
-      it "bills the next cycle instead of failing" do
-        expect(result.billing_segments.map(&:started_at)).to eq([Time.zone.parse("2026-03-01 00:00:00")])
+      it "keeps the pre-created next cycle instead of failing" do
+        expect(result.billing_segments).to eq([])
+        expect(contract_rate_card.billing_segments.where(started_at: Time.zone.parse("2026-03-01 00:00:00"))).to exist
       end
 
       it "leaves the settled cycle untouched" do

@@ -49,6 +49,7 @@ module RatePhases
         end
       end
 
+      ensure_advance_segment
       result.rate_phase = rate_phase
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -73,6 +74,13 @@ module RatePhases
         rate_card: applied_rate_card.rate_card,
         params: params[:rate_override]
       ).raise_if_error!.rate_override
+    end
+
+    def ensure_advance_segment
+      contract_rate_card = rate_phase.contract_rate_card
+      return unless contract_rate_card
+
+      BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
     end
 
     def last_phase?

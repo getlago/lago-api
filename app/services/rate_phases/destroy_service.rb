@@ -42,6 +42,7 @@ module RatePhases
         end
       end
 
+      ensure_advance_segment
       result.rate_phase = rate_phase
       result
     end
@@ -52,6 +53,13 @@ module RatePhases
 
     def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
+    end
+
+    def ensure_advance_segment
+      contract_rate_card = rate_phase.contract_rate_card
+      return unless contract_rate_card
+
+      BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
     end
   end
 end

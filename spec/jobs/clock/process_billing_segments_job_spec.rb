@@ -8,6 +8,8 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
   let(:organization) { create(:organization) }
   let(:owed_customer) { create(:customer, organization:) }
   let(:settled_customer) { create(:customer, organization:) }
+  let(:processing_customer) { create(:customer, organization:) }
+  let(:future_processing_customer) { create(:customer, organization:) }
 
   it_behaves_like "a unique job" do
     let(:job_args) { [] }
@@ -17,6 +19,20 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
     before do
       create(:billing_segment, organization:, customer: owed_customer)
       create(:billing_segment, organization:, customer: settled_customer, status: :done)
+      create(:billing_segment, organization:, customer: processing_customer, status: :processing, ended_at: 1.second.ago)
+      create(:billing_segment, organization:, customer: future_processing_customer, status: :processing, ended_at: 1.day.from_now)
+    end
+
+    it "enqueues a customer whose processing segment has closed" do
+      described_class.perform_now
+
+      expect(BillingSegments::ProcessJob).to have_been_enqueued.with(processing_customer.id)
+    end
+
+    it "enqueues a customer whose processing segment is still open" do
+      described_class.perform_now
+
+      expect(BillingSegments::ProcessJob).to have_been_enqueued.with(future_processing_customer.id)
     end
 
     it "enqueues one job for each customer holding a pending segment" do

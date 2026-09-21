@@ -28,6 +28,7 @@ module Contracts
           )
           card.next_billing_at = initial_next_billing_at(card, plan_rate_card)
           card.save!
+          BillingSegments::EnsureAdvanceService.call!(contract_rate_card: card)
           materialized << card
         end
       end

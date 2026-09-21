@@ -24,17 +24,22 @@ module RateCardRates
         return result.single_validation_failure!(field: :effective_from, error_code: "must_not_be_before_today")
       end
 
-      rate = rate_card.rates.create!(
-        organization_id: rate_card.organization_id,
-        code: params[:code].presence,
-        effective_from: params[:effective_from],
-        rate_model: params[:rate_model],
-        rate_properties: params[:rate_properties] || {},
-        min_amount_cents: params[:min_amount_cents] || 0,
-        billing_interval_count: params[:billing_interval_count] || 1,
-        billing_interval_unit: params[:billing_interval_unit],
-        applied_pricing_unit_conversion_rate: params[:applied_pricing_unit_conversion_rate]
-      )
+      rate = nil
+      ActiveRecord::Base.transaction do
+        rate = rate_card.rates.create!(
+          organization_id: rate_card.organization_id,
+          code: params[:code].presence,
+          effective_from: params[:effective_from],
+          rate_model: params[:rate_model],
+          rate_properties: params[:rate_properties] || {},
+          min_amount_cents: params[:min_amount_cents] || 0,
+          billing_interval_count: params[:billing_interval_count] || 1,
+          billing_interval_unit: params[:billing_interval_unit],
+          applied_pricing_unit_conversion_rate: params[:applied_pricing_unit_conversion_rate]
+        )
+
+        ensure_advance_segments
+      end
 
       result.rate_card_rate = rate
       result
@@ -45,5 +50,14 @@ module RateCardRates
     private
 
     attr_reader :rate_card, :params, :emit_activity_log
+
+    def ensure_advance_segments
+      rate_card.contract_applied_rate_cards
+        .left_joins(:billing_segments)
+        .where(billing_segments: {id: nil})
+        .find_each do |contract_rate_card|
+          BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
+        end
+    end
   end
 end
