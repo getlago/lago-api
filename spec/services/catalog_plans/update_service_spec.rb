@@ -118,4 +118,70 @@ RSpec.describe CatalogPlans::UpdateService do
       expect(catalog_plan.reload.name).to eq("Renamed")
     end
   end
+
+  describe "taxes" do
+    let(:organization) { catalog_plan.organization }
+    let(:tax1) { create(:tax, organization:) }
+    let(:tax2) { create(:tax, organization:) }
+    let(:params) { {tax_codes: [tax2.code]} }
+
+    before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: tax1, organization:) }
+
+    it "replaces the catalog plan taxes" do
+      expect(result).to be_success
+      expect(result.catalog_plan.taxes).to eq([tax2])
+    end
+
+    context "when tax codes are empty" do
+      let(:params) { {tax_codes: []} }
+
+      it "removes all catalog plan taxes" do
+        expect(result).to be_success
+        expect(result.catalog_plan.taxes).to be_empty
+      end
+    end
+
+    context "when tax codes are null" do
+      let(:params) { {tax_codes: nil} }
+
+      it "keeps the existing taxes" do
+        expect(result).to be_success
+        expect(result.catalog_plan.taxes).to eq([tax1])
+      end
+    end
+
+    context "when tax codes are omitted" do
+      let(:params) { {name: "Renamed"} }
+
+      it "keeps the existing taxes" do
+        expect(result).to be_success
+        expect(result.catalog_plan.taxes).to eq([tax1])
+      end
+    end
+
+    context "when the catalog plan is attached to a contract" do
+      before do
+        customer = create(:customer, organization:)
+        create(:contract, organization:, customer:, catalog_plan:)
+      end
+
+      it "still updates the taxes" do
+        expect(result).to be_success
+        expect(result.catalog_plan.taxes).to eq([tax2])
+      end
+    end
+
+    context "when a tax belongs to another organization" do
+      let(:other_tax) { create(:tax) }
+      let(:params) { {name: "Should roll back", tax_codes: [other_tax.code]} }
+
+      it "returns a tax not found failure and rolls back other changes" do
+        expect(result).to be_a(described_class::Result)
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("tax")
+        expect(catalog_plan.reload.name).to eq("Before")
+        expect(catalog_plan.taxes).to eq([tax1])
+      end
+    end
+  end
 end
