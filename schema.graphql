@@ -1525,6 +1525,7 @@ type CatalogPlan {
   invoiceDisplayName: String
   name: String!
   organization: Organization
+  taxes: [Tax!]!
   updatedAt: ISO8601DateTime!
 }
 
@@ -3467,6 +3468,7 @@ input CreateCatalogPlanInput {
   description: String
   invoiceDisplayName: String
   name: String!
+  taxCodes: [String!]
 }
 
 """
@@ -15792,6 +15794,7 @@ input UpdateCatalogPlanInput {
   id: ID!
   invoiceDisplayName: String
   name: String
+  taxCodes: [String!]
 }
 
 """
