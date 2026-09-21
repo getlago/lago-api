@@ -167,6 +167,25 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
+  # Resuming at a cycle's start replays that cycle whole, on purpose: a cycle can be half
+  # written, and resuming past it would skip the unwritten piece for good. The cost is that a
+  # run is handed pieces an earlier one already stored, which the producer subtracts.
+  describe "#segments_due_by, resuming inside a cycle" do
+    subject(:schedule) do
+      described_class.new(anchor_date:, phases:, rates:, terms:, timezone:, starts_at:, ends_at:, resume_at:)
+    end
+
+    let(:starts_at) { Time.utc(2022, 1, 1) }
+    let(:rates) { [card_rate(Time.utc(2022, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
+    let(:resume_at) { Time.utc(2022, 2, 1) }
+
+    it "hands back the whole cycle, the piece before the resume point included" do
+      expect(schedule.segments_due_by(Time.utc(2022, 3, 1)).map(&:started_at)).to eq(
+        [Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)]
+      )
+    end
+  end
+
   # The flat shape the consumer lane writes rows from: one entry per slice, cycle facts
   # already joined, so a writer never has to hold two objects to fill one row.
   describe "the flat segment surface" do

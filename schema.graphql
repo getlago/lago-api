@@ -1549,7 +1549,7 @@ type ContractAppliedRateCard {
   effectiveDate: ISO8601Date!
   endedDate: ISO8601Date
   id: ID!
-  nextBillingAt: ISO8601DateTime!
+  nextBillingAt: ISO8601DateTime
   product: Product!
   rateCard: RateCard!
   ratePhases: [RatePhase!]!
@@ -11825,7 +11825,7 @@ type Query {
   """
   Query contracts of an organization
   """
-  contracts(externalCustomerId: String, externalId: String, limit: Int, page: Int, planCode: String, status: [ContractStatusEnum!]): ContractCollection!
+  contracts(billingEntityIds: [ID!], externalCustomerId: String, externalId: String, hasRateOverrides: Boolean, limit: Int, page: Int, planCode: String, searchTerm: String, status: [ContractStatusEnum!]): ContractCollection!
 
   """
   Query a single coupon of an organization

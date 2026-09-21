@@ -17,7 +17,8 @@ class ContractRateCard < ApplicationRecord
   has_many :fees
 
   validates :billing_anchor_date, presence: true
-  validates :next_billing_at, presence: true
+  # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
+  validates :next_billing_at, presence: true, on: :create
   validates :effective_date, presence: true
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_date: nil) }}
@@ -36,13 +37,30 @@ class ContractRateCard < ApplicationRecord
   # termination clock (see #6086). Offsets span -12:00..+14:00, so any
   # customer-local today is at least yesterday's date — the bound is a strict
   # superset and the exact per-row check decides.
-  scope :current_and_scheduled, -> {
+  scope :current_and_scheduled, ->(at = Time.current) {
     joins(contract: [:customer, :organization]).where(
       "contract_rate_cards.ended_date IS NULL OR (contract_rate_cards.ended_date >= ? AND " \
       "contract_rate_cards.ended_date >= " \
       "(?::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC'))::date)",
-      Time.current.to_date - 1, Time.current
+      at.to_date - 1, at
     )
+  }
+
+  # The attachments the calendar can build a schedule for at all. Being *due* adds the clock
+  # and the contract's own status on top; a preview asks only for this.
+  scope :schedulable, ->(timestamp) {
+    current_and_scheduled(timestamp)
+      # Only a priced card owes anything: a period with no price is not one to be paid for.
+      .where(rate_card_id: RateCardRate.select(:rate_card_id))
+      # And only a card with a window: one that starts after its contract ends has no period
+      # to owe anything in, which is an ordinary outcome of bringing a termination forward.
+      .where("contracts.ended_at IS NULL OR contracts.ended_at > contract_rate_cards.effective_date")
+  }
+
+  scope :due_for_billing, ->(timestamp) {
+    schedulable(timestamp)
+      .where(next_billing_at: ..timestamp)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
   }
 
   def edit_error_code
@@ -69,7 +87,7 @@ end
 #  deleted_at          :datetime
 #  effective_date      :date             not null
 #  ended_date          :date
-#  next_billing_at     :datetime         not null
+#  next_billing_at     :datetime
 #  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
@@ -80,10 +98,10 @@ end
 # Indexes
 #
 #  index_active_contract_rate_cards_on_contract_and_card  (contract_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
+#  index_contract_rate_cards_on_billing_clock             (next_billing_at,ended_date) WHERE (deleted_at IS NULL)
 #  index_contract_rate_cards_on_contract_id               (contract_id)
 #  index_contract_rate_cards_on_deleted_at                (deleted_at)
 #  index_contract_rate_cards_on_id_and_contract_id        (id,contract_id) UNIQUE
-#  index_contract_rate_cards_on_next_billing_at           (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
 #  index_contract_rate_cards_on_organization_id           (organization_id)
 #  index_contract_rate_cards_on_rate_card_id              (rate_card_id)
 #
