@@ -91,6 +91,18 @@ RSpec.describe ContractRateCard do
         expect(described_class.due_for_billing(timestamp)).to be_empty
       end
 
+      # Deleting a customer leaves their contracts active, so without this the card stays due
+      # on every tick and the producer raises RecordNotFound loading the customer back:
+      # Contract#customer is with_discarded, Customer's own default scope is not.
+      it "leaves out cards of a deleted customer" do
+        deleted = create(:customer, organization:)
+        contract = create(:contract, organization:, customer: deleted, started_at: 1.year.ago)
+        card(contract:, next_billing_at: timestamp)
+        deleted.discard!
+
+        expect(described_class.due_for_billing(timestamp)).to be_empty
+      end
+
       it "leaves out cards of contracts that are not active" do
         %w[pending terminated canceled].each do |status|
           inactive = create(:contract, organization:, status:, started_at: 1.year.ago)

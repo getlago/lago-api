@@ -49,6 +49,7 @@ class ContractRateCard < ApplicationRecord
     current_and_scheduled(timestamp)
       .where(next_billing_at: ..timestamp)
       .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      .where(customers: {deleted_at: nil})
       # Only a priced card owes anything: a period with no price is not one to be paid for.
       .where(rate_card_id: RateCardRate.select(:rate_card_id))
       # And only a card with a window: one that starts after its contract ends has no period
