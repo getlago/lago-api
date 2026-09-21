@@ -60,40 +60,46 @@ class PastUsageQuery < BaseQuery
   def free_fees_by_period(invoice_subscriptions)
     return {} if invoice_subscriptions.empty?
 
+    charge_ids = regroup_charge_ids(invoice_subscriptions)
+    return {} if charge_ids.empty?
+
     owner_ids = free_usage_period_ids(invoice_subscriptions)
     periods_by_id = invoice_subscriptions.index_by(&:id)
     periods = owner_ids.values.filter_map { |id| periods_by_id[id] }
     if periods.empty?
       {}
     else
-      free_fees(periods).group_by do |fee|
-        owner_ids[usage_period_key(fee.subscription_id, fee.properties["charges_from_datetime"])]
+      free_fees(periods, charge_ids).group_by do |fee|
+        owner_ids[[fee.subscription_id, fee.properties["charges_from_datetime"]]]
       end
     end
   end
 
-  def free_fees(periods)
-    # Match all requested periods in one scan of standalone fees, on the period start
-    # only: a fee keeps the period end known when it was created, which outlives the
-    # invoice boundaries when the subscription is terminated mid-period. JSON boundaries
-    # have millisecond precision; invoice boundaries have microseconds.
-    conditions = periods.map do |period|
-      Fee.where(subscription_id: period.subscription_id)
-        .where("(fees.properties ->> 'charges_from_datetime')::timestamptz = ?", period.charges_from_datetime.iso8601(3))
-    end.reduce { |scope, condition| scope.or(condition) }
-
-    scope = Fee.where(organization:, subscription_id: periods.map(&:subscription_id).uniq, invoice_id: nil,
-      pay_in_advance: true, amount_cents: 0, precise_amount_cents: 0)
-      .charge.positive_units.joins(:charge)
-      .where(charges: {pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice})
-      .merge(conditions)
-      .includes(:charge_filter, :presentation_breakdowns)
-
+  def regroup_charge_ids(invoice_subscriptions)
+    subscription_ids = invoice_subscriptions.map(&:subscription_id).uniq
+    scope = Charge.with_discarded
+      .where(plan_id: Subscription.where(id: subscription_ids).select(:plan_id))
+      .where(pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice)
     if filters.billable_metric_code
-      scope = scope.where(charges: {billable_metric_id: billable_metric.id})
+      scope = scope.where(billable_metric_id: billable_metric.id)
     end
 
-    scope
+    scope.pluck(:id)
+  end
+
+  def free_fees(periods, charge_ids)
+    # Match on the period start only: a fee keeps the period end known when it was
+    # created, which outlives the invoice boundaries when the subscription is
+    # terminated mid-period.
+    conditions = periods.map do |period|
+      Fee.where(subscription_id: period.subscription_id)
+        .where("fees.properties ->> 'charges_from_datetime' = ?", usage_period_start(period.charges_from_datetime))
+    end.reduce { |scope, condition| scope.or(condition) }
+
+    Fee.where(organization:, charge_id: charge_ids, invoice_id: nil, pay_in_advance: true, amount_cents: 0, precise_amount_cents: 0)
+      .charge.positive_units
+      .merge(conditions)
+      .includes(:charge_filter, :presentation_breakdowns)
   end
 
   def free_usage_period_ids(periods)
@@ -112,13 +118,13 @@ class PastUsageQuery < BaseQuery
       .select(:id, :subscription_id, :charges_from_datetime)
       .order(Arel.sql("CASE WHEN invoicing_reason = 'in_advance_charge_periodic' THEN 0 ELSE 1 END"), :created_at, :id)
       .each_with_object({}) do |period, owners|
-        key = usage_period_key(period.subscription_id, period.charges_from_datetime)
-        owners[key] ||= period.id
+        owners[[period.subscription_id, usage_period_start(period.charges_from_datetime)]] ||= period.id
       end
   end
 
-  def usage_period_key(subscription_id, from_datetime)
-    [subscription_id, from_datetime.to_time.getutc.iso8601(3)]
+  # Fee boundaries are serialized as UTC ISO 8601 with milliseconds.
+  def usage_period_start(charges_from_datetime)
+    charges_from_datetime.utc.iso8601(3)
   end
 
   def validate_filters
