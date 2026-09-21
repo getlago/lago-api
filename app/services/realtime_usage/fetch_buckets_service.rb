@@ -86,10 +86,8 @@ module RealtimeUsage
       JSON.parse(grouped_by.presence || "{}").transform_values(&:presence)
     end
 
-    # Widening the window to whole buckets cannot pull in usage from a neighbouring period: the
-    # pipeline attributes an event to a subscription only within its lifetime, so an upgrade or
-    # a termination landing mid-bucket routes each event to the right subscription however the
-    # boundary falls.
+    # The pipeline attributes an event to a subscription only within its lifetime, so widening
+    # the window to whole buckets cannot pull in usage from a neighbouring subscription.
     def window
       @window ||= floor_to_bucket(boundaries.charges_from_datetime)...ceil_to_bucket(boundaries.charges_to_datetime)
     end

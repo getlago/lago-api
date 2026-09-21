@@ -178,6 +178,24 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       end
     end
 
+    # A customer timezone change opens the period at the previous `charges_to_datetime` plus one
+    # second (`Subscriptions::DatesService#charges_from_datetime`), so the start lands a whole
+    # second past a bucket wall. Flooring counts that bucket: the second it adds is the hole the
+    # correction leaves between the two periods, which no invoice bills.
+    context "when the window starts one second after the previous period" do
+      let(:bucket_wall) { Time.current.beginning_of_day - 1.day }
+      let(:previous_charges_to_datetime) { (bucket_wall - 1.second).end_of_day }
+      let(:from_datetime) { previous_charges_to_datetime + 1.second }
+
+      it "floors the start, counting the bucket that holds the second before the period" do
+        create_bucket(bucket: bucket_wall, units: "7.0", events_count: 1)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect(totals.value).to eq(BigDecimal("7.0"))
+      end
+    end
+
     context "when the window ends inside a bucket" do
       let(:to_datetime) { from_datetime + 1.month - 1.second }
 
