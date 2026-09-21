@@ -81,7 +81,7 @@ module Fees
     def product_taxes
       rate_card_taxes = fee.rate_card_rate.rate_card.taxes
       return rate_card_taxes if rate_card_taxes.any?
-      return plan.taxes if plan.taxes.any?
+      return plan.taxes if plan&.taxes&.any?
       return customer.taxes if customer.taxes.any?
 
       billing_entity_taxes(fee.billing_entity_id)
