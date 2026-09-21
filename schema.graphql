@@ -7499,6 +7499,7 @@ Usage of a single charge filter within one hour
 type HourlyUsageBreakdown {
   chargeFilterId: ID
   eventsCount: Int!
+  other: Boolean!
   units: Float!
 }
 
@@ -7509,6 +7510,11 @@ type HourlyUsageFilter {
   chargeFilterId: ID
   eventsCount: Int!
   invoiceDisplayName: String
+
+  """
+  True for the series folding every filter past the biggest ones
+  """
+  other: Boolean!
   units: Float!
   values: ChargeFilterValues!
 }

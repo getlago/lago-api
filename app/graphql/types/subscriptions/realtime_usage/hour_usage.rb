@@ -9,6 +9,7 @@ module Types
 
         field :charge_filter_id, ID, null: true
         field :events_count, Integer, null: false
+        field :other, Boolean, null: false
         field :units, GraphQL::Types::Float, null: false
       end
     end

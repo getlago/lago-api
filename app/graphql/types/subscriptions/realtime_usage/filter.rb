@@ -10,6 +10,7 @@ module Types
         field :charge_filter_id, ID, null: true
         field :events_count, Integer, null: false
         field :invoice_display_name, String, null: true
+        field :other, Boolean, null: false, description: "True for the series folding every filter past the biggest ones"
         field :units, GraphQL::Types::Float, null: false
         field :values, Types::ChargeFilters::Values, null: false
 
