@@ -43,9 +43,9 @@ RSpec.describe Wallets::Balance::DecreaseService do
       expect { subject }.to change { wallet.customer.reload.awaiting_wallet_refresh }.from(false).to(true)
     end
 
-    it "enqueues a RefreshWalletJob" do
+    it "enqueues a RefreshWalletsJob" do
       expect { subject }
-        .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(wallet.customer)
+        .to have_enqueued_job_after_commit(Customers::RefreshWalletsJob).with(wallet.customer)
     end
 
     it "sends a `wallet.updated` webhook" do
@@ -63,8 +63,8 @@ RSpec.describe Wallets::Balance::DecreaseService do
         expect { subject }.not_to change { wallet.customer.reload.awaiting_wallet_refresh }.from(false)
       end
 
-      it "does not enqueue a RefreshWalletJob" do
-        expect { subject }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+      it "does not enqueue a RefreshWalletsJob" do
+        expect { subject }.not_to have_enqueued_job(Customers::RefreshWalletsJob)
       end
     end
 

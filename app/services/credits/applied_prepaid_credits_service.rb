@@ -36,7 +36,7 @@ module Credits
           end
 
           update_prepaid_credit_amounts(result.wallet_transactions)
-          Customers::RefreshWalletsService.call(customer:, include_generating_invoices: true)
+          Customers::RecomputeWalletsBalanceService.call(customer:, include_generating_invoices: true)
           invoice.save! if invoice.changed?
         end
       end

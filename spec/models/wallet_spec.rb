@@ -261,7 +261,7 @@ RSpec.describe Wallet do
 
   describe "REFRESH_RELEVANT_ATTRIBUTES" do
     # If this list changes, you MUST decide whether the new/removed column
-    # should trigger Customers::RefreshWalletsService and update
+    # should trigger Customers::RecomputeWalletsBalanceService and update
     # Wallet::REFRESH_RELEVANT_ATTRIBUTES accordingly.
     non_refresh_relevant_attributes = %w[
       id

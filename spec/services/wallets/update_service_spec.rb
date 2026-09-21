@@ -71,14 +71,14 @@ RSpec.describe Wallets::UpdateService do
     end
 
     it "flags the customer wallets for refresh and enqueues a refresh job" do
-      expect { result }.to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
+      expect { result }.to have_enqueued_job_after_commit(Customers::RefreshWalletsJob).with(customer)
       expect(customer.reload).to be_awaiting_wallet_refresh
     end
 
     describe "wallet refresh gating" do
       shared_examples "flags refresh" do
         it "flags the customer wallets for refresh and enqueues a refresh job" do
-          expect { result }.to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
+          expect { result }.to have_enqueued_job_after_commit(Customers::RefreshWalletsJob).with(customer)
           expect(result).to be_success
           expect(customer.reload).to be_awaiting_wallet_refresh
         end
@@ -86,7 +86,7 @@ RSpec.describe Wallets::UpdateService do
 
       shared_examples "does not flag refresh" do
         it "does not flag the customer wallets for refresh nor enqueue a refresh job" do
-          expect { result }.not_to have_enqueued_job(Customers::RefreshWalletJob)
+          expect { result }.not_to have_enqueued_job(Customers::RefreshWalletsJob)
           expect(result).to be_success
           expect(customer.reload).not_to be_awaiting_wallet_refresh
         end

@@ -5,7 +5,7 @@ require "rails_helper"
 describe "Use wallet's credits and recalculate balances", transaction: false do
   subject(:wallets) { refresh_service.wallets }
 
-  let(:refresh_service) { Customers::RefreshWalletsService.call(customer:, include_generating_invoices:) }
+  let(:refresh_service) { Customers::RecomputeWalletsBalanceService.call(customer:, include_generating_invoices:) }
   let(:include_generating_invoices) { true }
 
   let(:organization) { create(:organization) }

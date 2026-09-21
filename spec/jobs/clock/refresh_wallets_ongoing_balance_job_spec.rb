@@ -21,26 +21,26 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
       wallet
       customer_without_wallet
       customer_with_terminated_wallet
-      allow(Customers::RefreshWalletsService).to receive(:call)
+      allow(Customers::RecomputeWalletsBalanceService).to receive(:call)
     end
 
     context "when freemium" do
       it "does not schedule refresh job" do
         subject
-        expect(Customers::RefreshWalletJob).not_to have_been_enqueued
+        expect(Customers::RefreshWalletsJob).not_to have_been_enqueued
       end
     end
 
     context "when premium", :premium do
       it "schedules refresh job for customers with active wallet awaiting refresh" do
         subject
-        expect(Customers::RefreshWalletJob).to have_been_enqueued.with(customer)
+        expect(Customers::RefreshWalletsJob).to have_been_enqueued.with(customer)
       end
 
       it "does not schedule refresh job for customers with terminated wallet or not awaiting for refresh" do
         subject
-        expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer_without_wallet)
-        expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer_with_terminated_wallet)
+        expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(customer_without_wallet)
+        expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(customer_with_terminated_wallet)
       end
 
       context "when customer has tax errors" do
@@ -48,7 +48,7 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
 
         it "does not schedule refresh job for customers with tax errors" do
           subject
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer)
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(customer)
         end
       end
 
@@ -57,7 +57,7 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
 
         it "does not schedule refresh job for customers in the dedicated organization" do
           subject
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer)
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(customer)
         end
 
         context "with a customer in a non-dedicated organization" do
@@ -68,7 +68,7 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
 
           it "still schedules refresh job for customers outside the dedicated list" do
             subject
-            expect(Customers::RefreshWalletJob).to have_been_enqueued.with(other_customer)
+            expect(Customers::RefreshWalletsJob).to have_been_enqueued.with(other_customer)
           end
         end
       end

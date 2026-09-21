@@ -32,7 +32,7 @@ RSpec.describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
       context "when premium", :premium do
         it "does not enqueue any refresh job" do
           subject
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued
         end
       end
     end
@@ -43,17 +43,17 @@ RSpec.describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
       context "when freemium" do
         it "does not enqueue refresh jobs" do
           subject
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued
         end
       end
 
       context "when premium", :premium do
         it "enqueues refresh jobs for flagged customers with active wallets in target org only" do
           subject
-          expect(Customers::RefreshWalletJob).to have_been_enqueued.with(target_customer)
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(other_customer)
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer_without_wallet)
-          expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(customer_with_terminated_wallet)
+          expect(Customers::RefreshWalletsJob).to have_been_enqueued.with(target_customer)
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(other_customer)
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(customer_without_wallet)
+          expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(customer_with_terminated_wallet)
         end
 
         context "when the target customer has tax errors" do
@@ -63,7 +63,7 @@ RSpec.describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
 
           it "does not enqueue the refresh job for that customer" do
             subject
-            expect(Customers::RefreshWalletJob).not_to have_been_enqueued.with(target_customer)
+            expect(Customers::RefreshWalletsJob).not_to have_been_enqueued.with(target_customer)
           end
         end
       end

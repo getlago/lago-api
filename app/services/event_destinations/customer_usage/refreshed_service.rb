@@ -55,7 +55,7 @@ module EventDestinations
         usage = usages[subscription]
 
         if usage.nil?
-          # Same arguments as the inline delivery in Customers::RefreshWalletsService: the event must
+          # Same arguments as the inline delivery in Customers::RecomputeWalletsBalanceService: the event must
           # not differ by path, and the presentation breakdowns would keep the buckets from serving.
           usage_result = ::Invoices::CustomerUsageService.call(
             customer:,

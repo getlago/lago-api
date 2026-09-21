@@ -13,7 +13,7 @@ module Clock
       scope = scope.where.not(organization_id: dedicated_org_ids) if dedicated_org_ids.any?
 
       scope.find_each do |customer|
-        Customers::RefreshWalletJob.perform_later(customer)
+        Customers::RefreshWalletsJob.perform_later(customer)
       end
     end
   end

@@ -76,7 +76,7 @@ module Wallets
 
         if needs_refresh?
           wallet.customer.flag_wallets_for_refresh
-          Customers::RefreshWalletJob.perform_after_commit(wallet.customer)
+          Customers::RefreshWalletsJob.perform_after_commit(wallet.customer)
         end
 
         InvoiceCustomSections::AttachToResourceService.call!(resource: wallet, params:)

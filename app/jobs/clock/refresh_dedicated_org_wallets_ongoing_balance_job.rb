@@ -16,7 +16,7 @@ module Clock
         .awaiting_wallet_refresh
         .without_tax_errors
         .find_each do |customer|
-          Customers::RefreshWalletJob.perform_later(customer)
+          Customers::RefreshWalletsJob.perform_later(customer)
         end
     end
   end

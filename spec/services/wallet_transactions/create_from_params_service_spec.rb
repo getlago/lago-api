@@ -77,9 +77,9 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       expect { subject }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
     end
 
-    it "enqueues a RefreshWalletJob to update the ongoing balance" do
+    it "enqueues a RefreshWalletsJob to update the ongoing balance" do
       expect { subject }
-        .to have_enqueued_job_after_commit(Customers::RefreshWalletJob).with(customer)
+        .to have_enqueued_job_after_commit(Customers::RefreshWalletsJob).with(customer)
     end
 
     it "enqueues a SendWebhookJob for each wallet transaction" do
