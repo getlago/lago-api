@@ -63,13 +63,13 @@ class PastUsageQuery < BaseQuery
     charge_ids = regroup_charge_ids(invoice_subscriptions)
     return {} if charge_ids.empty?
 
-    owner_ids = free_usage_period_ids(invoice_subscriptions)
-    periods_by_id = invoice_subscriptions.index_by(&:id)
-    periods = owner_ids.values.filter_map { |id| periods_by_id[id] }
-    if periods.empty?
+    owner_ids = free_usage_period_ids(invoice_subscriptions, charge_ids)
+    page_ids = invoice_subscriptions.map(&:id).to_set
+    owned_keys = owner_ids.select { |_key, owner_id| page_ids.include?(owner_id) }.keys
+    if owned_keys.empty?
       {}
     else
-      free_fees(periods, charge_ids).group_by do |fee|
+      free_fees(owned_keys, charge_ids).group_by do |fee|
         owner_ids[[fee.subscription_id, fee.properties["charges_from_datetime"]]]
       end
     end
@@ -87,44 +87,74 @@ class PastUsageQuery < BaseQuery
     scope.pluck(:id)
   end
 
-  def free_fees(periods, charge_ids)
-    # Match on the period start only: a fee keeps the period end known when it was
-    # created, which outlives the invoice boundaries when the subscription is
-    # terminated mid-period.
-    conditions = periods.map do |period|
-      Fee.where(subscription_id: period.subscription_id)
-        .where("fees.properties ->> 'charges_from_datetime' = ?", usage_period_start(period.charges_from_datetime))
-    end.reduce { |scope, condition| scope.or(condition) }
-
+  def free_fees(keys, charge_ids)
     Fee.where(organization:, charge_id: charge_ids, invoice_id: nil, pay_in_advance: true, amount_cents: 0)
       .charge.positive_units
-      .merge(conditions)
+      .merge(fee_period_conditions(keys))
       .includes(:charge_filter, :presentation_breakdowns)
   end
 
-  def free_usage_period_ids(periods)
-    # Resolve owners for the whole page, including competing invoices outside it.
-    # Prefer regrouped invoices, then regular invoices for entirely free periods.
+  # A free fee is shown next to the regrouped paid fees of its own period, on the
+  # invoice they were regrouped on. When none were regrouped yet, it is shown on the
+  # regular invoice of the period. Owners are resolved for the whole page, including
+  # invoices outside it, so a fee is never counted on two pages.
+  def free_usage_period_ids(periods, charge_ids)
+    regrouped = regrouped_period_keys(periods.map { |period| usage_period_key(period) }, charge_ids)
+
     conditions = periods.map do |period|
       InvoiceSubscription.where(
         subscription_id: period.subscription_id,
-        charges_from_datetime: period.charges_from_datetime
+        charges_from_datetime: period.charges_from_datetime,
+        invoicing_reason: [:subscription_periodic, :subscription_terminating]
       )
     end.reduce { |scope, condition| scope.or(condition) }
+    if regrouped.any?
+      conditions = conditions.or(
+        InvoiceSubscription.where(invoice_id: regrouped.keys, subscription_id: periods.map(&:subscription_id).uniq)
+      )
+    end
 
-    InvoiceSubscription.where(organization:, regenerated_invoice_id: nil,
-      invoicing_reason: [:in_advance_charge_periodic, :subscription_periodic, :subscription_terminating])
+    rows = InvoiceSubscription.where(organization:, regenerated_invoice_id: nil)
       .merge(conditions)
-      .select(:id, :subscription_id, :charges_from_datetime)
-      .order(Arel.sql("CASE WHEN invoicing_reason = 'in_advance_charge_periodic' THEN 0 ELSE 1 END"), :created_at, :id)
-      .each_with_object({}) do |period, owners|
-        owners[[period.subscription_id, usage_period_start(period.charges_from_datetime)]] ||= period.id
+      .select(:id, :invoice_id, :subscription_id, :charges_from_datetime, :invoicing_reason)
+      .order(:created_at, :id)
+      .to_a
+
+    owners = {}
+    rows.each do |row|
+      regrouped.fetch(row.invoice_id, []).each do |key|
+        owners[key] ||= row.id if key.first == row.subscription_id
       end
+    end
+    rows.each do |row|
+      next unless row.subscription_periodic? || row.subscription_terminating?
+
+      owners[usage_period_key(row)] ||= row.id
+    end
+    owners
+  end
+
+  def regrouped_period_keys(keys, charge_ids)
+    Fee.where(organization:, charge_id: charge_ids).where.not(invoice_id: nil).charge
+      .merge(fee_period_conditions(keys))
+      .distinct
+      .pluck(:invoice_id, :subscription_id, Arel.sql("fees.properties ->> 'charges_from_datetime'"))
+      .group_by(&:first)
+      .transform_values { |rows| rows.map { |_, subscription_id, period_start| [subscription_id, period_start] } }
+  end
+
+  # Match on the period start only: a fee keeps the period end known when it was
+  # created, which outlives the invoice boundaries when the subscription is
+  # terminated mid-period.
+  def fee_period_conditions(keys)
+    keys.map do |subscription_id, period_start|
+      Fee.where(subscription_id:).where("fees.properties ->> 'charges_from_datetime' = ?", period_start)
+    end.reduce { |scope, condition| scope.or(condition) }
   end
 
   # Fee boundaries are serialized as UTC ISO 8601 with milliseconds.
-  def usage_period_start(charges_from_datetime)
-    charges_from_datetime.utc.iso8601(3)
+  def usage_period_key(period)
+    [period.subscription_id, period.charges_from_datetime.utc.iso8601(3)]
   end
 
   def validate_filters
