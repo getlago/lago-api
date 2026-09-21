@@ -21,12 +21,14 @@ module V2
         ended_at: model.ended_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601,
         canceled_at: model.canceled_at&.iso8601,
+        skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         applied_rate_cards_count: applied_rate_cards_count
       }
 
       payload[:applied_rate_cards] = applied_rate_cards if include?(:applied_rate_cards)
+      payload[:applied_invoice_custom_sections] = applied_invoice_custom_sections if include?(:applied_invoice_custom_sections)
 
       payload
     end
@@ -49,6 +51,14 @@ module V2
         ::V2::ContractAppliedRateCardSerializer,
         collection_name: "applied_rate_cards"
       ).serialize[:applied_rate_cards]
+    end
+
+    def applied_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.applied_invoice_custom_sections.includes(:invoice_custom_section),
+        ::V1::AppliedInvoiceCustomSectionSerializer,
+        collection_name: "applied_invoice_custom_sections"
+      ).serialize[:applied_invoice_custom_sections]
     end
   end
 end

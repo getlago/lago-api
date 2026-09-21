@@ -23,6 +23,7 @@ module Types
       argument :billing_entity_id, ID, required: false
       # Invoicing settings.
       argument :consolidate_invoice, Boolean, required: false
+      argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :purchase_order_number, String, required: false
       # Payment settings: mirrors the subscription input; the payment method
       # scopes to the contract's customer.

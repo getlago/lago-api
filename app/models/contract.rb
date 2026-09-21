@@ -36,6 +36,12 @@ class Contract < ApplicationRecord
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :billing_segments
   has_many :invoices, -> { distinct }, through: :billing_segments
+  has_many :applied_invoice_custom_sections,
+    class_name: "Contract::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
@@ -134,26 +140,27 @@ end
 # Table name: contracts
 # Database name: primary
 #
-#  id                    :uuid             not null, primary key
-#  billing_anchor_date   :date
-#  billing_time          :enum             default("calendar"), not null
-#  canceled_at           :datetime
-#  consolidate_invoice   :boolean          default(TRUE), not null
-#  ended_at              :datetime
-#  name                  :string
-#  payment_method_type   :enum             default("provider"), not null
-#  purchase_order_number :string
-#  started_at            :datetime
-#  status                :enum             default("pending"), not null
-#  terminated_at         :datetime
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  billing_entity_id     :uuid
-#  catalog_plan_id       :uuid
-#  customer_id           :uuid             not null
-#  external_id           :string           not null
-#  organization_id       :uuid             not null
-#  payment_method_id     :uuid
+#  id                           :uuid             not null, primary key
+#  billing_anchor_date          :date
+#  billing_time                 :enum             default("calendar"), not null
+#  canceled_at                  :datetime
+#  consolidate_invoice          :boolean          default(TRUE), not null
+#  ended_at                     :datetime
+#  name                         :string
+#  payment_method_type          :enum             default("provider"), not null
+#  purchase_order_number        :string
+#  skip_invoice_custom_sections :boolean          default(FALSE), not null
+#  started_at                   :datetime
+#  status                       :enum             default("pending"), not null
+#  terminated_at                :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
+#  catalog_plan_id              :uuid
+#  customer_id                  :uuid             not null
+#  external_id                  :string           not null
+#  organization_id              :uuid             not null
+#  payment_method_id            :uuid
 #
 # Indexes
 #

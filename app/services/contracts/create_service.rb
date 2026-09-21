@@ -66,6 +66,7 @@ module Contracts
         )
         apply_settings(contract)
         contract.save!
+        InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
 
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
 

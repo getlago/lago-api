@@ -27,6 +27,8 @@ RSpec.describe Mutations::Contracts::Update do
       mutation($input: UpdateContractInput!) {
         updateContract(input: $input) {
           id externalId name
+          selectedInvoiceCustomSections { id }
+          skipInvoiceCustomSections
           plan { id }
           appliedRateCards { id }
         }
@@ -43,6 +45,15 @@ RSpec.describe Mutations::Contracts::Update do
 
     expect(result_data["externalId"]).to eq(contract.external_id)
     expect(result_data["name"]).to eq("Renamed")
+  end
+
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:input) { {externalId: contract.external_id, invoiceCustomSection: {invoiceCustomSectionIds: [section.id]}} }
+
+    it "attaches the sections to the contract" do
+      expect(execution["data"]["updateContract"]["selectedInvoiceCustomSections"].map { it["id"] }).to eq([section.id])
+    end
   end
 
   context "when changing the plan" do
