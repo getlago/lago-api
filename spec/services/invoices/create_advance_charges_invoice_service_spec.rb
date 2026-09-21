@@ -2,13 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CreateAdvanceChargesInvoiceSubscriptionService do
+RSpec.describe Invoices::CreateAdvanceChargesInvoiceService do
   subject(:create_service) do
     described_class.new(
       invoice:,
       timestamp:,
-      subscriptions_with_fees: [latest_terminated_subscription],
-      all_subscriptions: [latest_terminated_subscription, later_started_subscription]
+      billing_contexts_with_fees: [latest_terminated_billing_context],
+      all_billing_contexts: [latest_terminated_billing_context, later_started_billing_context]
     )
   end
 
@@ -17,6 +17,8 @@ RSpec.describe Invoices::CreateAdvanceChargesInvoiceSubscriptionService do
   let(:plan) { create(:plan, organization:, interval: :monthly, pay_in_advance: true) }
   let(:invoice) { create(:invoice, organization:, customer:, status: :generating) }
   let(:timestamp) { Time.zone.parse("2024-04-20T10:00:00") }
+  let(:latest_terminated_billing_context) { Billing::Context.from(subscription: latest_terminated_subscription) }
+  let(:later_started_billing_context) { Billing::Context.from(subscription: later_started_subscription) }
 
   let(:latest_terminated_subscription) do
     create(
@@ -43,11 +45,12 @@ RSpec.describe Invoices::CreateAdvanceChargesInvoiceSubscriptionService do
   end
 
   describe "#call" do
-    it "uses the latest termination to drive boundaries when every subscription is terminated" do
+    it "uses the latest termination to drive boundaries when every billing context is terminated" do
       result = create_service.call
 
       expect(result).to be_success
       expect(invoice.invoice_subscriptions.sole).to have_attributes(
+        subscription: latest_terminated_subscription,
         charges_from_datetime: match_datetime("2024-04-01T00:00:00Z"),
         charges_to_datetime: match_datetime(timestamp)
       )
