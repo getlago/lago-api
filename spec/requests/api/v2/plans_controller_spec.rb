@@ -23,6 +23,22 @@ RSpec.describe Api::V2::PlansController do
       expect(CatalogPlan.find(json[:plan][:lago_id])).to be_present
     end
 
+    context "with taxes" do
+      let(:tax1) { create(:tax, organization:) }
+      let(:tax2) { create(:tax, organization:) }
+      let(:create_params) do
+        {name: "Growth", code: "growth", currency: "USD", tax_codes: [tax1.code, tax2.code]}
+      end
+
+      it "assigns and returns the taxes" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:taxes].pluck(:code)).to match_array([tax1.code, tax2.code])
+        expect(CatalogPlan.find(json[:plan][:lago_id]).taxes).to match_array([tax1, tax2])
+      end
+    end
+
     context "when the payload is invalid" do
       let(:create_params) { {name: "Growth", code: "growth", currency: "INVALID"} }
 
@@ -60,6 +76,26 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plan][:name]).to eq("After")
     end
 
+    context "with taxes" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{catalog_plan.code}",
+          {plan: {tax_codes: [tax.code]}}
+        )
+      end
+
+      let(:tax) { create(:tax, organization:) }
+
+      it "assigns and returns the taxes" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:taxes].pluck(:code)).to eq([tax.code])
+        expect(catalog_plan.reload.taxes).to eq([tax])
+      end
+    end
+
     context "when the plan does not exist" do
       subject { put_with_token(organization, "/api/v2/plans/unknown", {plan: {name: "After"}}) }
 
@@ -85,6 +121,15 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plan][:lago_id]).to eq(catalog_plan.id)
       expect(json[:plan][:applied_rate_cards_count]).to eq(0)
       expect(json[:plan]).not_to have_key(:interval)
+    end
+
+    it "returns the assigned taxes" do
+      tax = create(:tax, organization:)
+      create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:)
+
+      subject
+
+      expect(json[:plan][:taxes].pluck(:code)).to eq([tax.code])
     end
 
     context "when the plan does not exist" do
@@ -118,6 +163,15 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plans].first[:applied_rate_cards_count]).to eq(2)
       expect(json[:plans].first).not_to have_key(:interval)
       expect(json[:meta][:total_count]).to eq(1)
+    end
+
+    it "returns the assigned taxes" do
+      tax = create(:tax, organization:)
+      create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:)
+
+      subject
+
+      expect(json[:plans].first[:taxes].pluck(:code)).to eq([tax.code])
     end
 
     context "with pagination" do

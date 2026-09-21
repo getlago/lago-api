@@ -17,10 +17,11 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.catalog_plans,
+              result.catalog_plans.includes(:taxes),
               ::V2::CatalogPlanSerializer,
               collection_name: "plans",
-              meta: pagination_metadata(result.catalog_plans)
+              meta: pagination_metadata(result.catalog_plans),
+              includes: %i[taxes]
             )
           )
         else
@@ -59,11 +60,11 @@ module Api
       private
 
       def input_params
-        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency)
+        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
       end
 
       def render_plan(catalog_plan)
-        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan"))
+        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan", includes: %i[taxes]))
       end
 
       def resource_name
