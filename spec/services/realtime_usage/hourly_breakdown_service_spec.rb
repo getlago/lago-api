@@ -18,9 +18,10 @@ RSpec.describe RealtimeUsage::HourlyBreakdownService, clickhouse: {clean_before:
 
   include_context "with realtime usage availability"
 
-  def insert_bucket(bucket:, units:, events_count: 1, charge_filter_id: "", grouped_by: "{}", ingested_at: nil)
+  def insert_bucket(bucket:, units:, events_count: 1, charge_filter_id: "", grouped_by: "{}", ingested_at: nil, is_deleted: 0)
     create(
       :clickhouse_usage_bucket,
+      is_deleted:,
       subscription:,
       customer:,
       organization:,
@@ -117,6 +118,28 @@ RSpec.describe RealtimeUsage::HourlyBreakdownService, clickhouse: {clean_before:
     it "ignores them" do
       expect(result.usage.filters).to be_empty
       expect(result.usage.hours.map { |hour| hour.units.to_f }).to eq([0.0, 0.0, 0.0, 0.0])
+    end
+  end
+
+  context "with a bucket the sink has retracted" do
+    let(:deleted_filter) { create(:charge_filter, charge:) }
+
+    before do
+      insert_bucket(bucket: Time.zone.parse("2026-08-24 09:30:00"), units: 10, charge_filter_id: charge_filter.id)
+      insert_bucket(
+        bucket: Time.zone.parse("2026-08-24 10:30:00"),
+        units: 500,
+        events_count: 50,
+        charge_filter_id: deleted_filter.id,
+        ingested_at: Time.zone.parse("2026-08-24 10:45:00"),
+        is_deleted: 1
+      )
+    end
+
+    it "leaves the deleted row out of the filters, the hours and the ingestion timestamp" do
+      expect(result.usage.filters.map(&:charge_filter_id)).to eq([charge_filter.id])
+      expect(result.usage.hours.map { |hour| hour.units.to_f }).to eq([10.0, 0.0, 0.0, 0.0])
+      expect(result.usage.last_ingested_at).to eq(Time.zone.parse("2026-08-24 09:30:00"))
     end
   end
 

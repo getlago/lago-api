@@ -180,12 +180,15 @@ module RealtimeUsage
       "if(charge_filter_id IN (#{kept_ids.map { |id| quote(id) }.join(", ")}), charge_filter_id, #{quote(OTHER_KEY)})"
     end
 
+    # The sink tombstones a row it has retracted, which the engine only drops on a merge, so
+    # both reads leave the deleted rows out themselves.
     def base_scope
       Clickhouse::UsageBucket
         .where(
           organization_id: subscription.organization_id,
           subscription_id: subscription.id,
-          charge_id: charge.id
+          charge_id: charge.id,
+          is_deleted: 0
         )
         .where("bucket >= ? AND bucket < ?", window_start, window_end)
     end
