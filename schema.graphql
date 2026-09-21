@@ -3125,7 +3125,7 @@ input CreateContractInput {
   consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
   externalCustomerId: String!
-  externalId: String!
+  externalId: String
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planCode: String
