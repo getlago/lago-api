@@ -102,6 +102,7 @@ module BillingSegments
           fee.invoice = invoice
           fee.billing_entity = invoice.billing_entity
           fee.save!
+          apply_taxes(fee, segment)
         end
       end
     end
@@ -120,13 +121,24 @@ module BillingSegments
     # NOTE: Fees::ChargeService persists and attaches the product fees itself (within this
     # surrounding transaction), so a failure on any segment rolls back the whole invoice group.
     def compute_metered_fees(segment, invoice, filtered_aggregations)
-      ::Fees::ChargeService.call!(
+      fees_result = ::Fees::ChargeService.call!(
         invoice:,
         metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
       )
+
+      fees_result.fees.each { |fee| apply_taxes(fee, segment) }
+    end
+
+    def apply_taxes(fee, segment)
+      ::Fees::ApplyTaxesService.call!(
+        fee:,
+        customer:,
+        plan: segment.contract.catalog_plan
+      )
+      fee.save!
     end
 
     def event_filters(metered_segments)
