@@ -153,7 +153,8 @@ RSpec.describe Events::Stores::Provider do
         organization:,
         billing_context:,
         serve_current_usage_from_buckets: true,
-        boundaries: billing_boundaries
+        boundaries: billing_boundaries,
+        charges: [charge]
       )
     end
 

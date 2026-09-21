@@ -167,7 +167,8 @@ module Invoices
         billing_context: Billing::Context.from(subscription:),
         boundaries:,
         serve_current_usage_from_buckets: serve_from_buckets?,
-        usage_filters:
+        usage_filters:,
+        charges:
       )
     end
 

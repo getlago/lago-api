@@ -17,9 +17,10 @@ module RealtimeUsage
       JSON::ParserError
     ].freeze
 
-    def initialize(subscription:, boundaries:)
+    def initialize(subscription:, boundaries:, charges:)
       @subscription = subscription
       @boundaries = boundaries
+      @charges = charges
 
       super
     end
@@ -27,6 +28,7 @@ module RealtimeUsage
     def call
       return result unless RealtimeUsage.enabled?(organization)
       return result if RealtimeUsage.deduplicated?(organization)
+      return result if charges.empty?
 
       result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)
       result
@@ -37,7 +39,7 @@ module RealtimeUsage
 
     private
 
-    attr_reader :subscription, :boundaries
+    attr_reader :subscription, :boundaries, :charges
 
     def organization
       @organization ||= subscription.organization
@@ -72,13 +74,17 @@ module RealtimeUsage
 
     def fetch_rows
       Clickhouse::UsageBucket
-        .where(organization_id: organization.id, subscription_id: subscription.id)
-        .where(bucket: window)
+        .where(organization_id: organization.id, subscription_id: subscription.id, charge_id: charge_ids)
+        .where(bucket: window, is_deleted: 0)
         .group(:charge_id, :charge_filter_id, :grouped_by)
         .pluck(Arel.sql("charge_id, charge_filter_id, grouped_by, sum(units), sum(events_count)"))
         .map do |charge_id, charge_filter_id, grouped_by, units, events_count|
           {charge_id:, charge_filter_id:, groups: parse_groups(grouped_by), units: units.to_d, events_count: events_count.to_i}
         end
+    end
+
+    def charge_ids
+      @charge_ids ||= charges.map(&:id)
     end
 
     # The stream writes an absent group value as "", where the events store returns nil.
