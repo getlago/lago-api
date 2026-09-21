@@ -37,7 +37,7 @@ class ContractRateCard < ApplicationRecord
   # customer-local today is at least yesterday's date — the bound is a strict
   # superset and the exact per-row check decides.
   scope :current_and_scheduled, ->(at = Time.current) {
-    joins(contract: [:customer, :organization]).where(
+    joins(contract: [{customer: :billing_entity}, :organization]).where(
       "contract_rate_cards.ended_date IS NULL OR (contract_rate_cards.ended_date >= ? AND " \
       "contract_rate_cards.ended_date >= " \
       "(?::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC'))::date)",
@@ -54,7 +54,11 @@ class ContractRateCard < ApplicationRecord
       .where(rate_card_id: RateCardRate.select(:rate_card_id))
       # And only a card with a window: one that starts after its contract ends has no period
       # to owe anything in, which is an ordinary outcome of bringing a termination forward.
-      .where("contracts.ended_at IS NULL OR contracts.ended_at > contract_rate_cards.effective_date")
+      .where(
+        "contracts.ended_at IS NULL OR contracts.ended_at AT TIME ZONE 'UTC' > " \
+        "(contract_rate_cards.effective_date::timestamp AT TIME ZONE " \
+        "COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))"
+      )
   }
 
   def edit_error_code

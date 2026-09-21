@@ -66,6 +66,40 @@ RSpec.describe ContractRateCard do
         expect(described_class.due_for_billing(timestamp)).to be_empty
       end
 
+      # effective_date is the customer's local day; contracts.ended_at is a UTC instant.
+      # Both cards are effective Jan 1 local and their contracts end within hours of the UTC
+      # midnight the naive comparison used, one on either side of it.
+      context "when the customer's day is far from UTC" do
+        let(:timestamp) { Time.utc(2027, 1, 1) }
+
+        def card_ending_at(timezone, ended_at)
+          customer = create(:customer, organization:, timezone:)
+          contract = create(
+            :contract,
+            organization:,
+            customer:,
+            started_at: Time.utc(2026, 12, 1),
+            ended_at:
+          )
+          card(contract:, next_billing_at: timestamp, effective_date: Date.new(2027, 1, 1))
+        end
+
+        # Local midnight is Dec 31 11:00 UTC, so the contract still has nine hours to run.
+        it "keeps a card whose contract outlives its customer-local start" do
+          still_open = card_ending_at("Pacific/Tongatapu", Time.utc(2026, 12, 31, 20))
+
+          expect(described_class.due_for_billing(timestamp)).to contain_exactly(still_open)
+        end
+
+        # Local midnight is Jan 1 12:00 UTC, after the contract ended: no window at all, and
+        # letting it through makes BuildScheduleService raise on ends_at before starts_at.
+        it "leaves out a card whose contract ended before its customer-local start" do
+          card_ending_at("Etc/GMT+12", Time.utc(2027, 1, 1, 5))
+
+          expect(described_class.due_for_billing(timestamp)).to be_empty
+        end
+      end
+
       it "leaves out a card whose rate card has no price yet" do
         card(next_billing_at: timestamp, priced: false)
 
