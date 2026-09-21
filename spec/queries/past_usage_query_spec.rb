@@ -228,6 +228,12 @@ RSpec.describe PastUsageQuery do
   context "with unbilled free advance fees" do
     let(:billable_metric) { create(:sum_billable_metric, organization:) }
     let(:charge) { create(:graduated_charge, :regroup_paid_fees, plan:, billable_metric:) }
+    let(:period_properties) do
+      {
+        charges_from_datetime: invoice_subscription1.charges_from_datetime,
+        charges_to_datetime: invoice_subscription1.charges_to_datetime
+      }
+    end
     let(:free_fee_attributes) do
       {
         organization:,
@@ -239,16 +245,13 @@ RSpec.describe PastUsageQuery do
         precise_amount_cents: 0,
         units: 40,
         total_aggregated_units: 40,
-        properties: {
-          charges_from_datetime: invoice_subscription1.charges_from_datetime,
-          charges_to_datetime: invoice_subscription1.charges_to_datetime
-        }
+        properties: period_properties
       }
     end
     let(:free_fee) { create(:charge_fee, **free_fee_attributes) }
     let(:paid_fee) do
       create(:charge_fee, organization:, subscription:, charge:, invoice: invoice_subscription1.invoice,
-        units: 10, total_aggregated_units: 10, amount_cents: 500)
+        units: 10, total_aggregated_units: 10, amount_cents: 500, properties: period_properties)
     end
 
     before do
@@ -358,11 +361,11 @@ RSpec.describe PastUsageQuery do
       before do
         (2...period_count).each do |offset|
           create(:invoice_subscription, organization:, subscription:,
-            invoicing_reason: :in_advance_charge_periodic,
+            invoicing_reason: :subscription_periodic,
             charges_from_datetime: invoice_subscription1.charges_from_datetime - offset.months,
             charges_to_datetime: invoice_subscription1.charges_to_datetime - offset.months)
         end
-        invoice_subscription2.update!(invoicing_reason: :in_advance_charge_periodic)
+        invoice_subscription2.update!(invoicing_reason: :subscription_periodic)
         subscription.invoice_subscriptions.where.not(id: invoice_subscription1.id).find_each do |period|
           create(:charge_fee, **free_fee_attributes, properties: {
             charges_from_datetime: period.charges_from_datetime,
@@ -441,15 +444,21 @@ RSpec.describe PastUsageQuery do
           created_at: invoice_subscription1.created_at + 1.second)
       end
 
+      let(:regenerated_paid_fee) do
+        create(:charge_fee, organization:, subscription:, charge:, invoice: regenerated_invoice,
+          units: 10, total_aggregated_units: 10, amount_cents: 500, properties: period_properties)
+      end
+
       before do
         invoice_subscription1.update!(regenerated_invoice_id: regenerated_invoice.id)
         regenerated_period
+        regenerated_paid_fee
       end
 
       it "assigns the free fees to the replacement and retains the historical period" do
         periods = result.usage_periods.index_by { |period| period.invoice_subscription.id }
 
-        expect(periods.fetch(regenerated_period.id).fees).to eq([free_fee])
+        expect(periods.fetch(regenerated_period.id).fees).to match_array([regenerated_paid_fee, free_fee])
         expect(periods.fetch(invoice_subscription1.id).fees).to eq([paid_fee])
       end
 
@@ -468,6 +477,22 @@ RSpec.describe PastUsageQuery do
 
       it "includes the free fees in that period" do
         expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+      end
+    end
+
+    context "when the regrouped invoice is stamped with a later period" do
+      let(:period_properties) do
+        {
+          charges_from_datetime: invoice_subscription2.charges_from_datetime,
+          charges_to_datetime: invoice_subscription2.charges_to_datetime
+        }
+      end
+
+      before { invoice_subscription2.update!(invoicing_reason: :subscription_periodic) }
+
+      it "shows the free fees next to their regrouped paid fees rather than by stamp" do
+        expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
+        expect(result.usage_periods.last.fees).to be_empty
       end
     end
 

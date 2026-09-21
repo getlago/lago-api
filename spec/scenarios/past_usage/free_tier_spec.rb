@@ -163,7 +163,7 @@ describe "Past usage for regrouped advance charges", transaction: false do
   end
 
   context "when the paid fee is regrouped after its usage period" do
-    it "reports each fee in the period it was consumed in" do
+    it "shows the free units next to their regrouped paid fees" do
       travel_to(Time.zone.local(2024, 6, 1)) do
         create_subscription({external_customer_id: customer.external_id, external_id: external_subscription_id, plan_code: plan.code})
       end
@@ -183,6 +183,14 @@ describe "Past usage for regrouped advance charges", transaction: false do
       travel_to(Time.zone.local(2024, 7, 1, 1)) { perform_billing }
       travel_to(Time.zone.local(2024, 8, 1, 1)) { perform_billing }
 
+      travel_to(Time.zone.local(2024, 8, 5, 12)) do
+        create_event({
+          code: billable_metric.code,
+          external_subscription_id:,
+          properties: {billable_metric.field_name => 30}
+        })
+      end
+
       travel_to(Time.zone.local(2024, 8, 10, 12)) do
         subscription.fees.charge.where("amount_cents > 0").find_each do |fee|
           update_fee(fee.id, {payment_status: "succeeded"})
@@ -193,7 +201,9 @@ describe "Past usage for regrouped advance charges", transaction: false do
 
       travel_to(Time.zone.local(2024, 9, 2, 12)) do
         advance_invoice = customer.invoices.advance_charges.sole
-        june_period = subscription.invoice_subscriptions.find_by(charges_from_datetime: Time.zone.local(2024, 6, 1))
+        regular_periods = subscription.invoice_subscriptions.where(invoicing_reason: :subscription_periodic)
+        june_invoice_id = regular_periods.find_by(charges_from_datetime: Time.zone.local(2024, 6, 1)).invoice_id
+        august_invoice_id = regular_periods.find_by(charges_from_datetime: Time.zone.local(2024, 8, 1)).invoice_id
 
         # The regrouping invoice is stamped with the period it is issued in, not with
         # the period the fee was consumed in.
@@ -203,12 +213,13 @@ describe "Past usage for regrouped advance charges", transaction: false do
 
         expect(response).to have_http_status(:success)
         periods = json[:usage_periods].index_by { |period| period[:lago_invoice_id] }
-        expect(periods.fetch(june_period.invoice_id)[:charges_usage].sole).to include(
-          units: "40.0",
-          total_aggregated_units: "40.0",
-          amount_cents: 0
+        expect(periods.fetch(advance_invoice.id)[:charges_usage].sole).to include(
+          units: "50.0",
+          total_aggregated_units: "50.0",
+          amount_cents: 500
         )
-        expect(periods.fetch(advance_invoice.id)[:charges_usage].sole).to include(units: "10.0", amount_cents: 500)
+        expect(periods.fetch(june_invoice_id)[:charges_usage]).to be_empty
+        expect(periods.fetch(august_invoice_id)[:charges_usage].sole).to include(units: "30.0", amount_cents: 0)
       end
     end
   end
