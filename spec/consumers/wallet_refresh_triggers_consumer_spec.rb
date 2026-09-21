@@ -65,6 +65,28 @@ RSpec.describe WalletRefreshTriggersConsumer do
     end
   end
 
+  context "without a subscription id on the payload" do
+    let(:trigger) do
+      {
+        organization_id: organization.id,
+        customer_id: customer.id,
+        last_ingested_at: watermark_ms,
+        target_wallet_code: nil
+      }
+    end
+
+    it "refreshes without a watermark to wait on" do
+      consumer.consume
+
+      expect(Wallets::RealtimeRefreshService).to have_received(:call).with(
+        organization_id: organization.id,
+        customer_id: customer.id,
+        wallet_codes: [],
+        expected_ingested_at: {}
+      )
+    end
+  end
+
   context "when realtime usage is off for the organization" do
     let(:realtime_usage_enabled) { "false" }
 

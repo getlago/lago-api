@@ -33,6 +33,7 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
     # Kept as integer epoch millis end-to-end: converting through Time.at(float) can land a
     # microsecond above the stored timestamp and never match.
     expected_ingested_at = customer_payloads
+      .select { |p| p["subscription_id"].present? }
       .group_by { |p| p["subscription_id"] }
       .transform_values { |rows| rows.filter_map { |r| r["last_ingested_at"] }.max }
       .compact
