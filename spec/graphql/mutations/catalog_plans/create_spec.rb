@@ -21,7 +21,7 @@ RSpec.describe Mutations::CatalogPlans::Create do
   let(:query) do
     <<~GQL
       mutation($input: CreateCatalogPlanInput!) {
-        createCatalogPlan(input: $input) { id code currency }
+        createCatalogPlan(input: $input) { id code currency taxes { id code } }
       }
     GQL
   end
@@ -36,6 +36,18 @@ RSpec.describe Mutations::CatalogPlans::Create do
     expect(plan_response["code"]).to eq("growth")
     expect(plan_response["currency"]).to eq("EUR")
     expect(CatalogPlan.find(plan_response["id"])).to have_attributes(name: "Growth", currency: "EUR")
+  end
+
+  context "with taxes" do
+    let(:tax) { create(:tax, organization:) }
+    let(:input) { {name: "Growth", code: "growth", currency: "EUR", taxCodes: [tax.code]} }
+
+    it "assigns and returns the taxes" do
+      plan_response = result["data"]["createCatalogPlan"]
+
+      expect(plan_response["taxes"]).to eq([{"id" => tax.id, "code" => tax.code}])
+      expect(CatalogPlan.find(plan_response["id"]).taxes).to eq([tax])
+    end
   end
 
   context "when the organization is not on the product catalog" do
