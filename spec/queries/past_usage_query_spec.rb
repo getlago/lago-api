@@ -494,6 +494,15 @@ RSpec.describe PastUsageQuery do
         expect(result.usage_periods.first.fees).to match_array([paid_fee, free_fee])
         expect(result.usage_periods.last.fees).to be_empty
       end
+
+      context "when only the regrouped invoice is on the page" do
+        let(:pagination) { {page: 1, limit: 1} }
+
+        it "still shows the free fees with it" do
+          expect(result.usage_periods.sole.invoice_subscription).to eq(invoice_subscription1)
+          expect(result.usage_periods.sole.fees).to match_array([paid_fee, free_fee])
+        end
+      end
     end
 
     context "when the plan has no regrouped charge" do
