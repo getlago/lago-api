@@ -19,7 +19,9 @@ class UsageAttributionType < ApplicationRecord
 
   enum :role, ROLES, validate: true
 
-  before_validation :normalize_attribution_keys
+  normalizes :attribution_keys, with: ->(attribution_keys) do
+    Array(attribution_keys).filter_map { it.to_s.strip.presence }.uniq
+  end
 
   validates :code, presence: true, length: {maximum: 255}, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
   validates :name, length: {maximum: 255}
@@ -35,10 +37,6 @@ class UsageAttributionType < ApplicationRecord
   end
 
   private
-
-  def normalize_attribution_keys
-    self.attribution_keys = Array(attribution_keys).filter_map { it.to_s.strip.presence }.uniq
-  end
 
   def validate_attribution_keys
     return if attribution_keys.blank?
