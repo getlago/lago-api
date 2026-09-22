@@ -4,7 +4,7 @@ module Wallets
   # wallet_codes carries the events' targeting intent (properties.target_wallet_code): it forces
   # the refresh, it does not narrow it — the allocation cascade makes wallets interdependent.
   class RealtimeRefreshService < BaseService
-    Result = BaseResult[:wallets]
+    Result = BaseResult[:wallets, :reason]
 
     # Trigger and bucket upsert are two sinks of the same RisingWave epoch, unordered between
     # them: without the wait a fast consumer reads the previous epoch's usage.
@@ -30,7 +30,8 @@ module Wallets
 
       # Refreshing on buckets that have not caught up writes a stale balance and clears
       # awaiting_wallet_refresh, the flag the sweep selects on: nothing would correct it after.
-      return result unless wait_for_buckets
+      wait_reason = wait_for_buckets
+      return skipped(wait_reason) if wait_reason
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?
         Rails.logger.warn(
@@ -39,7 +40,9 @@ module Wallets
         )
       end
 
+      started_at = Time.current
       refresh_result = Customers::RefreshWalletsService.call(customer:)
+      Yabeda.realtime_usage.wallet_refresh_duration.measure({}, Time.current - started_at)
       return refresh_result unless refresh_result.success?
 
       result.wallets = refresh_result.wallets
@@ -50,28 +53,40 @@ module Wallets
 
     attr_reader :organization_id, :customer_id, :wallet_codes, :expected_ingested_at
 
-    def wait_for_buckets
-      pending = expected_ingested_at.dup
-      return true if pending.empty?
+    def skipped(reason)
+      result.reason = reason
+      result
+    end
 
+    def wait_for_buckets
+      return nil if expected_ingested_at.empty?
+
+      started_at = Time.current
+      reason = poll_buckets
+      Yabeda.realtime_usage.wallet_refresh_bucket_wait.measure({}, Time.current - started_at)
+      reason
+    end
+
+    def poll_buckets
+      pending = expected_ingested_at.dup
       stale_cutoff_ms = ((Time.current - STALE_WATERMARK_CUTOFF).to_f * 1000).to_i
       deadline = Time.current + BUCKET_WAIT_TIMEOUT
 
       loop do
         pending.delete_if { |subscription_id, watermark_ms| bucket_caught_up?(subscription_id, watermark_ms) }
-        return true if pending.empty?
+        return nil if pending.empty?
 
         # An old watermark means the consumer is behind, not ClickHouse: sleeping on it spends the
         # batch's deadline for nothing, so it gets one check and goes back to the sweep.
         stale = pending.select { |_sub, ms| ms.to_i < stale_cutoff_ms }
         if stale.any?
           log_pending("usage buckets behind a stale watermark", stale)
-          return false
+          return :stale_watermark
         end
 
         if Time.current > deadline
           log_pending("usage buckets did not catch up before refresh", pending)
-          return false
+          return :bucket_wait_timeout
         end
 
         sleep BUCKET_WAIT_INTERVAL
