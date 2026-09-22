@@ -31,7 +31,8 @@ module Invoices
         )
         invoice.applied_taxes << applied_tax
 
-        tax_amount_cents = fees.sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate * tax.rate.to_f }
+        # Preserve the cents already allocated to fees by the provider calculation.
+        tax_amount_cents = fee_taxes.sum { |_fee, fee_tax| fee_tax.amount_cents }
         applied_tax.fees_amount_cents = fees_amount_cents(fees)
         applied_tax.taxable_base_amount_cents = taxable_base_amount_cents(fees).round
         applied_tax.amount_cents = tax_amount_cents.round

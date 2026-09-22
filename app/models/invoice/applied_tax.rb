@@ -26,6 +26,12 @@ class Invoice
       TAX_CODES_APPLICABLE_ON_WHOLE_INVOICE.include?(tax_code)
     end
 
+    # Local taxes can also lose their tax_id when an old tax definition is deleted.
+    # An explicit taxable base distinguishes taxable provider rows from those taxes.
+    def provider_tax?
+      tax_id.nil? && taxable_base_amount_cents.to_d.positive?
+    end
+
     def taxable_amount_cents
       base_amount = taxable_base_amount_cents
 

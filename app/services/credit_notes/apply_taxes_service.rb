@@ -22,7 +22,11 @@ module CreditNotes
       indexed_items.each do |tax_key, entry|
         invoice_applied_tax = entry[:invoice_applied_tax]
         precise_base_amount_cents = base_amounts.fetch(tax_key) * taxes_base_rate(invoice_applied_tax)
-        precise_tax_amount_cents = (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        precise_tax_amount_cents = if invoice_applied_tax.provider_tax?
+          provider_tax_amount_cents(tax_key, entry[:items].uniq)
+        else
+          (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        end
 
         result.applied_taxes << build_applied_tax(
           invoice_applied_tax,
@@ -59,6 +63,45 @@ module CreditNotes
         base_amount_cents: base_amount_cents.round,
         amount_cents: tax_amount_cents.round
       )
+    end
+
+    def provider_tax_amount_cents(tax_key, tax_items)
+      # Reconcile older invoices too: their fee taxes were rounded independently,
+      # so their sum can differ from the tax actually booked on the invoice.
+      taxes_by_fee = provider_fee_taxes.fetch(tax_key).group_by(&:fee_id)
+      amounts = Integrations::Aggregator::Taxes::Allocation.by_group(provider_tax_amounts.fetch(tax_key), taxes_by_fee.values)
+      amounts_by_fee = taxes_by_fee.keys.zip(amounts).to_h
+
+      tax_items.sum do |item|
+        if item.fee.amount_cents.zero?
+          0.to_d
+        else
+          amounts_by_fee.fetch(item.fee_id) * item.precise_amount_cents / item.fee.amount_cents
+        end
+      end
+    end
+
+    def provider_tax_amounts
+      @provider_tax_amounts ||= begin
+        taxes_by_key = invoice_applied_taxes.group_by { |tax| tax_key(tax) }.sort_by(&:first).to_h
+        weights = taxes_by_key.values.map { |taxes| taxes.sum(&:amount_cents) }
+        if weights.sum != invoice.taxes_amount_cents
+          precise_weights = taxes_by_key.keys.map do |key|
+            provider_fee_taxes.fetch(key, []).sum(&:precise_amount_cents)
+          end
+          weights = precise_weights unless precise_weights.sum.zero?
+        end
+        amounts = Integrations::Aggregator::Taxes::Allocation.call(invoice.taxes_amount_cents, weights)
+        taxes_by_key.keys.zip(amounts).to_h
+      end
+    end
+
+    def provider_fee_taxes
+      @provider_fee_taxes ||= invoice.fees.order(:created_at, :id).includes(:applied_taxes)
+        .flat_map(&:applied_taxes).group_by do |fee_tax|
+          invoice_applied_tax = resolve_invoice_applied_tax(fee_tax)
+          tax_key(invoice_applied_tax) if invoice_applied_tax
+        end
     end
 
     # NOTE: indexes the credit note items by the invoice applied tax their fee taxes resolve to,
@@ -122,17 +165,22 @@ module CreditNotes
     #       changed in between), it falls back to the invoice tax carrying the same code, but only
     #       if exactly one does: several invoice taxes sharing a code is the provider multi-rate
     #       case, where the rate is the only thing telling them apart.
-    def find_invoice_applied_tax(fee_applied_tax)
+    def resolve_invoice_applied_tax(fee_applied_tax)
       key = tax_key(fee_applied_tax)
       exact_match = invoice_applied_taxes.find { |applied_tax| tax_key(applied_tax) == key }
       return exact_match if exact_match
 
       code_matches = invoice_applied_taxes.select { |applied_tax| applied_tax.tax_code == fee_applied_tax.tax_code }
-      return code_matches.first if code_matches.one?
+      code_matches.first if code_matches.one?
+    end
+
+    def find_invoice_applied_tax(fee_applied_tax)
+      invoice_applied_tax = resolve_invoice_applied_tax(fee_applied_tax)
+      return invoice_applied_tax if invoice_applied_tax
 
       result.service_failure!(
         code: "invoice_applied_tax_not_found",
-        message: "Invoice #{invoice.id} has no applied tax matching #{key.join(", ")}"
+        message: "Invoice #{invoice.id} has no applied tax matching #{tax_key(fee_applied_tax).join(", ")}"
       )
 
       nil
