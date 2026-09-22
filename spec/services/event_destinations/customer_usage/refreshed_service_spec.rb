@@ -90,13 +90,23 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       end
     end
 
-    it "computes usage without taxes, so no tax provider is called on every refresh" do
-      allow(Invoices::CustomerUsageService).to receive(:call).and_call_original
+    context "when the caller supplied no usage to deliver" do
+      before { allow(Invoices::CustomerUsageService).to receive(:call).and_call_original }
 
-      service.call
+      it "computes usage without taxes, so no tax provider is called on every refresh" do
+        service.call
 
-      expect(Invoices::CustomerUsageService).to have_received(:call)
-        .with(hash_including(apply_taxes: false, with_cache: true))
+        expect(Invoices::CustomerUsageService).to have_received(:call)
+          .with(hash_including(apply_taxes: false, with_cache: true))
+      end
+
+      it "reads the source the inline delivery reads, so the event does not depend on where it ran" do
+        service.call
+
+        expect(Invoices::CustomerUsageService).to have_received(:call).with(
+          hash_including(use_usage_buckets: true, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER)
+        )
+      end
     end
 
     describe "the envelope" do

@@ -15,6 +15,7 @@ FactoryBot.define do
     timestamp { Time.current }
     transaction_id { "tr_#{SecureRandom.hex}" }
     properties { {} }
+    attribution_labels { {} }
     value { "21.0" }
     decimal_value { 21.0 }
   end

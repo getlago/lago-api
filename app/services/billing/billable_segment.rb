@@ -15,5 +15,19 @@ module Billing
     :rate_override,
     :proration_ratio,
     :rate_phase_code
-  )
+  ) do
+    # The calendar only builds a segment for a window it can price, so a segment without
+    # either is a caller's mistake rather than a state to carry. Same guard as Terms and
+    # Phase: the invariant belongs where the value is made, not where it is read.
+    def initialize(rate:, rate_override:, **)
+      if rate.nil? && rate_override.nil?
+        raise ArgumentError, "a billable segment needs a rate or an override to price it"
+      end
+
+      super
+    end
+
+    # A phase override prices the segment; the rate card's own rate does otherwise.
+    def properties = (rate_override || rate).properties
+  end
 end
