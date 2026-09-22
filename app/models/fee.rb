@@ -103,6 +103,7 @@ class Fee < ApplicationRecord
     return add_on.id if add_on?
     return invoiceable_id if credit?
     return fixed_charge_add_on.id if fixed_charge?
+    return invoiceable_id if product?
 
     subscription_id
   end
@@ -112,6 +113,7 @@ class Fee < ApplicationRecord
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
     return AddOn.name if fixed_charge?
+    return Product.name if product?
 
     Subscription.name
   end
@@ -121,6 +123,7 @@ class Fee < ApplicationRecord
     return add_on.code if add_on?
     return fee_type if credit?
     return fixed_charge_add_on.code if fixed_charge?
+    return invoiceable.code if product?
 
     subscription.plan.code
   end
@@ -130,6 +133,7 @@ class Fee < ApplicationRecord
     return add_on.name if add_on?
     return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge_add_on.name if fixed_charge?
+    return invoiceable.name if product?
 
     subscription.plan.name
   end
@@ -138,6 +142,7 @@ class Fee < ApplicationRecord
     return fixed_charge_add_on.code if fixed_charge?
     return add_on.code if add_on?
     return "consumed_credits" if credit?
+    return invoiceable.code if product?
 
     subscription&.plan&.code.presence || billable_metric&.code
   end
@@ -147,6 +152,7 @@ class Fee < ApplicationRecord
     return add_on.description if add_on?
     return fee_type if credit?
     return fixed_charge_add_on.description if fixed_charge?
+    return invoiceable.description if product?
 
     subscription.plan.description
   end

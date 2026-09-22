@@ -118,6 +118,14 @@ RSpec.describe Fee do
         expect(fee.item_code).to eq(fee.fixed_charge.add_on.code)
       end
     end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, code: "compute") }
+
+      it "returns the product code" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_code).to eq("compute")
+      end
+    end
   end
 
   describe "#invoice_name" do
@@ -326,6 +334,14 @@ RSpec.describe Fee do
           .to eq(charge.billable_metric.name)
       end
     end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, name: "Compute") }
+
+      it "returns the product name" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_name).to eq("Compute")
+      end
+    end
   end
 
   describe "#item_description" do
@@ -376,6 +392,14 @@ RSpec.describe Fee do
       it "returns related billable metric description" do
         expect(described_class.new(charge:, fee_type: "charge").item_description)
           .to eq(charge.billable_metric.description)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, description: "Compute usage") }
+
+      it "returns the product description" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_description).to eq("Compute usage")
       end
     end
   end
@@ -430,6 +454,12 @@ RSpec.describe Fee do
           .to eq("BillableMetric")
       end
     end
+
+    context "when it is a product fee" do
+      it "returns product" do
+        expect(described_class.new(fee_type: "product").item_type).to eq("Product")
+      end
+    end
   end
 
   describe "#item_source" do
@@ -480,6 +510,14 @@ RSpec.describe Fee do
       it "returns billable metric" do
         expect(described_class.new(charge:, fee_type: "charge").item_source)
           .to eq(charge.billable_metric.code)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, code: "compute") }
+
+      it "returns the product code" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_source).to eq("compute")
       end
     end
   end
@@ -535,6 +573,14 @@ RSpec.describe Fee do
       it "returns the billable metric id" do
         expect(described_class.new(charge:, fee_type: "charge").item_id)
           .to eq(charge.billable_metric.id)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns the product id" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_id).to eq(product.id)
       end
     end
   end
