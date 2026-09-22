@@ -15,11 +15,11 @@ module UsageAttributionTypes
 
       usage_attribution_type.name = params[:name] if params.key?(:name)
       usage_attribution_type.code = params[:code]&.strip if params.key?(:code)
-      usage_attribution_type.attribution_key = params[:attribution_key]&.strip if params.key?(:attribution_key)
+      usage_attribution_type.attribution_keys = params[:attribution_keys] if params.key?(:attribution_keys)
       usage_attribution_type.role = params[:role] if params.key?(:role)
       usage_attribution_type.parent_id = params[:parent_id].presence if params.key?(:parent_id)
 
-      frozen_changes = usage_attribution_type.changed.map(&:to_sym) - [:name]
+      frozen_changes = usage_attribution_type.changed.map(&:to_sym) - %i[name attribution_keys]
       if attributed? && frozen_changes.any?
         return result.validation_failure!(errors: frozen_changes.index_with { ["usage_already_attributed"] })
       end

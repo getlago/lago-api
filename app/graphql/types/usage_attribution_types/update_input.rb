@@ -7,7 +7,7 @@ module Types
 
       argument :id, ID, required: true
 
-      argument :attribution_key, String, required: false
+      argument :attribution_keys, [String], required: false
       argument :code, String, required: false
       argument :name, String, required: false
       argument :parent_id, ID, required: false

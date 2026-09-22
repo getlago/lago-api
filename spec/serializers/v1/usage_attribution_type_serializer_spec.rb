@@ -17,7 +17,7 @@ RSpec.describe ::V1::UsageAttributionTypeSerializer do
         "lago_organization_id" => usage_attribution_type.organization_id,
         "code" => usage_attribution_type.code,
         "name" => usage_attribution_type.name,
-        "attribution_key" => usage_attribution_type.attribution_key,
+        "attribution_keys" => usage_attribution_type.attribution_keys,
         "role" => "hierarchical",
         "lago_parent_id" => parent.id,
         "parent_code" => "department",

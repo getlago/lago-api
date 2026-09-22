@@ -3932,7 +3932,7 @@ input CreateTransactionMetadataInput {
 Create usage attribution type input arguments
 """
 input CreateUsageAttributionTypeInput {
-  attributionKey: String!
+  attributionKeys: [String!]!
 
   """
   A unique identifier for the client performing the mutation.
@@ -15885,7 +15885,7 @@ input UpdateSubscriptionInput {
 Update usage attribution type input arguments
 """
 input UpdateUsageAttributionTypeInput {
-  attributionKey: String
+  attributionKeys: [String!]
 
   """
   A unique identifier for the client performing the mutation.
@@ -15919,7 +15919,7 @@ input UpdateXeroIntegrationInput {
 Base usage attribution type
 """
 type UsageAttributionType {
-  attributionKey: String!
+  attributionKeys: [String!]!
   code: String!
   createdAt: ISO8601DateTime!
   id: ID!

@@ -37,10 +37,9 @@ RSpec.describe UsageAttributionType do
   describe "validations" do
     it do
       expect(usage_attribution_type).to validate_presence_of(:code)
-      expect(usage_attribution_type).to validate_presence_of(:attribution_key)
+      expect(usage_attribution_type).to validate_presence_of(:attribution_keys)
       expect(usage_attribution_type).to validate_length_of(:code).is_at_most(255)
       expect(usage_attribution_type).to validate_length_of(:name).is_at_most(255)
-      expect(usage_attribution_type).to validate_length_of(:attribution_key).is_at_most(255)
     end
 
     describe "code uniqueness" do
@@ -67,27 +66,69 @@ RSpec.describe UsageAttributionType do
       end
     end
 
-    describe "attribution_key uniqueness" do
+    describe "attribution_keys validation" do
       let(:organization) { create(:organization) }
 
       it "rejects two types resolving from the same event property" do
-        create(:usage_attribution_type, organization:, attribution_key: "user_id")
-        duplicate = build(:usage_attribution_type, organization:, attribution_key: "user_id")
+        create(:usage_attribution_type, organization:, attribution_keys: ["user_id"])
+        duplicate = build(:usage_attribution_type, organization:, attribution_keys: ["user_id"])
 
         expect(duplicate).not_to be_valid
-        expect(duplicate.errors.where(:attribution_key, :taken)).to be_present
+        expect(duplicate.errors.where(:attribution_keys, :taken)).to be_present
       end
 
-      it "allows the same attribution_key in another organization" do
-        create(:usage_attribution_type, organization:, attribution_key: "user_id")
+      it "rejects a type overlapping on any single key" do
+        create(:usage_attribution_type, organization:, attribution_keys: %w[user_id userId])
+        duplicate = build(:usage_attribution_type, organization:, attribution_keys: %w[userId usr_id])
 
-        expect(build(:usage_attribution_type, organization: create(:organization), attribution_key: "user_id")).to be_valid
+        expect(duplicate).not_to be_valid
+        expect(duplicate.errors.where(:attribution_keys, :taken)).to be_present
       end
 
-      it "frees the attribution_key once the holder is discarded" do
-        create(:usage_attribution_type, organization:, attribution_key: "user_id").discard!
+      it "allows a type whose keys do not overlap" do
+        create(:usage_attribution_type, organization:, attribution_keys: %w[user_id userId])
 
-        expect(build(:usage_attribution_type, organization:, attribution_key: "user_id")).to be_valid
+        expect(build(:usage_attribution_type, organization:, attribution_keys: %w[team_id teamId])).to be_valid
+      end
+
+      it "allows the same attribution key in another organization" do
+        create(:usage_attribution_type, organization:, attribution_keys: ["user_id"])
+
+        expect(build(:usage_attribution_type, organization: create(:organization), attribution_keys: ["user_id"])).to be_valid
+      end
+
+      it "frees the attribution keys once the holder is discarded" do
+        create(:usage_attribution_type, organization:, attribution_keys: ["user_id"]).discard!
+
+        expect(build(:usage_attribution_type, organization:, attribution_keys: ["user_id"])).to be_valid
+      end
+
+      it "rejects more keys than the maximum" do
+        keys = Array.new(described_class::MAX_ATTRIBUTION_KEYS + 1) { |i| "user_id_#{i}" }
+        usage_attribution_type = build(:usage_attribution_type, organization:, attribution_keys: keys)
+
+        expect(usage_attribution_type).not_to be_valid
+        expect(usage_attribution_type.errors.where(:attribution_keys, :too_long)).to be_present
+      end
+
+      it "rejects a key longer than 255 characters" do
+        usage_attribution_type = build(:usage_attribution_type, organization:, attribution_keys: ["a" * 256])
+
+        expect(usage_attribution_type).not_to be_valid
+        expect(usage_attribution_type.errors.where(:attribution_keys, :too_long)).to be_present
+      end
+
+      it "strips, compacts and dedupes the keys before validating" do
+        usage_attribution_type = create(:usage_attribution_type, organization:, attribution_keys: ["  user_id  ", "", "user_id", "userId", nil])
+
+        expect(usage_attribution_type.attribution_keys).to eq(%w[user_id userId])
+      end
+
+      it "rejects a type without any key" do
+        usage_attribution_type = build(:usage_attribution_type, organization:, attribution_keys: ["  "])
+
+        expect(usage_attribution_type).not_to be_valid
+        expect(usage_attribution_type.errors.where(:attribution_keys, :blank)).to be_present
       end
     end
 
@@ -162,12 +203,11 @@ RSpec.describe UsageAttributionType do
       expect { duplicate.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
-    it "enforces attribution_key uniqueness among kept rows at the database level" do
+    it "ignores discarded rows when checking attribution key overlap" do
       organization = create(:organization)
-      create(:usage_attribution_type, organization:, attribution_key: "user_id")
-      duplicate = build(:usage_attribution_type, organization:, attribution_key: "user_id")
+      create(:usage_attribution_type, organization:, attribution_keys: %w[user_id userId]).discard!
 
-      expect { duplicate.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+      expect(build(:usage_attribution_type, organization:, attribution_keys: ["userId"])).to be_valid
     end
   end
 end

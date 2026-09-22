@@ -10,7 +10,7 @@ RSpec.describe UsageAttributionTypes::CreateService do
     {
       code: "user",
       name: "User",
-      attribution_key: "user_id",
+      attribution_keys: ["user_id"],
       role: "hierarchical"
     }
   end
@@ -22,17 +22,23 @@ RSpec.describe UsageAttributionTypes::CreateService do
     expect(usage_attribution_type.organization).to eq(organization)
     expect(usage_attribution_type.code).to eq("user")
     expect(usage_attribution_type.name).to eq("User")
-    expect(usage_attribution_type.attribution_key).to eq("user_id")
+    expect(usage_attribution_type.attribution_keys).to eq(["user_id"])
     expect(usage_attribution_type.role).to eq("hierarchical")
     expect(usage_attribution_type.parent).to be_nil
   end
 
-  it "strips the code and the attribution key" do
+  it "strips the code and the attribution keys" do
     params[:code] = "  user  "
-    params[:attribution_key] = "  user_id  "
+    params[:attribution_keys] = ["  user_id  "]
 
     expect(result.usage_attribution_type.code).to eq("user")
-    expect(result.usage_attribution_type.attribution_key).to eq("user_id")
+    expect(result.usage_attribution_type.attribution_keys).to eq(["user_id"])
+  end
+
+  it "creates a type resolving from several attribution keys" do
+    params[:attribution_keys] = %w[user_id userId usr_id]
+
+    expect(result.usage_attribution_type.attribution_keys).to eq(%w[user_id userId usr_id])
   end
 
   context "when organization is nil" do
@@ -119,11 +125,32 @@ RSpec.describe UsageAttributionTypes::CreateService do
   end
 
   context "when the attribution key is already used" do
-    before { create(:usage_attribution_type, organization:, attribution_key: "user_id") }
+    before { create(:usage_attribution_type, organization:, attribution_keys: ["user_id"]) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:attribution_key]).to include("value_already_exist")
+      expect(result.error.messages[:attribution_keys]).to include("value_already_exist")
+    end
+  end
+
+  context "when one of the attribution keys is already used" do
+    before do
+      create(:usage_attribution_type, organization:, code: "team", attribution_keys: ["userId"])
+      params[:attribution_keys] = %w[user_id userId]
+    end
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:attribution_keys]).to include("value_already_exist")
+    end
+  end
+
+  context "when there are too many attribution keys" do
+    before { params[:attribution_keys] = Array.new(UsageAttributionType::MAX_ATTRIBUTION_KEYS + 1) { |i| "user_id_#{i}" } }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:attribution_keys]).to include("value_is_too_long")
     end
   end
 
@@ -137,11 +164,11 @@ RSpec.describe UsageAttributionTypes::CreateService do
   end
 
   context "when the attribution key is missing" do
-    before { params[:attribution_key] = nil }
+    before { params[:attribution_keys] = nil }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
-      expect(result.error.messages[:attribution_key]).to be_present
+      expect(result.error.messages[:attribution_keys]).to be_present
     end
   end
 end
