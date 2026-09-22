@@ -66,7 +66,7 @@ module BillingSegments
     def invoice_key(segment)
       contract = segment.contract
       [
-        segment.billing_at.in_time_zone(customer.applicable_timezone).to_date,
+        segment.cycle_started_at.in_time_zone(customer.applicable_timezone).to_date,
         contract.consolidate_invoice ? :shared : segment.id,
         segment.currency,
         contract.billing_entity_id || customer.billing_entity_id,
@@ -145,7 +145,8 @@ module BillingSegments
             raise ActiveRecord::Rollback
           end
 
-          finalize_advance_invoice(invoice)
+          Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
+          invoice.save!
         end
 
         invoiced_segment_ids = fee_result&.invoiced_metered_items&.map { |item| item.billing_segment.id }&.to_set || Set.new
@@ -171,14 +172,6 @@ module BillingSegments
         billing_entity: contract.applicable_billing_entity,
         purchase_order_number: contract.purchase_order_number
       ).invoice
-    end
-
-    def finalize_advance_invoice(invoice)
-      Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
-      Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-      invoice.payment_status = :succeeded
-      Invoices::TransitionToFinalStatusService.call!(invoice:)
-      invoice.save!
     end
 
     def attach_fixed_fees(segments, invoice)

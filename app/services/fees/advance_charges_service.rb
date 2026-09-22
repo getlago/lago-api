@@ -72,6 +72,7 @@ module Fees
     def apply_charges_to_datetime_condition?
       return true if metered_items.any?
 
+      # NOTE: Support this condition when contract lifecycle is done.
       billing_contexts.all? do |billing_context|
         billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
       end
