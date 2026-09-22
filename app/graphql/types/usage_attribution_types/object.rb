@@ -6,7 +6,7 @@ module Types
       graphql_name "UsageAttributionType"
       description "Base usage attribution type"
 
-      dataload_association :parent
+      dataload_association :parent, :children
 
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
@@ -17,6 +17,7 @@ module Types
       field :role, Types::UsageAttributionTypes::RoleEnum, null: false
 
       field :parent, Types::UsageAttributionTypes::Object, null: true
+      field :children, [Types::UsageAttributionTypes::Object], null: false, description: "Child types, empty for a leaf or a flat type"
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

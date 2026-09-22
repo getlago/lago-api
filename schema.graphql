@@ -12964,7 +12964,17 @@ type Query {
   """
   Query usage attribution types of an organization
   """
-  usageAttributionTypes(limit: Int, page: Int, role: UsageAttributionTypeRoleEnum, searchTerm: String): UsageAttributionTypeCollection!
+  usageAttributionTypes(
+    limit: Int
+    page: Int
+    role: UsageAttributionTypeRoleEnum
+
+    """
+    Return only root types, each carrying its descendants through `children`
+    """
+    roots: Boolean
+    searchTerm: String
+  ): UsageAttributionTypeCollection!
 
   """
   Query a single wallet of an organization
@@ -16184,6 +16194,11 @@ Base usage attribution type
 """
 type UsageAttributionType {
   attributionKeys: [String!]!
+
+  """
+  Child types, empty for a leaf or a flat type
+  """
+  children: [UsageAttributionType!]!
   code: String!
   createdAt: ISO8601DateTime!
   id: ID!
