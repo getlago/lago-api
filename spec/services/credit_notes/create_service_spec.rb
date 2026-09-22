@@ -197,6 +197,84 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
+    context "when provider taxes differ only by description" do
+      let(:create_default_applied_taxes) { false }
+      let(:first_tax) { build(:tax_breakdown_item, name: "Tax", type: "state", rate: 10.0) }
+      let(:second_tax) { build(:tax_breakdown_item, name: "Tax", type: "county", rate: 10.0) }
+      let(:credit_amount_cents) { 220 }
+      let(:refund_amount_cents) { 0 }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          currency: "EUR",
+          fees_amount_cents: 200,
+          taxes_amount_cents: 20,
+          total_amount_cents: 220,
+          total_paid_amount_cents: 220,
+          payment_status: :succeeded,
+          taxes_rate: 10,
+          version_number: 3
+        )
+      end
+
+      let(:fee1) { create(:fee, invoice:, amount_cents: 100, taxes_amount_cents: 10, taxes_rate: 10) }
+      let(:fee2) { create(:fee, invoice:, amount_cents: 100, taxes_amount_cents: 10, taxes_rate: 10) }
+      let(:items) do
+        [
+          {fee_id: fee1.id, amount_cents: fee1.amount_cents},
+          {fee_id: fee2.id, amount_cents: fee2.amount_cents}
+        ]
+      end
+
+      before do
+        create(
+          :fee_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: first_tax,
+          fee: fee1,
+          amount_cents: 10
+        )
+        create(
+          :fee_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: second_tax,
+          fee: fee2,
+          amount_cents: 10
+        )
+        create(
+          :invoice_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: first_tax,
+          invoice:,
+          fees_amount_cents: 100,
+          taxable_base_amount_cents: 100,
+          amount_cents: 10
+        )
+        create(
+          :invoice_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: second_tax,
+          invoice:,
+          fees_amount_cents: 100,
+          taxable_base_amount_cents: 100,
+          amount_cents: 10
+        )
+      end
+
+      it "persists one applied tax with the invoice tax total" do
+        expect(result).to be_success
+        expect(credit_note.applied_taxes.count).to eq(1)
+        expect(credit_note.taxes_amount_cents).to eq(invoice.taxes_amount_cents)
+      end
+    end
+
     context "when a fee tax has no matching invoice tax" do
       let(:create_default_applied_taxes) { false }
 

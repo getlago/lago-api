@@ -58,7 +58,7 @@ module CreditNotes
 
     delegate :organization, to: :invoice
 
-    # NOTE: indexes the credit note fees by tax description, code, and rate.
+    # NOTE: indexes the credit note fees by tax code and rate.
     def indexed_items
       @indexed_items ||= items.each_with_object({}) do |item, applied_taxes|
         item.fee.applied_taxes.each do |fee_applied_tax|
@@ -110,7 +110,7 @@ module CreditNotes
       exact_match = invoice.applied_taxes.find { |applied_tax| tax_key(applied_tax) == key }
       return exact_match if exact_match
 
-      code_matches = invoice.applied_taxes.select { |applied_tax| applied_tax.tax_code == key.second }
+      code_matches = invoice.applied_taxes.select { |applied_tax| applied_tax.tax_code == key.first }
       return code_matches.first if code_matches.one?
 
       result.service_failure!(
@@ -122,7 +122,7 @@ module CreditNotes
     end
 
     def tax_key(applied_tax)
-      [applied_tax.tax_description, applied_tax.tax_code, applied_tax.tax_rate.round(5)]
+      [applied_tax.tax_code, applied_tax.tax_rate]
     end
 
     def taxes_base_rate(applied_tax)

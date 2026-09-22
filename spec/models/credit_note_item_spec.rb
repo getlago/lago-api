@@ -14,11 +14,13 @@ RSpec.describe CreditNoteItem do
 
     let(:credit_note_item) { create(:credit_note_item) }
     let(:tax_code) { "provider_tax" }
+    let(:matching_rate) { 8.875001 }
+    let(:other_rate) { 8.875002 }
     let(:matching_tax) do
-      create(:credit_note_applied_tax, credit_note: credit_note_item.credit_note, tax: nil, tax_code:, tax_rate: 0.0)
+      create(:credit_note_applied_tax, credit_note: credit_note_item.credit_note, tax: nil, tax_code:, tax_rate: matching_rate)
     end
     let(:other_tax) do
-      create(:credit_note_applied_tax, credit_note: credit_note_item.credit_note, tax: nil, tax_code:, tax_rate: 8.875)
+      create(:credit_note_applied_tax, credit_note: credit_note_item.credit_note, tax: nil, tax_code:, tax_rate: other_rate)
     end
     let(:fee_applied_tax) do
       create(:fee_applied_tax, fee: credit_note_item.fee, tax: nil, tax_code:, tax_rate: matching_tax.tax_rate)
@@ -30,9 +32,10 @@ RSpec.describe CreditNoteItem do
       fee_applied_tax
     end
 
-    it "returns the credit note tax matching the fee tax rate" do
+    it "returns the exact credit note tax when rates differ beyond five decimals" do
       expect(applied_taxes).to be_a(ActiveRecord::Relation)
-      expect(applied_taxes.pluck(:tax_rate)).to eq([matching_tax.tax_rate])
+      expect(credit_note_item.credit_note.applied_taxes.count).to eq(2)
+      expect(applied_taxes.pluck(:id)).to eq([matching_tax.id])
     end
   end
 
