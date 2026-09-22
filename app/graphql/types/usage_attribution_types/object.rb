@@ -16,8 +16,8 @@ module Types
       field :name, String, null: true
       field :role, Types::UsageAttributionTypes::RoleEnum, null: false
 
-      field :parent, Types::UsageAttributionTypes::Object, null: true
       field :children, [Types::UsageAttributionTypes::Object], null: false, description: "Child types, empty for a leaf or a flat type"
+      field :parent, Types::UsageAttributionTypes::Object, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
