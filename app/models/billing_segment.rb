@@ -157,16 +157,17 @@ end
 #
 # Indexes
 #
-#  billing_segments_no_overlapping_periods          (organization_id, contract_id, customer_id, contract_rate_card_id, tsrange(started_at, ended_at, '[]'::text)) USING gist
-#  idx_on_contract_id_billing_at_status_3588bfae7a  (contract_id,billing_at,status)
-#  index_billing_segments_on_card_and_cycle         (contract_rate_card_id,cycle_started_at)
-#  index_billing_segments_on_card_and_period        (contract_rate_card_id,started_at) UNIQUE
-#  index_billing_segments_on_contract_id            (contract_id)
-#  index_billing_segments_on_contract_rate_card_id  (contract_rate_card_id)
-#  index_billing_segments_on_customer_id            (customer_id)
-#  index_billing_segments_on_invoice_id             (invoice_id)
-#  index_billing_segments_on_organization_id        (organization_id)
-#  index_billing_segments_on_rate_override_id       (rate_override_id)
+#  billing_segments_no_overlapping_periods                (organization_id, contract_id, customer_id, contract_rate_card_id, tsrange(started_at, ended_at, '[]'::text)) USING gist
+#  idx_on_contract_id_billing_at_status_3588bfae7a        (contract_id,billing_at,status)
+#  index_billing_segments_on_card_and_cycle               (contract_rate_card_id,cycle_started_at)
+#  index_billing_segments_on_card_and_period              (contract_rate_card_id,started_at) UNIQUE
+#  index_billing_segments_on_contract_id                  (contract_id)
+#  index_billing_segments_on_contract_rate_card_id        (contract_rate_card_id)
+#  index_billing_segments_on_customer_awaiting_invoicing  (status,customer_id) WHERE (status = ANY (ARRAY['pending'::billing_segment_status, 'processing'::billing_segment_status]))
+#  index_billing_segments_on_customer_id                  (customer_id)
+#  index_billing_segments_on_invoice_id                   (invoice_id)
+#  index_billing_segments_on_organization_id              (organization_id)
+#  index_billing_segments_on_rate_override_id             (rate_override_id)
 #
 # Foreign Keys
 #
