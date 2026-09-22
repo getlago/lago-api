@@ -2,11 +2,6 @@
 
 # Shared by the event store provider, the charge cache gate and the parity task, which must
 # agree on what the buckets can answer.
-#
-# The stream deduplicates on `transaction_id` as well, first ingestion wins over a 32 day
-# window (RisingWave stage 0, measured in ING-627), where the events store keeps the latest
-# insert. What is left diverges only when an event is corrected by re-sending the same
-# `transaction_id`, or when a duplicate lands more than 32 days after the first.
 module RealtimeUsage
   SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
 
