@@ -46,10 +46,6 @@ class KarafkaApp < Karafka::App
     Rails.logger.error("Karafka producer error: #{event[:error].message}")
   end
 
-  # A Karafka process serves no Rack app, so the exporter the Rails router mounts never runs here
-  # and nothing a consumer measures is scrapable. Puma::Server directly rather than the gem's
-  # start_metrics_server!, which needs webrick, and rather than a Rack handler, whose launcher
-  # installs signal traps over Karafka's own. A failure to bind must not take the lane down.
   if ENV["LAGO_KARAFKA_METRICS_PORT"].present?
     Karafka.monitor.subscribe("app.running") do
       exporter = Puma::Server.new(Yabeda::Prometheus::Exporter.rack_app)

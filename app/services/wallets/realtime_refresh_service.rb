@@ -4,8 +4,6 @@ module Wallets
   # wallet_codes carries the events' targeting intent (properties.target_wallet_code): it forces
   # the refresh, it does not narrow it — the allocation cascade makes wallets interdependent.
   class RealtimeRefreshService < BaseService
-    # reason names the exit taken when no refresh happened, and is nil when one did. The consumer
-    # counts it: these exits are the half of the partition it cannot see from the outside.
     Result = BaseResult[:wallets, :reason]
 
     # Trigger and bucket upsert are two sinks of the same RisingWave epoch, unordered between
@@ -59,8 +57,6 @@ module Wallets
       result
     end
 
-    # Timed here rather than around each poll so the histogram carries the whole wait, including
-    # the one that ends in a give-up: that tail is what says the buckets stopped moving.
     def wait_for_buckets
       return nil if expected_ingested_at.empty?
 

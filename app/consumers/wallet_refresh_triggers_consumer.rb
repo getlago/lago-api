@@ -2,10 +2,6 @@
 
 # Refreshing inline rather than through a job keeps the partition's ordering: the topic is keyed
 # by (organization_id, customer_id), so the consumer never refreshes one customer twice at once.
-#
-# Every exit below is correct and leaves the customer to the five-minute sweep, so a lane that has
-# stopped working looks exactly like a lane with nothing to do. It is the only place that knows
-# what a batch did with a customer, so it is the only place that reports it.
 class WalletRefreshTriggersConsumer < ApplicationConsumer
   # A batch outliving max.poll.interval.ms gets the member evicted and the batch replayed by its
   # next owner, forever. What the deadline cuts stays flagged for the sweep.
@@ -22,7 +18,6 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
 
     customer_batches.each_with_index do |((organization_id, customer_id), customer_payloads), index|
       if deadline_reached?(deadline)
-        # Counted in one go: the customers behind the cut are never looked at individually.
         report(:skipped, :deadline, by: customer_batches.size - index)
         break
       end
@@ -66,8 +61,6 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
       return
     end
 
-    # The service walks away from a customer of its own accord, and it is the only one that knows
-    # why, so its reason completes the partition the consumer's own exits start.
     if result.reason
       report(:skipped, result.reason)
       return
@@ -108,16 +101,12 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
     )
   end
 
-  # Triggers over refreshes is the collapse ratio the design rests on, so the messages are counted
-  # where they arrive rather than inferred from the outcomes.
   def report_messages(trigger_count)
     counter = Yabeda.realtime_usage.wallet_refresh_messages_total
     counter.increment({kind: "trigger"}, by: trigger_count)
     counter.increment({kind: "tombstone"}, by: messages.size - trigger_count)
   end
 
-  # Measured against the newest watermark the customer's triggers carry: the older ones are the
-  # same refresh's collapsed duplicates, not a latency this lane owes anything for.
   def report_latency(expected_ingested_at)
     watermark_ms = expected_ingested_at.values.max
     return if watermark_ms.nil?
