@@ -537,6 +537,54 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "when untouched preview fees are submitted after a charge price change" do
+      let(:charge) { create(:standard_charge, plan:, organization:, prorated: true, properties: {amount: "2000"}) }
+      let(:original_invoice) do
+        travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
+        invoice = subscription.invoices.first
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          units: 1,
+          amount_cents: 0,
+          precise_amount_cents: 0,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0
+        )
+        invoice.update!(status: :voided)
+        invoice
+      end
+      let(:original_fee) { original_invoice.fees.find_by!(charge:) }
+      let(:preview_fee) do
+        Invoices::BuildRegenerationPreviewService.call!(invoice: original_invoice).invoice.fees.find { |fee| fee.id == original_fee.id }
+      end
+      let(:fees_params) do
+        [
+          {
+            id: preview_fee.id,
+            subscription_id: preview_fee.subscription_id,
+            invoice_display_name: preview_fee.invoice_display_name,
+            units: preview_fee.units,
+            unit_amount_cents: preview_fee.precise_unit_amount
+          }
+        ]
+      end
+
+      it "regenerates the invoice with the previewed current charge price" do
+        regenerated_fee = regenerate_result.invoice.fees.find_by!(charge:)
+
+        expect(preview_fee).to have_attributes(unit_amount_cents: 200_000, amount_cents: 200_000)
+        expect(regenerated_fee).to have_attributes(
+          units: 1,
+          unit_amount_cents: 200_000,
+          precise_unit_amount: 2000,
+          amount_cents: 200_000
+        )
+      end
+    end
+
     context "when a plan charge was soft deleted" do
       let(:parent_charge) { create(:standard_charge, plan:, organization:) }
       let(:charge) do

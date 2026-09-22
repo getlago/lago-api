@@ -261,13 +261,23 @@ RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
   let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10, taxes_rate: 15) }
   let(:subscription) { invoice_subscription.subscription }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:charge) { create(:standard_charge, plan: subscription.plan) }
+  let(:charge) { create(:standard_charge, plan: subscription.plan, properties: {amount: "2.5"}) }
   let(:add_on) { create(:add_on, organization:) }
   let(:fee) do
     create(:fee, subscription:, invoice:, amount_cents: 50)
   end
   let(:charge_fee) do
-    create(:charge_fee, subscription:, invoice:, amount_cents: 250, charge:)
+    create(
+      :charge_fee,
+      subscription:,
+      invoice:,
+      amount_cents: 250,
+      precise_amount_cents: 250,
+      unit_amount_cents: 250,
+      precise_unit_amount: 2.5,
+      units: 1,
+      charge:
+    )
   end
   let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
   let(:fixed_charge_fee) do

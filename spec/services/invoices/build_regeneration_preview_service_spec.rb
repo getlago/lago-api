@@ -107,6 +107,116 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
       end
     end
 
+    context "when a charge price changed after invoicing" do
+      let(:parent_plan) { create(:plan, organization:) }
+      let(:parent_charge) { create(:standard_charge, plan: parent_plan, organization:, properties: {amount: "0"}) }
+      let(:plan) { create(:plan, organization:, parent: parent_plan) }
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          organization:,
+          parent: parent_charge,
+          prorated: true,
+          properties: {amount: "2000"}
+        )
+      end
+      let(:fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          fee_type: "charge",
+          units: 1,
+          amount_cents: 0,
+          precise_amount_cents: 0,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0,
+          taxes_rate: 10,
+          amount_currency: "EUR"
+        )
+      end
+
+      it "uses the current overridden charge price without persisting or changing the original fee" do
+        result = preview_service.call
+        preview_fee = result.invoice.fees.sole
+
+        expect(preview_fee).to have_attributes(
+          id: fee.id,
+          charge_id: charge.id,
+          units: 1,
+          unit_amount_cents: 200_000,
+          precise_unit_amount: 2000,
+          amount_cents: 200_000
+        )
+        expect(preview_fee).not_to be_persisted
+        expect(fee.reload).to have_attributes(unit_amount_cents: 0, precise_unit_amount: 0, amount_cents: 0)
+        expect(invoice.reload.fees).to contain_exactly(fee)
+      end
+
+      context "with an explicit zero price adjustment" do
+        before do
+          create(
+            :adjusted_fee,
+            organization:,
+            invoice:,
+            fee:,
+            subscription:,
+            charge:,
+            fee_type: :charge,
+            adjusted_units: false,
+            adjusted_amount: true,
+            units: 1,
+            unit_amount_cents: 0,
+            unit_precise_amount_cents: 0,
+            properties: fee.properties,
+            grouped_by: {}
+          )
+        end
+
+        it "keeps the explicit price adjustment" do
+          preview_fee = preview_service.call.invoice.fees.sole
+
+          expect(preview_fee).to have_attributes(
+            units: 1,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
+            amount_cents: 0
+          )
+        end
+      end
+    end
+
+    context "when a charge price is unchanged" do
+      let(:charge) { create(:standard_charge, plan:, properties: {amount: "10"}) }
+      let(:fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          units: 2,
+          amount_cents: 2000,
+          precise_amount_cents: 2000,
+          unit_amount_cents: 1000,
+          precise_unit_amount: 10,
+          amount_currency: "EUR"
+        )
+      end
+
+      it "keeps the same charge fee amounts" do
+        preview_fee = preview_service.call.invoice.fees.sole
+
+        expect(preview_fee).to have_attributes(
+          units: 2,
+          unit_amount_cents: 1000,
+          precise_unit_amount: 10,
+          amount_cents: 2000
+        )
+      end
+    end
+
     context "with taxes" do
       let(:tax) { create(:tax, organization:, rate: 12, applied_to_organization: false) }
       let(:applied_tax) { create(:plan_applied_tax, plan:, tax:) }
