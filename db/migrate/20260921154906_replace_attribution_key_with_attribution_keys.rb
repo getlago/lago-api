@@ -13,7 +13,8 @@ class ReplaceAttributionKeyWithAttributionKeys < ActiveRecord::Migration[8.0]
   def down
     safety_assured do
       remove_column :usage_attribution_types, :attribution_keys
-      add_column :usage_attribution_types, :attribution_key, :string, null: false
+      add_column :usage_attribution_types, :attribution_key, :string, null: false, default: ""
+      change_column_default :usage_attribution_types, :attribution_key, from: "", to: nil
     end
 
     add_index :usage_attribution_types,
