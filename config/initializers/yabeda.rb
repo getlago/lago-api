@@ -34,6 +34,11 @@ Yabeda.configure do
       unit: :seconds,
       buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300]
 
+    histogram :wallet_refresh_duration,
+      comment: "Time spent refreshing a customer's wallets, bucket wait excluded",
+      unit: :seconds,
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
+
     histogram :wallet_refresh_bucket_wait,
       comment: "Time a refresh spent waiting for the usage buckets to reach the trigger watermark",
       unit: :seconds,

@@ -40,7 +40,9 @@ module Wallets
         )
       end
 
+      started_at = Time.current
       refresh_result = Customers::RefreshWalletsService.call(customer:)
+      Yabeda.realtime_usage.wallet_refresh_duration.measure({}, Time.current - started_at)
       return refresh_result unless refresh_result.success?
 
       result.wallets = refresh_result.wallets

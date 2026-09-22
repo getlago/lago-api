@@ -16,10 +16,12 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
   end
 
   let(:bucket_wait) { Yabeda.realtime_usage.wallet_refresh_bucket_wait }
+  let(:duration) { Yabeda.realtime_usage.wallet_refresh_duration }
 
   before do
     allow(Customers::RefreshWalletsService).to receive(:call).and_return(refresh_result)
     allow(bucket_wait).to receive(:measure)
+    allow(duration).to receive(:measure)
   end
 
   context "with an active wallet" do
@@ -32,6 +34,12 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
 
     it "reports no reason, since it did refresh" do
       expect(service_result.reason).to be_nil
+    end
+
+    it "measures how long the refresh took" do
+      service_result
+
+      expect(duration).to have_received(:measure).with({}, be_within(60).of(0))
     end
 
     context "with unknown targeted wallet codes" do
