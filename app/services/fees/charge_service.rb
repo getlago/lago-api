@@ -322,7 +322,6 @@ module Fees
         rate_card_rate: selected_metered_item.rate_card_rate,
         rate_override: selected_metered_item.rate_override,
         product_filter: selected_metered_item.product_filter,
-        display_on_invoice: selected_metered_item.billing_segment ? selected_metered_item.display_on_invoice? : true,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
         properties: selected_metered_item.filtered_for_charge_boundaries,

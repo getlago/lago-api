@@ -28,6 +28,7 @@ module Billing
       :calendar?,
       :anniversary?,
       :fees,
+      :active?,
       to: :record
 
     def subscription_id
@@ -50,6 +51,12 @@ module Billing
       return record.applicable_billing_entity if contract?
 
       record.billing_entity || record.customer.billing_entity
+    end
+
+    def plan_id
+      return record.plan_id if subscription?
+
+      nil
     end
 
     def subscription

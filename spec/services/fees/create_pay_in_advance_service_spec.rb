@@ -145,7 +145,6 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           invoiceable: product,
           contract:,
           contract_rate_card:,
-          display_on_invoice: false,
           rate_card_rate: billing_segment.rate_card_rate,
           rate_override: billing_segment.rate_override
         )
@@ -155,14 +154,6 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           "charges_from_datetime" => billing_segment.started_at.iso8601(6),
           "charges_to_datetime" => billing_segment.ended_at.iso8601(6)
         )
-      end
-
-      context "when the rate card displays fees on invoices" do
-        let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: true) }
-
-        it "snapshots the visible state" do
-          expect(fee_service.call.fees.sole.display_on_invoice).to be(true)
-        end
       end
     end
 

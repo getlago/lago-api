@@ -128,7 +128,7 @@ module BillingSegments
     def compute_metered_fees(segment, invoice, filtered_aggregations)
       ::Fees::ChargeService.call!(
         invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(segment),
+        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
