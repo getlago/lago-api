@@ -25,14 +25,7 @@ module Fees
       fee_taxes.tax_breakdown.each do |tax|
         tax_rate = tax.rate.to_f * 100
 
-        applied_tax = Fee::AppliedTax.new(
-          organization_id: fee.organization_id,
-          tax_description: tax.type,
-          tax_code: tax.name.parameterize(separator: "_"),
-          tax_name: tax.name,
-          tax_rate: tax_rate,
-          amount_currency: fee.amount_currency
-        )
+        applied_tax = build_applied_tax(tax)
         fee.applied_taxes << applied_tax
 
         tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * taxes_base_rate * tax_rate).fdiv(100)
@@ -62,6 +55,17 @@ module Fees
     private
 
     attr_reader :fee, :fee_taxes
+
+    def build_applied_tax(tax)
+      Fee::AppliedTax.new(
+        organization_id: fee.organization_id,
+        tax_description: tax.type,
+        tax_code: tax.name.parameterize(separator: "_"),
+        tax_name: tax.name,
+        tax_rate: tax.rate.to_f * 100,
+        amount_currency: fee.amount_currency
+      )
+    end
 
     # NOTE: A fee with no amount is left out of the provider request, so having no entry in the
     #       response is expected. Any other fee missing from a successful response means the
