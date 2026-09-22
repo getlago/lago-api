@@ -18,8 +18,18 @@ module Clock
     # Everything pending, not everything due: the consumer does not filter by billing_at
     # either, so both ends agree on what "ready" means and a segment cannot sit unread
     # because two queries disagree.
+    #
+    # A deleted customer is not invoiced. Deleting one leaves their segments untouched, and
+    # the join reaches them because BillingSegment#customer is `with_discarded` — history has
+    # to resolve through it — while the job loads the customer back through the kept-only
+    # default scope and raises. Their segments do stay pending; clearing them belongs to the
+    # deletion, not to this scan.
     def pending_customer_ids
-      BillingSegment.status_pending.distinct.pluck(:customer_id)
+      BillingSegment.status_pending
+        .joins(:customer)
+        .where(customers: {deleted_at: nil})
+        .distinct
+        .pluck(:customer_id)
     end
   end
 end

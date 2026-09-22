@@ -37,6 +37,19 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
       expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(settled_customer.id)
     end
 
+    # Deleting a customer leaves their segments pending, so without this the scan keeps
+    # enqueueing them and the job raises RecordNotFound loading the customer back:
+    # BillingSegment#customer is with_discarded, Customer's own default scope is not.
+    it "leaves out a deleted customer" do
+      deleted = create(:customer, organization:)
+      segment(deleted, :pending)
+      deleted.discard!
+
+      described_class.perform_now
+
+      expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(deleted.id)
+    end
+
     # The fan-out is per customer, not per segment: a customer with several pending segments
     # is invoiced by one run, and the consumer groups them itself.
     it "enqueues a customer once however many segments are pending" do
