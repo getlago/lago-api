@@ -451,7 +451,6 @@ DROP INDEX IF EXISTS public.index_usage_attribution_values_on_customer_type_and_
 DROP INDEX IF EXISTS public.index_usage_attribution_values_on_customer_id_and_last_seen_at;
 DROP INDEX IF EXISTS public.index_usage_attribution_values_on_customer_id;
 DROP INDEX IF EXISTS public.index_usage_attribution_types_on_parent_id;
-DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id_and_key;
 DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
@@ -5881,11 +5880,11 @@ CREATE TABLE public.usage_attribution_types (
     parent_id uuid,
     code character varying NOT NULL,
     name character varying,
-    attribution_key character varying NOT NULL,
     role public.usage_attribution_type_role NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    attribution_keys character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -11566,13 +11565,6 @@ CREATE UNIQUE INDEX index_usage_attribution_types_on_organization_id_and_code ON
 
 
 --
--- Name: index_usage_attribution_types_on_organization_id_and_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_usage_attribution_types_on_organization_id_and_key ON public.usage_attribution_types USING btree (organization_id, attribution_key) WHERE (deleted_at IS NULL);
-
-
---
 -- Name: index_usage_attribution_types_on_parent_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14946,6 +14938,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260922110909'),
+('20260921154906'),
 ('20260918103214'),
 ('20260917164501'),
 ('20260916141523'),
