@@ -112,7 +112,101 @@ module Api
         )
       end
 
+      # Testing helper: the segments the calendar would produce for these contracts over a
+      # window, without writing anything. Takes the id from the path, or an `external_ids`
+      # array to preview several at once.
+      def segments
+        contracts = requested_contracts
+        return not_found_error(resource: "contract") unless contracts
+
+        result = ::BillingSegments::PreviewService.call(
+          contracts:,
+          from: preview_from(contracts),
+          to: preview_to
+        )
+
+        if result.success?
+          payload = ::CollectionSerializer.new(
+            result.previews,
+            ::V2::BillableSegmentSerializer,
+            collection_name: "segments"
+          ).serialize
+          payload[:next_billing_at] = result.next_billing_at.iso8601 if result.next_billing_at
+
+          render json: payload
+        else
+          render_error_response(result)
+        end
+      end
+
+      # Testing helper: brings billing up to `end_on` and returns the invoices it produced,
+      # synchronously. There is no start date — each card resumes from its own clock.
+      def bill
+        contracts = requested_contracts
+        return not_found_error(resource: "contract") unless contracts
+
+        result = ::Contracts::BillService.call(contracts:, timestamp: bill_until)
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.invoices,
+              ::V1::InvoiceSerializer,
+              collection_name: "invoices",
+              includes: %i[customer fees]
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
+
+      def bill_until
+        if params[:end_on].present?
+          params[:end_on].to_date.end_of_day
+        else
+          Time.current
+        end
+      end
+
+      def contract_external_ids
+        @contract_external_ids ||= Array.wrap(
+          params[:external_ids].presence ||
+            params[:contract_external_ids].presence ||
+            params[:external_id]
+        ).map(&:to_s).reject(&:blank?).uniq
+      end
+
+      # One lookup per id rather than a single WHERE IN: an external id can address both a
+      # pending contract and its active sibling, and live_by_external_id is what picks between
+      # them everywhere else. An unknown id answers nothing at all rather than the subset —
+      # a typo in a QA call should be visible, not look like "that one had nothing to bill".
+      def requested_contracts
+        return if contract_external_ids.empty?
+
+        contracts = contract_external_ids.map { current_organization.contracts.live_by_external_id(it) }
+        return if contracts.any?(&:nil?)
+
+        contracts
+      end
+
+      def preview_from(contracts)
+        if params[:start_on].present?
+          params[:start_on].to_date.beginning_of_day
+        else
+          contracts.filter_map(&:started_at).min || Time.current
+        end
+      end
+
+      def preview_to
+        if params[:end_on].present?
+          params[:end_on].to_date.end_of_day
+        else
+          Time.current
+        end
+      end
 
       # The column is a PostgreSQL enum: an unknown value would be a
       # database-level cast error, so anything else falls back to active.

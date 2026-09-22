@@ -270,6 +270,180 @@ RSpec.describe Api::V2::ContractsController do
     end
   end
 
+  describe "GET /api/v2/contracts/segments" do
+    subject { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/segments", params) }
+
+    let(:params) { {start_on: "2026-01-01", end_on: "2026-03-31"} }
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2026-01-01")) }
+    let(:rate_card) { create(:rate_card, organization:, billing_timing: "arrears") }
+
+    let!(:contract_rate_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        rate_card:,
+        effective_date: Date.new(2026, 1, 1),
+        billing_anchor_date: Date.new(2026, 1, 1),
+        next_billing_at: Time.zone.parse("2026-02-01")
+      )
+    end
+
+    before do
+      create(
+        :rate_card_rate,
+        organization:,
+        rate_card:,
+        effective_from: Time.zone.parse("2026-01-01"),
+        billing_interval_unit: "month",
+        billing_interval_count: 1
+      )
+    end
+
+    include_examples "requires API permission", "contract", "read"
+
+    it "returns what the calendar would produce over the window" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:segments].map { it[:period_from] }).to eq(
+        ["2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", "2026-03-01T00:00:00Z"]
+      )
+    end
+
+    it "describes each segment well enough to check a price against it" do
+      subject
+
+      expect(json[:segments].first).to include(
+        external_contract_id: contract.external_id,
+        lago_applied_rate_card_id: contract_rate_card.id,
+        applied_rate_card_code: rate_card.code,
+        cycle_index: 1,
+        period_to: "2026-01-31T23:59:59Z",
+        billing_at: "2026-02-01T00:00:00Z"
+      )
+    end
+
+    # The window ends on Mar 31; an arrears card bills a cycle at its close, so the next
+    # instant anything bills is the end of the March cycle.
+    it "reports the next instant anything bills after the window" do
+      subject
+
+      expect(json[:next_billing_at]).to eq("2026-04-01T00:00:00Z")
+    end
+
+    it "writes nothing" do
+      expect { subject }.not_to change(BillingSegment, :count)
+    end
+
+    context "with the collection form" do
+      subject { get_with_token(organization, "/api/v2/contracts/segments", params.merge(external_ids: [contract.external_id])) }
+
+      # The route is declared before the resource; drawn after it, "segments" would reach
+      # #show as an external id and answer 404.
+      it "previews the contracts named in external_ids" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:segments].size).to eq(3)
+      end
+    end
+
+    context "when one of the ids is unknown" do
+      subject { get_with_token(organization, "/api/v2/contracts/segments", params.merge(external_ids: [contract.external_id, "nope"])) }
+
+      it "answers not found rather than previewing the subset" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+
+  describe "POST /api/v2/contracts/:external_id/bill" do
+    subject { post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/bill", {end_on: "2026-02-01"}) }
+
+    let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:contract) do
+      create(:contract, organization:, customer:, billing_entity: organization.default_billing_entity,
+        started_at: Time.zone.parse("2026-01-01"))
+    end
+    let(:rate_card) do
+      create(:rate_card, organization:, product:, currency: "EUR", billing_timing: "arrears")
+    end
+
+    before do
+      stub_pdf_generation
+
+      create(:rate_card_rate, organization:, rate_card:,
+        effective_from: Time.zone.parse("2026-01-01"),
+        rate_model: "standard", rate_properties: {"amount" => "50"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+
+      create(:contract_rate_card, organization:, contract:, rate_card:, units: 3,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1),
+        next_billing_at: Time.zone.parse("2026-02-01"))
+    end
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "produces the due segments and invoices them in one call" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoices].sole[:total_amount_cents]).to eq(15_000)
+      expect(BillingSegment.where(customer:).sole).to have_attributes(status: "done")
+    end
+
+    # The fees are what a QA run actually reads. A segment-backed fee hangs off a product
+    # rather than a subscription, so serializing one is what makes this payload answerable.
+    it "returns the invoice fees carrying their product identity" do
+      subject
+
+      expect(json[:invoices].sole[:fees].sole[:item]).to include(
+        type: "product",
+        code: product.code,
+        name: product.name,
+        item_type: "Product",
+        lago_item_id: product.id
+      )
+    end
+
+    it "moves the clock on, so a second call bills nothing again" do
+      subject
+
+      expect { post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/bill", {end_on: "2026-02-01"}) }
+        .not_to change(BillingSegment, :count)
+    end
+
+    # Documented surprise: the consumer groups a customer's segments into as few invoices as
+    # their contracts allow, so billing is customer-grained. Asking for one contract brings
+    # the customer's others along, exactly as the clock would.
+    context "when the customer holds another contract" do
+      it "bills it in the same run" do
+        sibling = create(:contract, organization:, customer:, external_id: "sibling",
+          billing_entity: organization.default_billing_entity, started_at: Time.zone.parse("2026-01-01"))
+        create(:contract_rate_card, organization:, contract: sibling, rate_card:, units: 1,
+          effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1),
+          next_billing_at: Time.zone.parse("2026-02-01"))
+
+        subject
+
+        expect(BillingSegment.where(contract: sibling).sole).to have_attributes(status: "done")
+      end
+    end
+
+    context "when the contract is unknown" do
+      it "answers not found" do
+        post_with_token(organization, "/api/v2/contracts/nope/bill", {end_on: "2026-02-01"})
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+
   describe "DELETE /api/v2/contracts/:external_id" do
     subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
 
