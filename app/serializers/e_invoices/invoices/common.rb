@@ -52,17 +52,25 @@ module EInvoices
       end
 
       def taxes(&block)
-        invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
-          total_taxes = fees.sum(&:taxes_precise_amount_cents)
+        grouped_fees = invoice.fees.group_by(&:taxes_rate)
+        # Tax bases retain their precision, while monetary subtotals must add up to
+        # the booked invoice total, including any rounding across fees or tax rates.
+        booked_amounts = Integrations::Aggregator::Taxes::Allocation.by_group(
+          invoice.taxes_amount_cents, grouped_fees.values,
+          amount: invoice.provider_taxes? ? :taxes_amount_cents : :taxes_precise_amount_cents,
+          precise_amount: :taxes_precise_amount_cents
+        )
+
+        grouped_fees.map.with_index do |(tax_rate, fees), index|
           charged_amount = if tax_rate > 0
-            (total_taxes * 100).fdiv(tax_rate)
+            taxable_amount_cents(fees, tax_rate)
           else
             fees.sum(&:precise_amount_cents) - allowances_per_tax_rate[tax_rate]
           end
 
           tax_category = tax_category_code(type: invoice.invoice_type, tax_rate: tax_rate)
 
-          yield tax_category, tax_rate, Money.new(charged_amount), Money.new(total_taxes)
+          yield tax_category, tax_rate, Money.new(charged_amount), Money.new(booked_amounts[index])
         end
       end
 
@@ -73,8 +81,7 @@ module EInvoices
           total_amount = fees.sum(&:precise_amount_cents)
 
           if tax_rate > 0
-            total_taxes = fees.sum(&:taxes_precise_amount_cents)
-            charged_amount = (total_taxes * 100).fdiv(tax_rate)
+            charged_amount = taxable_amount_cents(fees, tax_rate)
 
             [tax_rate, total_amount - charged_amount]
           else
@@ -82,6 +89,16 @@ module EInvoices
             [tax_rate, proportion * allowances]
           end
         end.to_h
+      end
+
+      private
+
+      def taxable_amount_cents(fees, tax_rate)
+        fees.sum do |fee|
+          inferred_base = fee.taxes_precise_amount_cents * 100 / tax_rate.to_d
+          # A provider's rounded-up tax must not create a base larger than the fee.
+          [inferred_base, fee.sub_total_excluding_taxes_precise_amount_cents].min
+        end
       end
     end
   end
