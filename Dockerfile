@@ -1,58 +1,67 @@
-ARG PDFCPU_VERSION=0.15.0
-ARG GO_VERSION=1.26.6
+# syntax=docker/dockerfile:1
+#
+# Hardened Wolfi-based build for lago-api. This is now the default
+# Dockerfile — every downstream build (staging today, production once
+# it cuts over) targets this file. The previous Debian-based recipe
+# is kept as `Dockerfile.legacy` and is still consumed by lago-deploy's
+# production image workflow while prod bakes on the hardened image.
+#
+# Consumes two apko-built bases from https://github.com/getlago/lago-packages.
+# Both are public, multi-arch and cosign-signed, so building this file needs no
+# registry credentials:
+#   - ghcr.io/getlago/lago-api-build:latest  — ruby-4-dev, rust, build-base, node
+#   - ghcr.io/getlago/lago-api-base:latest   — ruby-4, jemalloc, libpq, pdfcpu, git
+#
+# The bases carry no shell history, no apt, no distro cruft; every package
+# has an SBOM and is signed. This Dockerfile just bundles gems and copies code.
 
-FROM golang:${GO_VERSION} AS pdfcpu-build
+ARG BUILD_IMAGE=ghcr.io/getlago/lago-api-build:latest
+ARG RUNTIME_IMAGE=ghcr.io/getlago/lago-api-base:latest
 
-ARG PDFCPU_VERSION
-
-RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
-
-FROM ruby:4.0.6-slim AS build
+FROM ${BUILD_IMAGE} AS build
 
 ARG BUNDLE_WITH
+ARG BUNDLER_VERSION=4.0.19
 
+USER root
 WORKDIR /app
-
-RUN apt update && apt upgrade -y
-RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
-  curl https://sh.rustup.rs -sSf | bash -s -- -y
-
-COPY ./Gemfile /app/Gemfile
-COPY ./Gemfile.lock /app/Gemfile.lock
-
-ENV BUNDLER_VERSION='4.0.19'
-ENV PATH="$PATH:/root/.cargo/bin/"
-RUN gem install bundler --no-document -v '4.0.19'
 
 ENV BUNDLE_WITH=${BUNDLE_WITH:-}
 ENV BUNDLE_WITHOUT="development test"
-RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIBSYS__COM \
-  bundle config set build.nokogiri --use-system-libraries &&\
-  bundle install --jobs=3 --retry=3
+ENV BUNDLE_PATH=/usr/local/bundle
+ENV GEM_HOME=/usr/local/bundle
+ENV PATH=/usr/local/bundle/bin:${PATH}
 
-FROM ruby:4.0.6-slim
+COPY Gemfile Gemfile.lock ./
+
+RUN gem install bundler --no-document -v "${BUNDLER_VERSION}"
+
+RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIBSYS__COM \
+    bundle config set --local build.nokogiri --use-system-libraries && \
+    bundle install --jobs=3 --retry=3
+
+FROM ${RUNTIME_IMAGE}
 
 ARG BUNDLE_WITH
-
-RUN apt update && apt upgrade -y
-RUN apt install git libpq-dev curl postgresql-client libjemalloc2 -y
-
-ENV LD_PRELOAD=libjemalloc.so.2
-
 ARG SEGMENT_WRITE_KEY
 ARG GOCARDLESS_CLIENT_ID
 ARG GOCARDLESS_CLIENT_SECRET
 
-ENV SEGMENT_WRITE_KEY=$SEGMENT_WRITE_KEY
-ENV GOCARDLESS_CLIENT_ID=$GOCARDLESS_CLIENT_ID
-ENV GOCARDLESS_CLIENT_SECRET=$GOCARDLESS_CLIENT_SECRET
+ENV SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
+ENV GOCARDLESS_CLIENT_ID=${GOCARDLESS_CLIENT_ID}
+ENV GOCARDLESS_CLIENT_SECRET=${GOCARDLESS_CLIENT_SECRET}
 
 ENV BUNDLE_WITH=${BUNDLE_WITH:-}
 ENV BUNDLE_WITHOUT="development test"
+ENV BUNDLE_PATH=/usr/local/bundle
+ENV GEM_HOME=/usr/local/bundle
+ENV PATH=/usr/local/bundle/bin:${PATH}
 
-COPY --from=build /usr/local/bundle/ /usr/local/bundle
-COPY --from=pdfcpu-build /go/bin/pdfcpu /usr/local/bin/pdfcpu
 WORKDIR /app
-COPY . .
 
-CMD ["./scripts/start.sh"]
+COPY --from=build --chown=nonroot:nonroot /usr/local/bundle /usr/local/bundle
+COPY --chown=nonroot:nonroot . .
+
+USER nonroot
+
+CMD ["/app/scripts/start.sh"]
