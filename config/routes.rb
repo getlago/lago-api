@@ -39,9 +39,15 @@ Rails.application.routes.draw do
         end
         draw(:plan_nested_api)
       end
+      # Declared before the resource: drawn after it, "segments" would be read as a
+      # contract's external id by #show.
+      get "contracts/segments", to: "contracts#segments"
+      post "contracts/bill", to: "contracts#bill"
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        get :segments, on: :member
+        post :bill, on: :member
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
