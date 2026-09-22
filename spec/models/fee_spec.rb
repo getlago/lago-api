@@ -21,22 +21,6 @@ RSpec.describe Fee do
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
   it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
 
-  describe "Scopes" do
-    describe ".displayed_on_invoice" do
-      let(:displayed_fee) { create(:fee, display_on_invoice: true) }
-      let(:hidden_fee) { create(:fee, display_on_invoice: false) }
-
-      before do
-        displayed_fee
-        hidden_fee
-      end
-
-      it "returns only displayed fees" do
-        expect(described_class.displayed_on_invoice).to eq([displayed_fee])
-      end
-    end
-  end
-
   describe "contract provenance validation" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }

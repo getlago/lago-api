@@ -5,13 +5,14 @@ require "rails_helper"
 RSpec.describe PayInAdvanceArguments do
   let(:organization) { create(:organization) }
   let(:charge) { create(:standard_charge, :pay_in_advance, organization:) }
-  let(:subscription) { create(:subscription, organization:).reload }
+  let(:timestamp) { Time.zone.parse("2026-09-17 15:00:00") }
+  let(:subscription) { create(:subscription, organization:, started_at: timestamp - 1.month).reload }
   let(:event) do
     create(
       :event,
       organization:,
       external_subscription_id: subscription.external_id,
-      timestamp: Time.zone.parse("2026-09-17 15:00:00")
+      timestamp:
     )
   end
   let(:common_event) { Events::CommonFactory.new_instance(source: event) }

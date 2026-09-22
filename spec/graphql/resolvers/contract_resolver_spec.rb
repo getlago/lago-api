@@ -27,7 +27,7 @@ RSpec.describe Resolvers::ContractResolver do
           id externalId status billingTime
           customer { id }
           plan { id code name currency }
-          appliedRateCards { id rateCard { id } effectiveDate }
+          appliedRateCards { id rateCard { id } effectiveDate nextBillingAt }
           appliedRateCardsCount
         }
       }
@@ -53,6 +53,14 @@ RSpec.describe Resolvers::ContractResolver do
     )
     expect(response["appliedRateCards"].sole["id"]).to eq(card.id)
     expect(response["appliedRateCardsCount"]).to eq(1)
+  end
+
+  # A finished schedule has no next instant, so the field is nullable and must answer null
+  # rather than fail the whole query.
+  it "answers null for a card whose schedule has run out" do
+    create(:contract_rate_card, organization:, contract:).update!(next_billing_at: nil)
+
+    expect(execution["data"]["contract"]["appliedRateCards"].sole["nextBillingAt"]).to be_nil
   end
 
   context "when the contract belongs to another organization" do

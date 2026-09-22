@@ -6,7 +6,6 @@ class AddContractProvenanceToFees < ActiveRecord::Migration[8.0]
   def change
     add_column :fees, :contract_id, :uuid
     add_column :fees, :contract_rate_card_id, :uuid
-    add_column :fees, :display_on_invoice, :boolean, default: true, null: false
 
     add_index :fees, :contract_id, algorithm: :concurrently
     add_index :fees, :contract_rate_card_id, algorithm: :concurrently

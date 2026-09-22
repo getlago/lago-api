@@ -2834,6 +2834,7 @@ RSpec.describe Fees::ChargeService, :premium do
           .and_return(aggregator_service)
         allow(aggregator_service).to receive(:aggregate)
           .and_return(error_result)
+        allow(aggregator_service).to receive(:precomputed?).and_return(false)
 
         result = charge_subscription_service.call
 
@@ -3052,6 +3053,7 @@ RSpec.describe Fees::ChargeService, :premium do
             .and_return(aggregator_service)
           allow(aggregator_service).to receive(:aggregate)
             .and_return(error_result)
+          allow(aggregator_service).to receive(:precomputed?).and_return(false)
 
           result = charge_subscription_service.call
 
@@ -4695,6 +4697,246 @@ RSpec.describe Fees::ChargeService, :premium do
           .to match_array([{"region" => "eu"}, {"region" => "us"}])
         expect(aws_fee.presentation_breakdowns.map { |b| b.units.to_f })
           .to match_array([10.0, 5.0])
+      end
+    end
+  end
+
+  describe "with a precomputed aggregation", cache: :memory, clickhouse: {clean_before: true} do
+    subject(:charge_subscription_service) do
+      described_class.new(
+        invoice:,
+        metered_item:,
+        billing_context:,
+        cache_middleware:,
+        provider:,
+        options: described_class::Options.new(context: :current_usage, usage_filters:)
+      )
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:usage_filters) { UsageFilters::NONE }
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+
+    let(:cache_middleware) do
+      Subscriptions::ChargeCacheMiddleware.new(
+        subscription:,
+        charge:,
+        to_datetime: boundaries.charges_to_datetime,
+        cache: true
+      )
+    end
+
+    let(:provider) do
+      Events::Stores::Provider.new(
+        organization:,
+        billing_context:,
+        serve_current_usage_from_buckets: true,
+        boundaries:,
+        usage_filters:,
+        charges: [charge]
+      )
+    end
+
+    let(:usage_buckets) do
+      Events::Stores::UsageBucketSet.new(
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(12), events_count: 3)}
+      )
+    end
+
+    before do
+      Rails.cache.clear
+      allow(Subscriptions::ChargeCacheService).to receive(:call).and_call_original
+      allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+        .and_return(RealtimeUsage::FetchBucketsService::Result.new.tap { it.usage_buckets = usage_buckets })
+    end
+
+    context "with an event in the window the buckets do not account for" do
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+      end
+
+      it "bills what the buckets answer without reading a single event" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first).to have_attributes(units: 12, events_count: 3, amount_cents: 24_000)
+      end
+    end
+
+    it "bypasses the charge cache" do
+      charge_subscription_service.call
+
+      expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+    end
+
+    context "when the provider was never asked to serve a precomputed source" do
+      let(:provider) { Events::Stores::Provider.new(organization:, billing_context:) }
+      let(:read_at) { boundaries.charges_from_datetime + 2.days }
+
+      let(:second_computation) do
+        described_class.new(
+          invoice:,
+          metered_item:,
+          billing_context:,
+          cache_middleware:,
+          provider:,
+          options: described_class::Options.new(context: :current_usage, usage_filters:)
+        )
+      end
+
+      # A cache entry holding no fee would be re-hydrated on the next read, which builds an
+      # aggregator of its own and would hide what this example is about.
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+
+        # The cache expires at the end of the billing period, so both reads have to happen
+        # inside it for the entry to outlive the first one.
+        travel_to(read_at) { charge_subscription_service.call }
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "reads the warm cache without building an aggregator to ask about the bypass" do
+        travel_to(read_at) { expect(second_computation.call.fees.first.units).to eq(4) }
+
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+    end
+
+    context "when the events store has not caught up with the buckets" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          metered_item:,
+          billing_context:,
+          cache_middleware:,
+          provider:,
+          filtered_aggregations: [],
+          options: described_class::Options.new(context: :current_usage, usage_filters:)
+        )
+      end
+
+      it "bills what the buckets hold, rather than the zero the pre-filtering implies" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first).to have_attributes(units: 12, events_count: 3)
+      end
+    end
+
+    context "when serving is opted into by an organization the feature is off for" do
+      let(:realtime_usage_enabled) { "false" }
+      let(:read_at) { boundaries.charges_from_datetime + 2.days }
+
+      let(:second_computation) do
+        described_class.new(
+          invoice:,
+          metered_item:,
+          billing_context:,
+          cache_middleware:,
+          provider:,
+          options: described_class::Options.new(context: :current_usage, usage_filters:)
+        )
+      end
+
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+
+        travel_to(read_at) { charge_subscription_service.call }
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "reads the warm cache without building an aggregator to ask about the bypass" do
+        travel_to(read_at) { expect(second_computation.call.fees.first.units).to eq(4) }
+
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+    end
+
+    context "with a charge the provider cannot serve" do
+      let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+      it "reads events, and keeps caching the result" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first.units).to eq(0)
+        expect(Subscriptions::ChargeCacheService).to have_received(:call)
+      end
+
+      context "when the cache is warm" do
+        let(:read_at) { boundaries.charges_from_datetime + 2.days }
+
+        let(:second_computation) do
+          described_class.new(
+            invoice:,
+            metered_item:,
+            billing_context:,
+            cache_middleware:,
+            provider:,
+            options: described_class::Options.new(context: :current_usage, usage_filters:)
+          )
+        end
+
+        before do
+          create(
+            :clickhouse_events_enriched,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: boundaries.charges_from_datetime + 1.day,
+            value: "4.0",
+            decimal_value: 4.0
+          )
+
+          travel_to(read_at) { charge_subscription_service.call }
+          allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+        end
+
+        it "reads the warm cache without building an aggregator the provider would refuse" do
+          travel_to(read_at) { expect(second_computation.call).to be_success }
+
+          expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+        end
+      end
+    end
+
+    context "when the read is narrowed to one pricing group" do
+      let(:usage_filters) { UsageFilters.new(filter_by_group: {"region" => "us"}) }
+
+      it "reads events, because the provider refuses a read narrower than the charge" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first.units).to eq(0)
       end
     end
   end

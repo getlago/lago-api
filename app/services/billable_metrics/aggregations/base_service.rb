@@ -198,6 +198,7 @@ module BillableMetrics
 
       def should_bypass_aggregation?
         return false if billable_metric.recurring?
+        return false if precomputed?
 
         bypass_aggregation
       end

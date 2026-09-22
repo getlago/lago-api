@@ -66,7 +66,6 @@ class Fee < ApplicationRecord
   validate :validate_contract_provenance
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
-  scope :displayed_on_invoice, -> { where(display_on_invoice: true) }
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
@@ -416,7 +415,6 @@ end
 #  amount_details                      :jsonb            not null
 #  deleted_at                          :datetime
 #  description                         :string
-#  display_on_invoice                  :boolean          default(TRUE), not null
 #  events_count                        :integer
 #  failed_at                           :datetime
 #  fee_type                            :integer

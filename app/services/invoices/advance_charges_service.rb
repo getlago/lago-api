@@ -130,7 +130,7 @@ module Invoices
         invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
-        billing_entity: billing_contexts.first&.billing_entity || customer.billing_entity,
+        billing_entity: billing_contexts.first&.applicable_billing_entity,
         purchase_order_number: billing_contexts_group.first&.purchase_order_number
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceService.call!(

@@ -870,6 +870,8 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_contracts_on_payment_method_id;
+DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
@@ -878,10 +880,10 @@ DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
-DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_id_and_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_billing_clock;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
@@ -911,6 +913,8 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_name_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_code_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_deleted_at;
@@ -1526,7 +1530,6 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 CREATE TYPE public.billing_segment_status AS ENUM (
     'pending',
-    'collecting',
     'processing',
     'done',
     'failed'
@@ -3752,7 +3755,6 @@ CREATE TABLE public.fees (
     product_filter_id uuid,
     contract_id uuid,
     contract_rate_card_id uuid,
-    display_on_invoice boolean DEFAULT true NOT NULL,
     CONSTRAINT fees_contract_provenance_present_together CHECK (((contract_id IS NULL) = (contract_rate_card_id IS NULL)))
 );
 
@@ -8366,6 +8368,20 @@ CREATE UNIQUE INDEX index_catalog_plans_on_organization_id_and_code ON public.ca
 
 
 --
+-- Name: index_catalog_plans_on_organization_id_code_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_on_organization_id_code_gin_trgm_ops ON public.catalog_plans USING gin (organization_id, code public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_catalog_plans_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_on_organization_id_name_gin_trgm_ops ON public.catalog_plans USING gin (organization_id, name public.gin_trgm_ops) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_charge_filter_values_on_billable_metric_filter_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8569,6 +8585,13 @@ CREATE INDEX index_commitments_taxes_on_tax_id ON public.commitments_taxes USING
 
 
 --
+-- Name: index_contract_rate_cards_on_billing_clock; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_on_billing_clock ON public.contract_rate_cards USING btree (next_billing_at, ended_date) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_contract_rate_cards_on_contract_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8587,13 +8610,6 @@ CREATE INDEX index_contract_rate_cards_on_deleted_at ON public.contract_rate_car
 --
 
 CREATE UNIQUE INDEX index_contract_rate_cards_on_id_and_contract_id ON public.contract_rate_cards USING btree (id, contract_id);
-
-
---
--- Name: index_contract_rate_cards_on_next_billing_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_contract_rate_cards_on_next_billing_at ON public.contract_rate_cards USING btree (next_billing_at) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL));
 
 
 --
@@ -8650,6 +8666,20 @@ CREATE INDEX index_contracts_on_organization_id ON public.contracts USING btree 
 --
 
 CREATE INDEX index_contracts_on_organization_id_and_external_id ON public.contracts USING btree (organization_id, external_id);
+
+
+--
+-- Name: index_contracts_on_organization_id_external_id_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_on_organization_id_external_id_gin_trgm_ops ON public.contracts USING gin (organization_id, external_id public.gin_trgm_ops);
+
+
+--
+-- Name: index_contracts_on_organization_id_name_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_on_organization_id_name_gin_trgm_ops ON public.contracts USING gin (organization_id, name public.gin_trgm_ops);
 
 
 --
@@ -14963,7 +14993,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260918125239'),
 ('20260918124413'),
-('20260916122921'),
+('20260918103214'),
+('20260917164501'),
+('20260916141523'),
 ('20260914145333'),
 ('20260914145022'),
 ('20260911144853'),
@@ -14971,7 +15003,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260910124306'),
 ('20260910124234'),
 ('20260910095513'),
-('20260909154904'),
 ('20260909103355'),
 ('20260908222044'),
 ('20260908211313'),
@@ -16104,3 +16135,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

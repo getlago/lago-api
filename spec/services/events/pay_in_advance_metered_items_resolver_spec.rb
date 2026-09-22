@@ -48,6 +48,7 @@ RSpec.describe Events::PayInAdvanceMeteredItemsResolver do
         contract:,
         contract_rate_card:,
         status: :processing,
+        cycle_started_at: timestamp.beginning_of_day,
         started_at: timestamp.beginning_of_day,
         ended_at: timestamp.end_of_day
       )
