@@ -7,7 +7,7 @@ RSpec.describe UsageAttributionTypes::UpdateService do
 
   let(:organization) { create(:organization) }
   let(:usage_attribution_type) do
-    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_key: "user_id")
+    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"])
   end
   let(:params) { {name: "Member"} }
 
@@ -18,7 +18,7 @@ RSpec.describe UsageAttributionTypes::UpdateService do
 
   it "leaves untouched attributes alone" do
     expect(result.usage_attribution_type.code).to eq("user")
-    expect(result.usage_attribution_type.attribution_key).to eq("user_id")
+    expect(result.usage_attribution_type.attribution_keys).to eq(["user_id"])
     expect(result.usage_attribution_type.role).to eq("hierarchical")
   end
 
@@ -31,20 +31,36 @@ RSpec.describe UsageAttributionTypes::UpdateService do
     end
   end
 
-  describe "attribution_key" do
-    let(:params) { {attribution_key: "  employee_id  "} }
+  describe "attribution_keys" do
+    let(:params) { {attribution_keys: ["  employee_id  "]} }
 
     it "is remapped and stripped" do
       expect(result).to be_success
-      expect(result.usage_attribution_type.attribution_key).to eq("employee_id")
+      expect(result.usage_attribution_type.attribution_keys).to eq(["employee_id"])
+    end
+
+    it "accepts several keys for the same type" do
+      params[:attribution_keys] = %w[user_id userId usr_id]
+
+      expect(result).to be_success
+      expect(result.usage_attribution_type.attribution_keys).to eq(%w[user_id userId usr_id])
     end
 
     context "when usage has already been attributed" do
       before { create(:usage_attribution_value, organization:, usage_attribution_type:) }
 
+      it "still updates the keys" do
+        expect(result).to be_success
+        expect(result.usage_attribution_type.attribution_keys).to eq(["employee_id"])
+      end
+    end
+
+    context "when a key is already claimed by another type" do
+      before { create(:usage_attribution_type, organization:, code: "team", attribution_keys: ["employee_id"]) }
+
       it "returns a validation failure" do
         expect(result).not_to be_success
-        expect(result.error.messages[:attribution_key]).to eq(["usage_already_attributed"])
+        expect(result.error.messages[:attribution_keys]).to eq(["value_already_exist"])
       end
     end
   end
@@ -170,7 +186,7 @@ RSpec.describe UsageAttributionTypes::UpdateService do
   context "when usage has already been attributed" do
     let(:parent) { create(:usage_attribution_type, organization:, code: "department") }
     let(:params) do
-      {name: "Member", code: "member", attribution_key: "employee_id", role: "flat", parent_id: parent.id}
+      {name: "Member", code: "member", attribution_keys: ["employee_id"], role: "flat", parent_id: parent.id}
     end
 
     before { create(:usage_attribution_value, organization:, usage_attribution_type:) }
@@ -179,7 +195,6 @@ RSpec.describe UsageAttributionTypes::UpdateService do
       expect(result).not_to be_success
       expect(result.error.messages).to eq(
         code: ["usage_already_attributed"],
-        attribution_key: ["usage_already_attributed"],
         role: ["usage_already_attributed"],
         parent_id: ["usage_already_attributed"]
       )
@@ -191,7 +206,7 @@ RSpec.describe UsageAttributionTypes::UpdateService do
 
     context "when the frozen attributes are submitted unchanged" do
       let(:params) do
-        {name: "Member", code: "user", attribution_key: "user_id", role: "hierarchical", parent_id: nil}
+        {name: "Member", code: "user", attribution_keys: ["user_id"], role: "hierarchical", parent_id: nil}
       end
 
       it "updates the name" do
@@ -216,7 +231,6 @@ RSpec.describe UsageAttributionTypes::UpdateService do
         expect(result).not_to be_success
         expect(result.error.messages).to eq(
           code: ["usage_already_attributed"],
-          attribution_key: ["usage_already_attributed"],
           role: ["usage_already_attributed"],
           parent_id: ["usage_already_attributed"]
         )

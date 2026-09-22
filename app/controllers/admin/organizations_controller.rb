@@ -19,30 +19,21 @@ module Admin
     end
 
     def create
-      result = ::Organizations::CreateService
-        .call(
-          name: create_params[:name],
-          document_numbering: "per_customer",
-          premium_integrations: create_params[:premium_integrations]
-        )
-
-      return render_error_response(result) unless result.success?
-
-      organization = result.organization
-
-      invite_result = ::Invites::CreateService.call(
-        current_organization: organization,
-        email: create_params[:email],
-        roles: %w[admin],
-        skip_admin_check: true
+      result = ::Organizations::CreateWithInviteService.call(
+        name: create_params[:name],
+        owner_email: create_params[:email],
+        document_numbering: "per_customer",
+        premium_integrations: create_params[:premium_integrations] || []
       )
 
-      return render_error_response(invite_result) unless invite_result.success?
-
-      render json: {
-        organization: ::Admin::OrganizationSerializer.new(organization).serialize,
-        invite_url: invite_result.invite_url
-      }, status: :created
+      if result.success?
+        render json: {
+          organization: ::Admin::OrganizationSerializer.new(result.organization).serialize,
+          invite_url: result.invite_url
+        }, status: :created
+      else
+        render_error_response(result)
+      end
     end
 
     private

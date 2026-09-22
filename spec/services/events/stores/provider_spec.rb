@@ -141,8 +141,8 @@ RSpec.describe Events::Stores::Provider do
         )
       end
 
-      it "is false" do
-        expect(provider.may_precompute?).to be(false)
+      it "is true, because the stream deduplicates as well" do
+        expect(provider.may_precompute?).to be(true)
       end
     end
   end
@@ -285,8 +285,8 @@ RSpec.describe Events::Stores::Provider do
         )
       end
 
-      it "reads events, because the stream and the events store disagree by construction" do
-        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      it "serves the buckets, as the stream deduplicates as well" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
       end
     end
 

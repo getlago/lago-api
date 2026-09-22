@@ -13,9 +13,9 @@ RSpec.describe UsageAttributionTypesQuery do
   let(:filters) { {} }
   let(:search_term) { nil }
 
-  let(:department) { create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_key: "department_id") }
-  let(:user) { create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_key: "user_id", parent: department) }
-  let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", name: "Model", attribution_key: "model_name") }
+  let(:department) { create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_keys: ["department_id"]) }
+  let(:user) { create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"], parent: department) }
+  let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", name: "Model", attribution_keys: ["model_name"]) }
 
   before do
     department
@@ -69,18 +69,26 @@ RSpec.describe UsageAttributionTypesQuery do
     end
   end
 
-  context "when searching by code, name or attribution key" do
+  context "when searching by code or name" do
     let(:search_term) { "depart" }
 
     it "returns the matching types" do
       expect(returned_ids).to eq([department.id])
     end
 
-    context "when the term matches an attribution key" do
-      let(:search_term) { "model_name" }
+    context "when the term matches a name" do
+      let(:search_term) { "Model" }
 
       it "returns the matching types" do
         expect(returned_ids).to eq([model.id])
+      end
+    end
+
+    context "when the term matches an attribution key" do
+      let(:search_term) { "model_name" }
+
+      it "returns nothing" do
+        expect(returned_ids).to be_empty
       end
     end
   end

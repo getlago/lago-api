@@ -61,26 +61,6 @@ RSpec.describe RealtimeUsage do
     end
   end
 
-  describe ".deduplicated?" do
-    subject(:deduplicated) { described_class.deduplicated?(organization) }
-
-    let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
-
-    it { expect(deduplicated).to be(true) }
-
-    context "when the organization reads the postgres store" do
-      let(:organization) { create(:organization, clickhouse_deduplication_enabled: true) }
-
-      it { expect(deduplicated).to be(false) }
-    end
-
-    context "without deduplication" do
-      let(:organization) { create(:organization, clickhouse_events_store: true) }
-
-      it { expect(deduplicated).to be(false) }
-    end
-  end
-
   describe ".supported_charge?" do
     subject(:supported) { described_class.supported_charge?(charge) }
 

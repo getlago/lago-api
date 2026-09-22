@@ -11,7 +11,7 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
 
-      field :attribution_key, String, null: false
+      field :attribution_keys, [String], null: false
       field :code, String, null: false
       field :name, String, null: true
       field :role, Types::UsageAttributionTypes::RoleEnum, null: false

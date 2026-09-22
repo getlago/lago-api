@@ -46,6 +46,17 @@ class KarafkaApp < Karafka::App
     Rails.logger.error("Karafka producer error: #{event[:error].message}")
   end
 
+  if ENV["LAGO_KARAFKA_METRICS_PORT"].present?
+    Karafka.monitor.subscribe("app.running") do
+      exporter = Puma::Server.new(Yabeda::Prometheus::Exporter.rack_app)
+      exporter.add_tcp_listener("0.0.0.0", Integer(ENV["LAGO_KARAFKA_METRICS_PORT"]))
+      exporter.run
+    rescue => e
+      Rails.logger.error("Karafka metrics exporter failed to start: #{e.message}")
+      Sentry.capture_exception(e)
+    end
+  end
+
   if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
     routes.draw do
       consumer_group :lago_events_charged_in_advance_consumer do
