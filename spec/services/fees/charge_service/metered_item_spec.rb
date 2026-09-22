@@ -286,6 +286,14 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       it "includes the target wallet code" do
         expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "target_wallet_code" => "wallet-1")
       end
+
+      context "without a target wallet code" do
+        let(:event_properties) { {"cloud" => "aws"} }
+
+        it "omits the target wallet grouping key" do
+          expect(metered_item.grouped_by_values).to eq("cloud" => "aws")
+        end
+      end
     end
   end
 

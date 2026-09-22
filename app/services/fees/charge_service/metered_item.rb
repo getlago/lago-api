@@ -95,7 +95,13 @@ module Fees
         return {} unless event
 
         event_properties = event.properties || {}
-        pricing_group_keys.index_with { |key| event_properties[key] }
+        grouped_by_values = pricing_group_keys.index_with { |key| event_properties[key] }
+
+        if charge&.accepts_target_wallet? && grouped_by_values[::Charge::EVENT_TARGET_WALLET_CODE].blank?
+          grouped_by_values.delete(::Charge::EVENT_TARGET_WALLET_CODE)
+        end
+
+        grouped_by_values
       end
 
       def with_event(event:)
