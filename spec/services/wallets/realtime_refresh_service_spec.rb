@@ -15,8 +15,13 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     Customers::RefreshWalletsService::Result.new.tap { |r| r.wallets = [] }
   end
 
+  let(:bucket_wait) { Yabeda.realtime_usage.wallet_refresh_bucket_wait }
+  let(:unknown_codes) { Yabeda.realtime_usage.wallet_refresh_unknown_codes_total }
+
   before do
     allow(Customers::RefreshWalletsService).to receive(:call).and_return(refresh_result)
+    allow(bucket_wait).to receive(:measure)
+    allow(unknown_codes).to receive(:increment)
   end
 
   context "with an active wallet" do
@@ -27,12 +32,22 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
       expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
     end
 
+    it "reports no reason, since it did refresh" do
+      expect(service_result.reason).to be_nil
+    end
+
     context "with unknown targeted wallet codes" do
       let(:wallet_codes) { ["nope"] }
 
       it "still refreshes (the cascade covers every wallet)" do
         expect(service_result).to be_success
         expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+      end
+
+      it "counts the codes the customer does not hold" do
+        service_result
+
+        expect(unknown_codes).to have_received(:increment)
       end
     end
   end
@@ -41,6 +56,10 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     it "does nothing" do
       expect(service_result).to be_success
       expect(Customers::RefreshWalletsService).not_to have_received(:call)
+    end
+
+    it "reports the reason it walked away" do
+      expect(service_result.reason).to eq(:no_active_wallet)
     end
   end
 
@@ -74,6 +93,12 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
         expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         expect(Rails.logger).not_to have_received(:warn).with(/usage buckets did not catch up/)
       end
+
+      it "measures the wait" do
+        service_result
+
+        expect(bucket_wait).to have_received(:measure).with({}, be_within(60).of(0))
+      end
     end
 
     context "when only another organization holds a bucket for that subscription id" do
@@ -105,6 +130,16 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
         expect(Customers::RefreshWalletsService).not_to have_received(:call)
         expect(Rails.logger).to have_received(:warn).with(/usage buckets did not catch up/)
       end
+
+      it "reports the reason it walked away" do
+        expect(service_result.reason).to eq(:bucket_wait_timeout)
+      end
+
+      it "measures the wait it gave up on" do
+        service_result
+
+        expect(bucket_wait).to have_received(:measure)
+      end
     end
 
     context "when the watermark is older than the stale cutoff" do
@@ -128,6 +163,10 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
           expect(Customers::RefreshWalletsService).not_to have_received(:call)
           expect(Rails.logger).to have_received(:warn).with(/behind a stale watermark/)
         end
+
+        it "reports the reason it walked away" do
+          expect(service_result.reason).to eq(:stale_watermark)
+        end
       end
     end
   end
@@ -140,6 +179,10 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     it "does nothing" do
       expect(service_result).to be_success
       expect(Customers::RefreshWalletsService).not_to have_received(:call)
+    end
+
+    it "reports the reason it walked away" do
+      expect(service_result.reason).to eq(:customer_not_found)
     end
   end
 end

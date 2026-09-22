@@ -2,6 +2,10 @@
 
 # Refreshing inline rather than through a job keeps the partition's ordering: the topic is keyed
 # by (organization_id, customer_id), so the consumer never refreshes one customer twice at once.
+#
+# Every exit below is correct and leaves the customer to the five-minute sweep, so a lane that has
+# stopped working looks exactly like a lane with nothing to do. It is the only place that knows
+# what a batch did with a customer, so it is the only place that reports it.
 class WalletRefreshTriggersConsumer < ApplicationConsumer
   # A batch outliving max.poll.interval.ms gets the member evicted and the batch replayed by its
   # next owner, forever. What the deadline cuts stays flagged for the sweep.
@@ -9,20 +13,33 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
 
   def consume
     payloads = messages.map(&:payload).compact # upsert-format retractions arrive as tombstones
+    report_messages(payloads.size)
+
     organization_ids = realtime_organization_ids(payloads)
     deadline = Time.current + CONSUME_DEADLINE
 
-    payloads
-      .group_by { |payload| [payload["organization_id"], payload["customer_id"]] }
-      .each do |(organization_id, customer_id), customer_payloads|
-        break if deadline_reached?(deadline)
-        next unless organization_ids.include?(organization_id)
+    customer_batches = payloads.group_by { |payload| [payload["organization_id"], payload["customer_id"]] }
 
-        # The trigger sink emits for every metered customer, and most hold no wallet.
-        next unless Wallet.active.exists?(organization_id:, customer_id:)
-
-        refresh(organization_id, customer_id, customer_payloads)
+    customer_batches.each_with_index do |((organization_id, customer_id), customer_payloads), index|
+      if deadline_reached?(deadline)
+        # Counted in one go: the customers behind the cut are never looked at individually.
+        report(:skipped, :deadline, by: customer_batches.size - index)
+        break
       end
+
+      unless organization_ids.include?(organization_id)
+        report(:skipped, :organization_not_served)
+        next
+      end
+
+      # The trigger sink emits for every metered customer, and most hold no wallet.
+      unless Wallet.active.exists?(organization_id:, customer_id:)
+        report(:skipped, :no_active_wallet)
+        next
+      end
+
+      refresh(organization_id, customer_id, customer_payloads)
+    end
   end
 
   private
@@ -39,15 +56,29 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
       .compact
 
     result = Wallets::RealtimeRefreshService.call(organization_id:, customer_id:, wallet_codes:, expected_ingested_at:)
-    return if result.success?
 
-    Rails.logger.error(
-      "[wallets] realtime refresh failed customer_id=#{customer_id}: #{result.error}"
-    )
-    Sentry.capture_message("wallet realtime refresh failed", extra: {customer_id:, error: result.error.to_s})
+    unless result.success?
+      report(:failed, :refresh_failed)
+      Rails.logger.error(
+        "[wallets] realtime refresh failed customer_id=#{customer_id}: #{result.error}"
+      )
+      Sentry.capture_message("wallet realtime refresh failed", extra: {customer_id:, error: result.error.to_s})
+      return
+    end
+
+    # The service walks away from a customer of its own accord, and it is the only one that knows
+    # why, so its reason completes the partition the consumer's own exits start.
+    if result.reason
+      report(:skipped, result.reason)
+      return
+    end
+
+    report(:refreshed, :none)
+    report_latency(expected_ingested_at)
   rescue => e
     # Raising out of #consume pauses the partition and replays the batch, re-refreshing every
     # customer already done. StaleObjectError against the sweep is the expected one.
+    report(:failed, :refresh_raised)
     Rails.logger.error(
       "[wallets] realtime refresh raised customer_id=#{customer_id}: #{e.class} #{e.message}"
     )
@@ -69,5 +100,29 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
       .select { RealtimeUsage.enabled?(it) && !RealtimeUsage.deduplicated?(it) }
       .map(&:id)
       .to_set
+  end
+
+  def report(outcome, reason, by: 1)
+    Yabeda.realtime_usage.wallet_refresh_outcomes_total.increment(
+      {outcome: outcome.to_s, reason: reason.to_s}, by:
+    )
+  end
+
+  # Triggers over refreshes is the collapse ratio the design rests on, so the messages are counted
+  # where they arrive rather than inferred from the outcomes.
+  def report_messages(trigger_count)
+    counter = Yabeda.realtime_usage.wallet_refresh_messages_total
+    counter.increment({kind: "trigger"}, by: trigger_count)
+    counter.increment({kind: "tombstone"}, by: messages.size - trigger_count)
+  end
+
+  # Measured against the newest watermark the customer's triggers carry: the older ones are the
+  # same refresh's collapsed duplicates, not a latency this lane owes anything for.
+  def report_latency(expected_ingested_at)
+    watermark_ms = expected_ingested_at.values.max
+    return if watermark_ms.nil?
+
+    latency = Time.current.to_f - (watermark_ms.to_i / 1000.0)
+    Yabeda.realtime_usage.wallet_refresh_latency.measure({}, latency)
   end
 end
