@@ -34,7 +34,7 @@ module BillingSegments
     attr_reader :customer
 
     def pending_segments
-      BillingSegment.status_pending
+      BillingSegment.awaiting_invoicing
         .where(customer_id: customer.id)
         .joins(contract_rate_card: {rate_card: :product})
         .where(

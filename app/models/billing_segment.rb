@@ -30,6 +30,11 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
+  # The states a segment is still owed in. One name for both ends of the pipe: the clock
+  # selects customers by it and the consumer selects their segments by it, so neither can
+  # drift into offering work the other will not do.
+  scope :awaiting_invoicing, -> { where(status: [:pending, :processing]) }
+
   validates :billing_at, presence: true
   validates :cycle_started_at, presence: true
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}

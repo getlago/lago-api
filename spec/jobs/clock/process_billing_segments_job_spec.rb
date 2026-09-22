@@ -37,6 +37,17 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
       expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(settled_customer.id)
     end
 
+    # Both unbilled states, not just pending: the consumer selects its segments by the same
+    # scope, so a customer offered here is always a customer it has work for.
+    it "enqueues a customer whose segments are processing" do
+      claimed_customer = create(:customer, organization:)
+      segment(claimed_customer, :processing)
+
+      described_class.perform_now
+
+      expect(BillingSegments::ProcessJob).to have_been_enqueued.with(claimed_customer.id)
+    end
+
     # Deleting a customer leaves their segments pending, so without this the scan keeps
     # enqueueing them and the job raises RecordNotFound loading the customer back:
     # BillingSegment#customer is with_discarded, Customer's own default scope is not.
