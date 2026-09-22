@@ -112,17 +112,18 @@ module Api
         )
       end
 
-      # Testing helper: the segments the calendar would produce for these contracts over a
-      # window, without writing anything. Takes the id from the path, or an `external_ids`
-      # array to preview several at once.
+      # Testing helper
       def segments
         contracts = requested_contracts
         return not_found_error(resource: "contract") unless contracts
 
+        errors = invalid_date_params
+        return validation_errors(errors:) if errors.any?
+
         result = ::BillingSegments::PreviewService.call(
           contracts:,
-          from: preview_from(contracts),
-          to: preview_to
+          from: window_start(contracts),
+          to: window_end
         )
 
         if result.success?
@@ -139,13 +140,18 @@ module Api
         end
       end
 
-      # Testing helper: brings billing up to `end_on` and returns the invoices it produced,
-      # synchronously. There is no start date — each card resumes from its own clock.
+      # Testing helper
       def bill
         contracts = requested_contracts
         return not_found_error(resource: "contract") unless contracts
 
-        result = ::Contracts::BillService.call(contracts:, timestamp: bill_until)
+        errors = invalid_date_params
+        # Billing resumes from each card's own clock, so there is no start date to honour.
+        # Refusing the parameter beats accepting it and silently ignoring it.
+        errors[:start_on] = ["value_is_invalid"] if params[:start_on].present?
+        return validation_errors(errors:) if errors.any?
+
+        result = ::Contracts::BillService.call(contracts:, timestamp: window_end)
 
         if result.success?
           render(
@@ -162,14 +168,6 @@ module Api
       end
 
       private
-
-      def bill_until
-        if params[:end_on].present?
-          params[:end_on].to_date.end_of_day
-        else
-          Time.current
-        end
-      end
 
       def contract_external_ids
         @contract_external_ids ||= Array.wrap(
@@ -192,7 +190,7 @@ module Api
         contracts
       end
 
-      def preview_from(contracts)
+      def window_start(contracts)
         if params[:start_on].present?
           params[:start_on].to_date.beginning_of_day
         else
@@ -200,12 +198,27 @@ module Api
         end
       end
 
-      def preview_to
+      def window_end
         if params[:end_on].present?
           params[:end_on].to_date.end_of_day
         else
           Time.current
         end
+      end
+
+      # String#to_date raises Date::Error on a malformed value and nothing above this
+      # rescues it, so an unparseable date would answer 500 instead of naming the param.
+      def invalid_date_params
+        %i[start_on end_on]
+          .select { params[it].present? && !parsable_date?(it) }
+          .index_with { ["invalid_date"] }
+      end
+
+      def parsable_date?(key)
+        params[key].to_date
+        true
+      rescue Date::Error
+        false
       end
 
       # The column is a PostgreSQL enum: an unknown value would be a

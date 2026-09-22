@@ -303,6 +303,17 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "read"
 
+    context "when a date cannot be parsed" do
+      let(:params) { {start_on: "2026-01-01", end_on: "2026-13-01"} }
+
+      it "names the offending parameter instead of failing" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({end_on: ["invalid_date"]})
+      end
+    end
+
     it "returns what the calendar would produce over the window" do
       subject
 
@@ -388,6 +399,29 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     include_examples "requires API permission", "contract", "write"
+
+    context "when a date cannot be parsed" do
+      it "names the offending parameter instead of failing" do
+        post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/bill", {end_on: "nope"})
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({end_on: ["invalid_date"]})
+      end
+    end
+
+    # The sibling preview endpoint takes one, so a caller will try it here too.
+    context "with a start date" do
+      it "refuses it rather than ignoring it" do
+        post_with_token(
+          organization,
+          "/api/v2/contracts/#{contract.external_id}/bill",
+          {start_on: "2026-01-01", end_on: "2026-02-01"}
+        )
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({start_on: ["value_is_invalid"]})
+      end
+    end
 
     it "produces the due segments and invoices them in one call" do
       subject
