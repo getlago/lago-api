@@ -21,6 +21,7 @@ module CreditNotes
 
       indexed_items.each_key do |tax_key|
         invoice_applied_tax = find_invoice_applied_tax(tax_key)
+        return result unless invoice_applied_tax
 
         applied_tax = CreditNote::AppliedTax.new(
           organization_id: invoice.organization_id,
@@ -106,7 +107,18 @@ module CreditNotes
     end
 
     def find_invoice_applied_tax(key)
-      invoice.applied_taxes.find { |applied_tax| tax_key(applied_tax) == key }
+      exact_match = invoice.applied_taxes.find { |applied_tax| tax_key(applied_tax) == key }
+      return exact_match if exact_match
+
+      code_matches = invoice.applied_taxes.select { |applied_tax| applied_tax.tax_code == key.second }
+      return code_matches.first if code_matches.one?
+
+      result.service_failure!(
+        code: "invoice_applied_tax_not_found",
+        message: "Invoice #{invoice.id} has no applied tax matching #{key.join(", ")}"
+      )
+
+      nil
     end
 
     def tax_key(applied_tax)
