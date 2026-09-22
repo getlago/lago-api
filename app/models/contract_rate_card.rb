@@ -41,12 +41,18 @@ class ContractRateCard < ApplicationRecord
     )
   }
 
+  # The attachments the calendar can build a schedule for at all. Being *due* adds the clock
+  # and the contract's own status on top; a preview asks only for this.
+  scope :schedulable, -> { priced.starting_before_contract_end }
+
   scope :due_for_billing, ->(timestamp) {
-    priced
-      .starting_before_contract_end
-      .joins(contract: {customer: :billing_entity})
+    schedulable
       .where(next_billing_at: ..timestamp)
       .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      # A deleted customer is not billed. Deleting one does not terminate their contracts, so
+      # their cards would stay due forever and the producer would raise loading the customer
+      # back through its kept-only default scope. A preview still resolves them, which is why
+      # this sits here rather than in schedulable.
       .where(customers: {deleted_at: nil})
   }
 
