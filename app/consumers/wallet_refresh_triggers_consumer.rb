@@ -66,7 +66,7 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
   def realtime_organization_ids(payloads)
     Organization
       .where(id: payloads.filter_map { it["organization_id"] }.uniq)
-      .select { RealtimeUsage.enabled?(it) && !RealtimeUsage.deduplicated?(it) }
+      .select { RealtimeUsage.enabled?(it) }
       .map(&:id)
       .to_set
   end

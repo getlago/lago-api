@@ -117,10 +117,10 @@ RSpec.describe WalletRefreshTriggersConsumer do
       )
     end
 
-    it "does not refresh" do
+    it "refreshes, as the stream deduplicates as well" do
       consumer.consume
 
-      expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
+      expect(Wallets::RealtimeRefreshService).to have_received(:call)
     end
   end
 

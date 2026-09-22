@@ -297,9 +297,9 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
         create(:organization, feature_flags: ["realtime_usage"], clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
       end
 
-      it "returns no bucket, as the stream and the store disagree by construction" do
+      it "reads the buckets, as the stream deduplicates as well" do
         expect(fetch).to be_success
-        expect(fetch.usage_buckets).to be_nil
+        expect(fetch.usage_buckets).not_to be_empty
       end
     end
   end
