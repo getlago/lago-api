@@ -50,15 +50,19 @@ RSpec.describe Contracts::UpdateService do
     let(:old_card) { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:)) }
     let(:old_phase) { create(:rate_phase, :contract_level, organization:, contract_rate_card: old_card) }
 
+    let(:new_plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card: new_rate_card, units: 3) }
+
     before do
       old_phase
-      create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card: new_rate_card, units: 3)
+      create(:rate_phase, organization:, plan_rate_card: new_plan_rate_card, code: "intro", position: 1)
     end
 
-    it "re-materializes the rate cards from the new plan" do
+    it "re-materializes the rate cards from the new plan with their phases" do
       expect(result).to be_success
       expect(contract.reload.catalog_plan).to eq(other_plan)
-      expect(contract.applied_rate_cards.sole).to have_attributes(rate_card: new_rate_card, units: 3)
+      card = contract.applied_rate_cards.sole
+      expect(card).to have_attributes(rate_card: new_rate_card, units: 3)
+      expect(card.rate_phases.map(&:code)).to eq(["intro"])
     end
 
     it "discards the replaced cards along with their phases" do
