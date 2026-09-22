@@ -245,8 +245,16 @@ class Invoice < ApplicationRecord
 
   def fee_total_amount_cents
     amount_cents = fees.sum(:amount_cents)
-    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
-    amount_cents + taxes_amount_cents
+    tax_amount = if provider_taxes?
+      taxes_amount_cents # Persisted invoice column; preserves the provider's booked total.
+    else
+      fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
+    end
+    amount_cents + tax_amount
+  end
+
+  def provider_taxes?
+    applied_taxes.any?(&:provider_tax?)
   end
 
   def charge_amount_cents
@@ -381,6 +389,10 @@ class Invoice < ApplicationRecord
 
     fees_total_creditable = fees.sum(&:creditable_amount_cents)
     return 0 if fees_total_creditable.zero?
+
+    if provider_taxes?
+      return [sub_total_including_taxes_amount_cents - credit_notes.sum(:total_amount_cents), 0].max
+    end
 
     credit_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
       0

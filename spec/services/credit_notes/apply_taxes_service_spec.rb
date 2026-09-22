@@ -379,6 +379,44 @@ RSpec.describe CreditNotes::ApplyTaxesService do
     end
   end
 
+  context "when legacy provider jurisdiction rows round above the invoice total" do
+    let(:tax_total) { 3 }
+    let(:booked_tax) { 2 }
+    let(:precise_tax) { 1.5 }
+    let(:invoice) { create(:invoice, taxes_amount_cents: tax_total) }
+    let(:fee1) { create(:fee, invoice:, amount_cents: 100, precise_amount_cents: 100, taxes_amount_cents: tax_total) }
+    let(:items) { [build(:credit_note_item, fee: fee1, amount_cents: 100, precise_amount_cents: 100)] }
+
+    before do
+      %w[state city].each do |code|
+        create(:invoice_applied_tax, invoice:, tax: nil, tax_code: code, tax_rate: precise_tax,
+          fees_amount_cents: 100, taxable_base_amount_cents: 100, amount_cents: booked_tax)
+        create(:fee_applied_tax, fee: fee1, tax: nil, tax_code: code, tax_rate: precise_tax,
+          amount_cents: booked_tax, precise_amount_cents: precise_tax)
+      end
+    end
+
+    it "credits only the tax booked on the invoice" do
+      result = apply_service.call
+
+      expect(result.precise_taxes_amount_cents).to eq(3)
+      expect(result.applied_taxes.sum(&:amount_cents)).to eq(3)
+    end
+
+    context "when every jurisdiction row rounds to zero" do
+      let(:tax_total) { 1 }
+      let(:booked_tax) { 0 }
+      let(:precise_tax) { 0.4 }
+
+      it "uses the precise shares to credit the invoice tax" do
+        result = apply_service.call
+
+        expect(result.precise_taxes_amount_cents).to eq(1)
+        expect(result.applied_taxes.sum(&:amount_cents)).to eq(1)
+      end
+    end
+  end
+
   context "when no taxes are applied on the invoice" do
     describe "call" do
       it "succeeds" do
