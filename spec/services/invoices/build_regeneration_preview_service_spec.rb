@@ -158,7 +158,7 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
       end
 
       context "with an explicit zero price adjustment" do
-        before do
+        let(:adjusted_fee) do
           create(
             :adjusted_fee,
             organization:,
@@ -177,6 +177,8 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           )
         end
 
+        before { adjusted_fee }
+
         it "keeps the explicit price adjustment" do
           preview_fee = preview_service.call.invoice.fees.sole
 
@@ -186,6 +188,25 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
             precise_unit_amount: 0,
             amount_cents: 0
           )
+        end
+
+        context "when the original voided invoice charge was soft deleted" do
+          let(:invoice) { create(:invoice, organization:, customer:, taxes_rate: 10, status: :voided) }
+
+          before { charge.discard! }
+
+          it "keeps the explicit price adjustment without changing the persisted adjustment" do
+            preview_fee = preview_service.call.invoice.fees.sole
+
+            expect(preview_fee).to have_attributes(
+              units: 1,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0,
+              amount_cents: 0
+            )
+            expect(fee.reload).to have_attributes(charge_id: charge.id, unit_amount_cents: 0, amount_cents: 0)
+            expect(adjusted_fee.reload).to have_attributes(charge: nil, charge_id: charge.id, unit_precise_amount_cents: 0)
+          end
         end
       end
 

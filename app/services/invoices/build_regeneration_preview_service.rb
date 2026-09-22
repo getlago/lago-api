@@ -90,6 +90,7 @@ module Invoices
     def adjusted_fee_for(fee)
       adjusted_fee = fee.adjusted_fee
       if adjusted_fee && !adjusted_fee.adjusted_display_name?
+        adjusted_fee.charge ||= adjusted_fee.charge_with_discarded
         return adjusted_fee
       end
 
