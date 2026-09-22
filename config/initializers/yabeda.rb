@@ -27,9 +27,6 @@ Yabeda.configure do
       comment: "Customers a consumed batch resolved to, by what the consumer did with them",
       tags: %i[outcome reason]
 
-    counter :wallet_refresh_unknown_codes_total,
-      comment: "Refreshes whose triggers targeted a wallet code the customer does not hold"
-
     # The prometheus adapter builds the exported name as group_name_unit, so the metrics are named
     # without the suffix their unit already adds.
     histogram :wallet_refresh_latency,

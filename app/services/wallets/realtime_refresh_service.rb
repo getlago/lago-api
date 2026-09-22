@@ -34,7 +34,6 @@ module Wallets
       return skipped(wait_reason) if wait_reason
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?
-        Yabeda.realtime_usage.wallet_refresh_unknown_codes_total.increment({})
         Rails.logger.warn(
           "[wallets] realtime refresh targeted unknown wallet codes " \
           "customer_id=#{customer.id} codes=#{wallet_codes.inspect}"

@@ -16,12 +16,10 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
   end
 
   let(:bucket_wait) { Yabeda.realtime_usage.wallet_refresh_bucket_wait }
-  let(:unknown_codes) { Yabeda.realtime_usage.wallet_refresh_unknown_codes_total }
 
   before do
     allow(Customers::RefreshWalletsService).to receive(:call).and_return(refresh_result)
     allow(bucket_wait).to receive(:measure)
-    allow(unknown_codes).to receive(:increment)
   end
 
   context "with an active wallet" do
@@ -42,12 +40,6 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
       it "still refreshes (the cascade covers every wallet)" do
         expect(service_result).to be_success
         expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
-      end
-
-      it "counts the codes the customer does not hold" do
-        service_result
-
-        expect(unknown_codes).to have_received(:increment)
       end
     end
   end
