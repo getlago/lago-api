@@ -150,4 +150,45 @@ RSpec.shared_examples "a connection-resolvable billing object" do
       end
     end
   end
+
+  describe "before the connection backfill" do
+    context "when the customer's only connection is not flagged as default" do
+      let!(:only_connection) do
+        create(:stripe_customer, customer: resolution_customer, organization:, is_default: false)
+      end
+
+      it "resolves it as the customer default" do
+        expect(resolvable.effective_payment_connection).to eq(only_connection)
+      end
+
+      it "reports it on the routing" do
+        routing = resolvable.connection_routing.index_by(&:category)
+
+        expect(routing["payment"]).to have_attributes(behavior: "inherit", code: only_connection.code)
+      end
+    end
+
+    context "when the customer has several connections and none is flagged as default" do
+      before do
+        create(:stripe_customer, customer: resolution_customer, organization:, is_default: false)
+        create(:gocardless_customer, customer: resolution_customer, organization:, is_default: false)
+      end
+
+      it "resolves nothing rather than guessing between them" do
+        expect(resolvable.effective_payment_connection).to be_nil
+      end
+    end
+
+    context "when several connections exist and one is flagged as default" do
+      let!(:flagged) do
+        create(:gocardless_customer, customer: resolution_customer, organization:, is_default: true)
+      end
+
+      before { create(:stripe_customer, customer: resolution_customer, organization:, is_default: false) }
+
+      it "prefers the flagged one" do
+        expect(resolvable.effective_payment_connection).to eq(flagged)
+      end
+    end
+  end
 end

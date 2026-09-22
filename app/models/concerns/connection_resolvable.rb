@@ -89,9 +89,15 @@ module ConnectionResolvable
     return unless customer
 
     if category == CATEGORIES[:payment]
-      customer.payment_provider_customers.detect(&:is_default?)
+      default_among(customer.payment_provider_customers.to_a)
     else
-      customer.integration_customers.detect { it.category == category && it.is_default? }
+      default_among(customer.integration_customers.select { it.category == category })
     end
+  end
+
+  def default_among(connections)
+    return connections.first if connections.one?
+
+    connections.detect(&:is_default?)
   end
 end
