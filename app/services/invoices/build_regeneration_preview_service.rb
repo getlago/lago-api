@@ -13,17 +13,18 @@ module Invoices
     def call
       preview_invoice = invoice.dup
 
-      invoice.fees.includes(:adjusted_fee).find_each do |fee|
+      invoice.fees.includes(:adjusted_fee, charge: :billable_metric).find_each do |fee|
         dup_fee = fee.dup
         dup_fee.invoice = preview_invoice
         preview_invoice.fees << dup_fee
 
-        refresh_charge_price(fee:, dup_fee:) if fee.charge? && fee.charge
+        refresh_charge_price(fee:, dup_fee:) if refreshable_charge_fee?(fee)
 
         result = Fees::ApplyTaxesService.call!(fee: dup_fee)
         result.raise_if_error!
 
         dup_fee.id = fee.id
+        dup_fee.pricing_unit_usage&.fee_id = fee.id
         dup_fee.applied_taxes.each do |applied_tax|
           applied_tax.fee_id = fee.id
           applied_tax.id = SecureRandom.uuid
@@ -72,6 +73,18 @@ module Invoices
           "charge_filter"
         )
       )
+      dup_fee.pricing_unit_usage = updated_fee.pricing_unit_usage
+    end
+
+    def refreshable_charge_fee?(fee)
+      charge = fee.charge
+
+      fee.charge? &&
+        fee.true_up_parent_fee_id.nil? &&
+        charge&.standard? &&
+        charge.prorated? &&
+        charge.billable_metric.sum_agg? &&
+        charge.billable_metric.recurring?
     end
 
     def adjusted_fee_for(fee)

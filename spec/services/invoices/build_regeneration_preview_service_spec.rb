@@ -188,6 +188,170 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           )
         end
       end
+
+      context "with a pricing unit" do
+        let(:pricing_unit) { create(:pricing_unit, organization:) }
+        let(:historical_pricing_unit_usage) do
+          create(
+            :pricing_unit_usage,
+            organization:,
+            fee:,
+            pricing_unit:,
+            amount_cents: 1,
+            precise_amount_cents: 1,
+            unit_amount_cents: 1,
+            precise_unit_amount: 0.01,
+            conversion_rate: 1
+          )
+        end
+
+        before do
+          create(
+            :applied_pricing_unit,
+            organization:,
+            pricing_unit:,
+            pricing_unitable: charge,
+            conversion_rate: 0.5
+          )
+          historical_pricing_unit_usage
+        end
+
+        it "refreshes the pricing unit usage with the charge amount" do
+          preview_fee = preview_service.call.invoice.fees.sole
+
+          expect(preview_fee).to have_attributes(
+            unit_amount_cents: 100_000,
+            precise_unit_amount: 1000,
+            amount_cents: 100_000
+          )
+          expect(preview_fee.pricing_unit_usage).to have_attributes(
+            fee_id: fee.id,
+            pricing_unit_id: pricing_unit.id,
+            amount_cents: 200_000,
+            precise_amount_cents: 200_000,
+            unit_amount_cents: 200_000,
+            precise_unit_amount: 2000,
+            conversion_rate: 0.5
+          )
+          expect(fee.reload.pricing_unit_usage).to have_attributes(amount_cents: 1, conversion_rate: 1)
+        end
+      end
+    end
+
+    context "when a minimum-charge true-up fee uses a changed charge price" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          organization:,
+          billable_metric:,
+          prorated: true,
+          properties: {amount: "2000"}
+        )
+      end
+      let(:true_up_parent_fee) do
+        create(:charge_fee, invoice:, subscription:, charge:, units: 1, amount_cents: 0, unit_amount_cents: 0)
+      end
+      let(:fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          true_up_parent_fee:,
+          units: 1,
+          amount_cents: 50_000,
+          precise_amount_cents: 50_000,
+          unit_amount_cents: 50_000,
+          precise_unit_amount: 500
+        )
+      end
+
+      it "preserves the true-up amount" do
+        preview_fee = preview_service.call.invoice.fees.find { |result_fee| result_fee.id == fee.id }
+
+        expect(preview_fee).to have_attributes(
+          units: 1,
+          unit_amount_cents: 50_000,
+          precise_unit_amount: 500,
+          amount_cents: 50_000,
+          precise_amount_cents: 50_000
+        )
+      end
+    end
+
+    context "with charge models excluded from repricing" do
+      let(:recurring_sum_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:custom_metric) { create(:custom_billable_metric, organization:) }
+      let(:percentage_charge) do
+        create(:percentage_charge, plan:, organization:, billable_metric: recurring_sum_metric)
+      end
+      let(:prorated_graduated_charge) do
+        create(:graduated_charge, plan:, organization:, billable_metric: recurring_sum_metric, prorated: true)
+      end
+      let(:dynamic_charge) do
+        create(:dynamic_charge, plan:, organization:, billable_metric: recurring_sum_metric)
+      end
+      let(:custom_charge) { create(:custom_charge, plan:, organization:, billable_metric: custom_metric) }
+      let(:excluded_fees) do
+        [
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            charge: percentage_charge,
+            units: 1,
+            amount_cents: 10_100,
+            precise_amount_cents: 10_100,
+            unit_amount_cents: 10_100,
+            precise_unit_amount: 101
+          ),
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            charge: prorated_graduated_charge,
+            units: 1,
+            amount_cents: 20_200,
+            precise_amount_cents: 20_200,
+            unit_amount_cents: 20_200,
+            precise_unit_amount: 202
+          ),
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            charge: dynamic_charge,
+            units: 1,
+            amount_cents: 30_300,
+            precise_amount_cents: 30_300,
+            unit_amount_cents: 30_300,
+            precise_unit_amount: 303
+          ),
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            charge: custom_charge,
+            units: 1,
+            amount_cents: 40_400,
+            precise_amount_cents: 40_400,
+            unit_amount_cents: 40_400,
+            precise_unit_amount: 404
+          )
+        ]
+      end
+
+      before { excluded_fees }
+
+      it "preserves their historical amounts" do
+        preview_fees = preview_service.call.invoice.fees.index_by(&:id)
+
+        expect(excluded_fees.map { |original_fee| preview_fees.fetch(original_fee.id).amount_cents }).to eq(
+          [10_100, 20_200, 30_300, 40_400]
+        )
+      end
     end
 
     context "when a charge price is unchanged" do
