@@ -71,6 +71,16 @@ module Fees
         source.pricing_buckets(event:).map { |bucket| with(source: bucket) }
       end
 
+      # The window an aggregation runs on, also the one the event store provider decides from.
+      def aggregation_boundaries
+        {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: boundaries.max_timestamp
+        }
+      end
+
       def aggregation_options(current_usage:)
         {
           free_units_per_events: properties["free_units_per_events"].to_i,

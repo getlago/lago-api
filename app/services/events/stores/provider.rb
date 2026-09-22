@@ -60,6 +60,20 @@ module Events
         RealtimeUsage.supported_charge?(charge)
       end
 
+      # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
+      # the charge will be served.
+      def serves_whole_charge_from_buckets?(metered_item:, boundaries:)
+        return false if requested_presentation_by(metered_item).present?
+
+        served_from_buckets?(metered_item:, boundaries:)
+      end
+
+      # The charge filters the buckets hold usage for, the default bucket being nil as in the
+      # events store. Only meaningful for a charge `serves_whole_charge_from_buckets?` accepted.
+      def precomputed_filter_ids(charge_id:)
+        usage_buckets&.charge_filter_ids_for(charge_id:)&.map(&:presence) || []
+      end
+
       def store_class
         @store_class ||= Events::Stores::StoreFactory.store_class(organization:)
       end
@@ -95,6 +109,15 @@ module Events
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
         usage_buckets.present?
+      end
+
+      # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A
+      # caller wanting none, like the wallet refresh, narrows it to nothing.
+      def requested_presentation_by(metered_item)
+        values = metered_item.presentation_group_keys_values
+        return values if values.blank?
+
+        values & (usage_filters.filter_by_presentation || values)
       end
 
       def same_window_as_prefetch?(window)
