@@ -21,7 +21,7 @@ module Invites
       )
 
       result.invite_url = build_invite_url(result.invite.token)
-      register_security_log
+      after_commit { register_security_log }
 
       result
     rescue ActiveRecord::RecordInvalid => e
