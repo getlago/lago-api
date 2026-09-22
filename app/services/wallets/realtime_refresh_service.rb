@@ -25,8 +25,8 @@ module Wallets
       result.wallets = []
 
       customer = Customer.find_by(id: customer_id, organization_id:)
-      return skipped(:customer_not_found) if customer.nil?
-      return skipped(:no_active_wallet) unless customer.wallets.active.exists?
+      return result if customer.nil?
+      return result unless customer.wallets.active.exists?
 
       # Refreshing on buckets that have not caught up writes a stale balance and clears
       # awaiting_wallet_refresh, the flag the sweep selects on: nothing would correct it after.

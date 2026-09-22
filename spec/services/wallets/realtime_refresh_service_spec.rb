@@ -57,10 +57,6 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
       expect(service_result).to be_success
       expect(Customers::RefreshWalletsService).not_to have_received(:call)
     end
-
-    it "reports the reason it walked away" do
-      expect(service_result.reason).to eq(:no_active_wallet)
-    end
   end
 
   describe "the bucket wait" do
@@ -179,10 +175,6 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     it "does nothing" do
       expect(service_result).to be_success
       expect(Customers::RefreshWalletsService).not_to have_received(:call)
-    end
-
-    it "reports the reason it walked away" do
-      expect(service_result.reason).to eq(:customer_not_found)
     end
   end
 end

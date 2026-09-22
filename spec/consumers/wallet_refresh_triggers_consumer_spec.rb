@@ -164,13 +164,6 @@ RSpec.describe WalletRefreshTriggersConsumer do
 
       expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
     end
-
-    it "counts the skip" do
-      consumer.consume
-
-      expect(outcomes).to have_received(:increment)
-        .with({outcome: "skipped", reason: "no_active_wallet"}, by: 1)
-    end
   end
 
   context "when a refresh raises" do
