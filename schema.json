@@ -46587,7 +46587,7 @@
             },
             {
               "name": "destroyRatePhase",
-              "description": "Removes a single phase; deleting an indefinite terminal phase promotes its predecessor",
+              "description": "Removes a single phase; the indefinite terminal phase cannot be removed",
               "args": [
                 {
                   "name": "input",
@@ -85600,6 +85600,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "position",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
                 "ofType": null
               },
               "defaultValue": null,

@@ -127,6 +127,20 @@ RSpec.describe RatePhases::ReplaceService do
     end
   end
 
+  context "when a position is not an integer" do
+    let(:phases_params) do
+      [
+        {position: "1abc", billing_interval_cycle_count: 3},
+        {position: 2, billing_interval_cycle_count: nil}
+      ]
+    end
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_phases]).to include("positions_must_be_contiguous")
+    end
+  end
+
   context "when an indefinite phase is not the last one" do
     let(:phases_params) do
       [
@@ -138,6 +152,20 @@ RSpec.describe RatePhases::ReplaceService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phases]).to include("indefinite_phase_must_be_last")
+    end
+  end
+
+  context "when the last phase is definite" do
+    let(:phases_params) do
+      [
+        {position: 1, billing_interval_cycle_count: 2},
+        {position: 2, billing_interval_cycle_count: 3}
+      ]
+    end
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_phases]).to eq(["last_phase_must_be_indefinite"])
     end
   end
 

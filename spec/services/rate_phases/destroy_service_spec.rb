@@ -43,10 +43,11 @@ RSpec.describe RatePhases::DestroyService do
   context "when deleting the indefinite terminal phase" do
     let(:rate_phase) { terminal }
 
-    it "auto-promotes the new last phase to indefinite" do
-      expect(result).to be_success
-      expect(terminal.reload).to be_discarded
-      expect(ramp.reload.billing_interval_cycle_count).to be_nil
+    it "returns a validation failure and leaves the sequence untouched" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:rate_phase]).to eq(["indefinite_phase_not_deletable"])
+      expect(terminal.reload).not_to be_discarded
+      expect(ramp.reload.billing_interval_cycle_count).to eq(6)
     end
   end
 
@@ -83,6 +84,18 @@ RSpec.describe RatePhases::DestroyService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phase]).to eq(["plan_locked"])
+    end
+  end
+
+  context "when the phase was deleted concurrently" do
+    let(:rate_phase) { ramp }
+
+    before { ramp.discard! }
+
+    it "returns a not found failure without touching the sequence" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(terminal.reload.position).to eq(3)
     end
   end
 
