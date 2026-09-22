@@ -197,6 +197,19 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
+    context "when a fee tax has no matching invoice tax" do
+      let(:create_default_applied_taxes) { false }
+
+      before do
+        create(:fee_applied_tax, tax:, fee: fee1)
+      end
+
+      it "returns the apply taxes failure" do
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("invoice_applied_tax_not_found")
+      end
+    end
+
     it "creates a credit note without metadata" do
       result = create_service.call
 

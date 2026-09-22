@@ -10,7 +10,11 @@ class CreditNoteItem < ApplicationRecord
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   def applied_taxes
-    credit_note.applied_taxes.where(tax_code: fee.applied_taxes.select("fees_taxes.tax_code"))
+    credit_note.applied_taxes.where(
+      "(credit_notes_taxes.tax_code, credit_notes_taxes.tax_rate) IN
+       (SELECT fees_taxes.tax_code, fees_taxes.tax_rate FROM fees_taxes WHERE fees_taxes.fee_id = ?)",
+      fee_id
+    )
   end
 
   # This method returns item amount with coupons applied
