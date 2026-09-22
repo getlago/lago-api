@@ -4,13 +4,12 @@ module Fees
   class CreatePayInAdvanceService < BaseService
     Result = BaseResult[:fees, :invoice_id]
 
-    def initialize(charge:, event:, billing_at: nil, estimate: false)
-      @charge = charge
-      @event = Events::CommonFactory.new_instance(source: event)
-      @billing_at = billing_at || @event.timestamp
+    def initialize(metered_item:, billing_at: nil, estimate: false)
+      @metered_item = metered_item
+      @billing_at = billing_at || metered_item.event.timestamp
 
       @estimate = estimate
-      raise ArgumentError, "estimate must be true if event if not persisted" if !@event.persisted && !estimate
+      raise ArgumentError, "estimate must be true if event if not persisted" if !metered_item.event.persisted && !estimate
 
       super
     end
@@ -21,17 +20,17 @@ module Fees
       fees = []
 
       ActiveRecord::Base.transaction(**isolation_mode) do
-        fees << if charge.filters.any?
-          init_charge_filter_fee
-        else
-          init_fee(properties:)
+        metered_item.pricing_buckets.each do |selected_metered_item|
+          fees << init_fee(selected_metered_item:)
+
+          return result unless result.success?
         end
       end
 
       ActiveRecord::Base.transaction do
         result.fees = persist_fees(fees.compact)
 
-        if !charge.invoiceable? && customer_provider_taxation?
+        if !metered_item.invoiceable? && customer_provider_taxation?
           Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
             customer:, fees: result.fees, currency: subscription.plan.amount_currency
           )
@@ -67,62 +66,63 @@ module Fees
       result
     end
 
-    attr_reader :charge, :event, :billing_at, :estimate
+    attr_reader :metered_item, :billing_at, :estimate
 
-    delegate :billable_metric, to: :charge
+    delegate :charge, :event, :billable_metric, to: :metered_item
     delegate :subscription, to: :event
 
-    def filter
-      @filter ||= ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-    end
+    def init_fee(selected_metered_item:)
+      properties = selected_metered_item.properties
+      charge_filter = selected_metered_item.charge_filter
+      aggregation_result = aggregate(selected_metered_item:, properties:, charge_filter:)
+      cache_aggregation_result(selected_metered_item:, aggregation_result:, charge_filter:)
 
-    def init_fee(properties:, charge_filter: nil)
-      aggregation_result = aggregate(properties:, charge_filter:)
-      cache_aggregation_result(aggregation_result:, charge_filter:)
-
-      charge_model_result = apply_charge_model(aggregation_result:, properties:)
+      charge_model_result = apply_charge_model(selected_metered_item:, aggregation_result:, properties:)
 
       amount = Fees::AmountsService.call(
         currency: subscription.plan.amount.currency,
         charge_model_result:,
-        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(charge.applied_pricing_unit)
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(selected_metered_item.applied_pricing_unit)
       ).amount
 
       fee = Fee.new(
         subscription:,
-        charge:,
+        charge: selected_metered_item.charge,
         organization_id: customer.organization_id,
         billing_entity_id: customer.billing_entity_id,
         amount_cents: amount.amount_cents,
         precise_amount_cents: amount.precise_amount_cents,
         amount_currency: subscription.plan.amount_currency,
         fee_type: :charge,
-        invoiceable: charge,
+        invoiceable: selected_metered_item.charge,
         units: charge_model_result.units,
         total_aggregated_units: charge_model_result.units,
-        properties: boundaries.to_h,
+        properties: selected_metered_item.boundaries.to_h,
         events_count: charge_model_result.count,
         charge_filter_id: charge_filter&.id,
-        pay_in_advance_event_id: event.id,
-        pay_in_advance_event_transaction_id: event.transaction_id,
+        pay_in_advance_event_id: selected_metered_item.event.id,
+        pay_in_advance_event_transaction_id: selected_metered_item.event.transaction_id,
         payment_status: :pending,
         pay_in_advance: true,
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
         unit_amount_cents: amount.unit_amount_cents,
         precise_unit_amount: amount.precise_unit_amount,
-        grouped_by: format_grouped_by,
+        grouped_by: format_grouped_by(selected_metered_item:),
         amount_details: charge_model_result.amount_details || {},
         pricing_unit_usage: amount.pricing_unit_usage
       )
 
-      build_breakdowns_for_fee(fee:, presentation_breakdowns: remove_formated_grouped_by_keys(aggregation_result.pay_in_advance_breakdowns))
+      build_breakdowns_for_fee(
+        fee:,
+        selected_metered_item:,
+        presentation_breakdowns: remove_formated_grouped_by_keys(
+          aggregation_result.pay_in_advance_breakdowns,
+          selected_metered_item:
+        )
+      )
 
       fee
-    end
-
-    def init_charge_filter_fee
-      init_fee(properties:, charge_filter: filter || ChargeFilter.new(charge:))
     end
 
     def persist_fees(fees)
@@ -132,7 +132,7 @@ module Fees
         # there is no ComputeTaxesAndTotalsService step for them.
         # Provider-taxed customers get taxes via apply_provider_taxes after persist.
         # Invoiceable fees get taxes applied later via ComputeTaxesAndTotalsService.
-        if !charge.invoiceable? && !customer_provider_taxation?
+        if !fee.charge.invoiceable? && !customer_provider_taxation?
           Fees::ApplyTaxesService.call!(fee:)
         end
 
@@ -141,38 +141,13 @@ module Fees
       end
     end
 
-    def date_service
-      @date_service ||= Subscriptions::DatesService.new_instance(
-        subscription,
-        billing_at,
-        current_usage: true
-      )
+    def aggregate(selected_metered_item:, properties:, charge_filter: nil)
+      Charges::PayInAdvanceAggregationService.call!(metered_item: selected_metered_item)
     end
 
-    def properties
-      @properties ||= filter&.properties || charge.properties
-    end
-
-    def boundaries
-      @boundaries ||= BillingPeriodBoundaries.new(
-        from_datetime: date_service.from_datetime,
-        to_datetime: date_service.to_datetime,
-        charges_from_datetime: date_service.charges_from_datetime,
-        charges_to_datetime: date_service.charges_to_datetime,
-        charges_duration: date_service.charges_duration_in_days,
-        timestamp: billing_at
-      )
-    end
-
-    def aggregate(properties:, charge_filter: nil)
-      Charges::PayInAdvanceAggregationService.call!(
-        charge:, boundaries:, properties:, event:, charge_filter:
-      )
-    end
-
-    def apply_charge_model(aggregation_result:, properties:)
+    def apply_charge_model(selected_metered_item:, aggregation_result:, properties:)
       Charges::ApplyPayInAdvanceChargeModelService.call!(
-        charge:, aggregation_result:, properties:
+        charge: selected_metered_item.charge, aggregation_result:, properties:
       )
     end
 
@@ -182,17 +157,17 @@ module Fees
       result.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
-    def build_breakdowns_for_fee(fee:, presentation_breakdowns:)
+    def build_breakdowns_for_fee(fee:, selected_metered_item:, presentation_breakdowns:)
       presentation_breakdowns.each do |breakdown|
         fee.presentation_breakdowns.build(
           presentation_by: breakdown[:groups],
           units: breakdown[:value],
-          organization_id: charge.organization_id
+          organization_id: selected_metered_item.organization_id
         )
       end
     end
 
-    def cache_aggregation_result(aggregation_result:, charge_filter:)
+    def cache_aggregation_result(selected_metered_item:, aggregation_result:, charge_filter:)
       return unless aggregation_result.current_aggregation.present? ||
         aggregation_result.max_aggregation.present? ||
         aggregation_result.max_aggregation_with_proration.present?
@@ -202,29 +177,32 @@ module Fees
         event_transaction_id: event.transaction_id,
         timestamp: billing_at,
         external_subscription_id: event.external_subscription_id,
-        charge_id: charge.id,
+        charge_id: selected_metered_item.charge_id,
         charge_filter_id: charge_filter&.id,
         current_aggregation: aggregation_result.current_aggregation,
         current_amount: aggregation_result.current_amount,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
-        grouped_by: format_grouped_by,
-        presentation_breakdowns: remove_formated_grouped_by_keys(aggregation_result.breakdowns)
+        grouped_by: format_grouped_by(selected_metered_item:),
+        presentation_breakdowns: remove_formated_grouped_by_keys(
+          aggregation_result.breakdowns,
+          selected_metered_item:
+        )
       )
     end
 
-    def remove_formated_grouped_by_keys(breakdowns)
-      Array(breakdowns).map { |b| b.merge(groups: b[:groups].except(*format_grouped_by.keys)) }
+    def remove_formated_grouped_by_keys(breakdowns, selected_metered_item:)
+      Array(breakdowns).map do |breakdown|
+        breakdown.merge(groups: breakdown[:groups].except(*format_grouped_by(selected_metered_item:).keys))
+      end
     end
 
-    def format_grouped_by
-      return @format_grouped_by if defined?(@format_grouped_by)
+    def format_grouped_by(selected_metered_item:)
+      grouped_by = selected_metered_item.properties["pricing_group_keys"].presence || selected_metered_item.properties["grouped_by"] || []
+      grouped_by << "target_wallet_code" if selected_metered_item.charge.accepts_target_wallet && selected_metered_item.event.properties["target_wallet_code"].present?
+      return {} if grouped_by.blank?
 
-      grouped_by = properties["pricing_group_keys"].presence || properties["grouped_by"] || []
-      grouped_by << "target_wallet_code" if charge.accepts_target_wallet && event.properties["target_wallet_code"].present?
-      return @format_grouped_by = {} if grouped_by.blank?
-
-      @format_grouped_by = grouped_by.index_with { event.properties[it] }
+      grouped_by.index_with { |key| selected_metered_item.event.properties[key] }
     end
 
     def customer

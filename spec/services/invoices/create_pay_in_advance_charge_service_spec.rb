@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeService do
   subject(:invoice_service) do
-    described_class.new(charge:, event:, timestamp: timestamp.to_i)
+    described_class.new(metered_item:, timestamp: timestamp.to_i)
   end
 
   let(:timestamp) { Time.zone.now.beginning_of_month }
@@ -27,6 +27,21 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         external_customer_id: customer.external_id,
         organization_id: organization.id
       )
+    )
+  end
+
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: event.timestamp,
+        to_datetime: event.timestamp,
+        charges_from_datetime: event.timestamp,
+        charges_to_datetime: event.timestamp,
+        charges_duration: 0,
+        timestamp: event.timestamp
+      ),
+      event: Events::CommonFactory.new_instance(source: event)
     )
   end
 
@@ -57,7 +72,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(charge:, boundaries: BillingPeriodBoundaries, properties: Hash, event:, charge_filter:)
+        .with(metered_item: have_attributes(charge:, event:))
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
@@ -186,7 +201,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     end
 
     it "produces an activity log" do
-      invoice = described_class.call(charge:, event:, timestamp: timestamp.to_i).invoice
+      invoice = described_class.call(metered_item:, timestamp: timestamp.to_i).invoice
 
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end

@@ -20,8 +20,11 @@ module Invoices
 
     unique :until_executed, on_conflict: :log
 
-    def perform(charge:, event:, timestamp:, invoice: nil)
-      result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:)
+    def perform(timestamp:, charge: nil, metered_item: nil, event: nil, invoice: nil)
+      result = Invoices::CreatePayInAdvanceChargeService.call(
+        metered_item: pay_in_advance_arguments.metered_item,
+        timestamp:
+      )
       return if result.success?
       # NOTE: We don't want a dead job for failed invoice due to the tax reason.
       #       This invoice should be in failed status and can be retried.
@@ -30,13 +33,18 @@ module Invoices
       result.raise_if_error!
     end
 
-    def lock_key_arguments
-      args = arguments.first
-      event = Events::CommonFactory.new_instance(source: args[:event])
-      [args[:charge], event.organization_id, event.external_subscription_id, event.transaction_id]
-    end
+    delegate :lock_key_arguments, to: :pay_in_advance_arguments
 
     private
+
+    def pay_in_advance_arguments
+      job_arguments = arguments.first
+      @pay_in_advance_arguments ||= PayInAdvanceArguments.new(
+        metered_item: job_arguments[:metered_item] || job_arguments["metered_item"],
+        charge: job_arguments[:charge] || job_arguments["charge"],
+        event: job_arguments[:event] || job_arguments["event"]
+      )
+    end
 
     def tax_error?(result)
       return false unless result.error.is_a?(BaseService::ValidationFailure)
