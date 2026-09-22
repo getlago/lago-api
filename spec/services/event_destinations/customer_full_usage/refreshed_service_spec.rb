@@ -51,6 +51,16 @@ RSpec.describe EventDestinations::CustomerFullUsage::RefreshedService do
       expect(producer_calls.size).to eq(1)
     end
 
+    context "with the usage service spied on" do
+      before { allow(Invoices::CustomerUsageService).to receive(:call).and_call_original }
+
+      it "reads the events, a full-usage window opening before the buckets the pipeline retains" do
+        service.call
+
+        expect(Invoices::CustomerUsageService).to have_received(:call).with(hash_excluding(use_usage_buckets: true))
+      end
+    end
+
     it "delivers a snapshot whose window starts at subscription.started_at" do
       service.call
 

@@ -216,6 +216,16 @@ RSpec.describe LifetimeUsages::CalculateService do
         expect(lifetime_usage.reload.current_usage_amount_cents).to eq(2000)
         expect(lifetime_usage.recalculate_current_usage).to be false
       end
+
+      context "with the usage service spied on" do
+        before { allow(Invoices::CustomerUsageService).to receive(:call).and_call_original }
+
+        it "reads the events, the lifetime total summing periods the buckets do not cover" do
+          service.call
+
+          expect(Invoices::CustomerUsageService).to have_received(:call).with(hash_excluding(use_usage_buckets: true))
+        end
+      end
     end
   end
 end

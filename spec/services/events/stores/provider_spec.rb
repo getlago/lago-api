@@ -434,6 +434,111 @@ RSpec.describe Events::Stores::Provider do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
+
+    context "when the read covers the whole lifetime of the subscription" do
+      subject(:provider) do
+        described_class.new(
+          organization:,
+          billing_context:,
+          serve_current_usage_from_buckets: true,
+          boundaries: billing_boundaries,
+          usage_filters: UsageFilters.new(full_usage: true),
+          charges: [charge]
+        )
+      end
+
+      it "reads events, although the window does hold buckets" do
+        expect(bucket_set).not_to be_empty
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "when the window starts mid-bucket" do
+      let(:boundaries) do
+        {from_datetime: Time.current.beginning_of_month + 1.second, to_datetime: Time.current}
+      end
+
+      it "reads events, as the prefetch would floor the start into the previous period" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "when the first period opens mid-bucket, on the subscription start" do
+      let(:started_at) { Time.current.beginning_of_month + 1.second }
+      let(:subscription) { create(:subscription, organization:, started_at:) }
+      let(:boundaries) { {from_datetime: started_at, to_datetime: Time.current} }
+
+      it "serves the buckets, the floor reaching back before the subscription existed" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.sum.value).to eq(BigDecimal("42.5"))
+      end
+    end
+
+    context "when the window is day-aligned in a timezone offset by 45 minutes" do
+      let(:boundaries) do
+        from = Time.use_zone("Asia/Kathmandu") { Time.current.beginning_of_day }
+        {from_datetime: from, to_datetime: Time.current}
+      end
+
+      it "serves the buckets, a 45-minute offset still landing on a 15-minute wall" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.sum.value).to eq(BigDecimal("42.5"))
+      end
+    end
+
+    context "with a charge grouped by its current pricing group keys" do
+      let(:filters) { {grouped_by: ["region"]} }
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => totals},
+          grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}}
+        )
+      end
+
+      it "serves the breakdown the rows were written under" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.grouped_sum.map(&:groups)).to eq([{"region" => "us"}])
+      end
+    end
+
+    context "when the rows were grouped by other keys than the charge is now" do
+      let(:filters) { {grouped_by: %w[region team]} }
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => totals},
+          grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}}
+        )
+      end
+
+      it "reads events, a partial breakdown being worse than a delegated one" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the charge no longer groups but the rows still do" do
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => totals},
+          grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}}
+        )
+      end
+
+      it "reads events, as the rows answer for a charge that has been edited since" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the charge groups and this window holds no row for it" do
+      let(:filters) { {grouped_by: ["region"]} }
+      let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[create(:standard_charge).id, ""] => totals}) }
+
+      it "serves no usage for it, there being no stale row to disagree with" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.grouped_sum).to eq([])
+      end
+    end
   end
 
   describe "#store_class" do

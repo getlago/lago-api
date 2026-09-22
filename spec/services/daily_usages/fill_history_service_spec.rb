@@ -57,6 +57,27 @@ RSpec.describe DailyUsages::FillHistoryService do
       end
     end
 
+    context "with the usage service spied on" do
+      before do
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "0"})
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2024-10-15 10:00:00"),
+          created_at: Time.zone.parse("2024-10-15 10:00:00")
+        )
+        allow(Invoices::CustomerUsageService).to receive(:call).and_call_original
+      end
+
+      it "computes the usage from the events, the history it persists reaching back before the buckets" do
+        travel_to(Time.zone.parse("2024-10-16 12:00:00")) { call_service }
+
+        expect(Invoices::CustomerUsageService).to have_received(:call).with(hash_excluding(use_usage_buckets: true))
+      end
+    end
+
     context "when there is no usage at all" do
       before { create(:standard_charge, plan:, billable_metric:) }
 

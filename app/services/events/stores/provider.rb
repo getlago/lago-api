@@ -28,7 +28,7 @@ module Events
             store,
             usage_buckets:,
             charge_id: metered_item.charge.id,
-            charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
+            charge_filter_id: charge_filter_id(filters)
           )
         else
           store
@@ -41,6 +41,7 @@ module Events
 
         @may_precompute = serve_current_usage_from_buckets &&
           whole_charge_read? &&
+          window_starts_on_bucket_wall? &&
           RealtimeUsage.enabled?(organization) &&
           !RealtimeUsage.deduplicated?(organization)
       end
@@ -86,6 +87,23 @@ module Events
         !usage_filters.full_usage && usage_filters.filter_by_group.blank?
       end
 
+      # The prefetch floors the window start down to the 15-minute wall, so a start that sits mid
+      # bucket reaches back into the period before it: the customer-timezone-change case, where
+      # `charges_from_datetime` becomes `previous_charge_to + 1.second`. A first period opens mid
+      # bucket too, on `subscription.started_at`, but the floor cannot widen it — the pipeline
+      # attributes nothing to the subscription before it started. A provider built without a window
+      # has nothing to align, and `same_window_as_prefetch?` refuses every charge anyway.
+      def window_starts_on_bucket_wall?
+        return true if boundaries.nil?
+
+        from = boundaries.charges_from_datetime
+        from == billing_context.subscription.started_at || on_bucket_wall?(from)
+      end
+
+      def on_bucket_wall?(time)
+        (time.to_i % RealtimeUsage::FetchBucketsService::BUCKET_DURATION.to_i).zero? && time.usec.zero?
+      end
+
       def served_from_buckets?(metered_item:, boundaries:, filters: {})
         return false unless may_precompute_charge?(metered_item:, boundaries:)
         return false unless filters[:grouped_by_values].blank? &&
@@ -95,7 +113,30 @@ module Events
         # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
-        usage_buckets.present?
+        return false if usage_buckets.blank?
+
+        groups_match_charge?(
+          charge_id: metered_item.charge.id,
+          charge_filter_id: charge_filter_id(filters),
+          grouped_by: filters[:grouped_by]
+        )
+      end
+
+      # A charge edit changes the keys the pipeline groups by, but the rows already written keep
+      # the old ones. A partially correct breakdown is worse than a delegated one, so the whole
+      # charge delegates as soon as one row disagrees. A charge with no row in this window keeps
+      # being served the zero its neighbours prove the pipeline wrote.
+      def groups_match_charge?(charge_id:, charge_filter_id:, grouped_by:)
+        expected = Array(grouped_by).map(&:to_s).sort
+
+        usage_buckets
+          .grouped_by_key_sets_for(charge_id:, charge_filter_id:)
+          .all? { it == expected }
+      end
+
+      # ClickHouse stores an empty string instead of nil.
+      def charge_filter_id(filters)
+        filters[:charge_filter]&.id || ""
       end
 
       def same_window_as_prefetch?(window)

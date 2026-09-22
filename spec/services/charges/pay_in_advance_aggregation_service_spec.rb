@@ -450,5 +450,25 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         )
       end
     end
+
+    context "when the organization serves its current usage from the usage buckets" do
+      include_context "with realtime usage availability"
+
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
+      let(:count_service) { instance_double(BillableMetrics::Aggregations::CountService, aggregate: agg_result) }
+
+      before do
+        allow(BillableMetrics::Aggregations::CountService).to receive(:new).and_return(count_service)
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+      end
+
+      it "aggregates from the events, which alone carry the triggering event and the running state" do
+        agg_service.call
+
+        expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
+          .with(hash_including(event_store: have_attributes(precomputed?: false)))
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
+    end
   end
 end

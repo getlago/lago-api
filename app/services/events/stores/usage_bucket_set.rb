@@ -38,6 +38,12 @@ module Events
         end
       end
 
+      # The key sets the written rows carry, so a caller can tell a breakdown made under the
+      # charge's current pricing group keys from one left behind by an edit.
+      def grouped_by_key_sets_for(charge_id:, charge_filter_id:)
+        grouped_totals_for(charge_id:, charge_filter_id:).map { |groups, _| groups.keys.sort }.uniq
+      end
+
       private
 
       attr_reader :totals, :grouped_totals

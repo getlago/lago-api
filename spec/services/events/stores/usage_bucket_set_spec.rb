@@ -74,6 +74,32 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
   end
 
+  describe "#grouped_by_key_sets_for" do
+    it "reports the key set the rows were written under, once" do
+      expect(bucket_set.grouped_by_key_sets_for(charge_id: "charge_1", charge_filter_id: "")).to eq([["region"]])
+    end
+
+    it "is empty for a charge the buckets do not carry" do
+      expect(bucket_set.grouped_by_key_sets_for(charge_id: "charge_2", charge_filter_id: "")).to eq([])
+    end
+
+    context "when rows written before and after a charge edit sit in the same window" do
+      let(:grouped_totals) do
+        {
+          ["charge_1", ""] => [
+            [{"region" => "us"}, described_class::Totals.new(units: BigDecimal(30), events_count: 5)],
+            [{"region" => "us", "team" => "core"}, described_class::Totals.new(units: BigDecimal(2), events_count: 1)]
+          ]
+        }
+      end
+
+      it "reports both key sets, so a caller can tell they disagree" do
+        expect(bucket_set.grouped_by_key_sets_for(charge_id: "charge_1", charge_filter_id: ""))
+          .to match_array([["region"], %w[region team]])
+      end
+    end
+  end
+
   describe "immutability" do
     it "is frozen so a computation cannot rewrite the window it read" do
       expect(bucket_set).to be_frozen

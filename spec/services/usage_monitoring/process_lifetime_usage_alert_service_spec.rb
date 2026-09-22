@@ -38,6 +38,12 @@ RSpec.describe UsageMonitoring::ProcessLifetimeUsageAlertService, :premium do
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
         .with(alert:, alertable: an_object_having_attributes(id: subscription.id), current_metrics: mocked_usage)
     end
+
+    it "reads the events, a lifetime window opening before the buckets the pipeline retains" do
+      service.call
+
+      expect(::Invoices::CustomerUsageService).to have_received(:call!).with(hash_excluding(use_usage_buckets: true))
+    end
   end
 
   context "when lifetime_usage is not enabled" do
