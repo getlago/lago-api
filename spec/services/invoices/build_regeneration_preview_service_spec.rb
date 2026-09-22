@@ -108,8 +108,9 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
     end
 
     context "when a charge price changed after invoicing" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
       let(:parent_plan) { create(:plan, organization:) }
-      let(:parent_charge) { create(:standard_charge, plan: parent_plan, organization:, properties: {amount: "0"}) }
+      let(:parent_charge) { create(:standard_charge, plan: parent_plan, organization:, billable_metric:, properties: {amount: "0"}) }
       let(:plan) { create(:plan, organization:, parent: parent_plan) }
       let(:charge) do
         create(
@@ -117,6 +118,7 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           plan:,
           organization:,
           parent: parent_charge,
+          billable_metric:,
           prorated: true,
           properties: {amount: "2000"}
         )

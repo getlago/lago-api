@@ -538,7 +538,10 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
     end
 
     context "when untouched preview fees are submitted after a charge price change" do
-      let(:charge) { create(:standard_charge, plan:, organization:, prorated: true, properties: {amount: "2000"}) }
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:charge) do
+        create(:standard_charge, plan:, organization:, billable_metric:, prorated: true, properties: {amount: "2000"})
+      end
       let(:original_invoice) do
         travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
         invoice = subscription.invoices.first
