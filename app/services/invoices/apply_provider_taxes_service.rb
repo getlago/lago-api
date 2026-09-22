@@ -4,9 +4,6 @@ module Invoices
   class ApplyProviderTaxesService < BaseService
     Result = BaseResult[:applied_taxes, :invoice]
 
-    # Minimal tax descriptor used only to group fees under a common key in indexed_fees.
-    GroupingTax = Data.define(:name, :rate, :type)
-
     def initialize(invoice:, provider_taxes: nil)
       @invoice = invoice
       @provider_taxes = provider_taxes || fetch_provider_taxes_result.fees
@@ -19,7 +16,9 @@ module Invoices
       applied_taxes_amount_cents = 0
       taxes_rate = 0
 
-      applicable_taxes.values.each do |tax|
+      applicable_taxes.each do |key, tax|
+        fee_taxes = indexed_fee_taxes.fetch(key)
+        fees = fee_taxes.map(&:first)
         tax_rate = tax.rate.to_f * 100
 
         applied_tax = invoice.applied_taxes.new(
@@ -32,9 +31,9 @@ module Invoices
         )
         invoice.applied_taxes << applied_tax
 
-        tax_amount_cents = compute_tax_amount_cents(tax)
-        applied_tax.fees_amount_cents = fees_amount_cents(tax)
-        applied_tax.taxable_base_amount_cents = taxable_base_amount_cents(tax)&.round
+        tax_amount_cents = fees.sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate * tax.rate.to_f }
+        applied_tax.fees_amount_cents = fees_amount_cents(fees)
+        applied_tax.taxable_base_amount_cents = taxable_base_amount_cents(fees).round
         applied_tax.amount_cents = tax_amount_cents.round
 
         # NOTE: when applied on user current usage, the invoice is
@@ -42,7 +41,7 @@ module Invoices
         applied_tax.save! if invoice.persisted?
 
         applied_taxes_amount_cents += tax_amount_cents
-        taxes_rate += pro_rated_taxes_rate(tax)
+        taxes_rate += pro_rated_taxes_rate(tax, fees)
 
         result.applied_taxes << applied_tax
       end
@@ -61,78 +60,52 @@ module Invoices
     attr_reader :invoice, :provider_taxes
 
     def applicable_taxes
-      return @applicable_taxes if defined? @applicable_taxes
-
-      output = {}
-      provider_taxes.each do |fee_taxes|
-        fee_taxes.tax_breakdown.each do |tax|
-          key = calculate_key(tax)
-
-          next if output[key]
-
-          output[key] = tax
-        end
+      @applicable_taxes ||= provider_taxes.flat_map(&:tax_breakdown).each_with_object({}) do |tax, output|
+        key = tax_key(name: tax.name, rate: tax.rate, type: tax.type)
+        output[key] ||= tax
       end
-
-      @applicable_taxes = output
-
-      @applicable_taxes
     end
 
-    def indexed_fees
-      @indexed_fees ||= invoice.fees.each_with_object({}) do |fee, applied_taxes|
+    def indexed_fee_taxes
+      @indexed_fee_taxes ||= invoice.fees.each_with_object({}) do |fee, output|
         fee.applied_taxes.each do |applied_tax|
-          tax = GroupingTax.new(
+          key = tax_key(
             name: applied_tax.tax_name,
             rate: applied_tax.tax_rate,
             type: applied_tax.tax_description
           )
-          key = calculate_key(tax)
-
-          applied_taxes[key] ||= []
-          applied_taxes[key] << fee
+          output[key] ||= []
+          output[key] << [fee, applied_tax]
         end
       end
     end
 
-    def compute_tax_amount_cents(tax)
-      key = calculate_key(tax)
-
-      indexed_fees[key]
-        .sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate * tax.rate.to_f }
-    end
-
-    def pro_rated_taxes_rate(tax)
+    def pro_rated_taxes_rate(tax, fees)
       tax_rate = tax.rate.is_a?(String) ? tax.rate.to_f * 100 : tax.rate
 
       fees_rate = if invoice.sub_total_excluding_taxes_amount_cents.positive?
-        fees_amount_cents(tax).fdiv(invoice.sub_total_excluding_taxes_amount_cents)
+        fees_amount_cents(fees).fdiv(invoice.sub_total_excluding_taxes_amount_cents)
       else
         # NOTE: when invoice have a 0 amount. The prorata is on the number of fees.
         #       Fees with no taxable base are not reported and carry no tax row, so they are
         #       out of the denominator too; counting them would dilute the rate below the one
         #       the provider returned.
-        key = calculate_key(tax)
-        indexed_fees[key].count.fdiv(taxed_fees_count)
+        fees.count.fdiv(taxed_fees_count)
       end
 
       fees_rate * tax_rate
     end
 
     def taxed_fees_count
-      indexed_fees.values.flatten.uniq.count
+      indexed_fee_taxes.values.flat_map { |entries| entries.map(&:first) }.uniq.count
     end
 
-    def fees_amount_cents(tax)
-      key = calculate_key(tax)
-
-      indexed_fees[key].sum(&:sub_total_excluding_taxes_amount_cents)
+    def fees_amount_cents(fees)
+      fees.sum(&:sub_total_excluding_taxes_amount_cents)
     end
 
-    def taxable_base_amount_cents(tax)
-      key = calculate_key(tax)
-
-      indexed_fees[key].sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate }
+    def taxable_base_amount_cents(fees)
+      fees.sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate }
     end
 
     def fetch_provider_taxes_result
@@ -144,10 +117,10 @@ module Invoices
       taxes_result.raise_if_error!
     end
 
-    def calculate_key(tax)
-      tax_rate = tax.rate.is_a?(String) ? tax.rate.to_f * 100 : tax.rate
+    def tax_key(name:, rate:, type:)
+      tax_rate = rate.is_a?(String) ? rate.to_f * 100 : rate
 
-      "#{tax.type}-#{tax.name.parameterize(separator: "_")}-#{tax_rate}"
+      "#{type}-#{name.parameterize(separator: "_")}-#{tax_rate}"
     end
   end
 end
