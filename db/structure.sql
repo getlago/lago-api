@@ -919,6 +919,7 @@ DROP INDEX IF EXISTS public.index_billing_segments_on_rate_override_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_invoice_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_customer_id;
+DROP INDEX IF EXISTS public.index_billing_segments_on_customer_awaiting_invoicing;
 DROP INDEX IF EXISTS public.index_billing_segments_on_contract_rate_card_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_contract_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_card_and_period;
@@ -8289,6 +8290,13 @@ CREATE INDEX index_billing_segments_on_contract_rate_card_id ON public.billing_s
 
 
 --
+-- Name: index_billing_segments_on_customer_awaiting_invoicing; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_segments_on_customer_awaiting_invoicing ON public.billing_segments USING btree (status, customer_id) WHERE (status = ANY (ARRAY['pending'::public.billing_segment_status, 'processing'::public.billing_segment_status]));
+
+
+--
 -- Name: index_billing_segments_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14937,6 +14945,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260922110909'),
 ('20260918103214'),
 ('20260917164501'),
 ('20260916141523'),
