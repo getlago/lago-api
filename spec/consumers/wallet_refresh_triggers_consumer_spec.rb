@@ -97,6 +97,17 @@ RSpec.describe WalletRefreshTriggersConsumer do
     end
   end
 
+  context "with a tombstone in the batch" do
+    before { karafka.produce(nil) }
+
+    it "counts the tombstone apart from the triggers" do
+      consumer.consume
+
+      expect(consumed_messages).to have_received(:increment).with({kind: "trigger"}, by: 1)
+      expect(consumed_messages).to have_received(:increment).with({kind: "tombstone"}, by: 1)
+    end
+  end
+
   context "without a subscription id on the payload" do
     let(:trigger) do
       {
@@ -126,6 +137,12 @@ RSpec.describe WalletRefreshTriggersConsumer do
       consumer.consume
 
       expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
+    end
+
+    it "counts the customer it walked past" do
+      consumer.consume
+
+      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "not_realtime"}, by: 1)
     end
   end
 
@@ -163,6 +180,12 @@ RSpec.describe WalletRefreshTriggersConsumer do
       consumer.consume
 
       expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
+    end
+
+    it "counts the customer it walked past" do
+      consumer.consume
+
+      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "no_wallet"}, by: 1)
     end
   end
 

@@ -22,10 +22,16 @@ class WalletRefreshTriggersConsumer < ApplicationConsumer
         break
       end
 
-      next unless organization_ids.include?(organization_id)
+      unless organization_ids.include?(organization_id)
+        report(:skipped, :not_realtime)
+        next
+      end
 
       # The trigger sink emits for every metered customer, and most hold no wallet.
-      next unless Wallet.active.exists?(organization_id:, customer_id:)
+      unless Wallet.active.exists?(organization_id:, customer_id:)
+        report(:skipped, :no_wallet)
+        next
+      end
 
       refresh(organization_id, customer_id, customer_payloads)
     end
