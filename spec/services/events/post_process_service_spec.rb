@@ -168,8 +168,8 @@ RSpec.describe Events::PostProcessService do
         let(:effective_date) { timestamp.to_date }
         let(:ended_at) { timestamp - 1.second }
 
-        it "does not enqueue a pay in advance job" do
-          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+        it "enqueues a pay in advance job for the existing billing segment" do
+          expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end
 
@@ -195,16 +195,16 @@ RSpec.describe Events::PostProcessService do
       context "when the contract is terminated" do
         let(:contract_status) { :terminated }
 
-        it "does not enqueue a pay in advance job" do
-          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+        it "enqueues a pay in advance job for the existing billing segment" do
+          expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end
 
       context "when the contract is canceled" do
         let(:contract_status) { :canceled }
 
-        it "does not enqueue a pay in advance job" do
-          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+        it "enqueues a pay in advance job for the existing billing segment" do
+          expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end
 

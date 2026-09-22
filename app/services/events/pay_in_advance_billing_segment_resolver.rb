@@ -29,17 +29,10 @@ module Events
       BillingSegment.status_processing
         .joins(:contract, contract_rate_card: {rate_card: :product})
         .where(
-          contracts: {
-            external_id: event.external_subscription_id,
-            status: Contract::LIVE_STATUSES
-          },
+          contracts: {external_id: event.external_subscription_id},
           rate_cards: {billing_timing: :advance},
           products: {billable_metric_id: billable_metric.id, product_type: :metered},
           organization_id: organization.id
-        )
-        .where(
-          "contracts.ended_at IS NULL OR date_trunc('millisecond', contracts.ended_at::timestamp) >= ?",
-          event.timestamp
         )
         .where(
           "date_trunc('millisecond', billing_segments.started_at::timestamp) <= ?::timestamp AND " \

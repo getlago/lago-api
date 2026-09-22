@@ -76,24 +76,24 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
   context "when the contract is terminated" do
     let(:contract_status) { :terminated }
 
-    it "does not return the billing segment" do
-      expect(billing_segments).to be_empty
+    it "returns the billing segment" do
+      expect(billing_segments).to contain_exactly(billing_segment)
     end
   end
 
   context "when the contract is canceled" do
     let(:contract_status) { :canceled }
 
-    it "does not return the billing segment" do
-      expect(billing_segments).to be_empty
+    it "returns the billing segment" do
+      expect(billing_segments).to contain_exactly(billing_segment)
     end
   end
 
   context "when the contract ended before the event" do
     let(:contract_ended_at) { timestamp - 1.second }
 
-    it "does not return the billing segment" do
-      expect(billing_segments).to be_empty
+    it "returns the billing segment" do
+      expect(billing_segments).to contain_exactly(billing_segment)
     end
   end
 
