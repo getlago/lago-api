@@ -127,13 +127,6 @@ RSpec.describe WalletRefreshTriggersConsumer do
 
       expect(Wallets::RealtimeRefreshService).not_to have_received(:call)
     end
-
-    it "counts the skip" do
-      consumer.consume
-
-      expect(outcomes).to have_received(:increment)
-        .with({outcome: "skipped", reason: "organization_not_served"}, by: 1)
-    end
   end
 
   context "when the organization does not read the clickhouse events store" do
