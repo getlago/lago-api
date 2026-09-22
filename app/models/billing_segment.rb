@@ -30,10 +30,22 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
-  # The states a segment is still owed in. One name for both ends of the pipe: the clock
-  # selects customers by it and the consumer selects their segments by it, so neither can
-  # drift into offering work the other will not do.
-  scope :awaiting_invoicing, -> { where(status: [:pending, :processing]) }
+  # What the periodic consumer still owes an invoice for. One name for both ends of the pipe:
+  # the clock selects customers by it and the consumer selects their segments by it, so
+  # neither can drift into offering work the other will not do.
+  #
+  # Metered usage billed in advance is priced per event rather than on the tick, so its
+  # segments are never invoiced here and never leave their state. Selecting them would
+  # enqueue that customer every hour for a run with nothing to do.
+  scope :awaiting_invoicing, -> {
+    where(status: [:pending, :processing])
+      .joins(contract_rate_card: {rate_card: :product})
+      .where(
+        "products.product_type != :metered OR rate_cards.billing_timing != :advance",
+        metered: Product::PRODUCT_TYPES[:metered],
+        advance: RateCard::BILLING_TIMINGS[:advance]
+      )
+  }
 
   validates :billing_at, presence: true
   validates :cycle_started_at, presence: true

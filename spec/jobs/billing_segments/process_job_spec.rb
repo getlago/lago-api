@@ -12,9 +12,9 @@ describe BillingSegments::ProcessJob, job: true do
   end
 
   describe ".perform" do
-    it "invoices the customer's pending segments" do
-      allow(BillingSegments::ProcessService).to receive(:call!).and_call_original
+    before { allow(BillingSegments::ProcessService).to receive(:call!).and_call_original }
 
+    it "invoices the customer's pending segments" do
       described_class.perform_now(customer.id)
 
       expect(BillingSegments::ProcessService).to have_received(:call!).with(customer:)
