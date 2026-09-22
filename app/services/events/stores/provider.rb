@@ -30,6 +30,8 @@ module Events
             charge_id: metered_item.charge.id,
             charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
           )
+        elsif (scan = charge_filters_scan(metered_item:, filters:))
+          ChargeFiltersScanStore.new(store, scan:)
         else
           store
         end
@@ -95,6 +97,34 @@ module Events
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
         usage_buckets.present?
+      end
+
+      # One scan per charge, shared by the stores of all its filters so that the first one to
+      # aggregate reads the events for every other.
+      def charge_filters_scan(metered_item:, filters:)
+        return unless charge_filters_scan_enabled?
+        return if metered_item.billing_segment
+        # A pay-in-advance event and its group narrow the store to themselves.
+        return unless filters[:charge_filter] && filters[:event].blank? && filters[:grouped_by_values].blank?
+
+        charge = metered_item.charge
+        return if charge.nil?
+
+        # A charge the scan cannot answer is remembered too: telling costs a count of its filters.
+        @charge_filters_scans ||= {}
+        return @charge_filters_scans[charge.id] if @charge_filters_scans.key?(charge.id)
+
+        @charge_filters_scans[charge.id] = (ChargeFiltersScan.new(charge:) if ChargeFiltersScan.supported_charge?(charge))
+      end
+
+      # The override belongs to the ClickHouse migration comparison, which has to keep comparing
+      # the stores themselves.
+      def charge_filters_scan_enabled?
+        return @charge_filters_scan_enabled if defined?(@charge_filters_scan_enabled)
+
+        @charge_filters_scan_enabled = Events::Stores::StoreFactory.override.nil? &&
+          store_class == Events::Stores::ClickhouseStore &&
+          organization.feature_flag_enabled?(:charge_filters_single_scan)
       end
 
       def same_window_as_prefetch?(window)

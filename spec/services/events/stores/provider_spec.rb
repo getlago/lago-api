@@ -483,4 +483,81 @@ RSpec.describe Events::Stores::Provider do
       end
     end
   end
+
+  describe "#store_for, with the charge filters scan" do
+    include_context "with clickhouse availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["charge_filters_single_scan"])
+    end
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+    let(:filters) { {charge_id: charge.id, charge_filter:} }
+    let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
+
+    it "wraps the store of a charge filter" do
+      expect(store).to be_a(Events::Stores::ChargeFiltersScanStore)
+      expect(store.__getobj__).to be_a(Events::Stores::ClickhouseStore)
+      expect(store.precomputed?).to be(false)
+    end
+
+    context "with several filters of one charge" do
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "shares one scan between them" do
+        store
+        provider.store_for(metered_item:, boundaries:, filters: {charge_id: charge.id, charge_filter: ChargeFilter.new(charge:)})
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new).once
+      end
+    end
+
+    context "without the feature flag" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the organization reads the postgres events store" do
+      let(:organization) { create(:organization, feature_flags: ["charge_filters_single_scan"]) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::PostgresStore)
+      end
+    end
+
+    context "without a charge filter" do
+      let(:filters) { {charge_id: charge.id} }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a pay-in-advance event" do
+      let(:filters) { {charge_id: charge.id, charge_filter:, event: build(:common_event)} }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the store is scoped to one group" do
+      let(:filters) { {charge_id: charge.id, charge_filter:, grouped_by_values: {"region" => "us"}} }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with an aggregation the scan does not support" do
+      let(:billable_metric) { create(:unique_count_billable_metric, organization:) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+  end
 end
