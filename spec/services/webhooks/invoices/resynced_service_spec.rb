@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Webhooks::Invoices::ResyncedService do
   subject(:webhook_service) { described_class.new(object: invoice) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
   describe ".call" do

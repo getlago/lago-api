@@ -14,8 +14,13 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  before_all do
+    create_default(:plan)
+  end
+
   let(:subscription) { create(:subscription, customer:, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
@@ -287,6 +292,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
     context "when a fee targets a wallet code that matches no wallet" do
       around { |test| lago_premium! { test.run } }
 
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
       let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
       let(:current_usage_fees) do
@@ -303,6 +309,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
     context "when a fee targets a wallet whose balance is smaller than the fee" do
       around { |test| lago_premium! { test.run } }
 
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
       let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
       let(:wallet_b) { create(:wallet, customer:, organization:, code: "wallet-b", balance_cents: 50, priority: 1) }

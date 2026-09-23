@@ -5,9 +5,9 @@ require "rails_helper"
 describe Subscriptions::ActivationRules::BillCurrentPeriodService do
   subject(:result) { described_class.call(subscription:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, interval: :monthly, pay_in_advance: true) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:, interval: :monthly, pay_in_advance: true) }
   let(:started_at) { Time.zone.parse("2026-03-05 10:00:00") }
   let(:current_time) { Time.zone.parse("2026-04-10 12:00:00") }
   let(:subscription) do
@@ -147,7 +147,7 @@ describe Subscriptions::ActivationRules::BillCurrentPeriodService do
     end
 
     context "when the plan is yearly with monthly billed charges" do
-      let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: true, bill_charges_monthly: true) }
+      let_it_be(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: true, bill_charges_monthly: true) }
       let(:current_time) { Time.zone.parse("2026-05-10 12:00:00") }
 
       it "enqueues a BillSubscriptionJob only for the latest monthly split boundary" do
@@ -190,7 +190,7 @@ describe Subscriptions::ActivationRules::BillCurrentPeriodService do
     end
 
     context "when the plan is yearly with monthly billed fixed charges" do
-      let(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: true, bill_fixed_charges_monthly: true) }
+      let_it_be(:plan) { create(:plan, organization:, interval: :yearly, pay_in_advance: true, bill_fixed_charges_monthly: true) }
       let(:current_time) { Time.zone.parse("2026-05-10 12:00:00") }
 
       it "enqueues a BillSubscriptionJob only for the latest monthly split boundary" do

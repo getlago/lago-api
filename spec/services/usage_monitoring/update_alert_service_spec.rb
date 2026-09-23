@@ -5,9 +5,14 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::UpdateAlertService do
   subject(:result) { described_class.call(alert:, params:) }
 
-  let(:organization) { create(:organization, premium_integrations:) }
-  let(:premium_integrations) { [] }
+  let_it_be(:premium_integrations) { [] }
+  let_it_be(:organization) { create_default(:organization, premium_integrations:) }
   let(:alert) { create(:alert, thresholds: [1, 50], organization: organization) }
+
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   describe "#call" do
     let(:params) do
@@ -29,7 +34,7 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
     context "with a billable_metric_id" do
       let(:alert) { create(:billable_metric_current_usage_amount_alert, thresholds: [50]) }
-      let(:billable_metric) { create(:billable_metric, organization: alert.organization) }
+      let(:billable_metric) { create_default(:billable_metric) }
       let(:params) do
         {code: "new_code", name: "Renamed", billable_metric_id: billable_metric.id, thresholds: [
           {value: 40},

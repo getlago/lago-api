@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Taxes::CreateService do
   subject(:create_service) { described_class.new(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:code) { "tax_code" }
   let(:params) do
