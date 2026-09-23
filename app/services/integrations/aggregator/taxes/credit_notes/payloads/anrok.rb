@@ -32,19 +32,19 @@ module Integrations
                     "taxable" => customer.tax_identification_number.present?,
                     "tax_number" => customer.tax_identification_number
                   },
-                  "fees" => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) },
+                  "fees" => charge_grouped_items.map { |items| cn_item(items) },
                   "tax_date" => credit_note.invoice.issuing_date
                 }
               ]
             end
 
-            def cn_item(item)
-              fee = item.fee
+            def cn_item(items)
+              fee = items.first.fee
 
               {
-                "item_id" => fee.item_id,
+                "item_id" => cn_item_id(items),
                 "item_code" => mapped_item(fee)&.external_id,
-                "amount_cents" => item.sub_total_excluding_taxes_amount_cents.round * -1
+                "amount_cents" => items.sum(&:sub_total_excluding_taxes_amount_cents).round * -1
               }
             end
 
