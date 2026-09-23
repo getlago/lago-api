@@ -11163,6 +11163,7 @@ enum PermissionEnum {
   charges_delete
   charges_update
   contracts_create
+  contracts_terminate
   contracts_update
   contracts_view
   coupons_attach
@@ -11306,6 +11307,7 @@ type Permissions {
   chargesDelete: Boolean!
   chargesUpdate: Boolean!
   contractsCreate: Boolean!
+  contractsTerminate: Boolean!
   contractsUpdate: Boolean!
   contractsView: Boolean!
   couponsAttach: Boolean!
