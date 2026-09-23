@@ -30,6 +30,23 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
+  # What the periodic consumer still owes an invoice for. One name for both ends of the pipe:
+  # the clock selects customers by it and the consumer selects their segments by it, so
+  # neither can drift into offering work the other will not do.
+  #
+  # Metered usage billed in advance is priced per event rather than on the tick, so its
+  # segments are never invoiced here and never leave their state. Selecting them would
+  # enqueue that customer every hour for a run with nothing to do.
+  scope :awaiting_invoicing, -> {
+    where(status: [:pending, :processing])
+      .joins(contract_rate_card: {rate_card: :product})
+      .where(
+        "products.product_type != :metered OR rate_cards.billing_timing != :advance",
+        metered: Product::PRODUCT_TYPES[:metered],
+        advance: RateCard::BILLING_TIMINGS[:advance]
+      )
+  }
+
   validates :billing_at, presence: true
   validates :cycle_started_at, presence: true
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
@@ -157,16 +174,17 @@ end
 #
 # Indexes
 #
-#  billing_segments_no_overlapping_periods          (organization_id, contract_id, customer_id, contract_rate_card_id, tsrange(started_at, ended_at, '[]'::text)) USING gist
-#  idx_on_contract_id_billing_at_status_3588bfae7a  (contract_id,billing_at,status)
-#  index_billing_segments_on_card_and_cycle         (contract_rate_card_id,cycle_started_at)
-#  index_billing_segments_on_card_and_period        (contract_rate_card_id,started_at) UNIQUE
-#  index_billing_segments_on_contract_id            (contract_id)
-#  index_billing_segments_on_contract_rate_card_id  (contract_rate_card_id)
-#  index_billing_segments_on_customer_id            (customer_id)
-#  index_billing_segments_on_invoice_id             (invoice_id)
-#  index_billing_segments_on_organization_id        (organization_id)
-#  index_billing_segments_on_rate_override_id       (rate_override_id)
+#  billing_segments_no_overlapping_periods                (organization_id, contract_id, customer_id, contract_rate_card_id, tsrange(started_at, ended_at, '[]'::text)) USING gist
+#  idx_on_contract_id_billing_at_status_3588bfae7a        (contract_id,billing_at,status)
+#  index_billing_segments_on_card_and_cycle               (contract_rate_card_id,cycle_started_at)
+#  index_billing_segments_on_card_and_period              (contract_rate_card_id,started_at) UNIQUE
+#  index_billing_segments_on_contract_id                  (contract_id)
+#  index_billing_segments_on_contract_rate_card_id        (contract_rate_card_id)
+#  index_billing_segments_on_customer_awaiting_invoicing  (status,customer_id) WHERE (status = ANY (ARRAY['pending'::billing_segment_status, 'processing'::billing_segment_status]))
+#  index_billing_segments_on_customer_id                  (customer_id)
+#  index_billing_segments_on_invoice_id                   (invoice_id)
+#  index_billing_segments_on_organization_id              (organization_id)
+#  index_billing_segments_on_rate_override_id             (rate_override_id)
 #
 # Foreign Keys
 #

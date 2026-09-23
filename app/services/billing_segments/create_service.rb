@@ -26,8 +26,7 @@ module BillingSegments
 
     attr_reader :contract_rate_card, :billable_segments, :pricing_unit
 
-    # Column values, not associations: the row is written without loading anything. `status`
-    # is left to the column default, which also keeps the enum out of insert_all's casting.
+    # Column values, not associations: the row is written without loading anything.
     def row_for(billable_segment)
       {
         organization_id: contract_rate_card.organization_id,
@@ -43,8 +42,19 @@ module BillingSegments
         rate_properties: billable_segment.properties,
         currency: contract_rate_card.rate_card.currency,
         pricing_unit_id: pricing_unit&.id,
-        proration_ratio: billable_segment.proration_ratio
+        proration_ratio: billable_segment.proration_ratio,
+        status: segment_status
       }
+    end
+
+    def segment_status
+      rate_card = contract_rate_card.rate_card
+
+      if rate_card.product.metered? && rate_card.advance?
+        BillingSegment::STATUSES.fetch(:processing)
+      else
+        BillingSegment::STATUSES.fetch(:pending)
+      end
     end
 
     def contract

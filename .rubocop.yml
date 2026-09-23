@@ -69,6 +69,7 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20260908222044_drop_subscription_rate_cards.rb"
     - "db/migrate/20260910095513_drop_wallet_targetable_from_rate_cards.rb"
     - "db/migrate/20260910151708_drop_enriched_store_migration_tables.rb"
+    - "db/migrate/20260921154906_replace_attribution_key_with_attribution_keys.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:
@@ -174,6 +175,8 @@ GraphQL/ExtractType:
 
 GraphQL/ExtractInputType:
   Exclude:
+    - "app/graphql/mutations/admin/create_organization.rb"
+    - "app/graphql/mutations/admin/toggle_feature.rb"
     - "app/graphql/mutations/applied_coupons/create.rb"
     - "app/graphql/mutations/credit_notes/create.rb"
     - "app/graphql/mutations/invites/accept.rb"

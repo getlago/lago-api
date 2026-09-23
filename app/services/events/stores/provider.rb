@@ -41,8 +41,7 @@ module Events
 
         @may_precompute = serve_current_usage_from_buckets &&
           whole_charge_read? &&
-          RealtimeUsage.enabled?(organization) &&
-          !RealtimeUsage.deduplicated?(organization)
+          RealtimeUsage.enabled?(organization)
       end
 
       # Every gate a charge can be ruled out by before an aggregator and a store exist, so that

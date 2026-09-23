@@ -8,7 +8,8 @@ RSpec.describe BillingSegments::CreateService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:contract) { create(:contract, organization:, customer:) }
-  let(:rate_card) { create(:rate_card, organization:, currency: "USD") }
+  let(:product) { create(:product, organization:) }
+  let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
   let(:rate) { create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "12"}) }
   let(:rate_override) { nil }
@@ -32,7 +33,7 @@ RSpec.describe BillingSegments::CreateService do
   end
 
   describe "#call" do
-    it "stores the slice as a pending segment" do
+    it "stores a metered arrears slice as a pending segment" do
       expect(result.billing_segments.sole).to have_attributes(
         organization_id: organization.id,
         contract_id: contract.id,
@@ -49,6 +50,31 @@ RSpec.describe BillingSegments::CreateService do
         proration_ratio: 0.5,
         status: "pending"
       )
+    end
+
+    context "with a metered advance rate card" do
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+
+      it "stores the slice as a processing segment" do
+        expect(result.billing_segments.sole.status).to eq("processing")
+      end
+    end
+
+    context "with a fixed advance rate card" do
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+
+      it "stores the slice as a pending segment" do
+        expect(result.billing_segments.sole.status).to eq("pending")
+      end
+    end
+
+    context "with a fixed arrears rate card" do
+      let(:product) { create(:product, :fixed, organization:) }
+
+      it "stores the slice as a pending segment" do
+        expect(result.billing_segments.sole.status).to eq("pending")
+      end
     end
 
     # A neighbour in the same organization: every owner on the row is derived from the card,

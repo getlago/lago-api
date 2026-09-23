@@ -27,7 +27,6 @@ module RealtimeUsage
 
     def call
       return result unless RealtimeUsage.enabled?(organization)
-      return result if RealtimeUsage.deduplicated?(organization)
       return result if charges.empty?
 
       result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)

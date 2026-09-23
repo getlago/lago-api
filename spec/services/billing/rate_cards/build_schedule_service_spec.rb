@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Billing::RateCards::BuildScheduleService do
-  subject(:result) { described_class.call(contract_rate_card:, plan_rate_card:) }
+  subject(:result) { described_class.call(contract_rate_card:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, timezone:) }
@@ -11,7 +11,6 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.utc(2026, 1, 1), ended_at:) }
   let(:rate_card) { create(:rate_card, organization:) }
-  let(:plan_rate_card) { nil }
   let(:ended_at) { nil }
 
   let(:contract_rate_card) do
@@ -119,8 +118,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "resumes from the cycle start when the persisted segment is only its last slice" do
-      applied = create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
-      create(:rate_phase, organization:, plan_rate_card: applied, code: "intro", billing_interval_cycle_count: 1)
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro", billing_interval_cycle_count: 1)
       new_rate = create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20))
       create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
         rate_card_rate: new_rate, cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 20),
@@ -189,46 +187,6 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       expect(first.cycle_index).to eq(0)
       expect(first.started_at).to eq(Time.utc(2026, 1, 14, 5))
       expect(first.ended_at).to eq(Time.utc(2026, 2, 14, 5))
-    end
-  end
-
-  # The hint is a shortcut, not the only route. The termination and credit paths build a
-  # schedule from the card alone, and passing nil straight through made the resolver fall
-  # back to `nil&.rate_phases.to_a` — so every phase and every override the plan configured
-  # disappeared, with no error and no clue on the invoice.
-  describe "resolving the plan entry when the caller has no hint" do
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5) }
-    let(:rate_override) { create(:rate_override, organization:, rate_properties: {"amount" => "1.00"}) }
-
-    before do
-      plan_rate_card
-      create(:rate_phase, organization:, plan_rate_card:, code: "intro",
-        billing_interval_cycle_count: 1, position: 1, rate_override_id: rate_override.id)
-    end
-
-    it "finds the plan entry itself when none is handed in" do
-      schedule = described_class.call(contract_rate_card:).schedule
-      first = schedule.segments_due_by(Time.utc(2026, 4, 1)).first
-
-      expect(first.rate_phase_code).to eq("intro")
-      expect(first.rate_override).to eq(rate_override)
-    end
-
-    it "answers the same whether the hint is handed in or looked up" do
-      with_hint = described_class.call(contract_rate_card:, plan_rate_card:).schedule
-      without = described_class.call(contract_rate_card:).schedule
-      codes = ->(s) { s.segments_due_by(Time.utc(2026, 4, 1)).map { |cycle| cycle.rate_phase_code } }
-
-      expect(codes.call(without)).to eq(codes.call(with_hint))
-    end
-
-    # A hint for a different card is a caller bug, and silently ignoring it prices the card
-    # at the base rate — the same invisible failure, arrived at from the other side.
-    it "refuses a hint that prices a different rate card" do
-      other = create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:))
-
-      expect { described_class.call(contract_rate_card:, plan_rate_card: other) }
-        .to raise_error(described_class::MismatchedPlanRateCard, /prices rate card/)
     end
   end
 
@@ -366,23 +324,6 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
 
       it "carries the override so the caller can price the cycle with it" do
         expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).first.rate_override).to eq(rate_override)
-      end
-    end
-
-    # Phases live on the plan entry until the contract overrides them.
-    context "with phases on the plan entry" do
-      let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 1) }
-
-      before do
-        create(
-          :rate_phase,
-          organization:, plan_rate_card:, position: 1, code: "intro",
-          billing_interval_cycle_count: 2
-        )
-      end
-
-      it "reads them through the plan" do
-        expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).first.rate_phase_code).to eq("intro")
       end
     end
   end
