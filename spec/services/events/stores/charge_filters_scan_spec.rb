@@ -164,6 +164,27 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
     end
   end
 
+  describe "the batches of filters" do
+    before do
+      stub_const("#{described_class}::FILTERS_PER_SCAN", 2)
+      allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+    end
+
+    it_behaves_like "the filter stores"
+
+    it "reads the events once per batch" do
+      pricing_buckets.each { scanned_store(it).sum }
+
+      expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).exactly(3).times
+    end
+
+    it "reads only the batch of the filter it aggregates" do
+      scanned_store(pricing_buckets.last).sum
+
+      expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+    end
+  end
+
   describe "the windows" do
     before do
       Clickhouse::EventsEnriched.create!(

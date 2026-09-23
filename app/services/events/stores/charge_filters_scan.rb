@@ -2,12 +2,13 @@
 
 module Events
   module Stores
-    # Aggregates every filter of a charge in a single read of its events.
+    # Aggregates the filters of a charge in a few reads of its events, one per batch of filters.
     #
     # Each filter's store reads the whole window of the subscription and the code to keep the
     # events its filter matches, so a charge with N filters read the same rows N+1 times. Here
-    # every event is attributed to its filters in the same pass, with the conditions the filter
-    # stores apply (ClickhouseStore#filters_condition_sql), and the rows are grouped by filter.
+    # every event is attributed to the filters of a batch in the same pass, with the conditions
+    # the filter stores apply (ClickhouseStore#filters_condition_sql), and the rows are grouped by
+    # filter.
     #
     # An event matching several filters counts in each of them, as it does in the filter stores:
     # the attribution is an ARRAY JOIN over the matching filters, not an exclusive multiIf.
@@ -17,9 +18,10 @@ module Events
     class ChargeFiltersScan
       SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
 
-      # Beyond it the conditions grow the query towards the ClickHouse max_query_size, and the
-      # filter stores remain the safer path.
-      MAX_FILTERS = 100
+      # Every filter adds its condition to the query and to the work done on each event, so
+      # filters are read in batches: a query stays the size of the filter stores' ones, however
+      # many filters the charge holds, and only the batches holding a filter to aggregate are read.
+      FILTERS_PER_SCAN = 100
 
       # The default filter is not persisted: it has no id to attribute its events to.
       DEFAULT_FILTER_KEY = "default"
@@ -32,11 +34,12 @@ module Events
 
         SUPPORTED_AGGREGATION_TYPES.include?(charge.billable_metric.aggregation_type) &&
           !charge.prorated? &&
-          charge.filters.size.between?(1, MAX_FILTERS)
+          charge.filters.size.positive?
       end
 
       def initialize(charge:)
         @charge = charge
+        @buckets = {}
         @rows = {}
       end
 
@@ -44,8 +47,10 @@ module Events
       # the charge, so a store whose conditions were changed by its caller (a group filter on the
       # usage for instance) or which groups by a key the scan does not read keeps its own query.
       def covers?(store)
-        bucket = buckets[filter_key(store.charge_filter_id)]
-        return false if bucket.nil?
+        key = filter_key(store.charge_filter_id)
+        return false unless batch_index.key?(key)
+
+        bucket = bucket(key)
 
         bucket.matching_filters == store.matching_filters &&
           bucket.ignored_filters == store.ignored_filters &&
@@ -95,32 +100,45 @@ module Events
         charge_filter_id || DEFAULT_FILTER_KEY
       end
 
-      # The pricing buckets Fees::ChargeService computes the charge fees for, with the conditions
-      # it gives their stores.
-      def buckets
-        @buckets ||= pricing_buckets.to_h do |item|
-          matching_and_ignored = item.matching_and_ignored_filters
+      # The pricing buckets Fees::ChargeService computes the charge fees for, keyed by filter.
+      def pricing_buckets
+        @pricing_buckets ||= Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil)
+          .pricing_buckets
+          .index_by { filter_key(it.charge_filter&.id) }
+      end
 
-          bucket = Bucket.new(
-            key: filter_key(item.charge_filter&.id),
+      def batch_index
+        @batch_index ||= pricing_buckets.keys.each_slice(FILTERS_PER_SCAN).with_index.each_with_object({}) do |(keys, index), acc|
+          keys.each { acc[it] = index }
+        end
+      end
+
+      def batch_keys(index)
+        pricing_buckets.keys.slice(index * FILTERS_PER_SCAN, FILTERS_PER_SCAN)
+      end
+
+      # The conditions Fees::ChargeService gives the filter's store. Resolved per filter, as a
+      # charge holding thousands of filters only reads the batches of those it aggregates.
+      def bucket(key)
+        @buckets[key] ||= begin
+          matching_and_ignored = pricing_buckets.fetch(key).matching_and_ignored_filters
+
+          Bucket.new(
+            key:,
             matching_filters: matching_and_ignored.matching_filters,
             ignored_filters: matching_and_ignored.ignored_filters
           )
-
-          [bucket.key, bucket]
         end
       end
 
       def group_keys
-        @group_keys ||= pricing_buckets.flat_map(&:pricing_group_keys).uniq
-      end
-
-      def pricing_buckets
-        @pricing_buckets ||= Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil).pricing_buckets
+        @group_keys ||= pricing_buckets.values.flat_map(&:pricing_group_keys).uniq
       end
 
       def rows_for(store)
-        scan(store).fetch(filter_key(store.charge_filter_id), [])
+        key = filter_key(store.charge_filter_id)
+
+        scan(store, batch_index.fetch(key)).fetch(key, [])
       end
 
       def grouped_rows_for(store)
@@ -131,17 +149,19 @@ module Events
           .to_a
       end
 
-      # One read per window: the stores of a charge share it, and recurring metrics read theirs
-      # without the lower boundary.
-      def scan(store)
+      # One read per batch and window: the stores of the batch share it, and recurring metrics
+      # read theirs without the lower boundary.
+      def scan(store, batch)
         from_datetime = (store.from_datetime if store.use_from_boundary)
-        key = [from_datetime, store.applicable_to_datetime, store.deduplicate]
+        key = [batch, from_datetime, store.applicable_to_datetime, store.deduplicate]
 
         @rows[key] ||= Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           connection
-            .select_all(scan_sql(store, from_datetime:))
+            .select_all(scan_sql(store, batch:, from_datetime:))
             .rows
-            .each_with_object({}) do |(filter_key, *groups, value, events_count), acc|
+            .each_with_object({}) do |(position, *groups, value, events_count), acc|
+              filter_key = batch_keys(batch).fetch(position.to_i - 1)
+
               (acc[filter_key] ||= []) << Row.new(
                 groups: group_keys.zip(groups).to_h,
                 value: BigDecimal((value || 0).to_s),
@@ -151,7 +171,7 @@ module Events
         end
       end
 
-      def scan_sql(store, from_datetime:)
+      def scan_sql(store, batch:, from_datetime:)
         to_datetime = store.applicable_to_datetime
 
         events_sql = if store.deduplicate
@@ -171,28 +191,31 @@ module Events
 
         <<~SQL.squish
           SELECT
-            #{["filter_key", *group_columns].join(", ")},
+            #{["filter_position", *group_columns].join(", ")},
             sum(events_enriched.decimal_value),
             count()
           FROM (#{events_sql}) AS events_enriched
-          ARRAY JOIN #{filter_keys_sql(store)} AS filter_key
-          GROUP BY #{["filter_key", *group_names].join(", ")}
+          ARRAY JOIN #{filter_positions_sql(store, batch)} AS filter_position
+          GROUP BY #{["filter_position", *group_names].join(", ")}
         SQL
       end
 
-      # The keys of the filters an event counts in. An event no filter keeps, the default one
-      # included, is dropped by the ARRAY JOIN, as it is by every filter store.
-      def filter_keys_sql(store)
-        attributions = buckets.values.map do |bucket|
+      # The positions in the batch of the filters an event counts in. An event none of them keeps
+      # is dropped by the ARRAY JOIN, as it is by each of their stores. Positions rather than the
+      # filter ids: the array is built for every event, and a small integer per filter keeps it far
+      # lighter than a copy of each id.
+      def filter_positions_sql(store, batch)
+        attributions = batch_keys(batch).map.with_index(1) do |key, position|
+          bucket = bucket(key)
           condition = store.filters_condition_sql(
             matching_filters: bucket.matching_filters,
             ignored_filters: bucket.ignored_filters
           )
 
-          "if(#{condition}, #{store.quote(bucket.key)}, '')"
+          "if(#{condition}, #{position}, 0)"
         end
 
-        "arrayFilter(x -> x != '', [#{attributions.join(", ")}])"
+        "arrayFilter(x -> x > 0, [#{attributions.join(", ")}])"
       end
     end
   end
