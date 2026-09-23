@@ -259,6 +259,48 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       end
     end
 
+    context "when provider taxes round up across fees in one wallet bucket" do
+      let(:wallets) { [normal_wallet] }
+      let(:amount_cents) { 412 }
+      let(:fee) { nil }
+      let(:charge) { create(:standard_charge, plan: subscription.plan) }
+      let(:credited_amount) { 0 }
+      let(:provider_fees) do
+        create_list(:charge_fee, 4, invoice:, subscription:, charge:,
+          amount_cents: 100, precise_amount_cents: 100,
+          taxes_amount_cents: 3, taxes_precise_amount_cents: 2.5.to_d,
+          precise_credit_notes_amount_cents: credited_amount)
+      end
+
+      before do
+        provider_fees
+        create(:invoice_applied_tax, invoice:, tax: nil, amount_cents: 12,
+          fees_amount_cents: 400, taxable_base_amount_cents: 400)
+      end
+
+      it "covers the booked invoice total without discarding tax precision" do
+        expect(result.wallet_transactions.values.sum).to eq(412)
+        expect(provider_fees.sum(&:taxes_precise_amount_cents)).to eq(10)
+      end
+
+      context "with credit notes already applied" do
+        let(:credited_amount) { 1 }
+        let(:amount_cents) { 408 }
+
+        it "deducts credited amounts from wallet coverage" do
+          expect(result.wallet_transactions.values.sum).to eq(408)
+        end
+      end
+
+      context "with a wallet restricted to subscription fees" do
+        let(:wallets) { [limited_subscription_wallet] }
+
+        it "does not fund ineligible charge fees" do
+          expect(result.wallet_transactions).to eq({})
+        end
+      end
+    end
+
     context "when wallet currency does not match invoice currency" do
       let(:wallets) { [eur_wallet, usd_wallet] }
       let(:eur_wallet) do
