@@ -17,20 +17,24 @@ module EInvoices
 
       def taxes(&block)
         grouped_items = credit_note.items.group_by { |item| item.fee.taxes_rate }
-        provider_amounts = if credit_note.invoice.provider_taxes?
+        basis_amounts = grouped_items.map do |tax_rate, items|
+          items.sum(&:precise_amount_cents) - (allowances_per_tax_rate[tax_rate] || 0)
+        end
+        booked_amounts = if credit_note.invoice.provider_taxes?
           Integrations::Aggregator::Taxes::Allocation.by_group(
             credit_note.taxes_amount_cents, grouped_items.values,
             amount: ->(item) { prorated_tax_amount(item, :taxes_amount_cents) },
             precise_amount: ->(item) { prorated_tax_amount(item, :taxes_precise_amount_cents) }
           )
+        else
+          precise_amounts = grouped_items.keys.zip(basis_amounts).map { |rate, basis| basis * rate.to_d / 100 }
+          Integrations::Aggregator::Taxes::Allocation.call(credit_note.taxes_amount_cents, precise_amounts)
         end
 
         grouped_items.each_with_index do |(tax_rate, items), index|
-          basis_amount = items.sum(&:precise_amount_cents) - (allowances_per_tax_rate[tax_rate] || 0)
-          tax_amount = provider_amounts ? provider_amounts[index] : basis_amount * tax_rate.fdiv(100)
           tax_category = tax_category_code(type: items.first.fee.fee_type, tax_rate: tax_rate)
 
-          yield tax_category, tax_rate, Money.new(basis_amount), Money.new(tax_amount)
+          yield tax_category, tax_rate, Money.new(basis_amounts[index]), Money.new(booked_amounts[index])
         end
       end
 
