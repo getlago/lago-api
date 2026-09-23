@@ -2310,6 +2310,47 @@ RSpec.describe Subscriptions::CreateService do
           expect(current_subscription.reload.billing_object_connections).to be_empty
         end
       end
+
+      context "when upgrading a subscription that has not started yet" do
+        let(:old_plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, :pending, customer:, organization:, plan: old_plan, external_id:,
+            subscription_at: 10.days.from_now)
+        end
+
+        it "pins the connection on the subscription updated in place" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(current_subscription.id)
+          expect(current_subscription.reload.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+        end
+      end
+
+      context "when downgrading a subscription that has not started yet" do
+        let(:plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let(:old_plan) { create(:plan, amount_cents: 500, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, :pending, customer:, organization:, plan: old_plan, external_id:,
+            subscription_at: 10.days.from_now)
+        end
+
+        it "pins the connection on the subscription updated in place" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(current_subscription.id)
+          expect(current_subscription.reload.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+        end
+
+        it "does not create a pending downgrade subscription" do
+          create_service.call
+
+          expect(current_subscription.reload.next_subscriptions).to be_empty
+        end
+      end
     end
   end
 end
