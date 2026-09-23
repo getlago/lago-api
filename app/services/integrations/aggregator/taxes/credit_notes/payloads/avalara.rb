@@ -42,19 +42,19 @@ module Integrations
                     "region" => billing_entity&.state,
                     "country" => billing_entity&.country
                   },
-                  "fees" => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) }
+                  "fees" => charge_grouped_items.map { |items| cn_item(items) }
                 }
               ]
             end
 
-            def cn_item(item)
-              fee = item.fee
+            def cn_item(items)
+              fee = items.first.fee
 
               {
-                "item_id" => fee.item_id,
+                "item_id" => cn_item_id(items),
                 "item_code" => mapped_item(fee)&.external_id,
-                "unit" => fee.units,
-                "amount" => item_amount(item, fee)
+                "unit" => items.map(&:fee).uniq.sum(&:units),
+                "amount" => item_amount(items, fee)
               }
             end
 
@@ -62,8 +62,9 @@ module Integrations
 
             attr_reader :customer, :integration_customer, :credit_note, :billing_entity
 
-            def item_amount(item, fee)
-              amount = (item.sub_total_excluding_taxes_amount_cents.round * -1).fdiv(fee.amount.currency.subunit_to_unit)
+            def item_amount(items, fee)
+              amount_cents = items.sum(&:sub_total_excluding_taxes_amount_cents).round * -1
+              amount = amount_cents.fdiv(fee.amount.currency.subunit_to_unit)
 
               amount.to_s
             end

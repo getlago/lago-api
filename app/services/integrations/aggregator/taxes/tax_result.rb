@@ -11,10 +11,15 @@ module Integrations
         :tax_amount_cents,
         :tax_breakdown
       ) do
-        # Reconcile the provider's line total with its jurisdiction breakdown.
+        # Preserve allocations made for a grouped charge; otherwise reconcile the
+        # provider's line total with its jurisdiction breakdown.
         def allocated_amounts
-          weights = tax_breakdown.map { |tax| tax.tax_amount || 0 }
-          Allocation.call(tax_amount_cents || weights.sum, weights)
+          if tax_breakdown.all? { |tax| !tax.allocated_amount_cents.nil? }
+            tax_breakdown.map(&:allocated_amount_cents)
+          else
+            weights = tax_breakdown.map { |tax| tax.tax_amount || 0 }
+            Allocation.call(tax_amount_cents || weights.sum, weights)
+          end
         end
       end
 
@@ -22,8 +27,11 @@ module Integrations
         :name,
         :rate,
         :tax_amount,
-        :type
-      )
+        :type,
+        :allocated_amount_cents
+      ) do
+        def initialize(allocated_amount_cents: nil, **) = super
+      end
     end
   end
 end

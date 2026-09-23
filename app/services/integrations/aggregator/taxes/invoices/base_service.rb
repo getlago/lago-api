@@ -25,7 +25,42 @@ module Integrations
           #       is taxable, so one fee stands in for it rather than sending an empty array,
           #       which both providers reject.
           def taxable_fees
-            @taxable_fees ||= fees.select(&:taxable?).presence || Array(fees.first)
+            @taxable_fees ||= ordered_fees.select(&:taxable?).presence || Array(ordered_fees.first)
+          end
+
+          # Persisted fees keep the same order across reporting attempts, including ties
+          # in created_at. Unsaved preview and usage fees retain their generation order.
+          def ordered_fees
+            @ordered_fees ||= fees.sort_by.with_index do |fee, index|
+              [fee.created_at || Time.at(0).utc, fee.id.to_s, index]
+            end
+          end
+
+          # NOTE: A charge split by charge filters or by grouped_by yields one fee per
+          #       combination, so a single charge could take dozens of the 1200 line items both
+          #       providers accept. Taxation is identical across the split, and equally across
+          #       the subscriptions and periods one charge may be billed for on one invoice, so
+          #       those collapse into the same line.
+          def payload_fees
+            @payload_fees ||= ChargeFeeGroup.build(taxable_fees)
+          end
+
+          def fee_groups
+            @fee_groups ||= payload_fees.grep(ChargeFeeGroup).index_by(&:item_key)
+          end
+
+          def process_response(body)
+            super
+
+            result.fees = split_group_taxes(result.fees) if result.success?
+          end
+
+          def split_group_taxes(fee_taxes)
+            fee_taxes.flat_map do |item|
+              group = fee_groups[item.item_key] || fee_groups[item.item_id]
+
+              group ? group.split_taxes(item) : item
+            end
           end
 
           # NOTE: Only an invoice carrying no fee at all reaches this, and it has nothing to

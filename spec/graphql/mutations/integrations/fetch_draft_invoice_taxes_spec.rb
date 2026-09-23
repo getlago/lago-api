@@ -136,6 +136,10 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
     expect(breakdown2["taxAmount"]).to eq("0")
     expect(breakdown2["type"]).to eq("exempt")
     expect(breakdown2["enumedTaxCode"]).to eq("reverse_charge")
+
+    expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+      expect(payload.first["fees"].map { |item| item["item_id"] }).to eq([add_on_first.id, add_on_second.id])
+    end
   end
 
   context "when a fee has no amount" do
