@@ -177,6 +177,33 @@ RSpec.describe CreditNotes::ApplyTaxesService do
     end
   end
 
+  context "when a fee carries two provider components with the same code and rate" do
+    let(:fee_applied_taxes) do
+      %w[state county].map do |description|
+        create(:fee_applied_tax, tax: nil, tax_code: "tax", tax_rate: 5, tax_description: description, fee: fee1)
+      end
+    end
+    let(:invoice_applied_taxes) do
+      %w[state county].map do |description|
+        create(:invoice_applied_tax, tax: nil, tax_code: "tax", tax_rate: 5, tax_description: description, invoice:)
+      end
+    end
+
+    before do
+      invoice_applied_taxes
+      fee_applied_taxes
+    end
+
+    it "credits both components on a single credit note tax" do
+      result = apply_service.call
+
+      expect(result).to be_success
+      expect(result.applied_taxes.map { |t| [t.tax_code, t.tax_rate] }).to eq([["tax", 5]])
+      expect(result.precise_taxes_amount_cents).to be_within(0.0001).of(1.66667)
+      expect(result.taxes_amount_cents).to eq(2)
+    end
+  end
+
   context "when a fee tax matches no invoice tax" do
     let(:fee_applied_tax) { create(:fee_applied_tax, tax: nil, tax_code: "tax", tax_rate: 5, fee: fee1) }
     let(:invoice_applied_taxes) do

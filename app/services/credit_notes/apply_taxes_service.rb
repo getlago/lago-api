@@ -66,6 +66,9 @@ module CreditNotes
     #       keyed by that invoice tax's code and rate. Keying on the resolved invoice tax, not on
     #       the fee tax, lets two fee taxes that resolve to the same invoice tax share a single
     #       credit note tax instead of colliding on the (credit_note_id, tax_code, tax_rate) index.
+    #       An item is listed once per fee tax, not once per key: a fee can carry several provider
+    #       components with the same code and rate (e.g. state and county, both "Tax" at 5%), and
+    #       each one must be credited, as it was taxed.
     #       Returns nil, with the failure recorded on the result, when a fee tax cannot be resolved.
     #       Example output: { ["vat", 20.0] => { invoice_applied_tax: tax, items: [item1, item2] } }
     def index_items_by_invoice_tax
@@ -75,7 +78,7 @@ module CreditNotes
           return nil unless invoice_applied_tax
 
           entry = index[tax_key(invoice_applied_tax)] ||= {invoice_applied_tax:, items: []}
-          entry[:items] << item unless entry[:items].include?(item)
+          entry[:items] << item
         end
       end
     end
