@@ -1489,4 +1489,56 @@ RSpec.describe Customers::UpsertFromApiService do
       end
     end
   end
+
+  describe "is_default on the payment connection" do
+    let(:external_id) { SecureRandom.uuid }
+
+    before do
+      create(:stripe_provider, organization:, code: "stripe_1")
+      create(:gocardless_provider, organization:, code: "gocardless_1")
+    end
+
+    def upsert_customer(billing_configuration)
+      described_class.call(organization:, params: {external_id:, billing_configuration:})
+    end
+
+    it "flags the connection as default through create, switch, removal and re-add" do
+      upsert_customer({payment_provider: "stripe", payment_provider_code: "stripe_1", provider_customer_id: "cus_1"})
+      customer = organization.customers.find_by(external_id:)
+      expect(customer.reload.stripe_customer).to be_is_default
+
+      upsert_customer({payment_provider: "gocardless", payment_provider_code: "gocardless_1", provider_customer_id: "gc_1"})
+      customer.reload
+      expect(customer.gocardless_customer).to be_is_default
+      expect(customer.payment_provider_customers.where(is_default: true).count).to eq(1)
+
+      upsert_customer({payment_provider: nil})
+      expect(customer.reload.payment_provider_customers.where(is_default: true)).to be_empty
+
+      upsert_customer({payment_provider: "stripe", payment_provider_code: "stripe_1", provider_customer_id: "cus_2"})
+      customer.reload
+      expect(customer.stripe_customer).to be_is_default
+      expect(customer.payment_provider_customers.where(is_default: true).count).to eq(1)
+    end
+
+    context "when the payment provider is not part of the payload" do
+      let(:customer) do
+        create(:customer, organization:, external_id:, payment_provider: "stripe", payment_provider_code: "stripe_1")
+      end
+      let(:other_connection) { create(:gocardless_customer, customer:, is_default: true) }
+
+      before do
+        create(:stripe_customer, customer:, provider_customer_id: nil, is_default: false)
+        other_connection
+        allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
+      end
+
+      it "leaves the default on the connection that already holds it" do
+        upsert_customer({sync_with_provider: true})
+
+        expect(other_connection.reload).to be_is_default
+        expect(customer.reload.stripe_customer).not_to be_is_default
+      end
+    end
+  end
 end

@@ -248,6 +248,7 @@ module Customers
       if new_customer || should_create_billing_configuration?(billing, customer)
         create_billing_configuration(customer, billing)
         customer.save!
+        set_default_payment_connection(customer, billing)
         return
       end
 
@@ -274,6 +275,7 @@ module Customers
       customer.save!
 
       if removing_provider
+        old_provider_customer.is_default = false
         old_provider_customer.discard!
         discard_payment_methods(old_provider_customer.payment_methods)
       end
@@ -291,6 +293,8 @@ module Customers
 
       create_or_update_provider_customer(customer, billing)
 
+      set_default_payment_connection(customer, billing)
+
       if customer.provider_customer&.provider_customer_id
         PaymentProviderCustomers::UpdateService.call(customer)
       end
@@ -306,6 +310,15 @@ module Customers
           discard_payment_methods(old_provider_customer.payment_methods)
         end
       end
+    end
+
+    def set_default_payment_connection(customer, billing)
+      return if billing[:payment_provider].blank?
+
+      connection = customer.provider_customer
+      return unless connection
+
+      PaymentProviderCustomers::SetAsDefaultService.call!(payment_provider_customer: connection)
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
