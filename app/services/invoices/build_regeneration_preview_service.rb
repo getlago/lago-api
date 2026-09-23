@@ -51,29 +51,65 @@ module Invoices
     attr_reader :invoice
 
     def refresh_charge_price(fee:, dup_fee:)
-      properties = fee.charge_filter&.properties || fee.charge.properties
-      result = Fees::InitFromAdjustedChargeFeeService.call!(
-        adjusted_fee: adjusted_fee_for(fee),
-        boundaries: fee.properties,
-        properties:
-      )
+      adjusted_fee = fee.adjusted_fee
+      if adjusted_fee && !adjusted_fee.adjusted_display_name?
+        adjusted_fee.charge ||= adjusted_fee.charge_with_discarded
+        updated_fee = Fees::InitFromAdjustedChargeFeeService.call!(
+          adjusted_fee:,
+          boundaries: fee.properties,
+          properties: fee.charge_filter&.properties || fee.charge.properties
+        ).fee
+        dup_fee.assign_attributes(updated_fee.attributes.slice(
+          "units", "unit_amount_cents", "precise_unit_amount", "amount_cents",
+          "precise_amount_cents", "amount_details", "invoice_display_name"
+        ))
+        dup_fee.pricing_unit_usage = updated_fee.pricing_unit_usage
+      else
+        dup_fee.invoice_display_name = adjusted_fee&.invoice_display_name || fee.invoice_display_name
+        refresh_prorated_amount(fee:, dup_fee:)
+      end
+    end
 
-      updated_fee = result.fee
-      dup_fee.assign_attributes(
-        updated_fee.attributes.slice(
-          "invoice_display_name",
-          "charge_id",
-          "subscription_id",
-          "units",
-          "unit_amount_cents",
-          "precise_unit_amount",
-          "amount_cents",
-          "precise_amount_cents",
-          "amount_details",
-          "charge_filter"
-        )
+    def refresh_prorated_amount(fee:, dup_fee:)
+      metered_item = Fees::ChargeService::MeteredItem.from_charge(
+        charge: fee.charge,
+        charge_filter: fee.charge_filter,
+        boundaries: BillingPeriodBoundaries.from_fee(fee)
       )
-      dup_fee.pricing_unit_usage = updated_fee.pricing_unit_usage
+      metered_item = metered_item.with_default_filter unless fee.charge_filter
+      matching = metered_item.matching_and_ignored_filters
+      aggregation = BillableMetrics::AggregationFactory.new_instance(
+        metered_item:,
+        billing_context: Billing::Context.from(subscription: fee.subscription),
+        boundaries: {
+          from_datetime: Time.zone.parse(fee.properties.fetch("charges_from_datetime")),
+          to_datetime: Time.zone.parse(fee.properties.fetch("charges_to_datetime")),
+          charges_duration: fee.properties.fetch("charges_duration")
+        },
+        filters: {
+          charge_id: fee.charge_id,
+          charge_filter: fee.charge_filter,
+          matching_filters: (matching.matching_filters || {}).merge(fee.grouped_by.transform_values { |value| [value] }),
+          ignored_filters: matching.ignored_filters
+        }
+      ).aggregate(options: metered_item.aggregation_options(current_usage: false))
+      aggregation.raise_if_error!
+
+      # Fee units are unprorated; only the event aggregation carries the period weighting.
+      aggregation.full_units_number = fee.units
+      model_result = ChargeModels::Factory.new_instance(
+        pricing_structure: ChargeModels::PricingStructure.from_charge(fee.charge).with(properties: metered_item.properties),
+        aggregation_result: aggregation
+      ).apply
+      model_result.raise_if_error!
+      amount = Fees::AmountsService.call!(
+        currency: fee.amount.currency,
+        charge_model_result: model_result,
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(fee.charge.applied_pricing_unit)
+      ).amount
+      dup_fee.assign_attributes(amount.to_h.except(:pricing_unit_usage))
+      dup_fee.amount_details = model_result.amount_details
+      dup_fee.pricing_unit_usage = amount.pricing_unit_usage
     end
 
     def refreshable_charge_fee?(fee)
@@ -83,32 +119,9 @@ module Invoices
         fee.true_up_parent_fee_id.nil? &&
         charge&.standard? &&
         charge.prorated? &&
+        !charge.pay_in_advance? &&
         charge.billable_metric.sum_agg? &&
         charge.billable_metric.recurring?
-    end
-
-    def adjusted_fee_for(fee)
-      adjusted_fee = fee.adjusted_fee
-      if adjusted_fee && !adjusted_fee.adjusted_display_name?
-        adjusted_fee.charge ||= adjusted_fee.charge_with_discarded
-        return adjusted_fee
-      end
-
-      AdjustedFee.new(
-        fee:,
-        invoice: fee.invoice,
-        subscription: fee.subscription,
-        charge: fee.charge,
-        adjusted_units: true,
-        adjusted_amount: false,
-        invoice_display_name: adjusted_fee&.invoice_display_name || fee.invoice_display_name,
-        fee_type: fee.fee_type,
-        properties: fee.properties,
-        units: fee.units,
-        grouped_by: fee.grouped_by,
-        charge_filter: fee.charge_filter,
-        organization: fee.organization
-      )
     end
   end
 end

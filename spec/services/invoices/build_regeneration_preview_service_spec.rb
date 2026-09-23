@@ -108,6 +108,9 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
     end
 
     context "when a charge price changed after invoicing" do
+      let(:subscription) do
+        create(:subscription, customer:, organization:, plan:, started_at: Time.zone.parse("2022-08-01"), subscription_at: Time.zone.parse("2022-08-01"))
+      end
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
       let(:parent_plan) { create(:plan, organization:) }
       let(:parent_charge) { create(:standard_charge, plan: parent_plan, organization:, billable_metric:, properties: {amount: "0"}) }
@@ -120,7 +123,7 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           parent: parent_charge,
           billable_metric:,
           prorated: true,
-          properties: {amount: "2000"}
+          properties: {amount: current_price}
         )
       end
       let(:fee) do
@@ -131,13 +134,26 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           charge:,
           fee_type: "charge",
           units: 1,
-          amount_cents: 0,
-          precise_amount_cents: 0,
-          unit_amount_cents: 0,
-          precise_unit_amount: 0,
+          grouped_by:,
+          charge_filter:,
+          amount_cents: original_amount,
+          precise_amount_cents: original_amount,
+          unit_amount_cents: original_amount,
+          precise_unit_amount: original_amount / 100.to_d,
           taxes_rate: 10,
           amount_currency: "EUR"
         )
+      end
+      let(:event_timestamp) { Time.zone.parse("2022-08-01") }
+      let(:current_price) { "2000" }
+      let(:original_amount) { 0 }
+      let(:grouped_by) { {} }
+      let(:charge_filter) { nil }
+      let(:event_properties) { {billable_metric.field_name => "1"} }
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: event_timestamp, properties: event_properties)
       end
 
       it "uses the current overridden charge price without persisting or changing the original fee" do
@@ -153,8 +169,68 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           amount_cents: 200_000
         )
         expect(preview_fee).not_to be_persisted
-        expect(fee.reload).to have_attributes(unit_amount_cents: 0, precise_unit_amount: 0, amount_cents: 0)
+        expect(fee.reload).to have_attributes(unit_amount_cents: original_amount, precise_unit_amount: original_amount / 100.to_d, amount_cents: 0)
         expect(invoice.reload.fees).to contain_exactly(fee)
+      end
+
+      context "with usage beginning partway through the period" do
+        let(:event_timestamp) { Time.zone.parse("2022-08-17") }
+
+        it "applies the new price to prorated usage while retaining the displayed units" do
+          preview_fee = preview_service.call.invoice.fees.sole
+
+          expect(preview_fee).to have_attributes(units: 1, amount_cents: 96_776, precise_unit_amount: BigDecimal("967.76"))
+          expect(fee.reload.amount_cents).to eq(0)
+        end
+
+        context "when the price has not changed" do
+          let(:current_price) { "100" }
+          let(:original_amount) { 4839 }
+
+          it "does not turn the prorated amount into a full-period charge" do
+            preview_fee = preview_service.call.invoice.fees.sole
+
+            expect(preview_fee).to have_attributes(units: 1, amount_cents: original_amount)
+          end
+        end
+      end
+
+      context "with a pricing group" do
+        let(:grouped_by) { {"region" => "eu"} }
+        let(:event_properties) { {billable_metric.field_name => "1", "region" => "eu"} }
+
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: event_timestamp, properties: {billable_metric.field_name => "10", "region" => "us"})
+        end
+
+        it "reprices only the fee's group" do
+          expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(200_000)
+        end
+      end
+
+      context "with a charge filter" do
+        let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "100"}) }
+        let(:event_properties) { {billable_metric.field_name => "1", "region" => "eu"} }
+
+        before do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter: metric_filter, values: ["eu"])
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: event_timestamp, properties: {billable_metric.field_name => "10", "region" => "us"})
+        end
+
+        it "uses the filter price and only matching events" do
+          expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(10_000)
+        end
+      end
+
+      context "with a pay-in-advance charge" do
+        let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:, prorated: true, pay_in_advance: true, properties: {amount: "2000"}) }
+
+        it "preserves the event-specific historical fee" do
+          expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(original_amount)
+        end
       end
 
       context "with an explicit zero price adjustment" do
