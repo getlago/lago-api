@@ -848,7 +848,17 @@ type Alert {
   deletedAt: ISO8601DateTime
   direction: DirectionEnum!
   id: ID!
+
+  """
+  When the alert was last evaluated. Null means it never has been.
+  """
+  lastProcessedAt: ISO8601DateTime
   name: String
+
+  """
+  Last observed value, judged against the threshold values and carrying the same scale.
+  """
+  previousValue: String!
   subscriptionExternalId: String
   thresholds: [AlertThreshold!]
   updatedAt: ISO8601DateTime!

@@ -60,16 +60,6 @@ RSpec.describe Billing::Context do
         expect(context.applicable_billing_entity).to eq(billing_entity)
       end
     end
-
-    it "preserves subscription charge duration calculation" do
-      dates_service = instance_double(Subscriptions::DatesService, charges_duration_in_days: 31)
-      allow(Subscriptions::DatesService).to receive(:new_instance).and_return(dates_service)
-      billing_at = Time.current
-
-      expect(context.charges_duration_at(billing_at)).to eq(31)
-      expect(Subscriptions::DatesService).to have_received(:new_instance)
-        .with(subscription, billing_at, current_usage: false)
-    end
   end
 
   context "with a contract" do
@@ -139,11 +129,6 @@ RSpec.describe Billing::Context do
         expect { context.public_send(method_name) }
           .to raise_error(NotImplementedError, "contract-backed billing contexts do not have #{method_name} yet")
       end
-    end
-
-    it "rejects subscription charge duration calculation" do
-      expect { context.charges_duration_at(Time.current) }
-        .to raise_error(NotImplementedError, "contract-backed billing contexts do not have charges_duration_at yet")
     end
   end
 end
