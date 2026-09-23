@@ -118,6 +118,8 @@ module Invoices
       fee.charge? &&
         fee.true_up_parent_fee_id.nil? &&
         charge&.standard? &&
+        charge.kept? &&
+        !fee.charge_filter&.discarded? &&
         charge.prorated? &&
         !charge.pay_in_advance? &&
         charge.billable_metric.sum_agg? &&

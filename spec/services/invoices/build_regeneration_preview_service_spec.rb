@@ -223,6 +223,36 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
         it "uses the filter price and only matching events" do
           expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(10_000)
         end
+
+        shared_examples "preserves the historical filtered fee" do
+          let(:original_amount) { 4321 }
+
+          it "keeps its historical amount without aggregating unrelated events" do
+            preview_fee = preview_service.call.invoice.fees.sole
+
+            expect(preview_fee).to have_attributes(
+              units: 1,
+              amount_cents: original_amount,
+              precise_amount_cents: original_amount,
+              unit_amount_cents: original_amount,
+              precise_unit_amount: BigDecimal("43.21")
+            )
+            expect(fee.reload.amount_cents).to eq(original_amount)
+            expect(fee.adjusted_fee).to be_nil
+          end
+        end
+
+        context "when the charge was discarded" do
+          before { Charges::DestroyService.call!(charge:) }
+
+          include_examples "preserves the historical filtered fee"
+        end
+
+        context "when the selected filter was discarded" do
+          before { ChargeFilters::DestroyService.call!(charge_filter:) }
+
+          include_examples "preserves the historical filtered fee"
+        end
       end
 
       context "with a pay-in-advance charge" do
