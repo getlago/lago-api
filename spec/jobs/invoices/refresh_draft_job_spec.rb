@@ -7,20 +7,37 @@ RSpec.describe Invoices::RefreshDraftJob do
   let(:result) { Invoices::RefreshDraftService::Result.new }
 
   it "delegates to the RefreshDraft service" do
-    allow(Invoices::RefreshDraftService).to receive(:call).with(invoice:).and_return(result)
+    allow(Invoices::RefreshDraftService).to receive(:call!).with(invoice:).and_return(result)
 
     described_class.perform_now(invoice:)
 
-    expect(Invoices::RefreshDraftService).to have_received(:call)
+    expect(Invoices::RefreshDraftService).to have_received(:call!)
   end
 
   it "does not delegate to the RefreshDraft service if the ready_to_be_refreshed? is false" do
-    allow(Invoices::RefreshDraftService).to receive(:call).with(invoice:)
+    allow(Invoices::RefreshDraftService).to receive(:call!).with(invoice:)
 
     invoice.update ready_to_be_refreshed: false
     described_class.perform_now(invoice:)
 
-    expect(Invoices::RefreshDraftService).not_to have_received(:call)
+    expect(Invoices::RefreshDraftService).not_to have_received(:call!)
+  end
+
+  context "when the RefreshDraft service fails" do
+    let(:result) do
+      Invoices::RefreshDraftService::Result.new.service_failure!(
+        code: "invoice_applied_tax_not_found",
+        message: "no applied tax matching"
+      )
+    end
+
+    before do
+      allow(Invoices::RefreshDraftService).to receive(:call).with(invoice:).and_return(result)
+    end
+
+    it "raises the failure" do
+      expect { described_class.perform_now(invoice:) }.to raise_error(BaseService::ServiceFailure)
+    end
   end
 
   it "has a lock_ttl of 12.hours" do
