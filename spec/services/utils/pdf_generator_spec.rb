@@ -45,5 +45,18 @@ RSpec.describe Utils::PdfGenerator do
         )
       end
     end
+
+    context "with a credit note" do
+      let(:pdf_generator_service) do
+        described_class.new(template: "credit_notes/credit_note", context: credit_note)
+      end
+      let(:credit_note) { create(:credit_note, number: "CN-123") }
+
+      it "adds its number to the footer" do
+        generate_pdf
+
+        expect(request_body).to match(/filename="footer\.html".*CN-123/m)
+      end
+    end
   end
 end

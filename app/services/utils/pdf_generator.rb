@@ -60,7 +60,7 @@ module Utils
         "document.page_numbering",
         current: '<span class="pageNumber"></span>',
         total: '<span class="totalPages"></span>'
-      ).html_safe
+      )
 
       <<~HTML
         <!DOCTYPE html>
@@ -73,7 +73,7 @@ module Utils
                 margin: 0;
                 padding: 0 0.42in;
                 color: #66758f;
-                font-size: 10px;
+                font-size: 13px;
               }
 
               .footer {
