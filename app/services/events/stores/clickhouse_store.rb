@@ -789,7 +789,7 @@ module Events
       def filters_condition_sql(matching_filters: self.matching_filters, ignored_filters: self.ignored_filters)
         conditions = matching_filters.map do |key, values|
           ActiveRecord::Base.sanitize_sql_for_conditions(
-            ["#{sanitized_property_name(key.to_s)} IN (?)", values.map(&:to_s)]
+            ["events_enriched.properties[?] IN (?)", key.to_s, values.map(&:to_s)]
           )
         end
 

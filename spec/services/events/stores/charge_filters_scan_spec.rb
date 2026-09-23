@@ -145,6 +145,13 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       it_behaves_like "the filter stores"
     end
 
+    context "with a question mark in a filter key" do
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region?", values: %w[us eu apac]) }
+      let(:events) { super().map { |properties, value| [properties.transform_keys("region" => "region?"), value] } }
+
+      it_behaves_like "the filter stores"
+    end
+
     context "with a duplicated event" do
       before do
         Clickhouse::EventsEnriched.create!(
