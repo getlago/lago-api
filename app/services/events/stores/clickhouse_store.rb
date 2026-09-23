@@ -765,20 +765,8 @@ module Events
           scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
         end
 
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
-            )
-          end.join(" AND ")
-          clause.presence
-        end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        scope = scope.where.not(sql) if sql.present?
+        sql = ignored_filters_sql
+        scope = scope.where.not(sql) if sql
 
         scope
       end
@@ -790,6 +778,31 @@ module Events
           )
         end
 
+        sql = ignored_filters_sql
+        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if sql
+
+        scope
+      end
+
+      # The condition the filters above apply, as one boolean expression, so that
+      # Events::Stores::ChargeFiltersScan can evaluate it for every filter of a charge in one read.
+      def filters_condition_sql(matching_filters: self.matching_filters, ignored_filters: self.ignored_filters)
+        conditions = matching_filters.map do |key, values|
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            ["events_enriched.properties[?] IN (?)", key.to_s, values.map(&:to_s)]
+          )
+        end
+
+        ignored_sql = ignored_filters_sql(ignored_filters)
+        conditions << "NOT (#{ignored_sql})" if ignored_sql
+
+        return "1" if conditions.empty?
+
+        conditions.map { "(#{it})" }.join(" AND ")
+      end
+
+      # An event is left out when it matches every key of one of the ignored filters.
+      def ignored_filters_sql(ignored_filters = self.ignored_filters)
         conditions = ignored_filters.filter_map do |filters|
           next if filters.empty?
 
@@ -802,10 +815,8 @@ module Events
           end.join(" AND ")
           clause.presence
         end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
 
-        scope
+        conditions.map { "(#{it})" }.join(" OR ").presence
       end
 
       def apply_grouped_by_values(scope)
