@@ -3,7 +3,7 @@
 require "rails_helper"
 
 # The two halves meeting: the hourly clock produces a customer's due segments, and the
-# consumer already on main turns them into an invoice. Everything between is real —
+# consumer turns them into an invoice in the same run. Everything between is real —
 # the calendar, the selection, the writer, the clock, the fee computation.
 describe "Billing segments produced by the clock and invoiced" do
   let(:organization) { create(:organization, webhook_url: nil) }
@@ -37,25 +37,17 @@ describe "Billing segments produced by the clock and invoiced" do
       perform_enqueued_jobs { Clock::CreateBillingSegmentsJob.perform_now }
     end
 
-    segment = BillingSegment.find_by(customer:)
-    expect(segment).to have_attributes(
+    invoice = Invoice.where(customer:).sole
+
+    expect(invoice).to have_attributes(status: "finalized", currency: "EUR", total_amount_cents: 15_000)
+    expect(BillingSegment.find_by(customer:)).to have_attributes(
       started_at: Time.zone.parse("2026-01-01 00:00:00"),
       ended_at: BillingSegment.inclusive_end(Time.zone.parse("2026-02-01 00:00:00")),
       billing_at: Time.zone.parse("2026-02-01 00:00:00"),
       currency: "EUR",
-      status: "pending"
+      status: "done",
+      invoice_id: invoice.id
     )
-
-    # Through the consumer's own tick, not by calling the service: the point of the pipe is
-    # that nobody has to. Its tick runs five minutes after the producer's, same hour.
-    travel_to(Time.zone.parse("2026-02-01 00:17:00")) do
-      perform_enqueued_jobs { Clock::ProcessBillingSegmentsJob.perform_now }
-    end
-
-    invoice = Invoice.where(customer:).sole
-
-    expect(invoice).to have_attributes(status: "finalized", currency: "EUR", total_amount_cents: 15_000)
-    expect(segment.reload).to have_attributes(status: "done", invoice_id: invoice.id)
   end
 
   it "moves the clock on, so the next tick bills February and not January again" do
