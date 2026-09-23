@@ -34,14 +34,8 @@ module BillingSegments
     attr_reader :customer
 
     def pending_segments
-      BillingSegment.status_pending
+      BillingSegment.awaiting_invoicing
         .where(customer_id: customer.id)
-        .joins(contract_rate_card: {rate_card: :product})
-        .where(
-          "products.product_type != :metered OR rate_cards.billing_timing != :advance",
-          metered: Product::PRODUCT_TYPES[:metered],
-          advance: RateCard::BILLING_TIMINGS[:advance]
-        )
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
     end
 

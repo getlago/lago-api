@@ -48,7 +48,7 @@ module BillingSegments
         .includes(
           :rate_card,
           {rate_phases: :rate_override},
-          contract: [:customer, {catalog_plan: {applied_rate_cards: :rate_phases}}]
+          contract: :customer
         )
     end
 

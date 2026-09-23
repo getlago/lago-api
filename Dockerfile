@@ -1,10 +1,8 @@
 # syntax=docker/dockerfile:1
 #
-# Hardened Wolfi-based build for lago-api. This is now the default
-# Dockerfile — every downstream build (staging today, production once
-# it cuts over) targets this file. The previous Debian-based recipe
-# is kept as `Dockerfile.legacy` and is still consumed by lago-deploy's
-# production image workflow while prod bakes on the hardened image.
+# Hardened Wolfi-based build for lago-api, and the only one. Every
+# downstream build — staging, production and the OSS release — targets
+# this file. The Debian-based `Dockerfile.legacy` it replaced is gone.
 #
 # Consumes two apko-built bases from https://github.com/getlago/lago-packages.
 # Both are public, multi-arch and cosign-signed, so building this file needs no
