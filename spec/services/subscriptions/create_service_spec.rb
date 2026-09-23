@@ -2289,18 +2289,25 @@ RSpec.describe Subscriptions::CreateService do
       context "when downgrading an existing subscription" do
         let(:plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
         let(:old_plan) { create(:plan, amount_cents: 500, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, customer:, organization:, plan: old_plan, external_id:)
+        end
 
-        before { create(:subscription, customer:, organization:, plan: old_plan, external_id:) }
-
-        # Deliberately not skipped the way invoice_custom_section is on a downgrade: connections are
-        # routing config in the same family as payment_method, which the downgrade path already
-        # carries onto the pending subscription.
         it "pins the connection on the pending subscription" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.subscription.billing_object_connections.sole.payment_provider_customer_id)
+
+          pending_subscription = current_subscription.next_subscriptions.sole
+          expect(pending_subscription).to be_pending
+          expect(pending_subscription.billing_object_connections.sole.payment_provider_customer_id)
             .to eq(stripe_connection.id)
+        end
+
+        it "leaves the subscription that is still active untouched" do
+          create_service.call
+
+          expect(current_subscription.reload.billing_object_connections).to be_empty
         end
       end
     end

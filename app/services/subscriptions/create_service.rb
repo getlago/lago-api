@@ -85,7 +85,7 @@ module Subscriptions
           end
           InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
 
-          if connections_requested?
+          if connections_requested? && !downgrade?
             BillingObjectConnections::AttachToResourceService.call!(resource: subscription, params:)
           end
 
