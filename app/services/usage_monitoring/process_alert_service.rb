@@ -88,7 +88,7 @@ module UsageMonitoring
       announced = alert.opted_in_thresholds.filter { recovered_values.include?(it.value) && recorded.include?(it.code) }
       return if announced.empty?
 
-      TriggeredAlert.create!(
+      resolved_alert = TriggeredAlert.create!(
         alert:,
         organization: alert.organization,
         alertable:,
@@ -100,6 +100,8 @@ module UsageMonitoring
         fully_resolved: alert.fully_resolved?(current),
         triggered_at: now
       )
+
+      SendWebhookJob.perform_after_commit("alert.resolved", resolved_alert)
     end
   end
 end
