@@ -232,10 +232,6 @@ module Events
 
       delegate :customer, to: :billing_context
 
-      def period_duration
-        @period_duration ||= billing_context.charges_duration_at(to_datetime + 1.day)
-      end
-
       def build_aggregation_result(row)
         AggregationResult.new(
           value: row["value"] || 0,

@@ -121,18 +121,6 @@ module Billing
       raise_contract_context_not_supported(:downgraded?)
     end
 
-    def charges_duration_at(billing_at)
-      unless subscription?
-        raise_contract_context_not_supported(:charges_duration_at)
-      end
-
-      Subscriptions::DatesService.new_instance(
-        record,
-        billing_at,
-        current_usage: terminated? && upgraded?
-      ).charges_duration_in_days
-    end
-
     private
 
     attr_reader :record
