@@ -44,6 +44,7 @@ module Utils
           "image/png",
           SlimHelper::PDF_LOGO_FILENAME
         ),
+        file3: prepare_http_files(render_footer, "text/html", "footer.html"),
         scale: "1.28",
         marginTop: "0.42",
         marginBottom: "0.42",
@@ -52,6 +53,46 @@ module Utils
       )
 
       response.body.force_encoding("UTF-8")
+    end
+
+    def render_footer
+      page_numbering = I18n.t(
+        "document.page_numbering",
+        current: '<span class="pageNumber"></span>',
+        total: '<span class="totalPages"></span>'
+      ).html_safe
+
+      <<~HTML
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              body {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0 0.42in;
+                color: #66758f;
+                font-size: 10px;
+              }
+
+              .footer {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                border-top: 1px solid #D9DEE7;
+                padding-top: 6px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="footer">
+              <span>#{ERB::Util.html_escape(context.number)}</span>
+              <span>#{page_numbering}</span>
+            </div>
+          </body>
+        </html>
+      HTML
     end
 
     def prepare_http_files(content, type, name)
