@@ -14,6 +14,7 @@ class SendWebhookJob < ApplicationJob
     "add_on.created" => Webhooks::AddOns::CreatedService,
     "add_on.updated" => Webhooks::AddOns::UpdatedService,
     "add_on.deleted" => Webhooks::AddOns::DeletedService,
+    "alert.resolved" => Webhooks::UsageMonitoring::AlertResolvedService,
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
     "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,

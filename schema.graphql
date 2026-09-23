@@ -7012,6 +7012,7 @@ enum EventTypeEnum {
   add_on_created
   add_on_deleted
   add_on_updated
+  alert_resolved
   alert_triggered
   all
   billable_metric_created
