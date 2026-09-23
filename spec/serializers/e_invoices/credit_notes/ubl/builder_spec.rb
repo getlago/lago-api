@@ -237,7 +237,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
 
       context "with multiple taxes" do
         let(:invoice) { create(:invoice) }
-        let(:credit_note) { create(:credit_note, invoice:) }
+        let(:credit_note) { create(:credit_note, invoice:, taxes_amount_cents: 80, precise_taxes_amount_cents: 80) }
         let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
         let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee1, precise_amount_cents: 500) }
         let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 100) }
