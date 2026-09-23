@@ -16,12 +16,19 @@ module Subscriptions
 
     def call
       return result.not_found_failure!(resource: "subscription") if subscription.blank?
-      return cancel_incomplete if subscription.incomplete?
-      return result.single_validation_failure!(error_code: "subscription_canceled") if subscription.canceled?
-      return result.single_validation_failure!(error_code: "next_subscription_incomplete") if !upgrade && subscription.next_subscription&.incomplete?
 
-      ActiveRecord::Base.transaction do
-        if subscription.pending?
+      cancel_incomplete_subscription = false
+      subscription_changed = false
+
+      subscription.with_lock do
+        if subscription.incomplete?
+          cancel_incomplete
+          cancel_incomplete_subscription = true
+        elsif subscription.canceled?
+          result.single_validation_failure!(error_code: "subscription_canceled")
+        elsif !upgrade && subscription.next_subscription&.incomplete?
+          result.single_validation_failure!(error_code: "next_subscription_incomplete")
+        elsif subscription.pending?
           previous = subscription.previous_subscription
           subscription.mark_as_canceled!
 
@@ -29,6 +36,8 @@ module Subscriptions
             SendWebhookJob.perform_after_commit("subscription.updated", previous)
             Utils::ActivityLog.produce_after_commit(previous, "subscription.updated")
           end
+
+          subscription_changed = true
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
           update_on_termination_actions!
@@ -60,13 +69,19 @@ module Subscriptions
           #       For upgrade we will create only one invoice for termination charges and for in advance charges
           #       It is handled in subscriptions/create_service.rb
           bill_subscription unless upgrade
+
+          subscription_changed = true
         end
 
-        cancel_next_subscription
+        cancel_next_subscription if subscription_changed
       end
 
-      SendWebhookJob.perform_after_commit("subscription.terminated", subscription)
-      Utils::ActivityLog.produce_after_commit(subscription, "subscription.terminated")
+      return result if result.failure? || cancel_incomplete_subscription
+
+      if subscription_changed
+        SendWebhookJob.perform_after_commit("subscription.terminated", subscription)
+        Utils::ActivityLog.produce_after_commit(subscription, "subscription.terminated")
+      end
 
       result.subscription = subscription
       result
