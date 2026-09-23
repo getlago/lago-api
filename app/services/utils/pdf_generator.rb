@@ -68,11 +68,20 @@ module Utils
           <head>
             <meta charset="UTF-8">
             <style>
+              @font-face {
+                font-family: 'Inter';
+                font-style: normal;
+                font-weight: 400;
+                font-display: swap;
+                src: local("Inter-Regular");
+              }
+
               body {
                 box-sizing: border-box;
                 margin: 0;
                 padding: 0 0.42in;
                 color: #66758f;
+                font-family: Inter, sans-serif;
                 font-size: 13px;
               }
 

@@ -32,6 +32,8 @@ RSpec.describe Utils::PdfGenerator do
       expect(request_body).to include("INV-123 &lt;&amp;&gt;")
       expect(request_body).to include('<span class="pageNumber"></span>')
       expect(request_body).to include('<span class="totalPages"></span>')
+      expect(request_body).to include('src: local("Inter-Regular");')
+      expect(request_body).to include("font-family: Inter, sans-serif;")
     end
 
     context "with a French document locale" do
