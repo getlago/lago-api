@@ -8,7 +8,7 @@ module V1
         lago_organization_id: model.organization_id,
         code: model.code,
         name: model.name,
-        attribution_key: model.attribution_key,
+        attribution_keys: model.attribution_keys,
         role: model.role,
         lago_parent_id: model.parent_id,
         parent_code: model.parent&.code,

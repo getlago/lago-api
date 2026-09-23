@@ -19,13 +19,13 @@ RSpec.describe Resolvers::UsageAttributionTypesResolver do
   let(:variables) { {} }
 
   let(:department) do
-    create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_key: "department_id")
+    create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_keys: ["department_id"])
   end
   let(:user) do
-    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_key: "user_id", parent: department)
+    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"], parent: department)
   end
   let(:model) do
-    create(:flat_usage_attribution_type, organization:, code: "model", name: "Model", attribution_key: "model_name")
+    create(:flat_usage_attribution_type, organization:, code: "model", name: "Model", attribution_keys: ["model_name"])
   end
 
   let(:query) do
@@ -33,7 +33,7 @@ RSpec.describe Resolvers::UsageAttributionTypesResolver do
       query($limit: Int, $page: Int, $role: UsageAttributionTypeRoleEnum, $searchTerm: String) {
         usageAttributionTypes(limit: $limit, page: $page, role: $role, searchTerm: $searchTerm) {
           collection {
-            id code name attributionKey role
+            id code name attributionKeys role
             parent { id code }
           }
           metadata { currentPage totalCount }

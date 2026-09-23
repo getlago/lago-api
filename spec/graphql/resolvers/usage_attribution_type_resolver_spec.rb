@@ -19,14 +19,14 @@ RSpec.describe Resolvers::UsageAttributionTypeResolver do
 
   let(:parent) { create(:usage_attribution_type, organization:, code: "department") }
   let(:usage_attribution_type) do
-    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_key: "user_id", parent:)
+    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"], parent:)
   end
 
   let(:query) do
     <<~GQL
       query($id: ID!) {
         usageAttributionType(id: $id) {
-          id code name attributionKey role
+          id code name attributionKeys role
           parent { id code }
         }
       }
@@ -45,7 +45,7 @@ RSpec.describe Resolvers::UsageAttributionTypeResolver do
     expect(result_data["id"]).to eq(usage_attribution_type.id)
     expect(result_data["code"]).to eq("user")
     expect(result_data["name"]).to eq("User")
-    expect(result_data["attributionKey"]).to eq("user_id")
+    expect(result_data["attributionKeys"]).to eq(["user_id"])
     expect(result_data["role"]).to eq("hierarchical")
     expect(result_data["parent"]["id"]).to eq(parent.id)
   end

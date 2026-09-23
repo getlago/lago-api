@@ -33,8 +33,7 @@ class UsageAttributionTypesQuery < BaseQuery
     {
       m: "or",
       code_cont: search_term,
-      name_cont: search_term,
-      attribution_key_cont: search_term
+      name_cont: search_term
     }
   end
 

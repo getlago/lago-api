@@ -157,6 +157,7 @@ module Fees
     def cache_aggregation_result(selected_metered_item:, aggregation_result:, charge_filter:)
       # TODO: Review recurring product usage persistence. CachedAggregation needs
       # product_id and product_filter_id support before segment-backed values can be persisted.
+      return if selected_metered_item.billing_segment
       return unless aggregation_result.current_aggregation.present? ||
         aggregation_result.max_aggregation.present? ||
         aggregation_result.max_aggregation_with_proration.present?

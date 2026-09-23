@@ -3,13 +3,10 @@
 module Billing
   module RateCards
     class BuildScheduleService < BaseService
-      class MismatchedPlanRateCard < StandardError; end
-
       Result = BaseResult[:schedule]
 
-      def initialize(contract_rate_card:, plan_rate_card: nil, ends_at: nil)
+      def initialize(contract_rate_card:, ends_at: nil)
         @contract_rate_card = contract_rate_card
-        @plan_rate_card = plan_rate_card
         @ends_at = ends_at
         super
       end
@@ -42,7 +39,7 @@ module Billing
 
       private
 
-      attr_reader :contract_rate_card, :plan_rate_card, :ends_at
+      attr_reader :contract_rate_card, :ends_at
 
       def timezone
         contract_rate_card.contract.customer.applicable_timezone
@@ -56,12 +53,7 @@ module Billing
       end
 
       def phases
-        rate_phases = ::ContractRateCards::ResolveRatePhasesService.call!(
-          contract_rate_card:,
-          plan_rate_card: resolved_plan_rate_card
-        ).rate_phases
-
-        configured = rate_phases.map do |rate_phase|
+        configured = contract_rate_card.rate_phases.map do |rate_phase|
           Phase.new(
             code: rate_phase.code,
             billing_interval_cycle_count: rate_phase.billing_interval_cycle_count,
@@ -73,18 +65,6 @@ module Billing
           configured
         else
           configured + [Phase.default]
-        end
-      end
-
-      def resolved_plan_rate_card
-        if plan_rate_card.nil?
-          contract_rate_card.contract.catalog_plan&.applied_rate_cards
-            &.find { it.rate_card_id == contract_rate_card.rate_card_id }
-        elsif plan_rate_card.rate_card_id != contract_rate_card.rate_card_id
-          raise MismatchedPlanRateCard, "plan_rate_card #{plan_rate_card.id} prices rate card " \
-            "#{plan_rate_card.rate_card_id}, not #{contract_rate_card.rate_card_id}"
-        else
-          plan_rate_card
         end
       end
     end

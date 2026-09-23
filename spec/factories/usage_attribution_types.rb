@@ -5,7 +5,7 @@ FactoryBot.define do
     organization
     sequence(:code) { |n| "usage-attribution-type-#{n}" }
     name { "User" }
-    sequence(:attribution_key) { |n| "attribution_key_#{n}" }
+    sequence(:attribution_keys) { |n| ["attribution_key_#{n}"] }
     role { "hierarchical" }
 
     factory :flat_usage_attribution_type do

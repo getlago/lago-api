@@ -22,12 +22,6 @@ module RealtimeUsage
       organization.feature_flag_enabled?(:realtime_usage)
     end
 
-    # The stream counts every event it receives, so an organization whose store drops
-    # duplicates would bill a different number than the buckets serve.
-    def deduplicated?(organization)
-      organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
-    end
-
     def supported_charge?(charge)
       billable_metric = charge.billable_metric
 
