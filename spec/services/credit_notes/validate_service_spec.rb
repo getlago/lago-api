@@ -36,7 +36,7 @@ RSpec.describe CreditNotes::ValidateService do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
+  let(:invoice) { create(:invoice, total_amount_cents: 120, taxes_amount_cents: 20, total_paid_amount_cents:) }
   let(:customer) { invoice.customer }
   let(:total_paid_amount_cents) { 0 }
 
@@ -95,6 +95,7 @@ RSpec.describe CreditNotes::ValidateService do
 
     context "when credit amount is higher than invoice amount" do
       let(:credit_amount_cents) { 250 }
+      let(:invoice) { create(:invoice, total_amount_cents: 240, taxes_amount_cents: 40, total_paid_amount_cents:) }
 
       before do
         create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
@@ -224,6 +225,31 @@ RSpec.describe CreditNotes::ValidateService do
         expect(validator).to be_valid
       end
 
+      context "when a second credit note takes the rest of the invoice" do
+        let(:amount_cents) { 50 }
+        let(:credit_amount_cents) { 54 }
+        let(:precise_taxes_amount_cents) { 9 }
+        let(:precise_coupons_adjustment_amount_cents) { 5 }
+
+        before do
+          create(:credit_note, invoice:, customer:, credit_amount_cents: 54, total_amount_cents: 54, status: :finalized)
+        end
+
+        it "accepts the last cent of the invoice total" do
+          expect(validator).to be_valid
+        end
+
+        context "when the credit notes would exceed the invoice total" do
+          let(:amount_cents) { 62 }
+          let(:credit_amount_cents) { 66 }
+
+          it "rejects the amount above the taxed total" do
+            expect(validator).not_to be_valid
+            expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
+          end
+        end
+      end
+
       context "when amount does not matches items" do
         let(:amount_cents) { 1 }
 
@@ -284,6 +310,7 @@ RSpec.describe CreditNotes::ValidateService do
     context "when the difference is due to rounding" do
       let(:credit_amount_cents) { 241 }
       let(:amount_cents) { 239 }
+      let(:invoice) { create(:invoice, total_amount_cents: 240, taxes_amount_cents: 40, total_paid_amount_cents:) }
 
       before do
         create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
@@ -316,6 +343,31 @@ RSpec.describe CreditNotes::ValidateService do
 
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
+      end
+    end
+
+    context "when an offset takes the last cent after an earlier credit" do
+      let(:amount_cents) { 50 }
+      let(:credit_amount_cents) { 0 }
+      let(:offset_amount_cents) { 60 }
+      let(:precise_taxes_amount_cents) { 10 }
+
+      before do
+        create(:credit_note, invoice:, customer:, credit_amount_cents: 60, total_amount_cents: 60, status: :finalized)
+      end
+
+      it "accepts the offset without rounding slack" do
+        expect(validator).to be_valid
+      end
+
+      context "when the offset exceeds the remaining amount by one cent" do
+        let(:offset_amount_cents) { 61 }
+        let(:precise_taxes_amount_cents) { 11 }
+
+        it "rejects the offset" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages[:offset_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
+        end
       end
     end
 

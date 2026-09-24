@@ -924,13 +924,34 @@ RSpec.describe Invoice do
   describe "#fee_total_amount_cents" do
     let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, coupons_amount_cents:, taxes_amount_cents:) }
+    let(:coupons_amount_cents) { 0 }
+    let(:taxes_amount_cents) { 47 }
 
-    it "returns the fee amount vat included" do
+    before do
       create(:fee, invoice:, amount_cents: 100, taxes_rate: 20)
       create(:fee, invoice:, amount_cents: 133, taxes_rate: 20)
+    end
 
-      expect(invoice.fee_total_amount_cents).to eq(120 + 160)
+    it "returns the fee amount vat included" do
+      expect(invoice.fee_total_amount_cents).to eq(233 + 47)
+    end
+
+    context "with a coupon" do
+      let(:coupons_amount_cents) { 33 }
+      let(:taxes_amount_cents) { 40 }
+
+      it "adds the tax computed after the coupon" do
+        expect(invoice.fee_total_amount_cents).to eq(233 + 40)
+      end
+    end
+
+    context "with provider taxes booked above the rate" do
+      let(:taxes_amount_cents) { 50 }
+
+      it "adds the booked tax" do
+        expect(invoice.fee_total_amount_cents).to eq(233 + 50)
+      end
     end
   end
 
