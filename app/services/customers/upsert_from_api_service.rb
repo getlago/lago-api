@@ -317,6 +317,7 @@ module Customers
 
       connection = customer.provider_customer
       return unless connection
+      return if customer.payment_provider_customers.where.not(id: connection.id).exists?
 
       PaymentProviderCustomers::SetAsDefaultService.call!(payment_provider_customer: connection)
     end

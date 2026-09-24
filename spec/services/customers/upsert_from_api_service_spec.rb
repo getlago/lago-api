@@ -1502,23 +1502,35 @@ RSpec.describe Customers::UpsertFromApiService do
       described_class.call(organization:, params: {external_id:, billing_configuration:})
     end
 
-    it "flags the connection as default through create, switch, removal and re-add" do
+    it "flags the first connection as default" do
       upsert_customer({payment_provider: "stripe", payment_provider_code: "stripe_1", provider_customer_id: "cus_1"})
       customer = organization.customers.find_by(external_id:)
+
       expect(customer.reload.stripe_customer).to be_is_default
+    end
+
+    it "leaves the default alone once the customer already holds a connection" do
+      upsert_customer({payment_provider: "stripe", payment_provider_code: "stripe_1", provider_customer_id: "cus_1"})
+      customer = organization.customers.find_by(external_id:)
+      first_connection = customer.reload.stripe_customer
 
       upsert_customer({payment_provider: "gocardless", payment_provider_code: "gocardless_1", provider_customer_id: "gc_1"})
       customer.reload
-      expect(customer.gocardless_customer).to be_is_default
-      expect(customer.payment_provider_customers.where(is_default: true).count).to eq(1)
 
+      expect(customer.gocardless_customer).not_to be_is_default
+      expect(customer.payment_provider_customers.where(is_default: true).pluck(:id)).to eq([first_connection.id])
+    end
+
+    it "keeps the default on the connection that survives the removal of another provider" do
+      upsert_customer({payment_provider: "stripe", payment_provider_code: "stripe_1", provider_customer_id: "cus_1"})
+      customer = organization.customers.find_by(external_id:)
+      first_connection = customer.reload.stripe_customer
+
+      upsert_customer({payment_provider: "gocardless", payment_provider_code: "gocardless_1", provider_customer_id: "gc_1"})
       upsert_customer({payment_provider: nil})
-      expect(customer.reload.payment_provider_customers.where(is_default: true)).to be_empty
-
-      upsert_customer({payment_provider: "stripe", payment_provider_code: "stripe_1", provider_customer_id: "cus_2"})
       customer.reload
-      expect(customer.stripe_customer).to be_is_default
-      expect(customer.payment_provider_customers.where(is_default: true).count).to eq(1)
+
+      expect(customer.payment_provider_customers.where(is_default: true).pluck(:id)).to eq([first_connection.id])
     end
 
     context "when the payment provider is not part of the payload" do
