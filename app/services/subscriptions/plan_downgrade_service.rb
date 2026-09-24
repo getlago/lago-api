@@ -61,9 +61,7 @@ module Subscriptions
 
         InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
 
-        if params[:connections].present?
-          BillingObjectConnections::AttachToResourceService.call!(resource: new_sub, params:)
-        end
+        BillingObjectConnections::AttachToResourceService.call!(resource: new_sub, params:)
 
         after_commit do
           SendWebhookJob.perform_later("subscription.updated", current_subscription)
