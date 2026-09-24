@@ -23,7 +23,7 @@ module CreditNotes
         invoice_applied_tax = entry[:invoice_applied_tax]
         precise_base_amount_cents = base_amounts.fetch(tax_key) * taxes_base_rate(invoice_applied_tax)
         precise_tax_amount_cents = if invoice_applied_tax.provider_tax?
-          provider_tax_amount_cents(tax_key, entry[:items].uniq)
+          booked_tax_to_credit(tax_key, entry[:items].uniq)
         else
           (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
         end
@@ -65,39 +65,49 @@ module CreditNotes
       )
     end
 
-    def provider_tax_amount_cents(tax_key, tax_items)
-      # Reconcile older invoices too: their fee taxes were rounded independently,
-      # so their sum can differ from the tax actually booked on the invoice.
-      taxes_by_fee = provider_fee_taxes.fetch(tax_key).group_by(&:fee_id)
-      amounts = Integrations::Aggregator::Taxes::Allocation.by_group(provider_tax_amounts.fetch(tax_key), taxes_by_fee.values)
-      amounts_by_fee = taxes_by_fee.keys.zip(amounts).to_h
+    def booked_tax_to_credit(tax_key, items)
+      booked_tax = booked_tax_by_fee(tax_key)
 
-      tax_items.sum do |item|
-        if item.fee.amount_cents.zero?
-          0.to_d
-        else
-          amounts_by_fee.fetch(item.fee_id) * item.precise_amount_cents / item.fee.amount_cents
-        end
+      items.sum { |item| credited_portion(booked_tax.fetch(item.fee_id), item) }
+    end
+
+    def credited_portion(fee_amount_cents, item)
+      if item.fee.amount_cents.zero?
+        0.to_d
+      else
+        fee_amount_cents * item.precise_amount_cents / item.fee.amount_cents
       end
     end
 
-    def provider_tax_amounts
-      @provider_tax_amounts ||= begin
-        taxes_by_key = invoice_applied_taxes.group_by { |tax| tax_key(tax) }.sort_by(&:first).to_h
-        weights = taxes_by_key.values.map { |taxes| taxes.sum(&:amount_cents) }
-        if weights.sum != invoice.taxes_amount_cents
-          precise_weights = taxes_by_key.keys.map do |key|
-            provider_fee_taxes.fetch(key, []).sum(&:precise_amount_cents)
-          end
-          weights = precise_weights unless precise_weights.sum.zero?
-        end
-        amounts = Integrations::Aggregator::Taxes::Allocation.call(invoice.taxes_amount_cents, weights)
-        taxes_by_key.keys.zip(amounts).to_h
+    def booked_tax_by_fee(tax_key)
+      fee_taxes = fee_taxes_by_key.fetch(tax_key).group_by(&:fee_id)
+      booked_tax = Integrations::Aggregator::Taxes::Allocation.by_group(invoice_tax_by_key.fetch(tax_key), fee_taxes.values)
+
+      fee_taxes.keys.zip(booked_tax).to_h
+    end
+
+    # Invoices booked before provider amounts were stored rounded each fee tax on its own,
+    # so their fee taxes can add up to less than the tax charged on the invoice.
+    def invoice_tax_by_key
+      @invoice_tax_by_key ||= begin
+        invoice_taxes = invoice_applied_taxes.group_by { |tax| tax_key(tax) }.sort_by(&:first).to_h
+        weights = invoice_tax_weights(invoice_taxes)
+        invoice_tax = Integrations::Aggregator::Taxes::Allocation.call(invoice.taxes_amount_cents, weights)
+
+        invoice_taxes.keys.zip(invoice_tax).to_h
       end
     end
 
-    def provider_fee_taxes
-      @provider_fee_taxes ||= invoice.fees.order(:created_at, :id).includes(:applied_taxes)
+    def invoice_tax_weights(invoice_taxes)
+      booked_weights = invoice_taxes.values.map { |taxes| taxes.sum(&:amount_cents) }
+      return booked_weights if booked_weights.sum == invoice.taxes_amount_cents
+
+      exact_weights = invoice_taxes.keys.map { |key| fee_taxes_by_key.fetch(key, []).sum(&:precise_amount_cents) }
+      exact_weights.sum.zero? ? booked_weights : exact_weights
+    end
+
+    def fee_taxes_by_key
+      @fee_taxes_by_key ||= invoice.fees.order(:created_at, :id).includes(:applied_taxes)
         .flat_map(&:applied_taxes).group_by do |fee_tax|
           invoice_applied_tax = resolve_invoice_applied_tax(fee_tax)
           tax_key(invoice_applied_tax) if invoice_applied_tax
