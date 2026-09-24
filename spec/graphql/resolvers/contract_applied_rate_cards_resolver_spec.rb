@@ -82,6 +82,27 @@ RSpec.describe Resolvers::ContractAppliedRateCardsResolver do
     end
   end
 
+  context "with filters" do
+    let(:variables) { {contractId: contract.id, productType: "fixed", searchTerm: "fixed_seats"} }
+    let!(:fixed_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product: create(:product, :fixed, organization:), code: "fixed_seats"))
+    end
+
+    let(:query) do
+      <<~GQL
+        query($contractId: ID, $productType: ProductTypeEnum, $searchTerm: String) {
+          contractAppliedRateCards(contractId: $contractId, productType: $productType, searchTerm: $searchTerm) {
+            collection { id }
+          }
+        }
+      GQL
+    end
+
+    it "returns only the matching cards" do
+      expect(execution["data"]["contractAppliedRateCards"]["collection"].map { it["id"] }).to eq([fixed_card.id])
+    end
+  end
+
   context "without a contract id" do
     let(:variables) { {} }
 

@@ -5,6 +5,7 @@ module Resolvers
     include RequiresProductCatalog
     include AuthenticableApiUser
     include RequiredOrganization
+    include RateCardListArguments
 
     REQUIRED_PERMISSION = "contracts:view"
 
@@ -16,11 +17,12 @@ module Resolvers
 
     type Types::ContractAppliedRateCards::Object.collection_type, null: false
 
-    def resolve(contract_id: nil, page: nil, limit: nil)
+    def resolve(contract_id: nil, page: nil, limit: nil, search_term: nil, **filters)
       result = ::ContractRateCardsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {contract_id:},
+        filters: filters.merge(contract_id:),
+        search_term:,
         order: :product_category
       )
 

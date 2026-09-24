@@ -12174,7 +12174,7 @@ type Query {
   """
   Query rate cards applied to a contract
   """
-  contractAppliedRateCards(contractId: ID, limit: Int, page: Int): ContractAppliedRateCardCollection!
+  contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
 
   """
   Query contracts of an organization
@@ -12734,7 +12734,7 @@ type Query {
   """
   Query rate cards applied to a plan
   """
-  planAppliedRateCards(limit: Int, page: Int, planId: ID): PlanAppliedRateCardCollection!
+  planAppliedRateCards(hasRateOverrides: Boolean, limit: Int, page: Int, planId: ID, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): PlanAppliedRateCardCollection!
 
   """
   Query plans of an organization

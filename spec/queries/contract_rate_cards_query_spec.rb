@@ -4,13 +4,14 @@ require "rails_helper"
 
 RSpec.describe ContractRateCardsQuery do
   subject(:result) do
-    described_class.call(organization:, pagination:, filters:, order:)
+    described_class.call(organization:, pagination:, filters:, order:, search_term:)
   end
 
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
   let(:filters) { {} }
   let(:order) { nil }
+  let(:search_term) { nil }
 
   let(:contract) { create(:contract, organization:) }
   let!(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
@@ -69,6 +70,43 @@ RSpec.describe ContractRateCardsQuery do
 
     it "groups by category, standalone products last, then by effective date" do
       expect(result.contract_rate_cards.to_a).to eq([earlier_card, later_card, contract_rate_card])
+    end
+  end
+
+  context "with rate card filters" do
+    let(:filters) { {contract_id: contract.id}.merge(card_filters) }
+    let(:card_filters) { {} }
+    let!(:fixed_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product: create(:product, :fixed, organization:), code: "seats_fixed"))
+    end
+
+    before do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card: fixed_card, rate_override: create(:rate_override, organization:))
+      create(:rate_phase, organization:, rate_override: create(:rate_override, organization:))
+    end
+
+    context "with rate overrides" do
+      let(:card_filters) { {has_rate_overrides: true} }
+
+      it { expect(result.contract_rate_cards).to eq([fixed_card]) }
+    end
+
+    context "without rate overrides" do
+      let(:card_filters) { {has_rate_overrides: false} }
+
+      it { expect(result.contract_rate_cards).to eq([contract_rate_card]) }
+    end
+
+    context "with a product type" do
+      let(:card_filters) { {product_type: "fixed"} }
+
+      it { expect(result.contract_rate_cards).to eq([fixed_card]) }
+    end
+
+    context "with a search term" do
+      let(:search_term) { "seats_fixed" }
+
+      it { expect(result.contract_rate_cards).to eq([fixed_card]) }
     end
   end
 
