@@ -67,7 +67,8 @@ module Customers
         tax_identification_number: args[:tax_identification_number],
         firstname: args[:firstname],
         lastname: args[:lastname],
-        customer_type: args[:customer_type]
+        customer_type: args[:customer_type],
+        x402_agent_address: args[:x402_agent_address]
       )
 
       if customer&.organization&.revenue_share_enabled?
