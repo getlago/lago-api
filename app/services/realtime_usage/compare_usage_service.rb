@@ -23,7 +23,6 @@ module RealtimeUsage
 
     MATCH = "match"
     MISMATCH = "mismatch"
-    NOT_SERVED = "not_served"
     DELEGATED_DEFAULT_FILTER = "delegated_default_filter"
     RESENT_TRANSACTION_ID = "resent_transaction_id"
 
@@ -35,7 +34,6 @@ module RealtimeUsage
       :billable_metric_code,
       :charge_filter_id,
       :grouped_by,
-      :served,
       :classification,
       :bucket_units,
       :events_units,
@@ -77,7 +75,7 @@ module RealtimeUsage
       compare
 
       if (result.differences.any? || result.cutover_risks.any?) && recent_events?
-        Kernel.sleep(RECHECK_DELAY)
+        sleep(RECHECK_DELAY)
         result.rechecked = true
         compare
       end
@@ -91,31 +89,40 @@ module RealtimeUsage
 
     attr_reader :subscription, :timestamp, :duplicate_events_by_code
 
+    # The charges the buckets serve are known before any usage is computed, so both runs are
+    # narrowed to them: a charge that cannot be compared is worth computing on neither side.
     def compare
-      events_usage = compute_usage(use_usage_buckets: false)
+      served_charges = RealtimeUsage.with_forced_gate { fetch_served_charges }
 
-      bucket_usage, served_charge_ids = RealtimeUsage.with_forced_gate do
-        [compute_usage(use_usage_buckets: true), fetch_served_charge_ids]
-      end
+      result.rows = []
+      result.differences = []
+      result.cutover_risks = []
+      result.duplicate_events_count = 0
+      result.eligible_charges_count = eligible_charges.size
+      result.served_charges_count = served_charges.size
+      result.declined_reason = served_charges.empty? ? decline_reason : nil
+      return if served_charges.empty?
 
-      @duplicate_events_by_code = fetch_duplicate_events_by_code
+      charge_ids = served_charges.map(&:id)
+      events_usage = compute_usage(use_usage_buckets: false, charge_ids:)
+      bucket_usage = RealtimeUsage.with_forced_gate { compute_usage(use_usage_buckets: true, charge_ids:) }
 
-      result.rows = build_rows(bucket_usage:, events_usage:, served_charge_ids:)
+      @duplicate_events_by_code = fetch_duplicate_events_by_code(served_charges)
+
+      result.rows = build_rows(bucket_usage:, events_usage:)
       result.differences = result.rows.select(&:mismatch?)
       result.cutover_risks = result.rows.select(&:cutover_risk?)
-      result.eligible_charges_count = eligible_charges.size
-      result.served_charges_count = served_charge_ids.size
-      result.declined_reason = served_charge_ids.empty? ? decline_reason : nil
       result.duplicate_events_count = duplicate_events_by_code.values.sum
     end
 
-    def compute_usage(use_usage_buckets:)
+    def compute_usage(use_usage_buckets:, charge_ids:)
       Invoices::CustomerUsageService.call!(
         customer: subscription.customer,
         subscription:,
         timestamp:,
         with_cache: false,
         apply_taxes: false,
+        usage_filters: UsageFilters.new(filter_by_charge_id: charge_ids),
         use_usage_buckets:
       ).usage
     end
@@ -124,7 +131,7 @@ module RealtimeUsage
     # the fees: a charge the provider declined must never be read as a comparison. Asked exactly as
     # Invoices::CustomerUsageService asks it, presentation group keys included, so a charge the read
     # path serves from the events store on both sides is never compared with itself.
-    def fetch_served_charge_ids
+    def fetch_served_charges
       provider = Events::Stores::Provider.new(
         organization:,
         billing_context:,
@@ -134,18 +141,16 @@ module RealtimeUsage
       )
       return [] unless provider.may_precompute?
 
-      eligible_charges.filter_map do |charge|
+      eligible_charges.select do |charge|
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
-        next unless provider.serves_whole_charge_from_buckets?(
+        provider.serves_whole_charge_from_buckets?(
           metered_item:,
           boundaries: metered_item.aggregation_boundaries
         )
-
-        charge.id
       end
     end
 
-    def build_rows(bucket_usage:, events_usage:, served_charge_ids:)
+    def build_rows(bucket_usage:, events_usage:)
       bucket_totals = comparable_totals(bucket_usage)
       events_totals = comparable_totals(events_usage)
 
@@ -159,7 +164,6 @@ module RealtimeUsage
           billable_metric_code: charges_by_id[charge_id].billable_metric.code,
           charge_filter_id:,
           grouped_by:,
-          served: served_charge_ids.include?(charge_id),
           classification: nil,
           bucket_units: bucket.units,
           events_units: events.units,
@@ -175,7 +179,6 @@ module RealtimeUsage
 
     def classify(row)
       return DELEGATED_DEFAULT_FILTER if delegated_default_leaf?(row)
-      return NOT_SERVED unless row.served
       return MATCH unless row.different?
       return RESENT_TRANSACTION_ID if resent_transaction_id?(row)
 
@@ -230,12 +233,12 @@ module RealtimeUsage
       "no_buckets"
     end
 
-    def fetch_duplicate_events_by_code
-      return {} if eligible_charges.empty? || !organization.clickhouse_events_store?
+    def fetch_duplicate_events_by_code(served_charges)
+      return {} unless organization.clickhouse_events_store?
 
       CountDuplicateEventsService.call!(
         subscription:,
-        codes: eligible_charges.map { it.billable_metric.code }.uniq,
+        codes: served_charges.map { it.billable_metric.code }.uniq,
         from_datetime: boundaries.charges_from_datetime,
         to_datetime: boundaries.charges_to_datetime
       ).duplicates_by_code

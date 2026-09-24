@@ -16,6 +16,7 @@ RSpec.describe RealtimeUsage::CompareUsageService do
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:timestamp) { Time.current }
   let(:duplicates_by_code) { {billable_metric.code => 0} }
+  let(:filtered_charge_ids) { [] }
 
   let(:bucket_units) { BigDecimal(10) }
   let(:bucket_amount_cents) { 1000 }
@@ -54,7 +55,8 @@ RSpec.describe RealtimeUsage::CompareUsageService do
   before do
     charge
 
-    allow(Invoices::CustomerUsageService).to receive(:call!) do |use_usage_buckets:, **|
+    allow(Invoices::CustomerUsageService).to receive(:call!) do |use_usage_buckets:, usage_filters:, **|
+      filtered_charge_ids << usage_filters.filter_by_charge_id
       use_usage_buckets ? bucket_usage_result : events_usage_result
     end
 
@@ -75,11 +77,17 @@ RSpec.describe RealtimeUsage::CompareUsageService do
     comparison
 
     expect(Invoices::CustomerUsageService).to have_received(:call!).with(
-      customer:, subscription:, timestamp:, with_cache: false, apply_taxes: false, use_usage_buckets: true
+      hash_including(customer:, subscription:, timestamp:, with_cache: false, apply_taxes: false, use_usage_buckets: true)
     )
     expect(Invoices::CustomerUsageService).to have_received(:call!).with(
-      customer:, subscription:, timestamp:, with_cache: false, apply_taxes: false, use_usage_buckets: false
+      hash_including(customer:, subscription:, timestamp:, with_cache: false, apply_taxes: false, use_usage_buckets: false)
     )
+  end
+
+  it "computes both usages over the charges the buckets serve only" do
+    comparison
+
+    expect(filtered_charge_ids).to eq([[charge.id], [charge.id]])
   end
 
   it "reports a match and how many comparable charges the buckets served" do
@@ -167,7 +175,7 @@ RSpec.describe RealtimeUsage::CompareUsageService do
     it "reports the charge as not served rather than comparing it with itself" do
       expect(comparison.served_charges_count).to eq(0)
       expect(comparison.declined_reason).to eq("no_buckets")
-      expect(comparison.rows.map(&:classification)).to eq(["not_served"])
+      expect(comparison.rows).to be_empty
     end
   end
 
@@ -207,12 +215,11 @@ RSpec.describe RealtimeUsage::CompareUsageService do
 
     before do
       stub_recent_events(true)
-      allow(Kernel).to receive(:sleep)
+      stub_const("#{described_class}::RECHECK_DELAY", 0)
     end
 
     it "compares once more before reporting the difference" do
       expect(comparison.rechecked).to be(true)
-      expect(Kernel).to have_received(:sleep).once
       expect(Invoices::CustomerUsageService).to have_received(:call!).exactly(4).times
     end
   end
@@ -220,10 +227,11 @@ RSpec.describe RealtimeUsage::CompareUsageService do
   context "when the organization still reads the postgres events store" do
     let(:organization) { create(:organization) }
 
-    it "reports the run as declined rather than as a match" do
+    it "reports the run as declined without computing any usage" do
       expect(comparison.served_charges_count).to eq(0)
       expect(comparison.declined_reason).to eq("postgres_events_store")
-      expect(comparison.rows.map(&:classification)).to eq(["not_served"])
+      expect(comparison.rows).to be_empty
+      expect(Invoices::CustomerUsageService).not_to have_received(:call!)
     end
   end
 

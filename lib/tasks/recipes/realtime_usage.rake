@@ -10,7 +10,6 @@ REALTIME_USAGE_CSV_HEADERS = %w[
   billable_metric_code
   charge_filter_id
   grouped_by
-  served
   classification
   bucket_units
   events_units
@@ -155,7 +154,6 @@ def realtime_usage_csv_rows(subscription, comparison)
       row.billable_metric_code,
       row.charge_filter_id,
       row.grouped_by.to_json,
-      row.served,
       row.classification,
       row.bucket_units.to_s("F"),
       row.events_units.to_s("F"),
