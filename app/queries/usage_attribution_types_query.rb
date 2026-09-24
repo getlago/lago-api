@@ -45,10 +45,7 @@ class UsageAttributionTypesQuery < BaseQuery
   # Roots carry the whole tree through `children`, so paginating them keeps
   # every subtree intact — unlike paginating the flat list, which would split a
   # parent from its descendants across pages.
-  #
-  # A type whose parent has been discarded counts as a root too: `DestroyService`
-  # discards a type without touching its children, so anchoring on
-  # `parent_id IS NULL` alone would drop those subtrees from the tree entirely.
+  # A type whose parent has been discarded counts as a root too.
   def only_roots(scope)
     scope.where(
       "usage_attribution_types.parent_id IS NULL OR usage_attribution_types.parent_id NOT IN (?)",
