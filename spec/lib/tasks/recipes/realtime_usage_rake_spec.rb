@@ -87,6 +87,7 @@ RSpec.describe "recipes:realtime_usage:compare_usage", :premium do # rubocop:dis
         "0",
         "4",
         "4",
+        "0",
         "0"
       ]
     )

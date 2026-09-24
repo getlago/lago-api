@@ -132,6 +132,17 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     end
   end
 
+  context "when the same units were aggregated over another number of events" do
+    let(:bucket_events_count) { 5 }
+
+    before { stub_recent_events(false) }
+
+    it "reports the difference, the event count being served with the units" do
+      expect(comparison.differences.map(&:classification)).to eq(["mismatch"])
+      expect(comparison.differences.first.events_count_diff).to eq(1)
+    end
+  end
+
   context "when the units differ over an unchanged event count and the window holds duplicates" do
     let(:bucket_units) { BigDecimal(12) }
     let(:bucket_amount_cents) { 1200 }

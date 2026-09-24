@@ -19,6 +19,7 @@ REALTIME_USAGE_CSV_HEADERS = %w[
   amount_cents_diff
   bucket_events_count
   events_events_count
+  events_count_diff
   duplicate_events
 ].freeze
 
@@ -163,6 +164,7 @@ def realtime_usage_csv_rows(subscription, comparison)
       row.amount_cents_diff,
       row.bucket_events_count,
       row.events_events_count,
+      row.events_count_diff,
       comparison.duplicate_events_count
     ]
   end

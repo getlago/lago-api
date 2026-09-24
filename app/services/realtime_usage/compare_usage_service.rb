@@ -53,8 +53,14 @@ module RealtimeUsage
         bucket_amount_cents - events_amount_cents
       end
 
+      def events_count_diff
+        bucket_events_count - events_events_count
+      end
+
+      # The event count is served to the usage APIs next to the units, so a leaf aggregating the
+      # same units over another number of events is a divergence like any other.
       def different?
-        !units_diff.zero? || !amount_cents_diff.zero?
+        !units_diff.zero? || !amount_cents_diff.zero? || !events_count_diff.zero?
       end
 
       def mismatch?
