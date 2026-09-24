@@ -15303,9 +15303,14 @@ input UpdateContractInput {
   endedAt: ISO8601DateTime
 
   """
-  External id of the contract to update
+  External id of the contract to update, resolving to the pending contract when an active one shares it
   """
-  externalId: String!
+  externalId: String
+
+  """
+  Unique ID of the contract to update
+  """
+  id: ID
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planCode: String

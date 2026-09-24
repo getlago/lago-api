@@ -6,7 +6,10 @@ module Types
       graphql_name "UpdateContractInput"
       description "Update contract input arguments"
 
-      argument :external_id, String, required: true, description: "External id of the contract to update"
+      argument :external_id, String, required: false, description: "External id of the contract to update, resolving to the pending contract when an active one shares it"
+      argument :id, ID, required: false, description: "Unique ID of the contract to update"
+
+      validates required: {one_of: [:id, :external_id]}
 
       argument :name, String, required: false
       # Optional: a plan-less contract prices through directly attached cards.
