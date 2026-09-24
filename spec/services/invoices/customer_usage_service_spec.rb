@@ -1019,6 +1019,25 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
     end
 
+    context "when the bucket read fails" do
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(
+          RealtimeUsage::FetchBucketsService::Result.new.tap do
+            it.service_failure!(code: "usage_buckets_read_failure", message: "clickhouse is unreachable")
+          end
+        )
+      end
+
+      it "counts the events, an unreachable clickhouse making current usage slow rather than broken" do
+        expect(usage_service.call.usage.fees.first).to have_attributes(units: 2)
+      end
+
+      it "raises under the forced gate, which only the parity comparison opens" do
+        expect { RealtimeUsage.with_forced_gate { usage_service.call } }
+          .to raise_error(BaseService::FailedResult)
+      end
+    end
+
     context "with the provider and the bucket fetch spied on" do
       before do
         allow(Events::Stores::Provider).to receive(:new).and_call_original

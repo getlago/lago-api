@@ -133,9 +133,14 @@ module Events
         return @usage_buckets if defined?(@usage_buckets)
 
         @usage_buckets = if serve_current_usage_from_buckets && bucket_charges.any?
-          RealtimeUsage::FetchBucketsService
+          fetch = RealtimeUsage::FetchBucketsService
             .call(subscription: billing_context.subscription, boundaries:, charges: bucket_charges)
-            .usage_buckets
+
+          # Only the parity comparison opens the gate, and there the silent fallback would have it
+          # compare the events store with itself and report a match it never established.
+          fetch.raise_if_error! if RealtimeUsage.forced_gate?
+
+          fetch.usage_buckets
         end
       end
 
