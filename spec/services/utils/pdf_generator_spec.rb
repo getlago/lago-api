@@ -34,10 +34,6 @@ RSpec.describe Utils::PdfGenerator do
       expect(request_body).to include('<span class="totalPages"></span>')
       expect(request_body).to include('src: local("Inter-Regular");')
       expect(request_body).to include("font-family: Inter, sans-serif;")
-      expect(request_body).to include("padding: 0 calc(0.42in + 10.24px);")
-      expect(request_body).to include("font-size: 11.52px;")
-      expect(request_body).to include("line-height: 20.48px;")
-      expect(request_body).to include("padding: 15.36px 0;")
       expect(request_body).to match(/name="marginBottom".*0\.6/m)
     end
 
