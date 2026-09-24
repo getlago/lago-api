@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PlanRateCardsQuery < BaseQuery
+  include RateCardCategoryOrdering
+
   Result = BaseResult[:plan_rate_cards]
   Filters = BaseFilters[:plan_id, :plan_code]
 
@@ -9,7 +11,11 @@ class PlanRateCardsQuery < BaseQuery
     plan_rate_cards = with_plan(plan_rate_cards) if filters.plan_id.present?
     plan_rate_cards = with_plan_code(plan_rate_cards) if filters.plan_code.present?
     plan_rate_cards = paginate(plan_rate_cards)
-    plan_rate_cards = apply_consistent_ordering(plan_rate_cards)
+    plan_rate_cards = if order == :product_category
+      order_by_product_category(plan_rate_cards).order(:id)
+    else
+      apply_consistent_ordering(plan_rate_cards)
+    end
 
     result.plan_rate_cards = plan_rate_cards
     result

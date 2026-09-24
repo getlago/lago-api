@@ -1765,6 +1765,21 @@ type ContractAppliedRateCard {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+ContractAppliedRateCardCollection type
+"""
+type ContractAppliedRateCardCollection {
+  """
+  A collection of paginated ContractAppliedRateCardCollection
+  """
+  collection: [ContractAppliedRateCard!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 enum ContractBillingTimeEnum {
   anniversary
   calendar
@@ -12155,6 +12170,11 @@ type Query {
     """
     id: ID!
   ): Contract
+
+  """
+  Query rate cards applied to a contract
+  """
+  contractAppliedRateCards(contractId: ID, limit: Int, page: Int): ContractAppliedRateCardCollection!
 
   """
   Query contracts of an organization

@@ -20,7 +20,8 @@ module Resolvers
       result = ::PlanRateCardsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {plan_id:}
+        filters: {plan_id:},
+        order: :product_category
       )
 
       result.plan_rate_cards
