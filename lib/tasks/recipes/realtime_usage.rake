@@ -90,7 +90,7 @@ namespace :recipes do
       puts "  charges served from buckets: #{served_charges}/#{eligible_charges} comparable"
       puts "  subscriptions declined:      #{declined} (nothing was served, nothing was compared)"
       puts "  subscriptions mismatching:   #{mismatching}"
-      puts "  subscriptions at cutover risk (re-sent transaction ids): #{with_cutover_risk}"
+      puts "  of which a re-sent transaction id may explain: #{with_cutover_risk}"
       puts "  per-leaf CSV: #{csv_path}"
       puts ""
       puts(if served_charges.zero?
@@ -136,12 +136,12 @@ def realtime_usage_print_comparison(subscription, comparison)
        "#{comparison.duplicate_events_count} duplicate event(s), " \
        "#{comparison.differences.size} mismatching leaf/leaves [#{status}]#{recheck}"
 
-  comparison.differences.group_by(&:charge_id).each do |charge_id, rows|
+  comparison.differences.select(&:mismatch?).group_by(&:charge_id).each do |charge_id, rows|
     puts "      charge #{rows.first.billable_metric_code} (#{charge_id}): #{rows.size} mismatching leaf/leaves, see the CSV"
   end
 
   comparison.cutover_risks.group_by(&:charge_id).each do |charge_id, rows|
-    puts "      charge #{rows.first.billable_metric_code} (#{charge_id}): #{rows.size} leaf/leaves moved by a re-sent transaction id (cutover risk)"
+    puts "      charge #{rows.first.billable_metric_code} (#{charge_id}): #{rows.size} differing leaf/leaves the window holds duplicates for (cutover risk)"
   end
 end
 

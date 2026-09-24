@@ -25,7 +25,8 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
   let(:events_amount_cents) { 1000 }
   let(:events_events_count) { 4 }
 
-  let(:bucket_usage_result) { usage_result(fee(units: bucket_units, amount_cents: bucket_amount_cents, events_count: bucket_events_count)) }
+  let(:precomputed_charge_ids) { [charge.id] }
+  let(:bucket_usage_result) { usage_result(fee(units: bucket_units, amount_cents: bucket_amount_cents, events_count: bucket_events_count), precomputed_charge_ids:) }
   let(:events_usage_result) { usage_result(fee(units: events_units, amount_cents: events_amount_cents, events_count: events_events_count)) }
 
   let(:usage_buckets) do
@@ -45,11 +46,12 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     )
   end
 
-  def usage_result(*fees)
+  def usage_result(*fees, precomputed_charge_ids: [])
     usage = SubscriptionUsage.new
     usage.fees = fees
     result = Invoices::CustomerUsageService::Result.new
     result.usage = usage
+    result.precomputed_charge_ids = precomputed_charge_ids
     result
   end
 
@@ -137,8 +139,8 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
 
     before { stub_recent_events(false) }
 
-    it "reports a re-sent transaction id rather than a mismatch" do
-      expect(comparison.differences).to be_empty
+    it "reports the difference and labels it as a possible re-sent transaction id" do
+      expect(comparison.differences.map(&:classification)).to eq(["resent_transaction_id"])
       expect(comparison.cutover_risks.map(&:classification)).to eq(["resent_transaction_id"])
     end
   end
@@ -181,7 +183,7 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
   end
 
   context "when an absent group value is empty on one side and nil on the other" do
-    let(:bucket_usage_result) { usage_result(fee(units: bucket_units, amount_cents: bucket_amount_cents, events_count: bucket_events_count, grouped_by: {"region" => ""})) }
+    let(:bucket_usage_result) { usage_result(fee(units: bucket_units, amount_cents: bucket_amount_cents, events_count: bucket_events_count, grouped_by: {"region" => ""}), precomputed_charge_ids:) }
     let(:events_usage_result) { usage_result(fee(units: events_units, amount_cents: events_amount_cents, events_count: events_events_count, grouped_by: {"region" => nil})) }
 
     it "matches the leaves rather than reporting two half-empty ones" do
@@ -195,7 +197,7 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
       create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "5", "pricing_group_keys" => ["region"]})
     end
     let(:charge_filter) { create(:charge_filter, charge:) }
-    let(:bucket_usage_result) { usage_result(fee(units: BigDecimal(0), amount_cents: 0, events_count: 0)) }
+    let(:bucket_usage_result) { usage_result(fee(units: BigDecimal(0), amount_cents: 0, events_count: 0), precomputed_charge_ids:) }
     let(:events_usage_result) { usage_result(fee(units: events_units, amount_cents: events_amount_cents, events_count: events_events_count)) }
 
     before do
@@ -222,6 +224,22 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     it "compares once more before reporting the difference" do
       expect(comparison.rechecked).to be(true)
       expect(Invoices::CustomerUsageService).to have_received(:call!).exactly(4).times
+    end
+  end
+
+  context "when the bucket run served nothing although the charge was eligible" do
+    let(:precomputed_charge_ids) { [] }
+
+    it "reports the run as declined rather than comparing the events store with itself" do
+      expect(comparison.served_charges_count).to eq(0)
+      expect(comparison.declined_reason).to eq("bucket_read_failure")
+      expect(comparison.rows).to be_empty
+    end
+
+    it "computes the bucket usage only" do
+      comparison
+
+      expect(Invoices::CustomerUsageService).to have_received(:call!).once
     end
   end
 

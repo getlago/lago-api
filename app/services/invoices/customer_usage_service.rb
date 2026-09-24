@@ -2,7 +2,7 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    Result = BaseResult[:invoice, :usage, :fees_taxes]
+    Result = BaseResult[:invoice, :usage, :fees_taxes, :precomputed_charge_ids]
 
     def initialize(
       customer:,
@@ -57,6 +57,9 @@ module Invoices
 
       result.usage = compute_usage
       result.invoice = invoice
+      # The buckets answer a charge only when they held its window: a caller comparing the two
+      # paths cannot tell a served charge from one the read silently fell back on otherwise.
+      result.precomputed_charge_ids = precomputed_filters.keys.map(&:id)
       result
     rescue BaseService::ThrottlingError => error
       result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
