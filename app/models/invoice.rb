@@ -244,13 +244,7 @@ class Invoice < ApplicationRecord
   end
 
   def fee_total_amount_cents
-    amount_cents = fees.sum(:amount_cents)
-    tax_amount = if provider_taxes?
-      taxes_amount_cents # Persisted invoice column; preserves the provider's booked total.
-    else
-      fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
-    end
-    amount_cents + tax_amount
+    fees.sum(:amount_cents) + taxes_amount_cents
   end
 
   def provider_taxes?
