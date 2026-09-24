@@ -48857,7 +48857,7 @@
             },
             {
               "name": "updateContract",
-              "description": "Updates a pending contract",
+              "description": "Updates a contract; once active, only its administrative settings",
               "args": [
                 {
                   "name": "input",

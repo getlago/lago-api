@@ -62,8 +62,34 @@ RSpec.describe Mutations::Contracts::Update do
   context "when the contract is already active" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
-    it "returns a validation error" do
-      expect_unprocessable_entity(execution)
+    it "updates the fields that stay editable" do
+      expect(execution["data"]["updateContract"]["name"]).to eq("Renamed")
+    end
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:input) { {externalId: contract.external_id, planCode: other_plan.code} }
+
+      it "returns a validation error" do
+        expect_unprocessable_entity(execution)
+      end
+    end
+
+    context "when the form resends the locked fields unchanged" do
+      let(:input) do
+        {
+          externalId: contract.external_id,
+          name: "Renamed",
+          planCode: catalog_plan.code,
+          billingTime: "calendar",
+          startedAt: contract.started_at.iso8601,
+          billingAnchorDate: contract.effective_billing_anchor_date.iso8601
+        }
+      end
+
+      it "updates the contract" do
+        expect(execution["data"]["updateContract"]["name"]).to eq("Renamed")
+      end
     end
   end
 end
