@@ -33,6 +33,7 @@ RSpec.describe RealtimeUsage::CountDuplicateEventsService, clickhouse: {clean_be
 
     expect(count.events_count).to eq(3)
     expect(count.duplicates_count).to eq(1)
+    expect(count.duplicates_by_code).to eq({billable_metric.code => 1})
   end
 
   it "reports no duplicate when every transaction id is unique" do
@@ -41,6 +42,20 @@ RSpec.describe RealtimeUsage::CountDuplicateEventsService, clickhouse: {clean_be
 
     expect(count.events_count).to eq(2)
     expect(count.duplicates_count).to eq(0)
+  end
+
+  context "with several metrics in the window" do
+    let(:other_billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:codes) { [billable_metric.code, other_billable_metric.code] }
+
+    it "reports the duplicates of each metric on its own code" do
+      create_event(transaction_id: "tr_1", value: "10.0")
+      create_event(transaction_id: "tr_1", value: "12.0")
+      create_event(transaction_id: "tr_2", code: other_billable_metric.code)
+
+      expect(count.duplicates_count).to eq(1)
+      expect(count.duplicates_by_code).to eq({billable_metric.code => 1, other_billable_metric.code => 0})
+    end
   end
 
   it "ignores the events of another metric and the ones outside the window" do

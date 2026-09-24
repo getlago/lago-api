@@ -5,7 +5,7 @@ module RealtimeUsage
   # read time. The stream collapses on a different key, so duplicates explain a difference the
   # pipeline is not responsible for.
   class CountDuplicateEventsService < BaseService
-    Result = BaseResult[:events_count, :duplicates_count]
+    Result = BaseResult[:events_count, :duplicates_count, :duplicates_by_code]
 
     def initialize(subscription:, codes:, from_datetime:, to_datetime:)
       @subscription = subscription
@@ -17,8 +17,12 @@ module RealtimeUsage
     end
 
     def call
-      result.events_count = scope.count
-      result.duplicates_count = result.events_count - deduplicated_count
+      events_by_code = scope.group(:code).count
+      deduplicated_by_code = deduplicated_scope.group(:code).count
+
+      result.events_count = events_by_code.values.sum
+      result.duplicates_by_code = events_by_code.to_h { |code, count| [code, count - deduplicated_by_code.fetch(code, 0)] }
+      result.duplicates_count = result.duplicates_by_code.values.sum
       result
     end
 
@@ -36,8 +40,8 @@ module RealtimeUsage
     end
 
     # FINAL collapses the rows sharing the sorting key, exactly as the events store reads them.
-    def deduplicated_count
-      scope.from("events_enriched FINAL").count
+    def deduplicated_scope
+      scope.from("events_enriched FINAL")
     end
   end
 end

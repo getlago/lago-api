@@ -15,6 +15,7 @@ RSpec.describe RealtimeUsage::CompareUsageService do
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:timestamp) { Time.current }
+  let(:duplicates_by_code) { {billable_metric.code => 0} }
 
   let(:bucket_units) { BigDecimal(10) }
   let(:bucket_amount_cents) { 1000 }
@@ -64,7 +65,8 @@ RSpec.describe RealtimeUsage::CompareUsageService do
     allow(RealtimeUsage::CountDuplicateEventsService).to receive(:call!).and_return(
       RealtimeUsage::CountDuplicateEventsService::Result.new.tap do
         it.events_count = 4
-        it.duplicates_count = 0
+        it.duplicates_by_code = duplicates_by_code
+        it.duplicates_count = duplicates_by_code.values.sum
       end
     )
   end
@@ -119,15 +121,53 @@ RSpec.describe RealtimeUsage::CompareUsageService do
     end
   end
 
-  context "when the units differ over an unchanged event count" do
+  context "when the units differ over an unchanged event count and the window holds duplicates" do
     let(:bucket_units) { BigDecimal(12) }
     let(:bucket_amount_cents) { 1200 }
+    let(:duplicates_by_code) { {billable_metric.code => 1} }
 
     before { stub_recent_events(false) }
 
     it "reports a re-sent transaction id rather than a mismatch" do
       expect(comparison.differences).to be_empty
       expect(comparison.cutover_risks.map(&:classification)).to eq(["resent_transaction_id"])
+    end
+  end
+
+  context "when the units differ over an unchanged event count without a duplicate to explain it" do
+    let(:bucket_units) { BigDecimal(12) }
+    let(:bucket_amount_cents) { 1200 }
+
+    before { stub_recent_events(false) }
+
+    it "reports a mismatch rather than a cutover risk" do
+      expect(comparison.cutover_risks).to be_empty
+      expect(comparison.differences.map(&:classification)).to eq(["mismatch"])
+    end
+  end
+
+  context "when the duplicates of the window belong to another metric" do
+    let(:bucket_units) { BigDecimal(12) }
+    let(:bucket_amount_cents) { 1200 }
+    let(:duplicates_by_code) { {"another_code" => 3} }
+
+    before { stub_recent_events(false) }
+
+    it "reports a mismatch rather than a cutover risk" do
+      expect(comparison.cutover_risks).to be_empty
+      expect(comparison.differences.map(&:classification)).to eq(["mismatch"])
+    end
+  end
+
+  context "when the charge breaks its usage down by presentation group keys" do
+    let(:charge) do
+      create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "5", "presentation_group_keys" => [{"value" => "region"}]})
+    end
+
+    it "reports the charge as not served rather than comparing it with itself" do
+      expect(comparison.served_charges_count).to eq(0)
+      expect(comparison.declined_reason).to eq("no_buckets")
+      expect(comparison.rows.map(&:classification)).to eq(["not_served"])
     end
   end
 

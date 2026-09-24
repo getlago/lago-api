@@ -89,7 +89,7 @@ module RealtimeUsage
 
     private
 
-    attr_reader :subscription, :timestamp
+    attr_reader :subscription, :timestamp, :duplicate_events_by_code
 
     def compare
       events_usage = compute_usage(use_usage_buckets: false)
@@ -98,13 +98,15 @@ module RealtimeUsage
         [compute_usage(use_usage_buckets: true), fetch_served_charge_ids]
       end
 
+      @duplicate_events_by_code = fetch_duplicate_events_by_code
+
       result.rows = build_rows(bucket_usage:, events_usage:, served_charge_ids:)
       result.differences = result.rows.select(&:mismatch?)
       result.cutover_risks = result.rows.select(&:cutover_risk?)
       result.eligible_charges_count = eligible_charges.size
       result.served_charges_count = served_charge_ids.size
       result.declined_reason = served_charge_ids.empty? ? decline_reason : nil
-      result.duplicate_events_count = duplicate_events_count
+      result.duplicate_events_count = duplicate_events_by_code.values.sum
     end
 
     def compute_usage(use_usage_buckets:)
@@ -119,7 +121,9 @@ module RealtimeUsage
     end
 
     # Asks the provider itself which charges the buckets answered, rather than deducing it from
-    # the fees: a charge the provider declined must never be read as a comparison.
+    # the fees: a charge the provider declined must never be read as a comparison. Asked exactly as
+    # Invoices::CustomerUsageService asks it, presentation group keys included, so a charge the read
+    # path serves from the events store on both sides is never compared with itself.
     def fetch_served_charge_ids
       provider = Events::Stores::Provider.new(
         organization:,
@@ -132,7 +136,12 @@ module RealtimeUsage
 
       eligible_charges.filter_map do |charge|
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
-        charge.id if provider.store_for(metered_item:, boundaries: aggregation_window).precomputed?
+        next unless provider.serves_whole_charge_from_buckets?(
+          metered_item:,
+          boundaries: metered_item.aggregation_boundaries
+        )
+
+        charge.id
       end
     end
 
@@ -168,12 +177,19 @@ module RealtimeUsage
       return DELEGATED_DEFAULT_FILTER if delegated_default_leaf?(row)
       return NOT_SERVED unless row.served
       return MATCH unless row.different?
-
-      # The events store keeps the latest insert of a re-sent transaction id where the stream keeps
-      # the first, which moves the units without moving the event count.
-      return RESENT_TRANSACTION_ID if row.bucket_events_count == row.events_events_count
+      return RESENT_TRANSACTION_ID if resent_transaction_id?(row)
 
       MISMATCH
+    end
+
+    # The events store keeps the latest insert of a re-sent transaction id where the stream keeps
+    # the first, which moves the units without moving the event count. An equal event count is no
+    # proof on its own: the window has to actually hold re-sent ids for that metric, otherwise the
+    # most common divergence of all, wrong units over the very same events, would be filed as a
+    # cutover risk and dropped from the differences.
+    def resent_transaction_id?(row)
+      row.bucket_events_count == row.events_events_count &&
+        duplicate_events_by_code[row.billable_metric_code].to_i.positive?
     end
 
     # A charge mixing charge filters with group keys delegates its catch-all bucket for good, so
@@ -214,15 +230,15 @@ module RealtimeUsage
       "no_buckets"
     end
 
-    def duplicate_events_count
-      return 0 if eligible_charges.empty? || !organization.clickhouse_events_store?
+    def fetch_duplicate_events_by_code
+      return {} if eligible_charges.empty? || !organization.clickhouse_events_store?
 
       CountDuplicateEventsService.call!(
         subscription:,
         codes: eligible_charges.map { it.billable_metric.code }.uniq,
         from_datetime: boundaries.charges_from_datetime,
         to_datetime: boundaries.charges_to_datetime
-      ).duplicates_count
+      ).duplicates_by_code
     end
 
     def recent_events?
@@ -263,17 +279,6 @@ module RealtimeUsage
         charges_duration: date_service.charges_duration_in_days,
         timestamp:
       )
-    end
-
-    # The window the aggregations are read over, as Fees::ChargeService builds it: the provider
-    # only serves a charge whose window is the one the buckets were fetched for.
-    def aggregation_window
-      {
-        from_datetime: boundaries.charges_from_datetime,
-        to_datetime: boundaries.charges_to_datetime,
-        charges_duration: boundaries.charges_duration,
-        max_timestamp: nil
-      }
     end
 
     def date_service
