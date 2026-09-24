@@ -9,11 +9,12 @@ RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {planId: catalog_plan.id}
+      variables:
     )
   end
 
   let(:required_permission) { "plans:view" }
+  let(:variables) { {planId: catalog_plan.id} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
@@ -43,6 +44,29 @@ RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
       ids = execution["data"]["planAppliedRateCards"]["collection"].map { it["id"] }
 
       expect(ids).to eq([plan_rate_card.id, standalone_card.id])
+    end
+  end
+
+  context "with filters" do
+    let(:variables) { {planId: catalog_plan.id, productType: "fixed", hasRateOverrides: true} }
+    let!(:fixed_card) do
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:, product: create(:product, :fixed, organization:)))
+    end
+
+    let(:query) do
+      <<~GQL
+        query($planId: ID, $productType: ProductTypeEnum, $hasRateOverrides: Boolean) {
+          planAppliedRateCards(planId: $planId, productType: $productType, hasRateOverrides: $hasRateOverrides) {
+            collection { id }
+          }
+        }
+      GQL
+    end
+
+    before { create(:rate_phase, organization:, plan_rate_card: fixed_card, rate_override: create(:rate_override, organization:)) }
+
+    it "returns only the matching cards" do
+      expect(execution["data"]["planAppliedRateCards"]["collection"].map { it["id"] }).to eq([fixed_card.id])
     end
   end
 

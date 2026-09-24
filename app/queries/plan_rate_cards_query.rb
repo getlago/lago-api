@@ -2,14 +2,16 @@
 
 class PlanRateCardsQuery < BaseQuery
   include RateCardCategoryOrdering
+  include RateCardListFiltering
 
   Result = BaseResult[:plan_rate_cards]
-  Filters = BaseFilters[:plan_id, :plan_code]
+  Filters = BaseFilters[:plan_id, :plan_code, *RateCardListFiltering::FILTERS]
 
   def call
     plan_rate_cards = base_scope
     plan_rate_cards = with_plan(plan_rate_cards) if filters.plan_id.present?
     plan_rate_cards = with_plan_code(plan_rate_cards) if filters.plan_code.present?
+    plan_rate_cards = apply_rate_card_filters(plan_rate_cards, phase_parent: :plan_rate_card_id)
     plan_rate_cards = paginate(plan_rate_cards)
     plan_rate_cards = if order == :product_category
       order_by_product_category(plan_rate_cards).order(:id)
