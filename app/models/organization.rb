@@ -75,6 +75,8 @@ class Organization < ApplicationRecord
   has_many :streaming_destinations, class_name: "StreamingDestinations::BaseDestination"
   has_many :taxes
   has_many :wallets
+  has_many :x402_connections, class_name: "X402::Connection"
+  has_many :x402_settlements, class_name: "X402::Settlement"
   has_many :wallet_transactions
   has_many :webhook_endpoints
   has_many :webhooks

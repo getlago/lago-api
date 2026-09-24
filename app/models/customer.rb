@@ -467,6 +467,7 @@ end
 #  timezone                                     :string
 #  url                                          :string
 #  vat_rate                                     :float
+#  x402_agent_address                           :string
 #  zipcode                                      :string
 #  created_at                                   :datetime         not null
 #  updated_at                                   :datetime         not null
@@ -488,6 +489,7 @@ end
 #  index_customers_on_external_id                               (organization_id,external_id)
 #  index_customers_on_external_id_and_organization_id           (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customers_on_org_id_and_sequential_id_unique           (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
+#  index_customers_on_organization_id_and_x402_agent_address    (organization_id,x402_agent_address) UNIQUE WHERE ((deleted_at IS NULL) AND (x402_agent_address IS NOT NULL))
 #  index_customers_on_organization_id_email_gin_trgm_ops        (organization_id,email) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_firstname_gin_trgm_ops    (organization_id,firstname) WHERE (deleted_at IS NULL) USING gin

@@ -56,7 +56,8 @@ class WalletTransaction < ApplicationRecord
   SOURCES = [
     :manual,
     :interval,
-    :threshold
+    :threshold,
+    :x402
   ].freeze
 
   enum :status, STATUSES

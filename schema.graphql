@@ -16539,6 +16539,7 @@ enum WalletTransactionSourceEnum {
   interval
   manual
   threshold
+  x402
 }
 
 enum WalletTransactionStatusEnum {
