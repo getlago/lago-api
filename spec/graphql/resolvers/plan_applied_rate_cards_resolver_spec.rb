@@ -34,6 +34,18 @@ RSpec.describe Resolvers::PlanAppliedRateCardsResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:view"
 
+  context "with a standalone product added after a categorized one" do
+    let!(:standalone_card) do
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:, product: create(:product, :standalone, organization:)))
+    end
+
+    it "lists the standalone product last" do
+      ids = execution["data"]["planAppliedRateCards"]["collection"].map { it["id"] }
+
+      expect(ids).to eq([plan_rate_card.id, standalone_card.id])
+    end
+  end
+
   it "returns the products assigned to the plan" do
     response = execution["data"]["planAppliedRateCards"]
 

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class ContractRateCardsQuery < BaseQuery
+  include RateCardCategoryOrdering
+
   Result = BaseResult[:contract_rate_cards]
   Filters = BaseFilters[:contract_id, :external_id]
 
@@ -9,7 +11,12 @@ class ContractRateCardsQuery < BaseQuery
     contract_rate_cards = with_contract(contract_rate_cards) if filters.contract_id.present?
     contract_rate_cards = with_external_id(contract_rate_cards) if filters.external_id.present?
     contract_rate_cards = paginate(contract_rate_cards)
-    contract_rate_cards = apply_consistent_ordering(contract_rate_cards)
+    contract_rate_cards = if order == :product_category
+      order_by_product_category(contract_rate_cards).order(:effective_date, :id)
+    else
+      # Same order as a contract's appliedRateCards field (Sources::ContractCurrentRateCards).
+      apply_consistent_ordering(contract_rate_cards, default_order: {effective_date: :asc})
+    end
 
     result.contract_rate_cards = contract_rate_cards
     result
