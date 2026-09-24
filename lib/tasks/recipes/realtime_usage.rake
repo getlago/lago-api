@@ -25,6 +25,55 @@ REALTIME_USAGE_CSV_HEADERS = %w[
 
 namespace :recipes do
   namespace :realtime_usage do
+    desc "Report whether an organization can be served current usage from the ClickHouse usage buckets"
+    task check_eligibility: :environment do
+      Rails.logger.level = Logger::Severity::ERROR
+
+      organization = TaskPrompt.ask_for_organization
+
+      puts ""
+      puts "Gates that are not switches"
+      realtime_usage_print_gate("premium license", License.premium?)
+      realtime_usage_print_gate("clickhouse enabled on the deployment", Events::Stores::StoreFactory.supports_clickhouse?)
+      realtime_usage_print_gate("organization reads the clickhouse events store", organization.clickhouse_events_store?)
+
+      puts ""
+      puts "Switches, as they stand today"
+      kill_switch = ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ENABLED"])
+      puts "  LAGO_REALTIME_USAGE_ENABLED: #{kill_switch ? "on" : "off"}"
+      puts "  realtime_usage feature flag:  #{organization.feature_flag_enabled?(:realtime_usage) ? "on" : "off"}"
+
+      subscriptions = organization.subscriptions.active.includes(plan: {charges: :billable_metric}).to_a
+      if subscriptions.empty?
+        puts ""
+        puts "No active subscription: nothing to serve, and nothing this task can say about coverage."
+        next
+      end
+
+      report = realtime_usage_eligibility_report(subscriptions)
+
+      puts ""
+      puts "Coverage over #{subscriptions.size} active subscription(s)"
+      puts "  fully served:   #{report[:fully_served]}"
+      puts "  partly served:  #{report[:partly_served]}"
+      puts "  not served:     #{report[:not_served]}"
+      puts "  no charge at all: #{report[:without_charges]}" if report[:without_charges].positive?
+      puts "  distinct charges served: #{report[:served_charges]}/#{report[:total_charges]}"
+
+      if report[:blockers].any?
+        puts ""
+        puts "What is keeping the rest on the events store, worst first"
+        report[:blockers].each do |reason, entry|
+          puts "  #{reason}: #{entry[:charge_ids].size} charge(s), #{entry[:subscriptions].size} subscription(s)"
+          entry[:labels].first(10).each { puts "    #{it}" }
+          puts "    … and #{entry[:labels].size - 10} more" if entry[:labels].size > 10
+        end
+      end
+
+      puts ""
+      puts(realtime_usage_verdict(organization, report, kill_switch))
+    end
+
     desc "Compare the current usage served from the usage buckets with the one computed from the events store"
     task compare_usage: :environment do
       Rails.logger.level = Logger::Severity::ERROR
@@ -168,4 +217,112 @@ def realtime_usage_csv_rows(subscription, comparison)
       comparison.duplicate_events_count
     ]
   end
+end
+
+def realtime_usage_print_gate(label, ok)
+  puts "  [#{ok ? "x" : " "}] #{label}"
+end
+
+# Charges are shared by every subscription on a plan, so coverage is counted twice: once over
+# distinct charges, which says what to fix, and once over subscriptions, which says how much of
+# the organization the fix is worth.
+def realtime_usage_eligibility_report(subscriptions)
+  fully_served = 0
+  partly_served = 0
+  not_served = 0
+  without_charges = 0
+  served_charge_ids = Set.new
+  charge_ids = Set.new
+  blockers = Hash.new { |hash, key| hash[key] = {charge_ids: Set.new, labels: Set.new, subscriptions: Set.new} }
+
+  subscriptions.each do |subscription|
+    charges = subscription.plan.charges
+    if charges.empty?
+      without_charges += 1
+      next
+    end
+
+    served = 0
+    charges.each do |charge|
+      charge_ids << charge.id
+      reason = realtime_usage_charge_blocker(charge)
+
+      if reason.nil?
+        served += 1
+        served_charge_ids << charge.id
+        next
+      end
+
+      blocker = blockers[reason]
+      blocker[:charge_ids] << charge.id
+      blocker[:labels] << realtime_usage_charge_label(charge)
+      blocker[:subscriptions] << subscription.id
+    end
+
+    case served
+    when charges.size then fully_served += 1
+    when 0 then not_served += 1
+    else partly_served += 1
+    end
+  end
+
+  {
+    fully_served:,
+    partly_served:,
+    not_served:,
+    without_charges:,
+    served_charges: served_charge_ids.size,
+    total_charges: charge_ids.size,
+    blockers: blockers.sort_by { |_reason, entry| -entry[:subscriptions].size }
+  }
+end
+
+# The presentation breakdown is not in RealtimeUsage.unsupported_reason because it depends on the
+# caller: one that suppresses the breakdown, like the wallet refresh, still serves the charge.
+# Ordinary current usage asks for it, so the rollout decision has to count it as delegated.
+def realtime_usage_charge_blocker(charge)
+  reason = RealtimeUsage.unsupported_reason(charge)
+  return reason if reason
+
+  "presentation_breakdown" if charge.presentation_group_keys_values.present?
+end
+
+def realtime_usage_charge_label(charge)
+  billable_metric = charge.billable_metric
+
+  "#{billable_metric.code} (#{billable_metric.aggregation_type}, #{charge.charge_model}) on plan #{charge.plan.code}"
+end
+
+def realtime_usage_verdict(organization, report, kill_switch)
+  unless License.premium? && Events::Stores::StoreFactory.supports_clickhouse?
+    return "Not a candidate: the deployment itself cannot serve the buckets."
+  end
+
+  unless organization.clickhouse_events_store?
+    return "Not a candidate: the organization reads the Postgres events store, so the buckets and " \
+           "the events would disagree. Migrate it to ClickHouse first."
+  end
+
+  if report[:served_charges].zero?
+    return "Not worth enabling: no charge on an active subscription can be served from the buckets."
+  end
+
+  served = "#{report[:served_charges]}/#{report[:total_charges]} charges, " \
+           "#{report[:fully_served]} fully served subscription(s)"
+
+  flag_enabled = organization.feature_flag_enabled?(:realtime_usage)
+
+  next_step = if kill_switch && flag_enabled
+    "Already serving: both switches are on. Re-run recipes:realtime_usage:compare_usage to confirm parity."
+  elsif kill_switch
+    "Next: run recipes:realtime_usage:compare_usage for this organization, then enable the realtime_usage flag."
+  elsif flag_enabled
+    "Next: the realtime_usage flag is on but LAGO_REALTIME_USAGE_ENABLED is off, so nothing is served. " \
+      "Run recipes:realtime_usage:compare_usage, then turn the kill switch on."
+  else
+    "Next: run recipes:realtime_usage:compare_usage, then enable LAGO_REALTIME_USAGE_ENABLED and the " \
+      "realtime_usage flag."
+  end
+
+  "Candidate: #{served}. #{next_step}"
 end

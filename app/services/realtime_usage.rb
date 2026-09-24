@@ -44,19 +44,25 @@ module RealtimeUsage
     end
 
     def supported_charge?(charge)
+      unsupported_reason(charge).nil?
+    end
+
+    def unsupported_reason(charge)
       billable_metric = charge.billable_metric
 
-      return false unless SUPPORTED_CHARGE_MODELS.include?(charge.charge_model)
-      return false unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
-      return false if charge.pay_in_advance?
-      return false if charge.prorated?
-      return false if billable_metric.recurring?
+      return "unsupported_charge_model" unless SUPPORTED_CHARGE_MODELS.include?(charge.charge_model)
+      return "unsupported_aggregation_type" unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
+      return "pay_in_advance" if charge.pay_in_advance?
+      return "prorated" if charge.prorated?
+      return "recurring_metric" if billable_metric.recurring?
 
       # `target_wallet_code` will be handled later.
-      return false if charge.accepts_target_wallet
+      return "target_wallet" if charge.accepts_target_wallet
 
       # The pipeline does not evaluate custom expressions yet.
-      billable_metric.expression.blank?
+      return "expression" if billable_metric.expression.present?
+
+      nil
     end
   end
 end
