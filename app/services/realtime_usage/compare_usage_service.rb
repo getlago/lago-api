@@ -233,8 +233,15 @@ module RealtimeUsage
       ).duplicates_by_code
     end
 
+    # Read from the ClickHouse events store, the only one the buckets are ever compared against.
     def recent_events?
-      RecentEventsService.call!(subscription:, since: RECENT_EVENTS_WINDOW.ago).received
+      Clickhouse::EventsEnriched
+        .where(
+          organization_id: subscription.organization_id,
+          external_subscription_id: subscription.external_id,
+          timestamp: RECENT_EVENTS_WINDOW.ago..
+        )
+        .exists?
     end
 
     def organization

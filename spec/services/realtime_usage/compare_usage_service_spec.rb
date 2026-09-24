@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe RealtimeUsage::CompareUsageService do
+RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
   subject(:comparison) { described_class.call(subscription:, timestamp:) }
 
   include_context "with realtime usage availability"
@@ -38,9 +38,10 @@ RSpec.describe RealtimeUsage::CompareUsageService do
     Fee.new(organization:, charge:, charge_filter_id:, units:, amount_cents:, events_count:, grouped_by:)
   end
 
+  # The recheck window is read straight from the events store, which holds no row here.
   def stub_recent_events(received)
-    allow(RealtimeUsage::RecentEventsService).to receive(:call!).and_return(
-      RealtimeUsage::RecentEventsService::Result.new.tap { it.received = received }
+    allow(Clickhouse::EventsEnriched).to receive(:where).and_return(
+      instance_double(ActiveRecord::Relation, exists?: received)
     )
   end
 
