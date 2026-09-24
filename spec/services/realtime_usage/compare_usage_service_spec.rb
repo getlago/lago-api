@@ -189,7 +189,7 @@ RSpec.describe RealtimeUsage::CompareUsageService do
     end
   end
 
-  context "when the charge mixes charge filters with group keys" do
+  context "when the catch-all leaf of a charge mixing filters with group keys is empty" do
     let(:charge) do
       create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "5", "pricing_group_keys" => ["region"]})
     end
@@ -202,9 +202,9 @@ RSpec.describe RealtimeUsage::CompareUsageService do
       stub_recent_events(false)
     end
 
-    it "classifies the catch-all leaf as delegated instead of mismatching" do
-      expect(comparison.differences).to be_empty
-      expect(comparison.rows.map(&:classification)).to eq(["delegated_default_filter"])
+    it "reports it as a mismatch, the stream writing that bucket like any other" do
+      expect(comparison.differences.map(&:classification)).to eq(["mismatch"])
+      expect(comparison.differences.first.charge_filter_id).to be_nil
     end
   end
 

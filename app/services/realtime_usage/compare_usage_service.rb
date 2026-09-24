@@ -23,7 +23,6 @@ module RealtimeUsage
 
     MATCH = "match"
     MISMATCH = "mismatch"
-    DELEGATED_DEFAULT_FILTER = "delegated_default_filter"
     RESENT_TRANSACTION_ID = "resent_transaction_id"
 
     Totals = Data.define(:units, :amount_cents, :events_count)
@@ -178,7 +177,6 @@ module RealtimeUsage
     end
 
     def classify(row)
-      return DELEGATED_DEFAULT_FILTER if delegated_default_leaf?(row)
       return MATCH unless row.different?
       return RESENT_TRANSACTION_ID if resent_transaction_id?(row)
 
@@ -193,15 +191,6 @@ module RealtimeUsage
     def resent_transaction_id?(row)
       row.bucket_events_count == row.events_events_count &&
         duplicate_events_by_code[row.billable_metric_code].to_i.positive?
-    end
-
-    # A charge mixing charge filters with group keys delegates its catch-all bucket for good, so
-    # its default leaf is expected to come from the events store on both sides.
-    def delegated_default_leaf?(row)
-      return false if row.charge_filter_id.present?
-
-      charge = charges_by_id[row.charge_id]
-      charge.filters.any? && (charge.pricing_group_keys.present? || charge.filters.any? { it.pricing_group_keys.present? })
     end
 
     def comparable_totals(usage)
