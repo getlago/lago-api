@@ -1019,6 +1019,27 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
     end
 
+    it "reports the charges it served from the buckets" do
+      expect(usage_service.call.precomputed_charge_ids).to eq([charge.id])
+    end
+
+    context "when the bucket read fails" do
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(
+          RealtimeUsage::FetchBucketsService::Result.new.tap do
+            it.service_failure!(code: "usage_buckets_read_failure", message: "clickhouse is unreachable")
+          end
+        )
+      end
+
+      it "counts the events and reports no charge as served, the fallback being silent" do
+        result = usage_service.call
+
+        expect(result.usage.fees.first).to have_attributes(units: 2)
+        expect(result.precomputed_charge_ids).to be_empty
+      end
+    end
+
     context "with the provider and the bucket fetch spied on" do
       before do
         allow(Events::Stores::Provider).to receive(:new).and_call_original
