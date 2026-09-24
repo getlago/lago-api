@@ -5979,7 +5979,8 @@ CREATE TABLE public.usage_attribution_types (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    attribution_keys character varying[] DEFAULT '{}'::character varying[] NOT NULL
+    attribution_keys character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    description character varying
 );
 
 
@@ -15186,6 +15187,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260924133109'),
 ('20260922172006'),
 ('20260922153925'),
 ('20260922110909'),

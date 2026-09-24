@@ -87,6 +87,7 @@ end
 #  attribution_keys :string           default([]), not null, is an Array
 #  code             :string           not null
 #  deleted_at       :datetime
+#  description      :string
 #  name             :string
 #  role             :enum             not null
 #  created_at       :datetime         not null

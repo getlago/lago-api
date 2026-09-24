@@ -33,7 +33,7 @@ RSpec.describe Resolvers::UsageAttributionTypesResolver do
       query($limit: Int, $page: Int, $role: UsageAttributionTypeRoleEnum, $searchTerm: String) {
         usageAttributionTypes(limit: $limit, page: $page, role: $role, searchTerm: $searchTerm) {
           collection {
-            id code name attributionKeys role
+            id code name description attributionKeys role
             parent { id code }
           }
           metadata { currentPage totalCount }
@@ -64,6 +64,7 @@ RSpec.describe Resolvers::UsageAttributionTypesResolver do
 
     hierarchical_child = collection.find { |type| type["id"] == user.id }
     expect(hierarchical_child["parent"]["id"]).to eq(department.id)
+    expect(hierarchical_child["description"]).to eq(user.description)
   end
 
   it "does not return types of another organization" do

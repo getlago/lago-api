@@ -13,6 +13,7 @@ module Types
 
       field :attribution_keys, [String], null: false
       field :code, String, null: false
+      field :description, String, null: true
       field :name, String, null: true
       field :role, Types::UsageAttributionTypes::RoleEnum, null: false
 
