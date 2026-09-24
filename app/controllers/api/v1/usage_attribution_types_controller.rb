@@ -102,7 +102,7 @@ module Api
 
       def input_params
         @input_params ||= params.require(:usage_attribution_type)
-          .permit(:code, :name, :role, :parent_code, attribution_keys: [])
+          .permit(:code, :name, :description, :role, :parent_code, attribution_keys: [])
       end
 
       def render_usage_attribution_type(usage_attribution_type)

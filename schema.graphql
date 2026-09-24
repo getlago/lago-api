@@ -4148,6 +4148,7 @@ input CreateUsageAttributionTypeInput {
   """
   clientMutationId: String
   code: String!
+  description: String
   name: String
   parentId: ID
   role: UsageAttributionTypeRoleEnum!
@@ -16166,6 +16167,7 @@ input UpdateUsageAttributionTypeInput {
   """
   clientMutationId: String
   code: String
+  description: String
   id: ID!
   name: String
   parentId: ID
@@ -16201,6 +16203,7 @@ type UsageAttributionType {
   children: [UsageAttributionType!]!
   code: String!
   createdAt: ISO8601DateTime!
+  description: String
   id: ID!
   name: String
   organization: Organization

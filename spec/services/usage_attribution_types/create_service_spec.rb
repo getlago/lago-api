@@ -10,6 +10,7 @@ RSpec.describe UsageAttributionTypes::CreateService do
     {
       code: "user",
       name: "User",
+      description: "A person using the product",
       attribution_keys: ["user_id"],
       role: "hierarchical"
     }
@@ -22,6 +23,7 @@ RSpec.describe UsageAttributionTypes::CreateService do
     expect(usage_attribution_type.organization).to eq(organization)
     expect(usage_attribution_type.code).to eq("user")
     expect(usage_attribution_type.name).to eq("User")
+    expect(usage_attribution_type.description).to eq("A person using the product")
     expect(usage_attribution_type.attribution_keys).to eq(["user_id"])
     expect(usage_attribution_type.role).to eq("hierarchical")
     expect(usage_attribution_type.parent).to be_nil
@@ -39,6 +41,15 @@ RSpec.describe UsageAttributionTypes::CreateService do
     params[:attribution_keys] = %w[user_id userId usr_id]
 
     expect(result.usage_attribution_type.attribution_keys).to eq(%w[user_id userId usr_id])
+  end
+
+  context "without a description" do
+    before { params.delete(:description) }
+
+    it "stores a nil description" do
+      expect(result).to be_success
+      expect(result.usage_attribution_type.description).to be_nil
+    end
   end
 
   context "when organization is nil" do
