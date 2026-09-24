@@ -27,6 +27,24 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
   end
 
+  describe "#charge_filter_ids_for" do
+    let(:totals) do
+      {
+        ["charge_1", ""] => described_class::Totals.new(units: BigDecimal("42.5"), events_count: 7),
+        ["charge_1", "filter_1"] => described_class::Totals.new(units: BigDecimal(3), events_count: 3),
+        ["charge_2", "filter_2"] => described_class::Totals.new(units: BigDecimal(1), events_count: 1)
+      }
+    end
+
+    it "lists the filters of that charge only" do
+      expect(bucket_set.charge_filter_ids_for(charge_id: "charge_1")).to match_array(["", "filter_1"])
+    end
+
+    it "is empty for a charge the buckets do not carry" do
+      expect(bucket_set.charge_filter_ids_for(charge_id: "charge_3")).to be_empty
+    end
+  end
+
   describe "#aggregation_result_for" do
     it "reports the units as the value and the events count alongside" do
       result = bucket_set.aggregation_result_for(charge_id: "charge_1", charge_filter_id: "")
