@@ -1,0 +1,4 @@
+---
+sv:
+  document:
+    page_numbering: Sida %{current} av %{total}
