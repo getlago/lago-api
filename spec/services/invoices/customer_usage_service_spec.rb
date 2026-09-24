@@ -1019,10 +1019,6 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
     end
 
-    it "reports the charges it served from the buckets" do
-      expect(usage_service.call.precomputed_charge_ids).to eq([charge.id])
-    end
-
     context "when the bucket read fails" do
       before do
         allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(
@@ -1032,11 +1028,13 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         )
       end
 
-      it "counts the events and reports no charge as served, the fallback being silent" do
-        result = usage_service.call
+      it "counts the events, an unreachable clickhouse making current usage slow rather than broken" do
+        expect(usage_service.call.usage.fees.first).to have_attributes(units: 2)
+      end
 
-        expect(result.usage.fees.first).to have_attributes(units: 2)
-        expect(result.precomputed_charge_ids).to be_empty
+      it "raises under the forced gate, which only the parity comparison opens" do
+        expect { RealtimeUsage.with_forced_gate { usage_service.call } }
+          .to raise_error(BaseService::FailedResult)
       end
     end
 

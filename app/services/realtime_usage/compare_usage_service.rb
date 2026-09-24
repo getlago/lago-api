@@ -27,8 +27,6 @@ module RealtimeUsage
     MISMATCH = "mismatch"
     RESENT_TRANSACTION_ID = "resent_transaction_id"
 
-    BUCKET_READ_FAILURE = "bucket_read_failure"
-
     Totals = Data.define(:units, :amount_cents, :events_count)
     EMPTY_TOTALS = Totals.new(units: BigDecimal(0), amount_cents: 0, events_count: 0)
 
@@ -102,37 +100,29 @@ module RealtimeUsage
     # The charges the buckets serve are known before any usage is computed, so both runs are
     # narrowed to them: a charge that cannot be compared is worth computing on neither side.
     def compare
-      candidate_charges = RealtimeUsage.with_forced_gate { fetch_served_charges }
+      served_charges = RealtimeUsage.with_forced_gate { fetch_served_charges }
 
       result.rows = []
       result.differences = []
       result.cutover_risks = []
       result.duplicate_events_count = 0
       result.eligible_charges_count = eligible_charges.size
-      result.served_charges_count = 0
-      result.declined_reason = candidate_charges.empty? ? decline_reason : nil
-      return if candidate_charges.empty?
-
-      # The probe reads the buckets on its own, and a read failing inside the usage run falls back
-      # to the events store without raising: taking the probe for an answer would compare the
-      # events store with itself. Only the charges the run reports as served are compared.
-      bucket_result = RealtimeUsage.with_forced_gate do
-        compute_usage(use_usage_buckets: true, charge_ids: candidate_charges.map(&:id))
-      end
-      served_charges = candidate_charges.select { bucket_result.precomputed_charge_ids.include?(it.id) }
       result.served_charges_count = served_charges.size
-      if served_charges.empty?
-        result.declined_reason = BUCKET_READ_FAILURE
-        return
-      end
+      result.declined_reason = served_charges.empty? ? decline_reason : nil
+      return if served_charges.empty?
 
       @compared_codes = served_charges.map { it.billable_metric.code }.uniq
       served_charge_ids = served_charges.map(&:id).to_set
-      events_usage = compute_usage(use_usage_buckets: false, charge_ids: served_charge_ids.to_a).usage
+      # A bucket read failing under the forced gate raises rather than falling back to the events
+      # store, so a usage the buckets did not serve never reaches the comparison.
+      bucket_usage = RealtimeUsage.with_forced_gate do
+        compute_usage(use_usage_buckets: true, charge_ids: served_charge_ids.to_a)
+      end
+      events_usage = compute_usage(use_usage_buckets: false, charge_ids: served_charge_ids.to_a)
 
       @duplicate_events_by_code = fetch_duplicate_events_by_code(served_charges)
 
-      result.rows = build_rows(bucket_usage: bucket_result.usage, events_usage:, served_charge_ids:)
+      result.rows = build_rows(bucket_usage:, events_usage:, served_charge_ids:)
       result.differences = result.rows.select(&:different?)
       result.cutover_risks = result.rows.select(&:cutover_risk?)
       result.duplicate_events_count = duplicate_events_by_code.values.sum
@@ -147,7 +137,7 @@ module RealtimeUsage
         apply_taxes: false,
         usage_filters: UsageFilters.new(filter_by_charge_id: charge_ids),
         use_usage_buckets:
-      )
+      ).usage
     end
 
     # Asks the provider itself which charges the buckets answered, rather than deducing it from
