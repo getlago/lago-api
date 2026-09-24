@@ -204,6 +204,24 @@ RSpec.describe Invoices::PaidCreditService do
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
+    context "with an x402 wallet transaction" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:, source: :x402)
+      end
+
+      before do
+        allow(X402::CreditPurchases::RecordPaymentService).to receive(:call!)
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+      end
+
+      it "pays the invoice from the settlement instead of a payment provider" do
+        result = invoice_service.call
+
+        expect(X402::CreditPurchases::RecordPaymentService).to have_received(:call!).with(invoice: result.invoice, wallet_transaction:)
+        expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+      end
+    end
+
     context "with lago_premium", :premium do
       it "enqueues an SendEmailJob" do
         expect do

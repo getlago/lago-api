@@ -98,7 +98,11 @@ module Invoices
     end
 
     def create_payment(invoice)
-      Invoices::Payments::CreateService.call_async(invoice:)
+      if wallet_transaction.x402?
+        ::X402::CreditPurchases::RecordPaymentService.call!(invoice:, wallet_transaction:)
+      else
+        Invoices::Payments::CreateService.call_async(invoice:)
+      end
     end
 
     def should_deliver_email?

@@ -33,6 +33,7 @@ RSpec.describe X402::CreditPurchases::PurchaseService do
       expect(wallet_transaction.wallet.reload).to have_attributes(code: "agent_credits", balance_cents: 100, credits_balance: 100)
       expect(a_request(:post, verify_url)).to have_been_made.once
       expect(a_request(:post, settle_url)).to have_been_made.once
+      expect(BillPaidCreditJob).to have_been_enqueued.with(wallet_transaction, Integer)
     end
   end
 

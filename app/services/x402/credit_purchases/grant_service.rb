@@ -53,6 +53,7 @@ module X402
         after_commit do
           SendWebhookJob.perform_later("wallet_transaction.created", wallet_transaction)
           Utils::ActivityLog.produce(wallet_transaction, "wallet_transaction.created")
+          BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
         end
       end
 

@@ -11137,6 +11137,7 @@ input PaymentRequestCreateInput {
 enum PaymentTypeEnum {
   manual
   provider
+  x402
 }
 
 """
