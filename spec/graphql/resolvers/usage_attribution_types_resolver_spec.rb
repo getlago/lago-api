@@ -104,6 +104,76 @@ RSpec.describe Resolvers::UsageAttributionTypesResolver do
     end
   end
 
+  context "with the roots filter" do
+    let(:team) do
+      create(:usage_attribution_type, organization:, code: "team", name: "Team", attribution_keys: ["team_id"], parent: department)
+    end
+    let(:variables) { {roots: true} }
+    let(:query) do
+      <<~GQL
+        query($limit: Int, $page: Int, $roots: Boolean) {
+          usageAttributionTypes(limit: $limit, page: $page, roots: $roots) {
+            collection {
+              id code name role
+              children {
+                id code name role
+                children { id code name role children { id } }
+              }
+            }
+            metadata { currentPage totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      team
+      user.update!(parent: team)
+    end
+
+    it "returns each root with its descendants nested" do
+      expect(collection.map { |type| type["id"] }).to match_array([department.id, model.id])
+
+      department_node = collection.find { |type| type["id"] == department.id }
+      team_node = department_node["children"].sole
+      expect(team_node["id"]).to eq(team.id)
+
+      user_node = team_node["children"].sole
+      expect(user_node["id"]).to eq(user.id)
+      expect(user_node["children"]).to be_empty
+    end
+
+    it "returns a flat type as a childless root" do
+      model_node = collection.find { |type| type["id"] == model.id }
+
+      expect(model_node["role"]).to eq("flat")
+      expect(model_node["children"]).to be_empty
+    end
+
+    it "paginates the roots while keeping their subtree whole" do
+      expect(metadata["totalCount"]).to eq(2)
+    end
+
+    context "with pagination" do
+      let(:variables) { {roots: true, page: 2, limit: 1} }
+
+      it "returns one root with its full subtree" do
+        expect(collection.count).to eq(1)
+        expect(collection.first["id"]).to eq(department.id)
+        expect(collection.first["children"].sole["children"].sole["id"]).to eq(user.id)
+        expect(metadata["totalCount"]).to eq(2)
+      end
+    end
+
+    context "when a discarded type has kept children" do
+      before { department.discard! }
+
+      it "promotes them to roots so the subtree stays visible" do
+        expect(collection.map { |type| type["id"] }).to match_array([team.id, model.id])
+      end
+    end
+  end
+
   context "when the account_tree feature flag is disabled" do
     before { organization.update!(feature_flags: []) }
 

@@ -14,7 +14,7 @@ class UsageAttributionType < ApplicationRecord
 
   belongs_to :organization
   belongs_to :parent, -> { with_discarded }, class_name: "UsageAttributionType", optional: true
-  has_many :children, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
+  has_many :children, -> { order(:code) }, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
   has_many :usage_attribution_values
 
   enum :role, ROLES, validate: true
