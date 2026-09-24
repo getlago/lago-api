@@ -37,3 +37,7 @@ skip_credit_invoice_auto_payment_delay:
 account_tree:
   description: "Enable the account tree - hierarchy based attributed usage below the customer"
   owners: ["@lovrocolic"]
+
+x402_payments:
+  description: "Enable x402 agentic payments: gate checks and USDC credit purchases settled through the Coinbase CDP facilitator"
+  owners: ["@osmarluz"]

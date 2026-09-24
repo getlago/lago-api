@@ -169,3 +169,8 @@ resources :webhooks, only: %i[] do
   get :public_key, on: :collection
   get :json_public_key, on: :collection
 end
+
+namespace :x402 do
+  resources :gate_checks, only: :create
+  resources :credit_purchases, only: :create
+end

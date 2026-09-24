@@ -6927,6 +6927,7 @@ enum FeatureFlagEnum {
   skip_credit_invoice_auto_payment_delay
   stripe_shared_payment_token
   wallet_traceability
+  x402_payments
 }
 
 type FeatureObject {
