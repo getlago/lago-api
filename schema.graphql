@@ -10152,7 +10152,7 @@ type Mutation {
   ): ChargeFilter
 
   """
-  Updates a pending contract
+  Updates a contract; once active, only its administrative settings
   """
   updateContract(
     """
