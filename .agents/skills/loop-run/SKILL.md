@@ -63,7 +63,7 @@ description: 'Orchestrator of the loop pipeline for lago-api: sweep → spec →
 
       `<type>` ∈ feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert, misc — implied by the ticket. `<scope>` = short domain (billing, alerts, webhooks...). `<description>` imperative mood. **The first line is 50 characters or less** — shorten the description until it fits. The body explains the why and the what in complete, direct sentences, describing only what this diff actually changes.
    3. **Push**: `git -C <worktree> push -u origin <branch>` (branch from state.md).
-   4. **PR** (ready, not draft): `gh pr create --repo getlago/lago-api --head <branch> --base main --assignee @me` — title = the commit's first line; body = the commit body (same Context/Description/Fixes structure). `@me` is the authenticated `gh` user, so the PR self-assigns to whoever runs the loop.
+   4. **PR** (ready, not draft): `gh pr create --repo getlago/lago-api --head <branch> --base main --assignee @me` — title = the commit's first line; body = the commit body WITHOUT the `Fixes <ISSUE-ID>` line: only the Context and Description sections. lago-api is open source, so the PR description never references Linear: no issue ID, no Linear URL. Linear still links the PR on its own, from the branch name (`<ISSUE-ID>-...`). `@me` is the authenticated `gh` user, so the PR self-assigns to whoever runs the loop.
    5. **Linear**: move the issue to "In Review" via the Linear MCP `save_issue` tool.
 
 5. **CI gate** (max 3 fix cycles — cap enforced by iter-budget.sh):
