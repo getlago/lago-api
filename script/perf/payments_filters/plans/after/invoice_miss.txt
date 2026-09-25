@@ -1,0 +1,13 @@
+-- case: invoice_miss (list) phase: after selective: true
+-- filters: {"invoice_number":"PERF-NOPE-000000-000000001"} search_term: nil page: 1
+-- runs_ms: [0.0, 0.0, 0.0]
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (1=0) ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=0.01..0.02 rows=1 width=448) (actual time=0.001..0.001 rows=0 loops=1)
+  ->  Sort  (cost=0.01..0.02 rows=0 width=448) (actual time=0.001..0.001 rows=0 loops=1)
+        Sort Key: created_at DESC, id
+        Sort Method: quicksort  Memory: 25kB
+        ->  Result  (cost=0.00..0.00 rows=0 width=0) (actual time=0.000..0.000 rows=0 loops=1)
+              One-Time Filter: false
+Planning Time: 0.028 ms
+Execution Time: 0.010 ms

@@ -19,6 +19,8 @@ class PaymentMethod < ApplicationRecord
     manual: "manual"
   }.freeze
 
+  PROVIDER_METHOD_TYPES = %w[card sepa_debit us_bank_account bacs_debit link boleto crypto customer_balance].freeze
+
   validates :provider_method_id, presence: true
   validates :is_default, inclusion: {in: [true, false]}
 

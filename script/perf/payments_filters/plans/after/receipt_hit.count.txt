@@ -1,0 +1,25 @@
+-- case: receipt_hit (count) phase: after selective: true
+-- filters: {"receipt_number":"her-1556-335-rcpt-000123"} search_term: nil page: 1
+-- runs_ms: [0.0, 0.1, 0.0]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."id" IN (SELECT "payment_receipts"."payment_id" FROM "payment_receipts" WHERE "payment_receipts"."organization_id" = '<org-uuid>' AND (lower(payment_receipts.number) = lower('her-1556-335-rcpt-000123')))
+
+Aggregate  (cost=151.13..151.14 rows=1 width=8) (actual time=0.022..0.022 rows=1 loops=1)
+  Buffers: shared hit=22
+  ->  Nested Loop  (cost=0.99..151.11 rows=9 width=0) (actual time=0.017..0.021 rows=2 loops=1)
+        Buffers: shared hit=22
+        ->  Index Scan using index_payment_receipts_on_organization_id_lower_number on payment_receipts  (cost=0.56..23.58 rows=24 width=16) (actual time=0.007..0.008 rows=2 loops=1)
+              Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (lower((number)::text) = 'her-1556-335-rcpt-000123'::text))
+              Buffers: shared hit=6
+        ->  Index Scan using payments_pkey on payments  (cost=0.43..5.31 rows=1 width=16) (actual time=0.006..0.006 rows=1 loops=2)
+              Index Cond: (id = payment_receipts.payment_id)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Buffers: shared hit=16
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=2)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.192 ms
+Execution Time: 0.043 ms

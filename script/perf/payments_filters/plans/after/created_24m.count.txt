@@ -1,0 +1,30 @@
+-- case: created_24m (count) phase: after selective: false
+-- filters: {"created_at_from":"2024-09-08","created_at_to":"2026-09-08"} search_term: nil page: 1
+-- runs_ms: [14211.8, 16234.0, 14673.2]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."created_at" >= '2024-09-08 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999'
+
+Aggregate  (cost=13572135.26..13572135.27 rows=1 width=8) (actual time=14671.212..14671.213 rows=1 loops=1)
+  Buffers: shared hit=18991594 read=165462
+  I/O Timings: shared/local read=726.744
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13565934.85 rows=2480165 width=0) (actual time=74.277..14526.272 rows=4951605 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (created_at >= '2024-09-08 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 48395
+        Buffers: shared hit=18991594 read=165462
+        I/O Timings: shared/local read=726.744
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4748761)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=18991594 read=3450
+                I/O Timings: shared/local read=164.792
+Planning:
+  Buffers: shared hit=3 read=5
+  I/O Timings: shared/local read=0.606
+Planning Time: 1.285 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.776 ms, Inlining 6.711 ms, Optimization 40.069 ms, Emission 27.380 ms, Total 75.937 ms
+Execution Time: 14673.156 ms

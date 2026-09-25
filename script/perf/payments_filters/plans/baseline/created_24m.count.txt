@@ -1,0 +1,29 @@
+-- case: created_24m (count) phase: baseline selective: false
+-- filters: {"created_at_from":"2024-09-08","created_at_to":"2026-09-08"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."created_at" >= '2024-09-08 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999'
+
+Aggregate  (cost=13606775.29..13606775.30 rows=1 width=8) (actual time=14546.448..14546.452 rows=1 loops=1)
+  Buffers: shared hit=18975846 read=181210
+  I/O Timings: shared/local read=804.659
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13600558.37 rows=2486767 width=0) (actual time=60.025..14411.106 rows=4951605 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (created_at >= '2024-09-08 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 48395
+        Buffers: shared hit=18975846 read=181210
+        I/O Timings: shared/local read=804.659
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4748761)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=18975846 read=19198
+                I/O Timings: shared/local read=99.832
+Planning:
+  Buffers: shared hit=6 read=2
+  I/O Timings: shared/local read=0.011
+Planning Time: 0.232 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 0.748 ms, Inlining 4.951 ms, Optimization 29.922 ms, Emission 25.299 ms, Total 60.919 ms
+Execution Time: 14547.415 ms

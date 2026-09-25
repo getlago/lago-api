@@ -1,0 +1,30 @@
+-- case: status_common_succeeded_page50 (count) phase: after selective: false
+-- filters: {"payment_status":["succeeded"]} search_term: nil page: 50
+-- runs_ms: [16027.1, 15925.3, 14960.4]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payable_payment_status" = 'succeeded'
+
+Aggregate  (cost=13558635.47..13558635.48 rows=1 width=8) (actual time=15923.331..15923.335 rows=1 loops=1)
+  Buffers: shared hit=15711524 read=182144 written=201
+  I/O Timings: shared/local read=2402.205 write=1.611
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13553501.19 rows=2053709 width=0) (actual time=75.681..15791.985 rows=4100643 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (payable_payment_status = 'succeeded'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 899357
+        Buffers: shared hit=15711524 read=182144 written=201
+        I/O Timings: shared/local read=2402.205 write=1.611
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.004..0.004 rows=1 loops=3932914)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=15711523 read=20133 written=98
+                I/O Timings: shared/local read=1587.338 write=0.726
+Planning:
+  Buffers: shared hit=703 read=116
+  I/O Timings: shared/local read=14.495
+Planning Time: 17.522 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.613 ms, Inlining 6.843 ms, Optimization 36.413 ms, Emission 32.406 ms, Total 77.274 ms
+Execution Time: 15925.291 ms

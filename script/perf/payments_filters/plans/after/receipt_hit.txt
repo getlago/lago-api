@@ -1,0 +1,29 @@
+-- case: receipt_hit (list) phase: after selective: true
+-- filters: {"receipt_number":"her-1556-335-rcpt-000123"} search_term: nil page: 1
+-- runs_ms: [0.1, 0.1, 0.1]
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."id" IN (SELECT "payment_receipts"."payment_id" FROM "payment_receipts" WHERE "payment_receipts"."organization_id" = '<org-uuid>' AND (lower(payment_receipts.number) = lower('her-1556-335-rcpt-000123'))) ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=151.25..151.27 rows=9 width=330) (actual time=0.024..0.024 rows=2 loops=1)
+  Buffers: shared hit=22
+  ->  Sort  (cost=151.25..151.27 rows=9 width=330) (actual time=0.023..0.024 rows=2 loops=1)
+        Sort Key: payments.created_at DESC, payments.id
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=22
+        ->  Nested Loop  (cost=0.99..151.11 rows=9 width=330) (actual time=0.017..0.020 rows=2 loops=1)
+              Buffers: shared hit=22
+              ->  Index Scan using index_payment_receipts_on_organization_id_lower_number on payment_receipts  (cost=0.56..23.58 rows=24 width=16) (actual time=0.007..0.008 rows=2 loops=1)
+                    Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (lower((number)::text) = 'her-1556-335-rcpt-000123'::text))
+                    Buffers: shared hit=6
+              ->  Index Scan using payments_pkey on payments  (cost=0.43..5.31 rows=1 width=330) (actual time=0.006..0.006 rows=1 loops=2)
+                    Index Cond: (id = payment_receipts.payment_id)
+                    Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+                    Buffers: shared hit=16
+                    SubPlan 1
+                      ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=2)
+                            Index Cond: (id = payments.payable_id)
+                            Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                            Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.194 ms
+Execution Time: 0.052 ms
