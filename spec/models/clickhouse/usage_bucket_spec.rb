@@ -89,6 +89,13 @@ RSpec.describe Clickhouse::UsageBucket, clickhouse: true do
       expect(bucket.units).to eq(BigDecimal("123456789012345678.0"))
     end
 
+    it "keeps precise_total_amount_cents at the Decimal(38, 15) precision the sink writes" do
+      created = create(:clickhouse_usage_bucket, precise_total_amount_cents: "12345678901234567890.000000000000001")
+      bucket = described_class.find_by(organization_id: created.organization_id)
+
+      expect(bucket.precise_total_amount_cents).to eq(BigDecimal("12345678901234567890.000000000000001"))
+    end
+
     it "allows plan_id and target_wallet_code to be null" do
       created = create(:clickhouse_usage_bucket, plan_id: nil, target_wallet_code: nil)
       bucket = described_class.find_by(organization_id: created.organization_id)
