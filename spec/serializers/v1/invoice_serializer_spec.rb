@@ -31,6 +31,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       "issuing_date" => invoice.issuing_date.iso8601,
       "payment_due_date" => invoice.payment_due_date.iso8601,
       "net_payment_term" => invoice.net_payment_term,
+      "payment_term" => {"term_type" => "net", "days" => invoice.net_payment_term},
       "invoice_type" => invoice.invoice_type,
       "status" => invoice.status,
       "payment_status" => invoice.payment_status,
