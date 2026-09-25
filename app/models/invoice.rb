@@ -255,6 +255,8 @@ class Invoice < ApplicationRecord
     booked = fees.index_with(&:taxes_amount_cents)
     return booked if booked.values.sum == taxes_amount_cents
 
+    # Native fees round their tax one by one while the invoice rounds once, and provider invoices
+    # booked before fee amounts were stored drift the same way: split what the invoice charged.
     ordered_fees = fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
     allocated = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, ordered_fees.map(&:taxes_precise_amount_cents))
     ordered_fees.zip(allocated).to_h
