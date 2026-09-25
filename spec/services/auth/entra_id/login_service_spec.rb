@@ -82,6 +82,27 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
       end
     end
 
+    context "when entra id is disabled on the integration's organization but enabled on another of the user's organizations" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before do
+        create(:membership, user:, organization: entra_id_integration.organization)
+        entra_id_integration.organization.disable_entra_id_authentication!
+
+        other_organization = create(:organization)
+        other_organization.update!(premium_integrations: ["entra_id"])
+        other_organization.enable_entra_id_authentication!
+        create(:membership, user:, organization: other_organization)
+      end
+
+      it "returns error" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(entra_id: ["login_method_not_authorized"])
+      end
+    end
+
     context "when domain is not configured with an integration" do
       let(:entra_id_integration) { nil }
 

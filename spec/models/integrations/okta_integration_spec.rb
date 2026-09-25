@@ -46,5 +46,22 @@ RSpec.describe Integrations::OktaIntegration do
         expect(okta_integration.errors).to include(:domain)
       end
     end
+
+    context "when host contains unsafe URL characters" do
+      before { subject.host = "evil.com/path" }
+
+      it "is invalid" do
+        expect(subject).not_to be_valid
+        expect(subject.errors).to include(:host)
+      end
+    end
+
+    context "when host is a custom domain" do
+      before { subject.host = "login.acme.com" }
+
+      it "is valid" do
+        expect(subject).to be_valid
+      end
+    end
   end
 end
