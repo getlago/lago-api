@@ -482,43 +482,51 @@ RSpec.describe Plan do
     end
   end
 
-  describe "#attached_to_live_subscriptions?" do
+  describe "#attached_to_live_subscriptions_or_draft_invoices?" do
     let(:plan) { create(:plan) }
 
     it "returns false when no subscription is attached" do
-      expect(plan.attached_to_live_subscriptions?).to be(false)
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(false)
     end
 
     it "returns false when only terminated or canceled subscriptions are attached" do
       create(:subscription, :terminated, plan:)
       create(:subscription, :canceled, plan:)
 
-      expect(plan.attached_to_live_subscriptions?).to be(false)
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(false)
     end
 
     it "returns true when an active subscription is attached" do
       create(:subscription, :active, plan:)
 
-      expect(plan.attached_to_live_subscriptions?).to be(true)
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(true)
     end
 
     it "returns true when a pending subscription is attached" do
       create(:subscription, :pending, plan:)
 
-      expect(plan.attached_to_live_subscriptions?).to be(true)
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(true)
     end
 
     it "returns true when an incomplete subscription is attached" do
       create(:subscription, :incomplete, plan:)
 
-      expect(plan.attached_to_live_subscriptions?).to be(true)
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(true)
     end
 
     it "returns true when a terminated and a pending subscription are attached" do
       create(:subscription, :terminated, plan:)
       create(:subscription, :pending, plan:)
 
-      expect(plan.attached_to_live_subscriptions?).to be(true)
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(true)
+    end
+
+    it "returns true when a terminated subscription has a draft invoice" do
+      subscription = create(:subscription, :terminated, plan:)
+      invoice = create(:invoice, :draft, customer: subscription.customer)
+      create(:invoice_subscription, subscription:, invoice:)
+
+      expect(plan.attached_to_live_subscriptions_or_draft_invoices?).to be(true)
     end
   end
 

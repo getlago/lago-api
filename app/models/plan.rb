@@ -91,11 +91,10 @@ class Plan < ApplicationRecord
   end
 
   # NOTE: Structural attributes of a plan stay frozen as long as it is attached to a live
-  #       subscription. A pending or incomplete subscription is a committed upcoming
-  #       subscription, so it freezes the plan too: only terminated and canceled ones are
-  #       done with it and let the plan become editable again.
-  def attached_to_live_subscriptions?
-    subscriptions.where.not(status: [:terminated, :canceled]).exists?
+  #       subscription or a draft invoice. A pending or incomplete subscription is a committed
+  #       upcoming subscription, so it freezes the plan too.
+  def attached_to_live_subscriptions_or_draft_invoices?
+    subscriptions.where.not(status: [:terminated, :canceled]).exists? || invoices.draft.exists?
   end
 
   def has_trial?

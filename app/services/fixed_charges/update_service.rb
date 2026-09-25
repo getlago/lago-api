@@ -26,7 +26,7 @@ module FixedCharges
 
       ActiveRecord::Base.transaction do
         # Note: when updating a fixed_charge, we can't update pay_in_advance and prorated,
-        fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_live_subscriptions?
+        fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_live_subscriptions_or_draft_invoices?
         fixed_charge.invoice_display_name = params[:invoice_display_name] unless cascade
         fixed_charge.code = params[:code] if cascade && params[:code].present?
 
@@ -59,8 +59,8 @@ module FixedCharges
             taxes_result.raise_if_error!
           end
 
-          # NOTE: structural fields cannot be edited if plan is attached to a live subscription
-          unless plan.attached_to_live_subscriptions?
+          # NOTE: structural fields cannot be edited if plan is attached to a live subscription or draft invoice
+          unless plan.attached_to_live_subscriptions_or_draft_invoices?
             code = params.delete(:code)
             fixed_charge.code = code if code.present?
             fixed_charge.save!
