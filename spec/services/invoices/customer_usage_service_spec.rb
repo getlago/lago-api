@@ -209,6 +209,75 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "with a subscription that routes its own tax connection" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+
+        before do
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+
+          stub_request(:post, endpoint).to_return do |request|
+            response = JSON.parse(File.read(
+              Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+            ))
+
+            key = JSON.parse(request.body).first["fees"].last["item_key"]
+            response["succeededInvoices"].first["fees"].last["item_key"] = key
+            response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
+            response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+
+            {body: response.to_json}
+          end
+        end
+
+        context "when the subscription skips tax" do
+          before do
+            organization.enable_feature_flag!(:multi_connection)
+            create(:billing_object_connection, owner: subscription, organization:, category: "tax", behavior: "skip")
+          end
+
+          it "falls back to the standard taxes without reaching the provider" do
+            travel_to(current_date) do
+              result = usage_service.call
+
+              expect(result).to be_success
+              expect(result.usage.taxes_amount_cents).to eq(506)
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+            end
+          end
+        end
+
+        context "when the subscription makes no choice of its own" do
+          before { organization.enable_feature_flag!(:multi_connection) }
+
+          it "taxes the usage through the customer default connection" do
+            travel_to(current_date) do
+              result = usage_service.call
+
+              expect(result).to be_success
+              expect(result.usage.taxes_amount_cents).to eq(253)
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService)
+                .to have_received(:call).with(hash_including(integration_customer:))
+            end
+          end
+        end
+
+        context "when the flag is disabled" do
+          before do
+            create(:billing_object_connection, owner: subscription, organization:, category: "tax", behavior: "skip")
+          end
+
+          it "ignores the subscription routing and taxes as before" do
+            travel_to(current_date) do
+              result = usage_service.call
+
+              expect(result).to be_success
+              expect(result.usage.taxes_amount_cents).to eq(253)
+            end
+          end
+        end
+      end
+
       context "when a charge produces a zero fee" do
         let(:current_date) { DateTime.parse("2025-06-15") }
         let(:timestamp) { current_date }
@@ -246,7 +315,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             # both zero-amount fees (empty + free usage) stay in the usage response
             expect(result.usage.fees.map(&:amount_cents)).to match_array([0, 0, 2532])
             # only the taxable (positive-amount) fee is sent to the provider
-            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:|
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:, **|
               expect(fees.map(&:amount_cents)).to match_array([2532])
             end
           end
