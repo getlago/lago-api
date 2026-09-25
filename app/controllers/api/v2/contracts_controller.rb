@@ -112,7 +112,114 @@ module Api
         )
       end
 
+      # Testing helper
+      def segments
+        contracts = requested_contracts
+        return not_found_error(resource: "contract") unless contracts
+
+        errors = invalid_date_params
+        return validation_errors(errors:) if errors.any?
+
+        result = ::BillingSegments::PreviewService.call(
+          contracts:,
+          from: window_start(contracts),
+          to: window_end
+        )
+
+        if result.success?
+          payload = ::CollectionSerializer.new(
+            result.previews,
+            ::V2::BillableSegmentSerializer,
+            collection_name: "segments"
+          ).serialize
+          payload[:next_billing_at] = result.next_billing_at.iso8601 if result.next_billing_at
+
+          render json: payload
+        else
+          render_error_response(result)
+        end
+      end
+
+      # Testing helper
+      def bill
+        contracts = requested_contracts
+        return not_found_error(resource: "contract") unless contracts
+
+        errors = invalid_date_params
+        # Billing resumes from each card's own clock, so there is no start date to honour.
+        # Refusing the parameter beats accepting it and silently ignoring it.
+        errors[:start_on] = ["value_is_invalid"] if params[:start_on].present?
+        return validation_errors(errors:) if errors.any?
+
+        result = ::Contracts::BillService.call(contracts:, timestamp: window_end)
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.invoices,
+              ::V1::InvoiceSerializer,
+              collection_name: "invoices",
+              includes: %i[customer fees]
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
+
+      def contract_external_ids
+        @contract_external_ids ||= Array.wrap(
+          params[:external_ids].presence ||
+            params[:contract_external_ids].presence ||
+            params[:external_id]
+        ).map(&:to_s).reject(&:blank?).uniq
+      end
+
+      # One lookup per id rather than a single WHERE IN: an external id can address both a
+      # pending contract and its active sibling, and live_by_external_id is what picks between
+      # them everywhere else. An unknown id answers nothing at all rather than the subset —
+      # a typo in a QA call should be visible, not look like "that one had nothing to bill".
+      def requested_contracts
+        return if contract_external_ids.empty?
+
+        contracts = contract_external_ids.map { current_organization.contracts.live_by_external_id(it) }
+        return if contracts.any?(&:nil?)
+
+        contracts
+      end
+
+      def window_start(contracts)
+        if params[:start_on].present?
+          params[:start_on].to_date.beginning_of_day
+        else
+          contracts.filter_map(&:started_at).min || Time.current
+        end
+      end
+
+      def window_end
+        if params[:end_on].present?
+          params[:end_on].to_date.end_of_day
+        else
+          Time.current
+        end
+      end
+
+      # String#to_date raises Date::Error on a malformed value and nothing above this
+      # rescues it, so an unparseable date would answer 500 instead of naming the param.
+      def invalid_date_params
+        %i[start_on end_on]
+          .select { params[it].present? && !parsable_date?(it) }
+          .index_with { ["invalid_date"] }
+      end
+
+      def parsable_date?(key)
+        params[key].to_date
+        true
+      rescue Date::Error
+        false
+      end
 
       # The column is a PostgreSQL enum: an unknown value would be a
       # database-level cast error, so anything else falls back to active.

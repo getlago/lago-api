@@ -154,6 +154,40 @@ RSpec.describe ContractRateCard do
       end
     end
 
+    describe ".schedulable" do
+      let(:timestamp) { Time.zone.parse("2026-03-01 00:00:00") }
+      let(:organization) { create(:organization) }
+
+      def card(contract: nil, priced: true, **attributes)
+        contract ||= create(:contract, organization:, started_at: 1.year.ago)
+        rate_card = create(:rate_card, organization:)
+        create(:rate_card_rate, organization:, rate_card:) if priced
+
+        create(:contract_rate_card, organization:, contract:, rate_card:, **attributes)
+      end
+
+      # Unlike .due_for_billing it ignores the clock: a preview answers for a card whose
+      # next billing instant is still ahead of it, which is most of the point of asking.
+      it "keeps a priced card whose clock has not come due" do
+        upcoming = card(next_billing_at: timestamp + 1.month)
+
+        expect(described_class.schedulable(timestamp)).to contain_exactly(upcoming)
+      end
+
+      it "leaves out a card whose rate card has no price yet" do
+        card(next_billing_at: timestamp, priced: false)
+
+        expect(described_class.schedulable(timestamp)).to be_empty
+      end
+
+      it "leaves out a card that starts after its contract ends" do
+        ending_early = create(:contract, organization:, started_at: 1.year.ago, ended_at: 1.month.ago)
+        card(contract: ending_early, next_billing_at: timestamp, effective_date: 1.week.ago.to_date)
+
+        expect(described_class.schedulable(timestamp)).to be_empty
+      end
+    end
+
     describe ".current_and_scheduled" do
       it "keeps open and upcoming attachments, hides ended ones" do
         open_card = create(:contract_rate_card)
