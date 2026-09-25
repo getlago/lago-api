@@ -79,6 +79,8 @@ module CreditNotes
       end
     end
 
+    # Crediting every fee must return exactly this tax's share of what the invoice charged, even
+    # when the fees' own booked cents do not add up to it on older invoices.
     def booked_tax_by_fee(tax_key)
       fee_taxes = fee_taxes_by_key.fetch(tax_key).group_by(&:fee_id)
       booked_tax = Integrations::Aggregator::Taxes::Allocation.by_group(invoice_tax_by_key.fetch(tax_key), fee_taxes.values)
