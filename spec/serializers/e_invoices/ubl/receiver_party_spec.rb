@@ -10,7 +10,11 @@ RSpec.describe EInvoices::Ubl::ReceiverParty do
   end
 
   let(:resource) { create(:payment, customer:) }
-  let(:customer) do
+  let(:root) { "//cac:ReceiverParty" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:invoice) { create_default(:invoice) }
+  let_it_be(:customer) do
     create(
       :customer,
       name: "Customer Jr",
@@ -21,8 +25,6 @@ RSpec.describe EInvoices::Ubl::ReceiverParty do
       country: "BR"
     )
   end
-
-  let(:root) { "//cac:ReceiverParty" }
 
   before { resource }
 

@@ -9,13 +9,15 @@ RSpec.describe EInvoices::Cii::Header do
     end
   end
 
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:invoice) { create(:invoice, issuing_date: issuing_date.to_date) }
+  let(:root) { "//rsm:ExchangedDocument" }
   let(:resource) { invoice }
   let(:type_code) { described_class::COMMERCIAL_INVOICE }
   let(:notes) { ["Invoice ID: #{invoice.id}", "Allow multiple notes"] }
-  let(:issuing_date) { "20250316" }
 
-  let(:root) { "//rsm:ExchangedDocument" }
+  let(:issuing_date) { "20250316" }
 
   before { invoice }
 
@@ -56,9 +58,10 @@ RSpec.describe EInvoices::Cii::Header do
 
     context "when credit note" do
       let(:credit_note) { create(:credit_note, invoice:, issuing_date: issuing_date.to_date) }
-      let(:issuing_date) { "20250317" }
       let(:resource) { credit_note }
       let(:type_code) { described_class::CREDIT_NOTE }
+
+      let_it_be(:issuing_date) { "20250317" }
 
       it "expects to have the credit note number" do
         expect(subject).to contains_xml_node("#{root}/ram:ID").with_value(credit_note.number)

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::QuoteSerializer do
   subject(:serializer) { described_class.new(quote, root_name: "quote", includes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:quote) { create(:quote) }
   let(:owner) { create(:membership, organization: quote.organization).user }
   let!(:quote_version) { create(:quote_version, quote:, organization: quote.organization) }
