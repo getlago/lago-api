@@ -224,6 +224,22 @@ RSpec.describe FeeDisplayHelper do
     end
   end
 
+  describe ".format_percentage_rate" do
+    it "rounds float artifacts to six decimal places and removes trailing zeros" do
+      expect(helper.format_percentage_rate("0.8999999999999999")).to eq("0.9%")
+      expect(helper.format_percentage_rate("0.7000000000000001")).to eq("0.7%")
+      expect(helper.format_percentage_rate("5.55")).to eq("5.55%")
+      expect(helper.format_percentage_rate("5")).to eq("5%")
+      expect(helper.format_percentage_rate("100")).to eq("100%")
+      expect(helper.format_percentage_rate("0.001")).to eq("0.001%")
+      expect(helper.format_percentage_rate("2.125")).to eq("2.125%")
+    end
+
+    it "returns nil when the rate is blank" do
+      expect(helper.format_percentage_rate("")).to be_nil
+    end
+  end
+
   describe ".format_amount" do
     subject { helper.format_amount(fee) }
 

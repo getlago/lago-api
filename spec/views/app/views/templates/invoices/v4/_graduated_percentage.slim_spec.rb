@@ -30,7 +30,7 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
             "from_value" => 0,
             "to_value" => 2,
             "units" => "2.0",
-            "rate" => "1.0",
+            "rate" => "0.8999999999999999",
             "per_unit_total_amount" => "0.02",
             "flat_unit_amount" => "0.0"
           },
@@ -38,7 +38,7 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
             "from_value" => 2,
             "to_value" => 10,
             "units" => "4.77001111111111111111107306",
-            "rate" => "1.0",
+            "rate" => "",
             "per_unit_total_amount" => "0.05",
             "flat_unit_amount" => "0.0"
           },
@@ -46,7 +46,7 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
             "from_value" => 10,
             "to_value" => nil,
             "units" => "5.123456789123",
-            "rate" => "1.0",
+            "rate" => "0.555e1",
             "per_unit_total_amount" => "0.05",
             "flat_unit_amount" => "0.0"
           }
@@ -60,5 +60,11 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
     expect(rendered_template).to match(/\s5\.123457\s/)
     expect(rendered_template).not_to match(/\s4\.77001111111111111111107306\s/)
     expect(rendered_template).not_to match(/\s5\.123456789123\s/)
+  end
+
+  it "formats percentage rates for display" do
+    rate_cells = Nokogiri::HTML.fragment(rendered_template).css("tr.details:not(.subtotal) td:nth-child(3)")
+
+    expect(rate_cells.map { |cell| cell.text.strip }).to eq(["0.9%", "", "5.55%"])
   end
 end
