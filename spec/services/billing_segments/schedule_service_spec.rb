@@ -7,7 +7,10 @@ RSpec.describe BillingSegments::ScheduleService do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, timezone: nil) }
-  let(:contract) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2026-01-01 00:00:00")) }
+  let(:contract) do
+    create(:contract, organization:, customer:, started_at: Time.zone.parse("2026-01-01 00:00:00"), ended_at: contract_ended_at)
+  end
+  let(:contract_ended_at) { nil }
   let(:rate_card) { create(:rate_card, organization:, billing_timing: "arrears", proration: false) }
   let(:timestamp) { Time.zone.parse("2026-03-01 00:00:00") }
 
@@ -53,6 +56,54 @@ RSpec.describe BillingSegments::ScheduleService do
       expect { result }
         .to change { contract_rate_card.reload.next_billing_at }
         .to(Time.zone.parse("2026-04-01 00:00:00"))
+    end
+
+    it "attaches each segment to its calendar period" do
+      expect(result.billing_segments.map { |segment| [segment.billing_cycle.started_at, segment.billing_cycle.ended_at] })
+        .to eq([
+          [Time.utc(2026, 1, 1), Time.utc(2026, 2, 1)],
+          [Time.utc(2026, 2, 1), Time.utc(2026, 3, 1)]
+        ])
+    end
+
+    context "with multiple rate changes in the same cycle" do
+      before do
+        add_rate(rate_card, Time.utc(2026, 2, 11))
+        add_rate(rate_card, Time.utc(2026, 2, 21))
+      end
+
+      it "keeps all pricing slices on one cycle" do
+        segments = result.billing_segments.select { |segment| segment.cycle_started_at == Time.utc(2026, 2, 1) }
+
+        expect(segments.map(&:started_at)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 11), Time.utc(2026, 2, 21)])
+        expect(segments.map(&:billing_cycle_id).uniq.size).to eq(1)
+        expect(segments.first.billing_cycle).to have_attributes(
+          started_at: Time.utc(2026, 2, 1), ended_at: Time.utc(2026, 3, 1)
+        )
+      end
+
+      it "reuses the cycle when its slices become due in separate runs" do
+        first = described_class.call!(customer:, timestamp: Time.utc(2026, 2, 11))
+          .billing_segments.find { |segment| segment.cycle_started_at == Time.utc(2026, 2, 1) }
+
+        expect { result }.not_to change(BillingCycle, :count)
+        expect(result.billing_segments.map(&:billing_cycle_id)).to eq([first.billing_cycle_id, first.billing_cycle_id])
+      end
+    end
+
+    context "when the contract ends before the nominal cycle boundary" do
+      let(:contract_ended_at) { Time.utc(2026, 2, 11) }
+
+      it "limits the billed service without shortening the calendar reference" do
+        segment = result.billing_segments.last
+
+        expect(segment.ended_at).to eq(BillingSegment.inclusive_end(contract_ended_at))
+        expect(segment.billing_cycle).to have_attributes(
+          started_at: Time.utc(2026, 2, 1),
+          reference_started_at: Time.utc(2026, 2, 1),
+          ended_at: Time.utc(2026, 3, 1)
+        )
+      end
     end
 
     it "is idempotent: a second run writes nothing more" do
@@ -163,6 +214,10 @@ RSpec.describe BillingSegments::ScheduleService do
 
       it "writes nothing" do
         expect { result }.not_to change(BillingSegment, :count)
+      end
+
+      it "rolls back the cycles together with the failed segments" do
+        expect { result }.not_to change(BillingCycle, :count)
       end
 
       it "reports no segments, the rollback having undone the ones it had built" do

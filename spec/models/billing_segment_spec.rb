@@ -21,6 +21,7 @@ RSpec.describe BillingSegment do
       expect(billing_segment).to belong_to(:contract)
       expect(billing_segment).to belong_to(:customer)
       expect(billing_segment).to belong_to(:contract_rate_card)
+      expect(billing_segment).to belong_to(:billing_cycle).optional
       expect(billing_segment).to belong_to(:invoice).optional
       expect(billing_segment).to belong_to(:rate_card_rate).optional
       expect(billing_segment).to belong_to(:rate_override).optional

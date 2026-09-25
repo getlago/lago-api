@@ -13,13 +13,22 @@ module BillingSegments
     end
 
     def call
-      # insert_all! rather than a conflict clause: a duplicate here means the caller wrote
-      # without subtracting what is already stored, and that is a bug to see, not to absorb.
-      rows = billable_segments.map { row_for(it) }
-      inserted = BillingSegment.insert_all!(rows, returning: BillingSegment.column_names) # rubocop:disable Rails/SkipsModelValidations
+      result.billing_segments = []
 
-      result.billing_segments = inserted.map { BillingSegment.instantiate(it) }
+      BillingSegment.transaction do
+        cycles_by_index = BillingCycles::CreateService.call!(
+          contract_rate_card:, cycles: billable_segments.map(&:cycle)
+        ).billing_cycles.index_by(&:cycle_index)
+
+        # A duplicate slice remains an error: the caller must subtract stored periods.
+        rows = billable_segments.map { row_for(it, cycles_by_index.fetch(it.cycle_index)) }
+        inserted = BillingSegment.insert_all!(rows, returning: BillingSegment.column_names) # rubocop:disable Rails/SkipsModelValidations
+        result.billing_segments = inserted.map { BillingSegment.instantiate(it) }
+      end
+
       result
+    rescue BaseService::FailedResult => error
+      result.fail_with_error!(error)
     end
 
     private
@@ -27,12 +36,13 @@ module BillingSegments
     attr_reader :contract_rate_card, :billable_segments, :pricing_unit
 
     # Column values, not associations: the row is written without loading anything.
-    def row_for(billable_segment)
+    def row_for(billable_segment, billing_cycle)
       {
         organization_id: contract_rate_card.organization_id,
         contract_id: contract_rate_card.contract_id,
         customer_id: contract.customer_id,
         contract_rate_card_id: contract_rate_card.id,
+        billing_cycle_id: billing_cycle.id,
         cycle_started_at: billable_segment.cycle_started_at,
         started_at: billable_segment.started_at,
         ended_at: BillingSegment.inclusive_end(billable_segment.ended_at),

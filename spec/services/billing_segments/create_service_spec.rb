@@ -17,22 +17,39 @@ RSpec.describe BillingSegments::CreateService do
 
   let(:cycle_started_at) { Time.zone.parse("2026-02-01 00:00:00") }
   let(:exclusive_end) { Time.zone.parse("2026-03-01 00:00:00") }
+  let(:calendar) do
+    Billing::Calendar.new(anchor_date: cycle_started_at.to_date,
+      interval: Billing::Interval.new(count: 1, unit: :month), timezone: "UTC")
+  end
+  let(:cycle) do
+    Billing::Cycle.new(index: 0, started_at: cycle_started_at, ended_at: exclusive_end,
+      phase: Billing::Phase.default, calendar:)
+  end
 
   let(:billable_segment) do
     Billing::BillableSegment.new(
-      cycle_index: 0,
-      cycle_started_at:,
+      cycle:,
       started_at: Time.zone.parse("2026-02-15 00:00:00"),
       ended_at: exclusive_end,
       billing_at: exclusive_end,
       rate:,
       rate_override:,
-      proration_ratio: 0.5,
-      rate_phase_code: nil
+      proration_ratio: 0.5
     )
   end
 
   describe "#call" do
+    it "links the slice to its full calendar cycle" do
+      expect(result.billing_segments.sole.billing_cycle).to have_attributes(
+        contract_rate_card_id: contract_rate_card.id,
+        started_at: cycle_started_at,
+        reference_started_at: cycle_started_at,
+        ended_at: exclusive_end,
+        cycle_index: 0,
+        timezone: "UTC"
+      )
+    end
+
     it "stores a metered arrears slice as a pending segment" do
       expect(result.billing_segments.sole).to have_attributes(
         organization_id: organization.id,
