@@ -56,8 +56,103 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     it "exposes product fee attributes individually" do
       expect(source).to have_attributes(
         fee_type: :product, invoiceable: product, contract: billing_segment.contract,
-        rate_card_rate:, rate_override: nil
+        contract_rate_card:, rate_card_rate:, rate_override: nil
       )
+    end
+  end
+
+  describe "invoice policy" do
+    let(:rate_card) do
+      build(
+        :rate_card,
+        :advance,
+        organization:,
+        product:,
+        currency: "USD",
+        display_on_invoice: false,
+        regroup_paid_fees: :invoice
+      )
+    end
+
+    it "reads visibility and regrouping from the segment rate card" do
+      expect(source.display_on_invoice?).to be(false)
+      expect(source.regroup_paid_fees_invoice?).to be(true)
+    end
+  end
+
+  describe "#pricing_buckets" do
+    subject(:pricing_buckets) { source.pricing_buckets(event:) }
+
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:product_filter) { create(:product_filter, organization:, product:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:region_filter) do
+      create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
+    end
+    let(:event) do
+      build(
+        :common_event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        properties: {"region" => "eu"}
+      )
+    end
+
+    before do
+      create(
+        :product_filter_value,
+        organization:,
+        product_filter:,
+        billable_metric_filter: region_filter,
+        value: "eu"
+      )
+    end
+
+    context "without an event" do
+      let(:event) { nil }
+
+      it "returns the rate card product filter" do
+        expect(pricing_buckets.sole).to have_attributes(product_filter:)
+      end
+    end
+
+    context "when the event matches the rate card product filter" do
+      it "returns the matching product filter" do
+        expect(pricing_buckets.sole).to have_attributes(product_filter:)
+      end
+    end
+
+    context "when the event does not match the rate card product filter" do
+      let(:event) do
+        build(
+          :common_event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "returns no pricing buckets" do
+        expect(pricing_buckets).to be_empty
+      end
+    end
+
+    context "when the event belongs to the default bucket" do
+      let(:rate_card) { create(:rate_card, organization:, product:) }
+      let(:event) do
+        build(
+          :common_event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "returns the default bucket" do
+        expect(pricing_buckets.sole).to have_attributes(product_filter: nil)
+      end
     end
   end
 

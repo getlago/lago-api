@@ -46,6 +46,7 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.fee.unit_amount_cents).to eq(3_000)
         expect(result.fee.precise_unit_amount).to eq(30)
         expect(result.fee.invoiceable).to eq(fixed_product)
+        expect(result.fee).to have_attributes(contract:, contract_rate_card:)
         expect(result.fee.amount_currency).to eq("USD")
         expect(result.fee.properties).to eq(
           "from_datetime" => billing_segment.started_at.iso8601(3),

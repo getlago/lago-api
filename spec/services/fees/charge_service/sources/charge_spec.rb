@@ -127,8 +127,20 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
   end
 
   describe "#pricing_group_keys" do
-    it "returns charge pricing group keys" do
+    it "returns pricing_group_keys properties" do
       charge.update!(properties: charge.properties.merge("pricing_group_keys" => ["region"]))
+
+      expect(source.pricing_group_keys).to eq(["region"])
+    end
+
+    it "returns legacy grouped_by properties" do
+      charge.update!(properties: charge.properties.merge("grouped_by" => ["region"]))
+
+      expect(source.pricing_group_keys).to eq(["region"])
+    end
+
+    it "prefers pricing_group_keys over legacy grouped_by properties" do
+      charge.update!(properties: charge.properties.merge("pricing_group_keys" => ["region"], "grouped_by" => ["cloud"]))
 
       expect(source.pricing_group_keys).to eq(["region"])
     end

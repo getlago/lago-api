@@ -23,7 +23,7 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment, product_filter: nil, event: nil)
+      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
         new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
       end
 
@@ -47,19 +47,30 @@ module Fees
         :pay_in_advance?,
         :prorated?,
         :invoiceable?,
+        :regroup_paid_fees_invoice?,
+        :display_on_invoice?,
         :applied_pricing_unit,
         to: :source
 
       delegate :filters, to: :invoiceable
+      delegate :charge_model, to: :pricing_structure
 
-      %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
+      %i[billing_segment charge_filter product_filter contract contract_rate_card rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
           source.public_send(attribute) if source.respond_to?(attribute)
         end
       end
 
       def dynamic?
-        pricing_structure.charge_model == "dynamic"
+        charge_model == "dynamic"
+      end
+
+      def percentage?
+        charge_model == "percentage"
+      end
+
+      def graduated_percentage?
+        charge_model == "graduated_percentage"
       end
 
       def filter_id
@@ -90,6 +101,19 @@ module Fees
         }
       end
 
+      def grouped_by_values
+        return {} unless event
+
+        event_properties = event.properties || {}
+        grouped_by_values = pricing_group_keys.index_with { |key| event_properties[key] }
+
+        if charge&.accepts_target_wallet? && grouped_by_values[::Charge::EVENT_TARGET_WALLET_CODE].blank?
+          grouped_by_values.delete(::Charge::EVENT_TARGET_WALLET_CODE)
+        end
+
+        grouped_by_values
+      end
+
       def with_event(event:)
         with(event:)
       end
@@ -104,6 +128,12 @@ module Fees
 
       def filtered_for_charge_boundaries
         properties = boundaries.to_h
+        if billing_segment
+          %w[from_datetime to_datetime charges_from_datetime charges_to_datetime].each do |key|
+            value = properties[key]
+            properties[key] = value.iso8601(6) if value.respond_to?(:usec)
+          end
+        end
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil

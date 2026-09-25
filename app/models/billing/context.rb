@@ -16,7 +16,6 @@ module Billing
 
     delegate :external_id,
       :applicable_billing_entity_id,
-      :billing_entity,
       :organization,
       :organization_id,
       :customer,
@@ -24,11 +23,12 @@ module Billing
       :started_at,
       :terminated_at,
       :terminated?,
-      :active?,
       :terminated_at?,
       :date_diff_with_timezone,
       :calendar?,
       :anniversary?,
+      :fees,
+      :active?,
       to: :record
 
     def subscription_id
@@ -45,6 +45,12 @@ module Billing
       return subscription.plan.amount_currency if subscription?
 
       contract.currency
+    end
+
+    def applicable_billing_entity
+      return record.applicable_billing_entity if contract?
+
+      record.billing_entity || record.customer.billing_entity
     end
 
     def plan_id
