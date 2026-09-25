@@ -209,6 +209,75 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "with a subscription that routes its own tax connection" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+
+        before do
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+
+          stub_request(:post, endpoint).to_return do |request|
+            response = JSON.parse(File.read(
+              Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+            ))
+
+            key = JSON.parse(request.body).first["fees"].last["item_key"]
+            response["succeededInvoices"].first["fees"].last["item_key"] = key
+            response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
+            response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+
+            {body: response.to_json}
+          end
+        end
+
+        context "when the subscription skips tax" do
+          before do
+            organization.enable_feature_flag!(:multi_connection)
+            create(:billing_object_connection, owner: subscription, organization:, category: "tax", behavior: "skip")
+          end
+
+          it "falls back to the standard taxes without reaching the provider" do
+            travel_to(current_date) do
+              result = usage_service.call
+
+              expect(result).to be_success
+              expect(result.usage.taxes_amount_cents).to eq(506)
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).not_to have_received(:call)
+            end
+          end
+        end
+
+        context "when the subscription makes no choice of its own" do
+          before { organization.enable_feature_flag!(:multi_connection) }
+
+          it "taxes the usage through the customer default connection" do
+            travel_to(current_date) do
+              result = usage_service.call
+
+              expect(result).to be_success
+              expect(result.usage.taxes_amount_cents).to eq(253)
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService)
+                .to have_received(:call).with(hash_including(integration_customer:))
+            end
+          end
+        end
+
+        context "when the flag is disabled" do
+          before do
+            create(:billing_object_connection, owner: subscription, organization:, category: "tax", behavior: "skip")
+          end
+
+          it "ignores the subscription routing and taxes as before" do
+            travel_to(current_date) do
+              result = usage_service.call
+
+              expect(result).to be_success
+              expect(result.usage.taxes_amount_cents).to eq(253)
+            end
+          end
+        end
+      end
+
       context "when a charge produces a zero fee" do
         let(:current_date) { DateTime.parse("2025-06-15") }
         let(:timestamp) { current_date }
@@ -246,7 +315,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             # both zero-amount fees (empty + free usage) stay in the usage response
             expect(result.usage.fees.map(&:amount_cents)).to match_array([0, 0, 2532])
             # only the taxable (positive-amount) fee is sent to the provider
-            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:|
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:, **|
               expect(fees.map(&:amount_cents)).to match_array([2532])
             end
           end
@@ -1019,6 +1088,25 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
     end
 
+    context "when the bucket read fails" do
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(
+          RealtimeUsage::FetchBucketsService::Result.new.tap do
+            it.service_failure!(code: "usage_buckets_read_failure", message: "clickhouse is unreachable")
+          end
+        )
+      end
+
+      it "counts the events, an unreachable clickhouse making current usage slow rather than broken" do
+        expect(usage_service.call.usage.fees.first).to have_attributes(units: 2)
+      end
+
+      it "raises under the forced gate, which only the parity comparison opens" do
+        expect { RealtimeUsage.with_forced_gate { usage_service.call } }
+          .to raise_error(BaseService::FailedResult)
+      end
+    end
+
     context "with the provider and the bucket fetch spied on" do
       before do
         allow(Events::Stores::Provider).to receive(:new).and_call_original
@@ -1113,6 +1201,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       let(:delegated_metric) { create(:unique_count_billable_metric, organization:) }
       let(:delegated_charge) { create(:standard_charge, plan:, billable_metric: delegated_metric, properties: {amount: "1"}) }
       let(:cached_charges) { [] }
+      let(:invalidation_timestamps) { [] }
 
       before do
         delegated_charge
@@ -1130,6 +1219,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         allow(Subscriptions::ChargeCacheService).to receive(:call) do |**args, &block|
           cached_charges << args[:charge]
+          invalidation_timestamps << args[:invalidate_if_older_than]
           block.call
         end
       end
@@ -1138,6 +1228,182 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         usage_service.call
 
         expect(cached_charges).to eq([delegated_charge])
+      end
+
+      it "keeps the ingestion timestamp the delegated charge's cache is invalidated on" do
+        usage_service.call
+
+        expect(invalidation_timestamps).to contain_exactly(be_present)
+      end
+    end
+
+    context "with the events store queries spied on" do
+      let(:combination_queries) { [] }
+      let(:queried_codes) { combination_queries.flat_map { it[:codes] } }
+
+      before do
+        allow(Events::Stores::ClickhouseStore).to receive(:new).and_wrap_original do |build, **args|
+          build.call(**args).tap do |store|
+            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+              combination_queries << options
+              query.call(**options)
+            end
+          end
+        end
+      end
+
+      it "resolves the billing period filters without reading the events store at all" do
+        usage_service.call
+
+        expect(combination_queries).to be_empty
+      end
+
+      context "when the bucket read came back empty" do
+        before do
+          allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+            .and_return(RealtimeUsage::FetchBucketsService::Result.new)
+        end
+
+        it "keeps the charge in the pre-filter and bills it from the events" do
+          usage = usage_service.call.usage
+
+          expect(queried_codes).to eq([billable_metric.code])
+          expect(usage.fees.first).to have_attributes(units: 2)
+        end
+      end
+
+      context "when the organization flag is off" do
+        before { organization.disable_feature_flag!(:realtime_usage) }
+
+        it "asks the events store for the plan, as before" do
+          usage_service.call
+
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+
+      context "with a charge the buckets cannot answer next to the served one" do
+        let(:delegated_metric) { create(:unique_count_billable_metric, organization:) }
+
+        before do
+          create(:standard_charge, plan:, billable_metric: delegated_metric, properties: {amount: "1"})
+        end
+
+        it "asks the events store for the delegated code only" do
+          usage_service.call
+
+          expect(queried_codes).to eq([delegated_metric.code])
+        end
+      end
+
+      context "with a second charge on the code of the served one" do
+        # A percentage charge walks the events one by one, so the code it shares with the served
+        # charge still has to be resolved from the events store.
+        before { create(:percentage_charge, plan:, billable_metric:, properties: {rate: "1"}) }
+
+        it "keeps the shared code in the query" do
+          usage_service.call
+
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+
+      context "with a presentation breakdown the caller asked none of" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+            use_usage_buckets: true
+          )
+        end
+
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan:,
+            billable_metric:,
+            properties: {amount: "1", presentation_group_keys: [{"value" => "region"}]}
+          )
+        end
+
+        # How the wallet refresh reads usage: no pricing bucket of the charge reads an event for a
+        # breakdown, so the buckets answer the charge whole and the pre-filter must say so too.
+        it "serves the charge from the buckets, without an events store read" do
+          usage = usage_service.call.usage
+
+          expect(combination_queries).to be_empty
+          expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
+        end
+      end
+
+      context "when no charge of the plan is eligible" do
+        let(:charge) { create(:percentage_charge, plan:, billable_metric:, properties: {rate: "1"}) }
+
+        before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+
+        it "reads no bucket, and the events store exactly as before" do
+          usage_service.call
+
+          expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+    end
+
+    context "with the charge computation spied on" do
+      before { allow(Fees::ChargeService).to receive(:call!).and_call_original }
+
+      it "hands the served charge the filters the buckets hold usage for" do
+        usage_service.call
+
+        expect(Fees::ChargeService).to have_received(:call!).with(hash_including(filtered_aggregations: [nil]))
+      end
+    end
+
+    context "with charge filters the buckets only partly hold usage for" do
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+      end
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "12.66"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "4"}) }
+
+      let(:eu_fee) { usage_service.call.usage.fees.find { it.charge_filter_id == eu_filter.id } }
+      let(:us_fee) { usage_service.call.usage.fees.find { it.charge_filter_id == us_filter.id } }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter:, values: %w[eu])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter:, values: %w[us])
+
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          charge_filter_id: eu_filter.id,
+          bucket: window_start,
+          units: "3.0",
+          events_count: 3,
+          aggregation_type: "count_agg"
+        )
+
+        # The events store holds usage for the filter the buckets do not, which the pre-filtering
+        # must not reach for.
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp:,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "serves the filter the buckets hold, without an events store read" do
+        expect(eu_fee).to have_attributes(units: 3, events_count: 3)
+      end
+
+      it "zeroes the filter no bucket holds usage for" do
+        expect(us_fee).to have_attributes(units: 0, events_count: 0)
       end
     end
   end

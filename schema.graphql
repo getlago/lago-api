@@ -848,7 +848,17 @@ type Alert {
   deletedAt: ISO8601DateTime
   direction: DirectionEnum!
   id: ID!
+
+  """
+  When the alert was last evaluated. Null means it never has been.
+  """
+  lastProcessedAt: ISO8601DateTime
   name: String
+
+  """
+  Last observed value, judged against the threshold values and carrying the same scale.
+  """
+  previousValue: String!
   subscriptionExternalId: String
   thresholds: [AlertThreshold!]
   updatedAt: ISO8601DateTime!
@@ -1753,6 +1763,21 @@ type ContractAppliedRateCard {
   ratePhasesCount: Int!
   units: Float
   updatedAt: ISO8601DateTime!
+}
+
+"""
+ContractAppliedRateCardCollection type
+"""
+type ContractAppliedRateCardCollection {
+  """
+  A collection of paginated ContractAppliedRateCardCollection
+  """
+  collection: [ContractAppliedRateCard!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 enum ContractBillingTimeEnum {
@@ -4139,6 +4164,7 @@ input CreateUsageAttributionTypeInput {
   """
   clientMutationId: String
   code: String!
+  description: String
   name: String
   parentId: ID
   role: UsageAttributionTypeRoleEnum!
@@ -9382,7 +9408,7 @@ type Mutation {
   ): DestroyRateCardRatePayload
 
   """
-  Removes a single phase; deleting an indefinite terminal phase promotes its predecessor
+  Removes a single phase; the indefinite terminal phase cannot be removed
   """
   destroyRatePhase(
     """
@@ -10142,7 +10168,7 @@ type Mutation {
   ): ChargeFilter
 
   """
-  Updates a pending contract
+  Updates a contract; once active, only its administrative settings
   """
   updateContract(
     """
@@ -11154,6 +11180,7 @@ enum PermissionEnum {
   charges_delete
   charges_update
   contracts_create
+  contracts_terminate
   contracts_update
   contracts_view
   coupons_attach
@@ -11297,6 +11324,7 @@ type Permissions {
   chargesDelete: Boolean!
   chargesUpdate: Boolean!
   contractsCreate: Boolean!
+  contractsTerminate: Boolean!
   contractsUpdate: Boolean!
   contractsView: Boolean!
   couponsAttach: Boolean!
@@ -12145,6 +12173,11 @@ type Query {
   ): Contract
 
   """
+  Query rate cards applied to a contract
+  """
+  contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
+
+  """
   Query contracts of an organization
   """
   contracts(billingEntityIds: [ID!], externalCustomerId: String, externalId: String, hasRateOverrides: Boolean, limit: Int, page: Int, planCode: String, searchTerm: String, status: [ContractStatusEnum!]): ContractCollection!
@@ -12702,7 +12735,7 @@ type Query {
   """
   Query rate cards applied to a plan
   """
-  planAppliedRateCards(limit: Int, page: Int, planId: ID): PlanAppliedRateCardCollection!
+  planAppliedRateCards(hasRateOverrides: Boolean, limit: Int, page: Int, planId: ID, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): PlanAppliedRateCardCollection!
 
   """
   Query plans of an organization
@@ -12953,7 +12986,17 @@ type Query {
   """
   Query usage attribution types of an organization
   """
-  usageAttributionTypes(limit: Int, page: Int, role: UsageAttributionTypeRoleEnum, searchTerm: String): UsageAttributionTypeCollection!
+  usageAttributionTypes(
+    limit: Int
+    page: Int
+    role: UsageAttributionTypeRoleEnum
+
+    """
+    Return only root types, each carrying its descendants through `children`
+    """
+    roots: Boolean
+    searchTerm: String
+  ): UsageAttributionTypeCollection!
 
   """
   Query a single wallet of an organization
@@ -15972,6 +16015,7 @@ input UpdateRatePhaseInput {
   name: String
   newCode: String
   planAppliedRateCardId: ID!
+  position: Int
   rateOverride: RateOverrideInput
 }
 
@@ -16147,6 +16191,7 @@ input UpdateUsageAttributionTypeInput {
   """
   clientMutationId: String
   code: String
+  description: String
   id: ID!
   name: String
   parentId: ID
@@ -16175,8 +16220,14 @@ Base usage attribution type
 """
 type UsageAttributionType {
   attributionKeys: [String!]!
+
+  """
+  Child types, empty for a leaf or a flat type
+  """
+  children: [UsageAttributionType!]!
   code: String!
   createdAt: ISO8601DateTime!
+  description: String
   id: ID!
   name: String
   organization: Organization

@@ -21,6 +21,7 @@ module CreditNotes
       return result unless result.success?
 
       credit_amount_cents = creditable_amount_cents(amount, items)
+      return result unless result.success?
       return result if credit_amount_cents.zero?
 
       credit_note_result = CreditNotes::CreateService.call!(
@@ -72,6 +73,7 @@ module CreditNotes
         invoice: progressive_billing_invoice,
         items: items.map { |item| CreditNoteItem.new(fee_id: item[:fee_id], precise_amount_cents: item[:amount_cents]) }
       )
+      return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
 
       (
         amount.truncate(CreditNote::DB_PRECISION_SCALE) -

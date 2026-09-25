@@ -9,8 +9,25 @@ class CreditNoteItem < ApplicationRecord
 
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
 
+  # NOTE: returns the credit note taxes this item's fee taxes resolved to, mirroring
+  #       CreditNotes::ApplyTaxesService#find_invoice_applied_tax: the tax with the same code and
+  #       rate, or, when the rates differ, the only credit note tax carrying that code.
+  #       Must stay a relation: TaxHelper orders and plucks on it.
   def applied_taxes
-    credit_note.applied_taxes.where(tax_code: fee.applied_taxes.select("fees_taxes.tax_code"))
+    credit_note.applied_taxes.where(<<~SQL.squish, fee_id:)
+      (credit_notes_taxes.tax_code, credit_notes_taxes.tax_rate) IN (
+        SELECT fees_taxes.tax_code, fees_taxes.tax_rate FROM fees_taxes WHERE fees_taxes.fee_id = :fee_id
+      )
+      OR (
+        credit_notes_taxes.tax_code IN (SELECT fees_taxes.tax_code FROM fees_taxes WHERE fees_taxes.fee_id = :fee_id)
+        AND NOT EXISTS (
+          SELECT 1 FROM credit_notes_taxes same_code
+          WHERE same_code.credit_note_id = credit_notes_taxes.credit_note_id
+            AND same_code.tax_code = credit_notes_taxes.tax_code
+            AND same_code.id <> credit_notes_taxes.id
+        )
+      )
+    SQL
   end
 
   # This method returns item amount with coupons applied

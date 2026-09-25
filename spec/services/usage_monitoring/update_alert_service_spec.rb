@@ -18,6 +18,13 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       ]}
     end
 
+    it "uses with_lock so evaluation cannot read half-rewritten thresholds" do
+      allow(alert).to receive(:with_lock).and_call_original
+      described_class.call(alert:, params:)
+
+      expect(alert).to have_received(:with_lock)
+    end
+
     it "updates the alert" do
       expect(result).to be_success
       expect(result.alert).to eq(alert)

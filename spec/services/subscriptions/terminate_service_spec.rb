@@ -52,6 +52,50 @@ RSpec.describe Subscriptions::TerminateService do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.terminated", subscription)
     end
 
+    context "with concurrent termination requests", transaction: false do
+      subject(:concurrent_terminations) do
+        errors = Concurrent::Array.new
+        results = Concurrent::Array.new
+
+        threads = subscriptions.map do |current_subscription|
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              results << described_class.call(subscription: current_subscription, async: false)
+            end
+          rescue => e
+            errors << e
+          end
+        end
+
+        threads.each(&:join)
+
+        {errors:, results:}
+      end
+
+      let(:subscriptions) { Array.new(2) { Subscription.find(subscription.id) } }
+
+      before do
+        subscriptions
+        allow(Invoices::SubscriptionService).to receive(:call).and_wrap_original do |original, **arguments|
+          sleep 0.2
+          original.call(**arguments)
+        end
+        allow(Utils::ActivityLog).to receive(:produce_after_commit)
+      end
+
+      it "serializes termination and bills the subscription once" do
+        execution = concurrent_terminations
+
+        expect(execution[:errors]).to be_empty
+        expect(execution[:results].count(&:success?)).to eq(2)
+        expect(subscription.reload).to be_terminated
+        expect(subscription.invoice_subscriptions.subscription_terminating.count).to eq(1)
+        expect(Invoices::SubscriptionService).to have_received(:call).once
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription).once
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(subscription, "subscription.terminated").once
+      end
+    end
+
     context "when subscription is starting in the future" do
       let(:subscription) { create(:subscription, :pending) }
 
@@ -146,6 +190,26 @@ RSpec.describe Subscriptions::TerminateService do
         expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.terminated", subscription)
       end
 
+      context "when the subscription becomes incomplete before it is locked" do
+        subject(:result) { described_class.call(subscription: stale_subscription) }
+
+        let(:subscription) { create(:subscription, :pending, customer:, organization:, plan:) }
+        let(:stale_subscription) { Subscription.find(subscription.id) }
+
+        before do
+          stale_subscription
+          subscription.mark_as_incomplete!
+        end
+
+        it "uses the incomplete subscription cancellation path" do
+          expect(result).to be_success
+          expect(result.subscription).to be_canceled
+          expect(subscription.activation_rules.payment.sole).to be_declined
+          expect(invoice.reload).to be_closed
+          expect(BillSubscriptionJob).not_to have_been_enqueued
+        end
+      end
+
       context "when activation cancellation loses a concurrent resolution" do
         let(:cancel_result) do
           Subscriptions::ActivationRules::CancelService::Result.new.tap do |result|
@@ -181,6 +245,25 @@ RSpec.describe Subscriptions::TerminateService do
           expect(subscription.reload.on_termination_credit_note).to be_nil
           expect(CreditNote.count).to eq(0)
         end
+      end
+    end
+
+    context "when a stale incomplete subscription becomes active before it is locked" do
+      subject(:result) { described_class.call(subscription: stale_subscription) }
+
+      let(:subscription) { create(:subscription, :incomplete) }
+      let(:stale_subscription) { Subscription.find(subscription.id) }
+
+      before do
+        stale_subscription
+        subscription.mark_as_active!
+      end
+
+      it "uses the active subscription termination path" do
+        expect(result).to be_success
+        expect(result.subscription).to be_terminated
+        expect(BillSubscriptionJob).to have_been_enqueued.once
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription).once
       end
     end
 

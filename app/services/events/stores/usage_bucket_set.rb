@@ -19,6 +19,12 @@ module Events
         totals.empty? && grouped_totals.empty?
       end
 
+      # The charge filters the buckets hold usage for, the empty string being the default bucket
+      # the stream writes where the events store has no filter.
+      def charge_filter_ids_for(charge_id:)
+        totals.keys.filter_map { |(id, charge_filter_id)| charge_filter_id if id == charge_id }
+      end
+
       def aggregation_result_for(charge_id:, charge_filter_id:)
         bucket_totals = totals_for(charge_id:, charge_filter_id:)
 

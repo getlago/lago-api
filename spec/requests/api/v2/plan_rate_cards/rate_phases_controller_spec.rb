@@ -110,15 +110,77 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         put_with_token(
           organization,
           "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
-          {rate_phase: {name: "Renamed", position: 4}}
+          {rate_phase: {position:}}
         )
       end
 
-      it "does not permit it" do
+      let(:position) { 2 }
+
+      before do
+        create(:rate_phase, organization:, plan_rate_card:, position: 2, code: "ramp", billing_interval_cycle_count: 6)
+        create(:rate_phase, organization:, plan_rate_card:, position: 3, code: "forever", billing_interval_cycle_count: nil)
+      end
+
+      it "moves the phase" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(rate_phase.reload.position).to eq(1)
+        expect(json[:rate_phase][:position]).to eq(2)
+        expect(plan_rate_card.rate_phases.order(:position).pluck(:code)).to eq(%w[ramp launch forever])
+      end
+
+      context "when it is a boolean" do
+        let(:position) { true }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json.dig(:error_details, :position)).to eq(["positions_must_be_contiguous"])
+          expect(plan_rate_card.rate_phases.order(:position).pluck(:code)).to eq(%w[launch ramp forever])
+        end
+      end
+
+      context "when it is an explicit null" do
+        let(:position) { nil }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json.dig(:error_details, :position)).to eq(["positions_must_be_contiguous"])
+        end
+      end
+
+      context "when it is the tail's slot" do
+        let(:position) { 3 }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json.dig(:error_details, :position)).to eq(["last_phase_must_be_indefinite"])
+          expect(plan_rate_card.rate_phases.order(:position).pluck(:code)).to eq(%w[launch ramp forever])
+        end
+      end
+    end
+
+    context "when making the tail finite" do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: {billing_interval_cycle_count: 4}}
+        )
+      end
+
+      let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1, code: "forever", billing_interval_cycle_count: nil) }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :billing_interval_cycle_count)).to eq(["last_phase_must_be_indefinite"])
       end
     end
 
@@ -219,20 +281,34 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
 
   describe "DELETE /api/v2/plans/:plan_code/applied_rate_cards/:rate_card_code/rate_phases/:code" do
     subject do
-      delete_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{terminal.code}")
+      delete_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{phase_code}")
     end
 
+    let(:phase_code) { launch.code }
     let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3) }
     let!(:terminal) { create(:rate_phase, organization:, plan_rate_card:, position: 2, billing_interval_cycle_count: nil) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
-    it "deletes the phase and promotes the new last phase to indefinite" do
+    it "deletes the phase and shifts the tail up" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(terminal.reload).to be_discarded
-      expect(launch.reload.billing_interval_cycle_count).to be_nil
+      expect(launch.reload).to be_discarded
+      expect(terminal.reload.position).to eq(1)
+    end
+
+    context "when deleting the indefinite tail" do
+      let(:phase_code) { terminal.code }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phase)).to eq(["indefinite_phase_not_deletable"])
+        expect(terminal.reload).not_to be_discarded
+        expect(launch.reload.billing_interval_cycle_count).to eq(3)
+      end
     end
   end
 end

@@ -59,6 +59,60 @@ RSpec.describe RealtimeUsage do
         end
       end
     end
+
+    context "with a forced gate" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+      let(:realtime_usage_enabled) { nil }
+
+      it "opens the organization flag and the kill switch" do
+        described_class.with_forced_gate do
+          expect(described_class.enabled?(organization)).to be(true)
+        end
+
+        expect(enabled).to be(false)
+      end
+
+      context "without a premium license" do
+        let(:premium_license) { false }
+
+        it "keeps refusing, because the license is not part of the gate" do
+          described_class.with_forced_gate do
+            expect(described_class.enabled?(organization)).to be(false)
+          end
+        end
+      end
+
+      context "when the organization still reads the postgres events store" do
+        let(:organization) { create(:organization) }
+
+        it "keeps refusing, because the store is not part of the gate" do
+          described_class.with_forced_gate do
+            expect(described_class.enabled?(organization)).to be(false)
+          end
+        end
+      end
+    end
+  end
+
+  describe ".with_forced_gate" do
+    it "opens the gate for the duration of the block only" do
+      described_class.with_forced_gate do
+        expect(described_class.forced_gate?).to be(true)
+      end
+
+      expect(described_class.forced_gate?).to be(false)
+    end
+
+    it "closes the gate when the block raises" do
+      expect { described_class.with_forced_gate { raise "boom" } }.to raise_error("boom")
+      expect(described_class.forced_gate?).to be(false)
+    end
+
+    it "refuses to nest, so a forgotten gate cannot outlive its block" do
+      described_class.with_forced_gate do
+        expect { described_class.with_forced_gate { nil } }.to raise_error("RealtimeUsage gate already forced")
+      end
+    end
   end
 
   describe ".supported_charge?" do

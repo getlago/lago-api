@@ -16,6 +16,9 @@ module UsageMonitoring
         alert_ids = alertable.alerts.ids
 
         ActiveRecord::Base.transaction do
+          # Alert rows first, in a stable order, or this deadlocks against evaluation and edits.
+          Alert.where(id: alert_ids).order(:id).lock.pluck(:id)
+
           AlertThreshold.where(usage_monitoring_alert_id: alert_ids).delete_all
           Alert.where(id: alert_ids).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
         end

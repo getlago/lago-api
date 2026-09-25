@@ -122,13 +122,35 @@ module Invoices
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).filter_targets
-      charges.find_each { |c| fees += charge_usage(c, filters[c.target_key] || {}) }
+
+      metered_items.each do |metered_item|
+        fees += charge_usage(metered_item, filters[metered_item.charge.target_key] || {})
+      end
+
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
-    def charge_usage(charge, applied_filters)
+    def metered_items
+      @metered_items ||= charges.map do |charge|
+        Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries)
+      end
+    end
+
+    def applied_boundaries
+      return @applied_boundaries if defined?(@applied_boundaries)
+
+      @applied_boundaries = if max_timestamp
+        boundaries.dup.tap { it.max_timestamp = max_timestamp }
+      else
+        boundaries
+      end
+    end
+
+    def charge_usage(metered_item, applied_filters)
+      charge = metered_item.charge
+
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
@@ -138,13 +160,10 @@ module Invoices
         last_seen_at: applied_filters
       )
 
-      applied_boundaries = boundaries
-      applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-
       Fees::ChargeService
         .call!(
           invoice:,
-          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
+          metered_item:,
           billing_context: Billing::Context.from(subscription:),
           cache_middleware:,
           filtered_aggregations: applied_filters.keys,
@@ -241,7 +260,11 @@ module Invoices
       #       count-based branch, which would dilute the rate with the excluded non-taxable fees.
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
 
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(
+        invoice:,
+        fees: taxable_fees,
+        integration_customer: tax_connection
+      )
 
       return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
@@ -276,7 +299,17 @@ module Invoices
     end
 
     def customer_provider_taxation?
-      @customer_provider_taxation ||= invoice.customer.tax_customer
+      tax_connection.present?
+    end
+
+    def tax_connection
+      return @tax_connection if defined?(@tax_connection)
+
+      @tax_connection = if customer.organization.feature_flag_enabled?(:multi_connection)
+        subscription.effective_tax_connection
+      else
+        customer.tax_customer
+      end
     end
 
     # Only the charges being computed are billed, so restricting the event lookup to their codes
@@ -287,8 +320,20 @@ module Invoices
         subscription:,
         boundaries:,
         codes: filtered_metric_codes,
-        with_last_seen_at: charge_cache_enabled?
+        with_last_seen_at: charge_cache_enabled?,
+        precomputed_filters:
       )
+    end
+
+    def precomputed_filters
+      @precomputed_filters ||= metered_items.each_with_object({}) do |metered_item, filters|
+        next unless provider.serves_whole_charge_from_buckets?(
+          metered_item:,
+          boundaries: metered_item.aggregation_boundaries
+        )
+
+        filters[metered_item.charge] = provider.precomputed_filter_ids(charge_id: metered_item.charge_id)
+      end
     end
 
     # nil when every charge of the plan is computed, so the whole plan is looked up as before.

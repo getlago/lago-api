@@ -96,6 +96,25 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(RateOverride.count).to eq(1)
     end
 
+    context "when no phase is indefinite" do
+      subject do
+        post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
+          rate_card_code: rate_card.code,
+          rate_phases: [
+            {code: "a", position: 1, billing_interval_cycle_count: 2},
+            {code: "b", position: 2, billing_interval_cycle_count: 3}
+          ]
+        }})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phases)).to eq(["last_phase_must_be_indefinite"])
+      end
+    end
+
     context "when the list is explicitly empty" do
       subject do
         post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
