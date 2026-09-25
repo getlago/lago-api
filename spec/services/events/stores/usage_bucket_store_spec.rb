@@ -22,7 +22,8 @@ RSpec.describe Events::Stores::UsageBucketStore do
   let(:aggregation_type) { "sum_agg" }
   let(:totals) do
     Events::Stores::UsageBucketSet::Totals.new(
-      aggregation_type:, units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current
+      aggregation_type:, units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current,
+      precise_total_amount_cents: BigDecimal("1234.5")
     )
   end
   let(:grouped_totals) { {} }
@@ -61,6 +62,32 @@ RSpec.describe Events::Stores::UsageBucketStore do
       it "answers zero" do
         expect(store.sum.value).to eq(0)
       end
+    end
+  end
+
+  describe "#sum_precise_total_amount_cents" do
+    it "answers the summed precise amount of the buckets" do
+      expect(store.sum_precise_total_amount_cents).to eq(BigDecimal("1234.5"))
+    end
+
+    context "when the buckets hold no row for the charge filter" do
+      let(:charge_filter_id) { "unknown" }
+
+      it "answers zero" do
+        expect(store.sum_precise_total_amount_cents).to eq(0)
+      end
+    end
+  end
+
+  describe "#grouped_sum_precise_total_amount_cents" do
+    let(:grouped_totals) do
+      {[charge.id, ""] => {{"region" => "us"} => totals}}
+    end
+
+    it "answers one amount per group of the buckets" do
+      expect(store.grouped_sum_precise_total_amount_cents).to eq(
+        [{groups: {"region" => "us"}, value: BigDecimal("1234.5")}]
+      )
     end
   end
 
