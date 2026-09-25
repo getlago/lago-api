@@ -239,6 +239,78 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(result.invoice.total_amount_cents).to eq(3_350)
       end
 
+      context "when the invoice contains Product fees" do
+        let(:fixed_product) { create(:product, :fixed, organization:) }
+        let(:usage_product) { create(:product, organization:) }
+        let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product) }
+        let(:usage_rate_card) { create(:rate_card, organization:, product: usage_product) }
+        let(:fixed_rate) { create(:rate_card_rate, organization:, rate_card: fixed_rate_card) }
+        let(:usage_rate) { create(:rate_card_rate, organization:, rate_card: usage_rate_card) }
+        let(:local_tax) { create(:tax, organization:, rate: 42) }
+        let(:fixed_product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription:,
+            rate_card_rate: fixed_rate,
+            amount_cents: 2_000,
+            precise_amount_cents: 2_000
+          )
+        end
+        let(:usage_product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription:,
+            rate_card_rate: usage_rate,
+            amount_cents: 1_000,
+            precise_amount_cents: 1_000
+          )
+        end
+        let(:fee_subscription) { fixed_product_fee }
+        let(:fee_charge) { usage_product_fee }
+
+        before do
+          create(:rate_card_applied_tax, rate_card: fixed_rate_card, tax: local_tax, organization:)
+          create(:rate_card_applied_tax, rate_card: usage_rate_card, tax: local_tax, organization:)
+        end
+
+        it "applies provider taxes to the Product fees and finalizes the invoice" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(fixed_product_fee.reload.applied_taxes.sole).to have_attributes(
+            tax: nil,
+            tax_code: "gst_hst",
+            tax_rate: 10,
+            amount_cents: 200
+          )
+          expect(usage_product_fee.reload.applied_taxes.sole).to have_attributes(
+            tax: nil,
+            tax_code: "gst_hst",
+            tax_rate: 15,
+            amount_cents: 150
+          )
+          expect(result.invoice).to have_attributes(taxes_amount_cents: 350, total_amount_cents: 3_350)
+          expect(result.invoice.applied_taxes.count).to eq(2)
+        end
+
+        context "when the invoice is a draft" do
+          before { invoice.update!(status: :draft) }
+
+          it "applies provider taxes and keeps the invoice as a draft" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice).to be_draft
+            expect(fixed_product_fee.reload.applied_taxes.sole.tax).to be_nil
+            expect(usage_product_fee.reload.applied_taxes.sole.tax).to be_nil
+            expect(result.invoice).to have_attributes(taxes_amount_cents: 350, total_amount_cents: 3_350)
+          end
+        end
+      end
+
       it_behaves_like "syncs invoice" do
         let(:service_call) { pull_taxes_service.call }
       end
