@@ -96,15 +96,13 @@ module Billing
         end
 
         BillableSegment.new(
-          cycle_index: cycle.index,
-          cycle_started_at: cycle.started_at,
+          cycle:,
           started_at: segment.started_at,
           ended_at: segment.ended_at,
           billing_at: terms.billing_at_for(segment),
           rate: segment.rate,
           rate_override: cycle.phase.rate_override,
-          proration_ratio:,
-          rate_phase_code: cycle.phase.code
+          proration_ratio:
         )
       end
     end

@@ -23,6 +23,7 @@ class BillingSegment < ApplicationRecord
   belongs_to :contract
   belongs_to :customer, -> { with_discarded }
   belongs_to :contract_rate_card, -> { with_discarded }
+  belongs_to :billing_cycle, optional: true
   belongs_to :invoice, optional: true
   belongs_to :rate_card_rate, -> { with_discarded }, optional: true
   belongs_to :rate_override, -> { with_discarded }, optional: true
@@ -163,6 +164,7 @@ end
 #  status                :enum             default("pending"), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
+#  billing_cycle_id      :uuid
 #  contract_id           :uuid             not null
 #  contract_rate_card_id :uuid             not null
 #  customer_id           :uuid             not null
@@ -176,6 +178,7 @@ end
 #
 #  billing_segments_no_overlapping_periods                (organization_id, contract_id, customer_id, contract_rate_card_id, tsrange(started_at, ended_at, '[]'::text)) USING gist
 #  idx_on_contract_id_billing_at_status_3588bfae7a        (contract_id,billing_at,status)
+#  index_billing_segments_on_billing_cycle_id             (billing_cycle_id)
 #  index_billing_segments_on_card_and_cycle               (contract_rate_card_id,cycle_started_at)
 #  index_billing_segments_on_card_and_period              (contract_rate_card_id,started_at) UNIQUE
 #  index_billing_segments_on_contract_id                  (contract_id)
@@ -188,6 +191,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_cycle_id => billing_cycles.id)
 #  fk_rails_...  (contract_id => contracts.id)
 #  fk_rails_...  (contract_rate_card_id => contract_rate_cards.id)
 #  fk_rails_...  (customer_id => customers.id)

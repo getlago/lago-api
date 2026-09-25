@@ -7,18 +7,19 @@ RSpec.describe Billing::BillableSegment do
 
   let(:rate) { instance_double(RateCardRate, properties: {"amount" => "10"}) }
   let(:rate_override) { nil }
+  let(:cycle) do
+    instance_double(Billing::Cycle, index: 0, started_at: Time.utc(2026, 2, 1), phase: Billing::Phase.default)
+  end
 
   let(:attributes) do
     {
-      cycle_index: 0,
-      cycle_started_at: Time.zone.parse("2026-02-01 00:00:00"),
+      cycle:,
       started_at: Time.zone.parse("2026-02-01 00:00:00"),
       ended_at: Time.zone.parse("2026-03-01 00:00:00"),
       billing_at: Time.zone.parse("2026-03-01 00:00:00"),
       rate:,
       rate_override:,
-      proration_ratio: 1.0,
-      rate_phase_code: nil
+      proration_ratio: 1.0
     }
   end
 
