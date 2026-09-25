@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 module RatePhases
-  # Removes a single phase. Later phases shift up; deleting an indefinite
-  # terminal phase promotes the new last phase to indefinite, so the sequence
-  # always keeps a coherent tail.
+  # Removes a single phase; later phases shift up. The indefinite tail is
+  # pinned: removing it would give the timeline an end.
   class DestroyService < BaseService
     Result = BaseResult[:rate_phase]
 
@@ -22,23 +21,23 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
+        rate_phase.reload
+        return result.not_found_failure!(resource: "rate_phase") if rate_phase.discarded?
+
         siblings = applied_rate_card.rate_phases.order(:position).to_a
+        if siblings.last == rate_phase && rate_phase.billing_interval_cycle_count.nil?
+          return result.single_validation_failure!(field: :rate_phase, error_code: "indefinite_phase_not_deletable")
+        end
+
         if siblings.size == 1
           return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
         end
-
-        was_terminal_indefinite = siblings.last == rate_phase && rate_phase.billing_interval_cycle_count.nil?
 
         rate_phase.discard!
         rate_phase.rate_override&.discard!
 
         siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
           phase.update!(position: phase.position - 1)
-        end
-
-        if was_terminal_indefinite
-          new_last = (siblings - [rate_phase]).last
-          new_last.update!(billing_interval_cycle_count: nil)
         end
       end
 

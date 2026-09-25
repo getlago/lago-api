@@ -859,7 +859,7 @@ DROP INDEX IF EXISTS public.index_credits_on_applied_coupon_id;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_code;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_organization_id;
-DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id_and_tax_code;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_note_id_code_rate;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id_and_sequential_id;
@@ -5979,7 +5979,8 @@ CREATE TABLE public.usage_attribution_types (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    attribution_keys character varying[] DEFAULT '{}'::character varying[] NOT NULL
+    attribution_keys character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    description character varying
 );
 
 
@@ -8947,10 +8948,10 @@ CREATE INDEX index_credit_notes_taxes_on_credit_note_id ON public.credit_notes_t
 
 
 --
--- Name: index_credit_notes_taxes_on_credit_note_id_and_tax_code; Type: INDEX; Schema: public; Owner: -
+-- Name: index_credit_notes_taxes_on_note_id_code_rate; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_credit_notes_taxes_on_credit_note_id_and_tax_code ON public.credit_notes_taxes USING btree (credit_note_id, tax_code);
+CREATE UNIQUE INDEX index_credit_notes_taxes_on_note_id_code_rate ON public.credit_notes_taxes USING btree (credit_note_id, tax_code, tax_rate);
 
 
 --
@@ -15186,6 +15187,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260924133109'),
+('20260922172006'),
 ('20260922153925'),
 ('20260922110909'),
 ('20260921154906'),
@@ -16337,4 +16340,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

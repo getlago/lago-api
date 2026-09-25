@@ -1,0 +1,4 @@
+---
+es:
+  document:
+    page_numbering: Página %{current} de %{total}

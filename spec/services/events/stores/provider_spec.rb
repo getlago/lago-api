@@ -165,7 +165,7 @@ RSpec.describe Events::Stores::Provider do
     end
     let(:billable_metric) { create(:sum_billable_metric, organization:) }
     let(:billing_boundaries) { metered_item.boundaries }
-    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("42.5"), events_count: 7) }
+    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current) }
     let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}) }
     let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
     let(:filters) { {} }
@@ -226,7 +226,7 @@ RSpec.describe Events::Stores::Provider do
 
     context "with a count_agg charge" do
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(7), events_count: 7) }
+      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "count_agg", units: BigDecimal(7), events_count: 7, last_event_at: Time.current) }
 
       it "serves the units, which the pipeline already counts one per event" do
         expect(store.count.value).to eq(7)
@@ -251,10 +251,38 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "with an aggregation the buckets cannot reconstruct" do
-      let(:billable_metric) { create(:max_billable_metric, organization:) }
+      let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
       it "reads events" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:) }
+      let(:totals) do
+        Events::Stores::UsageBucketSet::Totals.new(
+          aggregation_type: "max_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+        )
+      end
+
+      it "serves it from the buckets" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.max.value).to eq(BigDecimal(12))
+      end
+    end
+
+    context "with a latest metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+      let(:totals) do
+        Events::Stores::UsageBucketSet::Totals.new(
+          aggregation_type: "latest_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+        )
+      end
+
+      it "serves it from the buckets" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.last.value).to eq(BigDecimal(12))
       end
     end
 
@@ -432,6 +460,106 @@ RSpec.describe Events::Stores::Provider do
 
       it "reads events, because the buckets are keyed by charge" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    describe "#serves_whole_charge_from_buckets?" do
+      subject(:serves_whole_charge) do
+        provider.serves_whole_charge_from_buckets?(metered_item:, boundaries:)
+      end
+
+      let(:pricing_bucket_filter) { create(:charge_filter, charge:) }
+
+      # The pre-filtering of a charge this accepts is resolved from the buckets, so a pricing
+      # bucket the store then delegates would be zeroed by a list that never saw its events.
+      it "is true only when the store serves every pricing bucket of that charge" do
+        expect(serves_whole_charge).to be(true)
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(provider.store_for(metered_item:, boundaries:, filters: {charge_filter: pricing_bucket_filter}))
+          .to be_a(Events::Stores::UsageBucketStore)
+      end
+
+      context "with a presentation breakdown on the charge" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            properties: {amount: "1", presentation_group_keys: [{"value" => "region"}]}
+          )
+        end
+
+        # Every pricing bucket of the charge carries the breakdown, which reads events, so the
+        # charge is delegated as a whole rather than one bucket at a time.
+        it "is false, and the store delegates that charge as well" do
+          expect(serves_whole_charge).to be(false)
+          expect(provider.store_for(metered_item:, boundaries:, filters: {presentation_by: ["region"]}))
+            .to be_a(Events::Stores::ClickhouseStore)
+        end
+
+        context "when the caller asked for no breakdown at all" do
+          subject(:provider) do
+            described_class.new(
+              organization:,
+              billing_context:,
+              serve_current_usage_from_buckets: true,
+              boundaries: billing_boundaries,
+              usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+              charges: [charge]
+            )
+          end
+
+          # The wallet refresh narrows the breakdown to nothing, so no pricing bucket of the charge
+          # reads an event and the buckets answer the charge whole.
+          it "is true, as the store serves that charge" do
+            expect(serves_whole_charge).to be(true)
+            expect(provider.store_for(metered_item:, boundaries:, filters: {presentation_by: []}))
+              .to be_a(Events::Stores::UsageBucketStore)
+          end
+        end
+      end
+
+      context "with a charge the buckets cannot answer" do
+        let(:charge) { create(:percentage_charge, plan: subscription.plan, billable_metric:) }
+
+        it "is false, without reading clickhouse" do
+          expect(serves_whole_charge).to be(false)
+          expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+        end
+      end
+    end
+
+    describe "#precomputed_filter_ids" do
+      subject(:precomputed_filter_ids) { provider.precomputed_filter_ids(charge_id: charge.id) }
+
+      let(:charge_filter) { create(:charge_filter, charge:) }
+      let(:bucket_set) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => totals, [charge.id, charge_filter.id] => totals}
+        )
+      end
+
+      it "returns the filters of the charge the buckets hold usage for, the default one as nil" do
+        expect(precomputed_filter_ids).to match_array([nil, charge_filter.id])
+      end
+
+      context "when the buckets hold nothing for the charge" do
+        let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[create(:standard_charge).id, ""] => totals}) }
+
+        it "returns no filter, which leaves every fee of the charge at zero units" do
+          expect(precomputed_filter_ids).to be_empty
+        end
+      end
+
+      context "when no bucket was fetched" do
+        before do
+          allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+            .and_return(RealtimeUsage::FetchBucketsService::Result.new)
+        end
+
+        it "returns no filter" do
+          expect(precomputed_filter_ids).to be_empty
+        end
       end
     end
   end

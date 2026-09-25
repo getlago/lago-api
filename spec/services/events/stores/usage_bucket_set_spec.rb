@@ -5,12 +5,16 @@ require "rails_helper"
 RSpec.describe Events::Stores::UsageBucketSet do
   subject(:bucket_set) { described_class.new(totals:, grouped_totals:) }
 
-  let(:totals) { {["charge_1", ""] => described_class::Totals.new(units: BigDecimal("42.5"), events_count: 7)} }
+  def build_totals(units, events_count, aggregation_type: "sum_agg", last_event_at: Time.current)
+    described_class::Totals.new(aggregation_type:, units:, events_count:, last_event_at:)
+  end
+
+  let(:totals) { {["charge_1", ""] => build_totals(BigDecimal("42.5"), 7)} }
   let(:grouped_totals) do
     {
       ["charge_1", ""] => [
-        [{"region" => "us"}, described_class::Totals.new(units: BigDecimal(30), events_count: 5)],
-        [{"region" => "eu"}, described_class::Totals.new(units: BigDecimal("12.5"), events_count: 2)]
+        [{"region" => "us"}, build_totals(BigDecimal(30), 5)],
+        [{"region" => "eu"}, build_totals(BigDecimal("12.5"), 2)]
       ]
     }
   end
@@ -24,6 +28,24 @@ RSpec.describe Events::Stores::UsageBucketSet do
       it "is true" do
         expect(described_class.new).to be_empty
       end
+    end
+  end
+
+  describe "#charge_filter_ids_for" do
+    let(:totals) do
+      {
+        ["charge_1", ""] => build_totals(BigDecimal("42.5"), 7),
+        ["charge_1", "filter_1"] => build_totals(BigDecimal(3), 3),
+        ["charge_2", "filter_2"] => build_totals(BigDecimal(1), 1)
+      }
+    end
+
+    it "lists the filters of that charge only" do
+      expect(bucket_set.charge_filter_ids_for(charge_id: "charge_1")).to match_array(["", "filter_1"])
+    end
+
+    it "is empty for a charge the buckets do not carry" do
+      expect(bucket_set.charge_filter_ids_for(charge_id: "charge_3")).to be_empty
     end
   end
 
@@ -47,7 +69,7 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
 
     context "with a count metric, whose events the pipeline values at 1 apiece" do
-      let(:totals) { {["charge_1", ""] => described_class::Totals.new(units: BigDecimal(7), events_count: 7)} }
+      let(:totals) { {["charge_1", ""] => build_totals(BigDecimal(7), 7, aggregation_type: "count_agg")} }
 
       it "reports the units, which already are the count" do
         result = bucket_set.aggregation_result_for(charge_id: "charge_1", charge_filter_id: "")
@@ -74,6 +96,44 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
   end
 
+  describe "Totals#combine" do
+    let(:earlier) { Time.current - 1.hour }
+
+    it "adds the units of a sum metric" do
+      combined = build_totals(BigDecimal(10), 2).combine(build_totals(BigDecimal(5), 1))
+
+      expect([combined.units, combined.events_count]).to eq([BigDecimal(15), 3])
+    end
+
+    it "keeps the largest units of a max metric" do
+      combined = build_totals(BigDecimal(10), 2, aggregation_type: "max_agg")
+        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "max_agg"))
+
+      expect([combined.units, combined.events_count]).to eq([BigDecimal(10), 3])
+    end
+
+    it "keeps the units of the most recent row of a latest metric" do
+      combined = build_totals(BigDecimal(10), 2, aggregation_type: "latest_agg", last_event_at: earlier)
+        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest_agg"))
+
+      expect([combined.units, combined.events_count]).to eq([BigDecimal(5), 3])
+    end
+
+    it "ignores an older row of a latest metric" do
+      combined = build_totals(BigDecimal(10), 2, aggregation_type: "latest_agg")
+        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest_agg", last_event_at: earlier))
+
+      expect(combined.units).to eq(BigDecimal(10))
+    end
+
+    it "carries the most recent event time over, so a third row compares against it" do
+      combined = build_totals(BigDecimal(10), 2, last_event_at: earlier)
+        .combine(build_totals(BigDecimal(5), 1))
+
+      expect(combined.last_event_at).to be_within(1.second).of(Time.current)
+    end
+  end
+
   describe "immutability" do
     it "is frozen so a computation cannot rewrite the window it read" do
       expect(bucket_set).to be_frozen
@@ -82,7 +142,7 @@ RSpec.describe Events::Stores::UsageBucketSet do
     it "copies the rows, so the builder keeps writing to its own accumulators" do
       bucket_set
 
-      expect { totals[["charge_2", ""]] = described_class::Totals.new(units: BigDecimal(1), events_count: 1) }
+      expect { totals[["charge_2", ""]] = build_totals(BigDecimal(1), 1) }
         .not_to raise_error
       expect { grouped_totals[["charge_2", ""]] = [] }.not_to raise_error
 

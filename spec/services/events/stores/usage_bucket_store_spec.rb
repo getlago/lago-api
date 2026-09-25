@@ -19,7 +19,12 @@ RSpec.describe Events::Stores::UsageBucketStore do
     Events::Stores::PostgresStore.new(code: billable_metric.code, billing_context:, boundaries:)
   end
 
-  let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("42.5"), events_count: 7) }
+  let(:aggregation_type) { "sum_agg" }
+  let(:totals) do
+    Events::Stores::UsageBucketSet::Totals.new(
+      aggregation_type:, units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current
+    )
+  end
   let(:grouped_totals) { {} }
   let(:usage_buckets) do
     Events::Stores::UsageBucketSet.new(
@@ -56,6 +61,26 @@ RSpec.describe Events::Stores::UsageBucketStore do
       it "answers zero" do
         expect(store.sum.value).to eq(0)
       end
+    end
+  end
+
+  describe "#max" do
+    let(:aggregation_type) { "max_agg" }
+
+    it "answers the units of the buckets" do
+      expect(store.max).to eq(
+        Events::Stores::BaseStore::AggregationResult.new(value: BigDecimal("42.5"), events_count: 7)
+      )
+    end
+  end
+
+  describe "#last" do
+    let(:aggregation_type) { "latest_agg" }
+
+    it "answers the units of the buckets, counting every event of the window alongside" do
+      expect(store.last).to eq(
+        Events::Stores::BaseStore::AggregationResult.new(value: BigDecimal("42.5"), events_count: 7)
+      )
     end
   end
 
@@ -111,14 +136,68 @@ RSpec.describe Events::Stores::UsageBucketStore do
     end
   end
 
+  describe "#grouped_max" do
+    let(:aggregation_type) { "max_agg" }
+    let(:grouped_totals) do
+      {[charge.id, ""] => {{"region" => "us"} => totals}}
+    end
+
+    it "answers one result per group of the buckets" do
+      expect(store.grouped_max).to eq(
+        [
+          Events::Stores::BaseStore::GroupedAggregationResult.new(
+            groups: {"region" => "us"}, value: BigDecimal("42.5"), events_count: 7
+          )
+        ]
+      )
+    end
+
+    context "when a presentation breakdown is asked for" do
+      before { allow(delegated_store).to receive(:grouped_max).and_return([]) }
+
+      it "delegates it, as the buckets cannot answer it" do
+        store.grouped_max(["region"], with_count: false)
+
+        expect(delegated_store).to have_received(:grouped_max).with(["region"], with_count: false)
+      end
+    end
+  end
+
+  describe "#grouped_last" do
+    let(:aggregation_type) { "latest_agg" }
+    let(:grouped_totals) do
+      {[charge.id, ""] => {{"region" => "us"} => totals}}
+    end
+
+    it "answers one result per group of the buckets, counting the events of each group" do
+      expect(store.grouped_last).to eq(
+        [
+          Events::Stores::BaseStore::GroupedAggregationResult.new(
+            groups: {"region" => "us"}, value: BigDecimal("42.5"), events_count: 7
+          )
+        ]
+      )
+    end
+
+    context "when a presentation breakdown is asked for" do
+      before { allow(delegated_store).to receive(:grouped_last).and_return([]) }
+
+      it "delegates it, as the buckets cannot answer it" do
+        store.grouped_last(["region"], with_count: false)
+
+        expect(delegated_store).to have_received(:grouped_last).with(["region"], with_count: false)
+      end
+    end
+  end
+
   describe "the aggregations the buckets do not cover" do
     context "when one of them is called" do
-      before { allow(delegated_store).to receive(:max).and_return(nil) }
+      before { allow(delegated_store).to receive(:weighted_sum).and_return(nil) }
 
       it "delegates it to the store it wraps" do
-        store.max
+        store.weighted_sum
 
-        expect(delegated_store).to have_received(:max)
+        expect(delegated_store).to have_received(:weighted_sum)
       end
     end
 

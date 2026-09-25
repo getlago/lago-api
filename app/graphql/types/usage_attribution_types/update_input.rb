@@ -9,6 +9,7 @@ module Types
 
       argument :attribution_keys, [String], required: false
       argument :code, String, required: false
+      argument :description, String, required: false
       argument :name, String, required: false
       argument :parent_id, ID, required: false
       argument :role, Types::UsageAttributionTypes::RoleEnum, required: false

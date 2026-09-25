@@ -16,6 +16,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         usage_attribution_type: {
           code: "user",
           name: "User",
+          description: "A person using the product",
           attribution_keys: ["user_id"],
           role: "hierarchical"
         }
@@ -30,6 +31,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         lago_organization_id: organization.id,
         code: "user",
         name: "User",
+        description: "A person using the product",
         attribution_keys: ["user_id"],
         role: "hierarchical",
         lago_parent_id: nil,
@@ -230,6 +232,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
       expect(response).to have_http_status(:success)
       expect(json[:usage_attribution_type][:lago_id]).to eq(department.id)
       expect(json[:usage_attribution_type][:code]).to eq("department")
+      expect(json[:usage_attribution_type][:description]).to eq(department.description)
     end
 
     context "when the type does not exist" do
@@ -277,6 +280,19 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
       subject
 
       expect(user.reload.attribution_keys).to eq(["user_id"])
+      expect(user.description).to be_present
+    end
+
+    context "with a description" do
+      let(:params) { {usage_attribution_type: {description: "A seat in the product"}} }
+
+      it "updates the description" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:usage_attribution_type][:description]).to eq("A seat in the product")
+        expect(user.reload.description).to eq("A seat in the product")
+      end
     end
 
     context "with a parent_code" do
@@ -324,6 +340,17 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
 
         expect(response).to have_http_status(:success)
         expect(user.reload.attribution_keys).to eq(%w[user_id usr_id])
+      end
+
+      context "when the description is submitted" do
+        let(:params) { {usage_attribution_type: {description: "A seat in the product"}} }
+
+        it "still updates the description" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(user.reload.description).to eq("A seat in the product")
+        end
       end
 
       context "when a frozen attribute is submitted" do

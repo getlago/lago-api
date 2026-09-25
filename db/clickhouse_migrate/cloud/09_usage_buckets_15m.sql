@@ -13,6 +13,7 @@ CREATE TABLE default.usage_buckets_15m
     `aggregation_type` String,
     `events_count` Int64,
     `units` Decimal(38, 20),
+    `precise_total_amount_cents` Decimal(38, 15) DEFAULT 0,
     `last_event_at` DateTime64(3),
     `last_ingested_at` DateTime64(3),
     `is_deleted` UInt8 DEFAULT 0,

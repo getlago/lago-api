@@ -60,6 +60,7 @@ module CreditNotes
         result.raise_if_error!
 
         compute_amounts_and_taxes
+        result.raise_if_error!
 
         valid_credit_note?
         result.raise_if_error!
@@ -271,6 +272,7 @@ module CreditNotes
         invoice:,
         items: credit_note.items
       )
+      return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round

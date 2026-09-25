@@ -30,6 +30,8 @@ module CreditNotes
       return result unless result.success?
 
       compute_amounts_and_taxes
+      return result unless result.success?
+
       adjust_amounts_with_rounding
 
       result.credit_note = credit_note
@@ -78,6 +80,7 @@ module CreditNotes
         invoice:,
         items: credit_note.items
       )
+      return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round

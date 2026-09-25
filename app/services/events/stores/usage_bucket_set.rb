@@ -5,7 +5,27 @@ module Events
     # Pre-aggregated usage for one subscription over one window, indexed by charge and
     # charge filter. Immutable; build one per computation.
     class UsageBucketSet
-      Totals = Data.define(:units, :events_count)
+      # `last_event_at` orders the latest fold, which a `skip_grouping` read runs across groups.
+      Totals = Data.define(:aggregation_type, :units, :events_count, :last_event_at) do
+        # The buckets are keyed by charge, so two rows of one key always share their type.
+        def combine(other)
+          with(
+            units: combined_units(other),
+            events_count: events_count + other.events_count,
+            last_event_at: [last_event_at, other.last_event_at].max
+          )
+        end
+
+        private
+
+        def combined_units(other)
+          case aggregation_type
+          when "max_agg" then [units, other.units].max
+          when "latest_agg" then (other.last_event_at > last_event_at) ? other.units : units
+          else units + other.units
+          end
+        end
+      end
 
       # Copied before freezing: the caller usually builds these hashes as accumulators, and
       # freezing its own object would raise on the next write, far from here.
@@ -17,6 +37,12 @@ module Events
 
       def empty?
         totals.empty? && grouped_totals.empty?
+      end
+
+      # The charge filters the buckets hold usage for, the empty string being the default bucket
+      # the stream writes where the events store has no filter.
+      def charge_filter_ids_for(charge_id:)
+        totals.keys.filter_map { |(id, charge_filter_id)| charge_filter_id if id == charge_id }
       end
 
       def aggregation_result_for(charge_id:, charge_filter_id:)
