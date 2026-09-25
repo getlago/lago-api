@@ -36,7 +36,7 @@ RSpec.describe CreditNotes::ValidateService do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120, taxes_amount_cents: 20, total_paid_amount_cents:) }
+  let(:invoice) { create(:invoice, fees_amount_cents: 100, total_amount_cents: 120, taxes_amount_cents: 20, total_paid_amount_cents:) }
   let(:customer) { invoice.customer }
   let(:total_paid_amount_cents) { 0 }
 
@@ -95,7 +95,7 @@ RSpec.describe CreditNotes::ValidateService do
 
     context "when credit amount is higher than invoice amount" do
       let(:credit_amount_cents) { 250 }
-      let(:invoice) { create(:invoice, total_amount_cents: 240, taxes_amount_cents: 40, total_paid_amount_cents:) }
+      let(:invoice) { create(:invoice, fees_amount_cents: 200, total_amount_cents: 240, taxes_amount_cents: 40, total_paid_amount_cents:) }
 
       before do
         create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
@@ -310,7 +310,7 @@ RSpec.describe CreditNotes::ValidateService do
     context "when the difference is due to rounding" do
       let(:credit_amount_cents) { 241 }
       let(:amount_cents) { 239 }
-      let(:invoice) { create(:invoice, total_amount_cents: 240, taxes_amount_cents: 40, total_paid_amount_cents:) }
+      let(:invoice) { create(:invoice, fees_amount_cents: 200, total_amount_cents: 240, taxes_amount_cents: 40, total_paid_amount_cents:) }
 
       before do
         create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
@@ -468,6 +468,8 @@ RSpec.describe CreditNotes::ValidateService do
       let(:invoice) {
         create(:invoice,
           :credit,
+          fees_amount_cents: 10,
+          taxes_amount_cents: 2,
           total_amount_cents: 12,
           total_paid_amount_cents: 0,
           payment_status: :pending)
