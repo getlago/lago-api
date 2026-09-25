@@ -9407,7 +9407,7 @@ type Mutation {
   ): DestroyRateCardRatePayload
 
   """
-  Removes a single phase; deleting an indefinite terminal phase promotes its predecessor
+  Removes a single phase; the indefinite terminal phase cannot be removed
   """
   destroyRatePhase(
     """
@@ -16013,6 +16013,7 @@ input UpdateRatePhaseInput {
   name: String
   newCode: String
   planAppliedRateCardId: ID!
+  position: Int
   rateOverride: RateOverrideInput
 }
 

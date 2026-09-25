@@ -27,6 +27,15 @@ class RatePhase < ApplicationRecord
   validates_with ParentPresenceValidator, parents: %i[plan_rate_card contract_rate_card], error: :exactly_one_parent_required
 
   default_scope -> { kept }
+
+  # Positions arrive as integers (GraphQL, JSON numbers) or strings (REST). A
+  # boolean, a decimal or a stray word is not a position: nil, never coerced.
+  def self.parse_position(value)
+    case value
+    when Integer then value
+    when String then Integer(value, 10, exception: false)
+    end
+  end
 end
 
 # == Schema Information
