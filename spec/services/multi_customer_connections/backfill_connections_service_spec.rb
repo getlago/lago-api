@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
   subject(:result) { described_class.call(organization:, dry_run:, batch_size: 1000) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:dry_run) { false }
 
   describe "#call" do
