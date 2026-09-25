@@ -6,12 +6,18 @@ module Events
     # charge filter. Immutable; build one per computation.
     class UsageBucketSet
       # `last_event_at` orders the latest fold, which a `skip_grouping` read runs across groups.
-      Totals = Data.define(:aggregation_type, :units, :events_count, :last_event_at) do
+      # `precise_total_amount_cents` is only written on sum rows, and zero on every other type.
+      Totals = Data.define(:aggregation_type, :units, :events_count, :last_event_at, :precise_total_amount_cents) do
+        def initialize(precise_total_amount_cents: BigDecimal(0), **)
+          super
+        end
+
         # The buckets are keyed by charge, so two rows of one key always share their type.
         def combine(other)
           with(
             units: combined_units(other),
             events_count: events_count + other.events_count,
+            precise_total_amount_cents: precise_total_amount_cents + other.precise_total_amount_cents,
             last_event_at: [last_event_at, other.last_event_at].max
           )
         end
@@ -61,6 +67,17 @@ module Events
             value: bucket_totals.units,
             events_count: bucket_totals.events_count
           )
+        end
+      end
+
+      def precise_total_amount_cents_for(charge_id:, charge_filter_id:)
+        totals_for(charge_id:, charge_filter_id:)&.precise_total_amount_cents || BigDecimal(0)
+      end
+
+      # Hashes rather than a result object: the shape the events store returns for this read.
+      def grouped_precise_total_amount_cents_for(charge_id:, charge_filter_id:)
+        grouped_totals_for(charge_id:, charge_filter_id:).map do |groups, bucket_totals|
+          {groups:, value: bucket_totals.precise_total_amount_cents}
         end
       end
 

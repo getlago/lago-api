@@ -71,7 +71,8 @@ module RealtimeUsage
         aggregation_type: row[:aggregation_type],
         units: row[:units],
         events_count: row[:events_count],
-        last_event_at: row[:last_event_at]
+        last_event_at: row[:last_event_at],
+        precise_total_amount_cents: row[:precise_total_amount_cents]
       )
 
       totals ? totals.combine(row_totals) : row_totals
@@ -88,9 +89,10 @@ module RealtimeUsage
         .group(:charge_id, :charge_filter_id, :grouped_by, :aggregation_type)
         .pluck(Arel.sql(<<~SQL.squish))
           charge_id, charge_filter_id, grouped_by, aggregation_type,
-          sum(units), max(units), argMax(units, last_event_at), max(last_event_at), sum(events_count)
+          sum(units), max(units), argMax(units, last_event_at), max(last_event_at), sum(events_count),
+          sum(precise_total_amount_cents)
         SQL
-        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, sum_units, max_units, latest_units, last_event_at, events_count|
+        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, sum_units, max_units, latest_units, last_event_at, events_count, precise_total_amount_cents|
           units = {sum_units:, max_units:, latest_units:}
             .fetch(UNITS_BY_AGGREGATION_TYPE.fetch(aggregation_type, :sum_units))
 
@@ -101,7 +103,8 @@ module RealtimeUsage
             aggregation_type:,
             units: units.to_d,
             last_event_at: last_event_at.to_time,
-            events_count: events_count.to_i
+            events_count: events_count.to_i,
+            precise_total_amount_cents: precise_total_amount_cents.to_d
           }
         end
     end

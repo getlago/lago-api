@@ -5,9 +5,9 @@
 module RealtimeUsage
   SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg max_agg latest_agg].freeze
 
-  # percentage and custom walk individual events; dynamic needs precise amounts the buckets
-  # do not carry.
-  SUPPORTED_CHARGE_MODELS = %w[standard graduated package volume graduated_percentage].freeze
+  # percentage and custom walk individual events. dynamic reads the precise amounts the buckets
+  # sum on sum rows, the only aggregation type a dynamic charge accepts.
+  SUPPORTED_CHARGE_MODELS = %w[standard graduated package volume graduated_percentage dynamic].freeze
 
   FORCED_GATE_KEY = :lago_realtime_usage_forced_gate
 
