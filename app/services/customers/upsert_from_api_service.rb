@@ -78,6 +78,8 @@ module Customers
         customer.lastname = params[:lastname] if params.key?(:lastname)
         customer.customer_type = params[:customer_type] if params.key?(:customer_type)
 
+        PaymentTerms::AssignService.call(record: customer, params:)
+
         if customer.organization.revenue_share_enabled? && customer.editable?
           customer.account_type = params[:account_type] if params.key?(:account_type)
           customer.exclude_from_dunning_campaign = customer.partner_account?
