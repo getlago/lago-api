@@ -330,6 +330,47 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       end
     end
 
+    context "when a dispute is open on the invoice" do
+      let(:invoice) { create(:invoice, :refund_blocked, customer:, organization:) }
+
+      it "does not create a refund and marks the credit note as failed" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(credit_note.reload.refund_status).to eq("failed")
+
+        expect(Stripe::Refund).not_to have_received(:create)
+      end
+
+      it "does not query stripe for the charge" do
+        stripe_service.create
+
+        expect(Stripe::Charge).not_to have_received(:list)
+      end
+
+      it "delivers an error webhook" do
+        stripe_service.create
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "credit_note.provider_refund_failure",
+            credit_note,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: "The charge is disputed and cannot be refunded",
+              error_code: described_class::CHARGE_DISPUTED_ERROR
+            }
+          )
+      end
+
+      it "produces an activity log" do
+        stripe_service.create
+
+        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+      end
+    end
+
     context "when the charge is already fully refunded" do
       let(:charge_amount_refunded) { 200 }
 
