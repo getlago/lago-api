@@ -14,7 +14,7 @@ module Events
 
     def call
       return result if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
-      return result if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
+      return result if topic.blank?
 
       messages = events.map { |event| build_message(event) }
       Karafka.producer.produce_many_async(messages)
@@ -26,9 +26,19 @@ module Events
 
     attr_reader :events, :organization
 
+    # Product catalog organizations get their own pipeline, falling back to the
+    # legacy topic until the product topic is configured.
+    def topic
+      @topic ||= if organization.product_catalog_enabled?
+        ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].presence || ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
+      else
+        ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
+      end
+    end
+
     def build_message(event)
       {
-        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
+        topic:,
         payload: build_payload(event).to_json
       }
     end
