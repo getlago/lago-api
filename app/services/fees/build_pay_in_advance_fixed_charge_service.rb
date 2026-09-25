@@ -106,7 +106,10 @@ module Fees
 
     def build_delta_fee(delta_units, boundaries)
       proration_coefficient = if fixed_charge.prorated?
-        days = (boundaries.fixed_charges_to_datetime.to_date - Time.zone.at(timestamp).to_date + 1)
+        # NOTE: the period ends at the end of a day in the customer timezone, so days are counted there
+        timezone = subscription.customer.applicable_timezone
+        to_date = boundaries.fixed_charges_to_datetime.in_time_zone(timezone).to_date
+        days = (to_date - Time.zone.at(timestamp).in_time_zone(timezone).to_date + 1)
         days / boundaries.fixed_charges_duration.to_f
       else
         1

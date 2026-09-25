@@ -392,6 +392,86 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       end
     end
 
+    context "when the customer is ahead of UTC" do
+      let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          customer:,
+          plan:,
+          status: :active,
+          started_at: Time.zone.parse("2024-02-01")
+        )
+      end
+
+      let(:fixed_charge_event) do
+        create(
+          :fixed_charge_event,
+          subscription:,
+          fixed_charge:,
+          units: 10,
+          timestamp: Time.zone.at(timestamp)
+        )
+      end
+
+      context "when fixed charge is added on the first day of the billing period in the customer timezone" do
+        # 2024-03-01 08:00 in Asia/Tokyo
+        let(:timestamp) { Time.zone.parse("2024-02-29T23:00:00Z").to_i }
+
+        it "does not charge more than the full amount" do
+          # March 1 to March 31 in the customer timezone is 31 days
+          # Proration coefficient = 31/31 = 1.0
+          expect(result).to be_success
+          expect(result.fee.amount_cents).to eq(10_000)
+        end
+      end
+
+      context "when fixed charge is added mid-period" do
+        # 2024-03-15 08:00 in Asia/Tokyo
+        let(:timestamp) { Time.zone.parse("2024-03-14T23:00:00Z").to_i }
+
+        it "prorates on the days of the customer timezone" do
+          # March 15 to March 31 is 17 days (31 - 15 + 1)
+          expect(result).to be_success
+          expect(result.fee.amount_cents).to eq(5484) # 10 * 1000 * (17/31) = 5483.87 rounded to 5484
+        end
+      end
+    end
+
+    context "when the customer is behind UTC" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          customer:,
+          plan:,
+          status: :active,
+          started_at: Time.zone.parse("2024-02-01")
+        )
+      end
+
+      # 2024-03-15 12:00 in America/New_York
+      let(:timestamp) { Time.zone.parse("2024-03-15T16:00:00Z").to_i }
+
+      let(:fixed_charge_event) do
+        create(
+          :fixed_charge_event,
+          subscription:,
+          fixed_charge:,
+          units: 10,
+          timestamp: Time.zone.at(timestamp)
+        )
+      end
+
+      it "prorates on the days of the customer timezone" do
+        # March 15 to March 31 is 17 days (31 - 15 + 1)
+        expect(result).to be_success
+        expect(result.fee.amount_cents).to eq(5484) # 10 * 1000 * (17/31) = 5483.87 rounded to 5484
+      end
+    end
+
     context "when units increase mid-period (delta is positive)" do
       let(:timestamp) { Time.zone.parse("2024-03-20").to_i }
       let(:boundaries) do
