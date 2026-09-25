@@ -53,11 +53,11 @@ module Types
       end
 
       def applied_rate_cards
-        dataloader.with(Sources::ContractCurrentRateCards).load(object.id)
+        dataloader.with(Sources::ContractAppliedRateCards).load(object.id)
       end
 
       def applied_rate_cards_count
-        dataloader.with(Sources::ContractCurrentRateCards).load(object.id).size
+        dataloader.with(Sources::ContractAppliedRateCards).load(object.id).size
       end
     end
   end

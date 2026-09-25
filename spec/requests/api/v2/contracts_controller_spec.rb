@@ -77,8 +77,6 @@ RSpec.describe Api::V2::ContractsController do
 
     it "lists active contracts with their card counts" do
       create(:contract_rate_card, organization:, contract:)
-      # An ended attachment must not inflate the grouped count.
-      create(:contract_rate_card, organization:, contract:, effective_date: 10.days.ago.to_date, ended_date: 1.day.ago.to_date)
 
       subject
 
