@@ -182,6 +182,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+            response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 253
+            response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 253
 
             {body: response.to_json}
           end
@@ -233,6 +235,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+            response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 253
+            response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 253
 
             {body: response.to_json}
           end

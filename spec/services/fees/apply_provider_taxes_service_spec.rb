@@ -30,6 +30,56 @@ RSpec.describe Fees::ApplyProviderTaxesService do
   end
 
   describe "call" do
+    context "when jurisdictions have different taxable base reductions" do
+      let(:fee_taxes) do
+        build(:tax_result,
+          tax_amount_cents: 146,
+          tax_breakdown: [
+            build(:tax_breakdown_item, name: "State tax", type: "tax", rate: "0.12", tax_amount: 96),
+            build(:tax_breakdown_item, name: "City tax", type: "tax", rate: "0.05", tax_amount: 50)
+          ])
+      end
+
+      it "stores the provider allocation in both tax amount columns" do
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map { |tax| [tax.amount_cents, tax.precise_amount_cents] })
+          .to eq([[96, 96.to_d], [50, 50.to_d]])
+        expect(fee).to have_attributes(taxes_amount_cents: 146, taxes_precise_amount_cents: 146.to_d)
+      end
+
+      context "when the fee is not persisted" do
+        let(:fee) { build(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000) }
+
+        it "keeps the precise total equal to the provider total without persisting taxes" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes).to all(be_new_record)
+          expect(fee).to have_attributes(taxes_amount_cents: 146, taxes_precise_amount_cents: 146.to_d)
+        end
+      end
+    end
+
+    context "when the provider breakdown contains fractional cents" do
+      let(:fee_taxes) do
+        build(:tax_result,
+          tax_amount_cents: 8,
+          tax_breakdown: %w[State County City].map do |name|
+            build(:tax_breakdown_item, name:, type: "tax", rate: "0.025", tax_amount: 2.5)
+          end)
+      end
+
+      it "preserves fractional cents separately from the booked allocation" do
+        result = apply_service.call
+
+        expect(result.applied_taxes.map { |tax| [tax.amount_cents, tax.precise_amount_cents] })
+          .to eq([[3, 2.5.to_d], [3, 2.5.to_d], [2, 2.5.to_d]])
+        expect(fee).to have_attributes(taxes_amount_cents: 8, taxes_precise_amount_cents: 7.5.to_d)
+      end
+    end
+
     context "when there is no applied taxes yet" do
       it "creates applied_taxes based on the provider taxes" do
         result = apply_service.call

@@ -8,6 +8,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       :invoice,
       customer:,
       currency: "EUR",
+      taxes_amount_cents:,
       total_amount_cents: amount_cents
     )
   end
@@ -17,6 +18,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       taxes_precise_amount_cents: 0)
   }
   let(:amount_cents) { 100 }
+  let(:taxes_amount_cents) { 0 }
   let(:fee_amount_cents) { 100 }
 
   let(:normal_wallet) do
@@ -108,6 +110,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
     context "with fee type limitations" do
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
+      let(:taxes_amount_cents) { 10 }
       let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
       let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
 
@@ -120,6 +123,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
 
       context "when wallet credits are less than invoice amount" do
         let(:amount_cents) { 5150 }
+        let(:taxes_amount_cents) { 150 }
         let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 3500, precise_amount_cents: 3500, taxes_precise_amount_cents: 100) }
         let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1500, precise_amount_cents: 1500, taxes_precise_amount_cents: 50) }
 
@@ -158,6 +162,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       end
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
+      let(:taxes_amount_cents) { 10 }
       let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
       let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4, charge:) }
       let(:charge) { create(:standard_charge, organization: wallets.first.organization, billable_metric:) }
@@ -204,6 +209,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
     context "when wallet is limited to a fee processed last" do
       let(:fee) { nil }
       let(:amount_cents) { 680 }
+      let(:taxes_amount_cents) { 80 }
 
       let(:wallet_limited_billable_metric) { create(:billable_metric, organization: customer.organization) }
       let(:bm_wallet) do
@@ -242,6 +248,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       end
       let(:wallets) { [normal_wallet] }
       let(:amount_cents) { 106_826 }
+      let(:taxes_amount_cents) { 6826 }
       let(:fee) { nil }
 
       before do
@@ -256,6 +263,49 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       it "applies the full invoice amount without a rounding gap" do
         expect(result).to be_success
         expect(result.wallet_transactions.values.sum).to eq(106_826)
+      end
+    end
+
+    context "when provider taxes round up across fees in one wallet bucket" do
+      let(:wallets) { [normal_wallet] }
+      let(:amount_cents) { 412 }
+      let(:taxes_amount_cents) { 12 }
+      let(:fee) { nil }
+      let(:charge) { create(:standard_charge, plan: subscription.plan) }
+      let(:credited_amount) { 0 }
+      let(:provider_fees) do
+        create_list(:charge_fee, 4, invoice:, subscription:, charge:,
+          amount_cents: 100, precise_amount_cents: 100,
+          taxes_amount_cents: 3, taxes_precise_amount_cents: 2.5.to_d,
+          precise_credit_notes_amount_cents: credited_amount)
+      end
+
+      before do
+        provider_fees
+        create(:invoice_applied_tax, invoice:, tax: nil, amount_cents: 12,
+          fees_amount_cents: 400, taxable_base_amount_cents: 400)
+      end
+
+      it "covers the booked invoice total without discarding tax precision" do
+        expect(result.wallet_transactions.values.sum).to eq(412)
+        expect(provider_fees.sum(&:taxes_precise_amount_cents)).to eq(10)
+      end
+
+      context "with credit notes already applied" do
+        let(:credited_amount) { 1 }
+        let(:amount_cents) { 408 }
+
+        it "deducts credited amounts from wallet coverage" do
+          expect(result.wallet_transactions.values.sum).to eq(408)
+        end
+      end
+
+      context "with a wallet restricted to subscription fees" do
+        let(:wallets) { [limited_subscription_wallet] }
+
+        it "does not fund ineligible charge fees" do
+          expect(result.wallet_transactions).to eq({})
+        end
       end
     end
 

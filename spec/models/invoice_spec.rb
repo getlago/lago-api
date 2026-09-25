@@ -924,13 +924,34 @@ RSpec.describe Invoice do
   describe "#fee_total_amount_cents" do
     let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 233, coupons_amount_cents:, taxes_amount_cents:) }
+    let(:coupons_amount_cents) { 0 }
+    let(:taxes_amount_cents) { 47 }
 
-    it "returns the fee amount vat included" do
+    before do
       create(:fee, invoice:, amount_cents: 100, taxes_rate: 20)
       create(:fee, invoice:, amount_cents: 133, taxes_rate: 20)
+    end
 
-      expect(invoice.fee_total_amount_cents).to eq(120 + 160)
+    it "returns the fee amount vat included" do
+      expect(invoice.fee_total_amount_cents).to eq(233 + 47)
+    end
+
+    context "with a coupon" do
+      let(:coupons_amount_cents) { 33 }
+      let(:taxes_amount_cents) { 40 }
+
+      it "adds the tax computed after the coupon" do
+        expect(invoice.fee_total_amount_cents).to eq(233 + 40)
+      end
+    end
+
+    context "with provider taxes booked above the rate" do
+      let(:taxes_amount_cents) { 50 }
+
+      it "adds the booked tax" do
+        expect(invoice.fee_total_amount_cents).to eq(233 + 50)
+      end
     end
   end
 
@@ -1970,8 +1991,8 @@ RSpec.describe Invoice do
         subscription = invoice_subscription.subscription
         billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
         charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
-        invoice.update(fees_amount_cents: 160)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20, taxes_amount_cents: 27, taxes_precise_amount_cents: 26.6)
+        invoice.update(fees_amount_cents: 133, taxes_amount_cents: 27, sub_total_including_taxes_amount_cents: 160)
       end
 
       context "when invoice v1" do
@@ -2027,6 +2048,7 @@ RSpec.describe Invoice do
           coupons_amount_cents: 20,
           progressive_billing_credit_amount_cents:,
           taxes_amount_cents: 36,
+          sub_total_including_taxes_amount_cents: 216 - progressive_billing_credit_amount_cents,
           total_amount_cents: 216,
           taxes_rate: 20,
           version_number: 3
@@ -2042,7 +2064,17 @@ RSpec.describe Invoice do
         create(:standard_charge, plan: subscription.plan, billable_metric:)
       end
       let(:fee) do
-        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 200, taxes_rate: 20)
+        create(
+          :charge_fee,
+          subscription:,
+          invoice:,
+          charge:,
+          amount_cents: 200,
+          precise_coupons_amount_cents: 20 + progressive_billing_credit_amount_cents,
+          taxes_rate: 20,
+          taxes_amount_cents: 36,
+          taxes_precise_amount_cents: (180 - progressive_billing_credit_amount_cents) * 0.2
+        )
       end
 
       let(:progressive_billing_credit_amount_cents) { 0 }
@@ -2059,6 +2091,53 @@ RSpec.describe Invoice do
         it "returns the expected creditable amount in cents" do
           expect(invoice.available_to_credit_amount_cents).to eq(214)
         end
+      end
+    end
+
+    context "with provider taxes booked by position" do
+      let(:invoice) { create(:invoice, fees_amount_cents: 16, taxes_amount_cents: 2, sub_total_including_taxes_amount_cents: 18, total_amount_cents: 18, version_number: 3) }
+
+      before do
+        [1, 1, 0, 0].each do |booked|
+          create(:fee, invoice:, amount_cents: 4, taxes_rate: booked.zero? ? 0 : 10.55, taxes_amount_cents: booked, taxes_precise_amount_cents: 0.422 * booked)
+        end
+      end
+
+      it "returns the booked invoice total" do
+        expect(invoice.available_to_credit_amount_cents).to eq(18)
+      end
+    end
+
+    context "with native fee taxes rounded once on the invoice" do
+      let(:invoice) { create(:invoice, fees_amount_cents: 15, taxes_amount_cents: 2, sub_total_including_taxes_amount_cents: 17, total_amount_cents: 17, version_number: 3) }
+
+      before do
+        create_list(:fee, 3, invoice:, amount_cents: 5, taxes_rate: 10, taxes_amount_cents: 1, taxes_precise_amount_cents: 0.5)
+      end
+
+      it "returns the invoice total rather than the sum of rounded fee taxes" do
+        expect(invoice.available_to_credit_amount_cents).to eq(17)
+      end
+    end
+
+    context "with a coupon applied to one fee only" do
+      let(:invoice) do
+        create(:invoice, fees_amount_cents: 200, coupons_amount_cents: 20, taxes_amount_cents: 36, sub_total_including_taxes_amount_cents: 216, total_amount_cents: 216, version_number: 3)
+      end
+      let(:discounted_fee) do
+        create(:fee, invoice:, amount_cents: 100, precise_coupons_amount_cents: 20, taxes_rate: 20, taxes_amount_cents: 16, taxes_precise_amount_cents: 16)
+      end
+      let(:full_price_fee) do
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20, taxes_precise_amount_cents: 20)
+      end
+
+      before do
+        discounted_fee
+        create(:credit_note_item, credit_note: create(:credit_note, invoice:), fee: full_price_fee, amount_cents: 100, precise_amount_cents: 100)
+      end
+
+      it "returns what remains on the discounted fee" do
+        expect(invoice.available_to_credit_amount_cents).to eq(80 + 16)
       end
     end
   end
@@ -2129,8 +2208,8 @@ RSpec.describe Invoice do
       subscription = invoice_subscription.subscription
       billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
-      invoice.update(fees_amount_cents: 160)
+      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20, taxes_amount_cents: 27, taxes_precise_amount_cents: 26.6)
+      invoice.update(fees_amount_cents: 133, taxes_amount_cents: 27, sub_total_including_taxes_amount_cents: 160)
     end
 
     context "when version_number is less than CREDIT_NOTES_MIN_VERSION" do

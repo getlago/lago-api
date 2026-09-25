@@ -32,11 +32,11 @@ module Invoices
         (invoice.taxes_amount_cents.to_f * 100 / invoice.fees_amount_cents).round(2)
       end
 
-      invoice.applied_taxes = invoice.fees.includes(:applied_taxes).flat_map(&:applied_taxes).group_by(&:tax_id).map do |tax_id, applied_taxes|
+      invoice.applied_taxes = grouped_fee_taxes.values.map do |applied_taxes|
         t = applied_taxes.first
         Invoice::AppliedTax.new(
           organization: invoice.organization,
-          tax_id: tax_id,
+          tax_id: t.tax_id,
           tax_name: t.tax_name,
           tax_code: t.tax_code,
           tax_description: t.tax_description,
@@ -55,5 +55,12 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def grouped_fee_taxes
+      invoice.fees.includes(:applied_taxes).flat_map(&:applied_taxes).group_by do |tax|
+        # Provider jurisdictions have no tax_id, so retain their distinct identities.
+        tax.tax_id || [tax.tax_code, tax.tax_rate, tax.tax_description]
+      end
+    end
   end
 end

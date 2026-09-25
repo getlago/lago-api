@@ -244,9 +244,22 @@ class Invoice < ApplicationRecord
   end
 
   def fee_total_amount_cents
-    amount_cents = fees.sum(:amount_cents)
-    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
-    amount_cents + taxes_amount_cents
+    fees_amount_cents + taxes_amount_cents
+  end
+
+  def provider_taxes?
+    applied_taxes.any?(&:provider_tax?)
+  end
+
+  def booked_tax_by_fee
+    booked = fees.index_with(&:taxes_amount_cents)
+    return booked if booked.values.sum == taxes_amount_cents
+
+    # Native fees round their tax one by one while the invoice rounds once, and provider invoices
+    # booked before fee amounts were stored drift the same way: split what the invoice charged.
+    ordered_fees = fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
+    allocated = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, ordered_fees.map(&:taxes_precise_amount_cents))
+    ordered_fees.zip(allocated).to_h
   end
 
   def charge_amount_cents
@@ -379,25 +392,7 @@ class Invoice < ApplicationRecord
   def available_to_credit_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
 
-    fees_total_creditable = fees.sum(&:creditable_amount_cents)
-    return 0 if fees_total_creditable.zero?
-
-    credit_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
-      0
-    else
-      (coupons_amount_cents + progressive_billing_credit_amount_cents).fdiv(fees_amount_cents) * fees_total_creditable
-    end
-
-    vat = fees.sum do |fee|
-      # NOTE: Because coupons are applied before VAT,
-      #       we have to discribute the coupon adjustement at prorata of each fees
-      #       to compute the VAT
-      fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
-      prorated_credit_amount = credit_adjustement * fee_rate
-      (fee.creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
-    end.fdiv(100).round # BECAUSE OF THIS ROUND the returned value is not precise
-
-    fees_total_creditable - credit_adjustement + vat
+    [fees_available_to_credit_amount_cents, remaining_invoice_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as credit
@@ -562,6 +557,20 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def fees_available_to_credit_amount_cents
+    booked_tax = booked_tax_by_fee
+
+    fees.sum { |fee| creditable_share(fee) * (fee.sub_total_excluding_taxes_amount_cents + booked_tax.fetch(fee)) }.round
+  end
+
+  def remaining_invoice_amount_cents
+    [sub_total_including_taxes_amount_cents - credit_notes.sum(:total_amount_cents), 0].max
+  end
+
+  def creditable_share(fee)
+    fee.amount_cents.zero? ? 0 : fee.creditable_amount_cents.fdiv(fee.amount_cents)
+  end
 
   # Returns the wallet associated with this credit invoice's prepaid credit fee.
   # Can be nil for historical invoices where the fee or wallet transaction is missing.

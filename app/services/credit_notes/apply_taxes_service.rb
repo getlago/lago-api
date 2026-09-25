@@ -22,7 +22,11 @@ module CreditNotes
       indexed_items.each do |tax_key, entry|
         invoice_applied_tax = entry[:invoice_applied_tax]
         precise_base_amount_cents = base_amounts.fetch(tax_key) * taxes_base_rate(invoice_applied_tax)
-        precise_tax_amount_cents = (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        precise_tax_amount_cents = if invoice_applied_tax.provider_tax?
+          booked_tax_to_credit(tax_key, entry[:items].uniq)
+        else
+          (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        end
 
         result.applied_taxes << build_applied_tax(
           invoice_applied_tax,
@@ -59,6 +63,57 @@ module CreditNotes
         base_amount_cents: base_amount_cents.round,
         amount_cents: tax_amount_cents.round
       )
+    end
+
+    def booked_tax_to_credit(tax_key, items)
+      booked_tax = booked_tax_by_fee(tax_key)
+
+      items.sum { |item| credited_portion(booked_tax.fetch(item.fee_id), item) }
+    end
+
+    def credited_portion(fee_amount_cents, item)
+      if item.fee.amount_cents.zero?
+        0.to_d
+      else
+        fee_amount_cents * item.precise_amount_cents / item.fee.amount_cents
+      end
+    end
+
+    # Crediting every fee must return exactly this tax's share of what the invoice charged, even
+    # when the fees' own booked cents do not add up to it on older invoices.
+    def booked_tax_by_fee(tax_key)
+      fee_taxes = fee_taxes_by_key.fetch(tax_key).group_by(&:fee_id)
+      booked_tax = Integrations::Aggregator::Taxes::Allocation.by_group(invoice_tax_by_key.fetch(tax_key), fee_taxes.values)
+
+      fee_taxes.keys.zip(booked_tax).to_h
+    end
+
+    # Invoices booked before provider amounts were stored rounded each fee tax on its own,
+    # so their fee taxes can add up to less than the tax charged on the invoice.
+    def invoice_tax_by_key
+      @invoice_tax_by_key ||= begin
+        invoice_taxes = invoice_applied_taxes.group_by { |tax| tax_key(tax) }.sort_by(&:first).to_h
+        weights = invoice_tax_weights(invoice_taxes)
+        invoice_tax = Integrations::Aggregator::Taxes::Allocation.call(invoice.taxes_amount_cents, weights)
+
+        invoice_taxes.keys.zip(invoice_tax).to_h
+      end
+    end
+
+    def invoice_tax_weights(invoice_taxes)
+      booked_weights = invoice_taxes.values.map { |taxes| taxes.sum(&:amount_cents) }
+      return booked_weights if booked_weights.sum == invoice.taxes_amount_cents
+
+      exact_weights = invoice_taxes.keys.map { |key| fee_taxes_by_key.fetch(key, []).sum(&:precise_amount_cents) }
+      exact_weights.sum.zero? ? booked_weights : exact_weights
+    end
+
+    def fee_taxes_by_key
+      @fee_taxes_by_key ||= invoice.fees.order(:created_at, :id).includes(:applied_taxes)
+        .flat_map(&:applied_taxes).group_by do |fee_tax|
+          invoice_applied_tax = resolve_invoice_applied_tax(fee_tax)
+          tax_key(invoice_applied_tax) if invoice_applied_tax
+        end
     end
 
     # NOTE: indexes the credit note items by the invoice applied tax their fee taxes resolve to,
@@ -122,17 +177,22 @@ module CreditNotes
     #       changed in between), it falls back to the invoice tax carrying the same code, but only
     #       if exactly one does: several invoice taxes sharing a code is the provider multi-rate
     #       case, where the rate is the only thing telling them apart.
-    def find_invoice_applied_tax(fee_applied_tax)
+    def resolve_invoice_applied_tax(fee_applied_tax)
       key = tax_key(fee_applied_tax)
       exact_match = invoice_applied_taxes.find { |applied_tax| tax_key(applied_tax) == key }
       return exact_match if exact_match
 
       code_matches = invoice_applied_taxes.select { |applied_tax| applied_tax.tax_code == fee_applied_tax.tax_code }
-      return code_matches.first if code_matches.one?
+      code_matches.first if code_matches.one?
+    end
+
+    def find_invoice_applied_tax(fee_applied_tax)
+      invoice_applied_tax = resolve_invoice_applied_tax(fee_applied_tax)
+      return invoice_applied_tax if invoice_applied_tax
 
       result.service_failure!(
         code: "invoice_applied_tax_not_found",
-        message: "Invoice #{invoice.id} has no applied tax matching #{key.join(", ")}"
+        message: "Invoice #{invoice.id} has no applied tax matching #{tax_key(fee_applied_tax).join(", ")}"
       )
 
       nil
