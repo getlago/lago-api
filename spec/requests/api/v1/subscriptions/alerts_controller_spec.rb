@@ -97,6 +97,43 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       })
     end
 
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "current_usage_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(UsageMonitoring::Alert.find(json[:alert][:lago_id]).thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
+    context "when notify_on holds an unknown value" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "current_usage_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered exploded]}]
+        }
+      end
+
+      it "does not create the alert" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(json).to eq({
+          code: "validation_errors",
+          error: "Unprocessable Entity",
+          error_details: {"thresholds:notify_on": ["value_is_invalid"]},
+          status: 422
+        })
+      end
+    end
+
     context "when code already exists for this subscription" do
       it do
         create(:billable_metric_current_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
@@ -246,6 +283,37 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       end
     end
 
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          thresholds: [{code: :notice, value: 88_00, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(alert.reload.thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
+    context "when a threshold already opted in and the update leaves notify_on out" do
+      let(:alert) { create(:alert, :processed, code:, subscription_external_id: external_id, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, notify_on: %w[triggered resolved])
+      end
+
+      it "keeps notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, notify_on: %w[triggered resolved])
+      end
+    end
+
     context "when trying to update alert_type" do
       let(:params) do
         {
@@ -350,6 +418,47 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       expect(response).to have_http_status(:ok)
       expect(json[:alerts].count).to eq 2
       expect(json[:alerts].map { |a| a[:code] }).to eq %w[alert1 alert2]
+    end
+
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "alert1",
+              alert_type: "current_usage_amount",
+              thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+            }
+          ]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alerts].sole[:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(UsageMonitoring::Alert.find_by(code: "alert1").thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
+    context "when notify_on holds an unknown value" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "alert1",
+              alert_type: "current_usage_amount",
+              thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered exploded]}]
+            }
+          ]
+        }
+      end
+
+      it "creates no alert" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:code]).to eq "validation_errors"
+      end
     end
 
     context "when one alert is invalid" do
