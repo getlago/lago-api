@@ -537,6 +537,108 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "when untouched preview fees are submitted after a charge price change" do
+      let(:event_timestamp) { Time.zone.parse("2023-01-01") }
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:charge) do
+        create(:standard_charge, plan:, organization:, billable_metric:, prorated: true, properties: {amount: "2000"})
+      end
+      let(:original_invoice) do
+        travel_to(DateTime.new(2023, 1, 15)) { perform_billing }
+        invoice = subscription.invoices.first
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties: {
+            charges_from_datetime: "2023-01-01T00:00:00Z",
+            charges_to_datetime: "2023-01-31T23:59:59Z",
+            charges_duration: 31
+          },
+          units: 1,
+          amount_cents: 0,
+          precise_amount_cents: 0,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0
+        )
+        invoice.update!(status: :voided)
+        invoice
+      end
+      let(:original_fee) { original_invoice.fees.find_by!(charge:) }
+      let(:preview_fee) do
+        Invoices::BuildRegenerationPreviewService.call!(invoice: original_invoice).invoice.fees.find { |fee| fee.id == original_fee.id }
+      end
+      let(:fees_params) do
+        [
+          {
+            id: preview_fee.id,
+            subscription_id: preview_fee.subscription_id,
+            invoice_display_name: preview_fee.invoice_display_name,
+            units: preview_fee.units,
+            unit_amount_cents: preview_fee.precise_unit_amount
+          }
+        ]
+      end
+      let(:expected_amount) { 200_000 }
+      let(:expected_unit_amount) { 2000 }
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: event_timestamp, properties: {billable_metric.field_name => "1"})
+      end
+
+      it "regenerates the invoice with the previewed current charge price" do
+        regenerated_fee = regenerate_result.invoice.fees.find_by!(charge:)
+
+        expect(preview_fee).to have_attributes(unit_amount_cents: expected_amount, amount_cents: expected_amount)
+        expect(regenerated_fee).to have_attributes(
+          units: 1,
+          unit_amount_cents: expected_amount,
+          precise_unit_amount: expected_unit_amount,
+          amount_cents: expected_amount
+        )
+      end
+
+      context "when the terminated subscription is overridden after invoicing", :premium do
+        let(:charge) do
+          create(:standard_charge, plan:, organization:, billable_metric:, prorated: true, properties: {amount: "0"})
+        end
+        let(:event_timestamp) { Time.zone.parse("2023-01-17") }
+        let(:expected_amount) { 96_776 }
+
+        before do
+          original_invoice
+          subscription.update!(status: :terminated, terminated_at: Time.zone.parse("2023-01-31T23:59:59Z"))
+          Subscriptions::UpdateService.call!(subscription:, params: {
+            plan_overrides: {charges: [{id: charge.id, properties: {amount: "2000"}}]}
+          })
+        end
+
+        it "saves the overridden prorated price from the untouched preview" do
+          regenerated_fee = regenerate_result.invoice.fees.find_by!(charge:)
+
+          expect(subscription.reload.plan.charges.sole.parent_id).to eq(charge.id)
+          expect(preview_fee).to have_attributes(units: 1, amount_cents: expected_amount)
+          expect(regenerated_fee).to have_attributes(units: 1, amount_cents: expected_amount)
+          expect(original_fee.reload.amount_cents).to eq(0)
+        end
+      end
+
+      context "with a partially prorated event" do
+        let(:event_timestamp) { Time.zone.parse("2023-01-17") }
+        let(:expected_amount) { 96_776 }
+        let(:expected_unit_amount) { BigDecimal("967.76") }
+
+        it "saves the prorated amount returned by the untouched preview" do
+          regenerated_fee = regenerate_result.invoice.fees.find_by!(charge:)
+
+          expect(preview_fee.amount_cents).to eq(expected_amount)
+          expect(regenerated_fee).to have_attributes(units: 1, amount_cents: expected_amount)
+        end
+      end
+    end
+
     context "when a plan charge was soft deleted" do
       let(:parent_charge) { create(:standard_charge, plan:, organization:) }
       let(:charge) do
