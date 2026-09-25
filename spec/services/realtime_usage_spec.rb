@@ -132,6 +132,27 @@ RSpec.describe RealtimeUsage do
       it { expect(supported).to be(true) }
     end
 
+    context "with a max_agg metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:) }
+
+      it { expect(supported).to be(true) }
+    end
+
+    context "with a latest_agg metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+
+      it { expect(supported).to be(true) }
+    end
+
+    context "with a latest_agg metric on a graduated_percentage charge" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+      let(:charge) { build(:graduated_percentage_charge, billable_metric:) }
+
+      it "cannot exist, the charge properties validation rejecting the pair" do
+        expect(charge).not_to be_valid
+      end
+    end
+
     context "with an aggregation the buckets cannot recompose" do
       let(:billable_metric) { create(:unique_count_billable_metric, organization:) }
 
@@ -216,7 +237,7 @@ RSpec.describe RealtimeUsage do
     it "excludes exactly these aggregation types" do
       excluded = BillableMetric::AGGREGATION_TYPES.keys.map(&:to_s) - described_class::SUPPORTED_AGGREGATION_TYPES
 
-      expect(excluded).to match_array(%w[max_agg unique_count_agg weighted_sum_agg latest_agg custom_agg])
+      expect(excluded).to match_array(%w[unique_count_agg weighted_sum_agg custom_agg])
     end
   end
 end

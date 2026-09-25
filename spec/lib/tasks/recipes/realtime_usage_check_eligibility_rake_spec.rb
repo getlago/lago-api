@@ -57,7 +57,7 @@ RSpec.describe "recipes:realtime_usage:check_eligibility", :premium do # rubocop
 
   context "when no charge on the plan is servable" do
     before do
-      create(:standard_charge, plan:, billable_metric: create(:max_billable_metric, organization:))
+      create(:standard_charge, plan:, billable_metric: create(:weighted_sum_billable_metric, organization:))
       create(:subscription, customer:, plan:, organization:)
     end
 
@@ -153,7 +153,7 @@ RSpec.describe "recipes:realtime_usage:check_eligibility", :premium do # rubocop
 
   context "when an overridden plan repeats its parent's code" do
     let(:overridden_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
-    let(:billable_metric) { create(:max_billable_metric, organization:) }
+    let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
     before do
       create(:standard_charge, plan:, billable_metric:)

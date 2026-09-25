@@ -30,7 +30,7 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
 
   let(:usage_buckets) do
     Events::Stores::UsageBucketSet.new(
-      totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: bucket_units, events_count: bucket_events_count)}
+      totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: bucket_units, events_count: bucket_events_count, last_event_at: Time.current)}
     )
   end
 

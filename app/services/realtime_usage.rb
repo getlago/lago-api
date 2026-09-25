@@ -3,7 +3,7 @@
 # Shared by the event store provider, the charge cache gate and the parity task, which must
 # agree on what the buckets can answer.
 module RealtimeUsage
-  SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
+  SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg max_agg latest_agg].freeze
 
   # percentage and custom walk individual events; dynamic needs precise amounts the buckets
   # do not carry.
