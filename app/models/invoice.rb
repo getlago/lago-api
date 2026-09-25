@@ -251,6 +251,15 @@ class Invoice < ApplicationRecord
     applied_taxes.any?(&:provider_tax?)
   end
 
+  def booked_tax_by_fee
+    booked = fees.index_with(&:taxes_amount_cents)
+    return booked if booked.values.sum == taxes_amount_cents
+
+    ordered_fees = fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
+    allocated = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, ordered_fees.map(&:taxes_precise_amount_cents))
+    ordered_fees.zip(allocated).to_h
+  end
+
   def charge_amount_cents
     fees.charge.sum(:amount_cents)
   end
@@ -381,9 +390,7 @@ class Invoice < ApplicationRecord
   def available_to_credit_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
 
-    booked_tax = booked_tax_by_fee
-
-    fees.sum { |fee| creditable_share(fee) * (fee.sub_total_excluding_taxes_amount_cents + booked_tax.fetch(fee.id)) }.round
+    [fees_available_to_credit_amount_cents, remaining_invoice_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as credit
@@ -549,17 +556,18 @@ class Invoice < ApplicationRecord
 
   private
 
-  def creditable_share(fee)
-    fee.amount_cents.zero? ? 0 : fee.creditable_amount_cents.fdiv(fee.amount_cents)
+  def fees_available_to_credit_amount_cents
+    booked_tax = booked_tax_by_fee
+
+    fees.sum { |fee| creditable_share(fee) * (fee.sub_total_excluding_taxes_amount_cents + booked_tax.fetch(fee)) }.round
   end
 
-  def booked_tax_by_fee
-    ordered_fees = fees.sort_by { |fee| [fee.created_at, fee.id] }
-    booked_weights = ordered_fees.map(&:taxes_amount_cents)
-    weights = (booked_weights.sum == taxes_amount_cents) ? booked_weights : ordered_fees.map(&:taxes_precise_amount_cents)
-    booked_tax = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, weights)
+  def remaining_invoice_amount_cents
+    [sub_total_including_taxes_amount_cents - credit_notes.sum(:total_amount_cents), 0].max
+  end
 
-    ordered_fees.map(&:id).zip(booked_tax).to_h
+  def creditable_share(fee)
+    fee.amount_cents.zero? ? 0 : fee.creditable_amount_cents.fdiv(fee.amount_cents)
   end
 
   # Returns the wallet associated with this credit invoice's prepaid credit fee.
