@@ -1992,7 +1992,7 @@ RSpec.describe Invoice do
         billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
         charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
         create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20, taxes_amount_cents: 27, taxes_precise_amount_cents: 26.6)
-        invoice.update(fees_amount_cents: 133, taxes_amount_cents: 27)
+        invoice.update(fees_amount_cents: 133, taxes_amount_cents: 27, sub_total_including_taxes_amount_cents: 160)
       end
 
       context "when invoice v1" do
@@ -2048,6 +2048,7 @@ RSpec.describe Invoice do
           coupons_amount_cents: 20,
           progressive_billing_credit_amount_cents:,
           taxes_amount_cents: 36,
+          sub_total_including_taxes_amount_cents: 216 - progressive_billing_credit_amount_cents,
           total_amount_cents: 216,
           taxes_rate: 20,
           version_number: 3
@@ -2094,7 +2095,7 @@ RSpec.describe Invoice do
     end
 
     context "with provider taxes booked by position" do
-      let(:invoice) { create(:invoice, fees_amount_cents: 16, taxes_amount_cents: 2, total_amount_cents: 18, version_number: 3) }
+      let(:invoice) { create(:invoice, fees_amount_cents: 16, taxes_amount_cents: 2, sub_total_including_taxes_amount_cents: 18, total_amount_cents: 18, version_number: 3) }
 
       before do
         [1, 1, 0, 0].each do |booked|
@@ -2108,7 +2109,7 @@ RSpec.describe Invoice do
     end
 
     context "with native fee taxes rounded once on the invoice" do
-      let(:invoice) { create(:invoice, fees_amount_cents: 15, taxes_amount_cents: 2, total_amount_cents: 17, version_number: 3) }
+      let(:invoice) { create(:invoice, fees_amount_cents: 15, taxes_amount_cents: 2, sub_total_including_taxes_amount_cents: 17, total_amount_cents: 17, version_number: 3) }
 
       before do
         create_list(:fee, 3, invoice:, amount_cents: 5, taxes_rate: 10, taxes_amount_cents: 1, taxes_precise_amount_cents: 0.5)
@@ -2121,7 +2122,7 @@ RSpec.describe Invoice do
 
     context "with a coupon applied to one fee only" do
       let(:invoice) do
-        create(:invoice, fees_amount_cents: 200, coupons_amount_cents: 20, taxes_amount_cents: 36, total_amount_cents: 216, version_number: 3)
+        create(:invoice, fees_amount_cents: 200, coupons_amount_cents: 20, taxes_amount_cents: 36, sub_total_including_taxes_amount_cents: 216, total_amount_cents: 216, version_number: 3)
       end
       let(:discounted_fee) do
         create(:fee, invoice:, amount_cents: 100, precise_coupons_amount_cents: 20, taxes_rate: 20, taxes_amount_cents: 16, taxes_precise_amount_cents: 16)
@@ -2208,7 +2209,7 @@ RSpec.describe Invoice do
       billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
       create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20, taxes_amount_cents: 27, taxes_precise_amount_cents: 26.6)
-      invoice.update(fees_amount_cents: 133, taxes_amount_cents: 27)
+      invoice.update(fees_amount_cents: 133, taxes_amount_cents: 27, sub_total_including_taxes_amount_cents: 160)
     end
 
     context "when version_number is less than CREDIT_NOTES_MIN_VERSION" do
