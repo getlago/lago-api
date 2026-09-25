@@ -13,7 +13,7 @@ module Invoices
     def call
       preview_invoice = invoice.dup
 
-      invoice.fees.includes(:adjusted_fee, charge: :billable_metric).find_each do |fee|
+      invoice.fees.includes(:adjusted_fee, charge: :billable_metric, subscription: :plan).find_each do |fee|
         dup_fee = fee.dup
         dup_fee.invoice = preview_invoice
         preview_invoice.fees << dup_fee
@@ -65,12 +65,34 @@ module Invoices
         ))
         dup_fee.pricing_unit_usage = updated_fee.pricing_unit_usage
       else
+        properties = current_charge_properties(fee)
+        return unless properties
+
         dup_fee.invoice_display_name = adjusted_fee&.invoice_display_name || fee.invoice_display_name
-        refresh_prorated_amount(fee:, dup_fee:)
+        refresh_prorated_amount(fee:, dup_fee:, properties:)
       end
     end
 
-    def refresh_prorated_amount(fee:, dup_fee:)
+    def current_charge_properties(fee)
+      if fee.charge.plan_id == fee.subscription.plan_id || fee.subscription.plan.parent_id != fee.charge.plan_id
+        return fee.charge_filter&.properties || fee.charge.properties
+      end
+
+      # A first subscription override clones the charge; historical fees keep the parent ID.
+      @overridden_charges ||= {}
+      key = [fee.subscription.plan_id, fee.charge_id]
+      charge = @overridden_charges.fetch(key) do
+        @overridden_charges[key] = Charge.includes(filters: {values: :billable_metric_filter})
+          .find_by(plan_id: fee.subscription.plan_id, parent_id: fee.charge_id)
+      end
+      return unless charge
+
+      return charge.properties unless fee.charge_filter
+
+      charge.filters.find { |filter| filter.to_h == fee.charge_filter.to_h }&.properties
+    end
+
+    def refresh_prorated_amount(fee:, dup_fee:, properties:)
       metered_item = Fees::ChargeService::MeteredItem.from_charge(
         charge: fee.charge,
         charge_filter: fee.charge_filter,
@@ -98,7 +120,7 @@ module Invoices
       # Fee units are unprorated; only the event aggregation carries the period weighting.
       aggregation.full_units_number = fee.units
       model_result = ChargeModels::Factory.new_instance(
-        pricing_structure: ChargeModels::PricingStructure.from_charge(fee.charge).with(properties: metered_item.properties),
+        pricing_structure: ChargeModels::PricingStructure.from_charge(fee.charge).with(properties:),
         aggregation_result: aggregation
       ).apply
       model_result.raise_if_error!

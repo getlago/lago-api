@@ -600,6 +600,31 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         )
       end
 
+      context "when the terminated subscription is overridden after invoicing", :premium do
+        let(:charge) do
+          create(:standard_charge, plan:, organization:, billable_metric:, prorated: true, properties: {amount: "0"})
+        end
+        let(:event_timestamp) { Time.zone.parse("2023-01-17") }
+        let(:expected_amount) { 96_776 }
+
+        before do
+          original_invoice
+          subscription.update!(status: :terminated, terminated_at: Time.zone.parse("2023-01-31T23:59:59Z"))
+          Subscriptions::UpdateService.call!(subscription:, params: {
+            plan_overrides: {charges: [{id: charge.id, properties: {amount: "2000"}}]}
+          })
+        end
+
+        it "saves the overridden prorated price from the untouched preview" do
+          regenerated_fee = regenerate_result.invoice.fees.find_by!(charge:)
+
+          expect(subscription.reload.plan.charges.sole.parent_id).to eq(charge.id)
+          expect(preview_fee).to have_attributes(units: 1, amount_cents: expected_amount)
+          expect(regenerated_fee).to have_attributes(units: 1, amount_cents: expected_amount)
+          expect(original_fee.reload.amount_cents).to eq(0)
+        end
+      end
+
       context "with a partially prorated event" do
         let(:event_timestamp) { Time.zone.parse("2023-01-17") }
         let(:expected_amount) { 96_776 }

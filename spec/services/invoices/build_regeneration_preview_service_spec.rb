@@ -173,6 +173,131 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
         expect(invoice.reload.fees).to contain_exactly(fee)
       end
 
+      context "when a terminated subscription receives its first price override", :premium do
+        let(:plan) { create(:plan, organization:) }
+        let(:charge) do
+          create(:standard_charge, plan:, organization:, billable_metric:, prorated: true, properties: {amount: "0"})
+        end
+        let(:subscription) do
+          create(:subscription, customer:, organization:, plan:, status: :terminated,
+            started_at: Time.zone.parse("2022-08-01"), subscription_at: Time.zone.parse("2022-08-01"),
+            terminated_at: Time.zone.parse("2022-08-31T23:59:59Z"))
+        end
+
+        let(:override_params) { {id: charge.id, properties: {amount: "2000"}} }
+
+        before do
+          Subscriptions::UpdateService.call!(subscription:, params: {
+            plan_overrides: {charges: [override_params]}
+          })
+        end
+
+        it "uses the subscription override without changing the original fee or charge" do
+          preview_fee = preview_service.call.invoice.fees.sole
+
+          expect(subscription.reload.plan.charges.sole.parent_id).to eq(charge.id)
+          expect(preview_fee).to have_attributes(units: 1, amount_cents: 200_000)
+          expect(fee.reload).to have_attributes(charge_id: charge.id, amount_cents: 0)
+          expect(charge.reload.properties).to eq({"amount" => "0"})
+        end
+
+        context "with partially prorated usage" do
+          let(:event_timestamp) { Time.zone.parse("2022-08-17") }
+
+          it "applies the override price to the original prorated usage" do
+            expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(96_776)
+          end
+        end
+
+        context "when the subscription override is updated again" do
+          before do
+            override = subscription.reload.plan.charges.sole
+            Subscriptions::UpdateService.call!(subscription:, params: {
+              plan_overrides: {charges: [{id: override.id, properties: {amount: "3000"}}]}
+            })
+          end
+
+          it "uses the latest price of the same subscription override" do
+            expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(300_000)
+          end
+        end
+
+        context "when another subscription has its own override" do
+          let(:other_subscription) { create(:subscription, customer:, organization:, plan:) }
+
+          before do
+            Subscriptions::UpdateService.call!(subscription: other_subscription, params: {
+              plan_overrides: {charges: [{id: charge.id, properties: {amount: "5000"}}]}
+            })
+          end
+
+          it "does not use the other subscription's price" do
+            expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(200_000)
+          end
+        end
+
+        context "with a manual zero price adjustment" do
+          before do
+            create(:adjusted_fee, organization:, invoice:, fee:, subscription:, charge:, fee_type: :charge,
+              adjusted_units: false, adjusted_amount: true, units: 1,
+              unit_amount_cents: 0, unit_precise_amount_cents: 0, properties: fee.properties, grouped_by: {})
+          end
+
+          it "preserves the explicit zero instead of applying the subscription price" do
+            expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(0)
+          end
+        end
+
+        context "when the override charge is subsequently discarded" do
+          let(:original_amount) { 4321 }
+
+          before { Charges::DestroyService.call!(charge: subscription.reload.plan.charges.sole) }
+
+          it "preserves the historical amount instead of using the parent's price" do
+            expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(original_amount)
+          end
+        end
+
+        context "with a cloned charge filter" do
+          let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+          let(:charge_filter) do
+            filter = create(:charge_filter, charge:, properties: {amount: "0"})
+            create(:charge_filter_value, charge_filter: filter, billable_metric_filter: metric_filter, values: ["eu"])
+            filter
+          end
+          let(:event_properties) { {billable_metric.field_name => "1", "region" => "eu"} }
+          let(:override_params) do
+            {id: charge.id, properties: {amount: "2000"}, filters: [
+              {values: {"region" => ["eu"]}, properties: {amount: "100"}}
+            ]}
+          end
+
+          before do
+            create(:event, organization:, subscription:, code: billable_metric.code,
+              timestamp: event_timestamp, properties: {billable_metric.field_name => "10", "region" => "us"})
+          end
+
+          it "matches the cloned filter while aggregating the original filtered events" do
+            preview_fee = preview_service.call.invoice.fees.sole
+
+            expect(preview_fee).to have_attributes(amount_cents: 10_000, charge_filter_id: charge_filter.id)
+            expect(charge_filter.reload.properties).to eq({"amount" => "0"})
+          end
+
+          context "when the cloned filter is discarded" do
+            let(:original_amount) { 4321 }
+
+            before do
+              ChargeFilters::DestroyService.call!(charge_filter: subscription.reload.plan.charges.sole.filters.sole)
+            end
+
+            it "preserves the historical amount instead of falling back to the base price" do
+              expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(original_amount)
+            end
+          end
+        end
+      end
+
       context "with usage beginning partway through the period" do
         let(:event_timestamp) { Time.zone.parse("2022-08-17") }
 
