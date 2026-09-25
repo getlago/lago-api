@@ -52,14 +52,41 @@ RSpec.describe WalletTransactions::MarkAsFailedService do
         let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
         let(:wallet_transaction) { create(:wallet_transaction, wallet:, status: "settled", amount: 100, credit_amount: 100) }
 
-        before do
-          wallet_transaction
-        end
-
-        it "does not do anything" do
+        it "does not change the wallet_transaction status" do
           expect {
             service.call
           }.not_to change(wallet_transaction, :status)
+        end
+
+        it "does not enqueue a SendWebhookJob" do
+          expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+
+        context "with notify_settled_failure" do
+          subject(:service) { described_class.new(wallet_transaction:, notify_settled_failure: true) }
+
+          it "does not change the wallet_transaction status" do
+            expect {
+              service.call
+            }.not_to change(wallet_transaction, :status)
+          end
+
+          it "enqueues a SendWebhookJob to notify about the failed payment" do
+            expect {
+              service.call
+            }.to have_enqueued_job(SendWebhookJob)
+              .with("wallet_transaction.payment_failure_after_settlement", wallet_transaction)
+          end
+
+          context "when the webhook was already emitted for this wallet_transaction" do
+            before do
+              create(:webhook, object: wallet_transaction, webhook_type: "wallet_transaction.payment_failure_after_settlement")
+            end
+
+            it "does not enqueue a SendWebhookJob" do
+              expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
+            end
+          end
         end
       end
     end
