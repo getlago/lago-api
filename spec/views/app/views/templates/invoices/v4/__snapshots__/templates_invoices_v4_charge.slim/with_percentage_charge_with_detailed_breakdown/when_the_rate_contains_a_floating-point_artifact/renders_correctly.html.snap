@@ -114,8 +114,8 @@
             <td class="body-2">Amount</td>
           </tr>
           <tr class="charge-name fee">
-            <td class="body-1">Transaction Fee
-              <div class="body-3">Total events: </div>
+            <td class="body-1">Payment Processing Fee
+              <div class="body-3">Total events: 50</div>
             </td>
             <td class="body-2"></td>
             <td class="body-2"></td>
@@ -125,18 +125,27 @@
           <tr class="details">
             <td class="body-2">Rate on the amount</td>
             <td class="body-2">100</td>
-            <td class="body-2">5.55%</td>
+            <td class="body-2">0.7%</td>
             <td class="body-2">
               <div>0.0%</div>
             </td>
-            <td class="body-2">$55.50</td>
+            <td class="body-2">$0.70</td>
+          </tr>
+          <tr class="details">
+            <td class="body-2">Fixed fee per transaction</td>
+            <td class="body-2"></td>
+            <td class="body-2">$20.00</td>
+            <td class="body-2">
+              <div>0.0%</div>
+            </td>
+            <td class="body-2">$20.00</td>
           </tr>
           <tr class="details subtotal">
             <td class="body-2">Subtotal</td>
             <td class="body-2"></td>
             <td class="body-2"></td>
             <td class="body-2"></td>
-            <td class="body-2">$55.50</td>
+            <td class="body-2">$20.70</td>
           </tr>
         </table>
         <table class="total-table" width="100%">

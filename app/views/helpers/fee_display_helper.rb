@@ -59,7 +59,9 @@ class FeeDisplayHelper
   end
 
   def self.format_percentage_rate(rate)
-    format("%.2f%%", BigDecimal(rate))
+    if rate.present?
+      "#{BigDecimal(rate).round(6).to_s("F").sub(/\.?0+\z/, "")}%"
+    end
   end
 
   def self.sorted_presentation_breakdowns_displayed_in_invoice(fee)
