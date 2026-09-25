@@ -237,7 +237,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
 
       context "with multiple taxes" do
         let(:invoice) { create(:invoice) }
-        let(:credit_note) { create(:credit_note, invoice:) }
+        let(:credit_note) { create(:credit_note, invoice:, taxes_amount_cents: 80, precise_taxes_amount_cents: 80) }
         let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
         let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee1, precise_amount_cents: 500) }
         let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 100) }
@@ -267,24 +267,30 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
 
         context "with one tag per tax rate" do
           it "contains 0.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxableAmount").with_value("-10.00")
-            expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxAmount").with_value("0.00")
-            expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:ID").with_value(described_class::Z_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:Percent").with_value("0.00")
+            subtotal = "#{root}[cac:TaxCategory/cbc:Percent='0.00']"
+
+            expect(subject).to contains_xml_node("#{subtotal}/cbc:TaxableAmount").with_value("-10.00")
+            expect(subject).to contains_xml_node("#{subtotal}/cbc:TaxAmount").with_value("0.00")
+            expect(subject).to contains_xml_node("#{subtotal}/cac:TaxCategory/cbc:ID").with_value(described_class::Z_CATEGORY)
+            expect(subject).to contains_xml_node("#{subtotal}/cac:TaxCategory/cbc:Percent").with_value("0.00")
           end
 
           it "contains 5.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[2]/cbc:TaxableAmount").with_value("-4.00")
-            expect(subject).to contains_xml_node("#{root}[2]/cbc:TaxAmount").with_value("-0.20")
-            expect(subject).to contains_xml_node("#{root}[2]/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[2]/cac:TaxCategory/cbc:Percent").with_value("5.00")
+            subtotal = "#{root}[cac:TaxCategory/cbc:Percent='5.00']"
+
+            expect(subject).to contains_xml_node("#{subtotal}/cbc:TaxableAmount").with_value("-4.00")
+            expect(subject).to contains_xml_node("#{subtotal}/cbc:TaxAmount").with_value("-0.20")
+            expect(subject).to contains_xml_node("#{subtotal}/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{subtotal}/cac:TaxCategory/cbc:Percent").with_value("5.00")
           end
 
           it "contains 10.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[3]/cbc:TaxableAmount").with_value("-6.00")
-            expect(subject).to contains_xml_node("#{root}[3]/cbc:TaxAmount").with_value("-0.60")
-            expect(subject).to contains_xml_node("#{root}[3]/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[3]/cac:TaxCategory/cbc:Percent").with_value("10.00")
+            subtotal = "#{root}[cac:TaxCategory/cbc:Percent='10.00']"
+
+            expect(subject).to contains_xml_node("#{subtotal}/cbc:TaxableAmount").with_value("-6.00")
+            expect(subject).to contains_xml_node("#{subtotal}/cbc:TaxAmount").with_value("-0.60")
+            expect(subject).to contains_xml_node("#{subtotal}/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{subtotal}/cac:TaxCategory/cbc:Percent").with_value("10.00")
           end
         end
       end

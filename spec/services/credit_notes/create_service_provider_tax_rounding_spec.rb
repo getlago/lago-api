@@ -99,4 +99,41 @@ RSpec.describe CreditNotes::CreateService, :premium do
       expect(invoice.reload.credit_notes.sum(:total_amount_cents)).to eq(206)
     end
   end
+
+  {
+    ubl: [EInvoices::CreditNotes::Ubl::Builder, "//cac:TaxSubtotal/cbc:TaxAmount", "//cac:TaxTotal/cbc:TaxAmount"],
+    cii: [EInvoices::CreditNotes::Cii::Builder, "//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax/ram:CalculatedAmount",
+      "//ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TaxTotalAmount"]
+  }.each do |format, (serializer, subtotal_path, total_path)|
+    context "with #{format} serialization" do
+      subject(:document) { xml_document(format) { |xml| serializer.serialize(xml:, credit_note:) } }
+
+      let(:credit_amount_cents) { 206 }
+      let(:expected_tax) { -0.06.to_d }
+      let(:credit_note) { described_class.call!(invoice:, items:, credit_amount_cents:).credit_note }
+
+      it "exports the tax that was actually credited" do
+        expect(document.xpath(subtotal_path).sum { |node| node.text.to_d }).to eq(expected_tax)
+        expect(document.at_xpath(total_path).text.to_d).to eq(expected_tax)
+      end
+
+      context "when an earlier credit covered part of the same fee" do
+        let(:credit_amount_cents) { 154 }
+        let(:expected_tax) { -0.04.to_d }
+        let(:items) { [{fee_id: fees.first.id, amount_cents: 50}, {fee_id: fees.last.id, amount_cents: 100}] }
+
+        before do
+          described_class.call!(invoice:, items: [{fee_id: fees.first.id, amount_cents: 50}], credit_amount_cents: 52)
+        end
+
+        it "exports only this credit note's base and its remaining tax" do
+          basis_path = (format == :ubl) ? "//cac:TaxSubtotal/cbc:TaxableAmount" : "//ram:ApplicableTradeTax/ram:BasisAmount"
+
+          expect(document.at_xpath(basis_path).text.to_d).to eq(-1.50.to_d)
+          expect(document.xpath(subtotal_path).sum { |node| node.text.to_d }).to eq(expected_tax)
+          expect(document.at_xpath(total_path).text.to_d).to eq(expected_tax)
+        end
+      end
+    end
+  end
 end
