@@ -1,0 +1,81 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+describe Integrations::Aggregator::Invoices::VoidJob do
+  subject(:void_job) { described_class }
+
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:invoice) { create(:invoice, customer:, organization:, status: :voided) }
+  let(:result) { Integrations::Aggregator::Invoices::VoidService::Result.new }
+
+  before do
+    allow(Integrations::Aggregator::Invoices::VoidService).to receive(:call).and_return(result)
+  end
+
+  it "calls the void service" do
+    described_class.perform_now(invoice:)
+
+    expect(Integrations::Aggregator::Invoices::VoidService).to have_received(:call).with(invoice:)
+  end
+
+  context "when the service fails with an invoice missing failure" do
+    let(:failure) { Integrations::Aggregator::BasePayload::Failure.new(nil, code: "invoice_missing") }
+
+    before do
+      allow(Integrations::Aggregator::Invoices::VoidService).to receive(:call).and_raise(failure)
+    end
+
+    it "re-enqueues the job" do
+      expect { described_class.perform_now(invoice:) }.to have_enqueued_job(described_class)
+    end
+  end
+
+  context "when the service fails with a non-retryable failure" do
+    before { result.non_retryable_failure!(code: "client_error", message: "bad request") }
+
+    it "discards the job" do
+      expect { described_class.perform_now(invoice:) }.not_to raise_error
+    end
+  end
+
+  describe "Net::ReadTimeout retry" do
+    before do
+      allow(Integrations::Aggregator::Invoices::VoidService).to receive(:call).and_raise(Net::ReadTimeout.new)
+    end
+
+    context "when the invoice is for a NetSuite integration" do
+      let(:integration) { create(:netsuite_integration, organization:) }
+
+      before { create(:netsuite_customer, integration:, customer:) }
+
+      it "schedules the next attempt at least 6 minutes later" do
+        freeze_time do
+          described_class.perform_now(invoice:)
+
+          retry_at = ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at]
+          # NOTE: ActiveJob applies up to 15% positive jitter on top of the configured wait,
+          # so the retry lands in [6 minutes, 6 minutes + 15%] from now.
+          expect(retry_at).to be_between(6.minutes.from_now.to_f, 7.minutes.from_now.to_f)
+        end
+      end
+    end
+
+    context "when the invoice is for a non-NetSuite integration" do
+      let(:integration) { create(:xero_integration, organization:) }
+
+      before { create(:xero_customer, integration:, customer:) }
+
+      it "schedules the next attempt with polynomial backoff" do
+        freeze_time do
+          described_class.perform_now(invoice:)
+
+          retry_at = ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at]
+          # NOTE: First polynomial retry is ~3s (1**4 + 2) plus up to 15% jitter; well under a minute.
+          expect(retry_at).to be < 1.minute.from_now.to_f
+        end
+      end
+    end
+  end
+end
