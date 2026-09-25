@@ -4744,7 +4744,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
     let(:usage_buckets) do
       Events::Stores::UsageBucketSet.new(
-        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(12), events_count: 3)}
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current)}
       )
     end
 

@@ -1403,4 +1403,168 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 4200)
     end
   end
+
+  describe "the buckets and the events store agree on max and latest", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # The largest event is not the last one, and it shares its bucket with a smaller later event,
+    # so max and latest disagree both inside a bucket and across the window.
+    let(:event_values) do
+      {
+        window_start => "5.5",
+        window_start + 20.minutes => "12.0",
+        window_start + 23.minutes => "1.25",
+        window_start + 3.hours => "2.0"
+      }
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    def bucket_units(values)
+      pair = (billable_metric.aggregation_type == "max_agg") ? values.max_by { it.last.to_d } : values.max_by(&:first)
+      pair.last
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      event_values.each do |at, value|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      event_values.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, values|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: bucket_units(values),
+          events_count: values.size,
+          aggregation_type: billable_metric.aggregation_type,
+          last_event_at: values.map(&:first).max
+        )
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:) }
+
+      it "returns the same units, event count and amount either way" do
+        expect(served.fees.first).to have_attributes(
+          units: delegated.fees.first.units,
+          events_count: delegated.fees.first.events_count,
+          amount_cents: delegated.fees.first.amount_cents
+        )
+      end
+
+      it "serves the largest event of the window, rather than the largest bucket total" do
+        expect(served.fees.first).to have_attributes(units: 12, events_count: 4, amount_cents: 2400)
+      end
+    end
+
+    context "with a latest metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+
+      it "returns the same units, event count and amount either way" do
+        expect(served.fees.first).to have_attributes(
+          units: delegated.fees.first.units,
+          events_count: delegated.fees.first.events_count,
+          amount_cents: delegated.fees.first.amount_cents
+        )
+      end
+
+      it "serves the last event of the window, counting every event of it alongside" do
+        expect(served.fees.first).to have_attributes(units: 2, events_count: 4, amount_cents: 400)
+      end
+    end
+  end
+
+  describe "the buckets and the events store agree when the caller skips grouping", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:latest_billable_metric, organization:) }
+    let(:charge) do
+      create(:standard_charge, plan:, billable_metric:, properties: {amount: "2", pricing_group_keys: ["region"]})
+    end
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # Both groups close on the same bucket, so only the event time says which one holds the value
+    # the events store would return for the ungrouped charge.
+    let(:group_events) do
+      [
+        {at: window_start + 10.minutes, value: "7.0", region: "eu"},
+        {at: window_start + 12.minutes, value: "3.0", region: "us"}
+      ]
+    end
+
+    let(:served) do
+      described_class.new(
+        customer:, subscription:, apply_taxes: false, with_cache: false,
+        usage_filters: UsageFilters.new(skip_grouping: true), use_usage_buckets: true
+      ).call.usage
+    end
+    let(:delegated) do
+      described_class.new(
+        customer:, subscription:, apply_taxes: false, with_cache: false,
+        usage_filters: UsageFilters.new(skip_grouping: true)
+      ).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      group_events.each do |group_event|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: group_event[:at],
+          properties: {"region" => group_event[:region]},
+          value: group_event[:value],
+          decimal_value: group_event[:value].to_f
+        )
+
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket: window_start,
+          grouped_by: {"region" => group_event[:region]}.to_json,
+          units: group_event[:value],
+          events_count: 1,
+          aggregation_type: "latest_agg",
+          last_event_at: group_event[:at]
+        )
+      end
+    end
+
+    it "folds the groups onto the last event, rather than onto whichever row comes first" do
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count
+      )
+      expect(served.fees.first).to have_attributes(units: 3, events_count: 2)
+    end
+  end
 end

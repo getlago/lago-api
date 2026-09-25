@@ -37,6 +37,8 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       organization:, customer:, subscription:, billable_metric:,
       charge: billed_charge || charge,
       bucket:, units:, events_count:, grouped_by:, charge_filter_id:,
+      aggregation_type: billable_metric.aggregation_type,
+      last_event_at: bucket,
       **attributes
     )
   end
@@ -118,6 +120,101 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
         grouped = fetch.usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "")
 
         expect(grouped.map(&:groups)).to eq([{"region" => nil}])
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:) }
+
+      it "keeps the largest bucket rather than adding them up, and counts every event" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2)
+        create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect([totals.value, totals.events_count]).to eq([BigDecimal("10.0"), 3])
+      end
+
+      it "takes the max across the groups as the charge total, and per group below it" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime, units: "12.0", events_count: 1, grouped_by: {"region" => "us"}.to_json)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "").map { [it.groups, it.value] })
+          .to match_array([[{"region" => "eu"}, BigDecimal("10.0")], [{"region" => "us"}, BigDecimal("12.0")]])
+        expect(usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "").value).to eq(BigDecimal("12.0"))
+      end
+    end
+
+    context "with a latest metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+
+      it "keeps the units of the most recent bucket, whatever their order" do
+        create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1)
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect([totals.value, totals.events_count]).to eq([BigDecimal("4.0"), 3])
+      end
+
+      # Two groups can close on the same bucket, so the fold across them orders on the event time
+      # the events store orders on, not on the bucket wall they share.
+      it "picks the group holding the last event when two of them close on the same bucket" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json, last_event_at: from_datetime + 10.minutes)
+        create_bucket(bucket: from_datetime, units: "4.0", events_count: 1, grouped_by: {"region" => "us"}.to_json, last_event_at: from_datetime + 12.minutes)
+
+        totals = fetch.usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect([totals.value, totals.events_count]).to eq([BigDecimal("4.0"), 3])
+      end
+
+      it "takes the latest across the groups as the charge total, and per group below it" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime + 30.minutes, units: "4.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime + 15.minutes, units: "12.0", events_count: 1, grouped_by: {"region" => "us"}.to_json)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "").map { [it.groups, it.value] })
+          .to match_array([[{"region" => "eu"}, BigDecimal("4.0")], [{"region" => "us"}, BigDecimal("12.0")]])
+        expect(usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "").value).to eq(BigDecimal("4.0"))
+      end
+    end
+
+    context "with a plan mixing aggregation types" do
+      let(:max_metric) { create(:max_billable_metric, organization:) }
+      let(:max_charge) { create(:standard_charge, plan:, billable_metric: max_metric) }
+      let(:latest_metric) { create(:latest_billable_metric, organization:) }
+      let(:latest_charge) { create(:standard_charge, plan:, billable_metric: latest_metric) }
+      let(:charges) { [charge, max_charge, latest_charge] }
+
+      before do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2)
+        create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1)
+
+        [[max_metric, max_charge], [latest_metric, latest_charge]].each do |metric, billed_charge|
+          [[from_datetime, "10.0"], [from_datetime + 15.minutes, "4.0"]].each do |bucket, units|
+            create(
+              :clickhouse_usage_bucket,
+              organization:, customer:, subscription:, charge: billed_charge, billable_metric: metric,
+              bucket:, units:, events_count: 1,
+              aggregation_type: metric.aggregation_type, last_event_at: bucket
+            )
+          end
+        end
+      end
+
+      it "answers each charge by its own type, out of a single read" do
+        queries = capture_queries { fetch }
+        usage_buckets = fetch.usage_buckets
+
+        expect(queries.count { |sql| sql.include?("usage_buckets_15m") }).to eq(1)
+        expect(usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "").value).to eq(BigDecimal("14.0"))
+        expect(usage_buckets.aggregation_result_for(charge_id: max_charge.id, charge_filter_id: "").value).to eq(BigDecimal("10.0"))
+        expect(usage_buckets.aggregation_result_for(charge_id: latest_charge.id, charge_filter_id: "").value).to eq(BigDecimal("4.0"))
       end
     end
 

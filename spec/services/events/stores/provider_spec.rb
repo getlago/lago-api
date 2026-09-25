@@ -165,7 +165,7 @@ RSpec.describe Events::Stores::Provider do
     end
     let(:billable_metric) { create(:sum_billable_metric, organization:) }
     let(:billing_boundaries) { metered_item.boundaries }
-    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal("42.5"), events_count: 7) }
+    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current) }
     let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}) }
     let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
     let(:filters) { {} }
@@ -226,7 +226,7 @@ RSpec.describe Events::Stores::Provider do
 
     context "with a count_agg charge" do
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(7), events_count: 7) }
+      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "count_agg", units: BigDecimal(7), events_count: 7, last_event_at: Time.current) }
 
       it "serves the units, which the pipeline already counts one per event" do
         expect(store.count.value).to eq(7)
@@ -251,10 +251,38 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "with an aggregation the buckets cannot reconstruct" do
-      let(:billable_metric) { create(:max_billable_metric, organization:) }
+      let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
       it "reads events" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:) }
+      let(:totals) do
+        Events::Stores::UsageBucketSet::Totals.new(
+          aggregation_type: "max_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+        )
+      end
+
+      it "serves it from the buckets" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.max.value).to eq(BigDecimal(12))
+      end
+    end
+
+    context "with a latest metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+      let(:totals) do
+        Events::Stores::UsageBucketSet::Totals.new(
+          aggregation_type: "latest_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+        )
+      end
+
+      it "serves it from the buckets" do
+        expect(store).to be_a(Events::Stores::UsageBucketStore)
+        expect(store.last.value).to eq(BigDecimal(12))
       end
     end
 
