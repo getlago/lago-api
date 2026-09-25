@@ -61,6 +61,8 @@ module Subscriptions
 
         InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
 
+        BillingObjectConnections::AttachToResourceService.call!(resource: new_sub, params:)
+
         after_commit do
           SendWebhookJob.perform_later("subscription.updated", current_subscription)
           Utils::ActivityLog.produce(current_subscription, "subscription.updated")
