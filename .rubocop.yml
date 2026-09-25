@@ -70,6 +70,7 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20260910095513_drop_wallet_targetable_from_rate_cards.rb"
     - "db/migrate/20260910151708_drop_enriched_store_migration_tables.rb"
     - "db/migrate/20260921154906_replace_attribution_key_with_attribution_keys.rb"
+    - "db/migrate/20260925110807_drop_ended_date_from_contract_rate_cards.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:
