@@ -27,6 +27,7 @@ RSpec.describe BillingSegments::ProcessService do
     let(:billing_segment_rate_properties) { {"amount" => "15.00"} }
     let(:billing_segment_pricing_unit) { nil }
     let(:billing_segment_proration_ratio) { 1 }
+    let(:billing_segment_status) { :pending }
     let(:min_amount_cents) { 0 }
     let(:billing_segment) do
       create(
@@ -41,6 +42,7 @@ RSpec.describe BillingSegments::ProcessService do
         pricing_unit: billing_segment_pricing_unit,
         rate_properties: billing_segment_rate_properties,
         proration_ratio: billing_segment_proration_ratio,
+        status: billing_segment_status,
         billing_at: Time.zone.parse("2026-08-31 23:59:59"),
         cycle_started_at: Time.zone.parse("2026-08-01"),
         started_at: Time.zone.parse("2026-08-01"),
@@ -52,22 +54,27 @@ RSpec.describe BillingSegments::ProcessService do
       billing_segment
     end
 
-    describe "#pending_segments" do
-      it "loads the shared rate card once for both association paths" do
-        queries = []
+    describe "#grouped_segments" do
+      it "loads and groups segments with one query while sharing rate card records" do
+        billing_segment_queries = []
+        rate_card_queries = []
         subscriber = ->(_name, _start, _finish, _id, payload) {
-          queries << payload[:sql] if /SELECT.*FROM "rate_cards"/i.match?(payload[:sql])
+          billing_segment_queries << payload[:sql] if /SELECT.*FROM "billing_segments"/i.match?(payload[:sql])
+          rate_card_queries << payload[:sql] if /SELECT.*FROM "rate_cards"/i.match?(payload[:sql])
         }
 
         ActiveRecord::Base.uncached do
           ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
-            segment = described_class.new(customer:).send(:pending_segments).sole
+            service = described_class.new(customer:)
+            segment = service.send(:pending_segments).sole
 
             expect(segment.contract_rate_card.rate_card).to equal(segment.rate_card_rate.rate_card)
+            expect(service.send(:processing_advance_segments)).to eq([])
           end
         end
 
-        expect(queries.size).to eq(1)
+        expect(billing_segment_queries.size).to eq(1)
+        expect(rate_card_queries.size).to eq(1)
       end
     end
 
@@ -96,6 +103,111 @@ RSpec.describe BillingSegments::ProcessService do
           expect(result).to be_success
           expect(result.invoices).to be_empty
           expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+        end
+
+        context "when the segment is processing" do
+          let(:billing_segment_status) { :processing }
+          let(:rate_card) do
+            create(
+              :rate_card,
+              organization:,
+              product:,
+              currency: "USD",
+              billing_timing: :advance,
+              display_on_invoice: false,
+              regroup_paid_fees: :invoice
+            )
+          end
+          let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
+          let(:paid_fee_succeeded_at) { billing_segment.billing_at - 1.hour }
+          let(:paid_fee) do
+            create(
+              :fee,
+              :succeeded,
+              invoice: nil,
+              subscription: nil,
+              organization:,
+              billing_entity: customer.billing_entity,
+              contract:,
+              contract_rate_card:,
+              rate_card_rate:,
+              invoiceable: product,
+              fee_type: :product,
+              amount_currency: "USD",
+              amount_cents: 500,
+              taxes_amount_cents: 100,
+              pay_in_advance: true,
+              succeeded_at: paid_fee_succeeded_at,
+              properties: metered_item.filtered_for_charge_boundaries
+            )
+          end
+
+          before do
+            paid_fee
+            allow(Fees::AdvanceChargesService).to receive(:call!).and_call_original
+          end
+
+          it "creates the advance invoice and completes the segment" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole.reload
+            expect(invoice).to be_finalized.and have_attributes(
+              invoice_type: "advance_charges",
+              total_amount_cents: 600
+            )
+            expect(invoice.fees).to contain_exactly(paid_fee)
+            expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+            expect(Fees::AdvanceChargesService).to have_received(:call!).once
+          end
+
+          context "when the rate card keeps paid fees standalone" do
+            let(:rate_card) do
+              create(
+                :rate_card,
+                organization:,
+                product:,
+                currency: "USD",
+                billing_timing: :advance,
+                display_on_invoice: false
+              )
+            end
+
+            it "completes the segment without an invoice" do
+              expect(result).to be_success
+              expect(result.invoices).to eq([])
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
+              expect(paid_fee.reload.invoice_id).to be_nil
+            end
+          end
+
+          context "when no paid fees are eligible for regrouping" do
+            let(:paid_fee_succeeded_at) { billing_segment.billing_at + 1.hour }
+
+            it "rolls back the empty invoice and completes the segment without an invoice" do
+              expect { result }.not_to change(Invoice, :count)
+
+              expect(result).to be_success
+              expect(result.invoices).to eq([])
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
+              expect(paid_fee.reload.invoice_id).to be_nil
+              expect(Fees::AdvanceChargesService).to have_received(:call!).once
+            end
+          end
+
+          context "when attaching advance fees fails" do
+            before do
+              allow(Fees::AdvanceChargesService).to receive(:call!).and_raise(ActiveRecord::RecordInvalid)
+            end
+
+            it "rolls back the invoice and leaves the segment retryable" do
+              expect do
+                expect { result }.to raise_error(ActiveRecord::RecordInvalid)
+              end.not_to change(Invoice, :count)
+
+              expect(billing_segment.reload).to have_attributes(status: "processing", invoice_id: nil)
+              expect(paid_fee.reload.invoice_id).to be_nil
+            end
+          end
         end
       end
 
@@ -307,7 +419,7 @@ RSpec.describe BillingSegments::ProcessService do
             :billing_segment, organization:, contract:, customer:,
             contract_rate_card:, rate_card_rate:,
             currency: "USD", rate_properties:,
-            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-15"),
+            billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
             started_at: Time.zone.parse("2026-08-15"), ended_at: Time.zone.parse("2026-08-31 23:59:59")
           )
         end
@@ -483,17 +595,14 @@ RSpec.describe BillingSegments::ProcessService do
       subject(:invoice_key) { described_class.new(customer:).send(:invoice_key, billing_segment) }
 
       it "returns the invoice grouping key" do
-        expect(invoice_key).to eq([Date.parse("2026-08-31"), :shared, "USD", customer.billing_entity_id, [nil, "provider"], nil])
+        expect(invoice_key).to eq([Date.parse("2026-08-01"), :shared, "USD", customer.billing_entity_id, [nil, "provider"], nil])
       end
 
-      context "when the customer timezone changes the billing date" do
-        before do
-          customer.update!(timezone: "America/New_York")
-          billing_segment.update!(billing_at: Time.zone.parse("2026-09-01 02:00:00"))
-        end
+      context "when the customer timezone changes the cycle start date" do
+        before { customer.update!(timezone: "America/New_York") }
 
-        it "uses the customer-local billing date" do
-          expect(invoice_key.first).to eq(Date.parse("2026-08-31"))
+        it "uses the customer-local cycle start date" do
+          expect(invoice_key.first).to eq(Date.parse("2026-07-31"))
         end
       end
 
@@ -928,7 +1037,7 @@ RSpec.describe BillingSegments::ProcessService do
       end
     end
 
-    context "with multiple segments due on the same billing date" do
+    context "with multiple segments in the same billing cycle" do
       let(:second_contract) { contract }
       let(:second_rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
       let(:second_contract_rate_card) do
@@ -941,7 +1050,7 @@ RSpec.describe BillingSegments::ProcessService do
         create(:billing_segment, organization:, contract: second_contract, customer:,
           contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
           currency: second_rate_card.currency, rate_properties: {"amount" => "20.00"},
-          billing_at: Time.zone.parse("2026-08-31 10:00:00"), cycle_started_at: Time.zone.parse("2026-08-01"),
+          billing_at: Time.zone.parse("2026-09-01 10:00:00"), cycle_started_at: Time.zone.parse("2026-08-01"),
           started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59"))
       end
 
@@ -984,8 +1093,8 @@ RSpec.describe BillingSegments::ProcessService do
           end
         end
 
-        context "with different billing dates" do
-          before { second_segment.update!(billing_at: Time.zone.parse("2026-09-01")) }
+        context "with different cycle start dates" do
+          before { second_segment.update!(cycle_started_at: Time.zone.parse("2026-07-01")) }
 
           it_behaves_like "splits invoices"
         end

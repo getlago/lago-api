@@ -40,11 +40,6 @@ class BillingSegment < ApplicationRecord
   scope :awaiting_invoicing, -> {
     where(status: [:pending, :processing])
       .joins(contract_rate_card: {rate_card: :product})
-      .where(
-        "products.product_type != :metered OR rate_cards.billing_timing != :advance",
-        metered: Product::PRODUCT_TYPES[:metered],
-        advance: RateCard::BILLING_TIMINGS[:advance]
-      )
   }
 
   validates :billing_at, presence: true

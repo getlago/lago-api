@@ -13,9 +13,13 @@ module BillingSegments
       result.invoices = []
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
-        segments = pending_segments
-        segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+        pending_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
           result.invoices << build_invoice(invoice_segments)
+        end
+
+        processing_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+          invoice = process_advance_segments(invoice_segments)
+          result.invoices << invoice if invoice
         end
 
         finalize_generating_invoices
@@ -34,15 +38,35 @@ module BillingSegments
     attr_reader :customer
 
     def pending_segments
-      BillingSegment.awaiting_invoicing
+      grouped_segments.fetch(:pending_segments, [])
+    end
+
+    def processing_advance_segments
+      grouped_segments.fetch(:processing_advance_segments, [])
+    end
+
+    def grouped_segments
+      @grouped_segments ||= BillingSegment.awaiting_invoicing
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
+        .group_by { |segment| segment_group(segment) }
+        .except(nil)
+    end
+
+    def segment_group(segment)
+      advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
+
+      if advance_metered
+        :processing_advance_segments if segment.status_processing?
+      elsif segment.status_pending?
+        :pending_segments
+      end
     end
 
     def invoice_key(segment)
       contract = segment.contract
       [
-        segment.billing_at.in_time_zone(customer.applicable_timezone).to_date,
+        segment.cycle_started_at.in_time_zone(customer.applicable_timezone).to_date,
         contract.consolidate_invoice ? :shared : segment.id,
         segment.currency,
         contract.billing_entity_id || customer.billing_entity_id,
@@ -94,6 +118,60 @@ module BillingSegments
       end
 
       invoice
+    end
+
+    def process_advance_segments(segments)
+      metered_items = segments.map do |segment|
+        ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment)
+      end
+      billing_contexts = segments.map do |segment|
+        Billing::Context.from(contract: segment.contract)
+      end
+      invoice = nil
+      fee_result = nil
+
+      ActiveRecord::Base.transaction do
+        ActiveRecord::Base.transaction(requires_new: true) do
+          invoice = create_advance_invoice(segments)
+          fee_result = ::Fees::AdvanceChargesService.call!(
+            invoice:,
+            billing_contexts:,
+            metered_items:,
+            billing_at: segments.first.billing_at
+          )
+
+          if invoice.fees.reload.empty?
+            invoice = nil
+            raise ActiveRecord::Rollback
+          end
+
+          Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
+          invoice.save!
+        end
+
+        invoiced_segment_ids = fee_result&.invoiced_metered_items&.map { |item| item.billing_segment.id }&.to_set || Set.new
+
+        segments.each do |segment|
+          segment_invoice = invoice if invoiced_segment_ids.include?(segment.id)
+          segment.update!(status: :done, invoice: segment_invoice)
+        end
+      end
+
+      invoice
+    end
+
+    def create_advance_invoice(segments)
+      contract = segments.first.contract
+
+      Invoices::CreateGeneratingService.call!(
+        customer:,
+        invoice_type: :advance_charges,
+        currency: segments.first.currency,
+        datetime: segments.first.billing_at,
+        skip_charges: true,
+        billing_entity: contract.applicable_billing_entity,
+        purchase_order_number: contract.purchase_order_number
+      ).invoice
     end
 
     def attach_fixed_fees(segments, invoice)
