@@ -21,6 +21,7 @@ module Fees
           :elapsed_period_ratio,
           :rate,
           :contract,
+          :contract_rate_card,
           :rate_card_rate,
           :rate_override,
           :pricing_unit,

@@ -305,9 +305,9 @@ module Fees
         organization_id: billing_context.organization_id,
         billing_entity_id: billing_context.applicable_billing_entity_id,
         subscription:,
-        # A segment's product can have an optional legacy charge (including discarded charges).
-        # TODO: Decide whether to assign that charge here; segment-backed fees currently receive nil.
-        charge: selected_metered_item.billing_segment ? nil : selected_metered_item.charge,
+        contract: selected_metered_item.contract,
+        contract_rate_card: selected_metered_item.contract_rate_card,
+        charge: selected_metered_item.charge,
         amount_cents: amount.amount_cents,
         precise_amount_cents: amount.precise_amount_cents,
         unit_amount_cents: amount.unit_amount_cents,
@@ -321,8 +321,7 @@ module Fees
         product_filter: selected_metered_item.product_filter,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
-        # TODO: Review which fee properties billing segments should expose.
-        properties: selected_metered_item.billing_segment ? {} : selected_metered_item.filtered_for_charge_boundaries,
+        properties: selected_metered_item.filtered_for_charge_boundaries,
         events_count: amount_result.count,
         payment_status: :pending,
         taxes_amount_cents: 0,
@@ -421,9 +420,21 @@ module Fees
     end
 
     def already_billed?
-      # BillingSegment persistence is the source of truth for billing state.
-      # TODO: Review this fee-level idempotency bypass once segment processing is finalized.
-      return false if metered_item.billing_segment
+      if metered_item.billing_segment
+        return false if invoice.nil? || options.invoice_preview?
+
+        existing_fees = invoice.fees.matching_contract_period(
+          contract_rate_card_id: metered_item.billing_segment.contract_rate_card_id,
+          from_datetime: metered_item.boundaries.charges_from_datetime,
+          to_datetime: metered_item.boundaries.charges_to_datetime
+        )
+        if existing_fees.exists?
+          result.fees = existing_fees.to_a
+          return true
+        end
+
+        return false
+      end
 
       existing_fees = if invoice
         invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)

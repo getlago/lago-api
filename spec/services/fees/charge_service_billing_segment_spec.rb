@@ -21,12 +21,13 @@ RSpec.describe Fees::ChargeService do
   let(:billing_segment) do
     create(
       :billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
-      currency: "USD", rate_properties: {"amount" => "2"},
+      currency: "USD", rate_properties:,
       cycle_started_at: Time.utc(2026, 8, 1), started_at: Time.utc(2026, 8, 1),
       ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1)), billing_at: Time.utc(2026, 9, 1)
     )
   end
   let(:product_filter) { nil }
+  let(:rate_properties) { {"amount" => "2"} }
   let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment) }
   let(:options) { described_class::Options.new(context: :finalize) }
 
@@ -37,14 +38,148 @@ RSpec.describe Fees::ChargeService do
       code: billable_metric.code, timestamp: Time.utc(2026, 8, 20), properties: {region: "us"})
   end
 
-  it "persists a product fee using the segment price without charge properties" do
+  it "persists a product fee using the segment price and boundary identity" do
     expect(result).to be_success
     expect(result.fees.sole.reload).to have_attributes(
       invoice:, invoiceable: product, fee_type: "product", charge_id: nil, subscription_id: nil,
-      product_filter_id: nil, charge_filter_id: nil, rate_card_rate:, rate_override_id: nil,
+      product_filter_id: nil, charge_filter_id: nil, contract:, contract_rate_card:, rate_card_rate:, rate_override_id: nil,
       amount_cents: 400, units: 2, events_count: 2
     )
-    expect(result.fees.sole.properties).to eq({})
+    expect(result.fees.sole.properties).to eq(metered_item.filtered_for_charge_boundaries.as_json)
+  end
+
+  context "when the interval was already billed" do
+    let(:billed_fees) { described_class.call!(invoice:, metered_item:, billing_context:, options:).fees }
+
+    before do
+      billed_fees
+      allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+    end
+
+    it "returns the persisted fee set without recalculating or duplicating it" do
+      expect { result }.not_to change(Fee, :count)
+      expect(result).to be_success
+      expect(result.fees).to match_array(billed_fees)
+      expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+    end
+
+    context "with grouped fees and a true-up" do
+      let(:min_amount_cents) { 1000 }
+      let(:rate_properties) { {"amount" => "2", "pricing_group_keys" => ["region"]} }
+
+      it "returns all groups and the true-up with their original identities" do
+        expect { result }.not_to change(Fee, :count)
+        expect(result.fees).to match_array(billed_fees)
+        expect(result.fees.size).to eq(3)
+        expect(result.fees.map(&:contract_rate_card)).to eq([contract_rate_card] * 3)
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+    end
+  end
+
+  context "with an existing fee" do
+    let(:fee_invoice) { invoice }
+    let(:fee_card) { contract_rate_card }
+    let(:fee_from) { billing_segment.started_at.iso8601(6) }
+    let(:fee_to) { billing_segment.ended_at.iso8601(6) }
+    let(:fee_type) { :product }
+    let(:deleted_at) { nil }
+    let(:event_id) { nil }
+    let(:transaction_id) { nil }
+    let!(:existing_fee) do
+      create(:fee, organization:, invoice: fee_invoice, contract: fee_card.contract, contract_rate_card: fee_card,
+        invoiceable: product, rate_card_rate:, fee_type:, deleted_at:, pay_in_advance_event_id: event_id,
+        pay_in_advance_event_transaction_id: transaction_id,
+        properties: {charges_from_datetime: fee_from, charges_to_datetime: fee_to})
+    end
+
+    shared_examples "a new interval fee" do
+      it "calculates a new fee instead of reusing the existing one" do
+        expect { result }.to change(Fee, :count).by(1)
+        expect(result).to be_success
+        expect(result.fees.sole).to have_attributes(amount_cents: 400, contract_rate_card:)
+        expect(result.fees.sole.id).not_to eq(existing_fee.id)
+      end
+    end
+
+    context "with a different invoice" do
+      let(:fee_invoice) { create(:invoice, organization:, customer:, currency: "USD") }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with a different applied card sharing the catalog rate" do
+      let(:other_contract) { create(:contract, organization:, customer:) }
+      let(:fee_card) { create(:contract_rate_card, organization:, contract: other_contract, rate_card:) }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with a start boundary differing by one microsecond" do
+      let(:fee_from) { (billing_segment.started_at + Rational(1, 1_000_000)).iso8601(6) }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with an end boundary differing by one microsecond" do
+      let(:fee_to) { (billing_segment.ended_at - Rational(1, 1_000_000)).iso8601(6) }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with a discarded fee" do
+      let(:deleted_at) { Time.current }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with an advance event fee" do
+      let(:event_id) { SecureRandom.uuid }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with an advance transaction fee" do
+      let(:transaction_id) { SecureRandom.uuid }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with a different fee type" do
+      let(:fee_type) { :subscription }
+
+      include_examples "a new interval fee"
+    end
+
+    context "with equivalent boundaries expressed in a different timezone" do
+      let(:fee_from) { billing_segment.started_at.in_time_zone("Europe/Paris").iso8601(6) }
+      let(:fee_to) { billing_segment.ended_at.in_time_zone("Europe/Paris").iso8601(6) }
+
+      it "reuses the existing fee" do
+        expect { result }.not_to change(Fee, :count)
+        expect(result.fees).to eq([existing_fee])
+      end
+    end
+
+    context "with current usage" do
+      let(:options) { described_class::Options.new(context: :current_usage) }
+
+      it "calculates fresh usage in memory" do
+        expect { result }.not_to change(Fee, :count)
+        expect(result.fees.sole).to be_new_record
+        expect(result.fees.sole.amount_cents).to eq(400)
+      end
+    end
+
+    context "with an invoice preview" do
+      let(:options) { described_class::Options.new(context: :invoice_preview) }
+
+      it "calculates the preview in memory" do
+        expect { result }.not_to change(Fee, :count)
+        expect(result.fees.sole).to be_new_record
+        expect(result.fees.sole.amount_cents).to eq(400)
+      end
+    end
   end
 
   it "does not instantiate or call a charge cache" do

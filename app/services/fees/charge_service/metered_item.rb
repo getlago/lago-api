@@ -52,7 +52,7 @@ module Fees
 
       delegate :filters, to: :invoiceable
 
-      %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
+      %i[billing_segment charge_filter product_filter contract contract_rate_card rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
           source.public_send(attribute) if source.respond_to?(attribute)
         end
@@ -103,7 +103,7 @@ module Fees
       end
 
       def filtered_for_charge_boundaries
-        properties = boundaries.to_h
+        properties = billing_segment ? boundaries.to_contract_fee_properties : boundaries.to_h
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil
