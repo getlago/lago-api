@@ -96,7 +96,7 @@ RSpec.describe PayInAdvanceArguments do
     end
 
     context "with a billing segment metered item" do
-      let(:billing_segment) { build_stubbed(:billing_segment, organization:) }
+      let(:billing_segment) { create(:billing_segment, organization:) }
       let(:segment_metered_item) do
         Fees::ChargeService::MeteredItem.from_billing_segment(
           billing_segment:,
@@ -109,12 +109,29 @@ RSpec.describe PayInAdvanceArguments do
 
         expect(arguments.lock_key_arguments).to eq(
           [
-            billing_segment.id,
+            billing_segment.contract_rate_card,
             event.organization_id,
             event.external_subscription_id,
             event.transaction_id
           ]
         )
+      end
+
+      context "when the metered item is serialized" do
+        let(:serialized_metered_item) { ActiveJob::Arguments.serialize([segment_metered_item]).first }
+
+        it "resolves the contract rate card for the lock key" do
+          arguments = described_class.new(metered_item: serialized_metered_item)
+
+          expect(arguments.lock_key_arguments).to eq(
+            [
+              billing_segment.contract_rate_card,
+              event.organization_id,
+              event.external_subscription_id,
+              event.transaction_id
+            ]
+          )
+        end
       end
     end
   end

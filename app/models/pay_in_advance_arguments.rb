@@ -45,7 +45,7 @@ class PayInAdvanceArguments
   attr_reader :charge, :event
 
   def item_lock_key
-    metered_item.billing_segment&.id || metered_item.charge
+    metered_item.contract_rate_card || metered_item.charge
   end
 
   def normalized_event
