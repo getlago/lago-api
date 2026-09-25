@@ -126,5 +126,39 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
         end
       end
     end
+
+    context "when the trial ends late in the customer's local day" do
+      let(:plan) { create(:plan, trial_period: 41, pay_in_advance: true) }
+      let(:customer) { create(:customer, timezone: "Europe/Ljubljana") }
+
+      # Started Jun 15 23:47 local (21:47 UTC, CEST is UTC+2). With a 41 day trial, Jul 26 is the
+      # first paid day: Fees::SubscriptionService prorates the subscription fee from the trial end
+      # DATE, charging the whole of Jul 26. Billing must therefore happen on Jul 26 in the customer
+      # timezone, not once the exact signup time of day has passed (which pushes the invoice to
+      # Jul 27 for signups late in the local day).
+      let(:subscription) do
+        create(:subscription, plan:, customer:, started_at: Time.zone.parse("2026-06-15 21:47:00 UTC"))
+      end
+
+      before { subscription }
+
+      context "with the first hourly tick of the trial end date in the customer timezone" do
+        let(:timestamp) { Time.zone.parse("2026-07-25 22:35:00 UTC") } # Jul 26 00:35 local
+
+        it "bills the subscription and ends the trial on the trial end date" do
+          expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
+          expect(subscription.reload.trial_ended_at).not_to be_nil
+        end
+      end
+
+      context "with a tick on the day before the trial end date in the customer timezone" do
+        let(:timestamp) { Time.zone.parse("2026-07-25 21:35:00 UTC") } # Jul 25 23:35 local
+
+        it "does not bill and keeps the trial running" do
+          expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          expect(subscription.reload.trial_ended_at).to be_nil
+        end
+      end
+    end
   end
 end
