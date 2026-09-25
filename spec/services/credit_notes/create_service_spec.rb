@@ -42,6 +42,7 @@ RSpec.describe CreditNotes::CreateService do
   let(:fee2) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
   let(:credit_amount_cents) { 12 }
   let(:refund_amount_cents) { 6 }
+  let(:create_default_applied_taxes) { true }
   let(:items) do
     [
       {
@@ -56,9 +57,11 @@ RSpec.describe CreditNotes::CreateService do
   end
 
   before do
-    create(:fee_applied_tax, tax:, fee: fee1)
-    create(:fee_applied_tax, tax:, fee: fee2) if fee2
-    create(:invoice_applied_tax, tax:, invoice:) if invoice
+    if create_default_applied_taxes
+      create(:fee_applied_tax, tax:, fee: fee1)
+      create(:fee_applied_tax, tax:, fee: fee2) if fee2
+      create(:invoice_applied_tax, tax:, invoice:) if invoice
+    end
   end
 
   describe "#call" do
@@ -106,6 +109,183 @@ RSpec.describe CreditNotes::CreateService do
       expect(item2.fee).to eq(fee2)
       expect(item2.amount_cents).to eq(5)
       expect(item2.amount_currency).to eq(invoice.currency)
+    end
+
+    context "when provider taxes share a code at different rates" do
+      let(:create_default_applied_taxes) { false }
+      let(:higher_rate_tax) { build(:tax_breakdown_item, name: "Tax", type: "tax", rate: 8.875) }
+      let(:zero_rate_tax) { build(:tax_breakdown_item, name: "Tax", type: "tax", rate: 0.0) }
+      let(:credit_amount_cents) { 11_011 }
+      let(:refund_amount_cents) { 0 }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          currency: "EUR",
+          fees_amount_cents: 10_120,
+          taxes_amount_cents: 891,
+          total_amount_cents: 11_011,
+          total_paid_amount_cents: 11_011,
+          payment_status: :succeeded,
+          taxes_rate: 8.80484,
+          version_number: 3
+        )
+      end
+
+      let(:fee1) do
+        create(:fee, invoice:, amount_cents: 10_040, taxes_amount_cents: 891, taxes_rate: 8.875)
+      end
+
+      let(:fee2) do
+        create(:fee, invoice:, amount_cents: 80, taxes_amount_cents: 0, taxes_rate: 0.0)
+      end
+
+      let(:items) do
+        [
+          {fee_id: fee1.id, amount_cents: fee1.amount_cents},
+          {fee_id: fee2.id, amount_cents: fee2.amount_cents}
+        ]
+      end
+
+      before do
+        create(
+          :fee_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: higher_rate_tax,
+          fee: fee1,
+          amount_cents: 891
+        )
+        create(
+          :fee_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: zero_rate_tax,
+          fee: fee2,
+          amount_cents: 0
+        )
+        create(
+          :invoice_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: higher_rate_tax,
+          invoice:,
+          fees_amount_cents: 10_040,
+          taxable_base_amount_cents: 10_040,
+          amount_cents: 891
+        )
+        create(
+          :invoice_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: zero_rate_tax,
+          invoice:,
+          fees_amount_cents: 80,
+          taxable_base_amount_cents: 80,
+          amount_cents: 0
+        )
+      end
+
+      it "creates one applied tax per rate with the invoice tax total" do
+        expect(result).to be_success
+        expect(credit_note.taxes_amount_cents).to eq(invoice.taxes_amount_cents)
+        expect(credit_note.applied_taxes.order(:tax_rate).pluck(:tax_code, :tax_rate, :amount_cents)).to eq(
+          [["tax", 0.0, 0], ["tax", 8.875, 891]]
+        )
+      end
+    end
+
+    context "when provider taxes differ only by description" do
+      let(:create_default_applied_taxes) { false }
+      let(:first_tax) { build(:tax_breakdown_item, name: "Tax", type: "state", rate: 10.0) }
+      let(:second_tax) { build(:tax_breakdown_item, name: "Tax", type: "county", rate: 10.0) }
+      let(:credit_amount_cents) { 220 }
+      let(:refund_amount_cents) { 0 }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          currency: "EUR",
+          fees_amount_cents: 200,
+          taxes_amount_cents: 20,
+          total_amount_cents: 220,
+          total_paid_amount_cents: 220,
+          payment_status: :succeeded,
+          taxes_rate: 10,
+          version_number: 3
+        )
+      end
+
+      let(:fee1) { create(:fee, invoice:, amount_cents: 100, taxes_amount_cents: 10, taxes_rate: 10) }
+      let(:fee2) { create(:fee, invoice:, amount_cents: 100, taxes_amount_cents: 10, taxes_rate: 10) }
+      let(:items) do
+        [
+          {fee_id: fee1.id, amount_cents: fee1.amount_cents},
+          {fee_id: fee2.id, amount_cents: fee2.amount_cents}
+        ]
+      end
+
+      before do
+        create(
+          :fee_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: first_tax,
+          fee: fee1,
+          amount_cents: 10
+        )
+        create(
+          :fee_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: second_tax,
+          fee: fee2,
+          amount_cents: 10
+        )
+        create(
+          :invoice_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: first_tax,
+          invoice:,
+          fees_amount_cents: 100,
+          taxable_base_amount_cents: 100,
+          amount_cents: 10
+        )
+        create(
+          :invoice_applied_tax,
+          :with_provider_tax,
+          tax: nil,
+          provider_tax_breakdown_object: second_tax,
+          invoice:,
+          fees_amount_cents: 100,
+          taxable_base_amount_cents: 100,
+          amount_cents: 10
+        )
+      end
+
+      it "persists one applied tax with the invoice tax total" do
+        expect(result).to be_success
+        expect(credit_note.applied_taxes.count).to eq(1)
+        expect(credit_note.taxes_amount_cents).to eq(invoice.taxes_amount_cents)
+      end
+    end
+
+    context "when a fee tax has no matching invoice tax" do
+      let(:create_default_applied_taxes) { false }
+
+      before do
+        create(:fee_applied_tax, tax:, fee: fee1)
+      end
+
+      it "returns the apply taxes failure" do
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("invoice_applied_tax_not_found")
+      end
     end
 
     it "creates a credit note without metadata" do

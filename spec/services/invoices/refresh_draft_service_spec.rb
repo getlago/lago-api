@@ -180,6 +180,32 @@ RSpec.describe Invoices::RefreshDraftService do
       expect { refresh_service.call }.to change { credit_note.reload.items.pluck(:fee_id) }
     end
 
+    context "when refreshing a credit note fails" do
+      let(:credit_note) { create(:credit_note, invoice:) }
+      let(:fee) { create(:fee, invoice:, subscription:) }
+      let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }
+      let(:failed_result) do
+        CreditNotes::RefreshDraftService::Result.new.service_failure!(
+          code: "invoice_applied_tax_not_found",
+          message: "no matching invoice tax"
+        )
+      end
+
+      before do
+        credit_note_item
+        allow(CreditNotes::RefreshDraftService).to receive(:call).and_return(failed_result)
+      end
+
+      it "returns the failure and rolls the whole refresh back" do
+        result = refresh_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("invoice_applied_tax_not_found")
+        expect(invoice.reload.fees.pluck(:id)).to eq([fee.id])
+        expect(credit_note_item.reload.fee_id).to eq(fee.id)
+      end
+    end
+
     it "updates taxes_rate" do
       expect { refresh_service.call }
         .to change { invoice.reload.taxes_rate }.from(30.0).to(15)

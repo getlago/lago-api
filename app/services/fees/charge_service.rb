@@ -123,15 +123,14 @@ module Fees
     #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
     #       on draft invoices can target filters without any usage.
     #       Recurring metrics always aggregate as usage carries over from previous periods.
-    #       The pre-filtering reads the events store, which lags the buckets independently, so a
-    #       filter the buckets already hold usage for is aggregated rather than zeroed.
+    #       A charge served from the usage buckets is pre-filtered from those same buckets rather
+    #       than from the events store, so the list cannot lag the units it gates.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
       return false if selected_metered_item.billable_metric.recurring?
-      return false if filtered_aggregations.include?(selected_metered_item.filter_id)
 
-      !precomputed?(selected_metered_item:)
+      !filtered_aggregations.include?(selected_metered_item.filter_id)
     end
 
     def compute_fees_with_cache(selected_metered_item:)
@@ -454,7 +453,7 @@ module Fees
     def precomputed?(selected_metered_item:)
       return false unless provider.may_precompute_charge?(
         metered_item: selected_metered_item,
-        boundaries: aggregation_boundaries(selected_metered_item)
+        boundaries: selected_metered_item.aggregation_boundaries
       )
 
       aggregator(selected_metered_item:).precomputed?
@@ -476,7 +475,7 @@ module Fees
         current_usage: options.current_usage?,
         billing_context:,
         provider:,
-        boundaries: aggregation_boundaries(selected_metered_item),
+        boundaries: selected_metered_item.aggregation_boundaries,
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate
       )
@@ -490,15 +489,6 @@ module Fees
         billing_context:,
         usage_filters: options.usage_filters
       )
-    end
-
-    def aggregation_boundaries(selected_metered_item)
-      {
-        from_datetime: selected_metered_item.boundaries.charges_from_datetime,
-        to_datetime: selected_metered_item.boundaries.charges_to_datetime,
-        charges_duration: selected_metered_item.boundaries.charges_duration,
-        max_timestamp: selected_metered_item.boundaries.max_timestamp
-      }
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)

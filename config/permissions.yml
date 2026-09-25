@@ -42,6 +42,7 @@ contracts:
   view:
   create:
   update:
+  terminate:
 coupons:
   view:
     - finance

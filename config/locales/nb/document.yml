@@ -1,0 +1,4 @@
+---
+nb:
+  document:
+    page_numbering: Side %{current} av %{total}

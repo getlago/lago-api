@@ -26,6 +26,7 @@ RSpec.describe Mutations::UsageAttributionTypes::Update do
       id: usage_attribution_type.id,
       code: "member",
       name: "Member",
+      description: "A member of a team",
       attributionKeys: ["employee_id"],
       role: "hierarchical",
       parentId: parent.id
@@ -36,7 +37,7 @@ RSpec.describe Mutations::UsageAttributionTypes::Update do
     <<-GQL
       mutation($input: UpdateUsageAttributionTypeInput!) {
         updateUsageAttributionType(input: $input) {
-          id code name attributionKeys role
+          id code name description attributionKeys role
           parent { id code }
         }
       }
@@ -55,6 +56,7 @@ RSpec.describe Mutations::UsageAttributionTypes::Update do
     expect(result_data["id"]).to eq(usage_attribution_type.id)
     expect(result_data["code"]).to eq("member")
     expect(result_data["name"]).to eq("Member")
+    expect(result_data["description"]).to eq("A member of a team")
     expect(result_data["attributionKeys"]).to eq(["employee_id"])
     expect(result_data["parent"]["id"]).to eq(parent.id)
   end
