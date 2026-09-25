@@ -24,7 +24,13 @@ Out of POC scope: the reservation counter, most of E7's route and state checks, 
 lago exec api bundle exec rails runner scripts/x402_poc/<script>.rb
 ```
 
-Inside the container, drop `lago exec api`.
+Without the `lago` CLI, run the same command through Docker. The dev api container is `lago_api_dev`:
+
+```bash
+docker exec lago_api_dev bash -lc 'cd /app && bundle exec rails runner scripts/x402_poc/<script>.rb'
+```
+
+Inside the container, drop `lago exec api`. The rest of this README writes commands in the `lago exec api` form, and every one of them also runs as `docker exec lago_api_dev bash -lc 'cd /app && …'`.
 
 The scripts need the app environment and OpenSSL 3.2 or newer for Keccak-256; the api image ships 3.5. They reach the API on `localhost:3000`. `https://api.lago.dev` does not work from inside the container: public DNS maps `*.lago.dev` to 127.0.0.1, and the container doesn't trust your mkcert certificate.
 
