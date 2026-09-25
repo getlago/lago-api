@@ -260,7 +260,11 @@ module Invoices
       #       count-based branch, which would dilute the rate with the excluded non-taxable fees.
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
 
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(
+        invoice:,
+        fees: taxable_fees,
+        integration_customer: tax_connection
+      )
 
       return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
@@ -295,7 +299,17 @@ module Invoices
     end
 
     def customer_provider_taxation?
-      @customer_provider_taxation ||= invoice.customer.tax_customer
+      tax_connection.present?
+    end
+
+    def tax_connection
+      return @tax_connection if defined?(@tax_connection)
+
+      @tax_connection = if customer.organization.feature_flag_enabled?(:multi_connection)
+        subscription.effective_tax_connection
+      else
+        customer.tax_customer
+      end
     end
 
     # Only the charges being computed are billed, so restricting the event lookup to their codes

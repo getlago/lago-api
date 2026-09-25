@@ -5,11 +5,11 @@ module Integrations
     module Taxes
       module Invoices
         class BaseService < Integrations::Aggregator::Taxes::BaseService
-          def initialize(invoice:, fees: nil)
+          def initialize(invoice:, fees: nil, integration_customer: nil)
             @invoice = invoice
             @fees = fees || invoice.fees
 
-            super()
+            super(integration_customer:)
           end
 
           private
