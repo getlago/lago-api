@@ -26,11 +26,8 @@ class ContractRateCardsQuery < BaseQuery
 
   private
 
-  # current_and_scheduled only: the show endpoint and serializer resolve a
-  # card by code through the same scope, so an ended card must not appear in
-  # the list and then 404 when fetched.
   def base_scope
-    ContractRateCard.where(organization:).current_and_scheduled
+    ContractRateCard.where(organization:)
   end
 
   def with_contract(scope)

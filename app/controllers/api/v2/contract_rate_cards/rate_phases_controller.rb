@@ -62,7 +62,7 @@ module Api
           return @contract_rate_card if defined?(@contract_rate_card)
 
           contract = current_organization.contracts.live_by_external_id(params[:contract_external_id])
-          @contract_rate_card = contract&.applied_rate_cards&.current_and_scheduled&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
+          @contract_rate_card = contract&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
         end
 
         def find_rate_phase

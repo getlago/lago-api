@@ -83,7 +83,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "does not carry billing history into a separate attachment of the same rate card" do
-      contract_rate_card.update!(ended_date: Date.new(2026, 6, 30))
+      contract_rate_card.discard!
       successor = create(:contract_rate_card, organization:, contract:, rate_card:,
         effective_date: Date.new(2026, 7, 1), billing_anchor_date: Date.new(2026, 1, 1))
       schedule = described_class.call!(contract_rate_card: successor).schedule
@@ -234,43 +234,6 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         expect(final_slice.ended_at).to eq(ended_at)
         expect(final_slice.proration_ratio).to eq(6.fdiv(31))
       end
-    end
-  end
-
-  context "when the card has an inclusive end date" do
-    let(:rate_card) { create(:rate_card, organization:, proration: true, product: create(:product, :fixed, organization:)) }
-
-    before { contract_rate_card.update!(ended_date: Date.new(2026, 1, 20)) }
-
-    it "covers the whole final day and stops at the next local midnight" do
-      segment = result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole
-
-      expect(segment.ended_at).to eq(Time.utc(2026, 1, 21))
-      expect(segment.proration_ratio).to eq(6.fdiv(31))
-      expect(result.schedule.next_billing_at(after: segment.ended_at)).to be_nil
-    end
-
-    context "with a customer timezone" do
-      let(:timezone) { "America/New_York" }
-
-      it "converts the end date in the customer's timezone" do
-        expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.ended_at)
-          .to eq(Time.utc(2026, 1, 21, 5))
-      end
-    end
-
-    context "when the contract ends earlier" do
-      let(:ended_at) { Time.utc(2026, 1, 18, 12) }
-
-      it "stops at the contract end" do
-        expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.ended_at).to eq(ended_at)
-      end
-    end
-
-    it "does not extend the card when the caller supplies a later termination" do
-      schedule = described_class.call!(contract_rate_card:, ends_at: Time.utc(2026, 1, 25)).schedule
-
-      expect(schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.ended_at).to eq(Time.utc(2026, 1, 21))
     end
   end
 

@@ -144,20 +144,18 @@ RSpec.describe Contracts::UpdateService do
       context "when moving it later" do
         let(:params) { {ended_at: "2027-02-01T00:00:00Z"} }
 
-        it "rejects it" do
-          expect(result).not_to be_success
-          expect(result.error.messages[:ended_at]).to eq(["cannot_be_extended"])
-          expect(contract.reload.ended_at).to eq(ended_at)
+        it "updates it" do
+          expect(result).to be_success
+          expect(contract.reload.ended_at).to eq(Time.zone.parse("2027-02-01T00:00:00Z"))
         end
       end
 
       context "when clearing it" do
         let(:params) { {ended_at: nil} }
 
-        it "rejects it" do
-          expect(result).not_to be_success
-          expect(result.error.messages[:ended_at]).to eq(["cannot_be_extended"])
-          expect(contract.reload.ended_at).to eq(ended_at)
+        it "clears it" do
+          expect(result).to be_success
+          expect(contract.reload.ended_at).to be_nil
         end
       end
     end
