@@ -43,6 +43,12 @@ module Integrations
             result
           end
 
+          # NetSuite drops zero-amount lines and then rejects the transaction for having no
+          # line item, so mirror the lines that survive on its side: positive fees and discounts.
+          def sync_allowed?
+            positive_fees.exists? || discounts.any?
+          end
+
           private
 
           def columns

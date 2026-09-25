@@ -10,6 +10,18 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::BasePayload do
   let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, customer:, organization:) }
 
+  describe "#sync_allowed?" do
+    subject(:sync_allowed_call) { payload.sync_allowed? }
+
+    context "when all the fees are zero-amount and there is no discount" do
+      before { create(:fee, invoice:, amount_cents: 0, taxes_amount_cents: 0) }
+
+      it "returns true, so providers accepting zero-amount lines keep syncing" do
+        expect(subject).to be true
+      end
+    end
+  end
+
   describe "#fees" do
     subject(:fees_call) { payload.__send__(:fees) }
 
