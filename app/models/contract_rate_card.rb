@@ -5,6 +5,8 @@ class ContractRateCard < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
+  # The contract end date is the only end of a card; drop once released.
+  self.ignored_columns += %w[ended_date]
 
   belongs_to :organization
   belongs_to :contract
@@ -20,33 +22,12 @@ class ContractRateCard < ApplicationRecord
   validates :next_billing_at, presence: true, on: :create
   validates :effective_date, presence: true
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
-  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil, ended_date: nil) }}
-
-  validate :validate_effective_before_ended
+  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
   default_scope -> { kept }
 
-  # The window is day-grained and the end inclusive: the card still bills on
-  # its ended_date, charges stop after it. Ended attachments are history;
-  # upcoming ones stay visible. "Today" is the customer's day, not the
-  # application's — same COALESCE chain as the v1 timezone SQL helpers.
-  #
-  # The plain date bound comes first: the timezone expression cannot use an
-  # index, which turned a similar comparison into a full-scan timeout in the
-  # termination clock (see #6086). Offsets span -12:00..+14:00, so any
-  # customer-local today is at least yesterday's date — the bound is a strict
-  # superset and the exact per-row check decides.
-  scope :current_and_scheduled, ->(at = Time.current) {
-    joins(contract: [{customer: :billing_entity}, :organization]).where(
-      "contract_rate_cards.ended_date IS NULL OR (contract_rate_cards.ended_date >= ? AND " \
-      "contract_rate_cards.ended_date >= " \
-      "(?::timestamptz AT TIME ZONE COALESCE(customers.timezone, organizations.timezone, 'UTC'))::date)",
-      at.to_date - 1, at
-    )
-  }
-
   scope :due_for_billing, ->(timestamp) {
-    current_and_scheduled(timestamp)
+    joins(contract: {customer: :billing_entity})
       .where(next_billing_at: ..timestamp)
       .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
       .where(customers: {deleted_at: nil})
@@ -64,15 +45,6 @@ class ContractRateCard < ApplicationRecord
   def edit_error_code
     "contract_locked" unless contract.editable?
   end
-
-  private
-
-  def validate_effective_before_ended
-    return if effective_date.blank? || ended_date.blank?
-    return if effective_date <= ended_date
-
-    errors.add(:ended_date, :must_be_after_effective_date)
-  end
 end
 
 # == Schema Information
@@ -84,7 +56,6 @@ end
 #  billing_anchor_date :date             not null
 #  deleted_at          :datetime
 #  effective_date      :date             not null
-#  ended_date          :date
 #  next_billing_at     :datetime
 #  units               :decimal(, )
 #  created_at          :datetime         not null
@@ -95,12 +66,12 @@ end
 #
 # Indexes
 #
-#  index_active_contract_rate_cards_on_contract_and_card  (contract_id,rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (ended_date IS NULL))
-#  index_contract_rate_cards_on_billing_clock             (next_billing_at,ended_date) WHERE (deleted_at IS NULL)
-#  index_contract_rate_cards_on_contract_id               (contract_id)
-#  index_contract_rate_cards_on_deleted_at                (deleted_at)
-#  index_contract_rate_cards_on_organization_id           (organization_id)
-#  index_contract_rate_cards_on_rate_card_id              (rate_card_id)
+#  index_contract_rate_cards_on_contract_and_rate_card  (contract_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_contract_rate_cards_on_contract_id             (contract_id)
+#  index_contract_rate_cards_on_deleted_at              (deleted_at)
+#  index_contract_rate_cards_on_next_billing_at         (next_billing_at) WHERE (deleted_at IS NULL)
+#  index_contract_rate_cards_on_organization_id         (organization_id)
+#  index_contract_rate_cards_on_rate_card_id            (rate_card_id)
 #
 # Foreign Keys
 #

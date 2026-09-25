@@ -121,18 +121,6 @@ RSpec.describe Api::V2::ContractRateCardsController do
         expect(response).to be_not_found_error("applied_rate_card")
       end
     end
-
-    context "when an ended card shares the rate card code" do
-      before { create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: 3.days.ago, ended_date: 1.day.ago) }
-
-      it "resolves to the current open card, not the ended one" do
-        contract_rate_card
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:applied_rate_card][:lago_id]).to eq(contract_rate_card.id)
-      end
-    end
   end
 
   describe "PUT /api/v2/contracts/:external_id/applied_rate_cards/:code" do

@@ -69,7 +69,7 @@ module Api
           contracts = result.contracts.includes(:catalog_plan, :customer)
 
           # One grouped query instead of one COUNT per row in the serializer.
-          applied_rate_cards_counts = ContractRateCard.current_and_scheduled
+          applied_rate_cards_counts = ContractRateCard
             .where(contract_id: contracts.map(&:id))
             .group(:contract_id)
             .count

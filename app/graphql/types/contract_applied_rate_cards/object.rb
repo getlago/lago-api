@@ -14,10 +14,8 @@ module Types
       field :product, Types::Products::Object, null: false
       field :rate_card, Types::RateCards::Object, null: false
 
-      # The attachment's validity window, day-grained and end inclusive.
       field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: false
       field :effective_date, GraphQL::Types::ISO8601Date, null: false
-      field :ended_date, GraphQL::Types::ISO8601Date, null: true
       field :next_billing_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :rate_phases, [Types::RatePhases::Object], null: false

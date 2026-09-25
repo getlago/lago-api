@@ -34,7 +34,6 @@ RSpec.describe Resolvers::ContractAppliedRateCardsResolver do
 
   before do
     create(:contract_rate_card)
-    create(:contract_rate_card, organization:, contract:, effective_date: 10.days.ago.to_date, ended_date: 1.day.ago.to_date)
   end
 
   it_behaves_like "requires current user"

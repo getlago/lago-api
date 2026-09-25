@@ -34,18 +34,17 @@ module V2
     private
 
     # The index passes one grouped count for the whole page; show falls back
-    # to the scoped count on the single record. Ended attachments are history,
-    # not cards the contract currently carries.
+    # to a count on the single record.
     def applied_rate_cards_count
       counts = options[:applied_rate_cards_counts]
       return counts.fetch(model.id, 0) if counts
 
-      model.applied_rate_cards.current_and_scheduled.count
+      model.applied_rate_cards.count
     end
 
     def applied_rate_cards
       ::CollectionSerializer.new(
-        model.applied_rate_cards.current_and_scheduled.includes(:rate_phases, :rate_card, :contract),
+        model.applied_rate_cards.includes(:rate_phases, :rate_card, :contract),
         ::V2::ContractAppliedRateCardSerializer,
         collection_name: "applied_rate_cards"
       ).serialize[:applied_rate_cards]
