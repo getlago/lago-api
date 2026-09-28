@@ -258,7 +258,10 @@ class Invoice < ApplicationRecord
     # Native fees round their tax one by one while the invoice rounds once, and provider invoices
     # booked before fee amounts were stored drift the same way: split what the invoice charged.
     ordered_fees = fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
-    allocated = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, ordered_fees.map(&:taxes_precise_amount_cents))
+    weights = ordered_fees.map(&:taxes_precise_amount_cents)
+    # Fees billed before exact taxes were stored carry none, so their rounded taxes weight the split.
+    weights = ordered_fees.map(&:taxes_amount_cents) if weights.sum.zero?
+    allocated = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, weights)
     ordered_fees.zip(allocated).to_h
   end
 

@@ -2111,12 +2111,22 @@ RSpec.describe Invoice do
     context "with native fee taxes rounded once on the invoice" do
       let(:invoice) { create(:invoice, fees_amount_cents: 15, taxes_amount_cents: 2, sub_total_including_taxes_amount_cents: 17, total_amount_cents: 17, version_number: 3) }
 
+      let(:taxes_precise_amount_cents) { 0.5 }
+
       before do
-        create_list(:fee, 3, invoice:, amount_cents: 5, taxes_rate: 10, taxes_amount_cents: 1, taxes_precise_amount_cents: 0.5)
+        create_list(:fee, 3, invoice:, amount_cents: 5, taxes_rate: 10, taxes_amount_cents: 1, taxes_precise_amount_cents:)
       end
 
       it "returns the invoice total rather than the sum of rounded fee taxes" do
         expect(invoice.available_to_credit_amount_cents).to eq(17)
+      end
+
+      context "with fees billed before exact taxes were stored" do
+        let(:taxes_precise_amount_cents) { 0 }
+
+        it "splits the invoice tax by the rounded fee taxes" do
+          expect(invoice.available_to_credit_amount_cents).to eq(17)
+        end
       end
     end
 
