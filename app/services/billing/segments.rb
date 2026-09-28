@@ -5,23 +5,17 @@ module Billing
     Segment = Data.define(:started_at, :ended_at, :rate)
 
     # Split the half-open window at each rate change, keeping unpriced periods with rate: nil.
-    def self.within(window, rates:, starts_at: nil, ends_at: nil)
-      started_at = [window.started_at, starts_at].compact.max
-      ended_at = [window.ended_at, ends_at].compact.min
-      if started_at >= ended_at
-        return []
-      end
-
-      boundaries = [started_at] + rate_changes_inside(started_at, ended_at, rates) + [ended_at]
+    def self.within(window, rates:)
+      boundaries = [window.started_at] + rate_changes_inside(window, rates) + [window.ended_at]
 
       boundaries.each_cons(2).map do |started_at, ended_at|
         Segment.new(started_at:, ended_at:, rate: rate_at(rates, started_at))
       end
     end
 
-    def self.rate_changes_inside(started_at, ended_at, rates)
+    def self.rate_changes_inside(window, rates)
       rates.map(&:effective_from)
-        .select { |at| at > started_at && at < ended_at }
+        .select { |at| at > window.started_at && at < window.ended_at }
         .uniq
         .sort
     end

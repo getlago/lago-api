@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Billing
-  # One full calendar period of one rate card. Service dates only clip its segments.
+  # One billing period of one rate card.
   #
-  # @param ended_at [Time] EXCLUSIVE
+  # @param ended_at [Time] EXCLUSIVE, unlike the column of the same name
   # @param calendar [Calendar] the ruler this cycle was measured on; it varies per cycle,
   #   because a cadence change re-anchors mid-walk
   #

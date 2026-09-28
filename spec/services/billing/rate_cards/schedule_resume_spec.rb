@@ -66,8 +66,9 @@ RSpec.describe Billing::RateCards::Schedule do
     "leap day" => Date.new(2024, 2, 29),
     "mid-month" => Date.new(2026, 3, 15),
     # Havana springs forward AT MIDNIGHT, so 00:00 does not exist on this date and
-    # `beginning_of_day` answers 01:00. Later boundaries must return to local midnight,
-    # including when a phase changes cadence and reanchors the calendar.
+    # `beginning_of_day` answers 01:00. That breaks the identity every other shape relies on —
+    # that a ruler boundary is the local midnight of its anchor day — so a re-anchor lands on a
+    # ruler that opens at a different instant than the cursor which built it.
     "a day whose midnight does not exist" => Date.new(2026, 3, 8)
   }
 
@@ -188,11 +189,11 @@ RSpec.describe Billing::RateCards::Schedule do
 
   # Reject invalid inputs during construction, before a caller checks result.success?
   # and starts querying the schedule.
-  it "refuses a resume point before the first calendar period" do
+  it "refuses an instant before the card's own start when it is built" do
     shape = shapes.first
 
     expect { build(shape, resume_at: shape[:starts_at] - 1.year) }
-      .to raise_error(ArgumentError, /precedes the card's first cycle/)
+      .to raise_error(ArgumentError, /precedes the card's start/)
   end
 
   # The cross product above varies one dimension at a time and shares one plain shape. These are

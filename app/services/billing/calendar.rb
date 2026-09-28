@@ -4,10 +4,11 @@ module Billing
   # A ruler: boundaries every `interval` from the start of the anchor day, in the customer's
   # timezone. Anchored Feb 1 in "America/New_York", boundary 0 is Feb 1 05:00 UTC.
   class Calendar
-    attr_reader :anchor_date, :interval, :timezone
+    attr_reader :anchor_date, :interval
 
     def initialize(anchor_date:, interval:, timezone:)
       @anchor_date = anchor_date
+      @anchor = anchor_date.in_time_zone(timezone).beginning_of_day
       @interval = interval
       @timezone = timezone
     end
@@ -65,15 +66,17 @@ module Billing
 
     private
 
+    attr_reader :anchor, :timezone
+
     # Which interval `timestamp` falls in — a position on this ruler, not a cycle number. The
     # anchor is a reference day, not a start date, so instants before it have negative indices.
     def index_of_interval(timestamp)
-      interval.steps_between(anchor_date, timestamp.in_time_zone(timezone).to_date)
+      interval.steps_between(anchor, timestamp.in_time_zone(timezone))
     end
 
     def interval_with_index_starts_at(index)
       @boundaries ||= {}
-      @boundaries[index] ||= interval.advance(anchor_date, index).in_time_zone(timezone).beginning_of_day
+      @boundaries[index] ||= interval.advance(anchor, index)
     end
   end
 end

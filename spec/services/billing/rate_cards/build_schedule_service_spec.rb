@@ -96,14 +96,14 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     before do
       create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
         rate_card_rate: rate_card.rates.sole,
-        cycle_started_at: Time.utc(2026, 1, 1), started_at: Time.utc(2026, 1, 15),
+        cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 15),
         ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 2, 1))
     end
 
-    it "resumes the full cycle while preserving the service start" do
+    it "resumes at midnight of the card's effective date" do
       expect(result).to be_success
       expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.cycle_started_at)
-        .to eq(Time.utc(2026, 1, 1))
+        .to eq(Time.utc(2026, 1, 15))
     end
   end
 
@@ -113,7 +113,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     let(:billed_segment) do
       create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
         rate_card_rate: rate_card.rates.sole, status: :done,
-        cycle_started_at: Time.utc(2026, 1, 1), started_at: Time.utc(2026, 1, 15),
+        cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 15),
         ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 1, 15))
     end
 
@@ -121,13 +121,13 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro", billing_interval_cycle_count: 1)
       new_rate = create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20))
       create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
-        rate_card_rate: new_rate, cycle_started_at: Time.utc(2026, 1, 1), started_at: Time.utc(2026, 1, 20),
+        rate_card_rate: new_rate, cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 20),
         ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 1, 20))
 
       segments = result.schedule.segments_due_by(Time.utc(2026, 2, 1))
 
       expect(segments.map { |segment| [segment.cycle_index, segment.cycle_started_at, segment.rate_phase_code] })
-        .to eq([[0, Time.utc(2026, 1, 1), "intro"], [0, Time.utc(2026, 1, 1), "intro"], [1, Time.utc(2026, 2, 1), nil]])
+        .to eq([[0, Time.utc(2026, 1, 15), "intro"], [0, Time.utc(2026, 1, 15), "intro"], [1, Time.utc(2026, 2, 1), nil]])
     end
 
     it "measures consumption against the saved segment after the card terminates" do
@@ -311,7 +311,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
 
     it "takes the cadence from the rate in force when the window opens" do
       segments = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
-        .select { |segment| segment.cycle_started_at == Time.utc(2026, 1, 1) }
+        .select { |segment| segment.cycle_started_at == Time.utc(2026, 1, 15) }
 
       expect(segments.first.started_at...segments.last.ended_at)
         .to eq(Time.utc(2026, 1, 15)...Time.utc(2026, 2, 1))
@@ -320,7 +320,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # The later rate is not ignored — it cuts the cycle into two priced windows instead.
     it "bills the change as a segment rather than as a new cadence" do
       segments = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
-        .select { it.cycle_started_at == Time.utc(2026, 1, 1) }
+        .select { it.cycle_started_at == Time.utc(2026, 1, 15) }
 
       expect(segments.map { |segment| [segment.started_at, segment.ended_at] }).to eq(
         [[Time.utc(2026, 1, 15), Time.utc(2026, 1, 15, 8)],

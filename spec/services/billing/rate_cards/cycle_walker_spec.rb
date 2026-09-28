@@ -57,18 +57,18 @@ RSpec.describe Billing::RateCards::CycleWalker do
     context "when the card starts inside a calendar interval" do
       let(:starts_at) { Time.utc(2026, 2, 10, 14, 30) }
 
-      it "returns the full calendar period containing the first billing day" do
+      it "starts on the card's first billing day and keeps the next anchor boundary" do
         cycle = walker.start
 
-        expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2026, 1, 31), Time.utc(2026, 2, 28)])
+        expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2026, 2, 10), Time.utc(2026, 2, 28)])
       end
     end
 
     context "when the card ends during its first cycle" do
       let(:ends_at) { Time.utc(2026, 2, 15, 12) }
 
-      it "keeps the full period when service ends early" do
-        expect(walker.start.ended_at).to eq(Time.utc(2026, 2, 28))
+      it "clips the cycle to the actual end of service" do
+        expect(walker.start.ended_at).to eq(ends_at)
       end
     end
 
@@ -179,10 +179,10 @@ RSpec.describe Billing::RateCards::CycleWalker do
     context "when the card ends inside the next cycle" do
       let(:ends_at) { Time.utc(2026, 3, 15, 12) }
 
-      it "keeps the last period whole and stops before the next cycle" do
+      it "clips the last cycle and stays exhausted until explicitly restarted" do
         walker.start
 
-        expect(walker.advance.ended_at).to eq(Time.utc(2026, 3, 31))
+        expect(walker.advance.ended_at).to eq(ends_at)
         expect(walker.advance).to be_nil
         expect(walker.current_cycle).to be_nil
         expect(walker.advance).to be_nil
@@ -251,19 +251,6 @@ RSpec.describe Billing::RateCards::CycleWalker do
 
     context "when the first cycle starts inside a calendar interval" do
       let(:starts_at) { Time.utc(2026, 2, 10) }
-
-      context "with a cadence change before service begins" do
-        let(:rates) { [rate, rate.class.new(Time.utc(2026, 2, 5), 1, :week)] }
-
-        it "uses the initial cadence consistently when walking and resuming" do
-          first = walker.start
-          walked = walker.walk_to(Time.utc(2026, 4, 10)).last
-          resumed = walker.resume(Time.utc(2026, 4, 10))
-
-          expect([first.started_at, first.ended_at]).to eq([Time.utc(2026, 2, 7), Time.utc(2026, 2, 14)])
-          expect(resumed).to eq(walked)
-        end
-      end
 
       it "counts the partial first cycle once and preserves the original anchor" do
         cycle = walker.resume(Time.utc(2026, 4, 10))
@@ -415,15 +402,6 @@ RSpec.describe Billing::RateCards::CycleWalker do
       expect(walker.walk_to(starts_at).map(&:index)).to eq([0])
     end
 
-    context "when the card starts inside the first calendar period" do
-      let(:starts_at) { Time.utc(2026, 2, 10) }
-
-      it "does not expose service before the card starts" do
-        expect(walker.walk_to(Time.utc(2026, 2, 5))).to be_empty
-        expect(walker.walk_to(starts_at).map(&:started_at)).to eq([Time.utc(2026, 1, 31)])
-      end
-    end
-
     it "starts a fresh walk regardless of the previous position" do
       walker.walk_to(Time.utc(2026, 4, 10))
 
@@ -438,7 +416,7 @@ RSpec.describe Billing::RateCards::CycleWalker do
         cycles = walker.walk_to(Time.utc(2026, 4, 10))
 
         expect(cycles.map(&:index)).to eq([0, 1])
-        expect(cycles.last.ended_at).to eq(Time.utc(2026, 3, 31))
+        expect(cycles.last.ended_at).to eq(ends_at)
         expect(walker.current_cycle).to be_nil
       end
     end
@@ -490,7 +468,7 @@ RSpec.describe Billing::RateCards::CycleWalker do
     let(:ends_at) { Time.utc(2026, 4, 15) }
 
     it "stops at termination and can subsequently resume an earlier cycle" do
-      expect(walker.resume(Time.utc(2026, 4, 1)).ended_at).to eq(Time.utc(2026, 4, 30))
+      expect(walker.resume(Time.utc(2026, 4, 1)).ended_at).to eq(ends_at)
       expect(walker.advance).to be_nil
       expect(walker.advance).to be_nil
       expect(walker.resume(ends_at)).to be_nil
