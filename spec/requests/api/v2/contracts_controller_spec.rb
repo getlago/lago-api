@@ -84,6 +84,12 @@ RSpec.describe Api::V2::ContractsController do
       result = json[:contracts].sole
       expect(result[:lago_id]).to eq(contract.id)
       expect(result[:applied_rate_cards_count]).to eq(1)
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :contracts, model: Contract do
+      let(:paginated_path) { "/api/v2/contracts" }
+      let(:create_paginated_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
     end
 
     context "with a pending contract" do

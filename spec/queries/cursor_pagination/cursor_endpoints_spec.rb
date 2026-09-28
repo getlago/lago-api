@@ -62,4 +62,69 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
 
     it_behaves_like "a keyset-paginated query", table: "products", index: "index_products_by_cursor"
   end
+
+  context "with ProductCategoriesQuery" do
+    let(:filtered_scope) do
+      ->(pagination) { ProductCategoriesQuery.call(organization:, search_term: "a", pagination:).product_categories }
+    end
+    let(:default_scope) { ->(pagination) { ProductCategoriesQuery.call(organization:, pagination:).product_categories } }
+
+    it_behaves_like "a keyset-paginated query", table: "product_categories", index: "index_product_categories_by_cursor"
+  end
+
+  context "with RateCardsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        RateCardsQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {
+            product_ids: [SecureRandom.uuid],
+            product_filter_ids: [SecureRandom.uuid],
+            product_category_ids: [SecureRandom.uuid],
+            without_product_category: true,
+            code: "code",
+            product_code: "product",
+            product_filter_code: "filter"
+          }
+        ).rate_cards
+      end
+    end
+    let(:default_scope) { ->(pagination) { RateCardsQuery.call(organization:, pagination:).rate_cards } }
+
+    it_behaves_like "a keyset-paginated query", table: "rate_cards", index: "index_rate_cards_by_cursor"
+  end
+
+  context "with CatalogPlansQuery" do
+    let(:filtered_scope) { ->(pagination) { CatalogPlansQuery.call(organization:, search_term: "a", pagination:).catalog_plans } }
+    let(:default_scope) { ->(pagination) { CatalogPlansQuery.call(organization:, pagination:).catalog_plans } }
+
+    it_behaves_like "a keyset-paginated query", table: "catalog_plans", index: "index_catalog_plans_by_cursor"
+  end
+
+  context "with ContractsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        ContractsQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {
+            external_customer_id: "customer",
+            plan_code: "plan",
+            status: ["active"],
+            billing_entity_ids: [SecureRandom.uuid],
+            has_rate_overrides: "true"
+          }
+        ).contracts
+      end
+    end
+    # The endpoint always filters on a status, active by default.
+    let(:default_scope) do
+      ->(pagination) { ContractsQuery.call(organization:, pagination:, filters: {status: ["active"]}).contracts }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "contracts", index: "index_contracts_by_cursor"
+  end
 end

@@ -5,10 +5,9 @@ class ProductCategoriesQuery < BaseQuery
 
   def call
     product_categories = base_scope.result
-    product_categories = paginate(product_categories)
     product_categories = apply_consistent_ordering(product_categories)
 
-    result.product_categories = product_categories
+    result.product_categories = paginate(product_categories)
     result
   end
 

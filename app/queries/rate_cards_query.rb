@@ -14,7 +14,6 @@ class RateCardsQuery < BaseQuery
 
   def call
     rate_cards = base_scope.result
-    rate_cards = paginate(rate_cards)
     rate_cards = apply_consistent_ordering(rate_cards)
 
     rate_cards = with_products(rate_cards) if filters.product_ids.present?
@@ -26,7 +25,7 @@ class RateCardsQuery < BaseQuery
     rate_cards = with_product_code(rate_cards) if filters.product_code.present?
     rate_cards = with_product_filter_code(rate_cards) if filters.product_filter_code.present?
 
-    result.rate_cards = rate_cards
+    result.rate_cards = paginate(rate_cards)
     result
   end
 
