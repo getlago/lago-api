@@ -46,6 +46,29 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
     )
   end
 
+  context "with adjacent tiers" do
+    let(:aggregation) { 15 }
+    let(:aggregation_count) { 1 }
+    let(:charge) do
+      create(
+        :graduated_percentage_charge,
+        properties: {
+          graduated_percentage_ranges: [
+            {from_value: 0, to_value: 10, flat_amount: "0", rate: "1"},
+            {from_value: 10, to_value: 20, flat_amount: "0", rate: "2"},
+            {from_value: 20, to_value: nil, flat_amount: "0", rate: "3"}
+          ]
+        }
+      )
+    end
+
+    it "bills each unit in a single tier" do
+      expect(apply_graduated_percentage_service.amount_details[:graduated_percentage_ranges].map { it[:units] })
+        .to eq(%w[10.0 5.0])
+      expect(apply_graduated_percentage_service.amount).to eq(BigDecimal("0.2"))
+    end
+  end
+
   context "when aggregation is 0" do
     let(:aggregation) { 0 }
     let(:aggregation_count) { 0 }

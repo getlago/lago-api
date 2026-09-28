@@ -4005,7 +4005,7 @@ input CreateRateCardRateInput {
   minAmountCents: BigInt
   rateCardId: ID!
   rateModel: RateCardRateModelEnum!
-  rateProperties: PropertiesInput!
+  rateProperties: RatePropertiesInput!
 }
 
 """
@@ -13235,7 +13235,7 @@ type RateCardRate {
   id: ID!
   minAmountCents: BigInt!
   rateModel: RateCardRateModelEnum!
-  rateProperties: Properties!
+  rateProperties: RateProperties!
   status: RateCardRateStatusEnum!
   updatedAt: ISO8601DateTime!
 }
@@ -13273,7 +13273,7 @@ input RateCardRateInput {
   effectiveFrom: ISO8601DateTime!
   minAmountCents: BigInt
   rateModel: RateCardRateModelEnum!
-  rateProperties: PropertiesInput!
+  rateProperties: RatePropertiesInput!
 }
 
 enum RateCardRateModelEnum {
@@ -13308,7 +13308,7 @@ type RateOverride {
   minAmountCents: BigInt!
   pricingUnitConversionRate: Float
   rateModel: RateCardRateModelEnum!
-  rateProperties: Properties!
+  rateProperties: RateProperties!
   updatedAt: ISO8601DateTime!
 }
 
@@ -13321,7 +13321,26 @@ input RateOverrideInput {
   minAmountCents: BigInt
   pricingUnitConversionRate: Float
   rateModel: RateCardRateModelEnum!
-  rateProperties: PropertiesInput!
+  rateProperties: RatePropertiesInput!
+}
+
+type RatePercentageTier {
+  flatAmount: String!
+  rate: String!
+  toValue: String
+}
+
+"""
+Graduated percentage tier of a catalog rate, starting where the previous tier ends
+"""
+input RatePercentageTierInput {
+  flatAmount: String!
+  rate: String!
+
+  """
+  Upper bound of the tier; null on the last tier
+  """
+  toValue: String
 }
 
 """
@@ -13336,6 +13355,61 @@ type RatePhase {
   position: Int!
   rateOverride: RateOverride
   updatedAt: ISO8601DateTime!
+}
+
+type RateProperties {
+  amount: String
+  customProperties: JSON
+  fixedAmount: String
+  freeUnits: BigInt
+  freeUnitsPerEvents: BigInt
+  freeUnitsPerTotalAggregation: String
+  graduatedPercentageRanges: [RatePercentageTier!]
+  graduatedRanges: [RateTier!]
+  packageSize: BigInt
+  perTransactionMaxAmount: String
+  perTransactionMinAmount: String
+  presentationGroupKeys: [PresentationGroupKey!]
+  pricingGroupKeys: [String!]
+  rate: String
+  volumeRanges: [RateTier!]
+}
+
+input RatePropertiesInput {
+  amount: String
+  customProperties: JSON
+  fixedAmount: String
+  freeUnits: BigInt
+  freeUnitsPerEvents: BigInt
+  freeUnitsPerTotalAggregation: String
+  graduatedPercentageRanges: [RatePercentageTierInput!]
+  graduatedRanges: [RateTierInput!]
+  packageSize: BigInt
+  perTransactionMaxAmount: String
+  perTransactionMinAmount: String
+  presentationGroupKeys: [PresentationGroupKeyInput!]
+  pricingGroupKeys: [String!]
+  rate: String
+  volumeRanges: [RateTierInput!]
+}
+
+type RateTier {
+  flatAmount: String!
+  perUnitAmount: String!
+  toValue: String
+}
+
+"""
+Graduated or volume tier of a catalog rate, starting where the previous tier ends
+"""
+input RateTierInput {
+  flatAmount: String!
+  perUnitAmount: String!
+
+  """
+  Upper bound of the tier; null on the last tier
+  """
+  toValue: String
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -15997,7 +16071,7 @@ input UpdateRateCardRateInput {
   id: ID!
   minAmountCents: BigInt
   rateModel: RateCardRateModelEnum
-  rateProperties: PropertiesInput
+  rateProperties: RatePropertiesInput
 }
 
 """

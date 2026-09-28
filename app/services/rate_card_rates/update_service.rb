@@ -50,6 +50,13 @@ module RateCardRates
         return result.single_validation_failure!(field: :effective_from, error_code: "must_not_be_before_today")
       end
 
+      if params[:rate_properties].is_a?(Hash)
+        normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties])
+        return result.fail_with_error!(normalized.error) if normalized.failure?
+
+        params[:rate_properties] = normalized.rate_properties
+      end
+
       assign_attributes
       rate_card_rate.save!
 

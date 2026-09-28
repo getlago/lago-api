@@ -3,10 +3,11 @@
 module ChargeModels
   module AmountDetails
     class RangeGraduatedPercentageService < ::BaseService
-      def initialize(range:, total_units:)
+      def initialize(range:, total_units:, adjacent_model: false)
         super
         @range = range
         @total_units = total_units
+        @adjacent_model = adjacent_model
       end
 
       def call
@@ -53,13 +54,15 @@ module ChargeModels
       def units
         # NOTE: total_units is higher than the to_value of the range
         if to_value && total_units >= to_value
+          return to_value - from_value if @adjacent_model
+
           return to_value - (from_value.zero? ? 1 : from_value) + 1
         end
 
         return total_units if from_value.zero?
 
         # NOTE: total_units is in the range
-        total_units - from_value + 1
+        @adjacent_model ? total_units - from_value : total_units - from_value + 1
       end
     end
   end

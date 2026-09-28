@@ -43,7 +43,7 @@ class RateOverride < ApplicationRecord
   def validate_properties
     return unless rate_model
 
-    validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS[rate_model.to_sym]
+    validator = ChargePropertiesValidation::RATE_PROPERTIES_VALIDATORS[rate_model.to_sym]
     validator ||= Charges::Validators::BaseService
 
     instance = validator.new(charge: self)
