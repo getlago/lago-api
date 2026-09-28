@@ -3,6 +3,8 @@
 module Api
   module V2
     class ContractRateCardsController < Api::V2::BaseController
+      cursor_paginated_index(ContractRateCard)
+
       def create
         return not_found_error(resource: "contract") unless find_contract
 
@@ -56,20 +58,19 @@ module Api
 
         result = ::ContractRateCardsQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
+          pagination: cursor,
           filters: {contract_id: find_contract.id}
         )
 
         if result.success?
+          page = ::CursorPagination::Page.new(records: result.contract_rate_cards.includes(:contract, :rate_card, :rate_phases), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              result.contract_rate_cards.includes(:contract, :rate_card, :rate_phases),
+              page.records,
               ::V2::ContractAppliedRateCardSerializer,
               collection_name: "applied_rate_cards",
-              meta: pagination_metadata(result.contract_rate_cards)
+              meta: page.meta
             )
           )
         else
