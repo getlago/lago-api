@@ -88,7 +88,7 @@ module BillingSegments
 
         invoice.fees.reload
 
-        Invoices::ComputeAmountsFromFees.call!(invoice:)
+        compute_taxes_and_totals(invoice)
         invoice.save!
         segments.each { |segment| segment.update!(status: :done, invoice:) }
       end
@@ -133,12 +133,30 @@ module BillingSegments
     end
 
     def apply_taxes(fee, segment)
+      return if customer_provider_taxation?
+
       ::Fees::ApplyTaxesService.call!(
         fee:,
         customer:,
         plan: segment.contract.catalog_plan
       )
       fee.save!
+    end
+
+    def compute_taxes_and_totals(invoice)
+      invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+      totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+      if totals_result.failure? && !totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+        totals_result.raise_if_error!
+      end
+    end
+
+    def customer_provider_taxation?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = customer.tax_customer.present?
     end
 
     def event_filters(metered_segments)
