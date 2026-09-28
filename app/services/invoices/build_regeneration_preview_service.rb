@@ -93,12 +93,22 @@ module Invoices
     end
 
     def refresh_prorated_amount(fee:, dup_fee:, properties:)
+      aggregation = aggregate_historical_usage(fee)
+      model_result = reprice_usage(fee:, aggregation:, properties:)
+      apply_preview_amount(fee:, dup_fee:, model_result:)
+    end
+
+    def historical_metered_item(fee)
       metered_item = Fees::ChargeService::MeteredItem.from_charge(
         charge: fee.charge,
         charge_filter: fee.charge_filter,
         boundaries: BillingPeriodBoundaries.from_fee(fee)
       )
-      metered_item = metered_item.with_default_filter unless fee.charge_filter
+      fee.charge_filter ? metered_item : metered_item.with_default_filter
+    end
+
+    def aggregate_historical_usage(fee)
+      metered_item = historical_metered_item(fee)
       matching = metered_item.matching_and_ignored_filters
       aggregation = BillableMetrics::AggregationFactory.new_instance(
         metered_item:,
@@ -119,11 +129,19 @@ module Invoices
 
       # Fee units are unprorated; only the event aggregation carries the period weighting.
       aggregation.full_units_number = fee.units
+      aggregation
+    end
+
+    def reprice_usage(fee:, aggregation:, properties:)
       model_result = ChargeModels::Factory.new_instance(
         pricing_structure: ChargeModels::PricingStructure.from_charge(fee.charge).with(properties:),
         aggregation_result: aggregation
       ).apply
       model_result.raise_if_error!
+      model_result
+    end
+
+    def apply_preview_amount(fee:, dup_fee:, model_result:)
       amount = Fees::AmountsService.call!(
         currency: fee.amount.currency,
         charge_model_result: model_result,
