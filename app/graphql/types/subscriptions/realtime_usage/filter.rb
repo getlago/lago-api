@@ -15,7 +15,7 @@ module Types
         field :values, Types::ChargeFilters::Values, null: false
 
         def invoice_display_name
-          object.charge_filter&.display_name
+          object.charge_filter&.invoice_display_name
         end
 
         def values

@@ -34,7 +34,8 @@ RSpec.describe Resolvers::Subscriptions::HourlyUsageResolver, clickhouse: {clean
   let(:subscription) { create(:subscription, customer:, plan:) }
 
   let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
-  let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "Europe") }
+  let(:invoice_display_name) { "Europe" }
+  let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name:) }
   let(:charge_filter_value) do
     create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
   end
@@ -114,6 +115,27 @@ RSpec.describe Resolvers::Subscriptions::HourlyUsageResolver, clickhouse: {clean
     expect(usage["hours"].first["breakdown"]).to eq(
       [{"chargeFilterId" => charge_filter.id, "units" => 12.0, "eventsCount" => 12, "other" => false}]
     )
+  end
+
+  context "without an invoice display name on the charge filter" do
+    let(:invoice_display_name) { nil }
+
+    it "returns a null invoice display name instead of the derived filter text" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          subscriptionId: subscription.id,
+          chargeId: charge.id,
+          fromDatetime: from_datetime.iso8601,
+          toDatetime: to_datetime.iso8601
+        }
+      )
+
+      expect(result["data"]["subscriptionHourlyUsage"]["filters"].map { |filter| filter["invoiceDisplayName"] }).to eq([nil])
+    end
   end
 
   it "returns a not found error when the charge does not belong to the subscription plan" do
