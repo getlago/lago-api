@@ -4,24 +4,31 @@ module Api
   module V2
     module RateCards
       class RatesController < Api::V2::BaseController
+        # Before the lookups, like the cursor of the paginated lists.
+        before_action :reject_offset_pagination!, only: :index
         before_action :find_rate_card
         before_action :find_rate, only: %i[show update destroy]
 
+        # Bounded by their rate card and read as a timeline: returned whole, without
+        # pagination.
         def index
           result = ::RateCardRatesQuery.call(
             organization: current_organization,
-            pagination: {page: params[:page], limit: params[:per_page] || PER_PAGE},
+            pagination: nil,
             filters: {rate_card_id: rate_card.id}
           )
 
-          render(
-            json: ::CollectionSerializer.new(
-              result.rate_card_rates,
-              ::V2::RateCardRateSerializer,
-              collection_name: "rates",
-              meta: pagination_metadata(result.rate_card_rates)
+          if result.success?
+            render(
+              json: ::CollectionSerializer.new(
+                result.rate_card_rates,
+                ::V2::RateCardRateSerializer,
+                collection_name: "rates"
+              )
             )
-          )
+          else
+            render_error_response(result)
+          end
         end
 
         def show
