@@ -123,6 +123,28 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       end
     end
 
+    context "with a dynamic charge" do
+      let(:charge) { create(:dynamic_charge, plan:, billable_metric:) }
+
+      it "sums the precise amounts of the window, per charge and per group" do
+        create_bucket(bucket: from_datetime, precise_total_amount_cents: "1000.000000000000001", grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime + 15.minutes, precise_total_amount_cents: "250.5", grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime, precise_total_amount_cents: "10", grouped_by: {"region" => "us"}.to_json)
+        create_bucket(bucket: to_datetime + 15.minutes, precise_total_amount_cents: "99999", grouped_by: {"region" => "us"}.to_json)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets.precise_total_amount_cents_for(charge_id: charge.id, charge_filter_id: ""))
+          .to eq(BigDecimal("1260.500000000000001"))
+        expect(usage_buckets.grouped_precise_total_amount_cents_for(charge_id: charge.id, charge_filter_id: "")).to match_array(
+          [
+            {groups: {"region" => "eu"}, value: BigDecimal("1250.500000000000001")},
+            {groups: {"region" => "us"}, value: BigDecimal(10)}
+          ]
+        )
+      end
+    end
+
     context "with a max metric" do
       let(:billable_metric) { create(:max_billable_metric, organization:) }
 

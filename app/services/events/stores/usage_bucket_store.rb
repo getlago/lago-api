@@ -25,6 +25,10 @@ module Events
         aggregation_result
       end
 
+      def sum_precise_total_amount_cents
+        usage_buckets.precise_total_amount_cents_for(charge_id:, charge_filter_id:)
+      end
+
       def max(with_count: true)
         aggregation_result
       end
@@ -47,6 +51,10 @@ module Events
         return super if columns
 
         grouped_aggregation_results
+      end
+
+      def grouped_sum_precise_total_amount_cents
+        usage_buckets.grouped_precise_total_amount_cents_for(charge_id:, charge_filter_id:)
       end
 
       def grouped_max(columns = nil, with_count: true)

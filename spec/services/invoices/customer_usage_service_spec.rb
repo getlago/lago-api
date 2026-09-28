@@ -1498,6 +1498,77 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
   end
 
+  describe "the buckets and the events store agree on a dynamic charge", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:dynamic_charge, plan:, billable_metric:) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # [value, precise_total_amount_cents]: the amount is not proportional to the units, so a fee
+    # priced from the units instead of the summed amounts shows.
+    let(:events) do
+      {
+        window_start => ["5.5", "1000.25"],
+        window_start + 20.minutes => ["4.25", "300.5"],
+        window_start + 23.minutes => ["1.25", "0.25"],
+        window_start + 3.hours => ["10.0", "199"]
+      }
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      events.each do |at, (value, precise_total_amount_cents)|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f,
+          precise_total_amount_cents:
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      events.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, rows|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: rows.sum { |_, (value, _)| value.to_d }.to_s,
+          precise_total_amount_cents: rows.sum { |_, (_, amount)| amount.to_d }.to_s,
+          events_count: rows.size,
+          aggregation_type: "sum_agg"
+        )
+      end
+    end
+
+    it "returns the same units, event count and amount either way" do
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count,
+        amount_cents: delegated.fees.first.amount_cents
+      )
+    end
+
+    it "prices the fee from the summed precise amounts of the window" do
+      expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 1500)
+    end
+  end
+
   describe "the buckets and the events store agree when the caller skips grouping", clickhouse: {clean_before: true} do
     include_context "with realtime usage availability"
 

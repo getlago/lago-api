@@ -231,7 +231,7 @@ RSpec.describe RealtimeUsage do
     it "excludes exactly these charge models" do
       excluded = Charge::CHARGE_MODELS.map(&:to_s) - described_class::SUPPORTED_CHARGE_MODELS
 
-      expect(excluded).to match_array(%w[percentage dynamic custom])
+      expect(excluded).to match_array(%w[percentage custom])
     end
 
     it "excludes exactly these aggregation types" do
