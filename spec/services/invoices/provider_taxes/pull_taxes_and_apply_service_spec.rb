@@ -619,6 +619,57 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         File.read(path)
       end
 
+      context "when one Product has no mapping and no fallback" do
+        let(:integration_collection_mapping) { nil }
+        let(:mapped_product) { create(:product, :fixed, organization:) }
+        let(:unmapped_product) { create(:product, :fixed, organization:) }
+        let(:mapped_rate_card) { create(:rate_card, organization:, product: mapped_product) }
+        let(:unmapped_rate_card) { create(:rate_card, organization:, product: unmapped_product) }
+        let(:mapped_rate) { create(:rate_card_rate, organization:, rate_card: mapped_rate_card) }
+        let(:unmapped_rate) { create(:rate_card_rate, organization:, rate_card: unmapped_rate_card) }
+        let(:fee_subscription) do
+          create(:product_fee, invoice:, subscription:, rate_card_rate: mapped_rate, amount_cents: 2_000)
+        end
+        let(:fee_charge) do
+          create(:product_fee, invoice:, subscription:, rate_card_rate: unmapped_rate, amount_cents: 1_000)
+        end
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
+          response = JSON.parse(File.read(path))
+          response["failedInvoices"].first["validation_errors"] =
+            "Request body: lineItems: productExternalId must contain at least one character"
+          response.to_json
+        end
+
+        before do
+          create(
+            :anrok_mapping,
+            integration: integration_tax,
+            organization:,
+            billing_entity:,
+            mappable: mapped_product,
+            settings: {external_id: "mapped-product"}
+          )
+        end
+
+        it "fails the invoice instead of finalizing it without provider taxes" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "failed", tax_status: "failed")
+          expect(invoice).not_to be_finalized
+          expect(invoice.error_details.tax_error.sole.details).to include("tax_error" => "validationError")
+          expect(fee_subscription.reload.applied_taxes).to be_empty
+          expect(fee_charge.reload.applied_taxes).to be_empty
+          expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+            expect(payload.first["fees"]).to contain_exactly(
+              hash_including("item_id" => fee_subscription.id, "item_code" => "mapped-product"),
+              hash_including("item_id" => fee_charge.id, "item_code" => nil)
+            )
+          end
+        end
+      end
+
       it "puts invoice in failed status" do
         result = pull_taxes_service.call
 
