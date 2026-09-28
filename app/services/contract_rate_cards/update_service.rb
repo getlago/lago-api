@@ -25,14 +25,19 @@ module ContractRateCards
         return result.single_validation_failure!(field: :billing_anchor_date, error_code: "value_is_invalid")
       end
 
-      contract_rate_card.units = params[:units] if params.key?(:units)
-      contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
-      contract_rate_card.save!
+      contract_rate_card.with_lock do
+        contract_rate_card.units = params[:units] if params.key?(:units)
+        contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
+        contract_rate_card.save!
+        BillingCycles::RefreshService.call!(contract_rate_card:)
+      end
 
       result.contract_rate_card = contract_rate_card
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => error
+      result.fail_with_error!(error)
     end
 
     private

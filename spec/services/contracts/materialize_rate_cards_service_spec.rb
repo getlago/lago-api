@@ -148,6 +148,15 @@ RSpec.describe Contracts::MaterializeRateCardsService do
       expect(next_billing_at).to eq(Time.utc(2026, 2, 1))
     end
 
+    it "creates the first cycle with the contract before any segment is billed" do
+      card = result.contract_rate_cards.sole
+
+      expect(card.billing_cycles.sole).to have_attributes(
+        cycle_index: 0, started_at: Time.utc(2026, 1, 1), ended_at: Time.utc(2026, 2, 1)
+      )
+      expect(card.billing_segments).to be_empty
+    end
+
     context "when the rate card bills in advance" do
       let(:rate_card) { create(:rate_card, :advance, organization:) }
 

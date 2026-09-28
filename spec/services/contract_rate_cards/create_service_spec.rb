@@ -25,6 +25,25 @@ RSpec.describe ContractRateCards::CreateService do
     expect(card.rate_phases.sole.code).to eq("default")
   end
 
+  context "when the card has a rate" do
+    let(:contract) do
+      create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.utc(2026, 10, 15),
+        billing_anchor_date: Date.new(2026, 10, 1))
+    end
+
+    before { create(:rate_card_rate, rate_card:, organization:, effective_from: Time.utc(2026, 10, 1)) }
+
+    around { |example| travel_to(Time.utc(2026, 10, 10)) { example.run } }
+
+    it "creates the first cycle when attaching the card directly" do
+      expect(result).to be_success
+      expect(result.contract_rate_card.billing_cycles.sole).to have_attributes(
+        cycle_index: 0, started_at: Time.utc(2026, 10, 1), ended_at: Time.utc(2026, 11, 1)
+      )
+      expect(result.contract_rate_card.billing_segments).to be_empty
+    end
+  end
+
   context "when a billing_anchor_date is provided" do
     let(:params) { super().merge(billing_anchor_date: "2026-03-01") }
 

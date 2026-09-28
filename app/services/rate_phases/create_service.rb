@@ -70,6 +70,9 @@ module RatePhases
           name: params[:name],
           rate_override: build_override
         )
+        if contract_rate_card
+          BillingCycles::RefreshService.call!(contract_rate_card:)
+        end
       end
 
       result

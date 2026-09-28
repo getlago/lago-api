@@ -30,7 +30,7 @@ module Contracts
             **contract.default_rate_card_lifecycle
           )
           copy_rate_phases(plan_rate_card, card)
-          card.update!(next_billing_at: initial_next_billing_at(card))
+          BillingCycles::RefreshService.call!(contract_rate_card: card)
           materialized << card
         end
       end
@@ -64,17 +64,6 @@ module Contracts
       copy.billable_metric = card.rate_card.product.billable_metric
       copy.save!
       copy
-    end
-
-    def initial_next_billing_at(card)
-      build = Billing::RateCards::BuildScheduleService.call(contract_rate_card: card)
-
-      if build.success?
-        # Backdated contracts join the current period; an ended schedule has no next date.
-        build.schedule.billing_at_covering(Time.current) || card.next_billing_at
-      else
-        card.next_billing_at
-      end
     end
   end
 end

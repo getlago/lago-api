@@ -11,15 +11,16 @@ module BillingSegments
   class MissingBillableSegmentsService < BaseService
     Result = BaseResult[:billable_segments]
 
-    def initialize(contract_rate_card:, schedule:, timestamp:)
+    def initialize(contract_rate_card:, schedule:, timestamp:, billing_cycles: nil)
       @contract_rate_card = contract_rate_card
       @schedule = schedule
       @timestamp = timestamp
+      @billing_cycles = billing_cycles
       super
     end
 
     def call
-      due = schedule.segments_due_by(timestamp)
+      due = schedule.segments_due_by(timestamp, cycles: billing_cycles)
 
       if due.empty?
         result.billable_segments = []
@@ -39,7 +40,7 @@ module BillingSegments
 
     private
 
-    attr_reader :contract_rate_card, :schedule, :timestamp
+    attr_reader :contract_rate_card, :schedule, :timestamp, :billing_cycles
 
     # The second read of billing_segments — the first is the schedule's resume_at, a scalar that
     # cannot express a hole. The query it costs buys a walk bounded by the last stored cycle

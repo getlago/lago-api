@@ -56,7 +56,10 @@ module BillingSegments
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
       pricing_unit = pricing_unit_of(card)
 
-      missing = MissingBillableSegmentsService.call!(contract_rate_card: card, schedule:, timestamp:)
+      billing_cycles = BillingCycles::MaterializeService.call!(
+        contract_rate_card: card, cycles: schedule.cycles_through(timestamp)
+      ).billing_cycles
+      missing = MissingBillableSegmentsService.call!(contract_rate_card: card, schedule:, timestamp:, billing_cycles:)
       written = CreateService.call!(
         contract_rate_card: card,
         billable_segments: missing.billable_segments,

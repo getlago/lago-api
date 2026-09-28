@@ -228,15 +228,16 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     # The anchor is a reference day, not a start date: the weekly grid runs backwards from
-    # Aug 3 through Jul 27, Jul 20, Jul 13 and Jul 6, and the card's own start opens the first
-    # cycle on Jul 1 rather than on the boundary before it.
-    it "puts the cycles on the anchor's grid and clamps the first to the card start" do
-      windows = schedule.segments_due_by(Time.utc(2026, 8, 20)).group_by(&:cycle_started_at)
+    # Aug 3 through Jul 27, Jul 20, Jul 13, Jul 6 and Jun 29. Service starts inside cycle zero.
+    it "puts full cycles on the anchor's grid and starts segments at the card start" do
+      segments = schedule.segments_due_by(Time.utc(2026, 8, 20))
+      expect(segments.first.started_at).to eq(Time.utc(2026, 7, 1))
+      windows = segments.group_by(&:cycle_started_at)
         .map { |started_at, group| [started_at.to_fs(:db), group.last.ended_at.to_fs(:db)] }
 
       expect(windows).to eq(
         [
-          ["2026-07-01 00:00:00", "2026-07-06 00:00:00"],
+          ["2026-06-29 00:00:00", "2026-07-06 00:00:00"],
           ["2026-07-06 00:00:00", "2026-07-13 00:00:00"],
           ["2026-07-13 00:00:00", "2026-07-20 00:00:00"],
           ["2026-07-20 00:00:00", "2026-07-27 00:00:00"],

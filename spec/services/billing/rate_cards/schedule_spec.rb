@@ -45,6 +45,28 @@ RSpec.describe Billing::RateCards::Schedule do
     cycles.map { |cycle| "#{cycle.started_at.to_date} -> #{(cycle.ended_at - 1.day).to_date}" }
   end
 
+  describe "segments from persisted cycles" do
+    subject(:segments) { schedule.segments_due_by(Time.utc(2022, 2, 1), cycles: [persisted_cycle]) }
+
+    let(:persisted_cycle) do
+      build_stubbed(:billing_cycle, cycle_index: 1, started_at: Time.utc(2022, 1, 15),
+        ended_at: Time.utc(2022, 1, 22), timezone:)
+    end
+    let(:phases) do
+      [phase(cycle_count: 1, every: 1, unit: :month, code: "intro"),
+        phase(cycle_count: nil, every: 1, unit: :month, code: "regular")]
+    end
+    let(:ends_at) { Time.utc(2022, 1, 20) }
+
+    it "uses the stored boundaries for proration and the stored index for the phase" do
+      expect(segments.sole).to have_attributes(
+        cycle_index: 1, cycle_started_at: persisted_cycle.started_at,
+        started_at: Time.utc(2022, 1, 15), ended_at: ends_at,
+        proration_ratio: 5.fdiv(7), rate_phase_code: "regular"
+      )
+    end
+  end
+
   describe "validation" do
     # Without a rate the walk breaks before producing anything and answers "no cycles", which
     # reads as a card that never bills rather than as a card built wrong. BuildScheduleService
@@ -729,19 +751,18 @@ RSpec.describe Billing::RateCards::Schedule do
       end
 
       expect(windows).to eq(
-        [["2026-08-12 -> 2026-08-17", "weekly_intro"],
+        [["2026-08-10 -> 2026-08-17", "weekly_intro"],
           ["2026-08-17 -> 2026-08-24", "weekly_intro"],
           ["2026-08-24 -> 2026-08-31", "weekly_intro"],
           ["2026-08-31 -> 2026-09-30", "standard"]]
       )
     end
 
-    # A cycle is one turn of the interval clamped by the card's life, so the anchor decides
-    # where the boundary falls and the card's start decides where the first cycle opens.
-    it "opens the first cycle where the card starts, not on the anchor" do
+    it "keeps the full first cycle and starts its segments when service begins" do
       started_at, segments = slices_by_cycle.first
 
-      expect(started_at).to eq(Time.utc(2026, 8, 12))
+      expect(started_at).to eq(Time.utc(2026, 8, 10))
+      expect(segments.first.started_at).to eq(Time.utc(2026, 8, 12))
       expect(segments.last.ended_at).to eq(Time.utc(2026, 8, 17))
     end
 

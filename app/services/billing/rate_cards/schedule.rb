@@ -4,22 +4,30 @@ module Billing
   module RateCards
     class Schedule
       def initialize(rates:, terms:, phases:, starts_at:, anchor_date:, timezone:, ends_at: nil, resume_at: nil)
-        if resume_at && resume_at < starts_at.in_time_zone(timezone).beginning_of_day
-          raise ArgumentError, "resume_at #{resume_at} precedes the card's start"
-        end
-
         @rates = rates
         @terms = terms
         @timezone = timezone
+        @starts_at = starts_at.in_time_zone(timezone).beginning_of_day
+        @ends_at = ends_at
         @resume_at = resume_at
         @walker = CycleWalker.new(rates:, phases:, starts_at:, anchor_date:, timezone:, ends_at:)
+
+        if resume_at && resume_at < @starts_at && resume_at < (walker.start&.started_at || @starts_at)
+          raise ArgumentError, "resume_at #{resume_at} precedes the card's first cycle"
+        end
+      end
+
+      def first_cycle
+        walker.start
+      end
+
+      def cycles_through(timestamp)
+        walker.walk_to(timestamp, from: resume_at)
       end
 
       # A rate change can make a segment due before its cycle ends.
-      def segments_due_by(timestamp)
-        cycles = walker.walk_to(timestamp, from: resume_at)
-
-        billable_segments_of(cycles).select do |segment|
+      def segments_due_by(timestamp, cycles: nil)
+        billable_segments_of(cycles || cycles_through(timestamp)).select do |segment|
           segment.billing_at <= timestamp
         end
       end
@@ -66,7 +74,7 @@ module Billing
 
       private
 
-      attr_reader :rates, :terms, :timezone, :resume_at, :walker
+      attr_reader :rates, :terms, :timezone, :resume_at, :walker, :starts_at, :ends_at
 
       def segment_at(timestamp)
         cycle = walker.resume(timestamp)
@@ -80,7 +88,7 @@ module Billing
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|
-          Segments.within(cycle, rates:).filter_map do |segment|
+          Segments.within(cycle, rates:, starts_at:, ends_at:).filter_map do |segment|
             if segment.rate
               build_billable_segment(cycle:, segment:)
             end
@@ -90,21 +98,24 @@ module Billing
 
       def build_billable_segment(cycle:, segment:)
         proration_ratio = if terms.prorated
-          cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)
+          Days.between(segment.started_at, segment.ended_at, timezone: cycle.timezone)
+            .fdiv(Days.between(cycle.started_at, cycle.ended_at, timezone: cycle.timezone))
         else
           1.0
         end
 
+        phase = walker.phase_by_index(cycle.cycle_index)
+
         BillableSegment.new(
-          cycle_index: cycle.index,
+          cycle_index: cycle.cycle_index,
           cycle_started_at: cycle.started_at,
           started_at: segment.started_at,
           ended_at: segment.ended_at,
           billing_at: terms.billing_at_for(segment),
           rate: segment.rate,
-          rate_override: cycle.phase.rate_override,
+          rate_override: phase.rate_override,
           proration_ratio:,
-          rate_phase_code: cycle.phase.code
+          rate_phase_code: phase.code
         )
       end
     end

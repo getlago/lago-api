@@ -72,6 +72,10 @@ module RatePhases
         if superseded_override_id && superseded_override_id != rate_phase.rate_override_id
           RateOverride.find_by(id: superseded_override_id)&.discard!
         end
+
+        if rate_phase.contract_rate_card
+          BillingCycles::RefreshService.call!(contract_rate_card: rate_phase.contract_rate_card)
+        end
       end
 
       result.rate_phase = rate_phase

@@ -49,6 +49,17 @@ RSpec.describe BillingSegments::ScheduleService do
       )
     end
 
+    it "materializes completed periods and the open period before it is billable" do
+      result
+
+      expect(contract_rate_card.billing_cycles.order(:cycle_index).pluck(:cycle_index, :started_at, :ended_at)).to eq([
+        [0, Time.utc(2026, 1, 1), Time.utc(2026, 2, 1)],
+        [1, Time.utc(2026, 2, 1), Time.utc(2026, 3, 1)],
+        [2, Time.utc(2026, 3, 1), Time.utc(2026, 4, 1)]
+      ])
+      expect(result.billing_segments.map(&:cycle_started_at)).to eq([Time.utc(2026, 1, 1), Time.utc(2026, 2, 1)])
+    end
+
     it "advances the card's clock past the run" do
       expect { result }
         .to change { contract_rate_card.reload.next_billing_at }
@@ -58,6 +69,40 @@ RSpec.describe BillingSegments::ScheduleService do
     it "is idempotent: a second run writes nothing more" do
       result
       expect { described_class.call(customer:, timestamp:) }.not_to change(BillingSegment, :count)
+    end
+
+    context "when the open cycle was materialized by the previous run" do
+      let(:timestamp) { Time.utc(2026, 4, 1) }
+
+      before { described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)) }
+
+      it "bills that period once and opens the following cycle" do
+        expect(result.billing_segments.map(&:started_at)).to eq([Time.utc(2026, 3, 1)])
+        expect(contract_rate_card.billing_cycles.order(:cycle_index).pluck(:cycle_index)).to eq([0, 1, 2, 3])
+      end
+    end
+
+    context "when a weekly intro phase ends" do
+      let(:timestamp) { Time.utc(2026, 1, 15) }
+      let(:override) do
+        create(:rate_override, organization:, billing_interval_count: 1, billing_interval_unit: "week")
+      end
+
+      before do
+        create(:rate_phase, :contract_level, contract_rate_card:, organization:,
+          code: "intro", billing_interval_cycle_count: 2, rate_override: override)
+        contract_rate_card.update!(next_billing_at: Time.utc(2026, 1, 8))
+      end
+
+      it "uses each persisted index for its phase and opens the monthly period" do
+        expect(result.billing_segments.map(&:rate_override_id)).to eq([override.id, override.id])
+        expect(contract_rate_card.billing_cycles.order(:cycle_index).pluck(:cycle_index, :started_at, :ended_at)).to eq([
+          [0, Time.utc(2026, 1, 1), Time.utc(2026, 1, 8)],
+          [1, Time.utc(2026, 1, 8), Time.utc(2026, 1, 15)],
+          [2, Time.utc(2026, 1, 15), Time.utc(2026, 2, 15)]
+        ])
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+      end
     end
 
     # The clock is the only trigger. A rate added before the saved clock splits a cycle and
@@ -135,9 +180,9 @@ RSpec.describe BillingSegments::ScheduleService do
     # The filter is stubbed out here to reach it.
     context "when an overlapping segment reaches the database" do
       before do
-        allow(BillingSegments::MissingBillableSegmentsService).to receive(:call!) do |contract_rate_card:, schedule:, timestamp:|
+        allow(BillingSegments::MissingBillableSegmentsService).to receive(:call!) do |contract_rate_card:, schedule:, timestamp:, billing_cycles:|
           BillingSegments::MissingBillableSegmentsService::Result.new.tap do |unfiltered|
-            unfiltered.billable_segments = schedule.segments_due_by(timestamp)
+            unfiltered.billable_segments = schedule.segments_due_by(timestamp, cycles: billing_cycles)
           end
         end
 
@@ -161,8 +206,8 @@ RSpec.describe BillingSegments::ScheduleService do
         expect(result.error.messages).to eq({billing_segment: ["overlapping_periods"]})
       end
 
-      it "writes nothing" do
-        expect { result }.not_to change(BillingSegment, :count)
+      it "rolls back both segments and cycles" do
+        expect { result }.not_to change { [BillingSegment.count, BillingCycle.count] }
       end
 
       it "reports no segments, the rollback having undone the ones it had built" do
