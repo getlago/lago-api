@@ -115,14 +115,13 @@ class ContractsQuery < BaseQuery
     )
   end
 
-  # A contract has rate overrides when a current or scheduled card carries an
-  # override on one of its own phases. Own phases only: a plan-level override
-  # is the plan's shared pricing, not a per-contract one, so an inherited phase
-  # does not count. Live cards only: an ended card is history, dropped from the
-  # applied-card count, so an override on it must not flip the flag. The id
-  # subquery lets the boolean invert without a row-duplicating join.
+  # A contract has rate overrides when one of its cards carries an override on
+  # one of its own phases. Own phases only: a plan-level override is the plan's
+  # shared pricing, not a per-contract one, so an inherited phase does not
+  # count. The id subquery lets the boolean invert without a row-duplicating
+  # join.
   def with_rate_overrides(scope)
-    overriding_ids = ContractRateCard.current_and_scheduled
+    overriding_ids = ContractRateCard
       .where(organization:)
       .joins(:rate_phases)
       .where.not(rate_phases: {rate_override_id: nil})

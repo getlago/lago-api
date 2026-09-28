@@ -16,7 +16,7 @@ class ContractRateCardsQuery < BaseQuery
     contract_rate_cards = if order == :product_category
       order_by_product_category(contract_rate_cards).order(:effective_date, :id)
     else
-      # Same order as a contract's appliedRateCards field (Sources::ContractCurrentRateCards).
+      # Same order as a contract's appliedRateCards field (Sources::ContractAppliedRateCards).
       apply_consistent_ordering(contract_rate_cards, default_order: {effective_date: :asc})
     end
 
@@ -26,11 +26,8 @@ class ContractRateCardsQuery < BaseQuery
 
   private
 
-  # current_and_scheduled only: the show endpoint and serializer resolve a
-  # card by code through the same scope, so an ended card must not appear in
-  # the list and then 404 when fetched.
   def base_scope
-    ContractRateCard.where(organization:).current_and_scheduled
+    ContractRateCard.where(organization:)
   end
 
   def with_contract(scope)

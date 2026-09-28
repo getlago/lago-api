@@ -1754,7 +1754,6 @@ type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
-  endedDate: ISO8601Date
   id: ID!
   nextBillingAt: ISO8601DateTime
   product: Product!
