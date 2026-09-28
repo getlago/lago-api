@@ -2,7 +2,8 @@ concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
 timeout: 25
 retry: 1
 queues:
-  - webhook_worker
+  - [webhook_worker_high_priority, 3]
+  - [webhook_worker, 1]
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
