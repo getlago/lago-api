@@ -62,6 +62,15 @@ RSpec.describe PaymentTerm do
       expect(described_class.from_h(term_type: "days_end_of_month", days: 30).net_payment_term_alias).to be_nil
       expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15).net_payment_term_alias).to be_nil
     end
+
+    context "when the term type is unknown" do
+      subject(:term) { described_class.from_h(term_type: "fortnightly") }
+
+      it "raises an ArgumentError" do
+        expect { term.net_payment_term_alias }
+          .to raise_error(ArgumentError, "unknown term_type: fortnightly")
+      end
+    end
   end
 
   describe "#due_date_for" do
