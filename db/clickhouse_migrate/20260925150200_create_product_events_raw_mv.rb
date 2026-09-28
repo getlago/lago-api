@@ -6,7 +6,7 @@ class CreateProductEventsRawMv < ActiveRecord::Migration[8.0]
       SELECT
         organization_id,
         external_customer_id,
-        external_subscription_id,
+        external_contract_id,
         transaction_id,
         toDateTime64(timestamp, 3) AS timestamp,
         code,

@@ -18,7 +18,7 @@ end
 #  properties                 :string           not null
 #  timestamp                  :datetime         not null
 #  external_customer_id       :string           not null
-#  external_subscription_id   :string           not null
+#  external_contract_id       :string           not null
 #  organization_id            :string           not null
 #  transaction_id             :string           not null
 #

@@ -2,7 +2,7 @@ CREATE TABLE default.product_events_raw
 (
     `organization_id` String,
     `external_customer_id` String,
-    `external_subscription_id` String,
+    `external_contract_id` String,
     `transaction_id` String,
     `timestamp` DateTime64(3),
     `code` String,
@@ -11,5 +11,5 @@ CREATE TABLE default.product_events_raw
     `precise_total_amount_cents` Nullable(Decimal(40, 15))
 )
 ENGINE = SharedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}')
-ORDER BY (organization_id, external_subscription_id, code, transaction_id, timestamp)
+ORDER BY (organization_id, external_contract_id, code, transaction_id, timestamp)
 SETTINGS index_granularity = 8192

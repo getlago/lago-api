@@ -14,7 +14,7 @@ class CreateProductEventsRawQueue < ActiveRecord::Migration[8.0]
     create_table :product_events_raw_queue, id: false, options: do |t|
       t.string :organization_id, null: false
       t.string :external_customer_id, null: false
-      t.string :external_subscription_id, null: false
+      t.string :external_contract_id, null: false
       t.string :transaction_id, null: false
       t.string :timestamp, null: false
       t.string :code, null: false

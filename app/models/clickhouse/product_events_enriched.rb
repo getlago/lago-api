@@ -3,7 +3,7 @@
 module Clickhouse
   class ProductEventsEnriched < BaseRecord
     self.table_name = "product_events_enriched"
-    self.primary_key = [:organization_id, :code, :external_subscription_id, :timestamp]
+    self.primary_key = [:organization_id, :code, :external_contract_id, :timestamp]
   end
 end
 
@@ -21,7 +21,7 @@ end
 #  sorted_properties          :string           not null
 #  timestamp                  :datetime         not null, primary key
 #  value                      :string
-#  external_subscription_id   :string           not null, primary key
+#  external_contract_id       :string           not null, primary key
 #  organization_id            :string           not null, primary key
 #  transaction_id             :string           not null
 #

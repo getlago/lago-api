@@ -28,12 +28,14 @@ module Events
 
     # Product catalog organizations get their own pipeline, falling back to the
     # legacy topic until the product topic is configured.
+    def product_pipeline?
+      return @product_pipeline if defined?(@product_pipeline)
+
+      @product_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
+    end
+
     def topic
-      @topic ||= if organization.product_catalog_enabled?
-        ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].presence || ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
-      else
-        ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
-      end
+      product_pipeline? ? ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] : ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
     end
 
     def build_message(event)
@@ -47,7 +49,7 @@ module Events
       {
         organization_id: organization.id,
         external_customer_id: event.external_customer_id,
-        external_subscription_id: event.external_subscription_id,
+        **scope_key(event),
         transaction_id: event.transaction_id,
         # NOTE: Removes trailing 'Z' to allow clickhouse parsing
         timestamp: event.timestamp.to_f.to_s,
@@ -61,6 +63,16 @@ module Events
           api_post_processed: !organization.clickhouse_events_store?
         }
       }
+    end
+
+    # The create services store external_contract_id in external_subscription_id;
+    # the product tables key on the contract.
+    def scope_key(event)
+      if product_pipeline?
+        {external_contract_id: event.external_subscription_id}
+      else
+        {external_subscription_id: event.external_subscription_id}
+      end
     end
   end
 end

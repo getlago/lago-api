@@ -1,7 +1,7 @@
 CREATE TABLE default.product_events_enriched
 (
     `organization_id` String,
-    `external_subscription_id` String,
+    `external_contract_id` String,
     `code` String,
     `timestamp` DateTime64(3),
     `transaction_id` String,
@@ -14,6 +14,6 @@ CREATE TABLE default.product_events_enriched
     `attribution_labels` Map(String, String)
 )
 ENGINE = SharedReplacingMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}', timestamp)
-PRIMARY KEY (organization_id, code, external_subscription_id, toDate(timestamp))
-ORDER BY (organization_id, code, external_subscription_id, toDate(timestamp), timestamp, transaction_id)
+PRIMARY KEY (organization_id, code, external_contract_id, toDate(timestamp))
+ORDER BY (organization_id, code, external_contract_id, toDate(timestamp), timestamp, transaction_id)
 SETTINGS index_granularity = 8192

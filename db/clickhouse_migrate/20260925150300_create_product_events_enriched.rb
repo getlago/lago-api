@@ -7,13 +7,13 @@ class CreateProductEventsEnriched < ActiveRecord::Migration[8.0]
     PRIMARY KEY (
       organization_id,
       code,
-      external_subscription_id,
+      external_contract_id,
       toDate(timestamp)
     )
     ORDER BY (
       organization_id,
       code,
-      external_subscription_id,
+      external_contract_id,
       toDate(timestamp),
       timestamp,
       transaction_id
@@ -22,7 +22,7 @@ class CreateProductEventsEnriched < ActiveRecord::Migration[8.0]
 
     create_table :product_events_enriched, id: false, options: do |t|
       t.string :organization_id, null: false
-      t.string :external_subscription_id, null: false
+      t.string :external_contract_id, null: false
       t.string :code, null: false
       t.datetime :timestamp, null: false, precision: 3
       t.string :transaction_id, null: false

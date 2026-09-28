@@ -72,16 +72,27 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
               expect(messages.map { it[:topic] }).to eq(%w[product_events_raw product_events_raw])
             end
           end
+
+          it "keys the payload by contract" do
+            producer_service.call
+
+            expect(karafka_producer).to have_received(:produce_many_async) do |messages|
+              payloads = messages.map { JSON.parse(it[:payload]) }
+              expect(payloads.map { it["external_contract_id"] }).to eq(events.map(&:external_subscription_id))
+              expect(payloads.flat_map(&:keys)).not_to include("external_subscription_id")
+            end
+          end
         end
 
         context "without the product topic configured" do
           before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
 
-          it "falls back to the raw events topic" do
+          it "falls back to the raw events topic with the legacy payload" do
             producer_service.call
 
             expect(karafka_producer).to have_received(:produce_many_async) do |messages|
               expect(messages.map { it[:topic] }).to eq(%w[raw_events raw_events])
+              expect(messages.map { JSON.parse(it[:payload])["external_subscription_id"] }).to eq(events.map(&:external_subscription_id))
             end
           end
         end
