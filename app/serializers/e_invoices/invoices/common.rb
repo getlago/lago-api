@@ -52,7 +52,7 @@ module EInvoices
       end
 
       def taxes(&block)
-        grouped_fees = invoice.fees.group_by(&:taxes_rate)
+        grouped_fees = invoice.fees.group_by(&:taxes_rate).sort_by(&:first).to_h
         # Tax bases retain their precision, while monetary subtotals must add up to
         # the booked invoice total, including any rounding across fees or tax rates.
         booked_amounts = Integrations::Aggregator::Taxes::Allocation.by_group(
@@ -77,7 +77,7 @@ module EInvoices
       def allowances_per_tax_rate
         fees_total = invoice.fees.sum(:precise_amount_cents)
 
-        invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
+        invoice.fees.group_by(&:taxes_rate).sort_by(&:first).map do |tax_rate, fees|
           total_amount = fees.sum(&:precise_amount_cents)
 
           if tax_rate > 0

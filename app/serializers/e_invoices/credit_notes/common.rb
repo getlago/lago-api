@@ -16,7 +16,7 @@ module EInvoices
       end
 
       def taxes(&block)
-        grouped_items = credit_note.items.group_by { |item| item.fee.taxes_rate }
+        grouped_items = credit_note.items.group_by { |item| item.fee.taxes_rate }.sort_by(&:first).to_h
         basis_amounts = grouped_items.map do |tax_rate, items|
           items.sum(&:precise_amount_cents) - (allowances_per_tax_rate[tax_rate] || 0)
         end
@@ -46,7 +46,7 @@ module EInvoices
         credit_note.items.each_with_object(Hash.new(0)) do |item, rates|
           item_fee_rate = item.fee.amount_cents.zero? ? 0 : item.precise_amount_cents.fdiv(item.fee.precise_amount_cents)
           rates[item.fee.taxes_rate] += item.fee.precise_coupons_amount_cents * item_fee_rate
-        end
+        end.sort.to_h
       end
 
       private
