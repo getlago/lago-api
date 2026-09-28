@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Value object for a structured payment term, stored as jsonb tagged by term_type
-class PaymentTerm
+class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
   FIELDS_BY_TERM_TYPE = {
     "due_on_receipt" => [],
     "net" => ["days"],
@@ -10,8 +10,6 @@ class PaymentTerm
     "days_end_of_month" => ["days"],
     "day_of_month" => ["day_of_month", "month_offset"]
   }.freeze
-
-  attr_reader :term_type, :days, :day_of_month, :month_offset
 
   def self.from_h(hash)
     hash = hash.to_h.with_indifferent_access
@@ -25,10 +23,16 @@ class PaymentTerm
   end
 
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
-    @term_type = term_type.to_s
-    @days = days&.to_i if carries?("days")
-    @day_of_month = day_of_month&.to_i if carries?("day_of_month")
-    @month_offset = normalized_month_offset(month_offset)
+    term_type = term_type.to_s
+    fields = FIELDS_BY_TERM_TYPE.fetch(term_type, [])
+
+    super(
+      term_type:,
+      days: (days&.to_i if fields.include?("days")),
+      day_of_month: (day_of_month&.to_i if fields.include?("day_of_month")),
+      # If absent - next month (1) by default.
+      month_offset: ((month_offset || 1).to_i if fields.include?("month_offset"))
+    )
   end
 
   def to_h
@@ -40,11 +44,13 @@ class PaymentTerm
     }.compact
   end
 
-  # N for net, 0 for due_on_receipt, nil for the four types the integer cannot represent.
+  # The legacy integer can only represent net and due_on_receipt.
   def net_payment_term_alias
     case term_type
     when "net" then days
     when "due_on_receipt" then 0
+    when "end_of_month", "net_end_of_month", "days_end_of_month", "day_of_month" then nil
+    else raise ArgumentError, "unknown term_type: #{term_type}"
     end
   end
 
@@ -63,18 +69,6 @@ class PaymentTerm
   end
 
   private
-
-  def carries?(field)
-    FIELDS_BY_TERM_TYPE.fetch(term_type, []).include?(field)
-  end
-
-  # Only day_of_month terms carry a month_offset.
-  # If absent - next month (1) by default.
-  def normalized_month_offset(month_offset)
-    if carries?("month_offset")
-      (month_offset || 1).to_i
-    end
-  end
 
   # month_offset → clamp → roll forward (only reachable with offset 0) → re-clamp
   def day_of_month_due_date(issuing_date)
