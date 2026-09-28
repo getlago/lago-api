@@ -138,7 +138,8 @@ module Api
       end
 
       # external_customer_id and external_id are set at creation and address the
-      # contract; the rest are the editable authoring fields.
+      # contract. Contracts::UpdateService decides which of the rest may change
+      # for the contract's status.
       def update_params
         params.require(:contract).permit(
           :name,

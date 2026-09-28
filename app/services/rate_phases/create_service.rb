@@ -33,17 +33,25 @@ module RatePhases
         end
 
         existing = applied_rate_card.rate_phases.order(:position).to_a
-        position = (params[:position].presence || default_position(existing)).to_i
+        position = if params[:position].present?
+          RatePhase.parse_position(params[:position])
+        else
+          default_position(existing)
+        end
 
-        unless position.between?(1, existing.size + 1)
+        if position.nil? || !position.between?(1, existing.size + 1)
           return result.single_validation_failure!(field: :position, error_code: "positions_must_be_contiguous")
         end
 
-        # Validate the prospective sequence before touching anything: an
-        # indefinite phase (null cycle count) is only allowed last.
+        # Validate the prospective sequence before touching anything: the
+        # indefinite phase (null cycle count) is the last one, and only it.
         counts = existing.map(&:billing_interval_cycle_count).insert(position - 1, params[:billing_interval_cycle_count])
         if counts[0...-1].any?(&:nil?)
           return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "indefinite_phase_must_be_last")
+        end
+
+        if counts.last.present?
+          return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "last_phase_must_be_indefinite")
         end
 
         # Highest positions first so the unique (card, position) index never

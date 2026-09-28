@@ -7,7 +7,14 @@ RSpec.describe UsageAttributionTypes::UpdateService do
 
   let(:organization) { create(:organization) }
   let(:usage_attribution_type) do
-    create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"])
+    create(
+      :usage_attribution_type,
+      organization:,
+      code: "user",
+      name: "User",
+      description: "A person using the product",
+      attribution_keys: ["user_id"]
+    )
   end
   let(:params) { {name: "Member"} }
 
@@ -18,6 +25,7 @@ RSpec.describe UsageAttributionTypes::UpdateService do
 
   it "leaves untouched attributes alone" do
     expect(result.usage_attribution_type.code).to eq("user")
+    expect(result.usage_attribution_type.description).to eq("A person using the product")
     expect(result.usage_attribution_type.attribution_keys).to eq(["user_id"])
     expect(result.usage_attribution_type.role).to eq("hierarchical")
   end
@@ -28,6 +36,33 @@ RSpec.describe UsageAttributionTypes::UpdateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error.resource).to eq("usage_attribution_type")
+    end
+  end
+
+  describe "description" do
+    let(:params) { {description: "A member of a team"} }
+
+    it "is updated" do
+      expect(result).to be_success
+      expect(result.usage_attribution_type.reload.description).to eq("A member of a team")
+    end
+
+    context "when it is cleared" do
+      let(:params) { {description: nil} }
+
+      it "removes the description" do
+        expect(result).to be_success
+        expect(result.usage_attribution_type.reload.description).to be_nil
+      end
+    end
+
+    context "when usage has already been attributed" do
+      before { create(:usage_attribution_value, organization:, usage_attribution_type:) }
+
+      it "still updates the description" do
+        expect(result).to be_success
+        expect(result.usage_attribution_type.reload.description).to eq("A member of a team")
+      end
     end
   end
 
@@ -186,7 +221,14 @@ RSpec.describe UsageAttributionTypes::UpdateService do
   context "when usage has already been attributed" do
     let(:parent) { create(:usage_attribution_type, organization:, code: "department") }
     let(:params) do
-      {name: "Member", code: "member", attribution_keys: ["employee_id"], role: "flat", parent_id: parent.id}
+      {
+        name: "Member",
+        description: "A member of a team",
+        code: "member",
+        attribution_keys: ["employee_id"],
+        role: "flat",
+        parent_id: parent.id
+      }
     end
 
     before { create(:usage_attribution_value, organization:, usage_attribution_type:) }

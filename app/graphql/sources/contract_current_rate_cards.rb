@@ -14,7 +14,7 @@ module Sources
         .current_and_scheduled
         .where(contract_id: contract_ids)
         .includes(:rate_card)
-        .order(:effective_date)
+        .order(:effective_date, :id)
         .group_by(&:contract_id)
 
       contract_ids.map { by_contract.fetch(it, []) }

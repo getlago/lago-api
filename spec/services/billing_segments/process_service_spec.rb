@@ -640,6 +640,34 @@ RSpec.describe BillingSegments::ProcessService do
       end
     end
 
+    context "when the customer uses provider taxes" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:local_tax) { create(:tax, organization:, rate: 20) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        create(:rate_card_applied_tax, organization:, rate_card:, tax: local_tax)
+      end
+
+      it "defers tax calculation to the provider" do
+        expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
+
+        invoice = result.invoices.sole.reload
+        expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
+        expect(invoice).to have_attributes(
+          status: "pending",
+          tax_status: "pending",
+          fees_amount_cents: 7_500,
+          sub_total_excluding_taxes_amount_cents: 7_500
+        )
+
+        fee = invoice.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 0)
+        expect(fee.applied_taxes).to be_empty
+        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+      end
+    end
+
     it "does not create duplicate invoices or fees on repeated invocation" do
       invoice = result.invoices.sole
 

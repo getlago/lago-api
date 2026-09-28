@@ -34,6 +34,7 @@ module Types
     field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
     field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
     field :contract, resolver: Resolvers::ContractResolver
+    field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver

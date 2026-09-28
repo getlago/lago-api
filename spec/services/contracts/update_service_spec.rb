@@ -25,12 +25,181 @@ RSpec.describe Contracts::UpdateService do
     expect(contract.ended_at).to eq(Time.zone.parse("2026-12-01T00:00:00"))
   end
 
-  context "when the contract is already active" do
+  context "when the contract is active" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:params) do
+      {
+        name: "Renamed",
+        purchase_order_number: "PO-42",
+        ended_at: "2027-01-01T00:00:00Z",
+        billing_entity_id: billing_entity.id,
+        consolidate_invoice: false,
+        payment_method: {payment_method_type: "manual"}
+      }
+    end
 
-    it "rejects the edit as locked" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:contract]).to eq(["contract_locked"])
+    around { |example| travel_to(Time.zone.parse("2026-10-01T00:00:00Z")) { example.run } }
+
+    it "updates the fields that stay editable" do
+      expect(result).to be_success
+      expect(contract.reload).to have_attributes(
+        name: "Renamed",
+        purchase_order_number: "PO-42",
+        billing_entity:,
+        consolidate_invoice: false
+      )
+      expect(contract).to be_payment_method_type_manual
+      expect(contract.ended_at).to eq(Time.zone.parse("2027-01-01T00:00:00Z"))
+    end
+
+    context "when the form resends the locked fields unchanged" do
+      let(:started_at) { Time.zone.parse("2026-09-01T03:30:00.123456Z") }
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at:) }
+      let(:params) do
+        {
+          name: "Renamed",
+          plan_code: catalog_plan.code,
+          billing_time: "calendar",
+          started_at: "2026-09-01T03:30:00Z",
+          billing_anchor_date: contract.effective_billing_anchor_date.iso8601
+        }
+      end
+
+      it "accepts the edit without writing the locked fields back" do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(name: "Renamed", started_at:, billing_anchor_date: nil)
+      end
+    end
+
+    context "without a plan" do
+      let(:catalog_plan) { nil }
+
+      [nil, ""].each do |plan_code|
+        context "with #{plan_code.inspect} as the plan code" do
+          let(:params) { {name: "Renamed", plan_code:} }
+
+          it "accepts the edit" do
+            expect(result).to be_success
+            expect(contract.reload.name).to eq("Renamed")
+          end
+        end
+      end
+    end
+
+    context "when the form resends the code of the plan it has since discarded" do
+      let(:params) { {name: "Renamed", plan_code: catalog_plan.code} }
+
+      before { catalog_plan.discard! }
+
+      it "accepts the edit" do
+        expect(result).to be_success
+        expect(contract.reload.name).to eq("Renamed")
+      end
+    end
+
+    describe "end date" do
+      let(:ended_at) { Time.zone.parse("2027-01-01T00:00:00Z") }
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:, ended_at:) }
+
+      context "when bringing it forward" do
+        let(:params) { {ended_at: "2026-12-01T00:00:00Z"} }
+
+        it "updates it" do
+          expect(result).to be_success
+          expect(contract.reload.ended_at).to eq(Time.zone.parse("2026-12-01T00:00:00Z"))
+        end
+      end
+
+      context "when resending it unchanged" do
+        let(:params) { {name: "Renamed", ended_at: "2027-01-01T00:00:00Z"} }
+
+        it "accepts the edit" do
+          expect(result).to be_success
+          expect(contract.reload.name).to eq("Renamed")
+        end
+      end
+
+      context "when resending one that has already passed" do
+        let(:ended_at) { Time.zone.parse("2026-09-30T00:00:00Z") }
+        let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-09-01T00:00:00Z"), ended_at:) }
+        let(:params) { {name: "Renamed", ended_at: "2026-09-30T00:00:00Z"} }
+
+        it "accepts the edit" do
+          expect(result).to be_success
+          expect(contract.reload.name).to eq("Renamed")
+        end
+      end
+
+      context "when setting one that has already passed" do
+        let(:params) { {ended_at: "2026-09-15T00:00:00Z"} }
+
+        it "rejects it" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:ended_at]).to eq(["already_ended"])
+          expect(contract.reload.ended_at).to eq(ended_at)
+        end
+      end
+
+      context "when moving it later" do
+        let(:params) { {ended_at: "2027-02-01T00:00:00Z"} }
+
+        it "rejects it" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:ended_at]).to eq(["cannot_be_extended"])
+          expect(contract.reload.ended_at).to eq(ended_at)
+        end
+      end
+
+      context "when clearing it" do
+        let(:params) { {ended_at: nil} }
+
+        it "rejects it" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:ended_at]).to eq(["cannot_be_extended"])
+          expect(contract.reload.ended_at).to eq(ended_at)
+        end
+      end
+    end
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:params) { {name: "Renamed", plan_code: other_plan.code} }
+
+      it "rejects the edit as locked and changes nothing" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:contract]).to eq(["contract_locked"])
+        expect(contract.reload).to have_attributes(name: nil, catalog_plan:)
+      end
+    end
+
+    {
+      billing_time: "anniversary",
+      billing_anchor_date: "2026-03-01",
+      started_at: "2026-03-01T00:00:00Z"
+    }.each do |field, value|
+      context "when changing #{field}" do
+        let(:params) { {name: "Renamed"}.merge(field => value) }
+
+        it "rejects the edit as locked and changes nothing" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:contract]).to eq(["contract_locked"])
+          expect(contract.reload.name).to be_nil
+        end
+      end
+    end
+  end
+
+  %i[terminated canceled].each do |status|
+    context "when the contract is #{status}" do
+      let(:contract) { create(:contract, status, organization:, customer:, catalog_plan:) }
+      let(:params) { {name: "Renamed"} }
+
+      it "rejects any edit as locked" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:contract]).to eq(["contract_locked"])
+        expect(contract.reload.name).to be_nil
+      end
     end
   end
 
@@ -70,6 +239,30 @@ RSpec.describe Contracts::UpdateService do
 
       expect(old_card.reload).to be_discarded
       expect(old_phase.reload).to be_discarded
+    end
+  end
+
+  context "when resending the current plan code" do
+    let(:params) { {name: "Renamed", plan_code: catalog_plan.code} }
+
+    it "accepts the edit" do
+      expect(result).to be_success
+      expect(contract.reload.name).to eq("Renamed")
+    end
+  end
+
+  context "without a plan" do
+    let(:catalog_plan) { nil }
+
+    [nil, ""].each do |plan_code|
+      context "with #{plan_code.inspect} as the plan code" do
+        let(:params) { {name: "Renamed", plan_code:} }
+
+        it "accepts the edit" do
+          expect(result).to be_success
+          expect(contract.reload.name).to eq("Renamed")
+        end
+      end
     end
   end
 

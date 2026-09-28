@@ -251,11 +251,23 @@ RSpec.describe Api::V2::ContractsController do
     context "when the contract is already active" do
       let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
-      it "returns an unprocessable entity error" do
+      it "updates the fields that stay editable" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:contract]).to eq(["contract_locked"])
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:name]).to eq("Renamed")
+      end
+
+      context "when changing the plan" do
+        let(:other_plan) { create(:catalog_plan, organization:) }
+        let(:update_params) { {plan_code: other_plan.code} }
+
+        it "returns an unprocessable entity error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:contract]).to eq(["contract_locked"])
+        end
       end
     end
 
