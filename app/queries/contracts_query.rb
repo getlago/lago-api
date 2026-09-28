@@ -13,7 +13,6 @@ class ContractsQuery < BaseQuery
 
   def call
     contracts = base_scope
-    contracts = paginate(contracts)
     contracts = apply_consistent_ordering(contracts)
 
     contracts = with_external_customer(contracts) if filters.external_customer_id.present?
@@ -23,7 +22,7 @@ class ContractsQuery < BaseQuery
     contracts = with_billing_entity_ids(contracts) if filters.billing_entity_ids.present?
     contracts = with_rate_overrides(contracts) unless has_rate_overrides_filter.nil?
 
-    result.contracts = contracts
+    result.contracts = paginate(contracts)
     result
   end
 
