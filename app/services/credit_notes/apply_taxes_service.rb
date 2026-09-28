@@ -16,6 +16,9 @@ module CreditNotes
       result.precise_tax_amounts = []
       result.coupons_adjustment_amount_cents = coupons_adjustment_amount_cents
 
+      precise_taxes_amount_cents = 0
+      taxes_rate = 0
+
       @indexed_items = index_items_by_invoice_tax
       return result unless @indexed_items
 
@@ -24,17 +27,21 @@ module CreditNotes
         precise_base_amount_cents = base_amounts.fetch(tax_key) * taxes_base_rate(invoice_applied_tax)
         precise_tax_amount_cents = (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
 
-        result.applied_taxes << build_applied_tax(
+        applied_tax = build_applied_tax(
           invoice_applied_tax,
           base_amount_cents: precise_base_amount_cents,
           tax_amount_cents: precise_tax_amount_cents
         )
+        result.applied_taxes << applied_tax
         result.precise_tax_amounts << precise_tax_amount_cents
+
+        precise_taxes_amount_cents += precise_tax_amount_cents
+        taxes_rate += pro_rated_taxes_rate(applied_tax)
       end
 
-      result.precise_taxes_amount_cents = result.precise_tax_amounts.sum
+      result.precise_taxes_amount_cents = precise_taxes_amount_cents
       result.taxes_amount_cents = result.applied_taxes.sum(&:amount_cents)
-      result.taxes_rate = result.applied_taxes.sum { |tax| pro_rated_taxes_rate(tax) }.round(5)
+      result.taxes_rate = taxes_rate.round(5)
 
       result
     end
