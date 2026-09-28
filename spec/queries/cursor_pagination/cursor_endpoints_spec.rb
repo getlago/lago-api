@@ -127,4 +127,65 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
 
     it_behaves_like "a keyset-paginated query", table: "contracts", index: "index_contracts_by_cursor"
   end
+
+  context "with ProductFiltersQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        ProductFiltersQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {product_id: SecureRandom.uuid, product_category_ids: [SecureRandom.uuid], without_product_category: true}
+        ).product_filters
+      end
+    end
+    let(:default_scope) do
+      ->(pagination) { ProductFiltersQuery.call(organization:, pagination:, filters: {product_id: SecureRandom.uuid}).product_filters }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "product_filters", index: "index_product_filters_by_cursor"
+
+    # The default scope of the model orders ascending: the keyset must replace it.
+    it "drops the ordering of the default scope" do
+      expect(filtered_scope.call(CursorPagination::Cursor.new(table: "product_filters")).to_sql).not_to include("ASC")
+    end
+  end
+
+  context "with PlanRateCardsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PlanRateCardsQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {plan_id: SecureRandom.uuid, product_category_ids: [SecureRandom.uuid], has_rate_overrides: true}
+        ).plan_rate_cards
+      end
+    end
+    let(:default_scope) do
+      ->(pagination) { PlanRateCardsQuery.call(organization:, pagination:, filters: {plan_id: SecureRandom.uuid}).plan_rate_cards }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "plan_rate_cards", index: "index_plan_rate_cards_by_cursor"
+  end
+
+  context "with ContractRateCardsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        ContractRateCardsQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {contract_id: SecureRandom.uuid, product_category_ids: [SecureRandom.uuid], has_rate_overrides: true}
+        ).contract_rate_cards
+      end
+    end
+    let(:default_scope) do
+      lambda do |pagination|
+        ContractRateCardsQuery.call(organization:, pagination:, filters: {contract_id: SecureRandom.uuid}).contract_rate_cards
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "contract_rate_cards", index: "index_contract_rate_cards_by_cursor"
+  end
 end
