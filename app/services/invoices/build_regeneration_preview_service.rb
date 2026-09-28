@@ -53,11 +53,24 @@ module Invoices
     def refresh_charge_price(fee:, dup_fee:)
       adjusted_fee = fee.adjusted_fee
       if adjusted_fee && !adjusted_fee.adjusted_display_name?
-        adjusted_fee.charge ||= adjusted_fee.charge_with_discarded
+        if adjusted_fee.adjusted_units?
+          charge = current_charge(fee)
+          return unless charge
+
+          properties = current_charge_properties(fee, charge:)
+          return unless properties
+
+          adjusted_fee = adjusted_fee.dup
+          adjusted_fee.charge = charge
+          adjusted_fee.charge_filter = current_charge_filter(fee, charge:)
+        else
+          adjusted_fee.charge ||= adjusted_fee.charge_with_discarded
+          properties = fee.charge_filter&.properties || fee.charge.properties
+        end
         updated_fee = Fees::InitFromAdjustedChargeFeeService.call!(
           adjusted_fee:,
           boundaries: fee.properties,
-          properties: fee.charge_filter&.properties || fee.charge.properties
+          properties:
         ).fee
         dup_fee.assign_attributes(updated_fee.attributes.slice(
           "units", "unit_amount_cents", "precise_unit_amount", "amount_cents",
@@ -73,23 +86,32 @@ module Invoices
       end
     end
 
-    def current_charge_properties(fee)
+    def current_charge(fee)
       if fee.charge.plan_id == fee.subscription.plan_id || fee.subscription.plan.parent_id != fee.charge.plan_id
-        return fee.charge_filter&.properties || fee.charge.properties
+        return fee.charge
       end
 
       # A first subscription override clones the charge; historical fees keep the parent ID.
       @overridden_charges ||= {}
       key = [fee.subscription.plan_id, fee.charge_id]
-      charge = @overridden_charges.fetch(key) do
+      @overridden_charges.fetch(key) do
         @overridden_charges[key] = Charge.includes(filters: {values: :billable_metric_filter})
           .find_by(plan_id: fee.subscription.plan_id, parent_id: fee.charge_id)
       end
-      return unless charge
+    end
 
+    def current_charge_filter(fee, charge:)
+      return unless fee.charge_filter
+      return fee.charge_filter if charge == fee.charge
+
+      charge.filters.find { |filter| filter.to_h == fee.charge_filter.to_h }
+    end
+
+    def current_charge_properties(fee, charge: current_charge(fee))
+      return unless charge
       return charge.properties unless fee.charge_filter
 
-      charge.filters.find { |filter| filter.to_h == fee.charge_filter.to_h }&.properties
+      current_charge_filter(fee, charge:)&.properties
     end
 
     def refresh_prorated_amount(fee:, dup_fee:, properties:)

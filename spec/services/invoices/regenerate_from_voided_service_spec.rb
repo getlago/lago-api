@@ -615,6 +615,21 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           })
         end
 
+        context "with manually adjusted units" do
+          let!(:adjustment) do
+            create(:adjusted_fee, organization:, invoice: original_invoice, fee: original_fee,
+              subscription:, charge:, fee_type: :charge, adjusted_units: true, adjusted_amount: false,
+              units: 2, properties: original_fee.properties, grouped_by: {})
+          end
+
+          it "uses the override price for the manual units in preview and regeneration" do
+            expect(preview_fee).to have_attributes(units: 2, amount_cents: 400_000)
+            expect(regenerate_result.invoice.fees.find_by!(charge:)).to have_attributes(units: 2, amount_cents: 400_000)
+            expect(adjustment.reload).to have_attributes(charge_id: charge.id, units: 2)
+            expect(original_fee.reload.amount_cents).to eq(0)
+          end
+        end
+
         it "saves the overridden prorated price from the untouched preview" do
           regenerated_fee = regenerate_result.invoice.fees.find_by!(charge:)
 

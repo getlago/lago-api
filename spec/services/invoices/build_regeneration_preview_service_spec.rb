@@ -236,6 +236,27 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           end
         end
 
+        context "with manually adjusted units" do
+          let!(:adjustment) do
+            create(:adjusted_fee, organization:, invoice:, fee:, subscription:, charge:, fee_type: :charge,
+              adjusted_units: true, adjusted_amount: false, units: 2, properties: fee.properties, grouped_by: {})
+          end
+
+          it "uses current prices without changing the persisted adjustment" do
+            expect(preview_service.call.invoice.fees.sole).to have_attributes(units: 2, amount_cents: 400_000)
+            expect(adjustment.reload).to have_attributes(charge_id: charge.id, units: 2)
+            expect(fee.reload.amount_cents).to eq(0)
+          end
+
+          context "when the overridden charge is discarded" do
+            before { Charges::DestroyService.call!(charge: subscription.reload.plan.charges.sole) }
+
+            it "preserves the historical fee" do
+              expect(preview_service.call.invoice.fees.sole.amount_cents).to eq(0)
+            end
+          end
+        end
+
         context "with a manual zero price adjustment" do
           before do
             create(:adjusted_fee, organization:, invoice:, fee:, subscription:, charge:, fee_type: :charge,
@@ -275,6 +296,19 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           before do
             create(:event, organization:, subscription:, code: billable_metric.code,
               timestamp: event_timestamp, properties: {billable_metric.field_name => "10", "region" => "us"})
+          end
+
+          context "with manually adjusted units" do
+            let!(:adjustment) do
+              create(:adjusted_fee, organization:, invoice:, fee:, subscription:, charge:, charge_filter:,
+                fee_type: :charge, adjusted_units: true, adjusted_amount: false, units: 2,
+                properties: fee.properties, grouped_by: {})
+            end
+
+            it "uses the matching override filter price without changing the historical filter" do
+              expect(preview_service.call.invoice.fees.sole).to have_attributes(units: 2, amount_cents: 20_000)
+              expect(adjustment.reload.charge_filter_id).to eq(charge_filter.id)
+            end
           end
 
           it "matches the cloned filter while aggregating the original filtered events" do
