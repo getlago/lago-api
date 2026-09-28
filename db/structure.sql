@@ -2682,12 +2682,10 @@ CREATE TABLE public.contract_rate_cards (
     billing_anchor_date date NOT NULL,
     next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
-    ended_date date,
     units numeric,
     deleted_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT contract_rate_cards_effective_before_ended CHECK (((ended_date IS NULL) OR (effective_date <= ended_date)))
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -15187,6 +15185,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260925110807'),
 ('20260925110133'),
 ('20260924133109'),
 ('20260922172006'),
