@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Events::Stores::UsageBucketSet do
   subject(:bucket_set) { described_class.new(totals:, grouped_totals:) }
 
-  def build_totals(units, events_count, aggregation_type: "sum_agg", last_event_at: Time.current)
-    described_class::Totals.new(aggregation_type:, units:, events_count:, last_event_at:)
+  def build_totals(units, events_count, aggregation_type: "sum_agg", last_event_at: Time.current, precise_total_amount_cents: BigDecimal(0))
+    described_class::Totals.new(aggregation_type:, units:, events_count:, last_event_at:, precise_total_amount_cents:)
   end
 
   let(:totals) { {["charge_1", ""] => build_totals(BigDecimal("42.5"), 7)} }
@@ -96,6 +96,52 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
   end
 
+  describe "#precise_total_amount_cents_for" do
+    let(:totals) do
+      {["charge_1", ""] => build_totals(BigDecimal("42.5"), 7, precise_total_amount_cents: BigDecimal("1234.000000000000001"))}
+    end
+
+    it "reports the summed precise amount of the charge filter" do
+      expect(bucket_set.precise_total_amount_cents_for(charge_id: "charge_1", charge_filter_id: ""))
+        .to eq(BigDecimal("1234.000000000000001"))
+    end
+
+    it "is zero for a charge the buckets do not carry" do
+      expect(bucket_set.precise_total_amount_cents_for(charge_id: "charge_2", charge_filter_id: "")).to eq(0)
+    end
+  end
+
+  describe "#grouped_precise_total_amount_cents_for" do
+    let(:grouped_totals) do
+      {
+        ["charge_1", ""] => [
+          [{"region" => "us"}, build_totals(BigDecimal(30), 5, precise_total_amount_cents: BigDecimal("300.5"))],
+          [{"region" => "eu"}, build_totals(BigDecimal("12.5"), 2, precise_total_amount_cents: BigDecimal(125))]
+        ]
+      }
+    end
+
+    it "returns the groups and their amount in the shape the events store returns" do
+      expect(bucket_set.grouped_precise_total_amount_cents_for(charge_id: "charge_1", charge_filter_id: "")).to match_array(
+        [
+          {groups: {"region" => "us"}, value: BigDecimal("300.5")},
+          {groups: {"region" => "eu"}, value: BigDecimal(125)}
+        ]
+      )
+    end
+
+    it "is empty for a charge the buckets do not carry" do
+      expect(bucket_set.grouped_precise_total_amount_cents_for(charge_id: "charge_2", charge_filter_id: "")).to eq([])
+    end
+  end
+
+  describe "Totals" do
+    it "defaults the precise amount to zero, as the pipeline writes on every type but sum" do
+      expect(described_class::Totals.new(aggregation_type: "max_agg", units: 1, events_count: 1, last_event_at: Time.current).precise_total_amount_cents)
+        .to eq(0)
+    end
+  end
+
   describe "Totals#combine" do
     let(:earlier) { Time.current - 1.hour }
 
@@ -124,6 +170,13 @@ RSpec.describe Events::Stores::UsageBucketSet do
         .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest_agg", last_event_at: earlier))
 
       expect(combined.units).to eq(BigDecimal(10))
+    end
+
+    it "adds the precise amounts" do
+      combined = build_totals(BigDecimal(10), 2, precise_total_amount_cents: BigDecimal("100.25"))
+        .combine(build_totals(BigDecimal(5), 1, precise_total_amount_cents: BigDecimal("0.75")))
+
+      expect(combined.precise_total_amount_cents).to eq(BigDecimal(101))
     end
 
     it "carries the most recent event time over, so a third row compares against it" do
