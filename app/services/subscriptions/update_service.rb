@@ -126,9 +126,7 @@ module Subscriptions
 
         InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:)
 
-        if connections_requested?
-          BillingObjectConnections::AttachToResourceService.call!(resource: subscription, params:)
-        end
+        BillingObjectConnections::AttachToResourceService.call!(resource: subscription, params:)
       end
 
       result.subscription = subscription
