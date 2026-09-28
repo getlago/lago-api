@@ -18,6 +18,41 @@ RSpec.describe Billing::Segments do
   let(:window) { window_of(Time.utc(2026, 9, 10), Time.utc(2026, 10, 10)) }
 
   describe ".within" do
+    context "with a partial service period" do
+      subject(:segments) { described_class.within(window, rates:, starts_at:, ends_at:) }
+
+      let(:starts_at) { Time.utc(2026, 9, 22) }
+      let(:ends_at) { Time.utc(2026, 9, 28) }
+      let(:rates) do
+        [rate("v1", Time.utc(2026, 9, 20)), rate("v2", Time.utc(2026, 9, 25)), rate("v3", Time.utc(2026, 9, 30))]
+      end
+
+      it "prices only the overlap with service, retaining changes within that overlap" do
+        expect(windows(segments)).to eq([
+          ["2026-09-22", "2026-09-25", "v1"],
+          ["2026-09-25", "2026-09-28", "v2"]
+        ])
+      end
+
+      context "when service starts at the cycle's exclusive end" do
+        let(:starts_at) { window.ended_at }
+        let(:ends_at) { nil }
+
+        it "returns no segments" do
+          expect(segments).to be_empty
+        end
+      end
+
+      context "when service ends at the cycle start" do
+        let(:starts_at) { nil }
+        let(:ends_at) { window.started_at }
+
+        it "returns no segments" do
+          expect(segments).to be_empty
+        end
+      end
+    end
+
     it "leaves a window whole when no rate changes inside it" do
       segments = described_class.within(window, rates: [rate("v1", Time.utc(2026, 1, 1))])
 

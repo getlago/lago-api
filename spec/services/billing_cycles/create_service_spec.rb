@@ -87,7 +87,7 @@ RSpec.describe BillingCycles::CreateService do
       let(:ends_at) { zone.parse("2026-01-21") }
 
       it "does not truncate the nominal period" do
-        expect(cycle.ended_at).to eq(ends_at)
+        expect(cycle.ended_at).to eq(Time.utc(2026, 2, 1))
         expect(result.billing_cycle.ended_at).to eq(Time.utc(2026, 2, 1))
       end
 

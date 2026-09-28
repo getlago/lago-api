@@ -4,15 +4,17 @@ module Billing
   module RateCards
     class Schedule
       def initialize(rates:, terms:, phases:, starts_at:, anchor_date:, timezone:, ends_at: nil, resume_at: nil)
-        if resume_at && resume_at < starts_at.in_time_zone(timezone).beginning_of_day
-          raise ArgumentError, "resume_at #{resume_at} precedes the card's start"
-        end
-
         @rates = rates
         @terms = terms
         @timezone = timezone
+        @starts_at = starts_at.in_time_zone(timezone).beginning_of_day
+        @ends_at = ends_at
         @resume_at = resume_at
         @walker = CycleWalker.new(rates:, phases:, starts_at:, anchor_date:, timezone:, ends_at:)
+
+        if resume_at && resume_at < @starts_at && resume_at < (walker.start&.started_at || @starts_at)
+          raise ArgumentError, "resume_at #{resume_at} precedes the card's first cycle"
+        end
       end
 
       # A rate change can make a segment due before its cycle ends.
@@ -66,7 +68,7 @@ module Billing
 
       private
 
-      attr_reader :rates, :terms, :timezone, :resume_at, :walker
+      attr_reader :rates, :terms, :timezone, :resume_at, :walker, :starts_at, :ends_at
 
       def segment_at(timestamp)
         cycle = walker.resume(timestamp)
@@ -80,7 +82,7 @@ module Billing
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|
-          Segments.within(cycle, rates:).filter_map do |segment|
+          Segments.within(cycle, rates:, starts_at:, ends_at:).filter_map do |segment|
             if segment.rate
               build_billable_segment(cycle:, segment:)
             end

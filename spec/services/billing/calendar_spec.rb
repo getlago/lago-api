@@ -33,6 +33,22 @@ RSpec.describe Billing::Calendar do
     end
   end
 
+  context "when the anchor day has no midnight" do
+    let(:anchor_date) { Date.new(2026, 3, 8) }
+    let(:interval) { Billing::Interval.new(count: 1, unit: :week) }
+    let(:timezone) { "America/Havana" }
+    let(:zone) { ActiveSupport::TimeZone[timezone] }
+
+    it "uses each boundary's local start of day without carrying the missing hour forward" do
+      first = calendar.interval_containing(zone.local(2026, 3, 8, 1))
+      second = calendar.interval_containing(zone.local(2026, 3, 15))
+
+      expect(first).to eq(zone.local(2026, 3, 8, 1)...zone.local(2026, 3, 15))
+      expect(second).to eq(zone.local(2026, 3, 15)...zone.local(2026, 3, 22))
+      expect(calendar.intervals_between(first.begin, second.begin)).to eq(1)
+    end
+  end
+
   # The step function, asserted through the window it opens: constant inside an interval,
   # turning exactly on the boundary. Anchored on the 31st so month-end clamping is in play,
   # which puts the boundaries on Dec 31, Jan 31, Feb 28, Mar 31.

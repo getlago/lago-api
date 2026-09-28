@@ -729,19 +729,18 @@ RSpec.describe Billing::RateCards::Schedule do
       end
 
       expect(windows).to eq(
-        [["2026-08-12 -> 2026-08-17", "weekly_intro"],
+        [["2026-08-10 -> 2026-08-17", "weekly_intro"],
           ["2026-08-17 -> 2026-08-24", "weekly_intro"],
           ["2026-08-24 -> 2026-08-31", "weekly_intro"],
           ["2026-08-31 -> 2026-09-30", "standard"]]
       )
     end
 
-    # A cycle is one turn of the interval clamped by the card's life, so the anchor decides
-    # where the boundary falls and the card's start decides where the first cycle opens.
-    it "opens the first cycle where the card starts, not on the anchor" do
+    it "keeps the full first cycle and starts its segments when service begins" do
       started_at, segments = slices_by_cycle.first
 
-      expect(started_at).to eq(Time.utc(2026, 8, 12))
+      expect(started_at).to eq(Time.utc(2026, 8, 10))
+      expect(segments.first.started_at).to eq(Time.utc(2026, 8, 12))
       expect(segments.last.ended_at).to eq(Time.utc(2026, 8, 17))
     end
 

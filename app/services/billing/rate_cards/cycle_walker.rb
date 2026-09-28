@@ -55,9 +55,9 @@ module Billing
         cycles = []
         resume(from)
 
-        while current_cycle && current_cycle.started_at <= timestamp
+        while current_cycle && [current_cycle.started_at, starts_at].max <= timestamp
           cycles << current_cycle
-          break if current_cycle.ended_at > timestamp
+          break if [current_cycle.ended_at, ends_at].compact.min > timestamp
 
           advance
         end
@@ -103,7 +103,7 @@ module Billing
           phase_start_index - current_cycle.index
         end
 
-        next_rate = rates.find { |rate| rate.effective_from > started_at }
+        next_rate = rates.find { |rate| rate.effective_from > [started_at, starts_at].max }
         steps_to_rate_change = if next_rate
           boundary = calendar.boundary_at_or_after(next_rate.effective_from)
           calendar.intervals_between(started_at, boundary)
@@ -148,8 +148,8 @@ module Billing
 
         Cycle.new(
           index:,
-          started_at:,
-          ended_at: ends_at ? [window.end, ends_at].min : window.end,
+          started_at: window.begin,
+          ended_at: window.end,
           phase:,
           calendar:
         )
