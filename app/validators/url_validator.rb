@@ -18,7 +18,6 @@ class UrlValidator < ActiveModel::EachValidator
     false
   end
 
-  # An unresolvable host is accepted here: the HTTP client checks the address again at request time.
   def private_address?(url)
     return false unless LagoHttpClient::AddressGuard.enabled?
 
@@ -27,6 +26,7 @@ class UrlValidator < ActiveModel::EachValidator
   rescue LagoHttpClient::BlockedAddressError
     true
   rescue SocketError
+    # Unresolvable hosts are accepted: the HTTP client checks the address again at request time.
     false
   end
 end
