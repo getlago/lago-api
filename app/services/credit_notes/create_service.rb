@@ -249,7 +249,7 @@ module CreditNotes
     end
 
     def invoice_payment
-      @invoice_payment ||= credit_note.invoice.payments.order(created_at: :desc).first
+      @invoice_payment ||= credit_note.invoice.refundable_payment
     end
 
     def handle_refund

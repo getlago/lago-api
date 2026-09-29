@@ -437,6 +437,15 @@ class Invoice < ApplicationRecord
     refundable_cents.negative? ? 0 : refundable_cents
   end
 
+  # An invoice settled through a payment request has its payment attached to the request, not to the invoice
+  def refundable_payment
+    payments.succeeded.order(created_at: :desc).first ||
+      Payment.succeeded
+        .where(payable: payment_requests.payment_succeeded)
+        .order(created_at: :desc)
+        .first
+  end
+
   # Credit invoices have a single credit-type fee linked to the wallet transaction
   def prepaid_credit_fee
     fees.first
