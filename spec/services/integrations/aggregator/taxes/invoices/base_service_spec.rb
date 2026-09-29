@@ -26,6 +26,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
       end
       let(:fees) { [second_fee, first_fee] }
       let(:requested_items) { [] }
+      let(:fee_taxes) { (provider == :anrok) ? [3, 2] : [5, 5] }
 
       before do
         create(:"#{provider}_customer", integration:, customer:)
@@ -47,18 +48,30 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
         end
       end
 
-      it "breaks allocation ties by fee ID when timestamps are equal" do
+      it "orders fees by ID when timestamps are equal" do
         expect(service_result).to be_success
         expect(service_result.fees.map { |tax| [tax.item_key, tax.tax_amount_cents] })
-          .to eq([[first_fee.item_key, 3], [second_fee.item_key, 2]])
+          .to eq([[first_fee.item_key, fee_taxes[0]], [second_fee.item_key, fee_taxes[1]]])
       end
 
-      it "sends one charge line with the combined amount and units" do
-        service_result
+      if provider == :anrok
+        it "sends one charge line with the combined amount" do
+          service_result
 
-        expected = {"item_key" => charge.id, "item_id" => charge.id, "item_code" => "1"}
-        expected.merge!((provider == :anrok) ? {"amount_cents" => 200} : {"unit" => "2.0", "amount" => "2.0"})
-        expect(requested_items).to eq([expected])
+          expect(requested_items).to eq(
+            [{"item_key" => charge.id, "item_id" => charge.id, "item_code" => "1", "amount_cents" => 200}]
+          )
+        end
+      else
+        it "sends one line per fee, since Avalara rounds tax per line" do
+          service_result
+
+          expect(requested_items).to eq(
+            [first_fee, second_fee].map do |fee|
+              {"item_key" => fee.item_key, "item_id" => fee.id, "item_code" => "1", "unit" => "1.0", "amount" => "1.0"}
+            end
+          )
+        end
       end
 
       context "with a singleton charge and an unrelated fee" do
@@ -78,8 +91,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
 
         it "splits only the grouped response" do
           expect(service_result.fees.map { |tax| [tax.item_id, tax.tax_amount_cents] })
-            .to eq([[first_fee.id, 3], [second_fee.id, 2], [other_fee.id, 5]])
-          expect(requested_items.size).to eq(2)
+            .to eq([[first_fee.id, fee_taxes[0]], [second_fee.id, fee_taxes[1]], [other_fee.id, 5]])
+          expect(requested_items.size).to eq((provider == :anrok) ? 2 : 3)
         end
       end
 
@@ -87,10 +100,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
         context "when the invoice is voided" do
           let(:invoice) { create(:invoice, status: :voided) }
 
-          it "negates the grouped amount" do
+          it "negates each fee amount" do
             service_result
 
-            expect(requested_items.sole.fetch("amount")).to eq("-2.0")
+            expect(requested_items.map { |item| item.fetch("amount") }).to eq(["-1.0", "-1.0"])
           end
         end
       end
@@ -100,7 +113,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
 
         it "allocates in the same order as an explicitly supplied array" do
           expect(service_result.fees.map { |tax| [tax.item_key, tax.tax_amount_cents] })
-            .to eq([[first_fee.item_key, 3], [second_fee.item_key, 2]])
+            .to eq([[first_fee.item_key, fee_taxes[0]], [second_fee.item_key, fee_taxes[1]]])
         end
       end
 
@@ -112,7 +125,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
 
         it "orders by creation time before ID" do
           expect(service_result.fees.map { |tax| [tax.item_key, tax.tax_amount_cents] })
-            .to eq([[second_fee.item_key, 3], [first_fee.item_key, 2]])
+            .to eq([[second_fee.item_key, fee_taxes[0]], [first_fee.item_key, fee_taxes[1]]])
         end
       end
 
@@ -132,7 +145,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
 
         it "preserves generation order without requiring IDs or timestamps" do
           expect(service_result.fees.map { |tax| [tax.item_key, tax.tax_amount_cents] })
-            .to eq([[second_fee.item_key, 3], [first_fee.item_key, 2]])
+            .to eq([[second_fee.item_key, fee_taxes[0]], [first_fee.item_key, fee_taxes[1]]])
         end
       end
     end

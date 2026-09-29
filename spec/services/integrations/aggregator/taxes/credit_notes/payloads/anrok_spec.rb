@@ -98,6 +98,62 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Anrok do
       end
     end
 
+    context "when charges sharing a metric are credited with equal timestamps" do
+      let(:credit_note) { create(:credit_note, invoice:, customer:) }
+      let(:invoice) { create(:invoice) }
+      let(:customer) { invoice.customer }
+      let(:integration) { create(:anrok_integration, organization: customer.organization) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:reloaded_payload) do
+        described_class.new(integration:, customer:, integration_customer:, credit_note: CreditNote.find(credit_note.id)).body.first
+      end
+      let(:charge) { create(:standard_charge, organization: customer.organization) }
+      let(:other_charge) { create(:standard_charge, organization: customer.organization, billable_metric: charge.billable_metric) }
+      let(:fee) { create(:charge_fee, invoice:, charge:) }
+      let(:other_fee) { create(:charge_fee, invoice:, charge: other_charge) }
+      let(:created_at) { Time.current.change(usec: 0) }
+      let(:first_item) do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 100, precise_amount_cents: 100,
+          created_at:, id: "00000000-0000-4000-8000-000000000001")
+      end
+      let(:second_item) do
+        create(:credit_note_item, credit_note:, fee: other_fee, amount_cents: 100, precise_amount_cents: 100,
+          created_at:, id: "00000000-0000-4000-8000-000000000002")
+      end
+
+      before do
+        second_item
+        first_item
+      end
+
+      it "orders equal timestamps by item ID and distinguishes charges sharing a metric" do
+        expect(payload.first.fetch("fees").map { |item| item.fetch("item_id") }).to eq([charge.id, other_charge.id])
+      end
+
+      it "keeps identifiers and ordering unchanged when reporting the credit note again" do
+        expect(reloaded_payload).to eq(payload.first)
+      end
+
+      context "when only one charge fee is credited" do
+        let(:second_item) { nil }
+
+        it "uses the charge ID even without grouping" do
+          expect(payload.first.fetch("id")).to eq("cn_#{credit_note.id}")
+          expect(payload.first.fetch("fees").map { |item| item.fetch("item_id") }).to eq([charge.id])
+        end
+
+        context "when the invoice has other fees for the charge" do
+          let(:other_charge) { charge }
+
+          before { other_fee }
+
+          it "keeps the charge identifier for a partial credit of a grouped invoice line" do
+            expect(payload.first.fetch("fees").map { |item| item.fetch("item_id") }).to eq([charge.id])
+          end
+        end
+      end
+    end
+
     context "with precision edge case" do
       let(:integration) { create(:anrok_integration) }
       let(:customer) { create(:customer, organization: integration.organization) }

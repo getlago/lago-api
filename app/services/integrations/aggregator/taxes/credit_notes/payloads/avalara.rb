@@ -5,7 +5,7 @@ module Integrations
     module Taxes
       module CreditNotes
         module Payloads
-          class Avalara < BasePayload
+          class Avalara < Integrations::Aggregator::Taxes::BasePayload
             def initialize(integration:, customer:, integration_customer:, credit_note:)
               super(integration:, billing_entity: customer.billing_entity)
 
@@ -42,19 +42,19 @@ module Integrations
                     "region" => billing_entity&.state,
                     "country" => billing_entity&.country
                   },
-                  "fees" => charge_grouped_items.map { |items| cn_item(items) }
+                  "fees" => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) }
                 }
               ]
             end
 
-            def cn_item(items)
-              fee = items.first.fee
+            def cn_item(item)
+              fee = item.fee
 
               {
-                "item_id" => cn_item_id(items),
+                "item_id" => fee.item_id,
                 "item_code" => mapped_item(fee)&.external_id,
-                "unit" => items.map(&:fee).uniq.sum(&:units),
-                "amount" => item_amount(items, fee)
+                "unit" => fee.units,
+                "amount" => item_amount(item, fee)
               }
             end
 
@@ -62,9 +62,8 @@ module Integrations
 
             attr_reader :customer, :integration_customer, :credit_note, :billing_entity
 
-            def item_amount(items, fee)
-              amount_cents = items.sum(&:sub_total_excluding_taxes_amount_cents).round * -1
-              amount = amount_cents.fdiv(fee.amount.currency.subunit_to_unit)
+            def item_amount(item, fee)
+              amount = (item.sub_total_excluding_taxes_amount_cents.round * -1).fdiv(fee.amount.currency.subunit_to_unit)
 
               amount.to_s
             end

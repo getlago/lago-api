@@ -40,9 +40,14 @@ module Integrations
           #       combination, so a single charge could take dozens of the 1200 line items both
           #       providers accept. Taxation is identical across the split, and equally across
           #       the subscriptions and periods one charge may be billed for on one invoice, so
-          #       those collapse into the same line.
+          #       those collapse into the same line. Only for Anrok, which rounds tax once per
+          #       transaction: Avalara rounds per line, so merging lines would change its total.
           def payload_fees
-            @payload_fees ||= ChargeFeeGroup.build(taxable_fees)
+            @payload_fees ||= if integration.type.to_s == "Integrations::AnrokIntegration"
+              ChargeFeeGroup.build(taxable_fees)
+            else
+              taxable_fees
+            end
           end
 
           def fee_groups
