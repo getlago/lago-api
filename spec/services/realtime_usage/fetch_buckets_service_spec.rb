@@ -37,10 +37,15 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       organization:, customer:, subscription:, billable_metric:,
       charge: billed_charge || charge,
       bucket:, units:, events_count:, grouped_by:, charge_filter_id:,
-      aggregation_type: billable_metric.aggregation_type,
+      aggregation_type: stream_aggregation_type(billable_metric),
       last_event_at: bucket,
       **attributes
     )
+  end
+
+  # The stream writes the events processor's names, `max` where the metric has `max_agg`.
+  def stream_aggregation_type(metric)
+    metric.aggregation_type.delete_suffix("_agg")
   end
 
   def capture_queries
@@ -223,7 +228,7 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
               :clickhouse_usage_bucket,
               organization:, customer:, subscription:, charge: billed_charge, billable_metric: metric,
               bucket:, units:, events_count: 1,
-              aggregation_type: metric.aggregation_type, last_event_at: bucket
+              aggregation_type: stream_aggregation_type(metric), last_event_at: bucket
             )
           end
         end
