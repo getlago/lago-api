@@ -195,15 +195,23 @@ RSpec.describe Events::PostProcessService do
       context "when the contract is terminated" do
         let(:contract_status) { :terminated }
 
-        it "enqueues a pay in advance job for the existing billing segment" do
-          expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
+        it "does not enqueue a pay in advance job" do
+          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end
 
       context "when the contract is canceled" do
         let(:contract_status) { :canceled }
 
-        it "enqueues a pay in advance job for the existing billing segment" do
+        it "does not enqueue a pay in advance job" do
+          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+        end
+      end
+
+      context "when the contract is pending" do
+        let(:contract_status) { :pending }
+
+        it "enqueues a pay in advance job" do
           expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end

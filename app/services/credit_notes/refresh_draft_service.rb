@@ -32,6 +32,7 @@ module CreditNotes
         invoice: fee.invoice,
         items: credit_note.items
       )
+      return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round

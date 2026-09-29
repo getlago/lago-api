@@ -286,4 +286,24 @@ RSpec.describe ::V1::SubscriptionSerializer do
       )
     end
   end
+
+  context "with connections" do
+    let(:customer) { subscription.customer }
+
+    before do
+      create(:stripe_customer, customer:, organization: customer.organization,
+        code: "stripe_default", is_default: true)
+      create(:billing_object_connection, owner: subscription,
+        organization: subscription.organization, category: "tax", behavior: "skip")
+    end
+
+    it "reports every category with its behaviour and effective code" do
+      result = JSON.parse(serializer.to_json)
+      connections = result["subscription"]["connections"]
+
+      expect(connections.keys).to match_array(%w[payment tax accounting crm])
+      expect(connections["payment"]).to eq({"behavior" => "inherit", "code" => "stripe_default"})
+      expect(connections["tax"]).to eq({"behavior" => "skip", "code" => nil})
+    end
+  end
 end

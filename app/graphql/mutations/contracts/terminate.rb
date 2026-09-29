@@ -7,7 +7,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "contracts:update"
+      REQUIRED_PERMISSION = "contracts:terminate"
 
       graphql_name "TerminateContract"
       description "Terminates a live contract"

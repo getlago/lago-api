@@ -1,0 +1,4 @@
+---
+zh-TW:
+  document:
+    page_numbering: 第 %{current} 頁，共 %{total} 頁

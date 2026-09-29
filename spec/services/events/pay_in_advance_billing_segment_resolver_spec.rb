@@ -76,16 +76,42 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
   context "when the contract is terminated" do
     let(:contract_status) { :terminated }
 
-    it "returns the billing segment" do
-      expect(billing_segments).to contain_exactly(billing_segment)
+    it "does not return the billing segment" do
+      expect(billing_segments).to be_empty
     end
   end
 
   context "when the contract is canceled" do
     let(:contract_status) { :canceled }
 
-    it "returns the billing segment" do
-      expect(billing_segments).to contain_exactly(billing_segment)
+    it "does not return the billing segment" do
+      expect(billing_segments).to be_empty
+    end
+  end
+
+  context "with a terminated and a live contract sharing the external id" do
+    let(:contract_status) { :terminated }
+    let(:contract_ended_at) { timestamp - 1.second }
+    let(:live_contract) { create(:contract, organization:, customer:, external_id: contract.external_id, status: :active) }
+    let(:live_contract_rate_card) { create(:contract_rate_card, organization:, contract: live_contract, rate_card:) }
+    let(:live_billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract: live_contract,
+        contract_rate_card: live_contract_rate_card,
+        rate_card_rate: billing_segment.rate_card_rate,
+        started_at: segment_started_at,
+        ended_at: segment_ended_at,
+        status: segment_status
+      )
+    end
+
+    before { live_billing_segment }
+
+    it "returns only the live contract billing segment" do
+      expect(billing_segments).to contain_exactly(live_billing_segment)
     end
   end
 

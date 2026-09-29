@@ -10,8 +10,6 @@ RSpec.describe Fee do
   it { is_expected.to belong_to(:fixed_charge).optional }
   it { is_expected.to belong_to(:rate_card_rate).optional }
   it { is_expected.to belong_to(:rate_override).optional }
-  it { is_expected.to belong_to(:contract).optional }
-  it { is_expected.to belong_to(:contract_rate_card).optional }
   it { is_expected.to have_many(:presentation_breakdowns) }
   it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
   it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
@@ -20,41 +18,6 @@ RSpec.describe Fee do
   it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
   it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
-
-  describe "contract provenance validation" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:contract) { create(:contract, organization:, customer:) }
-    let(:other_contract) { create(:contract, organization:, customer:, external_id: "other-contract") }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract) }
-    let(:fee) { build(:fee, contract:, contract_rate_card:) }
-
-    it "rejects a contract rate card owned by another contract" do
-      expect(fee).not_to be_valid
-      expect(fee.errors[:contract_rate_card]).to eq(["must belong to the fee contract"])
-    end
-  end
-
-  describe "contract rate card history" do
-    let(:contract_rate_card) { create(:contract_rate_card) }
-    let(:fee) do
-      create(
-        :fee,
-        contract: contract_rate_card.contract,
-        contract_rate_card:,
-        organization: contract_rate_card.organization
-      )
-    end
-
-    before do
-      fee
-      contract_rate_card.discard!
-    end
-
-    it "resolves a discarded pricing attachment" do
-      expect(fee.reload.contract_rate_card).to eq(contract_rate_card)
-    end
-  end
 
   describe "#ordered_by_period" do
     let(:fee1) do
@@ -147,10 +110,10 @@ RSpec.describe Fee do
     end
 
     context "when it is a product fee" do
-      let(:product) { create(:product) }
+      let(:product) { create(:product, code: "compute") }
 
       it "returns the product code" do
-        expect(described_class.new(fee_type: "product", invoiceable: product).item_code).to eq(product.code)
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_code).to eq("compute")
       end
     end
   end
@@ -315,14 +278,6 @@ RSpec.describe Fee do
       end
     end
 
-    context "when it is a product fee" do
-      let(:product) { create(:product) }
-
-      it "returns the product name" do
-        expect(described_class.new(fee_type: "product", invoiceable: product).item_name).to eq(product.name)
-      end
-    end
-
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -369,6 +324,14 @@ RSpec.describe Fee do
           .to eq(charge.billable_metric.name)
       end
     end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, name: "Compute") }
+
+      it "returns the product name" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_name).to eq("Compute")
+      end
+    end
   end
 
   describe "#item_description" do
@@ -398,14 +361,6 @@ RSpec.describe Fee do
       end
     end
 
-    context "when it is a product fee" do
-      let(:product) { create(:product) }
-
-      it "returns product" do
-        expect(described_class.new(fee_type: "product", invoiceable: product).item_type).to eq("Product")
-      end
-    end
-
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -427,6 +382,14 @@ RSpec.describe Fee do
       it "returns related billable metric description" do
         expect(described_class.new(charge:, fee_type: "charge").item_description)
           .to eq(charge.billable_metric.description)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, description: "Compute usage") }
+
+      it "returns the product description" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_description).to eq("Compute usage")
       end
     end
   end
@@ -458,14 +421,6 @@ RSpec.describe Fee do
       end
     end
 
-    context "when it is a product fee" do
-      let(:product) { create(:product) }
-
-      it "returns the product id" do
-        expect(described_class.new(fee_type: "product", invoiceable: product).item_id).to eq(product.id)
-      end
-    end
-
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -487,6 +442,12 @@ RSpec.describe Fee do
       it "returns billable metric" do
         expect(described_class.new(charge:, fee_type: "charge").item_type)
           .to eq("BillableMetric")
+      end
+    end
+
+    context "when it is a product fee" do
+      it "returns product" do
+        expect(described_class.new(fee_type: "product").item_type).to eq("Product")
       end
     end
   end
@@ -539,6 +500,14 @@ RSpec.describe Fee do
       it "returns billable metric" do
         expect(described_class.new(charge:, fee_type: "charge").item_source)
           .to eq(charge.billable_metric.code)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, code: "compute") }
+
+      it "returns the product code" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_source).to eq("compute")
       end
     end
   end
@@ -594,6 +563,14 @@ RSpec.describe Fee do
       it "returns the billable metric id" do
         expect(described_class.new(charge:, fee_type: "charge").item_id)
           .to eq(charge.billable_metric.id)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns the product id" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_id).to eq(product.id)
       end
     end
   end

@@ -36,6 +36,15 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user)
     end
 
+    it "protects the Okta requests against private addresses" do
+      service.call
+
+      expect(LagoHttpClient::Client).to have_received(:new)
+        .with("https://foo.okta.com/oauth2/v1/token", block_private_addresses: true)
+      expect(LagoHttpClient::Client).to have_received(:new)
+        .with("https://foo.okta.com/oauth2/v1/userinfo", block_private_addresses: true)
+    end
+
     it "creates user, membership and authenticate user" do
       result = service.call
 

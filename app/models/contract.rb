@@ -54,9 +54,9 @@ class Contract < ApplicationRecord
   scope :live, -> { where(status: LIVE_STATUSES) }
 
   def self.live_by_external_id(external_id)
-    # Prefer the pending (editable) contract over an active sibling — the
-    # editable target every consumer wants; started_at/created_at then breaks
-    # ties deterministically within a status.
+    # Prefer the pending contract over an active sibling — the replacement
+    # being authored is the target every consumer wants; started_at/created_at
+    # then breaks ties deterministically within a status.
     live.where(external_id:)
       .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
       .first
@@ -86,17 +86,12 @@ class Contract < ApplicationRecord
     billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
   end
 
-  # Authoring is pending-only: once the agreement is active (or ended) its
-  # attached rate cards are signed. Unit changes on an active contract are a
+  # Rate cards are authored while pending only: once the agreement is active
+  # (or ended) they are signed. Unit changes on an active contract are a
   # lifecycle concern priced by the billing engine, not an authoring edit.
+  # The contract's own settings follow Contracts::UpdateService instead.
   def editable?
     pending?
-  end
-
-  # Error code for an edit blocked by the pending-only rule; nil when allowed.
-  # Mirrors ContractRateCard#edit_error_code.
-  def edit_error_code
-    "contract_locked" unless editable?
   end
 
   # The currency fees bill in: the plan's when there is one, otherwise the

@@ -4744,7 +4744,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
     let(:usage_buckets) do
       Events::Stores::UsageBucketSet.new(
-        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(units: BigDecimal(12), events_count: 3)}
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current)}
       )
     end
 
@@ -4823,7 +4823,31 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
-    context "when the events store has not caught up with the buckets" do
+    # The pre-filtering of a precomputed charge is resolved from the buckets themselves
+    # (Events::BillingPeriodFilters::ChargesResolver), so the list and the units it gates come
+    # from the same rows.
+    context "when the pre-filtering holds the pricing bucket" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          metered_item:,
+          billing_context:,
+          cache_middleware:,
+          provider:,
+          filtered_aggregations: [nil],
+          options: described_class::Options.new(context: :current_usage, usage_filters:)
+        )
+      end
+
+      it "bills what the buckets hold" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first).to have_attributes(units: 12, events_count: 3)
+      end
+    end
+
+    context "when the pre-filtering leaves the pricing bucket out" do
       subject(:charge_subscription_service) do
         described_class.new(
           invoice:,
@@ -4836,11 +4860,23 @@ RSpec.describe Fees::ChargeService, :premium do
         )
       end
 
-      it "bills what the buckets hold, rather than the zero the pre-filtering implies" do
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+      end
+
+      it "zeroes the fee without reading a single event" do
         result = charge_subscription_service.call
         expect(result).to be_success
 
-        expect(result.fees.first).to have_attributes(units: 12, events_count: 3)
+        expect(result.fees.first).to have_attributes(units: 0, events_count: 0)
       end
     end
 

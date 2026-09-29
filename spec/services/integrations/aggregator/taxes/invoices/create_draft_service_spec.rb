@@ -233,6 +233,27 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             expect(result.fees.first.tax_breakdown.last.tax_amount).to eq(0)
           end
         end
+
+        context "when taxes are rounded down to zero" do
+          let(:body) do
+            parsed_body = JSON.parse(base_body)
+            parsed_body["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 0
+            parsed_body["succeededInvoices"].first["fees"].first["tax_breakdown"].first["tax_amount"] = 0.422
+            parsed_body.to_json
+          end
+
+          it "preserves the provider tax breakdown" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.first.tax_breakdown.first).to have_attributes(
+              name: "GST/HST",
+              type: "tax_exempt",
+              rate: "0.10",
+              tax_amount: 0.422
+            )
+          end
+        end
       end
 
       context "when taxes are not successfully fetched" do

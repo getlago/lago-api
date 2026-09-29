@@ -8,7 +8,7 @@ module Contracts
   # canceled contract is history and cannot be terminated again.
   #
   # Lifecycle state only. This does not itself stop billing: the schedule
-  # bounds on contract.ended_at and each card's ended_date, not on status, so
+  # bounds on contract.ended_at, not on status, so
   # the billing cutoff (bringing those dates in, prorating the open period) is
   # owned by the billing engine and applied there, not from this service.
   class TerminateService < BaseService

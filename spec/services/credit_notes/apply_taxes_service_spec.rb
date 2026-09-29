@@ -153,6 +153,80 @@ RSpec.describe CreditNotes::ApplyTaxesService do
     end
   end
 
+  context "when two fee rates resolve to the same invoice tax" do
+    let(:tax) { create(:tax, organization:, code: "vat", rate: 12) }
+
+    # fee1 was taxed at an older rate than the one the invoice carries for the same code
+    let(:fee_applied_tax1) { create(:fee_applied_tax, tax:, tax_code: tax.code, tax_rate: 10, fee: fee1) }
+    let(:fee_applied_tax2) { create(:fee_applied_tax, tax:, tax_code: tax.code, tax_rate: 12, fee: fee2) }
+    let(:invoice_applied_tax) { create(:invoice_applied_tax, tax:, tax_code: tax.code, tax_rate: 12, invoice:) }
+
+    before do
+      invoice_applied_tax
+      fee_applied_tax1
+      fee_applied_tax2
+    end
+
+    it "builds a single credit note tax on the invoice tax" do
+      result = apply_service.call
+
+      expect(result).to be_success
+      expect(result.applied_taxes.map { |t| [t.tax_code, t.tax_rate] }).to eq([["vat", 12]])
+      expect(result.applied_taxes.first).to have_attributes(tax:, base_amount_cents: 58, amount_cents: 7)
+      expect(result.taxes_amount_cents).to eq(7)
+    end
+  end
+
+  context "when a fee carries two provider components with the same code and rate" do
+    let(:fee_applied_taxes) do
+      %w[state county].map do |description|
+        create(:fee_applied_tax, tax: nil, tax_code: "tax", tax_rate: 5, tax_description: description, fee: fee1)
+      end
+    end
+    let(:invoice_applied_taxes) do
+      %w[state county].map do |description|
+        create(:invoice_applied_tax, tax: nil, tax_code: "tax", tax_rate: 5, tax_description: description, invoice:)
+      end
+    end
+
+    before do
+      invoice_applied_taxes
+      fee_applied_taxes
+    end
+
+    it "credits both components on a single credit note tax" do
+      result = apply_service.call
+
+      expect(result).to be_success
+      expect(result.applied_taxes.map { |t| [t.tax_code, t.tax_rate] }).to eq([["tax", 5]])
+      expect(result.precise_taxes_amount_cents).to be_within(0.0001).of(1.66667)
+      expect(result.taxes_amount_cents).to eq(2)
+    end
+  end
+
+  context "when a fee tax matches no invoice tax" do
+    let(:fee_applied_tax) { create(:fee_applied_tax, tax: nil, tax_code: "tax", tax_rate: 5, fee: fee1) }
+    let(:invoice_applied_taxes) do
+      [
+        create(:invoice_applied_tax, tax: nil, tax_code: "tax", tax_rate: 8.875, invoice:),
+        create(:invoice_applied_tax, tax: nil, tax_code: "tax", tax_rate: 0, invoice:)
+      ]
+    end
+
+    before do
+      invoice_applied_taxes
+      fee_applied_tax
+    end
+
+    it "fails without guessing between the invoice taxes sharing that code" do
+      result = apply_service.call
+
+      expect(result).not_to be_success
+      expect(result.error.code).to eq("invoice_applied_tax_not_found")
+      expect(result.applied_taxes).to eq([])
+    end
+  end
+
   context "when taxes from tax provider are applied" do
     let(:provider_tax_1) { build(:tax_breakdown_item, name: "provider tax 1", type: "providerTax1", rate: 12.0) }
     let(:provider_tax_2) { build(:tax_breakdown_item, name: "provider tax 2", type: "providerTax2", rate: 8.0) }

@@ -31,9 +31,9 @@ RSpec.describe Billing::Context do
       expect(context.organization_id).to eq(subscription.organization_id)
       expect(context.customer).to eq(subscription.customer)
       expect(context.external_id).to eq(subscription.external_id)
-      expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
       expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
       expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
+      expect(context.billing_entity).to eq(subscription.billing_entity)
       expect(context.active?).to eq(subscription.active?)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
@@ -41,6 +41,7 @@ RSpec.describe Billing::Context do
       expect(context.fees.proxy_association.owner).to eq(subscription)
       expect(context.plan_id).to eq(subscription.plan_id)
       expect(context.anniversary?).to eq(subscription.anniversary?)
+      expect(context.active?).to eq(subscription.active?)
       expect(context).not_to respond_to(:plan)
     end
 
@@ -82,7 +83,6 @@ RSpec.describe Billing::Context do
       expect(context.applicable_billing_entity).to eq(contract.applicable_billing_entity)
       expect(context.purchase_order_number).to eq(contract.purchase_order_number)
       expect(context.applicable_billing_entity_id).to eq(contract.applicable_billing_entity_id)
-      expect(context.purchase_order_number).to eq(contract.purchase_order_number)
       expect(context.active?).to eq(contract.active?)
       expect(context.subscription_at).to eq(contract.started_at)
       expect(context.started_at).to eq(contract.started_at)

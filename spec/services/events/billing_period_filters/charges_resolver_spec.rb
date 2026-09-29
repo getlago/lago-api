@@ -53,5 +53,59 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       expect(target_charges.map(&:id)).to eq([charge.id, charge.id])
       expect(target_charges.map(&:object_id).uniq.size).to eq(2)
     end
+
+    context "with a charge served from the usage buckets" do
+      let(:resolver) { described_class.new(subscription:, boundaries:, precomputed_filters:) }
+      let(:precomputed_filters) { {charge => [nil, charge_filter.id]} }
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+      let(:combination_queries) { [] }
+      let(:queried_codes) { combination_queries.flat_map { it[:codes] } }
+
+      before do
+        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+
+        allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
+          build.call(**args).tap do |store|
+            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+              combination_queries << options
+              query.call(**options)
+            end
+          end
+        end
+      end
+
+      it "records the filters the buckets hold usage for, without querying the events store" do
+        expect(filter_targets).to eq({charge.target_key => {nil => nil, charge_filter.id => nil}})
+        expect(combination_queries).to be_empty
+      end
+
+      context "with a delegated charge on the same code" do
+        let(:delegated_charge) { create(:standard_charge, plan:, billable_metric:) }
+
+        before do
+          delegated_charge
+
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: boundaries.charges_from_datetime + 1.day,
+            properties: {"region" => "eu"}
+          )
+        end
+
+        it "keeps the code in the query and leaves the served charge to the buckets" do
+          expect(filter_targets).to match(
+            {
+              charge.target_key => {nil => nil, charge_filter.id => nil},
+              delegated_charge.target_key => {nil => be_present}
+            }
+          )
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+    end
   end
 end

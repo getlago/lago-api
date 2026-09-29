@@ -94,6 +94,12 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
         "product_filter" => nil,
         "event" => anything
       )
+      expect(serialized.fetch("billing_segment")).to include(
+        "organization_id" => billing_segment.organization_id,
+        "contract_id" => billing_segment.contract_id,
+        "contract_rate_card_id" => billing_segment.contract_rate_card_id
+      )
+      expect(serialized.fetch("billing_segment")).not_to include("_aj_globalid", "id", "created_at", "updated_at")
       expect(serialized).not_to have_key("charge")
       expect(serialized).not_to have_key("boundaries")
       expect(serialized).not_to have_key("charge_filter")
@@ -122,7 +128,9 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
       deserialized = ActiveJob::Arguments.deserialize([serialized]).first
 
       expect(deserialized.source).to be_a(Fees::ChargeService::Sources::BillingSegment)
-      expect(deserialized.billing_segment).to eq(billing_segment)
+      expect(deserialized.billing_segment).to be_new_record
+      expect(deserialized.billing_segment.attributes.except("id", "created_at", "updated_at"))
+        .to eq(billing_segment.attributes.except("id", "created_at", "updated_at"))
       expect(deserialized.event.timestamp).to eq(event.timestamp)
     end
 
