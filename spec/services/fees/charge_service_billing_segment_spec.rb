@@ -27,7 +27,7 @@ RSpec.describe Fees::ChargeService do
     )
   end
   let(:product_filter) { nil }
-  let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment) }
+  let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment:) }
   let(:options) { described_class::Options.new(context: :finalize) }
 
   before do
@@ -41,10 +41,16 @@ RSpec.describe Fees::ChargeService do
     expect(result).to be_success
     expect(result.fees.sole.reload).to have_attributes(
       invoice:, invoiceable: product, fee_type: "product", charge_id: nil, subscription_id: nil,
+      contract:, contract_rate_card:,
       product_filter_id: nil, charge_filter_id: nil, rate_card_rate:, rate_override_id: nil,
       amount_cents: 400, units: 2, events_count: 2
     )
-    expect(result.fees.sole.properties).to eq({})
+    expect(result.fees.sole.properties).to include(
+      "from_datetime" => billing_segment.started_at.iso8601(6),
+      "to_datetime" => billing_segment.ended_at.iso8601(6),
+      "charges_from_datetime" => billing_segment.started_at.iso8601(6),
+      "charges_to_datetime" => billing_segment.ended_at.iso8601(6)
+    )
   end
 
   it "does not instantiate or call a charge cache" do
@@ -66,7 +72,7 @@ RSpec.describe Fees::ChargeService do
       currency: "USD", rate_properties: {"amount" => "3"}, cycle_started_at: billing_segment.cycle_started_at,
       started_at: Time.utc(2026, 8, 15), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1))
     )
-    later_item = described_class::MeteredItem.from_billing_segment(later_segment)
+    later_item = described_class::MeteredItem.from_billing_segment(billing_segment: later_segment)
 
     later_result = described_class.call!(invoice:, metered_item: later_item, billing_context:, options:)
 
@@ -160,7 +166,7 @@ RSpec.describe Fees::ChargeService do
           expect(fees.first.product_filter_id).to eq(eu_filter.id)
           expect(fees.last).to have_attributes(
             invoiceable: product, fee_type: "product", product_filter_id: nil,
-            charge_filter_id: nil, true_up_parent_fee: fees.first
+            charge_filter_id: nil, true_up_parent_fee: fees.first, contract:, contract_rate_card:
           )
         end
       end

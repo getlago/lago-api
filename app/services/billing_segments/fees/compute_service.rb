@@ -28,6 +28,8 @@ module BillingSegments
       def fee
         @fee ||= Fee.new(
           organization: billing_segment.organization,
+          contract: billing_segment.contract,
+          contract_rate_card:,
           invoiceable: product,
           fee_type: :product,
           rate_card_rate:,

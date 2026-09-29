@@ -4,8 +4,12 @@ require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
   describe "#perform" do
-    let(:charge) { create(:standard_charge, :pay_in_advance, invoiceable: true) }
-    let(:event) { create(:event) }
+    let(:organization) { create(:organization) }
+    let(:subscription) { create(:subscription, organization:) }
+    let(:charge) do
+      create(:standard_charge, :pay_in_advance, organization:, plan: subscription.plan, invoiceable: true)
+    end
+    let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
     let(:timestamp) { Time.current.to_i }
 
     let(:invoice) { nil }
@@ -13,7 +17,11 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
 
     before do
       allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call)
-        .with(metered_item: instance_of(Fees::ChargeService::MeteredItem), timestamp:)
+        .with(
+          metered_item: instance_of(Fees::ChargeService::MeteredItem),
+          billing_context: instance_of(Billing::Context),
+          timestamp:
+        )
         .and_return(result)
     end
 
@@ -21,6 +29,22 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
       described_class.perform_now(charge:, event:, timestamp:)
 
       expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:call)
+    end
+
+    context "when the event has no billing context" do
+      let(:event) do
+        create(:event, organization:, external_subscription_id: "unknown-#{SecureRandom.uuid}")
+      end
+
+      before { allow(Rails.logger).to receive(:error) }
+
+      it "skips the service call and logs the event" do
+        described_class.perform_now(charge:, event:, timestamp:)
+
+        expect(Invoices::CreatePayInAdvanceChargeService).not_to have_received(:call)
+        expect(Rails.logger).to have_received(:error)
+          .with(/no billing context for event.*charge_id=#{charge.id}/)
+      end
     end
 
     context "when result is a failure" do

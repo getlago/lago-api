@@ -16,6 +16,7 @@ class ContractRateCard < ApplicationRecord
 
   has_many :rate_phases, -> { order(:position) }
   has_many :billing_segments
+  has_many :fees
 
   validates :billing_anchor_date, presence: true
   # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
@@ -69,6 +70,7 @@ end
 #  index_contract_rate_cards_on_contract_and_rate_card  (contract_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_contract_rate_cards_on_contract_id             (contract_id)
 #  index_contract_rate_cards_on_deleted_at              (deleted_at)
+#  index_contract_rate_cards_on_id_and_contract_id      (id,contract_id) UNIQUE
 #  index_contract_rate_cards_on_next_billing_at         (next_billing_at) WHERE (deleted_at IS NULL)
 #  index_contract_rate_cards_on_organization_id         (organization_id)
 #  index_contract_rate_cards_on_rate_card_id            (rate_card_id)

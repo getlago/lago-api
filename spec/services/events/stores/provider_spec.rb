@@ -455,7 +455,7 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "with a billing segment" do
-      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment) }
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: billing_segment) }
       let(:billing_segment) { create(:billing_segment) }
 
       it "reads events, because the buckets are keyed by charge" do

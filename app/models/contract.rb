@@ -35,6 +35,7 @@ class Contract < ApplicationRecord
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :billing_segments
+  has_many :fees
   has_many :invoices, -> { distinct }, through: :billing_segments
 
   enum :status, STATUSES, validate: true
