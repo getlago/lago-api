@@ -57,12 +57,9 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       context "when selecting f2" do
         let(:current_filter) { f2 }
 
-        it "keeps the more specific child and subtracts matching values from the all-values sibling" do
+        it "ignores the more specific child but not the wider all-values sibling" do
           expect(service_result.matching_filters).to eq({"size" => ["512"], "steps" => ["25"]})
-          expect(service_result.ignored_filters).to eq([
-            {"model" => ["llama-2"], "size" => ["512"], "steps" => ["25"]},
-            {"size" => ["1024"], "steps" => %w[50 75 100]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"model" => ["llama-2"], "size" => ["512"], "steps" => ["25"]}])
         end
       end
 
@@ -90,12 +87,9 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       context "when selecting f5" do
         let(:current_filter) { f5 }
 
-        it "keeps different-key children and subtracts its value from the all-values sibling" do
+        it "ignores the filters with more keys but not the wider all-values sibling" do
           expect(service_result.matching_filters).to eq({"size" => ["512"]})
-          expect(service_result.ignored_filters).to eq([
-            {"size" => %w[512 1024], "steps" => %w[25 50 75 100]},
-            {"size" => ["1024"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"size" => %w[512 1024], "steps" => %w[25 50 75 100]}])
         end
       end
 
@@ -209,8 +203,6 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
       it "expands the configured metric values and ignores the explicit child" do
         expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
         expect(service_result.ignored_filters).to eq([{"size" => ["512"]}])
-        expect(target_filter.all_filter_values?(current_filter, "size")).to be(true)
-        expect(target_filter.all_filter_values?(child_filter, "size")).to be(false)
       end
     end
 
@@ -225,9 +217,80 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
         create_filter_values(mixed_child, steps_filter, %w[25 75])
       end
 
-      it "subtracts matching values from the non-subset child and drops the emptied key" do
+      it "ignores the child allowing fewer values" do
         expect(service_result.matching_filters).to match({"size" => match_array(%w[512 1024]), "steps" => match_array(%w[25 50])})
-        expect(service_result.ignored_filters).to eq([{"steps" => ["75"]}])
+        expect(service_result.ignored_filters).to eq([{"size" => ["512"], "steps" => %w[25 75]}])
+      end
+    end
+
+    context "when same-key filters partially overlap with as many values" do
+      let(:older_filter) { create_filter(created_at: 2.days.ago) }
+      let(:newer_filter) { create_filter(created_at: 1.day.ago) }
+
+      before do
+        create_filter_values(older_filter, steps_filter, %w[25 50])
+        create_filter_values(newer_filter, steps_filter, %w[50 75])
+      end
+
+      context "when selecting the older filter" do
+        let(:current_filter) { older_filter }
+
+        it "keeps the shared value" do
+          expect(service_result.matching_filters).to eq({"steps" => %w[25 50]})
+          expect(service_result.ignored_filters).to eq([])
+        end
+      end
+
+      context "when selecting the newer filter" do
+        let(:current_filter) { newer_filter }
+
+        it "ignores the older filter" do
+          expect(service_result.matching_filters).to eq({"steps" => %w[50 75]})
+          expect(service_result.ignored_filters).to eq([{"steps" => %w[25 50]}])
+        end
+      end
+    end
+
+    context "when filters on different keys overlap" do
+      let(:size_only) { create_filter(created_at: 1.day.ago) }
+      let(:steps_only) { create_filter(created_at: 2.days.ago) }
+
+      before do
+        create_filter_values(size_only, size_filter, ["512"])
+        create_filter_values(steps_only, steps_filter, ["25"])
+      end
+
+      context "when selecting the older filter" do
+        let(:current_filter) { steps_only }
+
+        it "does not ignore the newer filter" do
+          expect(service_result.matching_filters).to eq({"steps" => ["25"]})
+          expect(service_result.ignored_filters).to eq([])
+        end
+      end
+
+      context "when selecting the newer filter" do
+        let(:current_filter) { size_only }
+
+        it "ignores the older filter" do
+          expect(service_result.matching_filters).to eq({"size" => ["512"]})
+          expect(service_result.ignored_filters).to eq([{"steps" => ["25"]}])
+        end
+      end
+    end
+
+    context "when a filter taking precedence does not overlap" do
+      let(:current_filter) { create_filter(created_at: 1.day.ago) }
+
+      before do
+        create_filter_values(current_filter, steps_filter, %w[25 50])
+        disjoint_filter = create_filter(created_at: 2.days.ago)
+        create_filter_values(disjoint_filter, steps_filter, %w[75 100])
+      end
+
+      it "does not ignore it" do
+        expect(service_result.matching_filters).to eq({"steps" => %w[25 50]})
+        expect(service_result.ignored_filters).to eq([])
       end
     end
 

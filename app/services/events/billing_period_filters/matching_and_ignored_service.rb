@@ -10,34 +10,17 @@ module Events
         super
       end
 
+      # An event matching several filters is billed on the one EventMatchingService picks, so the
+      # selected filter ignores every overlapping filter taking precedence over it.
       def call
         result.matching_filters = target_filter.filter_values(target_filter.selected_filter)
 
-        children = other_filters.find_all do |filter|
+        ignored_filters = other_filters.filter_map do |filter|
+          next unless preceding?(filter)
+
           child = target_filter.filter_values(filter)
-
-          result.matching_filters.all? do |key, values|
-            values.any? { (child[key] || []).include?(it) }
-          end
+          child if overlapping?(child)
         end
-
-        ignored_filters = children.map do |child_filter|
-          child = target_filter.filter_values(child_filter).dup
-
-          if child.keys.sort == result.matching_filters.keys.sort
-            if identical_to_matching_filters?(child)
-              next unless older_than_filter?(child_filter)
-            elsif !subset_of_matching_filters?(child)
-              child.each do |key, values|
-                next if target_filter.all_filter_values?(target_filter.selected_filter, key)
-
-                child[key] = values - result.matching_filters[key]
-              end
-            end
-          end
-
-          child
-        end.compact
 
         result.ignored_filters = MinimizeIgnoredFiltersService.call(ignored_filters:).ignored_filters
 
@@ -52,18 +35,18 @@ module Events
         @other_filters ||= target_filter.filters.reject { it.id == target_filter.selected_filter.id }
       end
 
-      def subset_of_matching_filters?(child)
-        child.all? { |key, values| (values - result.matching_filters[key]).empty? }
+      def preceding?(filter)
+        (target_filter.filter_precedence(filter) <=> selected_precedence).negative?
       end
 
-      def identical_to_matching_filters?(child)
-        child.all? { |key, values| values.sort == result.matching_filters[key].sort }
+      def selected_precedence
+        @selected_precedence ||= target_filter.filter_precedence(target_filter.selected_filter)
       end
 
-      def older_than_filter?(child)
-        return true if target_filter.selected_filter.created_at.nil?
-
-        ([child.created_at, child.id] <=> [target_filter.selected_filter.created_at, target_filter.selected_filter.id]).negative?
+      def overlapping?(child)
+        child.all? do |key, values|
+          !result.matching_filters.key?(key) || values.intersect?(result.matching_filters[key])
+        end
       end
     end
   end
