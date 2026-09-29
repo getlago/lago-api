@@ -20,6 +20,7 @@ module Events
     attr_reader :event
 
     def charge_selections
+      return [] if event.organization.product_catalog_enabled?
       return [] unless subscription
 
       subscription
@@ -37,6 +38,8 @@ module Events
     end
 
     def billing_segment_selections
+      return [] unless event.organization.product_catalog_enabled?
+
       Events::PayInAdvanceBillingSegmentResolver.call!(event:).billing_segments.map do |billing_segment|
         Selection.new(
           metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:),

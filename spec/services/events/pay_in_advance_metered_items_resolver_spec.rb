@@ -76,4 +76,54 @@ RSpec.describe Events::PayInAdvanceMeteredItemsResolver do
       )
     end
   end
+
+  context "when a subscription and a contract share the external id" do
+    let(:organization) { create(:organization, feature_flags:) }
+    let(:feature_flags) { [] }
+    let(:subscription) { create(:subscription, organization:, customer:, started_at: timestamp - 1.month) }
+    let(:charge) { create(:standard_charge, :pay_in_advance, plan: subscription.plan, billable_metric:) }
+    let(:contract) { create(:contract, organization:, customer:, external_id: subscription.external_id) }
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract:,
+        contract_rate_card:,
+        status: :processing,
+        cycle_started_at: timestamp.beginning_of_day,
+        started_at: timestamp.beginning_of_day,
+        ended_at: timestamp.end_of_day
+      )
+    end
+    let(:event) do
+      build(
+        :common_event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        external_subscription_id: subscription.external_id,
+        timestamp:
+      )
+    end
+
+    before do
+      charge
+      billing_segment
+    end
+
+    it "returns only the charge selection" do
+      expect(selections.sole.metered_item.charge).to eq(charge)
+    end
+
+    context "when the product catalog is enabled" do
+      let(:feature_flags) { [:product_catalog] }
+
+      it "returns only the billing segment selection" do
+        expect(selections.sole.metered_item.billing_segment).to eq(billing_segment)
+      end
+    end
+  end
 end
