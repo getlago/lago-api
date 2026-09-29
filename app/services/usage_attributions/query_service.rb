@@ -267,17 +267,17 @@ module UsageAttributions
     end
 
     def assign_result(rows)
-      ranked = rows.reject { it["node"] == "" }
-      unattributed = rows.find { it["node"] == "" }
-      page = ranked.select { it["in_page"].to_i == 1 }
+      ranked = rows.reject { |row| row["node"] == "" }
+      unattributed = rows.find { |row| row["node"] == "" }
+      page = ranked.select { |row| row["in_page"].to_i == 1 }
       level = ranked.first
 
-      result.rows = page.map { build_row(it) }
-      result.unattributed = (build_aggregate { value(unattributed, it) } if unattributed)
+      result.rows = page.map { |row| build_row(row) }
+      result.unattributed = build_aggregate(values_of(unattributed)) if unattributed
       result.groups_count = level ? level["groups_count"].to_i : 0
-      result.totals = build_aggregate { value(level, "total_#{it}") + value(unattributed, it) }
+      result.totals = build_aggregate(add(values_of(level, prefix: "total_"), values_of(unattributed)))
       result.others_count = others_count(page)
-      result.others = build_others(level, page)
+      result.others = build_aggregate(others_values(level, page))
     end
 
     def others_count(page)
@@ -292,48 +292,68 @@ module UsageAttributions
 
     # Everything ranked after the page. A page is contiguous, so the running total at its last row
     # covers it and every page before; search results are not, so they are subtracted one by one.
-    def build_others(level, page)
+    def others_values(level, page)
+      level_totals = values_of(level, prefix: "total_")
+
       if result.others_count.zero?
-        build_aggregate { 0 }
+        values_of(nil)
       elsif search
-        build_aggregate { |name| value(level, "total_#{name}") - page.sum { value(it, name) } }
+        page.reduce(level_totals) { |rest, row| subtract(rest, values_of(row)) }
       else
-        build_aggregate { |name| value(level, "total_#{name}") - value(page.last, "running_#{name}") }
+        subtract(level_totals, values_of(page.last, prefix: "running_"))
       end
     end
 
     def build_row(row)
+      values = values_of(row)
+
       Row.new(
         value: row["node"],
         rank: row["rank"].to_i,
-        amount_cents: value(row, "amount"),
-        events_count: value(row, "events").to_i,
-        cells: build_cells { value(row, it) }
+        amount_cents: values["amount"],
+        events_count: values["events"].to_i,
+        cells: build_cells(values)
       )
     end
 
-    def build_aggregate(&)
+    def build_aggregate(values)
       Aggregate.new(
-        amount_cents: decimal(yield("amount")),
-        events_count: decimal(yield("events")).to_i,
-        cells: build_cells(&)
+        amount_cents: values["amount"],
+        events_count: values["events"].to_i,
+        cells: build_cells(values)
       )
     end
 
-    def build_cells
+    def build_cells(values)
       Array(@cells).each_with_index.map do |cell, index|
         Cell.new(
           charge_id: cell.charge_id,
           charge_filter_id: cell.charge_filter_id,
-          units: decimal(yield("units_#{index}")),
-          amount_cents: (decimal(yield("amount_#{index}")) if cell.priced),
-          events_count: decimal(yield("events_#{index}")).to_i
+          units: values["units_#{index}"],
+          amount_cents: (values["amount_#{index}"] if cell.priced),
+          events_count: values["events_#{index}"].to_i
         )
       end
     end
 
-    def value(row, name)
-      decimal(row&.dig(name))
+    # The values of a returned row, by column name: {"amount" => ..., "events" => ..., "units_0" => ...}.
+    # A missing row reads as zeros.
+    def values_of(row, prefix: "")
+      column_names.index_with { |name| decimal(row && row["#{prefix}#{name}"]) }
+    end
+
+    def column_names
+      @column_names ||= %w[amount events] + Array(@cells).each_index.flat_map do |index|
+        ["units_#{index}", "amount_#{index}", "events_#{index}"]
+      end
+    end
+
+    def add(left, right)
+      left.to_h { |name, value| [name, value + right[name]] }
+    end
+
+    def subtract(left, right)
+      left.to_h { |name, value| [name, value - right[name]] }
     end
 
     def decimal(value)
