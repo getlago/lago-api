@@ -257,17 +257,34 @@ class Invoice < ApplicationRecord
     fees.index_with { |fee| booked_tax_units(fee).sum { |unit| booked_tax.fetch(unit) } }
   end
 
+  # Native fee taxes round one by one while the invoice rounds once, and provider invoices booked
+  # before fee amounts were stored drift the same way: split what the invoice charged, first
+  # across its taxes, then within each tax across its fee rows, so a full credit matches both.
   def booked_tax_by_fee_tax
     units = ordered_fees_for_booked_tax.flat_map { |fee| booked_tax_units(fee) }
-    booked = units.index_with { |unit| booked_tax_cents(unit) }
-    return booked if booked.values.sum == taxes_amount_cents
+    units_by_tax = booked_tax_units_by_invoice_tax(units)
+    tax_amounts = booked_tax_by_invoice_tax(units_by_tax)
 
-    # Native fee taxes round one by one while the invoice rounds once, and provider invoices
-    # booked before fee amounts were stored drift the same way: split what the invoice charged.
-    weights = units.map { |unit| exact_tax_cents(unit) }
-    # Taxes billed before exact amounts were stored carry none, so their rounded cents weight the split.
-    weights = booked.values if weights.sum.zero?
-    units.zip(Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, weights)).to_h
+    booked = units_by_tax.values.zip(tax_amounts).each_with_object({}) do |(tax_units, amount_cents), split|
+      split.merge!(split_booked_tax(amount_cents, tax_units))
+    end
+    units.index_with { |unit| booked.fetch(unit) }
+  end
+
+  # NOTE: a fee tax resolves to the invoice tax with the same code and rate. When no invoice tax
+  #       has that rate (the fee and the invoice were taxed at different rates, e.g. the tax rate
+  #       changed in between), it falls back to the invoice tax carrying the same code, but only
+  #       if exactly one does: several invoice taxes sharing a code is the provider multi-rate
+  #       case, where the rate is the only thing telling them apart.
+  def applied_tax_for(fee_applied_tax)
+    invoice_taxes = applied_taxes.to_a
+    exact_match = invoice_taxes.find do |tax|
+      tax.tax_code == fee_applied_tax.tax_code && tax.tax_rate == fee_applied_tax.tax_rate
+    end
+    return exact_match if exact_match
+
+    code_matches = invoice_taxes.select { |tax| tax.tax_code == fee_applied_tax.tax_code }
+    code_matches.first if code_matches.one?
   end
 
   def charge_amount_cents
@@ -581,6 +598,52 @@ class Invoice < ApplicationRecord
   def booked_tax_units(fee)
     rows = fee.applied_taxes.sort_by { |row| row.id.to_s }
     rows.empty? ? [fee] : rows
+  end
+
+  # Fees without rows and rows matching no invoice tax share one group, weighted by their own
+  # cents, so the invoice tax is still spent in full.
+  def booked_tax_units_by_invoice_tax(units)
+    units
+      .group_by { |unit| applied_tax_for(unit) if unit.is_a?(Fee::AppliedTax) }
+      .sort_by.with_index { |(tax, _), index| tax ? [0, tax.tax_code, tax.tax_rate, index] : [1, index] }
+      .to_h
+  end
+
+  def booked_tax_by_invoice_tax(units_by_tax)
+    booked = units_by_tax.map do |tax, tax_units|
+      tax ? tax.amount_cents : tax_units.sum { |unit| booked_tax_cents(unit) }
+    end
+    exact = units_by_tax.values.map { |tax_units| tax_units.sum { |unit| exact_tax_cents(unit) } }
+
+    if booked.sum == taxes_amount_cents
+      booked
+    else
+      Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, booked_tax_weights(exact, booked))
+    end
+  end
+
+  def split_booked_tax(amount_cents, units)
+    booked = units.map { |unit| booked_tax_cents(unit) }
+    exact = units.map { |unit| exact_tax_cents(unit) }
+    split = if booked.sum == amount_cents
+      booked
+    else
+      Integrations::Aggregator::Taxes::Allocation.call(amount_cents, booked_tax_weights(exact, booked))
+    end
+
+    units.zip(split).to_h
+  end
+
+  # Taxes billed before exact amounts were stored carry none, so their rounded cents weight the
+  # split; when those are zero too, the cents still land on the first rows.
+  def booked_tax_weights(exact, booked)
+    if exact.sum.nonzero?
+      exact
+    elsif booked.sum.nonzero?
+      booked
+    else
+      Array.new(exact.size, 1)
+    end
   end
 
   def booked_tax_cents(unit)
