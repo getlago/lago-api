@@ -6,12 +6,13 @@ RSpec.describe ::V1::InvoiceSerializer do
   subject(:serializer) { described_class.new(invoice, root_name: "invoice", includes:) }
 
   let(:includes) { %i[metadata error_details] }
-
-  let(:invoice) { create(:invoice) }
-
   let(:metadata) { create(:invoice_metadata, invoice:) }
   let(:error_details1) { create(:error_detail, owner: invoice) }
   let(:error_details2) { create(:error_detail, owner: invoice, deleted_at: Time.current) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice) }
 
   before do
     metadata
@@ -100,15 +101,12 @@ RSpec.describe ::V1::InvoiceSerializer do
 
   context "when including subscriptions with multiple subscriptions" do
     let(:includes) { %i[subscriptions billing_periods] }
-    let(:organization) { invoice.organization }
-    let(:customer) { invoice.customer }
-
-    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
-    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
-
     let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
     let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
     let(:subscription_custom) { create(:subscription, customer:, plan: plan_zebra, name: "AAA Custom") }
+
+    let_it_be(:plan_zebra) { create_default(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let_it_be(:plan_alpha) { create_default(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
 
     before do
       create(:invoice_subscription, :boundaries, invoice:, subscription: subscription_zebra)

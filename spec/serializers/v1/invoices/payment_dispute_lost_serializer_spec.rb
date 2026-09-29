@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe ::V1::Invoices::PaymentDisputeLostSerializer do
   subject(:serializer) { described_class.new(invoice, options) }
 
-  let(:invoice) { create(:invoice, :dispute_lost) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice, :dispute_lost) }
 
   context "when options are present" do
     let(:options) do

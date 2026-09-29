@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::ChargeFilterSerializer do
   subject(:serializer) { described_class.new(charge_filter, root_name: "filter") }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let(:charge_filter) { create(:charge_filter, properties:) }
   let(:properties) { {"amount" => "1000"} }
   let(:filter) { create(:billable_metric_filter) }

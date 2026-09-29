@@ -70,6 +70,10 @@ Sentry.init do |config|
   config.transport.transport_class = Sentry::DummyTransport
 end
 
+require "test_prof/recipes/rspec/sample"
+require "test_prof/recipes/rspec/let_it_be"
+require "test_prof/recipes/rspec/factory_default"
+
 RSpec.configure do |config|
   config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods

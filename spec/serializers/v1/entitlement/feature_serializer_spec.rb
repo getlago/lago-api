@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe V1::Entitlement::FeatureSerializer do
   subject { described_class.new(feature) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:feature) do
     create(:feature,
       organization:,

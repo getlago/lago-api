@@ -9,6 +9,10 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice) }
   let(:credit_note) { create(:credit_note, total_amount_currency: "EUR", credit_amount: 1) }
   let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee:, precise_amount_cents: 1000) }
   let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 2500) }
@@ -168,8 +172,6 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
 
     context "when ApplicableTradeTax tag" do
       let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:ApplicableTradeTax" }
-
-      let(:invoice) { create(:invoice) }
       let(:credit_note) { create(:credit_note, invoice:) }
       let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
       let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee1, precise_amount_cents: 500) }
@@ -183,6 +185,8 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
       let(:fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 60) }
       let(:credit_note_applied_tax1) { create(:credit_note_applied_tax, credit_note:, tax_rate: 5.0, amount_cents: 20, base_amount_cents: 400) }
       let(:credit_note_applied_tax2) { create(:credit_note_applied_tax, credit_note:, tax_rate: 10.0, amount_cents: 60, base_amount_cents: 600) }
+
+      let_it_be(:invoice) { create_default(:invoice) }
 
       before do
         credit_note_item0
@@ -224,8 +228,6 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
 
     context "when SpecifiedTradeAllowanceCharge tag" do
       let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:SpecifiedTradeAllowanceCharge" }
-
-      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
       let(:credit_note) { create(:credit_note, invoice:, precise_coupons_adjustment_amount_cents: 100) }
       let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_coupons_amount_cents: 100, precise_amount_cents: 2000, taxes_precise_amount_cents: 0) }
       let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_coupons_amount_cents: 10, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
@@ -235,6 +237,8 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
       let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: invoice_fee2, precise_amount_cents: 100) }
       let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: invoice_fee3, precise_amount_cents: 300) }
       let(:credit_note_item4) { create(:credit_note_item, credit_note:, fee: invoice_fee4, precise_amount_cents: 600) }
+
+      let_it_be(:invoice) { create_default(:invoice, coupons_amount_cents: 100) }
 
       before do
         credit_note_item1
@@ -294,9 +298,9 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
 
     context "when SpecifiedTradeSettlementHeaderMonetarySummation tag" do
       let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:SpecifiedTradeSettlementHeaderMonetarySummation" }
-
-      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
       let(:credit_note) { create(:credit_note, invoice:, precise_coupons_adjustment_amount_cents: 100, taxes_amount: 10, total_amount: 20, credit_amount: 10) }
+
+      let_it_be(:invoice) { create_default(:invoice, coupons_amount_cents: 100) }
 
       it "contains the tag" do
         expect(subject).to contains_xml_node(root)

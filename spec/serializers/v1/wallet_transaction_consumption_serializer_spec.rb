@@ -7,6 +7,8 @@ RSpec.describe ::V1::WalletTransactionConsumptionSerializer do
     described_class.new(consumption, root_name: "wallet_transaction_consumption", includes:)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:consumption) { create(:wallet_transaction_consumption) }
   let(:includes) { [] }
 

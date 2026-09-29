@@ -9,10 +9,12 @@ RSpec.describe EInvoices::Ubl::CustomerParty do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:resource) { invoice }
+  let(:root) { "//cac:AccountingCustomerParty/cac:Party" }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:, customer:) }
+
   let(:customer) do
     create(:customer,
       organization:,
@@ -23,8 +25,6 @@ RSpec.describe EInvoices::Ubl::CustomerParty do
       country: "BR",
       name: "Andre")
   end
-
-  let(:root) { "//cac:AccountingCustomerParty/cac:Party" }
 
   before { invoice }
 

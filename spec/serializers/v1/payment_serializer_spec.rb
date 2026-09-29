@@ -7,6 +7,9 @@ RSpec.describe ::V1::PaymentSerializer do
     described_class.new(payment, root_name: "payment", includes:)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   context "when payable is an invoice" do
     let(:payment) { create(:payment) }
 
