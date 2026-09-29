@@ -18,8 +18,7 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       offset: 0,
       deduplicate:,
       max_groups: 1_000,
-      max_execution_time: 10,
-      max_memory_usage: 1_000_000_000
+      max_execution_time: 10
     )
   end
 
@@ -109,8 +108,7 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
         "max_rows_to_group_by = 1000",
         "group_by_overflow_mode = 'throw'",
         "max_execution_time = 10",
-        "timeout_overflow_mode = 'throw'",
-        "max_memory_usage = 1000000000"
+        "timeout_overflow_mode = 'throw'"
       )
     end
 

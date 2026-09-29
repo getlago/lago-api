@@ -24,7 +24,7 @@ module Events
         ORDERS = {"amount" => "amount", "events_count" => "events"}.freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
-          charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:, max_memory_usage:)
+          charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:)
           @organization_id = organization_id
           @external_subscription_id = external_subscription_id
           @from_datetime = from_datetime
@@ -39,7 +39,6 @@ module Events
           @deduplicate = deduplicate
           @max_groups = max_groups
           @max_execution_time = max_execution_time
-          @max_memory_usage = max_memory_usage
         end
 
         def cells
@@ -103,15 +102,14 @@ module Events
               max_rows_to_group_by = #{Integer(max_groups)},
               group_by_overflow_mode = 'throw',
               max_execution_time = #{Integer(max_execution_time)},
-              timeout_overflow_mode = 'throw',
-              max_memory_usage = #{Integer(max_memory_usage)}
+              timeout_overflow_mode = 'throw'
           SQL
         end
 
         private
 
         attr_reader :organization_id, :external_subscription_id, :from_datetime, :to_datetime, :group_key, :label_filters,
-          :charge_columns, :order_by, :search, :limit, :offset, :deduplicate, :max_groups, :max_execution_time, :max_memory_usage
+          :charge_columns, :order_by, :search, :limit, :offset, :deduplicate, :max_groups, :max_execution_time
 
         def cell_names
           @cell_names ||= cells.each_index.flat_map { ["units_#{it}", "amount_#{it}", "events_#{it}"] }

@@ -17,7 +17,6 @@ module UsageAttributions
     MAX_CUSTOM_WINDOW = 31.days
     MAX_GROUPS = 250_000
     MAX_EXECUTION_TIME = 8
-    MAX_MEMORY_USAGE = 4_000_000_000
 
     ORDERS = %w[amount events_count].freeze
     SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
@@ -234,8 +233,7 @@ module UsageAttributions
         offset:,
         deduplicate: organization.clickhouse_deduplication_enabled?,
         max_groups: MAX_GROUPS,
-        max_execution_time: MAX_EXECUTION_TIME,
-        max_memory_usage: MAX_MEMORY_USAGE
+        max_execution_time: MAX_EXECUTION_TIME
       )
       @cells = query.cells
       query.rows
