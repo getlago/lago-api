@@ -5,7 +5,14 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     def perform
-      Invoice.ready_to_be_refreshed.with_active_subscriptions.find_each do |invoice|
+      enqueue_refresh_jobs(Invoice.ready_to_be_refreshed.with_active_subscriptions)
+      enqueue_refresh_jobs(Invoice.ready_to_be_refreshed.joins(:billing_segments).distinct)
+    end
+
+    private
+
+    def enqueue_refresh_jobs(scope)
+      scope.find_each do |invoice|
         Invoices::RefreshDraftJob.perform_later(invoice:)
       end
     end

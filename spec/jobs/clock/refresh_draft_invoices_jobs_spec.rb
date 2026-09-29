@@ -40,5 +40,38 @@ describe Clock::RefreshDraftInvoicesJob, job: true do
         expect(Invoices::RefreshDraftJob).to have_been_enqueued.with(invoice:)
       end
     end
+
+    context "when a product catalog invoice is ready to be refreshed" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          customer:,
+          organization: customer.organization,
+          ready_to_be_refreshed: true
+        )
+      end
+      let(:customer) { create(:customer) }
+      let(:invoice_subscription) { nil }
+      let(:contract) { create(:contract, organization: customer.organization, customer:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization: customer.organization,
+          customer:,
+          contract:,
+          invoice:,
+          status: :done
+        )
+      end
+
+      before { billing_segment }
+
+      it "enqueues its refresh job without a legacy subscription" do
+        described_class.perform_now
+
+        expect(Invoices::RefreshDraftJob).to have_been_enqueued.with(invoice:)
+      end
+    end
   end
 end

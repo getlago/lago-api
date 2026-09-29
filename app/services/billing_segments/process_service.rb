@@ -66,9 +66,6 @@ module BillingSegments
     def build_invoice(segments)
       contract = segments.first.contract
       invoice = nil
-      grouped = segments.group_by { |s| s.contract_rate_card.product.product_type }
-      metered_segments = grouped[Product::PRODUCT_TYPES[:metered]] || []
-      fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
 
       ActiveRecord::Base.transaction do
         invoice = Invoices::CreateGeneratingService.call!(
@@ -81,60 +78,36 @@ module BillingSegments
           purchase_order_number: contract.purchase_order_number
         ).invoice
 
-        filtered_aggregations = event_filters(metered_segments)
-
-        attach_fixed_fees(fixed_segments, invoice)
-        attach_metered_fees(metered_segments, invoice, filtered_aggregations)
-
-        invoice.fees.reload
-
-        Invoices::ComputeAmountsFromFees.call!(invoice:)
-        invoice.save!
+        context = grace_period? ? :draft : :finalize
+        BillingSegments::ComputeInvoiceService.call!(
+          invoice:,
+          billing_segments: segments,
+          context:
+        )
         segments.each { |segment| segment.update!(status: :done, invoice:) }
+
+        if context == :draft
+          invoice.update!(status: :draft)
+          notify_draft_created(invoice)
+        end
       end
 
       invoice
     end
 
-    def attach_fixed_fees(segments, invoice)
-      segments.each do |segment|
-        compute_fixed_fees(segment).each do |fee|
-          fee.invoice = invoice
-          fee.billing_entity = invoice.billing_entity
-          fee.save!
-        end
-      end
+    def grace_period?
+      customer.applicable_invoice_grace_period.positive?
     end
 
-    def attach_metered_fees(segments, invoice, filtered_aggregations)
-      segments.each do |segment|
-        compute_metered_fees(segment, invoice, filtered_aggregations)
-      end
-    end
+    def notify_draft_created(invoice)
+      customer.flag_wallets_for_refresh
+      SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
 
-    def compute_fixed_fees(segment)
-      fee_result = BillingSegments::Fees::ComputeService.call!(billing_segment: segment)
-      [fee_result.fee, fee_result.true_up_fee].compact
-    end
+      return if invoice.tax_pending?
 
-    # NOTE: Fees::ChargeService persists and attaches the product fees itself (within this
-    # surrounding transaction), so a failure on any segment rolls back the whole invoice group.
-    def compute_metered_fees(segment, invoice, filtered_aggregations)
-      ::Fees::ChargeService.call!(
-        invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
-        billing_context: Billing::Context.from(contract: segment.contract),
-        options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
-        filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
-      )
-    end
-
-    def event_filters(metered_segments)
-      return {} if metered_segments.empty?
-
-      Events::BillingPeriodFilterService.for_billing_segments!(
-        billing_segments: metered_segments, with_last_seen_at: false
-      ).filter_targets
+      SendWebhookJob.perform_after_commit("invoice.ready_to_finalize", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.ready_to_finalize")
     end
 
     def finalize_generating_invoices
