@@ -893,10 +893,11 @@ DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_id_and_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
-DROP INDEX IF EXISTS public.index_contract_rate_cards_on_billing_clock;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_and_rate_card;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
@@ -996,7 +997,6 @@ DROP INDEX IF EXISTS public.index_active_storage_blobs_on_key;
 DROP INDEX IF EXISTS public.index_active_storage_attachments_uniqueness;
 DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
-DROP INDEX IF EXISTS public.index_active_contract_rate_cards_on_contract_and_card;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
 DROP INDEX IF EXISTS public.index_activation_rules_pending_with_expiry;
@@ -2688,12 +2688,10 @@ CREATE TABLE public.contract_rate_cards (
     billing_anchor_date date NOT NULL,
     next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
-    ended_date date,
     units numeric,
     deleted_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT contract_rate_cards_effective_before_ended CHECK (((ended_date IS NULL) OR (effective_date <= ended_date)))
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -8040,13 +8038,6 @@ CREATE INDEX index_active_charge_filters ON public.charge_filters USING btree (c
 
 
 --
--- Name: index_active_contract_rate_cards_on_contract_and_card; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_active_contract_rate_cards_on_contract_and_card ON public.contract_rate_cards USING btree (contract_id, rate_card_id) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL));
-
-
---
 -- Name: index_active_metric_filters; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8740,10 +8731,10 @@ CREATE INDEX index_commitments_taxes_on_tax_id ON public.commitments_taxes USING
 
 
 --
--- Name: index_contract_rate_cards_on_billing_clock; Type: INDEX; Schema: public; Owner: -
+-- Name: index_contract_rate_cards_on_contract_and_rate_card; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_contract_rate_cards_on_billing_clock ON public.contract_rate_cards USING btree (next_billing_at, ended_date) WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX index_contract_rate_cards_on_contract_and_rate_card ON public.contract_rate_cards USING btree (contract_id, rate_card_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -8765,6 +8756,13 @@ CREATE INDEX index_contract_rate_cards_on_deleted_at ON public.contract_rate_car
 --
 
 CREATE UNIQUE INDEX index_contract_rate_cards_on_id_and_contract_id ON public.contract_rate_cards USING btree (id, contract_id);
+
+
+--
+-- Name: index_contract_rate_cards_on_next_billing_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_on_next_billing_at ON public.contract_rate_cards USING btree (next_billing_at) WHERE (deleted_at IS NULL);
 
 
 --
@@ -15241,6 +15239,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260925110807'),
+('20260925110133'),
 ('20260924133109'),
 ('20260922172006'),
 ('20260922153925'),
@@ -16396,3 +16396,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

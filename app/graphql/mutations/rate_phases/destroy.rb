@@ -10,7 +10,7 @@ module Mutations
       REQUIRED_PERMISSION = "plans:update"
 
       graphql_name "DestroyRatePhase"
-      description "Removes a single phase; deleting an indefinite terminal phase promotes its predecessor"
+      description "Removes a single phase; the indefinite terminal phase cannot be removed"
 
       argument :code, String, required: true
       argument :plan_applied_rate_card_id, ID, required: true

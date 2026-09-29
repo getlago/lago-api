@@ -1754,7 +1754,6 @@ type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
-  endedDate: ISO8601Date
   id: ID!
   nextBillingAt: ISO8601DateTime
   product: Product!
@@ -9407,7 +9406,7 @@ type Mutation {
   ): DestroyRateCardRatePayload
 
   """
-  Removes a single phase; deleting an indefinite terminal phase promotes its predecessor
+  Removes a single phase; the indefinite terminal phase cannot be removed
   """
   destroyRatePhase(
     """
@@ -16013,6 +16012,7 @@ input UpdateRatePhaseInput {
   name: String
   newCode: String
   planAppliedRateCardId: ID!
+  position: Int
   rateOverride: RateOverrideInput
 }
 
