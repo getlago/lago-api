@@ -711,6 +711,24 @@ RSpec.describe LagoHttpClient::Client do
       end
     end
 
+    context "when a plain HTTP URL goes through a proxy" do
+      let(:url) { "http://hooks.example.com:8080/lago" }
+      let(:pinned_url) { "http://93.184.215.14:8080/lago" }
+
+      before do
+        stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => allow_private, "http_proxy" => "http://proxy.test:3128"))
+        stub_request(:post, pinned_url).to_return(body: "{}", status: 200)
+      end
+
+      it "sends the request to the resolved address with the original Host header" do
+        client.post_with_response({}, {})
+
+        expect(client.send(:http_client).proxy_address).to eq("proxy.test")
+        expect(WebMock).to have_requested(:post, pinned_url).with(headers: {"Host" => "hooks.example.com:8080"})
+        expect(WebMock).not_to have_requested(:post, url)
+      end
+    end
+
     context "when the host resolves to a private address" do
       before { allow(Addrinfo).to receive(:getaddrinfo).and_return([private_address]) }
 

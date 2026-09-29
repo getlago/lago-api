@@ -64,7 +64,7 @@ module Webhooks
 
     def mark_webhook_as_succeeded(response)
       webhook.http_status = response&.code&.to_i
-      webhook.store_response(truncate(response&.body).presence || {})
+      webhook.store_response(sanitize_body(response&.body).presence || {})
       webhook.status = :succeeded
       webhook.save!
     end
@@ -72,7 +72,7 @@ module Webhooks
     def mark_webhook_as_unsuccessful(error:, retrying:)
       if error.is_a?(LagoHttpClient::HttpError)
         webhook.http_status = error.error_code
-        webhook.store_response(truncate(error.error_body))
+        webhook.store_response(sanitize_body(error.error_body))
       elsif error.is_a?(LagoHttpClient::BlockedAddressError)
         webhook.store_response("Destination address is not allowed")
       else
@@ -85,10 +85,11 @@ module Webhooks
       webhook.save!
     end
 
-    def truncate(body)
-      return body unless body.is_a?(String) && body.bytesize > MAX_STORED_RESPONSE_BYTES
+    # Net::HTTP bodies are binary, so invalid UTF-8 would fail the JSON storage after the endpoint got the webhook.
+    def sanitize_body(body)
+      return body unless body.is_a?(String)
 
-      body.byteslice(0, MAX_STORED_RESPONSE_BYTES).scrub("")
+      body.dup.force_encoding(Encoding::UTF_8).scrub("").byteslice(0, MAX_STORED_RESPONSE_BYTES).scrub("")
     end
 
     def wait_value

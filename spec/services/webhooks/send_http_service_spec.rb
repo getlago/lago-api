@@ -133,6 +133,32 @@ RSpec.describe Webhooks::SendHttpService do
 
       expect(webhook.response).to eq "01234567"
     end
+
+    context "when the limit cuts a multibyte character" do
+      before do
+        WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "0123456é".b)
+      end
+
+      it "drops the partial character" do
+        service.call
+
+        expect(webhook).to be_succeeded
+        expect(webhook.response).to eq "0123456"
+      end
+    end
+  end
+
+  context "when the response body is not valid UTF-8" do
+    before do
+      WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "ok\xFF".b)
+    end
+
+    it "stores the valid part of the response" do
+      service.call
+
+      expect(webhook).to be_succeeded
+      expect(webhook.response).to eq "ok"
+    end
   end
 
   context "when the connection fails" do

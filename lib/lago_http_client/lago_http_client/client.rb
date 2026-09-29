@@ -33,11 +33,10 @@ module LagoHttpClient
       block_private_addresses: false
     )
       @uri = URI(url)
-      @http_client = Net::HTTP.new(uri.host, uri.port)
-      @http_client.open_timeout = open_timeout if open_timeout.present?
-      @http_client.read_timeout = read_timeout if read_timeout.present?
-      @http_client.write_timeout = write_timeout if write_timeout.present?
-      @http_client.use_ssl = true if uri.scheme == "https"
+      @open_timeout = open_timeout
+      @read_timeout = read_timeout
+      @write_timeout = write_timeout
+      @http_client = build_http_client(uri.host)
       @retries_on = retries_on
       @retry_on_transient_errors = retry_on_transient_errors
       @block_private_addresses = block_private_addresses
@@ -109,7 +108,7 @@ module LagoHttpClient
 
       parser = EventStreamParser::Parser.new
 
-      pin_resolved_address
+      pin_resolved_address(req)
       http_client.start do |http|
         http.request(req) do |response|
           raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
@@ -146,7 +145,16 @@ module LagoHttpClient
 
     private
 
-    attr_reader :http_client
+    attr_reader :http_client, :open_timeout, :read_timeout, :write_timeout
+
+    def build_http_client(address)
+      client = Net::HTTP.new(address, uri.port)
+      client.open_timeout = open_timeout if open_timeout.present?
+      client.read_timeout = read_timeout if read_timeout.present?
+      client.write_timeout = write_timeout if write_timeout.present?
+      client.use_ssl = true if uri.scheme == "https"
+      client
+    end
 
     def raise_error(response)
       raise(
@@ -156,10 +164,18 @@ module LagoHttpClient
 
     # Resolving on every attempt and connecting to the checked IP defeats DNS rebinding,
     # while the hostname is still used for SNI, certificate verification and the Host header.
-    def pin_resolved_address
+    def pin_resolved_address(req)
       return unless block_private_addresses && AddressGuard.enabled?
 
-      http_client.ipaddr = AddressGuard.resolve!(uri.hostname)
+      address = AddressGuard.resolve!(uri.hostname)
+
+      if http_client.use_ssl?
+        http_client.ipaddr = address
+      else
+        # An HTTP proxy ignores ipaddr and resolves the request-line host itself, so plain HTTP targets the IP.
+        req["Host"] = uri.authority
+        @http_client = build_http_client(address)
+      end
     end
 
     def request(req, params = nil)
@@ -167,7 +183,7 @@ module LagoHttpClient
 
       begin
         attempt += 1
-        pin_resolved_address
+        pin_resolved_address(req)
         response = http_client.request(req, params)
         raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
         response
