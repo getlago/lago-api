@@ -252,15 +252,21 @@ class Invoice < ApplicationRecord
   end
 
   def booked_tax_by_fee
-    booked_tax = booked_tax_by_fee_tax
-
-    fees.index_with { |fee| booked_tax_units(fee).sum { |unit| booked_tax.fetch(unit) } }
+    # Native credit notes tax the credited amount at its rate and never read the per-row split.
+    if provider_taxes?
+      booked_tax = booked_tax_by_fee_tax
+      fees.index_with { |fee| booked_tax_units(fee).sum { |unit| booked_tax.fetch(unit) } }
+    else
+      split_booked_tax(taxes_amount_cents, ordered_fees_for_booked_tax)
+    end
   end
 
   # Native fee taxes round one by one while the invoice rounds once, and provider invoices booked
   # before fee amounts were stored drift the same way: split what the invoice charged, first
   # across its taxes, then within each tax across its fee rows, so a full credit matches both.
   def booked_tax_by_fee_tax
+    ActiveRecord::Associations::Preloader.new(records: fees.select(&:persisted?), associations: :applied_taxes).call
+
     units = ordered_fees_for_booked_tax.flat_map { |fee| booked_tax_units(fee) }
     units_by_tax = booked_tax_units_by_invoice_tax(units)
     tax_amounts = booked_tax_by_invoice_tax(units_by_tax)
@@ -590,8 +596,6 @@ class Invoice < ApplicationRecord
   end
 
   def ordered_fees_for_booked_tax
-    ActiveRecord::Associations::Preloader.new(records: fees.select(&:persisted?), associations: :applied_taxes).call
-
     fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
   end
 

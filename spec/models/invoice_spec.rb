@@ -965,7 +965,7 @@ RSpec.describe Invoice do
     end
     let(:booked_cents) { [0, 0, 1, 1] }
     let(:exact_cents) { [0.6, 0.3, 0.3, 0.3] }
-    let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: taxes_amount_cents)] }
+    let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax: nil, taxable_base_amount_cents: 100, tax_code: "sales", tax_rate: 10, amount_cents: taxes_amount_cents)] }
     let(:fee_taxes) do
       fees.each_with_index.map do |fee, index|
         create(:fee_applied_tax, fee:, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: booked_cents[index], precise_amount_cents: exact_cents[index])
@@ -1006,7 +1006,7 @@ RSpec.describe Invoice do
       let(:invoice_tax_cents) { {"state" => 1, "county" => 1} }
       let(:invoice_taxes) do
         invoice_tax_cents.map do |tax_code, amount_cents|
-          create(:invoice_applied_tax, invoice:, tax: nil, tax_code:, tax_rate: tax_rates.fetch(tax_code), amount_cents:)
+          create(:invoice_applied_tax, invoice:, tax: nil, taxable_base_amount_cents: 100, tax_code:, tax_rate: tax_rates.fetch(tax_code), amount_cents:)
         end
       end
       let(:tax_rates) { {"state" => 15, "county" => 10} }
@@ -1044,7 +1044,7 @@ RSpec.describe Invoice do
       let(:fees) { Array.new(2) { |index| create(:fee, invoice:, created_at: index.minutes.from_now) } }
       let(:tax_codes) { %w[state county city district] }
       let(:invoice_taxes) do
-        tax_codes.map { |tax_code| create(:invoice_applied_tax, invoice:, tax: nil, tax_code:, tax_rate: 12.5, amount_cents: 1) }
+        tax_codes.map { |tax_code| create(:invoice_applied_tax, invoice:, tax: nil, taxable_base_amount_cents: 100, tax_code:, tax_rate: 12.5, amount_cents: 1) }
       end
       let(:fee_taxes) do
         tax_codes.flat_map do |tax_code|
@@ -1060,7 +1060,7 @@ RSpec.describe Invoice do
 
     context "when a fee has no tax rows" do
       let(:taxes_amount_cents) { 3 }
-      let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: 1)] }
+      let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax: nil, taxable_base_amount_cents: 100, tax_code: "sales", tax_rate: 10, amount_cents: 1)] }
       let(:fees) { [create(:fee, invoice:), create(:fee, invoice:, taxes_amount_cents: 1, taxes_precise_amount_cents: 1.6)] }
       let(:fee_taxes) do
         [create(:fee_applied_tax, fee: fees.first, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: 1, precise_amount_cents: 1.4)]
@@ -1074,7 +1074,7 @@ RSpec.describe Invoice do
 
     context "when a row matches no invoice tax" do
       let(:taxes_amount_cents) { 3 }
-      let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: 1)] }
+      let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax: nil, taxable_base_amount_cents: 100, tax_code: "sales", tax_rate: 10, amount_cents: 1)] }
       let(:fees) { Array.new(2) { |index| create(:fee, invoice:, created_at: index.minutes.from_now) } }
       let(:fee_taxes) do
         [
@@ -1097,9 +1097,20 @@ RSpec.describe Invoice do
       end
     end
 
+    context "when the invoice taxes are native" do
+      let(:invoice_taxes) { [create(:invoice_applied_tax, invoice:, tax_code: "sales", tax_rate: 10, amount_cents: taxes_amount_cents)] }
+      let(:fees) do
+        Array.new(4) { |index| create(:fee, invoice:, taxes_amount_cents: [1, 0, 0, 1][index], created_at: index.minutes.from_now) }
+      end
+
+      it "books each fee's own tax" do
+        expect(invoice.booked_tax_by_fee).to eq(fees.zip([1, 0, 0, 1]).to_h)
+      end
+    end
+
     context "when the invoice is not saved" do
       let(:invoice) { build(:invoice, taxes_amount_cents: 1) }
-      let(:invoice_taxes) { [build(:invoice_applied_tax, invoice:, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: 1)] }
+      let(:invoice_taxes) { [build(:invoice_applied_tax, invoice:, tax: nil, taxable_base_amount_cents: 100, tax_code: "sales", tax_rate: 10, amount_cents: 1)] }
       let(:fees) { Array.new(2) { build(:fee, invoice:) } }
       let(:fee_taxes) do
         fees.map do |fee|
