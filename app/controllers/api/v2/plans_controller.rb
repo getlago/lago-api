@@ -3,8 +3,6 @@
 module Api
   module V2
     class PlansController < Api::V2::BaseController
-      include Api::RequiresProductCatalog
-
       def index
         result = CatalogPlansQuery.call(
           organization: current_organization,

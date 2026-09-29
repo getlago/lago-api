@@ -6,6 +6,9 @@ module CursorPagination
   class Error < StandardError
     INVALID_CURSOR = "invalid_pagination_cursor"
     CURSOR_EXPIRED = "pagination_cursor_expired"
+    INVALID_LIMIT = "invalid_pagination_limit"
+    TOTAL_COUNT_FIRST_PAGE_ONLY = "total_count_first_page_only"
+    INVALID_PARAMETER = "invalid_pagination_parameter"
 
     attr_reader :code, :details
 

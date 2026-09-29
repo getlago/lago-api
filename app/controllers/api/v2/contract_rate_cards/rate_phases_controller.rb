@@ -4,8 +4,6 @@ module Api
   module V2
     module ContractRateCards
       class RatePhasesController < Api::V2::BaseController
-        include Api::RequiresProductCatalog
-
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 

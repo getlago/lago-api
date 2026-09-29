@@ -3,8 +3,6 @@
 module Api
   module V2
     class PlanRateCardsController < Api::V2::BaseController
-      include Api::RequiresProductCatalog
-
       def create
         result = ::PlanRateCards::CreateService.call(
           catalog_plan: find_catalog_plan,
