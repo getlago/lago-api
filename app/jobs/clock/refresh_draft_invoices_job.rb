@@ -6,7 +6,7 @@ module Clock
 
     def perform
       enqueue_refresh_jobs(Invoice.ready_to_be_refreshed.with_active_subscriptions)
-      enqueue_refresh_jobs(Invoice.ready_to_be_refreshed.joins(:billing_segments).distinct)
+      enqueue_refresh_jobs(Invoice.ready_to_be_refreshed.with_active_contracts)
     end
 
     private

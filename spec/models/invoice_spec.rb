@@ -368,6 +368,26 @@ RSpec.describe Invoice do
     end
   end
 
+  describe ".with_active_contracts" do
+    let(:customer) { create(:customer, organization:) }
+    let(:active_invoice) { create(:invoice, organization:, customer:) }
+    let(:pending_invoice) { create(:invoice, organization:, customer:) }
+    let(:terminated_invoice) { create(:invoice, organization:, customer:) }
+
+    before do
+      active_contract = create(:contract, organization:, customer:)
+      pending_contract = create(:contract, :pending, organization:, customer:)
+      terminated_contract = create(:contract, :terminated, organization:, customer:)
+      create(:billing_segment, organization:, customer:, contract: active_contract, invoice: active_invoice)
+      create(:billing_segment, organization:, customer:, contract: pending_contract, invoice: pending_invoice)
+      create(:billing_segment, organization:, customer:, contract: terminated_contract, invoice: terminated_invoice)
+    end
+
+    it "returns invoices related to active contracts" do
+      expect(described_class.with_active_contracts).to eq([active_invoice])
+    end
+  end
+
   describe "when status is visible" do
     it do
       described_class::VISIBLE_STATUS.keys.each do |status|

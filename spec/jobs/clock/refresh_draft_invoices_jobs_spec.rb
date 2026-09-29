@@ -72,6 +72,16 @@ describe Clock::RefreshDraftInvoicesJob, job: true do
 
         expect(Invoices::RefreshDraftJob).to have_been_enqueued.with(invoice:)
       end
+
+      context "when the contract is terminated" do
+        let(:contract) { create(:contract, :terminated, organization: customer.organization, customer:) }
+
+        it "does not enqueue its refresh job" do
+          described_class.perform_now
+
+          expect(Invoices::RefreshDraftJob).not_to have_been_enqueued.with(invoice:)
+        end
+      end
     end
   end
 end
