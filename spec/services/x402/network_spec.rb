@@ -20,7 +20,7 @@ describe X402::Network do
       it { is_expected.to eq(:svm) }
     end
 
-    ["sui:mainnet", "base-sepolia", "eip155:", ""].each do |unsupported|
+    ["eip155:1", "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z", "sui:mainnet", "base-sepolia", "eip155:", ""].each do |unsupported|
       context "with #{unsupported.inspect}" do
         let(:network) { unsupported }
 

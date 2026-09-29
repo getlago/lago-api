@@ -145,6 +145,12 @@ describe X402::Payments::ComputeDigestService do
       it_behaves_like "a malformed payment", "unsupported_network"
     end
 
+    context "when the network is not one Lago accepts" do
+      let(:network) { "eip155:1" }
+
+      it_behaves_like "a malformed payment", "unsupported_network"
+    end
+
     context "when the asset is not an EVM address" do
       let(:asset) { "USDC" }
 

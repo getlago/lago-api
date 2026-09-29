@@ -28,6 +28,12 @@ describe X402::Asset do
     end
   end
 
+  describe "DEFINITIONS" do
+    it "covers exactly the networks Lago accepts" do
+      expect(described_class::DEFINITIONS.values.map(&:network).uniq).to match_array(X402::Network::NETWORKS.keys)
+    end
+  end
+
   describe "#atomic_units_per_cent" do
     it "is 10_000 for a 6-decimal asset" do
       expect(asset.atomic_units_per_cent).to eq(10_000)

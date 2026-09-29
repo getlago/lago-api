@@ -15,10 +15,11 @@ module X402
     SVM_ADDRESS_BYTES = 32
 
     def self.family_of_network(network)
-      namespace, reference = network.to_s.split(":", 2)
-      raise ArgumentError, "unsupported x402 network: #{network.inspect}" if reference.blank? || !FAMILIES.key?(namespace)
-
-      FAMILIES[namespace]
+      if NETWORKS.key?(network.to_s)
+        FAMILIES.fetch(network.to_s.split(":", 2).first)
+      else
+        raise ArgumentError, "unsupported x402 network: #{network.inspect}"
+      end
     end
 
     def self.family_of_address(address)
