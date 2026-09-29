@@ -252,17 +252,22 @@ class Invoice < ApplicationRecord
   end
 
   def booked_tax_by_fee
-    booked = fees.index_with(&:taxes_amount_cents)
+    booked_tax = booked_tax_by_fee_tax
+
+    fees.index_with { |fee| booked_tax_units(fee).sum { |unit| booked_tax.fetch(unit) } }
+  end
+
+  def booked_tax_by_fee_tax
+    units = ordered_fees_for_booked_tax.flat_map { |fee| booked_tax_units(fee) }
+    booked = units.index_with { |unit| booked_tax_cents(unit) }
     return booked if booked.values.sum == taxes_amount_cents
 
-    # Native fees round their tax one by one while the invoice rounds once, and provider invoices
+    # Native fee taxes round one by one while the invoice rounds once, and provider invoices
     # booked before fee amounts were stored drift the same way: split what the invoice charged.
-    ordered_fees = fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
-    weights = ordered_fees.map(&:taxes_precise_amount_cents)
-    # Fees billed before exact taxes were stored carry none, so their rounded taxes weight the split.
-    weights = ordered_fees.map(&:taxes_amount_cents) if weights.sum.zero?
-    allocated = Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, weights)
-    ordered_fees.zip(allocated).to_h
+    weights = units.map { |unit| exact_tax_cents(unit) }
+    # Taxes billed before exact amounts were stored carry none, so their rounded cents weight the split.
+    weights = booked.values if weights.sum.zero?
+    units.zip(Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, weights)).to_h
   end
 
   def charge_amount_cents
@@ -565,6 +570,25 @@ class Invoice < ApplicationRecord
     booked_tax = booked_tax_by_fee
 
     fees.sum { |fee| creditable_share(fee) * (fee.sub_total_excluding_taxes_amount_cents + booked_tax.fetch(fee)) }.round
+  end
+
+  def ordered_fees_for_booked_tax
+    ActiveRecord::Associations::Preloader.new(records: fees.select(&:persisted?), associations: :applied_taxes).call
+
+    fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
+  end
+
+  def booked_tax_units(fee)
+    rows = fee.applied_taxes.sort_by { |row| row.id.to_s }
+    rows.empty? ? [fee] : rows
+  end
+
+  def booked_tax_cents(unit)
+    unit.is_a?(Fee) ? unit.taxes_amount_cents : unit.amount_cents
+  end
+
+  def exact_tax_cents(unit)
+    unit.is_a?(Fee) ? unit.taxes_precise_amount_cents : unit.precise_amount_cents
   end
 
   def remaining_invoice_amount_cents

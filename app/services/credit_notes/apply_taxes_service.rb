@@ -73,7 +73,7 @@ module CreditNotes
     end
 
     def booked_tax_to_credit(tax_key, items)
-      booked_tax = booked_tax_by_fee(tax_key)
+      booked_tax = booked_tax_by_key_and_fee.fetch(tax_key)
 
       items.sum { |item| credited_portion(booked_tax.fetch(item.fee_id), item) }
     end
@@ -86,41 +86,17 @@ module CreditNotes
       end
     end
 
-    # Crediting every fee must return exactly this tax's share of what the invoice charged, even
-    # when the fees' own booked cents do not add up to it on older invoices.
-    def booked_tax_by_fee(tax_key)
-      fee_taxes = fee_taxes_by_key.fetch(tax_key).group_by(&:fee_id)
-      booked_tax = Integrations::Aggregator::Taxes::Allocation.by_group(invoice_tax_by_key.fetch(tax_key), fee_taxes.values)
+    # Same split as the invoice's credit limits, so crediting every fee returns what it charged.
+    def booked_tax_by_key_and_fee
+      @booked_tax_by_key_and_fee ||= invoice.booked_tax_by_fee_tax.each_with_object({}) do |(fee_tax, amount_cents), booked|
+        next unless fee_tax.is_a?(Fee::AppliedTax)
 
-      fee_taxes.keys.zip(booked_tax).to_h
-    end
+        invoice_applied_tax = resolve_invoice_applied_tax(fee_tax)
+        next unless invoice_applied_tax
 
-    # Invoices booked before provider amounts were stored rounded each fee tax on its own,
-    # so their fee taxes can add up to less than the tax charged on the invoice.
-    def invoice_tax_by_key
-      @invoice_tax_by_key ||= begin
-        invoice_taxes = invoice_applied_taxes.group_by { |tax| tax_key(tax) }.sort_by(&:first).to_h
-        weights = invoice_tax_weights(invoice_taxes)
-        invoice_tax = Integrations::Aggregator::Taxes::Allocation.call(invoice.taxes_amount_cents, weights)
-
-        invoice_taxes.keys.zip(invoice_tax).to_h
+        by_fee = booked[tax_key(invoice_applied_tax)] ||= Hash.new(0)
+        by_fee[fee_tax.fee_id] += amount_cents
       end
-    end
-
-    def invoice_tax_weights(invoice_taxes)
-      booked_weights = invoice_taxes.values.map { |taxes| taxes.sum(&:amount_cents) }
-      return booked_weights if booked_weights.sum == invoice.taxes_amount_cents
-
-      exact_weights = invoice_taxes.keys.map { |key| fee_taxes_by_key.fetch(key, []).sum(&:precise_amount_cents) }
-      exact_weights.sum.zero? ? booked_weights : exact_weights
-    end
-
-    def fee_taxes_by_key
-      @fee_taxes_by_key ||= invoice.fees.order(:created_at, :id).includes(:applied_taxes)
-        .flat_map(&:applied_taxes).group_by do |fee_tax|
-          invoice_applied_tax = resolve_invoice_applied_tax(fee_tax)
-          tax_key(invoice_applied_tax) if invoice_applied_tax
-        end
     end
 
     # NOTE: indexes the credit note items by the invoice applied tax their fee taxes resolve to,

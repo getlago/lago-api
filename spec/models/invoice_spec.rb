@@ -955,6 +955,92 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#booked_tax_by_fee_tax" do
+    subject(:booked_tax) { invoice.booked_tax_by_fee_tax }
+
+    let(:invoice) { create(:invoice, taxes_amount_cents:) }
+    let(:taxes_amount_cents) { 2 }
+    let(:fees) do
+      Array.new(4) { |index| create(:fee, invoice:, amount_cents: [6, 3, 3, 3][index], created_at: index.minutes.from_now) }
+    end
+    let(:booked_cents) { [0, 0, 1, 1] }
+    let(:exact_cents) { [0.6, 0.3, 0.3, 0.3] }
+    let(:fee_taxes) do
+      fees.each_with_index.map do |fee, index|
+        create(:fee_applied_tax, fee:, tax: nil, tax_code: "sales", tax_rate: 10, amount_cents: booked_cents[index], precise_amount_cents: exact_cents[index])
+      end
+    end
+
+    before { fee_taxes }
+
+    it "returns the booked rows when they add up to the invoice tax" do
+      expect(booked_tax).to eq(fee_taxes.zip([0, 0, 1, 1]).to_h)
+      expect(invoice.booked_tax_by_fee).to eq(fees.zip([0, 0, 1, 1]).to_h)
+    end
+
+    context "when the booked rows do not add up to the invoice tax" do
+      let(:booked_cents) { [1, 0, 0, 0] }
+
+      it "splits the invoice tax by the exact row amounts" do
+        expect(booked_tax).to eq(fee_taxes.zip([1, 1, 0, 0]).to_h)
+        expect(invoice.booked_tax_by_fee).to eq(fees.zip([1, 1, 0, 0]).to_h)
+      end
+    end
+
+    context "when every row was booked without an exact amount" do
+      let(:taxes_amount_cents) { 3 }
+      let(:booked_cents) { [1, 1, 0, 0] }
+      let(:exact_cents) { [0, 0, 0, 0] }
+
+      it "splits the invoice tax by the booked row amounts" do
+        expect(booked_tax).to eq(fee_taxes.zip([2, 1, 0, 0]).to_h)
+      end
+    end
+
+    context "when a fee has several rows" do
+      let(:taxes_amount_cents) { 4 }
+      let(:fees) { Array.new(2) { |index| create(:fee, invoice:, created_at: index.minutes.from_now) } }
+      let(:fee_taxes) do
+        %w[state county city district].flat_map do |tax_code|
+          fees.map { |fee| create(:fee_applied_tax, fee:, tax: nil, tax_code:, tax_rate: 12.5, amount_cents: 1, precise_amount_cents: 0.5) }
+        end
+      end
+
+      it "sums each fee's rows from the same split" do
+        expect(invoice.booked_tax_by_fee_tax.values).to eq([1, 1, 1, 1, 0, 0, 0, 0])
+        expect(invoice.booked_tax_by_fee).to eq(fees.first => 4, fees.last => 0)
+      end
+    end
+
+    context "when a fee has no tax rows" do
+      let(:taxes_amount_cents) { 3 }
+      let(:fees) { [create(:fee, invoice:), create(:fee, invoice:, taxes_amount_cents: 1, taxes_precise_amount_cents: 1.6)] }
+      let(:fee_taxes) { [create(:fee_applied_tax, fee: fees.first, tax: nil, amount_cents: 1, precise_amount_cents: 1.4)] }
+
+      it "books the fee's own tax as one unit" do
+        expect(booked_tax).to eq(fee_taxes.first => 1, fees.last => 2)
+        expect(invoice.booked_tax_by_fee).to eq(fees.first => 1, fees.last => 2)
+      end
+    end
+
+    context "when the invoice is not saved" do
+      let(:invoice) { build(:invoice, taxes_amount_cents: 1) }
+      let(:fees) { Array.new(2) { build(:fee, invoice:) } }
+      let(:fee_taxes) do
+        fees.map do |fee|
+          build(:fee_applied_tax, fee:, tax: nil, amount_cents: 1, precise_amount_cents: 0.5).tap { |fee_tax| fee.applied_taxes << fee_tax }
+        end
+      end
+
+      before { invoice.fees = fees }
+
+      it "keys the split by record" do
+        expect(booked_tax).to eq(fee_taxes.first => 1, fee_taxes.last => 0)
+        expect(invoice.booked_tax_by_fee).to eq(fees.first => 1, fees.last => 0)
+      end
+    end
+  end
+
   describe "#subscription_amount" do
     let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
