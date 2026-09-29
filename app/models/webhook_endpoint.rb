@@ -20,7 +20,7 @@ class WebhookEndpoint < ApplicationRecord
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
 
-  validates :webhook_url, presence: true, url: true
+  validates :webhook_url, presence: true, url: {block_private_addresses: true}
   validates :webhook_url, uniqueness: {scope: :organization_id}
   validate :max_webhook_endpoints, on: :create
   validate :validate_event_types, if: :event_types_changed?

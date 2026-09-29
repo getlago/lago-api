@@ -36,6 +36,15 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
       expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user)
     end
 
+    it "protects the token request against private addresses" do
+      service.call
+
+      expect(LagoHttpClient::Client).to have_received(:new).with(
+        "https://login.microsoftonline.com/#{entra_id_integration.tenant_id}/oauth2/v2.0/token",
+        block_private_addresses: true
+      )
+    end
+
     it "creates user, membership and authenticate user" do
       result = service.call
 
