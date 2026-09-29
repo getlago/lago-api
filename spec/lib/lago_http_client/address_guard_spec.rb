@@ -45,7 +45,14 @@ RSpec.describe LagoHttpClient::AddressGuard do
       "::1",
       "::ffff:127.0.0.1",
       "::ffff:169.254.169.254",
+      "64:ff9b::a00:1",
+      "64:ff9b::a9fe:a9fe",
+      "100::1",
+      "100:0:0:1::1",
+      "2001:db8::1",
       "2002:7f00:1::",
+      "3fff::1",
+      "5f00::1",
       "fc00::1",
       "fd00:ec2::254",
       "fe80::1",
@@ -56,7 +63,7 @@ RSpec.describe LagoHttpClient::AddressGuard do
       end
     end
 
-    %w[8.8.8.8 93.184.215.14 172.32.0.1 2606:4700:4700::1111].each do |address|
+    %w[8.8.8.8 93.184.215.14 172.32.0.1 2606:4700:4700::1111 64:ff9b::5db8:d70e].each do |address|
       it "allows #{address}" do
         expect(described_class.blocked_ip?(address)).to be(false)
       end

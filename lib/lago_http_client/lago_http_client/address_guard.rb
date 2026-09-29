@@ -22,20 +22,17 @@ module LagoHttpClient
       "203.0.113.0/24",
       "224.0.0.0/4",
       "240.0.0.0/4",
-      # IPv6
-      "::/128",
-      "::1/128",
-      "::ffff:0:0/96",
-      "64:ff9b:1::/48",
-      "100::/64",
+      # IPv6 special-purpose ranges inside global unicast
       "2001::/23",
       "2001:db8::/32",
       "2002::/16",
-      "fc00::/7",
-      "fe80::/10",
-      "fec0::/10",
-      "ff00::/8"
+      "3fff::/20"
     ].map { |range| IPAddr.new(range) }.freeze
+
+    # Anything outside global unicast (loopback, mapped IPv4, ULA, link-local, SRv6, multicast...) is blocked.
+    IPV6_GLOBAL_UNICAST = IPAddr.new("2000::/3").freeze
+    # DNS64 synthesizes these for IPv4-only hosts, so the embedded IPv4 address is what gets checked.
+    NAT64_WELL_KNOWN_PREFIX = IPAddr.new("64:ff9b::/96").freeze
 
     def self.enabled?
       !ActiveModel::Type::Boolean.new.cast(ENV["LAGO_WEBHOOK_ALLOW_PRIVATE_URLS"])
@@ -52,6 +49,9 @@ module LagoHttpClient
 
     def self.blocked_ip?(address)
       ip = IPAddr.new(address)
+      ip = IPAddr.new(ip.to_i & 0xffff_ffff, Socket::AF_INET) if NAT64_WELL_KNOWN_PREFIX.include?(ip)
+      return true if ip.ipv6? && !IPV6_GLOBAL_UNICAST.include?(ip)
+
       BLOCKED_RANGES.any? { |range| range.family == ip.family && range.include?(ip) }
     end
   end
