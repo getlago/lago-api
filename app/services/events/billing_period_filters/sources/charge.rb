@@ -6,7 +6,7 @@ module Events
       Charge = Data.define(:charge, :filter) do
         delegate :billable_metric, to: :charge
 
-        # A filter without values matches no event, as in RisingWave.
+        # A filter without values matches no event.
         def filters
           filters = if charge.association_cached?(:filters)
             charge.filters
