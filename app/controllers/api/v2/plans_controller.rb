@@ -2,7 +2,7 @@
 
 module Api
   module V2
-    class PlansController < Api::BaseController
+    class PlansController < Api::V2::BaseController
       include Api::RequiresProductCatalog
 
       def index

@@ -3,7 +3,7 @@
 module Api
   module V2
     module Products
-      class FiltersController < Api::BaseController
+      class FiltersController < Api::V2::BaseController
         include Api::RequiresProductCatalog
 
         before_action :find_product
