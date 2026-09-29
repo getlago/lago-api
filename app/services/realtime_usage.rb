@@ -59,9 +59,6 @@ module RealtimeUsage
       # `target_wallet_code` will be handled later.
       return "target_wallet" if charge.accepts_target_wallet
 
-      # The pipeline does not evaluate custom expressions yet.
-      return "expression" if billable_metric.expression.present?
-
       nil
     end
   end
