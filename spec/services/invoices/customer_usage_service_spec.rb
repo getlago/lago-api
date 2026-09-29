@@ -1009,7 +1009,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         bucket: window_start,
         units: "5.0",
         events_count: 5,
-        aggregation_type: "count_agg"
+        aggregation_type: "count"
       )
     end
 
@@ -1314,7 +1314,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           bucket: window_start,
           units: "3.0",
           events_count: 3,
-          aggregation_type: "count_agg"
+          aggregation_type: "count"
         )
 
         # The events store holds usage for the filter the buckets do not, which the pre-filtering
@@ -1381,7 +1381,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           bucket:,
           units: values.sum { |_, value| value.to_d }.to_s,
           events_count: values.size,
-          aggregation_type: "sum_agg"
+          aggregation_type: "sum"
         )
       end
     end
@@ -1459,7 +1459,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           bucket:,
           units: bucket_units(values),
           events_count: values.size,
-          aggregation_type: billable_metric.aggregation_type,
+          aggregation_type: billable_metric.aggregation_type.delete_suffix("_agg"),
           last_event_at: values.map(&:first).max
         )
       end
@@ -1551,7 +1551,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           units: rows.sum { |_, (value, _)| value.to_d }.to_s,
           precise_total_amount_cents: rows.sum { |_, (_, amount)| amount.to_d }.to_s,
           events_count: rows.size,
-          aggregation_type: "sum_agg"
+          aggregation_type: "sum"
         )
       end
     end
@@ -1624,7 +1624,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           grouped_by: {"region" => group_event[:region]}.to_json,
           units: group_event[:value],
           events_count: 1,
-          aggregation_type: "latest_agg",
+          aggregation_type: "latest",
           last_event_at: group_event[:at]
         )
       end
