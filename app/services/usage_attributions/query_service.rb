@@ -270,32 +270,35 @@ module UsageAttributions
       ranked = rows.reject { it["node"] == "" }
       unattributed = rows.find { it["node"] == "" }
       page = ranked.select { it["in_page"].to_i == 1 }
-      summary = ranked.first
+      level = ranked.first
 
       result.rows = page.map { build_row(it) }
-      result.unattributed = (build_aggregate(unattributed) if unattributed)
-      result.groups_count = summary ? summary["groups_count"].to_i : 0
-      result.totals = build_aggregate(summary, prefix: "total_", plus: unattributed)
-      result.others, result.others_count = build_others(summary, page)
+      result.unattributed = (build_aggregate { value(unattributed, it) } if unattributed)
+      result.groups_count = level ? level["groups_count"].to_i : 0
+      result.totals = build_aggregate { value(level, "total_#{it}") + value(unattributed, it) }
+      result.others_count = others_count(page)
+      result.others = build_others(level, page)
     end
 
-    # Everything ranked after the page: the level total minus the running total at the last row of
-    # the page. With a search, the page rows are not contiguous, so they are subtracted one by one.
-    def build_others(summary, page)
-      others_count = if summary.nil? || (!search && page.empty?)
-        0
-      elsif search
+    def others_count(page)
+      if search
         result.groups_count - page.size
-      else
+      elsif page.any?
         result.groups_count - page.last["rank"].to_i
-      end
-
-      if others_count.zero?
-        [build_aggregate(nil), 0]
-      elsif search
-        [build_aggregate(summary, prefix: "total_", minus: page), others_count]
       else
-        [build_aggregate(summary, prefix: "total_", minus_running: page.last), others_count]
+        0
+      end
+    end
+
+    # Everything ranked after the page. A page is contiguous, so the running total at its last row
+    # covers it and every page before; search results are not, so they are subtracted one by one.
+    def build_others(level, page)
+      if result.others_count.zero?
+        build_aggregate { 0 }
+      elsif search
+        build_aggregate { |name| value(level, "total_#{name}") - page.sum { value(it, name) } }
+      else
+        build_aggregate { |name| value(level, "total_#{name}") - value(page.last, "running_#{name}") }
       end
     end
 
@@ -303,22 +306,18 @@ module UsageAttributions
       Row.new(
         value: row["node"],
         rank: row["rank"].to_i,
-        amount_cents: decimal(row["amount"]),
-        events_count: row["events"].to_i,
-        cells: build_cells { |name| row[name] }
+        amount_cents: value(row, "amount"),
+        events_count: value(row, "events").to_i,
+        cells: build_cells { value(row, it) }
       )
     end
 
-    def build_aggregate(row, prefix: "", plus: nil, minus: [], minus_running: nil)
-      value = lambda do |name|
-        total = row ? decimal(row["#{prefix}#{name}"]) : BigDecimal(0)
-        total += decimal(plus[name]) if plus
-        total -= minus.sum { decimal(it[name]) }
-        total -= decimal(minus_running["running_#{name}"]) if minus_running
-        total
-      end
-
-      Aggregate.new(amount_cents: value.call("amount"), events_count: value.call("events").to_i, cells: build_cells(&value))
+    def build_aggregate(&)
+      Aggregate.new(
+        amount_cents: decimal(yield("amount")),
+        events_count: decimal(yield("events")).to_i,
+        cells: build_cells(&)
+      )
     end
 
     def build_cells
@@ -331,6 +330,10 @@ module UsageAttributions
           events_count: decimal(yield("events_#{index}")).to_i
         )
       end
+    end
+
+    def value(row, name)
+      decimal(row&.dig(name))
     end
 
     def decimal(value)
