@@ -315,11 +315,7 @@ module Customers
     def set_default_payment_connection(customer, billing)
       return if billing[:payment_provider].blank?
 
-      connection = customer.provider_customer
-      return unless connection
-      return if customer.payment_provider_customers.where.not(id: connection.id).exists?
-
-      PaymentProviderCustomers::SetAsDefaultService.call!(payment_provider_customer: connection)
+      PaymentProviderCustomers::SetDefaultIfUnsetService.call!(customer:)
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
