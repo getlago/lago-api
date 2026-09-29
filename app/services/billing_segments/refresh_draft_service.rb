@@ -20,7 +20,7 @@ module BillingSegments
       old_total_amount_cents = invoice.total_amount_cents
 
       ActiveRecord::Base.transaction do
-        reset_invoice
+        reset_invoice!
 
         BillingSegments::ComputeInvoiceService.call!(
           invoice:,
@@ -53,7 +53,7 @@ module BillingSegments
       )
     end
 
-    def reset_invoice
+    def reset_invoice!
       invoice.fees.discard_all!
       invoice.applied_taxes.destroy_all
       invoice.error_details.discard_all # rubocop:disable Lago/DiscardAll
