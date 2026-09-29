@@ -78,7 +78,7 @@ module BillingSegments
           purchase_order_number: contract.purchase_order_number
         ).invoice
 
-        context = grace_period? ? :draft : :finalize
+        context = grace_period?(invoice) ? :draft : :finalize
         BillingSegments::ComputeInvoiceService.call!(
           invoice:,
           billing_segments: segments,
@@ -95,8 +95,8 @@ module BillingSegments
       invoice
     end
 
-    def grace_period?
-      customer.applicable_invoice_grace_period.positive?
+    def grace_period?(invoice)
+      customer.applicable_invoice_grace_period(billing_entity: invoice.billing_entity).positive?
     end
 
     def notify_draft_created(invoice)

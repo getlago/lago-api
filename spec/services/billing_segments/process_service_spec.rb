@@ -648,6 +648,31 @@ RSpec.describe BillingSegments::ProcessService do
       end
     end
 
+    context "when the contract billing entity has an invoice grace period" do
+      let(:invoice_grace_period) { nil }
+      let(:contract_billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+      let(:contract) do
+        create(
+          :contract,
+          organization:,
+          customer:,
+          billing_entity: contract_billing_entity,
+          consolidate_invoice:,
+          started_at: Time.zone.parse("2026-07-01")
+        )
+      end
+
+      it "uses the contract billing entity grace period" do
+        invoice = result.invoices.sole.reload
+
+        expect(invoice).to have_attributes(
+          billing_entity: contract_billing_entity,
+          status: "draft",
+          expected_finalization_date: Date.parse("2026-09-03")
+        )
+      end
+    end
+
     it "does not create duplicate invoices or fees on repeated invocation" do
       invoice = result.invoices.sole
 
