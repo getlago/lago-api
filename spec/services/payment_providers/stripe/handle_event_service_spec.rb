@@ -36,6 +36,44 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
+  context "when charge dispute created event" do
+    let(:event_json) { get_stripe_fixtures("webhooks/charge_dispute_created.json") }
+
+    before do
+      allow(PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService).to receive(:call)
+        .and_return(service_result)
+    end
+
+    it "routes the event to an other service" do
+      result = event_service.call
+
+      expect(result).to be_success
+
+      expect(PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService).to have_received(:call)
+    end
+  end
+
+  context "when charge dispute updated event" do
+    let(:event_json) do
+      get_stripe_fixtures("webhooks/charge_dispute_created.json") do |h|
+        h[:type] = "charge.dispute.updated"
+      end
+    end
+
+    before do
+      allow(PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService).to receive(:call)
+        .and_return(service_result)
+    end
+
+    it "routes the event to the dispute created service" do
+      result = event_service.call
+
+      expect(result).to be_success
+
+      expect(PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService).to have_received(:call)
+    end
+  end
+
   context "when customer updated event" do
     let(:event_json) do
       get_stripe_fixtures("webhooks/customer_updated.json")
