@@ -33969,6 +33969,18 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "x402_payments",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "x402_reservation_counter_disabled",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -53937,6 +53949,12 @@
             },
             {
               "name": "manual",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "x402",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
