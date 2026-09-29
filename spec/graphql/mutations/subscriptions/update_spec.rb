@@ -355,4 +355,43 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
     end
   end
+
+  context "with connections on the response" do
+    let(:customer) { subscription.customer }
+
+    let(:connections_query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) {
+            id
+            connections { category behavior code }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+      create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+        behavior: "specific",
+        payment_provider_customer: customer.payment_provider_customers.sole)
+    end
+
+    it "returns the routing so the client can refresh its cache after saving" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_query,
+        variables: {input: {id: subscription.id, name: "renamed"}}
+      )
+
+      routing = result["data"]["updateSubscription"]["connections"].index_by { it["category"] }
+
+      expect(routing.keys).to match_array(%w[payment tax accounting crm])
+      expect(routing["payment"]).to eq(
+        {"category" => "payment", "behavior" => "specific", "code" => "stripe_default"}
+      )
+    end
+  end
 end
