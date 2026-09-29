@@ -8,6 +8,16 @@ module CreditNotes
       include Customers::PaymentProviderFinder
 
       INVALID_PAYMENT_METHOD_ERROR = "charge_not_refundable"
+      CHARGE_DISPUTED_ERROR = "charge_disputed"
+      CHARGE_ALREADY_REFUNDED_ERROR = "charge_already_refunded"
+      # NOTE: lago-specific, stripe rejects an over-refund without an error code
+      INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR = "insufficient_refundable_amount"
+
+      NON_RETRYABLE_ERRORS = [
+        INVALID_PAYMENT_METHOD_ERROR,
+        CHARGE_DISPUTED_ERROR,
+        CHARGE_ALREADY_REFUNDED_ERROR
+      ].freeze
 
       def initialize(credit_note = nil)
         @credit_note = credit_note
@@ -19,7 +29,16 @@ module CreditNotes
         result.credit_note = credit_note
         return result unless should_process_refund?
 
-        stripe_result = create_stripe_refund
+        blocking_error_code = refund_blocked_error_code
+        # NOTE: an earlier attempt can reach stripe without us ever seeing its response, and the
+        #       refund it created is exactly what the amount check then trips on. Adopt that
+        #       refund rather than failing the credit note for money we already refunded.
+        stripe_result = blocking_error_code ? existing_stripe_refund : create_stripe_refund
+
+        if stripe_result.nil?
+          handle_refund_failure(message: refund_blocked_message(blocking_error_code), code: blocking_error_code)
+          return result
+        end
 
         refund = Refund.new(
           organization_id: credit_note.organization_id,
@@ -44,10 +63,8 @@ module CreditNotes
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ::Stripe::InvalidRequestError => e
-        deliver_error_webhook(message: e.message, code: e.code)
-        update_credit_note_status(:failed)
-        Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
-        return result if e.code == INVALID_PAYMENT_METHOD_ERROR
+        handle_refund_failure(message: e.message, code: e.code)
+        return result if NON_RETRYABLE_ERRORS.include?(e.code)
 
         result.service_failure!(code: "stripe_error", message: e.message)
       end
@@ -103,6 +120,93 @@ module CreditNotes
             .order("payments.created_at DESC")
             .first
         end
+      end
+
+      def refund_blocked_error_code
+        remaining = stripe_refundable_amount_cents
+        # NOTE: nil means stripe could not be asked. The pre-check is an optimisation, never a
+        #       gate: when in doubt we let Stripe::Refund.create decide.
+        return nil if remaining.nil?
+        return CHARGE_ALREADY_REFUNDED_ERROR if remaining <= 0
+        return INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR if remaining < credit_note.refund_amount_cents
+
+        nil
+      end
+
+      def refund_blocked_message(code)
+        case code
+        when CHARGE_ALREADY_REFUNDED_ERROR
+          "The charge has already been fully refunded"
+        when INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR
+          "The charge has only #{stripe_refundable_amount_cents} cents left to refund, " \
+            "#{credit_note.refund_amount_cents} are required"
+        end
+      end
+
+      def stripe_refundable_amount_cents
+        return @stripe_refundable_amount_cents if defined?(@stripe_refundable_amount_cents)
+
+        charge = stripe_charge
+        # NOTE: bracket access, stripe objects raise NoMethodError on fields absent from the
+        #       pinned API version.
+        captured = charge && (charge[:amount_captured] || charge[:amount])
+        refunded = charge && charge[:amount_refunded]
+
+        @stripe_refundable_amount_cents = if captured.nil? || refunded.nil?
+          nil
+        else
+          captured - refunded
+        end
+      end
+
+      # NOTE: manual payments carry no provider payment id, and a stripe list filtered on nil
+      #       does not filter at all, it returns the whole account.
+      def stripe_payment_intent_id
+        payment.provider_payment_id.presence
+      end
+
+      def existing_stripe_refund
+        return @existing_stripe_refund if defined?(@existing_stripe_refund)
+        return @existing_stripe_refund = nil if stripe_payment_intent_id.nil?
+
+        refunds = ::Stripe::Refund.list(
+          {payment_intent: stripe_payment_intent_id, limit: 100},
+          {api_key: stripe_api_key}
+        )
+        @existing_stripe_refund = refunds.data.detect do |refund|
+          refund[:metadata] && refund[:metadata][:lago_credit_note_id] == credit_note.id
+        end
+      rescue *PaymentProviders::StripeProvider::PERMANENT_ERRORS => e
+        # NOTE: transient errors are left to propagate so the job retries and can still find the
+        #       refund. Failing here would mark the credit note failed for a refund stripe may
+        #       already hold.
+        Rails.logger.warn("Unable to list stripe refunds for payment #{payment.id}: #{e.message}")
+        @existing_stripe_refund = nil
+      end
+
+      def stripe_charge
+        return @stripe_charge if defined?(@stripe_charge)
+        return @stripe_charge = nil if stripe_payment_intent_id.nil?
+
+        charges = ::Stripe::Charge.list(
+          {payment_intent: stripe_payment_intent_id, limit: 10},
+          {api_key: stripe_api_key}
+        )
+        # NOTE: a payment intent can carry failed attempts alongside the successful charge.
+        @stripe_charge = charges.data.detect { |charge| charge[:status] == "succeeded" }
+      rescue ::Stripe::StripeError => e
+        # NOTE: deliberately broader than PERMANENT_ERRORS. This pre-check only saves a doomed
+        #       call, so proceeding is safe: stripe rejects a bad refund and the rescue below
+        #       handles it without raising. Retrying transient errors here would risk
+        #       dead-queueing a refund that would otherwise have gone through.
+        Rails.logger.warn("Unable to retrieve stripe charge for payment #{payment.id}: #{e.message}")
+        @stripe_charge = nil
+      end
+
+      def handle_refund_failure(message:, code:)
+        deliver_error_webhook(message:, code:)
+        update_credit_note_status(:failed)
+        Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
       end
 
       def stripe_api_key
