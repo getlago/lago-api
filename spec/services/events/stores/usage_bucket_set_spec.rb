@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Events::Stores::UsageBucketSet do
   subject(:bucket_set) { described_class.new(totals:, grouped_totals:) }
 
-  def build_totals(units, events_count, aggregation_type: "sum_agg", last_event_at: Time.current, precise_total_amount_cents: BigDecimal(0))
+  def build_totals(units, events_count, aggregation_type: "sum", last_event_at: Time.current, precise_total_amount_cents: BigDecimal(0))
     described_class::Totals.new(aggregation_type:, units:, events_count:, last_event_at:, precise_total_amount_cents:)
   end
 
@@ -69,7 +69,7 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
 
     context "with a count metric, whose events the pipeline values at 1 apiece" do
-      let(:totals) { {["charge_1", ""] => build_totals(BigDecimal(7), 7, aggregation_type: "count_agg")} }
+      let(:totals) { {["charge_1", ""] => build_totals(BigDecimal(7), 7, aggregation_type: "count")} }
 
       it "reports the units, which already are the count" do
         result = bucket_set.aggregation_result_for(charge_id: "charge_1", charge_filter_id: "")
@@ -137,7 +137,7 @@ RSpec.describe Events::Stores::UsageBucketSet do
 
   describe "Totals" do
     it "defaults the precise amount to zero, as the pipeline writes on every type but sum" do
-      expect(described_class::Totals.new(aggregation_type: "max_agg", units: 1, events_count: 1, last_event_at: Time.current).precise_total_amount_cents)
+      expect(described_class::Totals.new(aggregation_type: "max", units: 1, events_count: 1, last_event_at: Time.current).precise_total_amount_cents)
         .to eq(0)
     end
   end
@@ -152,22 +152,22 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
 
     it "keeps the largest units of a max metric" do
-      combined = build_totals(BigDecimal(10), 2, aggregation_type: "max_agg")
-        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "max_agg"))
+      combined = build_totals(BigDecimal(10), 2, aggregation_type: "max")
+        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "max"))
 
       expect([combined.units, combined.events_count]).to eq([BigDecimal(10), 3])
     end
 
     it "keeps the units of the most recent row of a latest metric" do
-      combined = build_totals(BigDecimal(10), 2, aggregation_type: "latest_agg", last_event_at: earlier)
-        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest_agg"))
+      combined = build_totals(BigDecimal(10), 2, aggregation_type: "latest", last_event_at: earlier)
+        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest"))
 
       expect([combined.units, combined.events_count]).to eq([BigDecimal(5), 3])
     end
 
     it "ignores an older row of a latest metric" do
-      combined = build_totals(BigDecimal(10), 2, aggregation_type: "latest_agg")
-        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest_agg", last_event_at: earlier))
+      combined = build_totals(BigDecimal(10), 2, aggregation_type: "latest")
+        .combine(build_totals(BigDecimal(5), 1, aggregation_type: "latest", last_event_at: earlier))
 
       expect(combined.units).to eq(BigDecimal(10))
     end

@@ -165,7 +165,7 @@ RSpec.describe Events::Stores::Provider do
     end
     let(:billable_metric) { create(:sum_billable_metric, organization:) }
     let(:billing_boundaries) { metered_item.boundaries }
-    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current) }
+    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current) }
     let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}) }
     let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
     let(:filters) { {} }
@@ -226,7 +226,7 @@ RSpec.describe Events::Stores::Provider do
 
     context "with a count_agg charge" do
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "count_agg", units: BigDecimal(7), events_count: 7, last_event_at: Time.current) }
+      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "count", units: BigDecimal(7), events_count: 7, last_event_at: Time.current) }
 
       it "serves the units, which the pipeline already counts one per event" do
         expect(store.count.value).to eq(7)
@@ -262,7 +262,7 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:max_billable_metric, organization:) }
       let(:totals) do
         Events::Stores::UsageBucketSet::Totals.new(
-          aggregation_type: "max_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+          aggregation_type: "max", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
         )
       end
 
@@ -276,7 +276,7 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:latest_billable_metric, organization:) }
       let(:totals) do
         Events::Stores::UsageBucketSet::Totals.new(
-          aggregation_type: "latest_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+          aggregation_type: "latest", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
         )
       end
 

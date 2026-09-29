@@ -7,6 +7,7 @@ module Events
     class UsageBucketSet
       # `last_event_at` orders the latest fold, which a `skip_grouping` read runs across groups.
       # `precise_total_amount_cents` is only written on sum rows, and zero on every other type.
+      # `aggregation_type` is the stream's name for the type, `max` where the metric has `max_agg`.
       Totals = Data.define(:aggregation_type, :units, :events_count, :last_event_at, :precise_total_amount_cents) do
         def initialize(precise_total_amount_cents: BigDecimal(0), **)
           super
@@ -26,8 +27,8 @@ module Events
 
         def combined_units(other)
           case aggregation_type
-          when "max_agg" then [units, other.units].max
-          when "latest_agg" then (other.last_event_at > last_event_at) ? other.units : units
+          when "max" then [units, other.units].max
+          when "latest" then (other.last_event_at > last_event_at) ? other.units : units
           else units + other.units
           end
         end
