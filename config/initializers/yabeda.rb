@@ -44,4 +44,16 @@ Yabeda.configure do
       unit: :seconds,
       buckets: [0.1, 0.25, 0.5, 1, 2, 5]
   end
+
+  group :x402 do
+    counter :facilitator_errors_total,
+      comment: "Facilitator calls that did not succeed, by call and reason",
+      tags: %i[operation reason]
+
+    histogram :facilitator_settle_duration,
+      comment: "Time spent in the facilitator's /settle, by outcome",
+      unit: :seconds,
+      tags: %i[outcome],
+      buckets: [0.25, 0.5, 1, 2, 5, 10, 20, 30]
+  end
 end
