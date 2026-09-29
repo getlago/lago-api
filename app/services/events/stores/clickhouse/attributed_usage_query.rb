@@ -17,9 +17,6 @@ module Events
       class AttributedUsageQuery
         include Events::Stores::Utils::ClickhouseSqlHelpers
 
-        # unit_amount_cents: default price per unit, nil when the charge is not priced.
-        # lookup: UsageAttributions::ChargePriceLookupService::Lookup, nil when the events do not need
-        #   to be matched with the charge filters.
         ChargeColumn = Data.define(:charge_id, :code, :count, :unit_amount_cents, :lookup, :split)
         Cell = Data.define(:charge_id, :charge_filter_id, :priced, :column_index, :rank)
 
@@ -58,8 +55,6 @@ module Events
           end
         end
 
-        # The price lookups make the statement grow with the charge filters, past the ClickHouse parser
-        # defaults. Settings sent with the request apply to parsing, unlike a SETTINGS clause.
         def rows
           ::Clickhouse::BaseRecord.with_connection do |connection|
             connection.with_settings(**Events::Stores::Utils::ClickhouseConnection::QUERY_SETTINGS) do
@@ -188,7 +183,6 @@ module Events
           end.join(", ")
         end
 
-        # With a search, the page holds the matching values, keeping their rank in the whole level.
         def search_rank_sql
           return "" unless search
 

@@ -238,8 +238,6 @@ module UsageAttributions
       query.rows
     end
 
-    # A charge with filters needs the lookup to be priced or split. When the lookup is too large to
-    # build, the charge is returned in units only.
     def charge_column(charge)
       split = charge == split_charge
       lookup = price_lookup(charge) if filters_count_by_charge_id.key?(charge.id) && (priced?(charge) || split)
