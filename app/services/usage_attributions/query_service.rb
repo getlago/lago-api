@@ -58,7 +58,7 @@ module UsageAttributions
       result.to_datetime = window_to
       result.currency = currency.iso_code
 
-      assign_result(charges.any? ? fetch_rows : [])
+      assign_result(fetch_rows)
       result
     rescue ActiveRecord::ActiveRecordError => e
       failure_code = CLICKHOUSE_FAILURES.find { |clickhouse_code, _| e.message.include?(clickhouse_code) }&.last
@@ -216,7 +216,10 @@ module UsageAttributions
       @price_lookups[charge.id] = ChargePriceLookupService.call!(charge:, currency:).lookup
     end
 
+    # A plan may hold no count or sum charge: there is nothing to read then.
     def fetch_rows
+      return [] if charges.empty?
+
       query = Events::Stores::Clickhouse::AttributedUsageQuery.new(
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
@@ -240,8 +243,9 @@ module UsageAttributions
 
     def charge_column(charge)
       split = charge == split_charge
-      lookup = price_lookup(charge) if filters_count_by_charge_id.key?(charge.id) && (priced?(charge) || split)
-      priced = priced?(charge) && (!lookup.nil? || !filters_count_by_charge_id.key?(charge.id))
+      filtered = filters_count_by_charge_id.key?(charge.id)
+      lookup = price_lookup(charge) if filtered && (priced?(charge) || split)
+      priced = priced?(charge) && (!filtered || lookup.present?)
 
       Events::Stores::Clickhouse::AttributedUsageQuery::ChargeColumn.new(
         charge_id: charge.id,
