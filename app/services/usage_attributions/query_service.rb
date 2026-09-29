@@ -2,19 +2,24 @@
 
 module UsageAttributions
   class QueryService < BaseService
-    Result = BaseResult[:rows, :groups_count, :total_amount_cents, :total_events_count, :from_datetime, :to_datetime, :currency]
+    Result = BaseResult[:rows, :unattributed, :others, :others_count, :totals, :groups_count, :from_datetime, :to_datetime, :currency]
 
-    Row = Data.define(:value, :amount_cents, :events_count, :cells)
+    Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
+    Aggregate = Data.define(:amount_cents, :events_count, :cells)
     Cell = Data.define(:charge_id, :charge_filter_id, :units, :amount_cents, :events_count)
 
     DEFAULT_LIMIT = 50
     MAX_LIMIT = 100
     MAX_FILTER_VALUES = 20
     MAX_FLAT_FILTERS = 3
+    MAX_SPLIT_FILTERS = 10
+    MAX_SEARCH_LENGTH = 100
     MAX_CUSTOM_WINDOW = 31.days
-    MAX_GROUPS = 100_000
-    MAX_EXECUTION_TIME = 20
+    MAX_GROUPS = 250_000
+    MAX_EXECUTION_TIME = 8
+    MAX_MEMORY_USAGE = 4_000_000_000
 
+    ORDERS = %w[amount events_count].freeze
     SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
     PRICED_CHARGE_MODELS = %w[standard].freeze
 
@@ -25,7 +30,7 @@ module UsageAttributions
     }.freeze
 
     def initialize(subscription:, group_by:, filters: {}, from_datetime: nil, to_datetime: nil, charges: nil,
-      split_charge: nil, limit: DEFAULT_LIMIT, offset: 0)
+      split_charge: nil, search: nil, order_by: "amount", limit: DEFAULT_LIMIT, offset: 0)
       @subscription = subscription
       @group_by = group_by.to_s
       @filters = filters.to_h.to_h { |code, values| [code.to_s, (values.is_a?(Array) ? values : [values]).map(&:to_s)] }
@@ -33,6 +38,8 @@ module UsageAttributions
       @to_datetime = to_datetime
       @requested_charges = charges&.to_a
       @split_charge = split_charge
+      @search = search.presence
+      @order_by = order_by.to_s
       @limit = limit
       @offset = offset
 
@@ -51,7 +58,7 @@ module UsageAttributions
       result.to_datetime = window_to
       result.currency = currency.iso_code
 
-      assign_rows(charges.any? ? fetch_rows : [])
+      assign_result(charges.any? ? fetch_rows : [])
       result
     rescue ActiveRecord::ActiveRecordError => e
       failure_code = CLICKHOUSE_FAILURES.find { |clickhouse_code, _| e.message.include?(clickhouse_code) }&.last
@@ -66,7 +73,7 @@ module UsageAttributions
     private
 
     attr_reader :subscription, :group_by, :filters, :from_datetime, :to_datetime, :requested_charges, :split_charge,
-      :limit, :offset
+      :search, :order_by, :limit, :offset
 
     delegate :organization, to: :subscription
 
@@ -90,6 +97,8 @@ module UsageAttributions
         to_datetime: window_errors,
         limit: (["value_is_out_of_range"] unless limit.is_a?(Integer) && limit.between?(1, MAX_LIMIT)),
         offset: (["value_is_out_of_range"] unless offset.is_a?(Integer) && offset >= 0),
+        search: (["value_is_too_long"] if search && search.length > MAX_SEARCH_LENGTH),
+        order_by: (["value_is_invalid"] unless ORDERS.include?(order_by)),
         charges: charges_errors,
         split_charge: split_charge_errors
       }.compact_blank
@@ -108,7 +117,14 @@ module UsageAttributions
       errors = []
       errors << "unsupported_aggregation_type" unless supported_charge?(split_charge)
       errors << "must_be_selected" if requested_charges&.exclude?(split_charge)
-      errors << "must_have_filters" if split_charge.filters.none?
+
+      filters_count = filters_count_by_charge_id.fetch(split_charge.id, 0)
+      if filters_count.zero?
+        errors << "must_have_filters"
+      elsif filters_count > MAX_SPLIT_FILTERS || (supported_charge?(split_charge) && price_lookup(split_charge).nil?)
+        errors << "too_many_filters"
+      end
+
       errors
     end
 
@@ -134,11 +150,28 @@ module UsageAttributions
     end
 
     def window_from
-      [from_datetime || dates_service.charges_from_datetime, subscription.started_at].max
+      [from_datetime || default_window.first, subscription.started_at].max
     end
 
     def window_to
-      [to_datetime || dates_service.charges_to_datetime, subscription.terminated_at].compact.min
+      [to_datetime || default_window.last, subscription.terminated_at].compact.min
+    end
+
+    # The current billing period. A period longer than a custom window (quarterly or yearly charges)
+    # is narrowed to its last MAX_CUSTOM_WINDOW up to now, so the default view scans as much as a
+    # custom one at most.
+    def default_window
+      @default_window ||= begin
+        period_from = dates_service.charges_from_datetime
+        period_to = dates_service.charges_to_datetime
+
+        if period_to - period_from > MAX_CUSTOM_WINDOW
+          period_to = [period_to, Time.current].min
+          period_from = [period_from, period_to - MAX_CUSTOM_WINDOW].max
+        end
+
+        [period_from, period_to]
+      end
     end
 
     def dates_service
@@ -165,12 +198,22 @@ module UsageAttributions
       @supported_charges ||= subscription.plan.charges
         .joins(:billable_metric)
         .where(billable_metrics: {aggregation_type: SUPPORTED_AGGREGATION_TYPES, recurring: false})
-        .includes(:billable_metric, :applied_pricing_unit, filters: {values: :billable_metric_filter})
+        .includes(:billable_metric, :applied_pricing_unit)
         .to_a
     end
 
-    def charges_by_id
-      @charges_by_id ||= charges.index_by(&:id)
+    def filters_count_by_charge_id
+      @filters_count_by_charge_id ||= ChargeFilter.unscope(:order)
+        .where(charge_id: [*supported_charges, split_charge].compact.map(&:id))
+        .group(:charge_id)
+        .count
+    end
+
+    def price_lookup(charge)
+      @price_lookups ||= {}
+      return @price_lookups[charge.id] if @price_lookups.key?(charge.id)
+
+      @price_lookups[charge.id] = ChargePriceLookupService.call!(charge:, currency:).lookup
     end
 
     def fetch_rows
@@ -182,87 +225,114 @@ module UsageAttributions
         group_key: group_by,
         label_filters: filters,
         charge_columns: charges.map { charge_column(it) },
+        order_by:,
+        search:,
         limit:,
         offset:,
         deduplicate: organization.clickhouse_deduplication_enabled?,
         max_groups: MAX_GROUPS,
-        max_execution_time: MAX_EXECUTION_TIME
+        max_execution_time: MAX_EXECUTION_TIME,
+        max_memory_usage: MAX_MEMORY_USAGE
       )
-
-      ::Clickhouse::BaseRecord.with_connection { it.select_all(query.query).rows }
+      @cells = query.cells
+      query.rows
     end
 
+    # A charge with filters needs the lookup to be priced or split. When the lookup is too large to
+    # build, the charge is returned in units only.
     def charge_column(charge)
+      split = charge == split_charge
+      lookup = price_lookup(charge) if filters_count_by_charge_id.key?(charge.id) && (priced?(charge) || split)
+      priced = priced?(charge) && (!lookup.nil? || !filters_count_by_charge_id.key?(charge.id))
+
       Events::Stores::Clickhouse::AttributedUsageQuery::ChargeColumn.new(
         charge_id: charge.id,
         code: charge.billable_metric.code,
         count: charge.billable_metric.count_agg?,
-        priced: priced?(charge),
-        split: charge == split_charge,
-        buckets: pricing_buckets(charge)
+        unit_amount_cents: (unit_amount_cents(charge) if priced),
+        lookup:,
+        split:
       )
     end
 
-    def pricing_buckets(charge)
-      filter_buckets = charge.filters.map do |filter|
-        matching_and_ignored = Events::BillingPeriodFilters::MatchingAndIgnoredService.call(
-          target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter:)
-        )
-
-        pricing_bucket(charge, filter.id, filter.properties, matching_and_ignored.matching_filters, matching_and_ignored.ignored_filters)
-      end
-
-      filter_buckets + [pricing_bucket(charge, nil, charge.properties, {}, [])]
-    end
-
-    def pricing_bucket(charge, charge_filter_id, properties, matching_filters, ignored_filters)
-      Events::Stores::Clickhouse::AttributedUsageQuery::PricingBucket.new(
-        charge_filter_id:,
-        matching_filters:,
-        ignored_filters:,
-        unit_amount_cents: unit_amount_cents(charge, properties)
-      )
-    end
-
-    def unit_amount_cents(charge, properties)
-      return BigDecimal(0) unless priced?(charge)
-
+    def unit_amount_cents(charge)
       conversion_rate = charge.applied_pricing_unit&.conversion_rate || 1
-      BigDecimal(properties["amount"].presence || 0) * conversion_rate * currency.subunit_to_unit
+      BigDecimal(charge.properties["amount"].presence || 0) * conversion_rate * currency.subunit_to_unit
     end
 
     def priced?(charge)
       PRICED_CHARGE_MODELS.include?(charge.charge_model)
     end
 
-    def assign_rows(rows)
-      result.rows = rows.map { build_row(it) }
-      result.groups_count = rows.first&.last.to_i
-      result.total_amount_cents = rows.first ? BigDecimal(rows.first[4].to_s) : BigDecimal(0)
-      result.total_events_count = rows.first ? rows.first[5].to_i : 0
+    def assign_result(rows)
+      ranked = rows.reject { it["node"] == "" }
+      unattributed = rows.find { it["node"] == "" }
+      page = ranked.select { it["in_page"].to_i == 1 }
+      summary = ranked.first
+
+      result.rows = page.map { build_row(it) }
+      result.unattributed = (build_aggregate(unattributed) if unattributed)
+      result.groups_count = summary ? summary["groups_count"].to_i : 0
+      result.totals = build_aggregate(summary, prefix: "total_", plus: unattributed)
+      result.others, result.others_count = build_others(summary, page)
+    end
+
+    # Everything ranked after the page: the level total minus the running total at the last row of
+    # the page. With a search, the page rows are not contiguous, so they are subtracted one by one.
+    def build_others(summary, page)
+      others_count = if summary.nil? || (!search && page.empty?)
+        0
+      elsif search
+        result.groups_count - page.size
+      else
+        result.groups_count - page.last["rank"].to_i
+      end
+
+      if others_count.zero?
+        [build_aggregate(nil), 0]
+      elsif search
+        [build_aggregate(summary, prefix: "total_", minus: page), others_count]
+      else
+        [build_aggregate(summary, prefix: "total_", minus_running: page.last), others_count]
+      end
     end
 
     def build_row(row)
-      node, (keys, units, amounts, counts), amount_cents, events_count = row
-
       Row.new(
-        value: node.presence,
-        amount_cents: BigDecimal(amount_cents.to_s),
-        events_count: events_count.to_i,
-        cells: keys.each_with_index.map { |key, index| build_cell(key, units[index], amounts[index], counts[index]) }
+        value: row["node"],
+        rank: row["rank"].to_i,
+        amount_cents: decimal(row["amount"]),
+        events_count: row["events"].to_i,
+        cells: build_cells { |name| row[name] }
       )
     end
 
-    def build_cell(key, units, amount_cents, events_count)
-      charge_id, charge_filter_id = Events::Stores::Clickhouse::AttributedUsageQuery.parse_column_key(key)
+    def build_aggregate(row, prefix: "", plus: nil, minus: [], minus_running: nil)
+      value = lambda do |name|
+        total = row ? decimal(row["#{prefix}#{name}"]) : BigDecimal(0)
+        total += decimal(plus[name]) if plus
+        total -= minus.sum { decimal(it[name]) }
+        total -= decimal(minus_running["running_#{name}"]) if minus_running
+        total
+      end
 
-      Cell.new(
-        charge_id:,
-        charge_filter_id:,
-        units: BigDecimal(units.to_s),
-        amount_cents: (BigDecimal(amount_cents.to_s) if priced?(charges_by_id.fetch(charge_id))),
-        events_count: events_count.to_i
-      )
+      Aggregate.new(amount_cents: value.call("amount"), events_count: value.call("events").to_i, cells: build_cells(&value))
+    end
+
+    def build_cells
+      Array(@cells).each_with_index.map do |cell, index|
+        Cell.new(
+          charge_id: cell.charge_id,
+          charge_filter_id: cell.charge_filter_id,
+          units: decimal(yield("units_#{index}")),
+          amount_cents: (decimal(yield("amount_#{index}")) if cell.priced),
+          events_count: decimal(yield("events_#{index}")).to_i
+        )
+      end
+    end
+
+    def decimal(value)
+      BigDecimal((value || 0).to_s)
     end
   end
 end
