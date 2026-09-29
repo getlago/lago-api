@@ -30,6 +30,13 @@ module Invoices
     def call
       return result.forbidden_failure! unless invoice.subscription?
 
+      if invoice.billing_segments.exists?
+        return BillingSegments::RefreshDraftService.call(
+          invoice:,
+          context: billing_segment_context
+        )
+      end
+
       result.invoice = invoice
       return result unless invoice.draft?
 
@@ -93,6 +100,14 @@ module Invoices
     private
 
     attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
+
+    def billing_segment_context
+      if context == :finalize
+        :finalize
+      else
+        :draft
+      end
+    end
 
     def fetch_timestamp
       timestamp = invoice_subscriptions.first&.timestamp
