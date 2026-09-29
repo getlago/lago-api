@@ -71,6 +71,15 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
         expect(service_result.filter).to eq(older_filter)
       end
     end
+
+    context "when a filter has no values" do
+      before { older_filter }
+
+      it "does not match it" do
+        expect(service_result.matching_filters).to be_empty
+        expect(service_result.filter).to be_nil
+      end
+    end
   end
 
   context "with a BillingSegment target" do
@@ -107,6 +116,19 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
     it "expands a nil product filter value to the configured values" do
       expect(service_result.matching_filters).to eq([product_filter])
       expect(service_result.filter).to eq(product_filter)
+    end
+
+    context "with a newer filter allowing fewer values" do
+      let(:card_filter) { create(:product_filter, organization:, product:, created_at: 1.day.from_now) }
+
+      before do
+        create(:product_filter_value, value: "card", billable_metric_filter: payment_method, product_filter: card_filter)
+      end
+
+      it "keeps the first loaded filter" do
+        expect(service_result.matching_filters).to eq([product_filter, card_filter])
+        expect(service_result.filter).to eq(product_filter)
+      end
     end
 
     ["virtual_card", nil, ""].each do |value|

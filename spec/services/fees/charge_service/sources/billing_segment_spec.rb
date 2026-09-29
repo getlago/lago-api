@@ -122,9 +122,12 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       context "with an explicit filter value" do
         let(:product_filter) { us_filter }
 
-        it "excludes the more specific filter only" do
+        it "excludes the more specific filter and the remaining configured region" do
           expect(service_result.matching_filters).to eq("region" => ["us"])
-          expect(service_result.ignored_filters).to eq([{"region" => ["us"], "size" => ["512"]}])
+          expect(service_result.ignored_filters).to match_array([
+            {"region" => ["us"], "size" => ["512"]},
+            {"region" => ["eu"]}
+          ])
         end
 
         it "uses default-bucket exclusions when the selected filter is cleared" do

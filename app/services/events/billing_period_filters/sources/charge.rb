@@ -6,10 +6,15 @@ module Events
       Charge = Data.define(:charge, :filter) do
         delegate :billable_metric, to: :charge
 
+        # A filter without values matches no event, as in RisingWave.
         def filters
-          return charge.filters if charge.association_cached?(:filters)
+          filters = if charge.association_cached?(:filters)
+            charge.filters
+          else
+            charge.filters.includes(values: :billable_metric_filter)
+          end
 
-          charge.filters.includes(values: :billable_metric_filter)
+          filters.reject { filter_values(it).empty? }
         end
 
         def selected_filter
@@ -22,6 +27,10 @@ module Events
 
         def filter_match_values(filter)
           filter.to_h
+        end
+
+        def filter_precedence(filter)
+          filter.precedence
         end
 
         delegate :target_key, to: :charge
