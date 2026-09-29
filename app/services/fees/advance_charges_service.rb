@@ -100,12 +100,13 @@ module Fees
           payment_status: :succeeded,
           pay_in_advance: true
         )
-        .then { |relation| filter_charges_to_datetime(relation) }
     end
 
     def product_fee_relation(metered_item)
       Fee.where(fee_match_attributes(metered_item))
-        .where("succeeded_at <= ?", metered_item.billing_segment.billing_at)
+        .where("succeeded_at <= ?", metered_item.billing_segment.ended_at)
+        .where("(properties ->> 'charges_to_datetime') IS NULL OR " \
+          "(properties ->> 'charges_to_datetime')::timestamp <= ?", metered_item.billing_segment.ended_at)
     end
 
     def fee_match_attributes(metered_item)

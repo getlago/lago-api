@@ -28,6 +28,7 @@ RSpec.describe BillingSegments::ProcessService do
     let(:billing_segment_pricing_unit) { nil }
     let(:billing_segment_proration_ratio) { 1 }
     let(:billing_segment_status) { :pending }
+    let(:billing_segment_billing_at) { Time.zone.parse("2026-08-31 23:59:59") }
     let(:min_amount_cents) { 0 }
     let(:billing_segment) do
       create(
@@ -43,7 +44,7 @@ RSpec.describe BillingSegments::ProcessService do
         rate_properties: billing_segment_rate_properties,
         proration_ratio: billing_segment_proration_ratio,
         status: billing_segment_status,
-        billing_at: Time.zone.parse("2026-08-31 23:59:59"),
+        billing_at: billing_segment_billing_at,
         cycle_started_at: Time.zone.parse("2026-08-01"),
         started_at: Time.zone.parse("2026-08-01"),
         ended_at: Time.zone.parse("2026-08-31 23:59:59")
@@ -96,6 +97,7 @@ RSpec.describe BillingSegments::ProcessService do
         let(:field_name) { nil }
         let(:event_properties) { {} }
         let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+        let(:billing_segment_billing_at) { Time.zone.parse("2026-08-01") }
 
         it "does not process the segment through periodic billing" do
           expect { result }.not_to change(Invoice, :count)
@@ -119,7 +121,7 @@ RSpec.describe BillingSegments::ProcessService do
             )
           end
           let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
-          let(:paid_fee_succeeded_at) { billing_segment.billing_at - 1.hour }
+          let(:paid_fee_succeeded_at) { billing_segment.started_at + 1.hour }
           let(:paid_fee) do
             create(
               :fee,
@@ -181,7 +183,7 @@ RSpec.describe BillingSegments::ProcessService do
           end
 
           context "when no paid fees are eligible for regrouping" do
-            let(:paid_fee_succeeded_at) { billing_segment.billing_at + 1.hour }
+            let(:paid_fee_succeeded_at) { billing_segment.ended_at + 1.hour }
 
             it "rolls back the empty invoice and completes the segment without an invoice" do
               expect { result }.not_to change(Invoice, :count)

@@ -103,6 +103,7 @@ RSpec.describe Fees::AdvanceChargesService do
       let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
       let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
       let(:rate_override) { create(:rate_override, organization:) }
+      let(:segment_ended_at) { BillingSegment.inclusive_end(billing_at + 1.month) }
       let(:billing_segment) do
         create(
           :billing_segment,
@@ -114,9 +115,9 @@ RSpec.describe Fees::AdvanceChargesService do
           rate_override:,
           currency: "USD",
           billing_at:,
-          cycle_started_at: billing_at.beginning_of_month,
-          started_at: billing_at.beginning_of_month,
-          ended_at: billing_at,
+          cycle_started_at: billing_at,
+          started_at: billing_at,
+          ended_at: segment_ended_at,
           status: :processing
         )
       end
@@ -166,9 +167,9 @@ RSpec.describe Fees::AdvanceChargesService do
           invoice: create_product_fee(invoice: create(:invoice, organization:, customer:)),
           payment_status: create_product_fee(payment_status: :failed, succeeded_at: nil),
           pay_in_advance: create_product_fee(pay_in_advance: false),
-          succeeded_at: create_product_fee(succeeded_at: billing_at + 1.second),
+          succeeded_at: create_product_fee(succeeded_at: segment_ended_at + 1.second),
           charges_to_datetime: create_product_fee(properties: eligible_properties.merge(
-            "charges_to_datetime" => (billing_at + 1.second).iso8601(6)
+            "charges_to_datetime" => (segment_ended_at + 1.second).iso8601(6)
           ))
         }
       end
@@ -229,6 +230,9 @@ RSpec.describe Fees::AdvanceChargesService do
           create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card)
         end
         let(:second_rate) { create(:rate_card_rate, organization:, rate_card: second_rate_card) }
+        let(:second_segment_ended_at) { segment_ended_at }
+        let(:second_fee_succeeded_at) { billing_at + 1.day }
+        let(:second_fee_properties) { second_metered_item.filtered_for_charge_boundaries }
         let(:second_segment) do
           create(
             :billing_segment,
@@ -239,9 +243,9 @@ RSpec.describe Fees::AdvanceChargesService do
             rate_card_rate: second_rate,
             currency: "USD",
             billing_at:,
-            cycle_started_at: billing_at.beginning_of_month,
-            started_at: billing_at.beginning_of_month,
-            ended_at: billing_at,
+            cycle_started_at: billing_at,
+            started_at: billing_at,
+            ended_at: second_segment_ended_at,
             status: :processing
           )
         end
@@ -265,8 +269,8 @@ RSpec.describe Fees::AdvanceChargesService do
             fee_type: :product,
             amount_currency: "USD",
             pay_in_advance: true,
-            succeeded_at: billing_at - 1.second,
-            properties: second_metered_item.filtered_for_charge_boundaries
+            succeeded_at: second_fee_succeeded_at,
+            properties: second_fee_properties
           )
         end
 
@@ -278,6 +282,34 @@ RSpec.describe Fees::AdvanceChargesService do
           expect(result).to be_success
           expect(invoice.fees.reload).to include(eligible_fee, second_fee)
           expect(result.invoiced_metered_items).to eq([metered_item, second_metered_item])
+        end
+
+        context "when one segment ends earlier" do
+          let(:second_segment_ended_at) { billing_at + 2.weeks }
+          let(:second_fee_succeeded_at) { second_segment_ended_at + 1.second }
+
+          it "does not attach fees succeeded after that segment closes" do
+            expect(result).to be_success
+            expect(invoice.fees.reload).to match_array([eligible_fee, fee_without_charges_to_datetime,
+              *fees_with_ignored_pricing_attributes])
+            expect(second_fee.reload.invoice_id).to be_nil
+            expect(result.invoiced_metered_items).to eq([metered_item])
+          end
+
+          context "when the fee's charge boundary extends beyond the segment" do
+            let(:second_fee_succeeded_at) { billing_at + 1.day }
+            let(:second_fee_properties) do
+              second_metered_item.filtered_for_charge_boundaries.merge(
+                "charges_to_datetime" => (second_segment_ended_at + 1.second).iso8601(6)
+              )
+            end
+
+            it "does not attach the fee even though it succeeded in the segment" do
+              expect(result).to be_success
+              expect(second_fee.reload.invoice_id).to be_nil
+              expect(result.invoiced_metered_items).to eq([metered_item])
+            end
+          end
         end
       end
     end
@@ -312,7 +344,7 @@ RSpec.describe Fees::AdvanceChargesService do
         fee_type: :product,
         amount_currency: "USD",
         pay_in_advance: true,
-        succeeded_at: billing_at - 1.second,
+        succeeded_at: billing_at + 1.day,
         properties: eligible_properties,
         **attributes
       )
