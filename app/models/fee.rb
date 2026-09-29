@@ -144,6 +144,7 @@ class Fee < ApplicationRecord
     return fixed_charge_add_on.code if fixed_charge?
     return add_on.code if add_on?
     return "consumed_credits" if credit?
+    return invoiceable.code if product?
 
     subscription&.plan&.code.presence || billable_metric&.code
   end

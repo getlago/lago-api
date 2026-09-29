@@ -24,8 +24,8 @@ module V1
           name: model.item_name,
           description: model.item_description,
           invoice_display_name: model.invoice_name,
-          filters: model.charge_filter&.to_h,
-          filter_invoice_display_name: model.charge_filter&.display_name,
+          filters: item_filters,
+          filter_invoice_display_name: model.filter_display_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
           grouped_by: model.grouped_by
@@ -68,6 +68,12 @@ module V1
     end
 
     private
+
+    def item_filters
+      return model.product_filter&.to_h if model.product?
+
+      model.charge_filter&.to_h
+    end
 
     def pay_in_advance_charge_attributes
       return {} unless model.pay_in_advance?
