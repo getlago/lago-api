@@ -95,8 +95,10 @@ module V1
             :customer,
             :charge,
             :billable_metric,
+            :invoiceable,
             :presentation_breakdowns,
-            {charge_filter: {values: :billable_metric_filter}}
+            {charge_filter: {values: :billable_metric_filter}},
+            {product_filter: {values: :billable_metric_filter}}
           ]
         ),
         ::V1::FeeSerializer,

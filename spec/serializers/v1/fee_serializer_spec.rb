@@ -260,6 +260,65 @@ RSpec.describe ::V1::FeeSerializer do
     end
   end
 
+  context "when fee is product" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:product) do
+      create(
+        :product,
+        organization:,
+        billable_metric:,
+        code: "compute",
+        name: "Compute",
+        description: "Compute usage"
+      )
+    end
+    let(:product_filter) do
+      create(:product_filter, organization:, product:, invoice_display_name: "Europe")
+    end
+    let(:billable_metric_filter) do
+      create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: ["eu"])
+    end
+    let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:fee) do
+      create(
+        :fee,
+        fee_type: "product",
+        invoice:,
+        invoiceable: product,
+        product_filter:,
+        rate_card_rate:,
+        subscription: nil,
+        invoice_display_name: nil
+      )
+    end
+
+    before do
+      create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+    end
+
+    it "serializes the product and its filter" do
+      expect(result["fee"]).to include(
+        "lago_subscription_id" => nil,
+        "external_subscription_id" => nil
+      )
+      expect(result["fee"]["item"]).to include(
+        "type" => "product",
+        "code" => "compute",
+        "name" => "Compute",
+        "description" => "Compute usage",
+        "invoice_display_name" => "Compute",
+        "filters" => {"region" => ["eu"]},
+        "filter_invoice_display_name" => "Europe",
+        "lago_item_id" => product.id,
+        "item_type" => "Product"
+      )
+    end
+  end
+
   context "when pay_in_advance attributes are included" do
     let(:inclusion) { %i[pay_in_advance] }
 
