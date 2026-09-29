@@ -10,7 +10,9 @@ module Integrations
         CUSTOMER_ADDRESS_INVALID = "customerAddressCouldNotResolve"
         OUT_OF_MEMORY_ERROR = "function_runtime_out_of_memory"
 
-        def initialize
+        def initialize(integration_customer: nil)
+          @integration_customer = integration_customer
+
           super(integration:)
         end
 
