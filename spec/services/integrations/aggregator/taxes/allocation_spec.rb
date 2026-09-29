@@ -5,6 +5,33 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Taxes::Allocation do
   subject(:allocated) { described_class.call(total, weights) }
 
+  describe ".by_group" do
+    subject(:allocated) { described_class.by_group(5, groups) }
+
+    let(:booked) { [2, 3] }
+    let(:groups) do
+      booked.map do |amount|
+        [build(:fee_applied_tax, amount_cents: amount, precise_amount_cents: 2.5)]
+      end
+    end
+
+    it "preserves booked amounts even when precise shares differ" do
+      expect(allocated).to eq([2, 3])
+    end
+
+    context "when only one group has rounded to zero" do
+      let(:booked) { [0, 2] }
+
+      it { is_expected.to eq([0, 5]) }
+    end
+
+    context "when every group has rounded to zero" do
+      let(:booked) { [0, 0] }
+
+      it { is_expected.to eq([3, 2]) }
+    end
+  end
+
   describe ".precise" do
     subject(:shares) { described_class.precise(total, weights) }
 
