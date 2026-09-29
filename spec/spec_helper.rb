@@ -62,6 +62,8 @@ rescue ActiveRecord::PendingMigrationError
 end
 
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
+# Factories use Faker URLs, which would otherwise be resolved over DNS.
+ENV["LAGO_WEBHOOK_ALLOW_PRIVATE_URLS"] ||= "true"
 
 Sentry.init do |config|
   config.dsn = "https://fake@sentry.io/123"
