@@ -34,12 +34,20 @@ class BillingSegment < ApplicationRecord
   # the clock selects customers by it and the consumer selects their segments by it, so
   # neither can drift into offering work the other will not do.
   #
-  # Metered usage billed in advance is priced per event rather than on the tick, so its
-  # segments are never invoiced here and never leave their state. Selecting them would
-  # enqueue that customer every hour for a run with nothing to do.
+  # Pending advance-metered segments are priced per event, not on the tick. Once processing,
+  # they can have paid fees to reconcile. Other segments are invoiced while pending.
   scope :awaiting_invoicing, -> {
     where(status: [:pending, :processing])
       .joins(contract_rate_card: {rate_card: :product})
+      .where(
+        "(billing_segments.status = :pending AND NOT (rate_cards.billing_timing = :advance AND " \
+          "products.product_type = :metered)) OR (billing_segments.status = :processing AND " \
+          "rate_cards.billing_timing = :advance AND products.product_type = :metered)",
+        pending: STATUSES[:pending],
+        processing: STATUSES[:processing],
+        advance: RateCard::BILLING_TIMINGS[:advance],
+        metered: Product::PRODUCT_TYPES[:metered]
+      )
   }
 
   validates :billing_at, presence: true

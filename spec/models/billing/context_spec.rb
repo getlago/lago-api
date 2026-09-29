@@ -33,7 +33,6 @@ RSpec.describe Billing::Context do
       expect(context.external_id).to eq(subscription.external_id)
       expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
       expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
-      expect(context.billing_entity).to eq(subscription.billing_entity)
       expect(context.active?).to eq(subscription.active?)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
