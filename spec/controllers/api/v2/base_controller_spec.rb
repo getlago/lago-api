@@ -63,6 +63,17 @@ RSpec.describe Api::V2::BaseController, type: :controller do
     end
   end
 
+  context "with include_total_count" do
+    let(:params) { {limit: "2", include_total_count: "true"} }
+
+    it "adds the total count" do
+      index
+
+      expect(json[:meta][:total_count]).to eq(3)
+      expect(json[:meta]).not_to have_key(:total_count_estimated)
+    end
+  end
+
   context "with an invalid limit" do
     let(:params) { {limit: "101"} }
 

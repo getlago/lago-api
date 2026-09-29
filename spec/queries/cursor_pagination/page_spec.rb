@@ -109,6 +109,63 @@ RSpec.describe CursorPagination::Page do
     end
   end
 
+  context "with a total count" do
+    let(:cursor_params) { {include_total_count: true} }
+
+    before { allow(CursorPagination::TotalCount).to receive(:call).and_call_original }
+
+    it "counts the page's own relation, with the same filters" do
+      expect(page.meta).to eq(next_cursor: token(products[1]), prev_cursor: nil, total_count: 6)
+    end
+
+    it "counts once however often the meta is read" do
+      page.meta
+      page.meta
+
+      expect(CursorPagination::TotalCount).to have_received(:call).once
+    end
+  end
+
+  context "with an estimated total count" do
+    let(:cursor_params) { {include_total_count: true} }
+
+    before do
+      allow(CursorPagination::TotalCount).to receive(:call)
+        .and_return(CursorPagination::TotalCount::Result.new(value: 10_500, outcome: :capped))
+    end
+
+    it "flags the total as estimated" do
+      expect(page.meta).to include(total_count: 10_500, total_count_estimated: true)
+    end
+  end
+
+  context "with an estimated total count below the rows already seen" do
+    let(:cursor_params) { {include_total_count: true} }
+
+    before do
+      allow(CursorPagination::TotalCount).to receive(:call)
+        .and_return(CursorPagination::TotalCount::Result.new(value: 1, outcome: :timed_out))
+    end
+
+    it "reports at least the rows of the page and the one past it" do
+      expect(page.meta).to include(total_count: 3, total_count_estimated: true)
+    end
+  end
+
+  context "with a total count asked on a later page" do
+    subject(:page) { described_class.new(records: Product.where(organization:).reorder(created_at: :desc, id: :desc).limit(3), cursor:) }
+
+    let(:cursor) { CursorPagination::Cursor.new(table: "products", limit: 2, include_total_count: true) }
+
+    # `Cursor` already refuses it: the guard keeps `Page` from counting a page bounded by
+    # a cursor, should that rule ever be relaxed.
+    before { allow(cursor).to receive(:direction).and_return(:forward) }
+
+    it "refuses to count" do
+      expect { page.meta }.to raise_error(ArgumentError, /first page/)
+    end
+  end
+
   describe "walking the whole list" do
     it "follows the sort of the cursor, here ascending" do
       sort = {created_at: :asc, id: :asc}
