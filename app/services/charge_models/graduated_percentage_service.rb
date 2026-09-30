@@ -13,7 +13,7 @@ module ChargeModels
     def amount_details
       {
         graduated_percentage_ranges: ranges.each_with_object([]) do |range, amounts|
-          detail = ChargeModels::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units, adjacent_model: adjacent_ranges?)
+          detail = ChargeModels::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units, adjacent_model: half_open_ranges?)
           # On the first pay-in-advance event: delta = cost(1 unit) - cost(0 units, exclude_event: true).
           # Here we exclude the flat fee from cost(0 units, exclude_event: true).
           detail = detail.merge(flat_unit_amount: 0, total_with_flat_amount: 0) if units.zero? && properties[:exclude_event]
@@ -21,6 +21,12 @@ module ChargeModels
           break amounts if range[:to_value].nil? || range[:to_value] >= units
         end
       }
+    end
+
+    # v1 charges keep counting touching tiers with a one-unit step, so their
+    # billing does not change; only catalog rates bill them half-open.
+    def half_open_ranges?
+      pricing_structure.catalog && adjacent_ranges?
     end
 
     def compute_amount

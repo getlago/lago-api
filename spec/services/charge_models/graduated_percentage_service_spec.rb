@@ -5,12 +5,13 @@ require "rails_helper"
 RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
   subject(:apply_graduated_percentage_service) do
     described_class.apply(
-      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
+      pricing_structure:,
       aggregation_result:,
       period_ratio: 1.0
     )
   end
 
+  let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge) }
   let(:aggregation_result) do
     BillableMetrics::Aggregations::BaseService::Result.new.tap do |r|
       r.aggregation = aggregation
@@ -62,10 +63,41 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
       )
     end
 
-    it "bills each unit in a single tier" do
+    it "keeps a one-unit step between the tiers of a v1 charge" do
       expect(apply_graduated_percentage_service.amount_details[:graduated_percentage_ranges].map { it[:units] })
-        .to eq(%w[10.0 5.0])
-      expect(apply_graduated_percentage_service.amount).to eq(BigDecimal("0.2"))
+        .to eq(%w[10.0 6.0])
+    end
+
+    context "with a catalog rate" do
+      let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(catalog: true) }
+
+      it "bills each unit in a single tier" do
+        expect(apply_graduated_percentage_service.amount_details[:graduated_percentage_ranges].map { it[:units] })
+          .to eq(%w[10.0 5.0])
+        expect(apply_graduated_percentage_service.amount).to eq(BigDecimal("0.2"))
+      end
+    end
+
+    context "with decimal bounds on a catalog rate" do
+      let(:aggregation) { 1 }
+      let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(catalog: true) }
+      let(:charge) do
+        create(
+          :graduated_percentage_charge,
+          properties: {
+            graduated_percentage_ranges: [
+              {from_value: 0, to_value: 0.2, flat_amount: "0", rate: "1"},
+              {from_value: 0.2, to_value: 0.3, flat_amount: "0", rate: "2"},
+              {from_value: 0.3, to_value: nil, flat_amount: "0", rate: "3"}
+            ]
+          }
+        )
+      end
+
+      it "counts the units of each tier exactly" do
+        expect(apply_graduated_percentage_service.amount_details[:graduated_percentage_ranges].map { it[:units] })
+          .to eq(%w[0.2 0.1 0.7])
+      end
     end
   end
 

@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe RateProperties::NormalizeRangesService do
-  subject(:result) { described_class.call(rate_properties:) }
+  subject(:result) { described_class.call(rate_properties:, proration:) }
 
+  let(:proration) { false }
   let(:rate_properties) { {"amount" => "1", "graduated_ranges" => ranges} }
   let(:ranges) do
     [
@@ -39,6 +40,31 @@ RSpec.describe RateProperties::NormalizeRangesService do
     end
   end
 
+  context "with proration" do
+    let(:proration) { true }
+
+    it "rejects a decimal graduated bound" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:graduated_ranges]).to eq(["decimal_bound_not_allowed_with_proration"])
+    end
+
+    context "with whole upper bounds" do
+      let(:ranges) { [{"to_value" => "10.0", "flat_amount" => "0", "per_unit_amount" => "1"}, {"to_value" => nil, "flat_amount" => "0", "per_unit_amount" => "1"}] }
+
+      it "accepts them" do
+        expect(result.rate_properties["graduated_ranges"].map { it.values_at("from_value", "to_value") }).to eq([[0, 10], [10, nil]])
+      end
+    end
+
+    context "with decimal volume bounds" do
+      let(:rate_properties) { {"volume_ranges" => [{"to_value" => "0.5", "flat_amount" => "0"}, {"to_value" => nil, "flat_amount" => "0"}]} }
+
+      it "accepts them" do
+        expect(result.rate_properties["volume_ranges"].map { it["to_value"] }).to eq([0.5, nil])
+      end
+    end
+  end
+
   context "without tiers" do
     let(:rate_properties) { {"amount" => "1"} }
 
@@ -63,7 +89,8 @@ RSpec.describe RateProperties::NormalizeRangesService do
     "when an upper bound is not a number" => ["ten", nil],
     "when an upper bound is not positive" => ["0", nil],
     "when an upper bound is infinite" => ["10", "Infinity", nil],
-    "when upper bounds only differ beyond float precision" => ["1.00000000000000001", "1.00000000000000002", nil]
+    "when upper bounds only differ beyond float precision" => ["1.00000000000000001", "1.00000000000000002", nil],
+    "when an upper bound does not fit a float" => ["123456789.123456789", nil]
   }.each do |description, bounds|
     context description do
       let(:ranges) { bounds.map { {"to_value" => it, "flat_amount" => "0", "per_unit_amount" => "1"} } }

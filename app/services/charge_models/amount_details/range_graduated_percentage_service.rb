@@ -52,17 +52,25 @@ module ChargeModels
 
       # NOTE: compute how many units to bill in the range
       def units
+        return half_open_units if @adjacent_model
+
         # NOTE: total_units is higher than the to_value of the range
         if to_value && total_units >= to_value
-          return to_value - from_value if @adjacent_model
-
           return to_value - (from_value.zero? ? 1 : from_value) + 1
         end
 
         return total_units if from_value.zero?
 
         # NOTE: total_units is in the range
-        @adjacent_model ? total_units - from_value : total_units - from_value + 1
+        total_units - from_value + 1
+      end
+
+      # Catalog bounds can be decimals stored as floats: subtract them as
+      # decimals, or 0.3 - 0.2 bills 0.09999999999999998 units.
+      def half_open_units
+        lower = BigDecimal(from_value.to_s)
+        upper = (to_value && total_units >= to_value) ? BigDecimal(to_value.to_s) : BigDecimal(total_units.to_s)
+        upper - lower
       end
     end
   end

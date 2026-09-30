@@ -51,7 +51,10 @@ module RateCardRates
       end
 
       if params[:rate_properties].is_a?(Hash)
-        normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties])
+        normalized = ::RateProperties::NormalizeRangesService.call(
+          rate_properties: params[:rate_properties],
+          proration: rate_card_rate.rate_card.proration?
+        )
         return result.fail_with_error!(normalized.error) if normalized.failure?
 
         params[:rate_properties] = normalized.rate_properties

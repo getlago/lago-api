@@ -6,8 +6,9 @@ module RateProperties
   class NormalizeRangesService < BaseService
     Result = BaseResult[:rate_properties]
 
-    def initialize(rate_properties:)
+    def initialize(rate_properties:, proration: false)
       @rate_properties = rate_properties
+      @proration = proration
       super
     end
 
@@ -25,6 +26,12 @@ module RateProperties
         bounds = upper_bounds(ranges)
         return result.single_validation_failure!(field: key.to_sym, error_code: "invalid_#{key}") unless bounds
 
+        # Prorated graduated billing steps between tiers one whole unit at a
+        # time, so a decimal bound would skip part of the next tier.
+        if proration && key == "graduated_ranges" && bounds.any?(Float)
+          return result.single_validation_failure!(field: key.to_sym, error_code: "decimal_bound_not_allowed_with_proration")
+        end
+
         properties[key] = ranges.each_with_index.map do |range, index|
           range.merge("from_value" => index.zero? ? 0 : bounds[index - 1], "to_value" => bounds[index])
         end
@@ -36,11 +43,10 @@ module RateProperties
 
     private
 
-    attr_reader :rate_properties
+    attr_reader :rate_properties, :proration
 
     # Upper bounds as stored numbers, or nil unless they rise strictly and only the
-    # last tier is open-ended. Checked on the stored values: a decimal finer than a
-    # float keeps would otherwise pass here and collapse onto its neighbour.
+    # last tier is open-ended.
     def upper_bounds(ranges)
       *closed, last = ranges.map { it["to_value"] }
       return unless last.nil?
@@ -58,7 +64,13 @@ module RateProperties
       bound = BigDecimal(value.to_s)
       return unless bound.finite?
 
-      bound.frac.zero? ? bound.to_i : bound.to_f
+      if bound.frac.zero?
+        bound.to_i
+      elsif BigDecimal(bound.to_f.to_s) == bound
+        # Decimals are stored as floats: one a float cannot hold exactly is
+        # rejected rather than billed against a bound the customer never set.
+        bound.to_f
+      end
     rescue ArgumentError
       nil
     end
