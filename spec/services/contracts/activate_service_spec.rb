@@ -45,8 +45,9 @@ RSpec.describe Contracts::ActivateService do
   context "when an active contract shares its external id" do
     before { create(:contract, organization:, customer:, external_id: contract.external_id) }
 
-    it "keeps the replacement pending" do
-      expect(result).to be_success
+    it "fails instead of leaving the replacement waiting unnoticed" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:external_id]).to eq(["active_contract_exists"])
       expect(contract.reload).to be_pending
       expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
     end

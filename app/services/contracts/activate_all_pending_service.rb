@@ -2,8 +2,7 @@
 
 module Contracts
   # Activates every pending contract whose start has arrived, one job each so a
-  # contract that fails does not hold back the others. A start is stored as the
-  # customer's local midnight, so comparing instants is enough.
+  # contract that fails does not hold back the others.
   class ActivateAllPendingService < BaseService
     Result = BaseResult
 
@@ -13,8 +12,7 @@ module Contracts
     end
 
     def call
-      Contract.pending
-        .where(started_at: ..timestamp)
+      Contract.due_for_activation(timestamp)
         .joins(:customer)
         .where(customers: {deleted_at: nil})
         .find_each { |contract| Contracts::ActivateJob.perform_later(contract) }

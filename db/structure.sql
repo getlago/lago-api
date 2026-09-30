@@ -882,6 +882,7 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_contracts_on_started_at_pending;
 DROP INDEX IF EXISTS public.index_contracts_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
@@ -8843,6 +8844,13 @@ CREATE INDEX index_contracts_on_payment_method_id ON public.contracts USING btre
 
 
 --
+-- Name: index_contracts_on_started_at_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_on_started_at_pending ON public.contracts USING btree (started_at) WHERE (status = 'pending'::public.contract_status);
+
+
+--
 -- Name: index_coupon_targets_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15239,6 +15247,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260930150122'),
 ('20260925110807'),
 ('20260925110133'),
 ('20260924133109'),

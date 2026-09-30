@@ -3,8 +3,8 @@
 module Contracts
   # Starts a pending contract once its start has arrived and schedules its
   # first billing. A pending contract with an active sibling on the same
-  # external id is a replacement: it waits for the flow that ends its
-  # predecessor, since two active contracts cannot share an external id.
+  # external id is a replacement whose predecessor should have been ended by
+  # the handover: activation fails rather than leave it waiting unnoticed.
   class ActivateService < BaseService
     Result = BaseResult[:contract]
 
@@ -20,11 +20,14 @@ module Contracts
       ActiveRecord::Base.transaction do
         # Re-read under lock: a contract canceled since it was loaded stays canceled.
         contract.lock!
+        next unless due?
 
-        if activatable?
-          contract.update!(status: :active)
-          BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
+        if active_sibling?
+          return result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
         end
+
+        contract.update!(status: :active)
+        BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
       end
 
       result.contract = contract
@@ -35,8 +38,8 @@ module Contracts
 
     attr_reader :contract, :timestamp
 
-    def activatable?
-      contract.pending? && contract.started_at.present? && contract.started_at <= timestamp && !active_sibling?
+    def due?
+      contract.pending? && contract.started_at.present? && contract.started_at <= timestamp
     end
 
     def active_sibling?
