@@ -43,7 +43,7 @@ module X402
 
           if match.nil?
             :absent
-          elsif match[:transaction].dig("meta", "err").nil?
+          elsif succeeded?(match)
             @identifier = match[:signature]
             :settled
           else
@@ -82,6 +82,13 @@ module X402
         raise InconclusiveError, "getTransaction returned nothing for a listed signature" unless landed
 
         {signature: entry["signature"], transaction: landed} if SolanaTransaction.decode(Base64.strict_decode64(landed.dig("transaction", 0).to_s)).signatures.include?(buyer_signature)
+      end
+
+      def succeeded?(match)
+        meta = match[:transaction]["meta"]
+        raise InconclusiveError, "getTransaction returned no status for #{match[:signature]}" unless meta.is_a?(Hash) && meta.key?("err")
+
+        meta["err"].nil?
       end
 
       def signature_query(before)

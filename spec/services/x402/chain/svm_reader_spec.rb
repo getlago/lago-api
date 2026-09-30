@@ -198,6 +198,31 @@ describe X402::Chain::SvmReader do
     end
   end
 
+  context "when the endpoint returns the transaction with null metadata" do
+    let(:history) { [super().first.merge("err" => {"InstructionError" => [2, {"Custom" => 1}]})] }
+    let(:transactions) { {transaction_id => landed.merge("meta" => nil)} }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no status/)
+    end
+  end
+
+  context "when the endpoint returns the transaction without metadata" do
+    let(:transactions) { {transaction_id => landed.except("meta")} }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no status/)
+    end
+  end
+
+  context "when the metadata has no error field" do
+    let(:transactions) { {transaction_id => landed.merge("meta" => {})} }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no status/)
+    end
+  end
+
   context "when the history reaches back before the row was written" do
     let(:history) { [other_entry(1, block_time: since.to_i - 3_600), super().first] }
 
