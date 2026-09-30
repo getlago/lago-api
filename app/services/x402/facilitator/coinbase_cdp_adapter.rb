@@ -24,7 +24,7 @@ module X402
       def verify(payment:, payment_requirements:)
         answer = request_or_unavailable("verify") { post("/verify", payment, payment_requirements, READ_TIMEOUT) }
         raise_for_access!("verify", answer)
-        raise unavailable("verify", answer) if answer.status >= 500 || !answer.parsed
+        raise unavailable("verify", answer) if answer.status >= 500 || !answer.parsed || malformed_verdict?(answer)
 
         body = answer.body
         reason = body["invalidReason"].presence || body["errorType"].presence || "verify_failed" unless body["isValid"] == true
@@ -48,9 +48,9 @@ module X402
       def supported
         answer = request_or_unavailable("supported") { get("/supported") }
         raise_for_access!("supported", answer)
-        raise unavailable("supported", answer) if answer.status >= 500 || !answer.parsed
+        raise unavailable("supported", answer) if answer.status >= 500 || !answer.parsed || malformed_kinds?(answer)
 
-        SupportedResult.new(kinds: Array(answer.body["kinds"]), response: answer.body)
+        SupportedResult.new(kinds: answer.body["kinds"], response: answer.body)
       end
 
       private
@@ -150,8 +150,17 @@ module X402
         raise error_class.new("#{operation}: HTTP #{answer.status}", http_status: answer.status, error_type: answer.body["errorType"], correlation_id: answer.body["correlationId"])
       end
 
+      def malformed_verdict?(answer)
+        answer.status < 300 && !answer.body["isValid"].in?([true, false])
+      end
+
+      def malformed_kinds?(answer)
+        kinds = answer.body["kinds"]
+        !kinds.is_a?(Array) || !kinds.all?(Hash)
+      end
+
       def unavailable(operation, answer)
-        log_failure(operation, answer.parsed ? "server_error" : "malformed_response", status: answer.status, correlation_id: answer.body["correlationId"])
+        log_failure(operation, (answer.parsed && answer.status >= 500) ? "server_error" : "malformed_response", status: answer.status, correlation_id: answer.body["correlationId"])
         UnavailableError.new("#{operation}: HTTP #{answer.status}", http_status: answer.status, error_type: answer.body["errorType"], correlation_id: answer.body["correlationId"])
       end
 

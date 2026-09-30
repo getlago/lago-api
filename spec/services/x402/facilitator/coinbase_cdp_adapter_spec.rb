@@ -154,6 +154,27 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       end
     end
 
+    context "when a success carries no verdict" do
+      before { stub_answer("verify", status: 200, body: "{}") }
+
+      it "raises" do
+        expect { verification }.to raise_error(X402::Facilitator::UnavailableError)
+      end
+
+      it "logs it" do
+        expect { verification }.to raise_error(X402::Facilitator::UnavailableError)
+        expect(Rails.logger).to have_received(:warn).with("X402::Facilitator::CoinbaseCdpAdapter call failed operation=verify reason=malformed_response status=200")
+      end
+    end
+
+    context "when a success carries a verdict that is not a boolean" do
+      before { stub_answer("verify", status: 200, body: {isValid: "true"}.to_json) }
+
+      it "raises" do
+        expect { verification }.to raise_error(X402::Facilitator::UnavailableError)
+      end
+    end
+
     context "when the stored secret is not a key" do
       subject(:adapter) { described_class.new(api_key_id: cdp_api_key_id, api_key_secret: "not a key") }
 
@@ -424,7 +445,7 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       end
     end
 
-    ["<html></html>", "[]"].each do |body|
+    ["<html></html>", "[]", "{}", {kinds: {network: "eip155:84532"}}.to_json, {kinds: ["exact"]}.to_json].each do |body|
       context "when CDP answers #{body}" do
         before { stub_answer("supported", status: 200, body:) }
 
