@@ -155,6 +155,31 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           "charges_to_datetime" => billing_segment.ended_at.iso8601(6)
         )
       end
+
+      context "when an unfiltered advance fee already exists" do
+        let(:original_fee) { fee_service.call.fees.sole }
+        let(:duplicate_fee) { original_fee.dup }
+
+        it "rejects another fee for the same event and contract rate card" do
+          expect do
+            Fee.transaction(requires_new: true) { duplicate_fee.save! }
+          end.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+
+        context "with a product filter" do
+          let(:product_filter) { create(:product_filter, organization:, product:) }
+          let(:filtered_fee) { original_fee.dup.tap { |fee| fee.product_filter = product_filter } }
+          let(:duplicate_filtered_fee) { filtered_fee.dup }
+
+          it "allows a filtered fee but rejects another fee for the same filter" do
+            filtered_fee.save!
+
+            expect do
+              Fee.transaction(requires_new: true) { duplicate_filtered_fee.save! }
+            end.to raise_error(ActiveRecord::RecordNotUnique)
+          end
+        end
+      end
     end
 
     it "creates a fee" do
