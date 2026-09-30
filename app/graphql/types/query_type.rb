@@ -13,6 +13,10 @@ module Types
     field :activity_logs, resolver: Resolvers::ActivityLogsResolver
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
+    field :admin_audit_logs, resolver: Resolvers::Admin::AuditLogsResolver
+    field :admin_cs_admins, resolver: Resolvers::Admin::CsAdminsResolver
+    field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
+    field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::Subscriptions::AlertResolver
@@ -30,6 +34,7 @@ module Types
     field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
     field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
     field :contract, resolver: Resolvers::ContractResolver
+    field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver

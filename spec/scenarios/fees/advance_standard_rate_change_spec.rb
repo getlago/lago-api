@@ -14,7 +14,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
         }})
       end
 
-      # Contract creation schedules the initial R1 row before later rates are known.
+      # Event pricing does not require contract creation to persist an advance-metered row.
     end
 
     rate_changes.each do |change|
@@ -120,9 +120,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       "from_datetime" => cycle_started_at.iso8601(6),
       "to_datetime" => BillingSegment.inclusive_end(second_rate_start).iso8601(6)
     )
-    expect(BillingSegment.where(contract:, cycle_started_at:).pluck(:rate_card_rate_id, :ended_at)).to eq([
-      [first_rate.id, BillingSegment.inclusive_end(cycle_ended_at)]
-    ])
+    expect(BillingSegment.where(contract:, cycle_started_at:)).to be_empty
     expect(fees.sole.invoice).to be_finalized
     expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(1)
   end
@@ -239,7 +237,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
         ]
       end
 
-      it "issues three invoices for R1, R2, and R3 without rewriting the stored R1 row" do
+      it "issues three invoices for R1, R2, and R3 without persisting event segments" do
         expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents, fee.units] }).to eq([
           [first_rate, 1_000, 10], [second_rate, 2_000, 10], [third_rate, 3_000, 10]
         ])
@@ -253,9 +251,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
           ["finalized", 1], ["finalized", 1], ["finalized", 1]
         ])
         expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(3)
-        expect(BillingSegment.where(contract:, cycle_started_at:).pluck(:rate_card_rate_id, :ended_at)).to eq([
-          [first_rate.id, BillingSegment.inclusive_end(cycle_ended_at)]
-        ])
+        expect(BillingSegment.where(contract:, cycle_started_at:)).to be_empty
       end
     end
   end

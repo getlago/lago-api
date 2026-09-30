@@ -251,4 +251,73 @@ RSpec.describe Mutations::Subscriptions::Create, :premium do
       )
     end
   end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+    let(:netsuite_connection) { create(:netsuite_customer, customer:, organization:, code: "netsuite_main") }
+
+    let(:connections_mutation) do
+      <<~GQL
+        mutation($input: CreateSubscriptionInput!) {
+          createSubscription(input: $input) { id }
+        }
+      GQL
+    end
+
+    def create_subscription(connections:)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            planId: plan.id,
+            externalId: SecureRandom.uuid,
+            billingTime: "anniversary",
+            connections:
+          }
+        }
+      )
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+      netsuite_connection
+    end
+
+    it "persists one connection per category" do
+      result = create_subscription(
+        connections: {
+          payment: {code: "stripe_us"},
+          tax: {behavior: "skip"},
+          accounting: {code: "netsuite_main"},
+          crm: {behavior: "skip"}
+        }
+      )
+
+      subscription = Subscription.find(result["data"]["createSubscription"]["id"])
+
+      expect(subscription.billing_object_connections.pluck(:category)).to match_array(%w[payment tax accounting crm])
+      expect(subscription.effective_payment_connection).to eq(stripe_connection)
+      expect(subscription.effective_accounting_connection).to eq(netsuite_connection)
+      expect(subscription.effective_tax_connection).to be_nil
+    end
+
+    it "returns a validation error when the code does not resolve" do
+      result = create_subscription(connections: {payment: {code: "unknown_connection"}})
+
+      expect(result["errors"].first["extensions"]["details"]["connections"]).to include("connection_not_found")
+    end
+
+    it "returns a forbidden error when the multi_connection flag is disabled" do
+      organization.disable_feature_flag!(:multi_connection)
+
+      result = create_subscription(connections: {payment: {code: "stripe_us"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
+    end
+  end
 end

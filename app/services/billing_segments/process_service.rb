@@ -47,7 +47,8 @@ module BillingSegments
 
     def grouped_segments
       @grouped_segments ||= BillingSegment
-        .where(customer_id: customer.id, status: %i[pending processing])
+        .where(status: %i[pending processing])
+        .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
         .group_by { |segment| segment_group(segment) }
         .except(nil)

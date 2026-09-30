@@ -235,25 +235,6 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
         )
       end
 
-      let(:ch_enriched_expanded_event) do
-        create(
-          :clickhouse_events_enriched_expanded,
-          organization_id: billable_metric.organization_id,
-          code: billable_metric.code,
-          external_subscription_id: subscription.external_id,
-          enriched_at: event_timestamp
-        )
-      end
-
-      let(:not_impacted_ch_enriched_expanded_event) do
-        create(
-          :clickhouse_events_enriched_expanded,
-          organization_id: billable_metric.organization_id,
-          external_subscription_id: SecureRandom.uuid,
-          enriched_at: event_timestamp
-        )
-      end
-
       before do
         # Force ALTER TABLE DELETE mutations to run synchronously so the test can
         # observe the deletion immediately. In production this stays at "0" (async).
@@ -265,8 +246,6 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
         other_org_ch_event
         ch_enriched_event
         not_impacted_ch_enriched_event
-        ch_enriched_expanded_event
-        not_impacted_ch_enriched_expanded_event
       end
 
       it "deletes matching clickhouse events_raw" do
@@ -291,21 +270,12 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
           .to eq(1)
       end
 
-      it "deletes matching clickhouse events_enriched_expanded" do
-        service.call
-
-        expect(Clickhouse::EventsEnrichedExpanded.where(transaction_id: ch_enriched_expanded_event.transaction_id).count)
-          .to eq(0)
-        expect(Clickhouse::EventsEnrichedExpanded.where(transaction_id: not_impacted_ch_enriched_expanded_event.transaction_id).count)
-          .to eq(1)
-      end
-
       context "when the subscription list exceeds CLICKHOUSE_BATCH_SIZE" do
         # delete_clickhouse_events slices the id list into CLICKHOUSE_BATCH_SIZE
         # chunks before inlining it into the ALTER TABLE … DELETE statement,
         # so a query never blows past ClickHouse's `max_query_size`. Stubbing
         # the constant to 1 forces two subscriptions to be sliced across two
-        # CH queries per table × three tables = 6 calls.
+        # CH queries per table × two tables = 4 calls.
         let(:second_subscription) { create(:subscription, customer: subscription.customer, plan: subscription.plan) }
 
         before do
@@ -317,7 +287,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
         it "slices the IN(?) list into CLICKHOUSE_BATCH_SIZE chunks" do
           service.call
 
-          expect(::Clickhouse::BaseRecord.connection).to have_received(:execute).exactly(6).times
+          expect(::Clickhouse::BaseRecord.connection).to have_received(:execute).exactly(4).times
         end
       end
 

@@ -316,4 +316,77 @@ RSpec.describe Resolvers::SubscriptionResolver do
       end
     end
   end
+
+  context "with connections" do
+    let(:connections_query) do
+      <<~GQL
+        query($subscriptionId: ID!) {
+          subscription(id: $subscriptionId) {
+            id
+            connections { category behavior code }
+          }
+        }
+      GQL
+    end
+
+    let(:default_connection) do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+    end
+
+    before { default_connection }
+
+    def routing
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_query,
+        variables: {subscriptionId: subscription.id}
+      )
+
+      result["data"]["subscription"]["connections"].index_by { it["category"] }
+    end
+
+    it "reports every category" do
+      expect(routing.keys).to match_array(%w[payment tax accounting crm])
+    end
+
+    context "when the category is inherited" do
+      it "reports inherit with the customer default's code" do
+        expect(routing["payment"]).to eq(
+          {"category" => "payment", "behavior" => "inherit", "code" => "stripe_default"}
+        )
+      end
+    end
+
+    context "when the subscription pins the customer's own default connection" do
+      before do
+        create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+          behavior: "specific", payment_provider_customer: default_connection)
+      end
+
+      it "stays specific even though the code matches the customer default" do
+        expect(routing["payment"]).to eq(
+          {"category" => "payment", "behavior" => "specific", "code" => "stripe_default"}
+        )
+      end
+    end
+
+    context "when the category is skipped" do
+      before do
+        create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+          behavior: "skip")
+      end
+
+      it "reports skip with no code" do
+        expect(routing["payment"]).to eq({"category" => "payment", "behavior" => "skip", "code" => nil})
+      end
+    end
+
+    context "when nothing resolves" do
+      it "reports inherit with a nil code" do
+        expect(routing["crm"]).to eq({"category" => "crm", "behavior" => "inherit", "code" => nil})
+      end
+    end
+  end
 end

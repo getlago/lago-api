@@ -123,6 +123,8 @@ module Fees
     #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
     #       on draft invoices can target filters without any usage.
     #       Recurring metrics always aggregate as usage carries over from previous periods.
+    #       A charge served from the usage buckets is pre-filtered from those same buckets rather
+    #       than from the events store, so the list cannot lag the units it gates.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
@@ -133,7 +135,11 @@ module Fees
 
     def compute_fees_with_cache(selected_metered_item:)
       if cache_middleware
-        cache_middleware.call(charge_filter: selected_metered_item.charge_filter) do
+        cache_middleware.call(
+          charge_filter: selected_metered_item.charge_filter,
+          # Precomputed usage is already fresh, caching it would put back the staleness it removes.
+          bypass: precomputed?(selected_metered_item:)
+        ) do
           fees = compute_fees(selected_metered_item:)
           if fees.nil?
             return
@@ -315,7 +321,6 @@ module Fees
         rate_card_rate: selected_metered_item.rate_card_rate,
         rate_override: selected_metered_item.rate_override,
         product_filter: selected_metered_item.product_filter,
-        display_on_invoice: selected_metered_item.billing_segment ? selected_metered_item.display_on_invoice? : true,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
         properties: selected_metered_item.filtered_for_charge_boundaries,
@@ -442,8 +447,20 @@ module Fees
       true
     end
 
-    # One instance per pricing bucket, shared by the aggregation and the zero-units hydration, so
-    # the two cannot disagree on where the units come from.
+    # The provider is asked first, down to the per-charge gates: building the aggregator and its
+    # store is wasted work for a charge the buckets could never answer, and this runs before the
+    # charge cache is even read.
+    def precomputed?(selected_metered_item:)
+      return false unless provider.may_precompute_charge?(
+        metered_item: selected_metered_item,
+        boundaries: selected_metered_item.aggregation_boundaries
+      )
+
+      aggregator(selected_metered_item:).precomputed?
+    end
+
+    # One instance per pricing bucket, shared by the cache bypass, the aggregation and the
+    # zero-units hydration, so the three cannot disagree on where the units come from.
     def aggregator(selected_metered_item:)
       @aggregators ||= {}
       @aggregators[selected_metered_item] ||= build_aggregator(selected_metered_item)
@@ -458,7 +475,7 @@ module Fees
         current_usage: options.current_usage?,
         billing_context:,
         provider:,
-        boundaries: aggregation_boundaries(selected_metered_item),
+        boundaries: selected_metered_item.aggregation_boundaries,
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate
       )
@@ -470,17 +487,8 @@ module Fees
       @provider ||= Events::Stores::Provider.new(
         organization: billing_context.organization,
         billing_context:,
-        current_usage: options.current_usage?
+        usage_filters: options.usage_filters
       )
-    end
-
-    def aggregation_boundaries(selected_metered_item)
-      {
-        from_datetime: selected_metered_item.boundaries.charges_from_datetime,
-        to_datetime: selected_metered_item.boundaries.charges_to_datetime,
-        charges_duration: selected_metered_item.boundaries.charges_duration,
-        max_timestamp: selected_metered_item.boundaries.max_timestamp
-      }
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)

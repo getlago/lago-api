@@ -13,7 +13,7 @@ RSpec.describe Mutations::Contracts::Terminate do
     )
   end
 
-  let(:required_permission) { "contracts:update" }
+  let(:required_permission) { "contracts:terminate" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -34,7 +34,7 @@ RSpec.describe Mutations::Contracts::Terminate do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "contracts:update"
+  it_behaves_like "requires permission", "contracts:terminate"
 
   it "terminates the contract" do
     result_data = execution["data"]["terminateContract"]

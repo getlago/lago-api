@@ -17,6 +17,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
       fees_amount_cents: 20,
       coupons_amount_cents: 10,
       taxes_amount_cents: 2,
+      sub_total_including_taxes_amount_cents: 12,
       total_amount_cents: 12,
       payment_status: :succeeded,
       taxes_rate: 20,
@@ -24,6 +25,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
     )
   end
   let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:invoice_applied_tax) { create(:invoice_applied_tax, tax:, invoice:) }
 
   let(:params) { {invoice_id: invoice&.id, amount_cents: 9, reference: "ref1"} }
 
@@ -52,7 +54,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
     before do
       create(:fee_applied_tax, tax:, fee: fee1)
       create(:fee_applied_tax, tax:, fee: fee2) if fee2
-      create(:invoice_applied_tax, tax:, invoice:) if invoice
+      invoice_applied_tax if invoice
       Payments::ManualCreateService.call(organization:, params:)
     end
 
@@ -122,6 +124,17 @@ RSpec.describe CreditNotes::EstimateService, :premium do
       end
     end
 
+    context "when a fee tax has no matching invoice tax" do
+      let(:invoice_applied_tax) { nil }
+
+      it "returns the apply taxes failure" do
+        result = estimate_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("invoice_applied_tax_not_found")
+      end
+    end
+
     context "with missing items" do
       let(:items) {}
 
@@ -170,6 +183,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
           :invoice,
           total_amount_cents: 25000,
           taxes_amount_cents: 5000,
+          sub_total_including_taxes_amount_cents: 25000,
           fees_amount_cents: 20000,
           total_paid_amount_cents: 25000,
           taxes_rate: 25,
@@ -182,7 +196,9 @@ RSpec.describe CreditNotes::EstimateService, :premium do
           :fee,
           invoice:,
           amount_cents: 20000,
-          taxes_rate: 25
+          taxes_rate: 25,
+          taxes_amount_cents: 5000,
+          taxes_precise_amount_cents: 5000
         )
       end
 

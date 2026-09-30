@@ -20,6 +20,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       payment_provider_customer: gocardless_customer,
       amount_cents: 200,
       amount_currency: "CHF",
+      payable_payment_status: "succeeded",
       payable: credit_note.invoice
     )
   end
@@ -85,6 +86,30 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
           refund_status: "paid"
         }
       )
+    end
+
+    context "with a payment request for an invoice" do
+      let(:payment_request) { create(:payment_request, :succeeded, customer:, invoices: [invoice]) }
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: gocardless_payment_provider,
+          payment_provider_customer: gocardless_customer,
+          amount_cents: 200,
+          amount_currency: "CHF",
+          payable_payment_status: "succeeded",
+          payable: payment_request
+        )
+      end
+
+      it "refunds the payment request payment" do
+        result = gocardless_service.create
+
+        expect(result).to be_success
+        expect(result.refund.payment).to eq(payment)
+        expect(gocardless_refunds_service).to have_received(:create)
+          .with(hash_including(params: hash_including(links: {payment: payment.provider_payment_id})))
+      end
     end
 
     context "with an error on gocardless" do

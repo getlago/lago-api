@@ -24,6 +24,8 @@ module Types
         argument :trigger, Types::Wallets::RecurringTransactionRules::TriggerEnum, required: true
 
         argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
+
+        argument :connections, Types::Connections::Input, required: false
       end
     end
   end

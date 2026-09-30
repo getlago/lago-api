@@ -32,12 +32,15 @@ module Types
 
     field :create_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Create
     field :create_rate_phase, mutation: Mutations::RatePhases::Create
+    field :destroy_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Destroy
     field :destroy_rate_phase, mutation: Mutations::RatePhases::Destroy
     field :update_rate_phase, mutation: Mutations::RatePhases::Update
 
     field :create_charge, mutation: Mutations::Charges::Create
     field :create_contract, mutation: Mutations::Contracts::Create
+    field :create_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
+    field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
     field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
     field :update_contract, mutation: Mutations::Contracts::Update
@@ -313,5 +316,9 @@ module Types
     field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
     field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
+
+    field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
+    field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
+    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
   end
 end

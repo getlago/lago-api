@@ -12,6 +12,7 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :role, Types::UsageAttributionTypes::RoleEnum, required: false
+    argument :roots, Boolean, required: false, description: "Return only root types, each carrying its descendants through `children`"
     argument :search_term, String, required: false
 
     type Types::UsageAttributionTypes::Object.collection_type, null: false
@@ -23,7 +24,7 @@ module Resolvers
         organization: current_organization,
         search_term: args[:search_term],
         pagination: {page: args[:page], limit: args[:limit]},
-        filters: args.slice(:role)
+        filters: args.slice(:role, :roots)
       )
 
       result.success? ? result.usage_attribution_types : result_error(result)

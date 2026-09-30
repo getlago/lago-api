@@ -69,7 +69,7 @@ module Api
           contracts = result.contracts.includes(:catalog_plan, :customer)
 
           # One grouped query instead of one COUNT per row in the serializer.
-          applied_rate_cards_counts = ContractRateCard.current_and_scheduled
+          applied_rate_cards_counts = ContractRateCard
             .where(contract_id: contracts.map(&:id))
             .group(:contract_id)
             .count
@@ -234,7 +234,8 @@ module Api
       end
 
       # external_customer_id and external_id are set at creation and address the
-      # contract; the rest are the editable authoring fields.
+      # contract. Contracts::UpdateService decides which of the rest may change
+      # for the contract's status.
       def update_params
         params.require(:contract).permit(
           :name,

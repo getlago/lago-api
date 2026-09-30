@@ -2,14 +2,19 @@
 
 module RealtimeUsage
   # Reads the pre-aggregated usage of one subscription over one window from the ClickHouse
-  # buckets. A window the buckets cannot answer is a success carrying no `usage_buckets`, while
-  # a failed read is a service failure: both leave the caller reading events, but only the
-  # second one says something went wrong. An unreachable ClickHouse has to make current usage
-  # slow, not broken, so the read never raises.
+  # buckets. A failed read is a service failure, which leaves the caller reading events: an
+  # unreachable ClickHouse has to make current usage slow, not broken, so the read never raises.
   class FetchBucketsService < BaseService
     Result = BaseResult[:usage_buckets]
 
-    BUCKET_SIZE = 15.minutes
+    BUCKET_DURATION = 15.minutes
+
+    # One query must answer a plan mixing aggregation types, so the read selects every combine.
+    # Keyed by the names the stream writes, the events processor's, without the `_agg` suffix.
+    UNITS_BY_AGGREGATION_TYPE = {
+      "max" => :max_units,
+      "latest" => :latest_units
+    }.freeze
 
     # What the ClickHouse driver raises on a connection it cannot use, plus the two errors the
     # retry helper and the row mapping raise on their own.
@@ -19,17 +24,17 @@ module RealtimeUsage
       JSON::ParserError
     ].freeze
 
-    def initialize(subscription:, boundaries:)
+    def initialize(subscription:, boundaries:, charges:)
       @subscription = subscription
       @boundaries = boundaries
+      @charges = charges
 
       super
     end
 
     def call
       return result unless RealtimeUsage.enabled?(organization)
-      return result if RealtimeUsage.deduplicated?(organization)
-      return result if window.nil?
+      return result if charges.empty?
 
       result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)
       result
@@ -40,7 +45,7 @@ module RealtimeUsage
 
     private
 
-    attr_reader :subscription, :boundaries
+    attr_reader :subscription, :boundaries, :charges
 
     def organization
       @organization ||= subscription.organization
@@ -49,7 +54,7 @@ module RealtimeUsage
     def totals
       rows.each_with_object({}) do |row, acc|
         key = [row[:charge_id], row[:charge_filter_id]]
-        acc[key] = sum_totals(acc[key], row)
+        acc[key] = combine_totals(acc[key], row)
       end
     end
 
@@ -58,15 +63,20 @@ module RealtimeUsage
         next if row[:groups].empty?
 
         groups = (acc[[row[:charge_id], row[:charge_filter_id]]] ||= {})
-        groups[row[:groups]] = sum_totals(groups[row[:groups]], row)
+        groups[row[:groups]] = combine_totals(groups[row[:groups]], row)
       end
     end
 
-    def sum_totals(totals, row)
-      Events::Stores::UsageBucketSet::Totals.new(
-        units: (totals&.units || BigDecimal(0)) + row[:units],
-        events_count: (totals&.events_count || 0) + row[:events_count]
+    def combine_totals(totals, row)
+      row_totals = Events::Stores::UsageBucketSet::Totals.new(
+        aggregation_type: row[:aggregation_type],
+        units: row[:units],
+        events_count: row[:events_count],
+        last_event_at: row[:last_event_at],
+        precise_total_amount_cents: row[:precise_total_amount_cents]
       )
+
+      totals ? totals.combine(row_totals) : row_totals
     end
 
     def rows
@@ -75,13 +85,33 @@ module RealtimeUsage
 
     def fetch_rows
       Clickhouse::UsageBucket
-        .where(organization_id: organization.id, subscription_id: subscription.id)
-        .where(bucket: window)
-        .group(:charge_id, :charge_filter_id, :grouped_by)
-        .pluck(Arel.sql("charge_id, charge_filter_id, grouped_by, sum(units), sum(events_count)"))
-        .map do |charge_id, charge_filter_id, grouped_by, units, events_count|
-          {charge_id:, charge_filter_id:, groups: parse_groups(grouped_by), units: units.to_d, events_count: events_count.to_i}
+        .where(organization_id: organization.id, subscription_id: subscription.id, charge_id: charge_ids)
+        .where(bucket: window, is_deleted: 0)
+        .group(:charge_id, :charge_filter_id, :grouped_by, :aggregation_type)
+        .pluck(Arel.sql(<<~SQL.squish))
+          charge_id, charge_filter_id, grouped_by, aggregation_type,
+          sum(units), max(units), argMax(units, last_event_at), max(last_event_at), sum(events_count),
+          sum(precise_total_amount_cents)
+        SQL
+        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, sum_units, max_units, latest_units, last_event_at, events_count, precise_total_amount_cents|
+          units = {sum_units:, max_units:, latest_units:}
+            .fetch(UNITS_BY_AGGREGATION_TYPE.fetch(aggregation_type, :sum_units))
+
+          {
+            charge_id:,
+            charge_filter_id:,
+            groups: parse_groups(grouped_by),
+            aggregation_type:,
+            units: units.to_d,
+            last_event_at: last_event_at.to_time,
+            events_count: events_count.to_i,
+            precise_total_amount_cents: precise_total_amount_cents.to_d
+          }
         end
+    end
+
+    def charge_ids
+      @charge_ids ||= charges.map(&:id)
     end
 
     # The stream writes an absent group value as "", where the events store returns nil.
@@ -89,37 +119,20 @@ module RealtimeUsage
       JSON.parse(grouped_by.presence || "{}").transform_values(&:presence)
     end
 
+    # The pipeline attributes an event to a subscription only within its lifetime, so widening
+    # the window to whole buckets cannot pull in usage from a neighbouring subscription.
     def window
-      return @window if defined?(@window)
-
-      @window = servable_window? ? (floor_to_bucket(from)...to) : nil
-    end
-
-    def from
-      boundaries.charges_from_datetime
-    end
-
-    def to
-      boundaries.charges_to_datetime
-    end
-
-    # A window opening inside a bucket would count the whole bucket, except on the very first
-    # period: the pipeline attributes an event to a subscription only within its lifetime, so
-    # nothing before `started_at` lands in that bucket. A truncated window (daily usage
-    # backfill) ends mid-bucket and has the same problem at the other end.
-    def servable_window?
-      return false if from.blank? || to.blank?
-      return false if boundaries.max_timestamp.present?
-
-      aligned?(from) || from == subscription.started_at
-    end
-
-    def aligned?(time)
-      (time.to_i % BUCKET_SIZE.to_i).zero? && time.usec.zero?
+      @window ||= floor_to_bucket(boundaries.charges_from_datetime)...ceil_to_bucket(boundaries.charges_to_datetime)
     end
 
     def floor_to_bucket(time)
-      Time.zone.at(time.to_i - (time.to_i % BUCKET_SIZE.to_i))
+      Time.zone.at(time.to_i - (time.to_i % BUCKET_DURATION.to_i))
+    end
+
+    def ceil_to_bucket(time)
+      floor = floor_to_bucket(time)
+
+      (floor == time) ? floor : floor + BUCKET_DURATION
     end
   end
 end

@@ -37,8 +37,6 @@ module RateCardRates
           billing_interval_unit: params[:billing_interval_unit],
           applied_pricing_unit_conversion_rate: params[:applied_pricing_unit_conversion_rate]
         )
-
-        ensure_advance_segments
       end
 
       result.rate_card_rate = rate
@@ -50,14 +48,5 @@ module RateCardRates
     private
 
     attr_reader :rate_card, :params, :emit_activity_log
-
-    def ensure_advance_segments
-      rate_card.contract_applied_rate_cards
-        .left_joins(:billing_segments)
-        .where(billing_segments: {id: nil})
-        .find_each do |contract_rate_card|
-          BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
-        end
-    end
   end
 end

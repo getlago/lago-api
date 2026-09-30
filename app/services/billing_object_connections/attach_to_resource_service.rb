@@ -38,8 +38,12 @@ module BillingObjectConnections
 
     attr_reader :resource, :params
 
+    # See ValidateService: GraphQL supplies an InputObject, REST a plain Hash.
     def connections
-      params[:connections]
+      raw = params[:connections]
+      return raw if raw.is_a?(Hash)
+
+      raw.respond_to?(:to_hash) ? raw.to_hash : raw
     end
 
     def customer

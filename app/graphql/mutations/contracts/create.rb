@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         result = ::Contracts::CreateService.call(
           organization: current_organization,
-          params: args
+          params: args.merge(external_id: args[:external_id].presence || SecureRandom.uuid)
         )
 
         result.success? ? result.contract : result_error(result)

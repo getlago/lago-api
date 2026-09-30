@@ -11,10 +11,16 @@ describe BillingSegments::ProcessJob, job: true do
     let(:job_args) { [customer.id] }
   end
 
+  describe "unique" do
+    it "releases its lock once it starts, so a request made during a run is not dropped" do
+      expect(described_class.lock_strategy_class).to eq(ActiveJob::Uniqueness::Strategies::UntilExecuting)
+    end
+  end
+
   describe ".perform" do
     before { allow(BillingSegments::ProcessService).to receive(:call!).and_call_original }
 
-    it "processes the customer's pending segments" do
+    it "invoices the customer's pending segments" do
       described_class.perform_now(customer.id)
 
       expect(BillingSegments::ProcessService).to have_received(:call!).with(customer:)

@@ -244,9 +244,53 @@ class Invoice < ApplicationRecord
   end
 
   def fee_total_amount_cents
-    amount_cents = fees.sum(:amount_cents)
-    taxes_amount_cents = fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
-    amount_cents + taxes_amount_cents
+    fees_amount_cents + taxes_amount_cents
+  end
+
+  def provider_taxes?
+    applied_taxes.any?(&:provider_tax?)
+  end
+
+  def booked_tax_by_fee
+    # Native credit notes tax the credited amount at its rate and never read the per-row split.
+    if provider_taxes?
+      booked_tax = booked_tax_by_fee_tax
+      fees.index_with { |fee| booked_tax_units(fee).sum { |unit| booked_tax.fetch(unit) } }
+    else
+      split_booked_tax(taxes_amount_cents, ordered_fees_for_booked_tax)
+    end
+  end
+
+  # Native fee taxes round one by one while the invoice rounds once, and provider invoices booked
+  # before fee amounts were stored drift the same way: split what the invoice charged, first
+  # across its taxes, then within each tax across its fee rows, so a full credit matches both.
+  def booked_tax_by_fee_tax
+    ActiveRecord::Associations::Preloader.new(records: fees.select(&:persisted?), associations: :applied_taxes).call
+
+    units = ordered_fees_for_booked_tax.flat_map { |fee| booked_tax_units(fee) }
+    units_by_tax = booked_tax_units_by_invoice_tax(units)
+    tax_amounts = booked_tax_by_invoice_tax(units_by_tax)
+
+    booked = units_by_tax.values.zip(tax_amounts).each_with_object({}) do |(tax_units, amount_cents), split|
+      split.merge!(split_booked_tax(amount_cents, tax_units))
+    end
+    units.index_with { |unit| booked.fetch(unit) }
+  end
+
+  # NOTE: a fee tax resolves to the invoice tax with the same code and rate. When no invoice tax
+  #       has that rate (the fee and the invoice were taxed at different rates, e.g. the tax rate
+  #       changed in between), it falls back to the invoice tax carrying the same code, but only
+  #       if exactly one does: several invoice taxes sharing a code is the provider multi-rate
+  #       case, where the rate is the only thing telling them apart.
+  def applied_tax_for(fee_applied_tax)
+    invoice_taxes = applied_taxes.to_a
+    exact_match = invoice_taxes.find do |tax|
+      tax.tax_code == fee_applied_tax.tax_code && tax.tax_rate == fee_applied_tax.tax_rate
+    end
+    return exact_match if exact_match
+
+    code_matches = invoice_taxes.select { |tax| tax.tax_code == fee_applied_tax.tax_code }
+    code_matches.first if code_matches.one?
   end
 
   def charge_amount_cents
@@ -379,25 +423,7 @@ class Invoice < ApplicationRecord
   def available_to_credit_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
 
-    fees_total_creditable = fees.sum(&:creditable_amount_cents)
-    return 0 if fees_total_creditable.zero?
-
-    credit_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
-      0
-    else
-      (coupons_amount_cents + progressive_billing_credit_amount_cents).fdiv(fees_amount_cents) * fees_total_creditable
-    end
-
-    vat = fees.sum do |fee|
-      # NOTE: Because coupons are applied before VAT,
-      #       we have to discribute the coupon adjustement at prorata of each fees
-      #       to compute the VAT
-      fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
-      prorated_credit_amount = credit_adjustement * fee_rate
-      (fee.creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
-    end.fdiv(100).round # BECAUSE OF THIS ROUND the returned value is not precise
-
-    fees_total_creditable - credit_adjustement + vat
+    [fees_available_to_credit_amount_cents, remaining_invoice_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as credit
@@ -435,6 +461,15 @@ class Invoice < ApplicationRecord
 
     refundable_cents = [remaining_paid_cents, creditable_amount_cents].min
     refundable_cents.negative? ? 0 : refundable_cents
+  end
+
+  # An invoice settled through a payment request has its payment attached to the request, not to the invoice
+  def refundable_payment
+    payments.succeeded.order(created_at: :desc).first ||
+      Payment.succeeded
+        .where(payable: payment_requests.payment_succeeded)
+        .order(created_at: :desc)
+        .first
   end
 
   # Credit invoices have a single credit-type fee linked to the wallet transaction
@@ -562,6 +597,83 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def fees_available_to_credit_amount_cents
+    booked_tax = booked_tax_by_fee
+
+    fees.sum { |fee| creditable_share(fee) * (fee.sub_total_excluding_taxes_amount_cents + booked_tax.fetch(fee)) }.round
+  end
+
+  def ordered_fees_for_booked_tax
+    fees.sort_by.with_index { |fee, index| [fee.created_at || Time.zone.at(0), fee.id.to_s, index] }
+  end
+
+  def booked_tax_units(fee)
+    rows = fee.applied_taxes.sort_by { |row| row.id.to_s }
+    rows.empty? ? [fee] : rows
+  end
+
+  # Fees without rows and rows matching no invoice tax share one group, weighted by their own
+  # cents, so the invoice tax is still spent in full.
+  def booked_tax_units_by_invoice_tax(units)
+    units
+      .group_by { |unit| applied_tax_for(unit) if unit.is_a?(Fee::AppliedTax) }
+      .sort_by.with_index { |(tax, _), index| tax ? [0, tax.tax_code, tax.tax_rate, index] : [1, index] }
+      .to_h
+  end
+
+  def booked_tax_by_invoice_tax(units_by_tax)
+    booked = units_by_tax.map do |tax, tax_units|
+      tax ? tax.amount_cents : tax_units.sum { |unit| booked_tax_cents(unit) }
+    end
+    exact = units_by_tax.values.map { |tax_units| tax_units.sum { |unit| exact_tax_cents(unit) } }
+
+    if booked.sum == taxes_amount_cents
+      booked
+    else
+      Integrations::Aggregator::Taxes::Allocation.call(taxes_amount_cents, booked_tax_weights(exact, booked))
+    end
+  end
+
+  def split_booked_tax(amount_cents, units)
+    booked = units.map { |unit| booked_tax_cents(unit) }
+    exact = units.map { |unit| exact_tax_cents(unit) }
+    split = if booked.sum == amount_cents
+      booked
+    else
+      Integrations::Aggregator::Taxes::Allocation.call(amount_cents, booked_tax_weights(exact, booked))
+    end
+
+    units.zip(split).to_h
+  end
+
+  # Taxes billed before exact amounts were stored carry none, so their rounded cents weight the
+  # split; when those are zero too, the cents still land on the first rows.
+  def booked_tax_weights(exact, booked)
+    if exact.sum.nonzero?
+      exact
+    elsif booked.sum.nonzero?
+      booked
+    else
+      Array.new(exact.size, 1)
+    end
+  end
+
+  def booked_tax_cents(unit)
+    unit.is_a?(Fee) ? unit.taxes_amount_cents : unit.amount_cents
+  end
+
+  def exact_tax_cents(unit)
+    unit.is_a?(Fee) ? unit.taxes_precise_amount_cents : unit.precise_amount_cents
+  end
+
+  def remaining_invoice_amount_cents
+    [sub_total_including_taxes_amount_cents - credit_notes.sum(:total_amount_cents), 0].max
+  end
+
+  def creditable_share(fee)
+    fee.amount_cents.zero? ? 0 : fee.creditable_amount_cents.fdiv(fee.amount_cents)
+  end
 
   # Returns the wallet associated with this credit invoice's prepaid credit fee.
   # Can be nil for historical invoices where the fee or wallet transaction is missing.

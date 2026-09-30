@@ -23,7 +23,7 @@ module Invoices
         invoice.invoice_subscriptions << InvoiceSubscription.create!(
           organization: billing_context.organization,
           invoice:,
-          subscription_id: billing_context.subscription_id,
+          subscription: billing_context.subscription,
           timestamp:,
           from_datetime: boundaries[:from],
           to_datetime: boundaries[:to],

@@ -22,7 +22,8 @@ module UsageAttributionTypes
       usage_attribution_type = organization.usage_attribution_types.create!(
         code: params[:code]&.strip,
         name: params[:name],
-        attribution_key: params[:attribution_key]&.strip,
+        description: params[:description],
+        attribution_keys: params[:attribution_keys],
         role: params[:role],
         parent:
       )

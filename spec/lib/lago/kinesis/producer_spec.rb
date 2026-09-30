@@ -12,6 +12,7 @@ RSpec.describe Lago::Kinesis::Producer do
     described_class::CLIENTS.clear
     described_class::ASSUMED_CREDENTIALS.clear
     described_class::UNAVAILABLE_CREDENTIALS.clear
+    described_class::INTERMEDIATE_CREDENTIALS.clear
     Aws.config[:kinesis] = {stub_responses: true}
     Aws.config[:sts] = {stub_responses: true, credentials: Aws::Credentials.new("akid", "secret")}
   end
@@ -158,6 +159,65 @@ RSpec.describe Lago::Kinesis::Producer do
       described_class.new(destination: other).produce(data: {hello: "world"}, partition_key: "cust_2")
 
       expect(Aws::AssumeRoleCredentials).to have_received(:new).twice
+    end
+  end
+
+  describe "an intermediate role" do
+    let(:intermediate_role_arn) { "arn:aws:iam::123456789012:role/SynthesiaKinesis" }
+
+    before do
+      allow(Aws::AssumeRoleCredentials).to receive(:new).and_call_original
+      allow(Aws::STS::Client).to receive(:new).and_call_original
+    end
+
+    context "when the worker declares one" do
+      before { stub_const("#{described_class}::INTERMEDIATE_ROLE_ARN", intermediate_role_arn) }
+
+      it "assumes it before the destination role" do
+        producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+        expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
+          hash_including(
+            role_arn: intermediate_role_arn,
+            role_session_name: described_class::INTERMEDIATE_SESSION_NAME
+          )
+        )
+        expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
+          hash_including(role_arn: destination.role_arn, role_session_name: described_class::ROLE_SESSION_NAME)
+        )
+      end
+
+      it "signs the destination assume with it, so the destination sees the intermediate principal" do
+        producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+        expect(Aws::STS::Client).to have_received(:new).with(
+          hash_including(credentials: described_class::INTERMEDIATE_CREDENTIALS[destination.region])
+        )
+      end
+
+      it "assumes it once per region rather than once per destination" do
+        other = create(:kinesis_destination)
+        other.role_arn = "arn:aws:iam::210987654321:role/other-writer"
+        other.region = destination.region
+        other.save!
+
+        producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+        described_class.new(destination: other).produce(data: {hello: "world"}, partition_key: "cust_2")
+
+        expect(Aws::AssumeRoleCredentials).to have_received(:new)
+          .with(hash_including(role_arn: intermediate_role_arn)).once
+      end
+    end
+
+    context "when the worker declares none" do
+      before { stub_const("#{described_class}::INTERMEDIATE_ROLE_ARN", nil) }
+
+      it "reaches the destination straight from the ambient identity" do
+        producer.produce(data: {hello: "world"}, partition_key: "cust_1")
+
+        expect(Aws::AssumeRoleCredentials).to have_received(:new).once
+        expect(Aws::STS::Client).to have_received(:new).with(hash_excluding(:credentials))
+      end
     end
   end
 

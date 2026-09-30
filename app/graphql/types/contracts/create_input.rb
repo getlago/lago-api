@@ -7,7 +7,8 @@ module Types
       description "Create contract input arguments"
 
       argument :external_customer_id, String, required: true
-      argument :external_id, String, required: true
+      # Generated server-side when blank or omitted; see Mutations::Contracts::Create.
+      argument :external_id, String, required: false
       argument :name, String, required: false
       # Optional by design: a plan-less contract prices through directly
       # attached rate cards.

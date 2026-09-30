@@ -86,6 +86,16 @@ module Fees
         source.pricing_buckets(event:).map { |bucket| with(source: bucket) }
       end
 
+      # The window an aggregation runs on, also the one the event store provider decides from.
+      def aggregation_boundaries
+        {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: boundaries.max_timestamp
+        }
+      end
+
       def aggregation_options(current_usage:)
         {
           free_units_per_events: properties["free_units_per_events"].to_i,
@@ -99,7 +109,13 @@ module Fees
         return {} unless event
 
         event_properties = event.properties || {}
-        pricing_group_keys.index_with { |key| event_properties[key] }
+        grouped_by_values = pricing_group_keys.index_with { |key| event_properties[key] }
+
+        if charge&.accepts_target_wallet? && grouped_by_values[::Charge::EVENT_TARGET_WALLET_CODE].blank?
+          grouped_by_values.delete(::Charge::EVENT_TARGET_WALLET_CODE)
+        end
+
+        grouped_by_values
       end
 
       def with_event(event:)

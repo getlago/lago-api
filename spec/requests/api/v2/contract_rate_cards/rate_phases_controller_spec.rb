@@ -13,8 +13,10 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}/rate_phases"
   end
 
+  let(:default_position) { 1 }
+
   before do
-    create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: 1)
+    create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: default_position)
   end
 
   describe "GET .../rate_phases" do
@@ -79,6 +81,24 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
       expect(json[:rate_phase][:name]).to eq("Renamed")
     end
 
+    context "when moving a phase" do
+      subject { put_with_token(organization, "#{base_path}/intro", {rate_phase: {position: 2}}) }
+
+      let(:default_position) { 3 }
+
+      before do
+        create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro", position: 1, billing_interval_cycle_count: 1)
+        create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "ramp", position: 2, billing_interval_cycle_count: 2)
+      end
+
+      it "reorders the card's phases" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[ramp intro default])
+      end
+    end
+
     context "when the contract is active" do
       let(:contract) { create(:contract, organization:, customer:) }
 
@@ -95,8 +115,9 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     subject { delete_with_token(organization, "#{base_path}/#{phase_code}") }
 
     let(:phase_code) { "extra" }
+    let(:default_position) { 2 }
 
-    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 2) }
+    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 1, billing_interval_cycle_count: 2) }
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
@@ -105,6 +126,18 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[default])
+    end
+
+    context "when deleting the indefinite tail" do
+      let(:phase_code) { "default" }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:rate_phase]).to eq(["indefinite_phase_not_deletable"])
+        expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[extra default])
+      end
     end
   end
 end

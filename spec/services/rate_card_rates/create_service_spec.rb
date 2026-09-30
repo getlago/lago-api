@@ -119,11 +119,11 @@ RSpec.describe RateCardRates::CreateService do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1)
     end
 
-    it "persists the card's first processing billing segment" do
+    it "adds the rate without persisting an event-pricing segment" do
       contract_rate_card
 
-      expect { result }.to change(BillingSegment.status_processing, :count).by(1)
-      expect(contract_rate_card.billing_segments.sole.status).to eq("processing")
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(contract_rate_card.billing_segments).to be_empty
     end
   end
 

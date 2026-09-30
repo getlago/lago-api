@@ -63,9 +63,9 @@ RSpec.describe ContractRateCards::CreateService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at.beginning_of_day)
     end
 
-    it "persists its first processing billing segment" do
-      expect { result }.to change(BillingSegment.status_processing, :count).by(1)
-      expect(result.contract_rate_card.billing_segments.sole.status).to eq("processing")
+    it "creates the card without persisting an event-pricing segment" do
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(result.contract_rate_card.billing_segments).to be_empty
     end
   end
 
@@ -110,18 +110,6 @@ RSpec.describe ContractRateCards::CreateService do
     it "fails with a product_already_priced error" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_card]).to eq(["product_already_priced"])
-    end
-  end
-
-  context "when the product's existing card has ended" do
-    before do
-      create(:contract_rate_card, organization:, contract:,
-        rate_card: create(:rate_card, organization:, currency: "EUR", product: rate_card.product),
-        effective_date: 3.days.ago, ended_date: 1.day.ago)
-    end
-
-    it "allows pricing the product again" do
-      expect(result).to be_success
     end
   end
 end

@@ -17,7 +17,7 @@ RSpec.describe Mutations::RatePhases::Update do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
-  let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1, code: "launch", name: "Before") }
+  let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1, code: "launch", name: "Before", billing_interval_cycle_count: 3) }
 
   let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: rate_phase.code, name: "After", newCode: "intro"} }
 
@@ -25,7 +25,7 @@ RSpec.describe Mutations::RatePhases::Update do
     <<~GQL
       mutation($input: UpdateRatePhaseInput!) {
         updateRatePhase(input: $input) {
-          id code name
+          id code name position
         }
       }
     GQL
@@ -40,6 +40,28 @@ RSpec.describe Mutations::RatePhases::Update do
 
     expect(response["name"]).to eq("After")
     expect(response["code"]).to eq("intro")
+  end
+
+  context "when moving the phase" do
+    let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: rate_phase.code, position: 2} }
+
+    before do
+      create(:rate_phase, organization:, plan_rate_card:, position: 2, code: "ramp", billing_interval_cycle_count: 6)
+      create(:rate_phase, organization:, plan_rate_card:, position: 3, code: "forever", billing_interval_cycle_count: nil)
+    end
+
+    it "reorders the sequence" do
+      expect(execution["data"]["updateRatePhase"]["position"]).to eq(2)
+      expect(plan_rate_card.rate_phases.order(:position).pluck(:code)).to eq(%w[ramp launch forever])
+    end
+
+    context "when taking the tail's slot" do
+      let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: rate_phase.code, position: 3} }
+
+      it "returns a validation error" do
+        expect_graphql_error(result: execution, message: "Unprocessable Entity")
+      end
+    end
   end
 
   context "when the phase does not exist" do

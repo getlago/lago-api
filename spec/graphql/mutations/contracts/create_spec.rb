@@ -18,6 +18,7 @@ RSpec.describe Mutations::Contracts::Create do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let(:uuid_pattern) { /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/ }
 
   let(:input) do
     {
@@ -81,6 +82,33 @@ RSpec.describe Mutations::Contracts::Create do
 
     it "returns a validation error" do
       expect_unprocessable_entity(execution)
+    end
+  end
+
+  context "without an external id" do
+    let(:input) { super().except(:externalId) }
+
+    it "generates one server-side and persists it" do
+      result_data = execution["data"]["createContract"]
+
+      expect(result_data["externalId"]).to match(uuid_pattern)
+      expect(Contract.find(result_data["id"]).external_id).to eq(result_data["externalId"])
+    end
+  end
+
+  context "with a blank external id" do
+    let(:input) { super().merge(externalId: "") }
+
+    it "treats it as omitted and generates one" do
+      expect(execution["data"]["createContract"]["externalId"]).to match(uuid_pattern)
+    end
+  end
+
+  context "with a whitespace-only external id" do
+    let(:input) { super().merge(externalId: "  ") }
+
+    it "treats it as omitted and generates one" do
+      expect(execution["data"]["createContract"]["externalId"]).to match(uuid_pattern)
     end
   end
 end

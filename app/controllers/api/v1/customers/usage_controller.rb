@@ -13,7 +13,8 @@ module Api
               external_subscription_id: params[:external_subscription_id],
               organization_id: current_organization.id,
               apply_taxes:,
-              usage_filters:
+              usage_filters:,
+              use_usage_buckets: true
             ).call
 
           if result.success?

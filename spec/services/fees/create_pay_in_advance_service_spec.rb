@@ -145,7 +145,6 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           invoiceable: product,
           contract:,
           contract_rate_card:,
-          display_on_invoice: false,
           rate_card_rate: billing_segment.rate_card_rate,
           rate_override: billing_segment.rate_override
         )
@@ -1013,6 +1012,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           response_data["succeededInvoices"].first["fees"].first["item_id"] = fee_id
           response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["rate"] = "0.10"
           response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["tax_amount"] = 1
+          response_data["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 1
 
           response_data.to_json
         end

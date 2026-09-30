@@ -101,6 +101,8 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
       )
       expect(serialized["billing_segment"]).not_to have_key("id")
       expect(serialized["billing_segment"]).not_to have_key("_aj_globalid")
+      expect(serialized["billing_segment"]).not_to have_key("created_at")
+      expect(serialized["billing_segment"]).not_to have_key("updated_at")
       expect(serialized).not_to have_key("charge")
       expect(serialized).not_to have_key("boundaries")
       expect(serialized).not_to have_key("charge_filter")
@@ -130,7 +132,8 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
 
       expect(deserialized.source).to be_a(Fees::ChargeService::Sources::BillingSegment)
       expect(deserialized.billing_segment).to be_new_record
-      expect(deserialized.billing_segment.attributes.except("id")).to eq(billing_segment.attributes.except("id"))
+      expect(deserialized.billing_segment.attributes.except("id", "created_at", "updated_at"))
+        .to eq(billing_segment.attributes.except("id", "created_at", "updated_at"))
       expect(deserialized.event.timestamp).to eq(event.timestamp)
     end
 

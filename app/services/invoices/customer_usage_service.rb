@@ -13,7 +13,8 @@ module Invoices
       max_timestamp: nil,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      usage_filters: UsageFilters::NONE
+      usage_filters: UsageFilters::NONE,
+      use_usage_buckets: false
     )
       super
 
@@ -25,24 +26,25 @@ module Invoices
       @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
       @usage_filters = usage_filters
+      @use_usage_buckets = use_usage_buckets
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
-      calculate_projected_usage: false, usage_filters: UsageFilters::NONE)
+      calculate_projected_usage: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
 
-    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false)
+    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false, use_usage_buckets: false)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -63,7 +65,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
-    attr_reader :usage_filters
+    attr_reader :usage_filters, :use_usage_buckets
 
     delegate :plan, to: :subscription
     delegate :billing_entity, to: :customer
@@ -120,13 +122,35 @@ module Invoices
     def compute_charge_fees
       fees = []
       filters = event_filters(subscription, boundaries).filter_targets
-      charges.find_each { |c| fees += charge_usage(c, filters[c.target_key] || {}) }
+
+      metered_items.each do |metered_item|
+        fees += charge_usage(metered_item, filters[metered_item.charge.target_key] || {})
+      end
+
       return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
-    def charge_usage(charge, applied_filters)
+    def metered_items
+      @metered_items ||= charges.map do |charge|
+        Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries)
+      end
+    end
+
+    def applied_boundaries
+      return @applied_boundaries if defined?(@applied_boundaries)
+
+      @applied_boundaries = if max_timestamp
+        boundaries.dup.tap { it.max_timestamp = max_timestamp }
+      else
+        boundaries
+      end
+    end
+
+    def charge_usage(metered_item, applied_filters)
+      charge = metered_item.charge
+
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
@@ -136,16 +160,14 @@ module Invoices
         last_seen_at: applied_filters
       )
 
-      applied_boundaries = boundaries
-      applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-
       Fees::ChargeService
         .call!(
           invoice:,
-          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: applied_boundaries),
+          metered_item:,
           billing_context: Billing::Context.from(subscription:),
           cache_middleware:,
           filtered_aggregations: applied_filters.keys,
+          provider:,
           options: Fees::ChargeService::Options.new(
             context: :current_usage,
             calculate_projected_usage:,
@@ -156,6 +178,24 @@ module Invoices
           )
         )
         .fees
+    end
+
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization:,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        serve_current_usage_from_buckets: serve_from_buckets?,
+        usage_filters:,
+        charges:
+      )
+    end
+
+    # A projected read keeps counting events: Fees::ProjectionService re-aggregates the charge
+    # from the events at presentation time, so serving the units from the buckets would render
+    # a projection below the usage it projects.
+    def serve_from_buckets?
+      use_usage_buckets && !calculate_projected_usage
     end
 
     def boundaries
@@ -266,8 +306,20 @@ module Invoices
         subscription:,
         boundaries:,
         codes: filtered_metric_codes,
-        with_last_seen_at: charge_cache_enabled?
+        with_last_seen_at: charge_cache_enabled?,
+        precomputed_filters:
       )
+    end
+
+    def precomputed_filters
+      @precomputed_filters ||= metered_items.each_with_object({}) do |metered_item, filters|
+        next unless provider.serves_whole_charge_from_buckets?(
+          metered_item:,
+          boundaries: metered_item.aggregation_boundaries
+        )
+
+        filters[metered_item.charge] = provider.precomputed_filter_ids(charge_id: metered_item.charge_id)
+      end
     end
 
     # nil when every charge of the plan is computed, so the whole plan is looked up as before.

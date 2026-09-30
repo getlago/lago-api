@@ -62,8 +62,6 @@ module ContractRateCards
           RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1})
         end
 
-        BillingSegments::EnsureAdvanceService.call!(contract_rate_card:)
-
         result.contract_rate_card = contract_rate_card
       end
 
@@ -87,7 +85,7 @@ module ContractRateCards
     end
 
     def slice_already_priced?(rate_card)
-      contract.applied_rate_cards.current_and_scheduled.joins(:rate_card).exists?(
+      contract.applied_rate_cards.joins(:rate_card).exists?(
         rate_cards: {
           product_id: rate_card.product_id,
           product_filter_id: rate_card.product_filter_id

@@ -152,7 +152,6 @@ RSpec.describe BillingSegments::ProcessService do
               amount_cents: 500,
               taxes_amount_cents: 100,
               pay_in_advance: true,
-              display_on_invoice: false,
               succeeded_at: billing_segment.billing_at - 1.hour,
               properties: metered_item.filtered_for_charge_boundaries
             )

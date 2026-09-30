@@ -307,6 +307,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:clean_record_deletions" do
+    let(:job) { "schedule:clean_record_deletions" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("2 Apr 2022 00:00:00") }
+
+    it "enqueue a clean record deletions job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::RecordDeletionsCleanupJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:retry_inbound_webhooks" do
     let(:job) { "schedule:retry_inbound_webhooks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:05:00") }
@@ -529,6 +550,27 @@ describe Clockwork do
         Clockwork::Test.block_for(job).call
         expect(Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob).to have_been_enqueued
       end
+    end
+  end
+
+  describe "schedule:process_billing_segments" do
+    let(:job) { "schedule:process_billing_segments" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:00:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:00:00") }
+
+    it "enqueues a process billing segments job once an hour" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ProcessBillingSegmentsJob).to have_been_enqueued
     end
   end
 end

@@ -182,6 +182,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+            response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 253
+            response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 253
 
             {body: response.to_json}
           end
@@ -205,6 +207,62 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             )
             expect(result.usage.fees.size).to eq(1)
             expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+          end
+        end
+      end
+
+      context "when a charge is split by grouped_by" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+        let(:requested_line_items) { [] }
+        let(:charge) do
+          create(:standard_charge, plan:, billable_metric:, properties: {amount: "12.66", grouped_by: ["region"]})
+        end
+        let(:events) do
+          %w[us eu].map do |region|
+            create(
+              :event,
+              organization:,
+              subscription:,
+              customer:,
+              code: billable_metric.code,
+              timestamp:,
+              properties: {region:}
+            )
+          end
+        end
+
+        before do
+          stub_request(:post, endpoint).to_return do |request|
+            line_item = JSON.parse(request.body).first["fees"].sole
+            requested_line_items << line_item
+
+            taxed = line_item.merge(
+              "tax_amount_cents" => 253,
+              "tax_breakdown" => [{"name" => "GST", "rate" => "0.10", "tax_amount" => 253, "type" => "tax"}]
+            )
+
+            {body: {succeededInvoices: [{id: "inv_123", fees: [taxed]}], failedInvoices: []}.to_json}
+          end
+        end
+
+        it "sends the charge as a single line item" do
+          travel_to(current_date) do
+            usage_service.call
+
+            expect(requested_line_items.sole)
+              .to include("item_key" => charge.id, "amount_cents" => 2532)
+          end
+        end
+
+        it "taxes every fee of the charge and adds up to what the provider returned" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            expect(result.usage.fees.map(&:amount_cents)).to eq([1266, 1266])
+            expect(result.usage.fees.map(&:taxes_rate)).to eq([10, 10])
+            expect(result.usage.fees.sum(&:taxes_amount_cents)).to eq(253)
+            expect(result.usage.taxes_amount_cents).to eq(253)
           end
         end
       end
@@ -233,6 +291,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+            response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 253
+            response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 253
 
             {body: response.to_json}
           end
@@ -970,6 +1030,672 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             .with(hash_including(with_last_seen_at: false))
         end
       end
+    end
+  end
+
+  describe "with the usage buckets", clickhouse: {clean_before: true} do
+    subject(:usage_service) do
+      described_class.new(customer:, subscription:, apply_taxes: false, use_usage_buckets: true)
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # Serving the buckets requires the organization to read the clickhouse events store, so the
+    # fallback has to count clickhouse events rather than the postgres ones the other specs use.
+    let(:events) do
+      create_list(
+        :clickhouse_events_enriched,
+        2,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:
+      )
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      create(:tax, :applied_to_billing_entity, organization:, rate: 0)
+      charge
+      events
+
+      create(
+        :clickhouse_usage_bucket,
+        organization:, customer:, subscription:, charge:, billable_metric:,
+        bucket: window_start,
+        units: "5.0",
+        events_count: 5,
+        aggregation_type: "count"
+      )
+    end
+
+    it "serves the units of the buckets instead of counting the events" do
+      usage = usage_service.call.usage
+
+      expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
+    end
+
+    context "when the bucket read fails" do
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(
+          RealtimeUsage::FetchBucketsService::Result.new.tap do
+            it.service_failure!(code: "usage_buckets_read_failure", message: "clickhouse is unreachable")
+          end
+        )
+      end
+
+      it "counts the events, an unreachable clickhouse making current usage slow rather than broken" do
+        expect(usage_service.call.usage.fees.first).to have_attributes(units: 2)
+      end
+
+      it "raises under the forced gate, which only the parity comparison opens" do
+        expect { RealtimeUsage.with_forced_gate { usage_service.call } }
+          .to raise_error(BaseService::FailedResult)
+      end
+    end
+
+    context "with the provider and the bucket fetch spied on" do
+      before do
+        allow(Events::Stores::Provider).to receive(:new).and_call_original
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original
+      end
+
+      it "builds one provider for the whole computation, which reads clickhouse once" do
+        usage_service.call
+
+        expect(Events::Stores::Provider).to have_received(:new).once
+        expect(RealtimeUsage::FetchBucketsService).to have_received(:call).once
+      end
+    end
+
+    context "when the organization flag is off" do
+      before { organization.disable_feature_flag!(:realtime_usage) }
+
+      it "counts the events" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+
+    context "when the caller did not ask for the buckets" do
+      subject(:usage_service) { described_class.new(customer:, subscription:, apply_taxes: false) }
+
+      it "counts the events, as a caller nobody considered has to keep today's behaviour" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+    end
+
+    context "with a projected read" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          calculate_projected_usage: true,
+          use_usage_buckets: true
+        )
+      end
+
+      before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+
+      it "counts the events, which the projection re-aggregates from at presentation time" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "with a lifetime window", :premium do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true),
+          use_usage_buckets: true
+        )
+      end
+
+      let(:subscription) { create(:subscription, plan:, customer:, started_at: window_start) }
+
+      before { organization.update!(premium_integrations: %w[granular_lifetime_usage]) }
+
+      it "counts the events, as the window reaches past what the buckets retain" do
+        usage = usage_service.call.usage
+
+        expect(usage.fees.first).to have_attributes(units: 2)
+      end
+
+      context "when the buckets are reachable" do
+        before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+
+        it "is refused for the window itself, which the provider rules out before the fetch" do
+          usage_service.call
+
+          expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+        end
+      end
+    end
+
+    context "with a delegated charge next to the served one" do
+      # unique_count cannot be recomposed from per-bucket distincts, so this charge reads
+      # events while the count_agg one next to it is served by the same computation.
+      let(:delegated_metric) { create(:unique_count_billable_metric, organization:) }
+      let(:delegated_charge) { create(:standard_charge, plan:, billable_metric: delegated_metric, properties: {amount: "1"}) }
+      let(:cached_charges) { [] }
+      let(:invalidation_timestamps) { [] }
+
+      before do
+        delegated_charge
+
+        # A charge with no event in the window is dropped before the cache is consulted, so
+        # this one has to have been used for the assertion to say anything.
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: delegated_metric.code,
+          timestamp:,
+          properties: {"item_id" => "item_1"}
+        )
+
+        allow(Subscriptions::ChargeCacheService).to receive(:call) do |**args, &block|
+          cached_charges << args[:charge]
+          invalidation_timestamps << args[:invalidate_if_older_than]
+          block.call
+        end
+      end
+
+      it "caches the charge it delegated and only that one" do
+        usage_service.call
+
+        expect(cached_charges).to eq([delegated_charge])
+      end
+
+      it "keeps the ingestion timestamp the delegated charge's cache is invalidated on" do
+        usage_service.call
+
+        expect(invalidation_timestamps).to contain_exactly(be_present)
+      end
+    end
+
+    context "with the events store queries spied on" do
+      let(:combination_queries) { [] }
+      let(:queried_codes) { combination_queries.flat_map { it[:codes] } }
+
+      before do
+        allow(Events::Stores::ClickhouseStore).to receive(:new).and_wrap_original do |build, **args|
+          build.call(**args).tap do |store|
+            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+              combination_queries << options
+              query.call(**options)
+            end
+          end
+        end
+      end
+
+      it "resolves the billing period filters without reading the events store at all" do
+        usage_service.call
+
+        expect(combination_queries).to be_empty
+      end
+
+      context "when the bucket read came back empty" do
+        before do
+          allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+            .and_return(RealtimeUsage::FetchBucketsService::Result.new)
+        end
+
+        it "keeps the charge in the pre-filter and bills it from the events" do
+          usage = usage_service.call.usage
+
+          expect(queried_codes).to eq([billable_metric.code])
+          expect(usage.fees.first).to have_attributes(units: 2)
+        end
+      end
+
+      context "when the organization flag is off" do
+        before { organization.disable_feature_flag!(:realtime_usage) }
+
+        it "asks the events store for the plan, as before" do
+          usage_service.call
+
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+
+      context "with a charge the buckets cannot answer next to the served one" do
+        let(:delegated_metric) { create(:unique_count_billable_metric, organization:) }
+
+        before do
+          create(:standard_charge, plan:, billable_metric: delegated_metric, properties: {amount: "1"})
+        end
+
+        it "asks the events store for the delegated code only" do
+          usage_service.call
+
+          expect(queried_codes).to eq([delegated_metric.code])
+        end
+      end
+
+      context "with a second charge on the code of the served one" do
+        # A percentage charge walks the events one by one, so the code it shares with the served
+        # charge still has to be resolved from the events store.
+        before { create(:percentage_charge, plan:, billable_metric:, properties: {rate: "1"}) }
+
+        it "keeps the shared code in the query" do
+          usage_service.call
+
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+
+      context "with a presentation breakdown the caller asked none of" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+            use_usage_buckets: true
+          )
+        end
+
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan:,
+            billable_metric:,
+            properties: {amount: "1", presentation_group_keys: [{"value" => "region"}]}
+          )
+        end
+
+        # How the wallet refresh reads usage: no pricing bucket of the charge reads an event for a
+        # breakdown, so the buckets answer the charge whole and the pre-filter must say so too.
+        it "serves the charge from the buckets, without an events store read" do
+          usage = usage_service.call.usage
+
+          expect(combination_queries).to be_empty
+          expect(usage.fees.first).to have_attributes(units: 5, events_count: 5)
+        end
+      end
+
+      context "when no charge of the plan is eligible" do
+        let(:charge) { create(:percentage_charge, plan:, billable_metric:, properties: {rate: "1"}) }
+
+        before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+
+        it "reads no bucket, and the events store exactly as before" do
+          usage_service.call
+
+          expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+    end
+
+    context "with the charge computation spied on" do
+      before { allow(Fees::ChargeService).to receive(:call!).and_call_original }
+
+      it "hands the served charge the filters the buckets hold usage for" do
+        usage_service.call
+
+        expect(Fees::ChargeService).to have_received(:call!).with(hash_including(filtered_aggregations: [nil]))
+      end
+    end
+
+    context "with charge filters the buckets only partly hold usage for" do
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+      end
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "12.66"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "4"}) }
+
+      let(:eu_fee) { usage_service.call.usage.fees.find { it.charge_filter_id == eu_filter.id } }
+      let(:us_fee) { usage_service.call.usage.fees.find { it.charge_filter_id == us_filter.id } }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter:, values: %w[eu])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter:, values: %w[us])
+
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          charge_filter_id: eu_filter.id,
+          bucket: window_start,
+          units: "3.0",
+          events_count: 3,
+          aggregation_type: "count"
+        )
+
+        # The events store holds usage for the filter the buckets do not, which the pre-filtering
+        # must not reach for.
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp:,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "serves the filter the buckets hold, without an events store read" do
+        expect(eu_fee).to have_attributes(units: 3, events_count: 3)
+      end
+
+      it "zeroes the filter no bucket holds usage for" do
+        expect(us_fee).to have_attributes(units: 0, events_count: 0)
+      end
+    end
+  end
+
+  describe "the buckets and the events store agree", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    let(:event_values) do
+      {
+        window_start => "5.5",
+        window_start + 20.minutes => "4.25",
+        window_start + 23.minutes => "1.25",
+        window_start + 3.hours => "10.0"
+      }
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      event_values.each do |at, value|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      event_values.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, values|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: values.sum { |_, value| value.to_d }.to_s,
+          events_count: values.size,
+          aggregation_type: "sum"
+        )
+      end
+    end
+
+    it "returns the same units, event count and amount either way" do
+      served = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+      delegated = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count,
+        amount_cents: delegated.fees.first.amount_cents
+      )
+    end
+
+    it "sums every bucket of the window, rather than the one the events happen to open" do
+      served = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+
+      expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 4200)
+    end
+  end
+
+  describe "the buckets and the events store agree on max and latest", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # The largest event is not the last one, and it shares its bucket with a smaller later event,
+    # so max and latest disagree both inside a bucket and across the window.
+    let(:event_values) do
+      {
+        window_start => "5.5",
+        window_start + 20.minutes => "12.0",
+        window_start + 23.minutes => "1.25",
+        window_start + 3.hours => "2.0"
+      }
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    def bucket_units(values)
+      pair = (billable_metric.aggregation_type == "max_agg") ? values.max_by { it.last.to_d } : values.max_by(&:first)
+      pair.last
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      event_values.each do |at, value|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      event_values.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, values|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: bucket_units(values),
+          events_count: values.size,
+          aggregation_type: billable_metric.aggregation_type.delete_suffix("_agg"),
+          last_event_at: values.map(&:first).max
+        )
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:) }
+
+      it "returns the same units, event count and amount either way" do
+        expect(served.fees.first).to have_attributes(
+          units: delegated.fees.first.units,
+          events_count: delegated.fees.first.events_count,
+          amount_cents: delegated.fees.first.amount_cents
+        )
+      end
+
+      it "serves the largest event of the window, rather than the largest bucket total" do
+        expect(served.fees.first).to have_attributes(units: 12, events_count: 4, amount_cents: 2400)
+      end
+    end
+
+    context "with a latest metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:) }
+
+      it "returns the same units, event count and amount either way" do
+        expect(served.fees.first).to have_attributes(
+          units: delegated.fees.first.units,
+          events_count: delegated.fees.first.events_count,
+          amount_cents: delegated.fees.first.amount_cents
+        )
+      end
+
+      it "serves the last event of the window, counting every event of it alongside" do
+        expect(served.fees.first).to have_attributes(units: 2, events_count: 4, amount_cents: 400)
+      end
+    end
+  end
+
+  describe "the buckets and the events store agree on a dynamic charge", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:dynamic_charge, plan:, billable_metric:) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # [value, precise_total_amount_cents]: the amount is not proportional to the units, so a fee
+    # priced from the units instead of the summed amounts shows.
+    let(:events) do
+      {
+        window_start => ["5.5", "1000.25"],
+        window_start + 20.minutes => ["4.25", "300.5"],
+        window_start + 23.minutes => ["1.25", "0.25"],
+        window_start + 3.hours => ["10.0", "199"]
+      }
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      events.each do |at, (value, precise_total_amount_cents)|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f,
+          precise_total_amount_cents:
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      events.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, rows|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: rows.sum { |_, (value, _)| value.to_d }.to_s,
+          precise_total_amount_cents: rows.sum { |_, (_, amount)| amount.to_d }.to_s,
+          events_count: rows.size,
+          aggregation_type: "sum"
+        )
+      end
+    end
+
+    it "returns the same units, event count and amount either way" do
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count,
+        amount_cents: delegated.fees.first.amount_cents
+      )
+    end
+
+    it "prices the fee from the summed precise amounts of the window" do
+      expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 1500)
+    end
+  end
+
+  describe "the buckets and the events store agree when the caller skips grouping", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:latest_billable_metric, organization:) }
+    let(:charge) do
+      create(:standard_charge, plan:, billable_metric:, properties: {amount: "2", pricing_group_keys: ["region"]})
+    end
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # Both groups close on the same bucket, so only the event time says which one holds the value
+    # the events store would return for the ungrouped charge.
+    let(:group_events) do
+      [
+        {at: window_start + 10.minutes, value: "7.0", region: "eu"},
+        {at: window_start + 12.minutes, value: "3.0", region: "us"}
+      ]
+    end
+
+    let(:served) do
+      described_class.new(
+        customer:, subscription:, apply_taxes: false, with_cache: false,
+        usage_filters: UsageFilters.new(skip_grouping: true), use_usage_buckets: true
+      ).call.usage
+    end
+    let(:delegated) do
+      described_class.new(
+        customer:, subscription:, apply_taxes: false, with_cache: false,
+        usage_filters: UsageFilters.new(skip_grouping: true)
+      ).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      group_events.each do |group_event|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: group_event[:at],
+          properties: {"region" => group_event[:region]},
+          value: group_event[:value],
+          decimal_value: group_event[:value].to_f
+        )
+
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket: window_start,
+          grouped_by: {"region" => group_event[:region]}.to_json,
+          units: group_event[:value],
+          events_count: 1,
+          aggregation_type: "latest",
+          last_event_at: group_event[:at]
+        )
+      end
+    end
+
+    it "folds the groups onto the last event, rather than onto whichever row comes first" do
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count
+      )
+      expect(served.fees.first).to have_attributes(units: 3, events_count: 2)
     end
   end
 end
