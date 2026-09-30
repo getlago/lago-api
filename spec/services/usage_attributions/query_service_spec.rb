@@ -85,8 +85,6 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     expect(result.unattributed).to have_attributes(amount_cents: 5_000, events_count: 1)
     expect(result.groups_count).to eq(2)
     expect(result.totals).to have_attributes(amount_cents: 180_200, events_count: 5)
-    expect(result.others).to have_attributes(amount_cents: 0, events_count: 0)
-    expect(result.others_count).to eq(0)
     expect(result.basis).to eq("amount")
     expect(result.from_datetime).to eq(Time.zone.parse("2026-09-01"))
     expect(result.to_datetime).to eq(Time.zone.parse("2026-09-30").end_of_day)
@@ -174,23 +172,14 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       expect(summary(result.rows)).to eq([["eng", 75_200, 3]])
       expect(result.groups_count).to eq(2)
       expect(result.totals).to have_attributes(amount_cents: 180_200, events_count: 5)
-      expect(result.others).to have_attributes(amount_cents: 0, events_count: 0)
-      expect(result.others_count).to eq(0)
     end
 
-    context "with rows ranked after the page" do
+    context "when on the first page" do
       let(:offset) { 0 }
 
-      it "returns them as others, so the level adds up" do
+      it "returns the first ranked value with the totals of the whole level" do
         expect(summary(result.rows)).to eq([["data", 100_000, 1]])
-        expect(result.others).to have_attributes(amount_cents: 75_200, events_count: 3)
-        expect(result.others_count).to eq(1)
-        expect(cells_of(result.others)).to eq(
-          [
-            [requests_charge.id, nil, 1, 200, 1],
-            [tokens_charge.id, nil, 1500, 75_000, 2]
-          ]
-        )
+        expect(result.totals).to have_attributes(amount_cents: 180_200, events_count: 5)
       end
     end
   end
@@ -285,8 +274,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "returns the matching values with their rank in the level" do
       expect(result.rows.map { [it.value, it.rank] }).to eq([["eng", 2]])
-      expect(result.others).to have_attributes(amount_cents: 100_000, events_count: 1)
-      expect(result.others_count).to eq(1)
+      expect(result.groups_count).to eq(2)
     end
   end
 

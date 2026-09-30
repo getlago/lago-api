@@ -159,7 +159,7 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
 
     it "returns the totals of the attributed values" do
       expect([row("eng")["groups_count"].to_i, row("eng")["total_amount"].to_d, row("eng")["total_events"].to_i]).to eq([2, 1_212, 7])
-      expect([row("data")["running_amount"].to_d, row("data")["running_events"].to_i]).to eq([1_212, 7])
+      expect(row("eng").keys.grep(/running/)).to eq([])
     end
 
     context "when the charge is split" do

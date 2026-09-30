@@ -67,8 +67,7 @@ module Events
             SELECT
               node, rank, in_page, groups_count,
               amount, events, #{cell_names.join(", ")},
-              total_amount, total_events, #{cell_names.map { "total_#{it}" }.join(", ")},
-              running_amount, running_events, #{cell_names.map { "running_#{it}" }.join(", ")}
+              total_amount, total_events, #{cell_names.map { "total_#{it}" }.join(", ")}
             FROM (
               SELECT *, #{page_condition_sql} AS in_page
               FROM (
@@ -92,8 +91,7 @@ module Events
                 )
                 WINDOW
                   level AS (PARTITION BY node = ''),
-                  ranked AS (PARTITION BY node = '' ORDER BY #{ORDERS.fetch(order_by)} DESC, node ASC),
-                  running AS (PARTITION BY node = '' ORDER BY #{ORDERS.fetch(order_by)} DESC, node ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+                  ranked AS (PARTITION BY node = '' ORDER BY #{ORDERS.fetch(order_by)} DESC, node ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
               )
             )
             WHERE node = '' OR rank = 1 OR in_page
@@ -176,15 +174,13 @@ module Events
         end
 
         def level_windows_sql
-          %w[amount events].concat(cell_names).flat_map do |name|
-            ["sum(#{name}) OVER level AS total_#{name}", "sum(#{name}) OVER running AS running_#{name}"]
-          end.join(", ")
+          %w[amount events].concat(cell_names).map { |name| "sum(#{name}) OVER level AS total_#{name}" }.join(", ")
         end
 
         def search_rank_sql
           return "" unless search
 
-          "sum(#{search_match_sql}) OVER running AS search_rank,"
+          "sum(#{search_match_sql}) OVER ranked AS search_rank,"
         end
 
         def page_condition_sql

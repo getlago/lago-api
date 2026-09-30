@@ -3,7 +3,7 @@
 module UsageAttributions
   class QueryService < BaseService
     Result = BaseResult[
-      :rows, :unattributed, :others, :others_count, :totals, :groups_count, :basis, :from_datetime, :to_datetime, :currency
+      :rows, :unattributed, :totals, :groups_count, :basis, :from_datetime, :to_datetime, :currency
     ]
 
     Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
@@ -304,32 +304,6 @@ module UsageAttributions
       result.unattributed = build_aggregate(values_of(unattributed))
       result.groups_count = level ? level["groups_count"].to_i : 0
       result.totals = build_aggregate(add(values_of(level, prefix: "total_"), values_of(unattributed)))
-      result.others_count = others_count(page)
-      result.others = build_aggregate(others_values(level, page))
-    end
-
-    def others_count(page)
-      if search
-        result.groups_count - page.size
-      elsif page.any?
-        result.groups_count - page.last["rank"].to_i
-      else
-        0
-      end
-    end
-
-    # Everything ranked after the page. A page is contiguous, so the running total at its last row
-    # covers it and every page before; search results are not, so they are subtracted one by one.
-    def others_values(level, page)
-      level_totals = values_of(level, prefix: "total_")
-
-      if result.others_count.zero?
-        values_of(nil)
-      elsif search
-        page.reduce(level_totals) { |rest, row| subtract(rest, values_of(row)) }
-      else
-        subtract(level_totals, values_of(page.last, prefix: "running_"))
-      end
     end
 
     def build_row(row)
@@ -403,10 +377,6 @@ module UsageAttributions
 
     def add(left, right)
       left.to_h { |name, value| [name, value + right[name]] }
-    end
-
-    def subtract(left, right)
-      left.to_h { |name, value| [name, value - right[name]] }
     end
 
     def decimal(value)
