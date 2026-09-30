@@ -164,6 +164,8 @@ To create a webhook:
 
 - Make sure to specify the latest available `ActiveRecord::Migration` version. For example, if the latest version is `8.0`, use `ActiveRecord::Migration[8.0]`.
 - Prefer `add_column` over `change_table` when adding single columns
+- In every new PostgreSQL migration, use `algorithm: :concurrently` for `add_index`. Put concurrent index additions in a migration with `disable_ddl_transaction!`; do not add columns or other schema objects in that migration. If a change needs both columns and indexes, create two migrations in order: one to add the columns, then one to add the indexes concurrently.
+- Use `if_not_exists: true` for every `add_index`, `add_column`, `add_foreign_key`, and `add_check_constraint` so an interrupted migration can be retried. An invalid index left by an interrupted concurrent build must be dropped manually before retrying; `if_not_exists` alone will not fix it.
 - Use `safety_assured` wrapper when required for complex operations
 - Never use hardcoded or fake timestamps in migration filenames. Migration timestamps should be generated using `date +"%Y%m%d%H%M%S"` command to ensure proper chronological ordering.
 - For enums, use `create_enum` to define the PostgreSQL enum type before adding the column
