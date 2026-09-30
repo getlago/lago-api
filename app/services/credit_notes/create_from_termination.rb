@@ -28,7 +28,10 @@ module CreditNotes
 
       return result if base_creditable_amount.zero?
 
-      credit_amount_cents, refund_amount_cents, offset_amount_cents = calculate_amounts(base_creditable_amount)
+      amounts = calculate_amounts(base_creditable_amount)
+      return result unless result.success?
+
+      credit_amount_cents, refund_amount_cents, offset_amount_cents = amounts
 
       return result if (credit_amount_cents + refund_amount_cents + offset_amount_cents).zero?
 
@@ -131,8 +134,11 @@ module CreditNotes
     def calculate_amounts(base_creditable_amount)
       # Calculate the total creditable amount (including taxes)
       total_creditable_amount = adjust_for_coupon_and_taxes(base_creditable_amount)
+      return unless result.success?
 
       refund_amount_cents = calculate_refund(total_creditable_amount)
+      return unless result.success?
+
       creditable_amount_cents = total_creditable_amount - refund_amount_cents
 
       # [credit_amount, refund_amount, offset_amount]
@@ -150,6 +156,7 @@ module CreditNotes
       precise_amount_cents = item_amount.truncate(CreditNote::DB_PRECISION_SCALE)
       item = CreditNoteItem.new(fee_id: last_subscription_fee.id, precise_amount_cents:)
       taxes_result = CreditNotes::ApplyTaxesService.call(invoice: last_subscription_fee.invoice, items: [item])
+      return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
 
       (
         precise_amount_cents -
@@ -159,7 +166,10 @@ module CreditNotes
     end
 
     def calculate_refund(total_creditable_amount)
-      potential_refund = paid_amount_prorated_to_subscription - creditable_used_amount
+      used_amount = creditable_used_amount
+      return unless result.success?
+
+      potential_refund = paid_amount_prorated_to_subscription - used_amount
 
       return 0 if potential_refund <= 0
 

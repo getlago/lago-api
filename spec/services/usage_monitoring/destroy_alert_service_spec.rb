@@ -13,5 +13,16 @@ RSpec.describe UsageMonitoring::DestroyAlertService do
       expect(result.alert).to be_discarded
       expect(result.alert.thresholds.count).to eq 0
     end
+
+    it "locks the alert row before deleting its thresholds" do
+      statements = capture_sql { result }
+
+      locked_alert = statements.index { it.include?("usage_monitoring_alerts") && it.include?("FOR UPDATE") }
+      deleted_thresholds = statements.index { it.start_with?("DELETE FROM \"usage_monitoring_alert_thresholds\"") }
+
+      expect(locked_alert).not_to be_nil
+      expect(deleted_thresholds).not_to be_nil
+      expect(locked_alert).to be < deleted_thresholds
+    end
   end
 end

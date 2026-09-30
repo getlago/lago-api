@@ -5,7 +5,34 @@ module Events
     # Pre-aggregated usage for one subscription over one window, indexed by charge and
     # charge filter. Immutable; build one per computation.
     class UsageBucketSet
-      Totals = Data.define(:units, :events_count)
+      # `last_event_at` orders the latest fold, which a `skip_grouping` read runs across groups.
+      # `precise_total_amount_cents` is only written on sum rows, and zero on every other type.
+      # `aggregation_type` is the stream's name for the type, `max` where the metric has `max_agg`.
+      Totals = Data.define(:aggregation_type, :units, :events_count, :last_event_at, :precise_total_amount_cents) do
+        def initialize(precise_total_amount_cents: BigDecimal(0), **)
+          super
+        end
+
+        # The buckets are keyed by charge, so two rows of one key always share their type.
+        def combine(other)
+          with(
+            units: combined_units(other),
+            events_count: events_count + other.events_count,
+            precise_total_amount_cents: precise_total_amount_cents + other.precise_total_amount_cents,
+            last_event_at: [last_event_at, other.last_event_at].max
+          )
+        end
+
+        private
+
+        def combined_units(other)
+          case aggregation_type
+          when "max" then [units, other.units].max
+          when "latest" then (other.last_event_at > last_event_at) ? other.units : units
+          else units + other.units
+          end
+        end
+      end
 
       # Copied before freezing: the caller usually builds these hashes as accumulators, and
       # freezing its own object would raise on the next write, far from here.
@@ -17,6 +44,12 @@ module Events
 
       def empty?
         totals.empty? && grouped_totals.empty?
+      end
+
+      # The charge filters the buckets hold usage for, the empty string being the default bucket
+      # the stream writes where the events store has no filter.
+      def charge_filter_ids_for(charge_id:)
+        totals.keys.filter_map { |(id, charge_filter_id)| charge_filter_id if id == charge_id }
       end
 
       def aggregation_result_for(charge_id:, charge_filter_id:)
@@ -35,6 +68,17 @@ module Events
             value: bucket_totals.units,
             events_count: bucket_totals.events_count
           )
+        end
+      end
+
+      def precise_total_amount_cents_for(charge_id:, charge_filter_id:)
+        totals_for(charge_id:, charge_filter_id:)&.precise_total_amount_cents || BigDecimal(0)
+      end
+
+      # Hashes rather than a result object: the shape the events store returns for this read.
+      def grouped_precise_total_amount_cents_for(charge_id:, charge_filter_id:)
+        grouped_totals_for(charge_id:, charge_filter_id:).map do |groups, bucket_totals|
+          {groups:, value: bucket_totals.precise_total_amount_cents}
         end
       end
 

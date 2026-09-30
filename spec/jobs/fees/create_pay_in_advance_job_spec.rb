@@ -3,18 +3,43 @@
 require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceJob do
-  let(:charge) { create(:standard_charge, :pay_in_advance) }
-  let(:event) { create(:event) }
+  let(:organization) { create(:organization) }
+  let(:subscription) { create(:subscription, organization:) }
+  let(:charge) { create(:standard_charge, :pay_in_advance, organization:, plan: subscription.plan) }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
   let(:result) { Fees::CreatePayInAdvanceService::Result.new }
 
   it "delegates to the pay_in_advance aggregation service" do
     allow(Fees::CreatePayInAdvanceService).to receive(:call)
-      .with(metered_item: instance_of(Fees::ChargeService::MeteredItem), billing_at: nil)
+      .with(
+        metered_item: instance_of(Fees::ChargeService::MeteredItem),
+        billing_context: instance_of(Billing::Context),
+        billing_at: nil
+      )
       .and_return(result)
 
     described_class.perform_now(charge:, event:)
 
     expect(Fees::CreatePayInAdvanceService).to have_received(:call)
+  end
+
+  context "when the event has no billing context" do
+    let(:event) do
+      create(:event, organization:, external_subscription_id: "unknown-#{SecureRandom.uuid}")
+    end
+
+    before do
+      allow(Fees::CreatePayInAdvanceService).to receive(:call)
+      allow(Rails.logger).to receive(:error)
+    end
+
+    it "skips the service call and logs the event" do
+      described_class.perform_now(charge:, event:)
+
+      expect(Fees::CreatePayInAdvanceService).not_to have_received(:call)
+      expect(Rails.logger).to have_received(:error)
+        .with(/no billing context for event.*charge_id=#{charge.id}/)
+    end
   end
 
   describe ".retry_wait" do

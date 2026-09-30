@@ -91,8 +91,6 @@ module Api
           )
         end
 
-        # Positions are not editable on update (ordering goes through insert
-        # and delete), so update does not permit one.
         def update_params
           # Required before any wrapper inspection so a missing rate_phase key
           # stays a parameter-missing 400, not a NoMethodError.
@@ -109,7 +107,7 @@ module Api
 
         def permitted_update_params
           params.require(:rate_phase).permit(
-            :code, :name, :billing_interval_cycle_count,
+            :code, :position, :name, :billing_interval_cycle_count,
             rate_override: [
               :rate_model,
               :min_amount_cents,

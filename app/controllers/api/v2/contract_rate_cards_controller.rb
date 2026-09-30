@@ -91,7 +91,7 @@ module Api
         contract = find_contract
         return nil unless contract
 
-        contract.applied_rate_cards.current_and_scheduled.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
+        contract.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
       end
 
       def create_params

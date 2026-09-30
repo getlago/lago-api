@@ -65,7 +65,7 @@ module Invoices
         invoice.credit_notes.each do |credit_note|
           subscription_id = cn_subscription_ids.find { |h| h[:credit_note_id] == credit_note.id }[:subscription_id]
           fee = invoice.fees.subscription.find_by(subscription_id:)
-          CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
+          CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:).raise_if_error!
         end
 
         calculate_result.raise_if_error! unless tax_error?(calculate_result.error)

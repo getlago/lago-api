@@ -70,12 +70,13 @@ module Credits
     def calculate_amounts_for_fees_by_type_and_bm
       remaining = Hash.new(0)
       fees = invoice.persisted? ? invoice.fees.includes(:charge) : invoice.fees
+      booked_tax = invoice.booked_tax_by_fee
 
       fees.each do |fee|
         next if fee.sub_total_excluding_taxes_amount_cents == 0
 
         cap = fee.sub_total_excluding_taxes_amount_cents +
-          fee.taxes_precise_amount_cents -
+          booked_tax.fetch(fee) -
           fee.precise_credit_notes_amount_cents
 
         next if cap <= 0

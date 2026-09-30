@@ -8,6 +8,9 @@ RSpec.describe RatePhases::CreateService do
   let(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
 
+  let(:terminal_position) { 1 }
+  let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: terminal_position, billing_interval_cycle_count: nil) }
+
   let(:params) { {code: "trial", position: 1, billing_interval_cycle_count: 6, name: "Trial period"} }
 
   it "creates a rate phase" do
@@ -40,8 +43,8 @@ RSpec.describe RatePhases::CreateService do
   end
 
   context "when inserting between existing phases" do
+    let(:terminal_position) { 2 }
     let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
-    let!(:standard) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: nil) }
 
     let(:params) { {code: "ramp", position: 2, billing_interval_cycle_count: 6, name: "Ramp"} }
 
@@ -49,7 +52,16 @@ RSpec.describe RatePhases::CreateService do
       expect(result).to be_success
       expect(result.rate_phase.position).to eq(2)
       expect(launch.reload.position).to eq(1)
-      expect(standard.reload.position).to eq(3)
+      expect(terminal.reload.position).to eq(3)
+    end
+  end
+
+  context "when the new phase would end the timeline" do
+    let!(:terminal) { nil }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:billing_interval_cycle_count]).to eq(["last_phase_must_be_indefinite"])
     end
   end
 
@@ -74,6 +86,15 @@ RSpec.describe RatePhases::CreateService do
     end
   end
 
+  context "when the position is not an integer" do
+    let(:params) { {code: "trial", position: true, billing_interval_cycle_count: 3} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:position]).to eq(["positions_must_be_contiguous"])
+    end
+  end
+
   context "when the position is out of range" do
     let(:params) { {position: 3, billing_interval_cycle_count: 3} }
 
@@ -84,9 +105,10 @@ RSpec.describe RatePhases::CreateService do
   end
 
   context "when inserting an indefinite phase before the end" do
-    before { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
-
+    let(:terminal_position) { 2 }
     let(:params) { {position: 1, billing_interval_cycle_count: nil} }
+
+    before { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success

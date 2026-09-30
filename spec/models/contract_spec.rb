@@ -35,6 +35,7 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:payment_method).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
+      expect(contract).to have_many(:fees)
       expect(contract).to have_many(:invoices).through(:billing_segments)
     end
 
@@ -222,14 +223,6 @@ RSpec.describe Contract do
       expect(build(:contract, status: :active).editable?).to be(false)
       expect(build(:contract, :terminated).editable?).to be(false)
       expect(build(:contract, :canceled).editable?).to be(false)
-    end
-  end
-
-  describe "#edit_error_code" do
-    it "is nil while pending and contract_locked once no longer editable" do
-      expect(build(:contract, :pending).edit_error_code).to be_nil
-      expect(build(:contract, status: :active).edit_error_code).to eq("contract_locked")
-      expect(build(:contract, :terminated).edit_error_code).to eq("contract_locked")
     end
   end
 

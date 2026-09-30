@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+
 RSpec.describe PayInAdvanceArguments do
   let(:organization) { create(:organization) }
   let(:charge) { create(:standard_charge, :pay_in_advance, organization:) }
-  let(:event_timestamp) { Time.zone.parse("2026-09-17 15:00:00") }
-  let(:subscription) { create(:subscription, organization:, started_at: event_timestamp - 1.day).reload }
+  let(:timestamp) { Time.zone.parse("2026-09-17 15:00:00") }
+  let(:subscription) { create(:subscription, organization:, started_at: timestamp - 1.month).reload }
   let(:event) do
     create(
       :event,
       organization:,
       external_subscription_id: subscription.external_id,
-      timestamp: event_timestamp
+      timestamp:
     )
   end
   let(:common_event) { Events::CommonFactory.new_instance(source: event) }
@@ -81,12 +82,75 @@ RSpec.describe PayInAdvanceArguments do
   end
 
   describe "#lock_key_arguments" do
-    it "returns the charge and event identity arguments" do
+    it "returns the charge pricing source and event identity arguments" do
       arguments = described_class.new(metered_item:)
 
       expect(arguments.lock_key_arguments).to eq(
-        [charge, event.organization_id, event.external_subscription_id, event.transaction_id]
+        [
+          charge,
+          event.organization_id,
+          event.external_subscription_id,
+          event.transaction_id
+        ]
       )
+    end
+
+    context "with a billing segment metered item" do
+      let(:billing_segment) { create(:billing_segment, organization:) }
+      let(:segment_metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(
+          billing_segment:,
+          event: common_event
+        )
+      end
+
+      it "returns the billing segment pricing source and event identity arguments" do
+        arguments = described_class.new(metered_item: segment_metered_item)
+
+        expect(arguments.lock_key_arguments).to eq(
+          [
+            billing_segment.contract_rate_card,
+            event.organization_id,
+            event.external_subscription_id,
+            event.transaction_id
+          ]
+        )
+      end
+
+      context "when the metered item is serialized" do
+        let(:serialized_metered_item) { ActiveJob::Arguments.serialize([segment_metered_item]).first }
+
+        it "resolves the contract rate card for the lock key" do
+          arguments = described_class.new(metered_item: serialized_metered_item)
+
+          expect(arguments.lock_key_arguments).to eq(
+            [
+              billing_segment.contract_rate_card,
+              event.organization_id,
+              event.external_subscription_id,
+              event.transaction_id
+            ]
+          )
+        end
+      end
+    end
+  end
+
+  describe "#billing_context" do
+    it "uses the event subscription" do
+      expect(described_class.new(metered_item:).billing_context.subscription).to eq(subscription)
+    end
+
+    context "with a billing segment metered item" do
+      let(:billing_segment) { build_stubbed(:billing_segment, organization:) }
+      let(:segment_metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: common_event)
+      end
+
+      it "uses the billing segment contract" do
+        expect(described_class.new(metered_item: segment_metered_item).billing_context.contract)
+          .to eq(billing_segment.contract)
+      end
     end
   end
 end

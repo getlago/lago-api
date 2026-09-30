@@ -10,7 +10,7 @@ module Mutations
       REQUIRED_PERMISSION = "contracts:update"
 
       graphql_name "UpdateContract"
-      description "Updates a pending contract"
+      description "Updates a contract; once active, only its administrative settings"
 
       input_object_class Types::Contracts::UpdateInput
       type Types::Contracts::Object

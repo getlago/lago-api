@@ -15,7 +15,8 @@ module UsageMonitoring
       return result unless subscription
       return result unless subscription.active?
 
-      charge_ids = subscription.plan.charges.where(billable_metric_id: alert.billable_metric_id).ids
+      billable_metric_id = alert.billable_metric_id
+      charge_ids = subscription.plan.charges.where(billable_metric_id:).ids
       return result if charge_ids.empty?
 
       usage_filters = UsageFilters.new(full_usage: true, filter_by_charge_id: charge_ids)
@@ -27,7 +28,16 @@ module UsageMonitoring
         usage_filters:
       )
 
-      ProcessAlertService.call(alert:, alertable: subscription, current_metrics: usage_for_charges_result.usage)
+      # Checked after the usage is built, not before: building it is the slow part, so that is the window a
+      # metric change or a deletion can land in. Before it the alert has only just been loaded by the job.
+      return result unless Alert.where(id: alert.id, billable_metric_id:).exists?
+
+      ProcessAlertService.call(
+        alert:,
+        alertable: subscription,
+        current_metrics: usage_for_charges_result.usage,
+        expected_billable_metric_id: billable_metric_id
+      )
 
       result
     end

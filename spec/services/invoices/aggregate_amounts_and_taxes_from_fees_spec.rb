@@ -46,4 +46,64 @@ RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees do
     expect(applied_tax_12.fees_amount_cents).to eq(120 + 50)
     expect(applied_tax_12.taxable_base_amount_cents).to eq(120 + 50)
   end
+
+  context "with multiple provider jurisdictions" do
+    subject(:aggregation_result) { described_class.call(invoice:) }
+
+    let(:fees) do
+      create_list(:charge_fee, 2, :succeeded, invoice:, amount_cents: 100,
+        precise_amount_cents: 100, taxes_amount_cents: 15, taxes_precise_amount_cents: 15)
+    end
+
+    before do
+      fees.each do |fee|
+        create(:fee_applied_tax, fee:, tax: nil, tax_code: "state", tax_name: "State", tax_rate: 10,
+          amount_cents: 10, precise_amount_cents: 10)
+        create(:fee_applied_tax, fee:, tax: nil, tax_code: "city", tax_name: "City", tax_rate: 5,
+          amount_cents: 5, precise_amount_cents: 5)
+      end
+    end
+
+    it "preserves each jurisdiction while combining its fees" do
+      expect(aggregation_result).to be_success
+      expect(invoice.applied_taxes.map { |tax| [tax.tax_code, tax.amount_cents] }).to match_array([
+        ["state", 20], ["city", 10]
+      ])
+      expect(invoice.taxes_amount_cents).to eq(30)
+    end
+
+    context "when the invoice is credited" do
+      subject(:credit_result) { CreditNotes::ComputeTaxesService.call(credit_note:) }
+
+      let(:credit_note) { create(:credit_note, invoice:, customer:) }
+      let(:credited_amount) { 100 }
+      let(:expected_taxes) { 30 }
+
+      before do
+        aggregation_result.raise_if_error!
+        invoice.save!
+        fees.each do |fee|
+          create(:credit_note_item, credit_note:, fee: fee.reload,
+            amount_cents: credited_amount, precise_amount_cents: credited_amount)
+        end
+        credit_note.reload
+      end
+
+      it "credits all provider jurisdictions" do
+        expect(credit_result).to be_success
+        expect(credit_note.taxes_amount_cents).to eq(expected_taxes)
+        expect(credit_note.applied_taxes.map(&:tax_code)).to match_array(%w[state city])
+      end
+
+      context "with a partial credit" do
+        let(:credited_amount) { 50 }
+        let(:expected_taxes) { 15 }
+
+        it "prorates both jurisdictions" do
+          expect(credit_result).to be_success
+          expect(credit_note.applied_taxes.sum(&:amount_cents)).to eq(expected_taxes)
+        end
+      end
+    end
+  end
 end
