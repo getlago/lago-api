@@ -15,23 +15,25 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       end
     end
 
-    travel_to(Time.zone.parse("2027-01-10 12:00:00")) do
+    travel_to(first_event_at) do
       # No public endpoint schedules billing segments; keep them processing for event pricing.
       BillingSegments::ScheduleService.call!(customer:)
       create_event({
         external_contract_id: contract.external_id,
         code: billable_metric.code,
+        timestamp: first_event_at.utc.strftime("%s.%6N"),
         properties: {"quantity" => 80}
       }, perform_jobs: false)
       # Segment finalization is a separate lifecycle case; it can mark an unused row done.
       perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
     end
 
-    travel_to(Time.zone.parse("2027-01-20 12:00:00")) do
+    travel_to(second_event_at) do
       BillingSegments::ScheduleService.call!(customer:)
       create_event({
         external_contract_id: contract.external_id,
         code: billable_metric.code,
+        timestamp: second_event_at.utc.strftime("%s.%6N"),
         properties: {"quantity" => 40}
       }, perform_jobs: false)
       perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
@@ -58,6 +60,8 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
   let(:cycle_started_at) { Time.zone.parse("2027-01-01") }
   let(:rate_changed_at) { Time.zone.parse("2027-01-15") }
   let(:cycle_ended_at) { Time.zone.parse("2027-02-01") }
+  let(:first_event_at) { Time.zone.parse("2027-01-10 12:00:00") }
+  let(:second_event_at) { Time.zone.parse("2027-01-20 12:00:00") }
   let(:first_rate) { organization.rate_cards.find_by!(code: "graduated-card").rates.find_by!(code: "r1") }
   let(:second_rate) { organization.rate_cards.find_by!(code: "graduated-card").rates.find_by!(code: "r2") }
   let(:first_rate_model) { "graduated" }
@@ -154,6 +158,17 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       expect(first_fee.reload.amount_cents).to eq(8_000)
       expect([second_fee, third_fee].map { |fee| fee.properties["charges_from_datetime"] }).to eq([
         cycle_started_at.iso8601(6), cycle_started_at.iso8601(6)
+      ])
+    end
+  end
+
+  context "when events arrive on either side of the rate change" do
+    let(:first_event_at) { rate_changed_at - Rational(500, 1_000_000) }
+    let(:second_event_at) { rate_changed_at }
+
+    it "creates one fee per event with the rate on its side of the microsecond boundary" do
+      expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents] }).to eq([
+        [first_rate, 8_000], [second_rate, 7_000]
       ])
     end
   end

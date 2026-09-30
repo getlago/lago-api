@@ -37,14 +37,10 @@ module Events
           products: {billable_metric_id: billable_metric.id, product_type: :metered},
           organization_id: organization.id
         )
+        # Segment ends are stored inclusive to the microsecond; truncating either
+        # boundary to milliseconds loses events or selects the next rate early.
         .where(
           "contracts.ended_at IS NULL OR date_trunc('millisecond', contracts.ended_at::timestamp) >= ?",
-          event.timestamp
-        )
-        .where(
-          "date_trunc('millisecond', billing_segments.started_at::timestamp) <= ?::timestamp AND " \
-            "date_trunc('millisecond', billing_segments.ended_at::timestamp) >= ?",
-          event.timestamp,
           event.timestamp
         )
     end
