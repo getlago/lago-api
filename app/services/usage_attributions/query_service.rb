@@ -2,11 +2,13 @@
 
 module UsageAttributions
   class QueryService < BaseService
-    Result = BaseResult[:rows, :unattributed, :others, :others_count, :totals, :groups_count, :from_datetime, :to_datetime, :currency]
+    Result = BaseResult[
+      :rows, :unattributed, :others, :others_count, :totals, :groups_count, :basis, :from_datetime, :to_datetime, :currency
+    ]
 
     Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
     Aggregate = Data.define(:amount_cents, :events_count, :cells)
-    Cell = Data.define(:charge_id, :charge_filter_id, :units, :amount_cents, :events_count)
+    Cell = Data.define(:charge, :charge_filter, :units, :amount_cents, :events_count)
 
     DEFAULT_LIMIT = 50
     MAX_LIMIT = 100
@@ -55,6 +57,7 @@ module UsageAttributions
       return result.not_found_failure!(resource: "charge") unless requested_charges_in_plan?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
 
+      result.basis = basis
       result.from_datetime = window_from
       result.to_datetime = window_to
       result.currency = currency.iso_code
@@ -298,7 +301,7 @@ module UsageAttributions
       level = ranked.first
 
       result.rows = page.map { |row| build_row(row) }
-      result.unattributed = build_aggregate(values_of(unattributed)) if unattributed
+      result.unattributed = build_aggregate(values_of(unattributed))
       result.groups_count = level ? level["groups_count"].to_i : 0
       result.totals = build_aggregate(add(values_of(level, prefix: "total_"), values_of(unattributed)))
       result.others_count = others_count(page)
@@ -350,15 +353,40 @@ module UsageAttributions
     end
 
     def build_cells(values)
-      Array(@cells).each_with_index.map do |cell, index|
+      ordered_cells.map do |cell, index|
         Cell.new(
-          charge_id: cell.charge_id,
-          charge_filter_id: cell.charge_filter_id,
+          charge: charges_by_id.fetch(cell.charge_id),
+          charge_filter: split_filters_by_id[cell.charge_filter_id],
           units: values["units_#{index}"],
           amount_cents: (values["amount_#{index}"] if cell.priced),
           events_count: values["events_#{index}"].to_i
         )
       end
+    end
+
+    # The query cells, each with the index of its columns in the returned rows, in the order of the
+    # charges. A split charge lists its filters in their own order and the default last, while the
+    # query ranks them by specificity.
+    def ordered_cells
+      @ordered_cells ||= Array(@cells).each_with_index.sort_by do |cell, index|
+        [cell.column_index, split_filter_positions.fetch(cell.charge_filter_id, split_filters.size), index]
+      end
+    end
+
+    def charges_by_id
+      @charges_by_id ||= charges.index_by(&:id)
+    end
+
+    def split_filters
+      @split_filters ||= split_charge ? split_charge.filters.includes(values: :billable_metric_filter).to_a : []
+    end
+
+    def split_filters_by_id
+      @split_filters_by_id ||= split_filters.index_by(&:id)
+    end
+
+    def split_filter_positions
+      @split_filter_positions ||= split_filters.each_with_index.to_h { |filter, position| [filter.id, position] }
     end
 
     # The values of a returned row, by column name: {"amount" => ..., "events" => ..., "units_0" => ...}.

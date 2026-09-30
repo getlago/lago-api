@@ -70,7 +70,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   end
 
   def cells_of(row)
-    row.cells.sort_by(&:units).map { [it.charge_id, it.charge_filter_id, it.units, it.amount_cents, it.events_count] }
+    row.cells.sort_by(&:units).map { [it.charge.id, it.charge_filter&.id, it.units, it.amount_cents, it.events_count] }
   end
 
   before do
@@ -90,6 +90,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     expect(result.groups_count).to eq(2)
     expect(aggregate(result.totals)).to eq([180_200, 5])
     expect([*aggregate(result.others), result.others_count]).to eq([0, 0, 0])
+    expect(result.basis).to eq("amount")
     expect(result.from_datetime).to eq(Time.zone.parse("2026-09-01"))
     expect(result.to_datetime).to eq(Time.zone.parse("2026-09-30").end_of_day)
     expect(result.currency).to eq("EUR")
@@ -110,6 +111,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "narrows the events to the matching labels" do
       expect(summary(result.rows)).to eq([["alice", 50_200, 2]])
+      expect(aggregate(result.unattributed)).to eq([0, 0])
     end
   end
 
@@ -205,6 +207,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
 
     it "returns the units ranked by events, without amounts" do
+      expect(result.basis).to eq("units")
       expect(summary(result.rows)).to eq([["eng", nil, 3], ["data", nil, 1]])
       expect(cells_of(result.rows.first)).to eq(
         [
@@ -301,7 +304,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     it "only reads the events of the selected charges" do
       expect(summary(result.rows)).to eq([["data", 100_000, 1], ["eng", 75_000, 2]])
       expect(aggregate(result.unattributed)).to eq([5_000, 1])
-      expect(result.rows.flat_map(&:cells).map(&:charge_id).uniq).to eq([tokens_charge.id])
+      expect(result.rows.flat_map(&:cells).map { it.charge.id }.uniq).to eq([tokens_charge.id])
     end
   end
 
@@ -356,6 +359,14 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
       it "prices the events matching it with its amount" do
         expect(summary(result.rows)).to eq([["data", 200_000, 1], ["eng", 128_200, 4]])
+      end
+
+      context "when the charge is split" do
+        let(:split_charge) { tokens_charge }
+
+        it "lists the filters in their order, the default last" do
+          expect(result.totals.cells.select { it.charge == tokens_charge }.map(&:charge_filter)).to eq([charge_filter, opus_eu_filter, nil])
+        end
       end
     end
 
@@ -446,7 +457,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     let(:requests_metric) { create(:max_billable_metric, organization:, code: "requests", field_name: "requests") }
 
     it "leaves the charge out" do
-      expect(result.rows.flat_map(&:cells).map(&:charge_id).uniq).to eq([tokens_charge.id])
+      expect(result.rows.flat_map(&:cells).map { it.charge.id }.uniq).to eq([tokens_charge.id])
     end
   end
 
