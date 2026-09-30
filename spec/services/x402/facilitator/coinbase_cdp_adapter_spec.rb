@@ -220,22 +220,22 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       end
     end
 
-    context "when the settle fails before broadcasting" do
+    context "when CDP rejects the settle" do
       let(:fault) { :settle_fail_after_verify }
 
-      it "fails with CDP's reason" do
-        expect(settlement).to have_attributes(outcome: :failed, error_reason: "invalid_exact_evm_signature", transaction: nil)
+      it "stays unconfirmed with CDP's reason" do
+        expect(settlement).to have_attributes(outcome: :unconfirmed_failure, error_reason: "invalid_exact_evm_signature", transaction: nil)
       end
 
       it "logs the failure with its duration" do
         settlement
 
         expect(Rails.logger).to have_received(:warn)
-          .with(/call failed operation=settle reason=invalid_exact_evm_signature outcome=failed network=eip155:84532 duration=\d+\.\d+\z/)
+          .with(/call failed operation=settle reason=invalid_exact_evm_signature outcome=unconfirmed_failure network=eip155:84532 duration=\d+\.\d+\z/)
       end
     end
 
-    context "when a terminal reason comes with a hash" do
+    context "when a rejection carries a hash" do
       before { stub_answer("settle", status: 400, body: {success: false, errorReason: "invalid_exact_evm_signature", transaction: "0x#{"cd" * 32}"}.to_json) }
 
       it "stays unconfirmed, without the hash" do
@@ -282,25 +282,19 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
     end
 
     %w[
-      invalid_exact_evm_nonce_already_used
-      invalid_exact_evm_transaction_failed
-      invalid_transaction_state
-      invalid_exact_evm_simulation_failed
-    ].each do |post_broadcast_reason|
-      context "when CDP answers #{post_broadcast_reason} without a hash" do
-        before { stub_answer("settle", status: 400, body: {success: false, errorReason: post_broadcast_reason}.to_json) }
+      insufficient_funds
+      invalid_payload
+      invalid_exact_evm_payload_authorization_valid_before
+      invalid_exact_evm_verification_failed
+      invalid_exact_solana_transaction_confirmation_failed
+      settle_exact_svm_transaction_confirmation_timed_out
+    ].each do |cdp_reason|
+      context "when CDP answers #{cdp_reason}" do
+        before { stub_answer("settle", status: 400, body: {success: false, errorReason: cdp_reason}.to_json) }
 
         it "stays unconfirmed" do
-          expect(settlement.outcome).to eq(:unconfirmed_failure)
+          expect(settlement).to have_attributes(outcome: :unconfirmed_failure, error_reason: cdp_reason)
         end
-      end
-    end
-
-    context "when the authorization expired before the settle" do
-      before { stub_answer("settle", status: 400, body: {errorReason: "invalid_exact_evm_payload_authorization_valid_before", success: false}.to_json) }
-
-      it "fails" do
-        expect(settlement.outcome).to eq(:failed)
       end
     end
 

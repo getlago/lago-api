@@ -9,9 +9,6 @@ module X402
       READ_TIMEOUT = 10
       SETTLE_READ_TIMEOUT = 20
 
-      TERMINAL_REASON = /\A(invalid_[a-z0-9_]+|insufficient_funds|unsupported_scheme)\z/
-      AMBIGUOUS_REASON = /(nonce_already_used|nonce_used|already|transaction_failed|transaction_state|failed_onchain|simulation_failed)/
-
       Answer = Data.define(:status, :body, :parsed)
       class NoResponse < StandardError; end
       private_constant :Answer, :NoResponse
@@ -81,11 +78,7 @@ module X402
         end
 
         reason = body["errorReason"].presence || body["errorType"].presence || "unexpected_settle_error"
-        settle_outcome(terminal?(reason, body) ? :failed : :unconfirmed_failure, response: body, error_reason: reason)
-      end
-
-      def terminal?(reason, body)
-        TERMINAL_REASON.match?(reason) && !AMBIGUOUS_REASON.match?(reason) && body["transaction"].blank?
+        settle_outcome(:unconfirmed_failure, response: body, error_reason: reason)
       end
 
       def settle_outcome(outcome, transaction: nil, response: {}, error_reason: nil)

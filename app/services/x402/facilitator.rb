@@ -27,7 +27,7 @@ module X402
 
     class SettleResult < Data.define(:outcome, :transaction, :network, :payer, :error_reason, :response)
       PENDING_OUTCOMES = %i[unconfirmed_failure settlement_pending server_error no_response].freeze
-      OUTCOMES = [:settled, :failed, *PENDING_OUTCOMES].freeze
+      OUTCOMES = [:settled, *PENDING_OUTCOMES].freeze
 
       def initialize(outcome:, **)
         raise ArgumentError, "unknown settle outcome: #{outcome.inspect}" unless OUTCOMES.include?(outcome)
@@ -37,10 +37,6 @@ module X402
 
       def settled?
         outcome == :settled
-      end
-
-      def failed?
-        outcome == :failed
       end
 
       def pending?

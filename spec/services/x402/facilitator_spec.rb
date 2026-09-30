@@ -7,18 +7,17 @@ describe X402::Facilitator do
     subject(:settle_result) { described_class.new(outcome:, transaction: nil, network: nil, payer: nil, error_reason: nil, response: {}) }
 
     {
-      settled: [true, false, false],
-      failed: [false, true, false],
-      unconfirmed_failure: [false, false, true],
-      settlement_pending: [false, false, true],
-      server_error: [false, false, true],
-      no_response: [false, false, true]
-    }.each do |settle_outcome, (settled, failed, pending)|
+      settled: [true, false],
+      unconfirmed_failure: [false, true],
+      settlement_pending: [false, true],
+      server_error: [false, true],
+      no_response: [false, true]
+    }.each do |settle_outcome, (settled, pending)|
       context "when #{settle_outcome}" do
         let(:outcome) { settle_outcome }
 
         it "answers its predicates" do
-          expect([settle_result.settled?, settle_result.failed?, settle_result.pending?]).to eq([settled, failed, pending])
+          expect([settle_result.settled?, settle_result.pending?]).to eq([settled, pending])
         end
       end
     end
