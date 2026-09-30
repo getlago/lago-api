@@ -2160,6 +2160,78 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#refundable_payment" do
+    subject(:refundable_payment) { invoice.refundable_payment }
+
+    let(:invoice) { create(:invoice, organization:) }
+
+    context "without payments" do
+      it { is_expected.to be_nil }
+    end
+
+    context "with succeeded invoice payments" do
+      let(:older_payment) { create(:payment, payable: invoice, payable_payment_status: "succeeded", created_at: 2.days.ago) }
+      let(:latest_payment) { create(:payment, payable: invoice, payable_payment_status: "succeeded", created_at: 1.day.ago) }
+
+      before do
+        older_payment
+        latest_payment
+      end
+
+      it { is_expected.to eq(latest_payment) }
+    end
+
+    context "with only a failed invoice payment" do
+      before { create(:payment, payable: invoice, payable_payment_status: "failed") }
+
+      it { is_expected.to be_nil }
+    end
+
+    context "with a payment request covering the invoice" do
+      let(:payment_request) { create(:payment_request, :succeeded, customer: invoice.customer, invoices: [invoice]) }
+      let(:request_payment) { create(:payment, payable: payment_request, payable_payment_status: "succeeded") }
+
+      before { request_payment }
+
+      it { is_expected.to eq(request_payment) }
+
+      context "when the invoice also has a succeeded payment" do
+        let(:invoice_payment) { create(:payment, payable: invoice, payable_payment_status: "succeeded") }
+
+        before { invoice_payment }
+
+        it { is_expected.to eq(invoice_payment) }
+      end
+
+      context "when the invoice also has a failed payment" do
+        before { create(:payment, payable: invoice, payable_payment_status: "failed") }
+
+        it { is_expected.to eq(request_payment) }
+      end
+
+      context "when the payment request is not succeeded" do
+        let(:payment_request) { create(:payment_request, :failed, customer: invoice.customer, invoices: [invoice]) }
+
+        it { is_expected.to be_nil }
+      end
+
+      context "when the payment request payment is not succeeded" do
+        let(:request_payment) { create(:payment, payable: payment_request, payable_payment_status: "failed") }
+
+        it { is_expected.to be_nil }
+      end
+    end
+
+    context "with a succeeded payment request for another invoice" do
+      let(:other_invoice) { create(:invoice, organization:, customer: invoice.customer) }
+      let(:payment_request) { create(:payment_request, :succeeded, customer: invoice.customer, invoices: [other_invoice]) }
+
+      before { create(:payment, payable: payment_request, payable_payment_status: "succeeded") }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
   describe "#available_to_credit_amount_cents" do
     context "with created fee" do
       before do
