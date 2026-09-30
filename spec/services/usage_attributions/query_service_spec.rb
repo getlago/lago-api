@@ -65,10 +65,6 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     rows.map { [it.value, it.amount_cents, it.events_count] }
   end
 
-  def aggregate(aggregate)
-    [aggregate.amount_cents, aggregate.events_count]
-  end
-
   def cells_of(row)
     row.cells.sort_by(&:units).map { [it.charge.id, it.charge_filter&.id, it.units, it.amount_cents, it.events_count] }
   end
@@ -86,10 +82,11 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     expect(result).to be_success
     expect(summary(result.rows)).to eq([["data", 100_000, 1], ["eng", 75_200, 3]])
     expect(result.rows.map(&:rank)).to eq([1, 2])
-    expect(aggregate(result.unattributed)).to eq([5_000, 1])
+    expect(result.unattributed).to have_attributes(amount_cents: 5_000, events_count: 1)
     expect(result.groups_count).to eq(2)
-    expect(aggregate(result.totals)).to eq([180_200, 5])
-    expect([*aggregate(result.others), result.others_count]).to eq([0, 0, 0])
+    expect(result.totals).to have_attributes(amount_cents: 180_200, events_count: 5)
+    expect(result.others).to have_attributes(amount_cents: 0, events_count: 0)
+    expect(result.others_count).to eq(0)
     expect(result.basis).to eq("amount")
     expect(result.from_datetime).to eq(Time.zone.parse("2026-09-01"))
     expect(result.to_datetime).to eq(Time.zone.parse("2026-09-30").end_of_day)
@@ -111,7 +108,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "narrows the events to the matching labels" do
       expect(summary(result.rows)).to eq([["alice", 50_200, 2]])
-      expect(aggregate(result.unattributed)).to eq([0, 0])
+      expect(result.unattributed).to have_attributes(amount_cents: 0, events_count: 0)
     end
   end
 
@@ -121,8 +118,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "matches the events without the label" do
       expect(result.rows).to eq([])
-      expect(aggregate(result.unattributed)).to eq([5_000, 1])
-      expect(aggregate(result.totals)).to eq([5_000, 1])
+      expect(result.unattributed).to have_attributes(amount_cents: 5_000, events_count: 1)
+      expect(result.totals).to have_attributes(amount_cents: 5_000, events_count: 1)
     end
   end
 
@@ -176,8 +173,9 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     it "returns the requested page with the totals of the whole level" do
       expect(summary(result.rows)).to eq([["eng", 75_200, 3]])
       expect(result.groups_count).to eq(2)
-      expect(aggregate(result.totals)).to eq([180_200, 5])
-      expect([*aggregate(result.others), result.others_count]).to eq([0, 0, 0])
+      expect(result.totals).to have_attributes(amount_cents: 180_200, events_count: 5)
+      expect(result.others).to have_attributes(amount_cents: 0, events_count: 0)
+      expect(result.others_count).to eq(0)
     end
 
     context "with rows ranked after the page" do
@@ -185,7 +183,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
       it "returns them as others, so the level adds up" do
         expect(summary(result.rows)).to eq([["data", 100_000, 1]])
-        expect([*aggregate(result.others), result.others_count]).to eq([75_200, 3, 1])
+        expect(result.others).to have_attributes(amount_cents: 75_200, events_count: 3)
+        expect(result.others_count).to eq(1)
         expect(cells_of(result.others)).to eq(
           [
             [requests_charge.id, nil, 1, 200, 1],
@@ -215,7 +214,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
           [tokens_charge.id, nil, 1500, nil, 2]
         ]
       )
-      expect(aggregate(result.totals)).to eq([nil, 5])
+      expect(result.totals).to have_attributes(amount_cents: nil, events_count: 5)
     end
 
     it "does not match the events with the charge filters" do
@@ -286,7 +285,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "returns the matching values with their rank in the level" do
       expect(result.rows.map { [it.value, it.rank] }).to eq([["eng", 2]])
-      expect([*aggregate(result.others), result.others_count]).to eq([100_000, 1, 1])
+      expect(result.others).to have_attributes(amount_cents: 100_000, events_count: 1)
+      expect(result.others_count).to eq(1)
     end
   end
 
@@ -303,7 +303,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "only reads the events of the selected charges" do
       expect(summary(result.rows)).to eq([["data", 100_000, 1], ["eng", 75_000, 2]])
-      expect(aggregate(result.unattributed)).to eq([5_000, 1])
+      expect(result.unattributed).to have_attributes(amount_cents: 5_000, events_count: 1)
       expect(result.rows.flat_map(&:cells).map { it.charge.id }.uniq).to eq([tokens_charge.id])
     end
   end
@@ -404,7 +404,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "converts the amount to the plan currency" do
       expect(summary(result.rows)).to eq([["data", 200_000, 1], ["eng", 150_200, 3]])
-      expect(aggregate(result.unattributed)).to eq([10_000, 1])
+      expect(result.unattributed).to have_attributes(amount_cents: 10_000, events_count: 1)
     end
   end
 
@@ -449,7 +449,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "prices each event with its filter" do
       expect(summary(result.rows)).to eq([["eng", 35_200, 3], ["data", 20_000, 1]])
-      expect(aggregate(result.unattributed)).to eq([5_000, 1])
+      expect(result.unattributed).to have_attributes(amount_cents: 5_000, events_count: 1)
     end
   end
 
@@ -469,7 +469,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       expect(result).to be_success
       expect(result.rows).to eq([])
       expect(result.groups_count).to eq(0)
-      expect(aggregate(result.totals)).to eq([0, 0])
+      expect(result.totals).to have_attributes(amount_cents: 0, events_count: 0)
     end
   end
 
