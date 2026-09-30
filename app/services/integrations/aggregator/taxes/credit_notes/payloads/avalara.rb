@@ -50,21 +50,9 @@ module Integrations
             def cn_item(item)
               fee = item.fee
 
-              mapped_item = if fee.charge?
-                billable_metric_item(fee)
-              elsif fee.add_on_id.present?
-                add_on_item(fee)
-              elsif fee.fixed_charge?
-                fixed_charge_item(fee)
-              elsif fee.commitment?
-                commitment_item
-              elsif fee.subscription?
-                subscription_item
-              end
-
               {
                 "item_id" => fee.item_id,
-                "item_code" => mapped_item&.external_id,
+                "item_code" => mapped_item(fee)&.external_id,
                 "unit" => fee.units,
                 "amount" => item_amount(item, fee)
               }
