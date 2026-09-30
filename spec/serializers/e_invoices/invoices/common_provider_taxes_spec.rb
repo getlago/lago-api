@@ -49,6 +49,41 @@ RSpec.describe EInvoices::Invoices::Common do
         end
       end
 
+      context "when a grouped charge requires rounding between fees" do
+        let(:fee) { create(:charge_fee, invoice:, amount_cents: 100, precise_amount_cents: 100) }
+        let(:other_fee) { create(:charge_fee, invoice:, charge: fee.charge, amount_cents: 100, precise_amount_cents: 100) }
+        let(:expected_tax_cents) { 15 }
+        let(:group_taxes) do
+          build(:tax_result, tax_amount_cents: 15, tax_breakdown: %w[State County City].map do |name|
+            build(:tax_breakdown_item, name:, type: "tax", rate: "0.025", tax_amount: 5)
+          end)
+        end
+        let(:provider_taxes) do
+          Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup.new(fees: [fee, other_fee])
+            .split_taxes(group_taxes)
+        end
+
+        it "reports the allocated cents in both XML tax subtotals and totals" do
+          expect(document.xpath(subtotal_path).sum { |node| node.text.to_d }).to eq(expected_tax_cents / 100.to_d)
+          expect(document.at_xpath(total_path).text.to_d).to eq(expected_tax_cents / 100.to_d)
+        end
+
+        context "when the precise jurisdiction total differs from the booked total" do
+          let(:expected_tax_cents) { 8 }
+          let(:group_taxes) do
+            build(:tax_result, tax_amount_cents: 8, tax_breakdown: %w[State County City].map do |name|
+              build(:tax_breakdown_item, name:, type: "tax", rate: "0.025", tax_amount: 2.5.to_d)
+            end)
+          end
+
+          it "preserves precision while exporting the booked cents" do
+            expect(invoice.fees.sum(:taxes_precise_amount_cents)).to eq(7.5.to_d)
+            expect(document.xpath(subtotal_path).sum { |node| node.text.to_d }).to eq(0.08.to_d)
+            expect(document.at_xpath(total_path).text.to_d).to eq(0.08.to_d)
+          end
+        end
+      end
+
       context "when independent fees round up at the same tax rate" do
         let(:fee) { create(:fee, invoice:, amount_cents: 100, precise_amount_cents: 100) }
         let(:other_fee) { create(:fee, invoice:, amount_cents: 100, precise_amount_cents: 100) }

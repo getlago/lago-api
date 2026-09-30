@@ -5,7 +5,7 @@ module Integrations
     module Taxes
       module CreditNotes
         module Payloads
-          class Avalara < BasePayload
+          class Avalara < Integrations::Aggregator::Taxes::BasePayload
             def initialize(integration:, customer:, integration_customer:, credit_note:)
               super(integration:, billing_entity: customer.billing_entity)
 
