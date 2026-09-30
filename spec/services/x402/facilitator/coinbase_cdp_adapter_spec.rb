@@ -428,6 +428,19 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       end
     end
 
+    context "when the body cannot be serialised" do
+      let(:payment) { x402_evm_payment.merge("memo" => (+"\xFF").force_encoding("UTF-8")) }
+
+      it "raises instead of reporting no response" do
+        expect { settlement }.to raise_error(JSON::GeneratorError)
+      end
+
+      it "sends nothing" do
+        expect { settlement }.to raise_error(JSON::GeneratorError)
+        expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
+      end
+    end
+
     context "when CDP answers 401" do
       before { stub_answer("settle", status: 401, body: "Unauthorized") }
 
