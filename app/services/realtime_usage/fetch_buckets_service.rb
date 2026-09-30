@@ -10,9 +10,10 @@ module RealtimeUsage
     BUCKET_DURATION = 15.minutes
 
     # One query must answer a plan mixing aggregation types, so the read selects every combine.
+    # Keyed by the names the stream writes, the events processor's, without the `_agg` suffix.
     UNITS_BY_AGGREGATION_TYPE = {
-      "max_agg" => :max_units,
-      "latest_agg" => :latest_units
+      "max" => :max_units,
+      "latest" => :latest_units
     }.freeze
 
     # What the ClickHouse driver raises on a connection it cannot use, plus the two errors the

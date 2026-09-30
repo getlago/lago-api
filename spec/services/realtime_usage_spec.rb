@@ -195,8 +195,8 @@ RSpec.describe RealtimeUsage do
     context "with an expression metric" do
       let(:billable_metric) { create(:sum_billable_metric, organization:, expression: "event.properties.value * 2") }
 
-      it "is not served, because the pipeline does not evaluate expressions yet" do
-        expect(supported).to be(false)
+      it "is served, because the pipeline evaluates the expression before bucketing" do
+        expect(supported).to be(true)
       end
     end
 
