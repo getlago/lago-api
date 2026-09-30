@@ -103,6 +103,51 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
+    context "without an invoice" do
+      let(:invoice) { nil }
+
+      before { allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original }
+
+      it "returns the existing standalone fee without recalculating" do
+        expect { result }.not_to change(Fee, :count)
+        expect(result.fees).to eq([existing_fee])
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+
+      context "with an invoice-backed fee" do
+        let(:fee_invoice) { create(:invoice, organization:, customer:, currency: "USD") }
+
+        include_examples "a new interval fee"
+      end
+
+      context "with an advance event fee" do
+        let(:event_id) { SecureRandom.uuid }
+
+        include_examples "a new interval fee"
+      end
+
+      context "with a legacy charge linked to the product" do
+        let(:charge) { create(:standard_charge, billable_metric:) }
+        let(:product) { create(:product, organization:, billable_metric:, charge:) }
+
+        it "looks up the segment by contract rate card rather than charge" do
+          expect(metered_item.charge).to eq(charge)
+          expect(result.fees).to eq([existing_fee])
+          expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+        end
+      end
+
+      context "with an invoice preview" do
+        let(:options) { described_class::Options.new(context: :invoice_preview) }
+
+        it "recalculates without reusing or persisting the standalone fee" do
+          expect { result }.not_to change(Fee, :count)
+          expect(result.fees.sole).to be_new_record
+          expect(result.fees.sole.amount_cents).to eq(400)
+        end
+      end
+    end
+
     context "with a different invoice" do
       let(:fee_invoice) { create(:invoice, organization:, customer:, currency: "USD") }
 

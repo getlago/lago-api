@@ -421,9 +421,14 @@ module Fees
 
     def already_billed?
       if metered_item.billing_segment
-        return false if invoice.nil? || options.invoice_preview?
+        return false if options.invoice_preview?
 
-        existing_fees = invoice.fees.matching_contract_period(
+        fees = if invoice
+          invoice.fees
+        else
+          Fee.where(invoice_id: nil, contract_id: metered_item.billing_segment.contract_id)
+        end
+        existing_fees = fees.matching_contract_period(
           contract_rate_card_id: metered_item.billing_segment.contract_rate_card_id,
           from_datetime: metered_item.boundaries.charges_from_datetime,
           to_datetime: metered_item.boundaries.charges_to_datetime
