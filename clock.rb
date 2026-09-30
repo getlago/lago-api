@@ -24,6 +24,12 @@ module Clockwork
       .perform_later
   end
 
+  every(5.minutes, "schedule:activate_contracts") do
+    Clock::ActivateContractsJob
+      .set(sentry: {"slug" => "lago_activate_contracts", "cron" => "*/5 * * * *"})
+      .perform_later
+  end
+
   every(5.minutes, "schedule:refresh_draft_invoices") do
     Clock::RefreshDraftInvoicesJob
       .set(sentry: {"slug" => "lago_refresh_draft_invoices", "cron" => "*/5 * * * *"})
