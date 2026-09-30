@@ -3,13 +3,13 @@
 module Contracts
   # Edits a contract's authoring fields. A pending contract is fully editable,
   # and changing its plan re-materialises its rate cards onto the contract.
-  # Once active, its pricing and schedule are signed: only the administrative
-  # fields in EDITABLE_WHILE_ACTIVE can change, and a locked field is accepted
-  # only when it carries the value already stored. Finished contracts are
-  # read-only. No billing side-effects — lifecycle transitions live in their
-  # own services, and moving the end date does not reschedule card clocks: a
-  # clock that already stopped at the previous end stays stopped, and nothing
-  # restarts it yet.
+  # Moving a pending contract's start or anchor re-seeds its cards' lifecycle,
+  # and a start moved to today or earlier activates it. Once active, its
+  # pricing and schedule are signed: only the administrative fields in
+  # EDITABLE_WHILE_ACTIVE can change, and a locked field is accepted only when
+  # it carries the value already stored. Finished contracts are read-only.
+  # Moving the end date does not reschedule card clocks: a clock that already
+  # stopped at the previous end stays stopped, and nothing restarts it yet.
   class UpdateService < BaseService
     include CustomerTimezone
     include SettingsResolvable
@@ -31,6 +31,27 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
+      # Locked before the status gates: the clock may activate a pending
+      # contract while it is edited, and the edit must then obey the active rules.
+      ActiveRecord::Base.transaction do
+        contract.lock!
+        update_contract
+      end
+
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
+    end
+
+    private
+
+    attr_reader :contract, :params
+
+    delegate :organization, :customer, to: :contract
+
+    def update_contract
       unless Contract::LIVE_STATUSES.include?(contract.status)
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
@@ -67,47 +88,49 @@ module Contracts
       end
 
       plan_changed = params.key?(:plan_code) && catalog_plan != contract.catalog_plan
+      previous_billing_anchor_date = contract.effective_billing_anchor_date
 
-      ActiveRecord::Base.transaction do
-        contract.name = params[:name] if params.key?(:name)
-        contract.ended_at = ended_at_in_customer_timezone if params.key?(:ended_at)
-        apply_settings(contract)
+      contract.name = params[:name] if params.key?(:name)
+      contract.ended_at = ended_at_in_customer_timezone if params.key?(:ended_at)
+      apply_settings(contract)
 
-        # An active contract only gets here with its locked fields unchanged;
-        # writing them back would still version them on a signed contract.
-        if contract.pending?
-          contract.billing_time = params[:billing_time] if params[:billing_time].present?
-          contract.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
-          contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
-          contract.catalog_plan = catalog_plan if params.key?(:plan_code)
+      # An active contract only gets here with its locked fields unchanged;
+      # writing them back would still version them on a signed contract.
+      if contract.pending?
+        contract.billing_time = params[:billing_time] if params[:billing_time].present?
+        contract.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
+        contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
+        contract.catalog_plan = catalog_plan if params.key?(:plan_code)
+      end
+      contract.save!
+
+      # Replace the old plan's materialised cards. The destroy service also
+      # discards each card's soft-deletable phases and overrides, which a bare
+      # discard_all! would orphan.
+      if plan_changed
+        contract.applied_rate_cards.to_a.each do |card|
+          ContractRateCards::DestroyService.call!(contract_rate_card: card)
         end
-        contract.save!
-
-        # Replace the old plan's materialised cards. The destroy service also
-        # discards each card's soft-deletable phases and overrides, which a bare
-        # discard_all! would orphan.
-        if plan_changed
-          contract.applied_rate_cards.to_a.each do |card|
-            ContractRateCards::DestroyService.call!(contract_rate_card: card)
-          end
-          Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
-        end
-
-        result.contract = contract
+        Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+      elsif contract.saved_change_to_started_at? || contract.saved_change_to_billing_anchor_date?
+        reseed_rate_cards(previous_billing_anchor_date)
       end
 
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      e.result
+      # A start moved to today or earlier takes effect now, as on create.
+      Contracts::ActivateService.call!(contract:) if contract.pending?
+
+      result.contract = contract
     end
 
-    private
-
-    attr_reader :contract, :params
-
-    delegate :organization, :customer, to: :contract
+    # The cards were seeded from the previous start and anchor. An anchor still
+    # equal to the contract's previous one was inherited, so it follows the
+    # contract; any other was set on the card and is kept.
+    def reseed_rate_cards(previous_billing_anchor_date)
+      contract.applied_rate_cards.find_each do |card|
+        own_anchor = (card.billing_anchor_date == previous_billing_anchor_date) ? nil : card.billing_anchor_date
+        ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
+      end
+    end
 
     def locked_field_changed?
       (params.keys.map(&:to_sym) - EDITABLE_WHILE_ACTIVE).any? { |field| changes?(field) }
