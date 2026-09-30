@@ -307,7 +307,9 @@ module Fees
         subscription:,
         contract: selected_metered_item.contract,
         contract_rate_card: selected_metered_item.contract_rate_card,
-        charge: selected_metered_item.charge,
+        # A segment's product can have an optional legacy charge (including discarded charges).
+        # TODO: Decide whether to assign that charge here; segment-backed fees currently receive nil.
+        charge: selected_metered_item.billing_segment ? nil : selected_metered_item.charge,
         amount_cents: amount.amount_cents,
         precise_amount_cents: amount.precise_amount_cents,
         unit_amount_cents: amount.unit_amount_cents,

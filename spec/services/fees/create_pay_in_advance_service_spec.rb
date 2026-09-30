@@ -156,6 +156,27 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         )
       end
 
+      context "with a legacy charge linked to the product" do
+        let(:product) { create(:product, :metered, organization:, billable_metric:, charge:) }
+
+        it "persists the product fee without its legacy charge" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
+      context "with a legacy add-on linked to the product" do
+        let(:add_on) { create(:add_on, organization:) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:, add_on:) }
+
+        it "keeps the product fee distinct from a one-off add-on fee" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", add_on_id: nil, charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
       context "when an unfiltered advance fee already exists" do
         let(:original_fee) { fee_service.call.fees.sole }
         let(:duplicate_fee) { original_fee.dup }

@@ -305,10 +305,40 @@ RSpec.describe Fees::ChargeService do
 
     before { create(:charge_filter, charge:, properties: {amount: "100"}) }
 
-    it "does not expand legacy filters and persist charge add_on" do
+    it "does not assign the legacy charge or expand its filters" do
       expect(result.fees.sole.reload).to have_attributes(
-        invoiceable: product, fee_type: "product", charge_id: charge.id, charge_filter_id: nil, amount_cents: 400
+        invoiceable: product, fee_type: "product", charge_id: nil, charge_filter_id: nil, amount_cents: 400
       )
+    end
+
+    context "with a minimum amount" do
+      let(:min_amount_cents) { 1000 }
+
+      it "keeps the product fee and its true-up charge-less" do
+        expect(result.fees.map(&:charge_id)).to eq([nil, nil])
+        expect(result.fees.last.true_up_parent_fee).to eq(result.fees.first)
+      end
+    end
+  end
+
+  context "with a legacy add-on linked to the product" do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:product) { create(:product, organization:, billable_metric:, add_on:) }
+
+    it "keeps the product identity without creating a one-off add-on fee" do
+      expect(result.fees.sole.reload).to have_attributes(
+        invoiceable: product, fee_type: "product", add_on_id: nil, charge_id: nil,
+        contract_rate_card:, amount_cents: 400
+      )
+    end
+
+    context "with a minimum amount" do
+      let(:min_amount_cents) { 1000 }
+
+      it "keeps the product fee and true-up separate from one-off add-on fees" do
+        expect(result.fees.map(&:add_on_id)).to eq([nil, nil])
+        expect(result.fees.map(&:charge_id)).to eq([nil, nil])
+      end
     end
   end
 
