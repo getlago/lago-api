@@ -64,10 +64,12 @@ module Fees
         end
 
         def boundaries
+          # Keep the fee's service period on the rate segment; only the usage
+          # aggregation starts at the cycle boundary for advance graduated tiers.
           BillingPeriodBoundaries.new(
             from_datetime: billing_segment.started_at,
             to_datetime: billing_segment.ended_at,
-            charges_from_datetime: billing_segment.started_at,
+            charges_from_datetime: pricing_aggregation_from_datetime,
             charges_to_datetime: billing_segment.ended_at,
             charges_duration: duration_in_days,
             timestamp: billing_segment.billing_at
@@ -140,6 +142,14 @@ module Fees
 
         def duration_in_days
           billing_segment.duration_in_days
+        end
+
+        def pricing_aggregation_from_datetime
+          if pay_in_advance? && rate.graduated? && !billable_metric.recurring?
+            billing_segment.cycle_started_at
+          else
+            billing_segment.started_at
+          end
         end
       end
     end
