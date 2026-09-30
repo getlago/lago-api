@@ -139,10 +139,12 @@ RSpec.describe Events::PostProcessService do
       let(:product) { create(:product, :metered, organization:, billable_metric:) }
       let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
       let(:billing_timing) { :advance }
+      let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: effective_date.beginning_of_day) }
 
       before do
         contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:, effective_date:)
         create(:billing_segment, organization:, customer:, contract:, contract_rate_card:,
+          rate_card_rate: rate,
           started_at: effective_date.beginning_of_day,
           ended_at: effective_date.end_of_day + 1.month,
           status: :processing)
@@ -168,7 +170,7 @@ RSpec.describe Events::PostProcessService do
         let(:effective_date) { timestamp.to_date }
         let(:ended_at) { timestamp - 1.second }
 
-        it "does not enqueue a pay in advance job" do
+        it "does not enqueue a job beyond the schedule's service period" do
           expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end
@@ -187,8 +189,8 @@ RSpec.describe Events::PostProcessService do
         let(:effective_date) { timestamp.to_date }
         let(:ended_at) { timestamp }
 
-        it "enqueues a pay in advance job" do
-          expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
+        it "does not enqueue a job at the exclusive contract end" do
+          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
         end
       end
 
@@ -202,6 +204,14 @@ RSpec.describe Events::PostProcessService do
 
       context "when the contract is canceled" do
         let(:contract_status) { :canceled }
+
+        it "does not enqueue a pay in advance job" do
+          expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)
+        end
+      end
+
+      context "when the contract is pending" do
+        let(:contract_status) { :pending }
 
         it "does not enqueue a pay in advance job" do
           expect { process_service.call }.not_to have_enqueued_job(Events::PayInAdvanceJob)

@@ -28,6 +28,14 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
     end
 
+    if append_second_rate_later
+      travel_to(rate_changed_at - 1.day) do
+        api_call(perform_jobs: false) do
+          post_with_token(organization, "/api/v2/rate_cards/graduated-card/rates", {rate: second_rate_params})
+        end
+      end
+    end
+
     travel_to(second_event_at) do
       BillingSegments::ScheduleService.call!(customer:)
       create_event({
@@ -65,6 +73,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
   let(:first_rate) { organization.rate_cards.find_by!(code: "graduated-card").rates.find_by!(code: "r1") }
   let(:second_rate) { organization.rate_cards.find_by!(code: "graduated-card").rates.find_by!(code: "r2") }
   let(:first_rate_model) { "graduated" }
+  let(:append_second_rate_later) { false }
   let(:first_rate_properties) do
     {
       graduated_ranges: [
@@ -74,6 +83,25 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     }
   end
   let(:third_event_quantity) { nil }
+  let(:second_rate_params) do
+    {
+      code: "r2", effective_from: rate_changed_at.iso8601, rate_model: "graduated",
+      billing_interval_unit: "month", rate_properties: {
+        graduated_ranges: [
+          {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
+          {from_value: 101, to_value: nil, per_unit_amount: "1.50", flat_amount: "0"}
+        ]
+      }
+    }
+  end
+  let(:initial_rates) do
+    rates = [{
+      code: "r1", effective_from: cycle_started_at.iso8601, rate_model: first_rate_model,
+      billing_interval_unit: "month", rate_properties: first_rate_properties
+    }]
+    rates << second_rate_params unless append_second_rate_later
+    rates
+  end
 
   around do |example|
     travel_to(Time.zone.parse("2026-12-31 12:00:00"))
@@ -96,21 +124,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       post_with_token(organization, "/api/v2/rate_cards", {rate_card: {
         name: "Advance graduated", code: "graduated-card", product_code: "graduated-product", currency: "USD",
         billing_timing: "advance", proration: false, display_on_invoice: true,
-        rates: [
-          {
-            code: "r1", effective_from: cycle_started_at.iso8601, rate_model: first_rate_model,
-            billing_interval_unit: "month", rate_properties: first_rate_properties
-          },
-          {
-            code: "r2", effective_from: rate_changed_at.iso8601, rate_model: "graduated",
-            billing_interval_unit: "month", rate_properties: {
-              graduated_ranges: [
-                {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
-                {from_value: 101, to_value: nil, per_unit_amount: "1.50", flat_amount: "0"}
-              ]
-            }
-          }
-        ]
+        rates: initial_rates
       }})
     end
 
@@ -170,6 +184,45 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents] }).to eq([
         [first_rate, 8_000], [second_rate, 7_000]
       ])
+    end
+  end
+
+  context "when the new rate is appended after the first segment was stored" do
+    let(:append_second_rate_later) { true }
+
+    it "prices the second event with the new rate and shortens its service period without changing the issued fee" do
+      first_fee, second_fee = fees
+
+      expect([first_fee.rate_card_rate, second_fee.rate_card_rate]).to eq([first_rate, second_rate])
+      expect([first_fee.amount_cents, second_fee.amount_cents]).to eq([8_000, 7_000])
+      expect(first_fee.reload.amount_cents).to eq(8_000)
+      expect(second_fee.properties).to include(
+        "from_datetime" => rate_changed_at.iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(cycle_ended_at).iso8601(6),
+        "charges_from_datetime" => cycle_started_at.iso8601(6)
+      )
+      expect(BillingSegment.where(contract:).pluck(:rate_card_rate_id, :ended_at)).to eq([
+        [first_rate.id, BillingSegment.inclusive_end(cycle_ended_at)]
+      ])
+    end
+
+    context "when another event arrives before the new rate activates" do
+      let(:second_event_at) { rate_changed_at - 12.hours }
+      let(:third_event_quantity) { 40 }
+
+      it "shortens the old rate's service period without repricing the earlier fee" do
+        first_fee, later_old_rate_fee, new_rate_fee = fees
+
+        expect([first_fee.rate_card_rate, later_old_rate_fee.rate_card_rate, new_rate_fee.rate_card_rate]).to eq([
+          first_rate, first_rate, second_rate
+        ])
+        expect(first_fee.reload.properties["to_datetime"]).to eq(BillingSegment.inclusive_end(cycle_ended_at).iso8601(6))
+        expect(later_old_rate_fee.properties).to include(
+          "from_datetime" => cycle_started_at.iso8601(6),
+          "to_datetime" => BillingSegment.inclusive_end(rate_changed_at).iso8601(6)
+        )
+        expect(new_rate_fee.properties["from_datetime"]).to eq(rate_changed_at.iso8601(6))
+      end
     end
   end
 end

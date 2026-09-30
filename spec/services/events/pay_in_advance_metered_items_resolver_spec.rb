@@ -34,24 +34,16 @@ RSpec.describe Events::PayInAdvanceMeteredItemsResolver do
     end
   end
 
-  context "with a contract billing segment" do
+  context "with an advance metered contract rate card" do
     let(:organization) { create(:organization, feature_flags: [:product_catalog]) }
     let(:contract) { create(:contract, organization:, customer:) }
     let(:product) { create(:product, organization:, billable_metric:) }
     let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
-    let(:billing_segment) do
-      create(
-        :billing_segment,
-        organization:,
-        customer:,
-        contract:,
-        contract_rate_card:,
-        status: :processing,
-        started_at: timestamp.beginning_of_day,
-        ended_at: timestamp.end_of_day
-      )
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: timestamp.to_date, billing_anchor_date: timestamp.to_date)
     end
+    let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: timestamp.beginning_of_day) }
     let(:event) do
       build(
         :common_event,
@@ -62,17 +54,63 @@ RSpec.describe Events::PayInAdvanceMeteredItemsResolver do
       )
     end
 
-    before { billing_segment }
+    before do
+      contract_rate_card
+      rate
+    end
 
-    it "returns the billing segment with its contract context and boundaries" do
+    it "returns a schedule-derived segment with its contract context and boundaries" do
       selection = selections.sole
 
       expect(selection.billing_context.contract).to eq(contract)
-      expect(selection.metered_item).to have_attributes(billing_segment:, event:)
+      expect(selection.metered_item.billing_segment).to be_new_record
+      expect(selection.metered_item).to have_attributes(contract_rate_card:, rate_card_rate: rate, event:)
       expect(selection.metered_item.boundaries).to have_attributes(
-        charges_from_datetime: billing_segment.started_at,
-        charges_to_datetime: billing_segment.ended_at
+        charges_from_datetime: timestamp.beginning_of_day,
+        charges_to_datetime: BillingSegment.inclusive_end(timestamp.beginning_of_day + 1.month)
       )
+    end
+  end
+
+  context "when a subscription and a contract share the external id" do
+    let(:organization) { create(:organization, feature_flags:) }
+    let(:feature_flags) { [] }
+    let(:subscription) { create(:subscription, organization:, customer:, started_at: timestamp - 1.month) }
+    let(:charge) { create(:standard_charge, :pay_in_advance, plan: subscription.plan, billable_metric:) }
+    let(:contract) { create(:contract, organization:, customer:, external_id: subscription.external_id) }
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: timestamp.to_date, billing_anchor_date: timestamp.to_date)
+    end
+    let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: timestamp.beginning_of_day) }
+    let(:event) do
+      build(
+        :common_event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        external_subscription_id: subscription.external_id,
+        timestamp:
+      )
+    end
+
+    before do
+      charge
+      contract_rate_card
+      rate
+    end
+
+    it "returns only the charge selection" do
+      expect(selections.sole.metered_item.charge).to eq(charge)
+    end
+
+    context "when the product catalog is enabled" do
+      let(:feature_flags) { [:product_catalog] }
+
+      it "returns only the billing segment selection" do
+        expect(selections.sole.metered_item).to have_attributes(contract_rate_card:, rate_card_rate: rate)
+      end
     end
   end
 end

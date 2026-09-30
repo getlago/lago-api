@@ -58,9 +58,21 @@ module Billing
 
       # Bill the segment being served, or the first future one if pricing has not started.
       def billing_at_covering(timestamp)
-        segment = segment_at(timestamp)
+        segment = segment_covering(timestamp)
 
         segment&.billing_at || next_billing_at(after: timestamp)
+      end
+
+      # Find the priced slice serving this instant, regardless of which cycles
+      # have already been written to billing_segments.
+      def segment_covering(timestamp)
+        cycle = walker.resume(timestamp)
+
+        if cycle
+          billable_segments_of([cycle]).find do |segment|
+            (segment.started_at...segment.ended_at).cover?(timestamp)
+          end
+        end
       end
 
       # Measure consumption against the original billed segment, whose end is exclusive.
@@ -80,16 +92,6 @@ module Billing
       private
 
       attr_reader :rates, :terms, :timezone, :resume_at, :walker
-
-      def segment_at(timestamp)
-        cycle = walker.resume(timestamp)
-
-        if cycle
-          billable_segments_of([cycle]).find do |segment|
-            (segment.started_at...segment.ended_at).cover?(timestamp)
-          end
-        end
-      end
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|
