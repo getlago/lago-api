@@ -20,7 +20,7 @@ module X402
 
       def verify(payment:, payment_requirements:)
         answer = request_or_unavailable("verify") { post("/verify", payment, payment_requirements, READ_TIMEOUT) }
-        raise_for_access!("verify", answer)
+        raise_for_access!("verify", answer) unless screening_decline?(answer)
         raise unavailable("verify", answer) if answer.status >= 500 || !answer.parsed || malformed_verdict?(answer)
 
         body = answer.body
@@ -134,13 +134,18 @@ module X402
       def raise_for_access!(operation, answer)
         error_class, reason = case answer.status
         when 401 then [CredentialError, "unauthorized"]
+        when 402 then [CredentialError, "payment_required"]
         when 403 then [CredentialError, "forbidden"]
         when 429 then [RateLimitError, "rate_limited"]
         end
         return unless error_class
 
-        log_failure(operation, reason, status: answer.status, correlation_id: answer.body["correlationId"])
+        log_failure(operation, reason, status: answer.status, error_type: answer.body["errorType"], correlation_id: answer.body["correlationId"])
         raise error_class.new("#{operation}: HTTP #{answer.status}", http_status: answer.status, error_type: answer.body["errorType"], correlation_id: answer.body["correlationId"])
+      end
+
+      def screening_decline?(answer)
+        answer.status == 403 && answer.body["errorType"] == "kyt_risk_detected"
       end
 
       def malformed_verdict?(answer)

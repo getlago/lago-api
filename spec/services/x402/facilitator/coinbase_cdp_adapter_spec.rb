@@ -114,11 +114,38 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       end
     end
 
+    context "when CDP answers 402" do
+      before { stub_answer("verify", status: 402, body: {errorType: "payment_method_required", correlationId: "corr-3"}.to_json) }
+
+      it "raises a credential error" do
+        expect { verification }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.http_status).to eq(402) }
+      end
+
+      it "logs it" do
+        expect { verification }.to raise_error(X402::Facilitator::CredentialError)
+        expect(Rails.logger).to have_received(:warn).with("X402::Facilitator::CoinbaseCdpAdapter call failed operation=verify reason=payment_required status=402 error_type=payment_method_required correlation_id=corr-3")
+      end
+    end
+
     context "when CDP answers 403" do
       before { stub_answer("verify", status: 403, body: {errorType: "forbidden", correlationId: "corr-2"}.to_json) }
 
       it "raises a credential error" do
         expect { verification }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.correlation_id).to eq("corr-2") }
+      end
+    end
+
+    context "when screening declines the payment" do
+      before { stub_answer("verify", status: 403, body: {errorType: "kyt_risk_detected", correlationId: "corr-4"}.to_json) }
+
+      it "is invalid with the screening reason" do
+        expect(verification).to have_attributes(valid?: false, invalid_reason: "kyt_risk_detected")
+      end
+
+      it "logs it" do
+        verification
+
+        expect(Rails.logger).to have_received(:warn).with("X402::Facilitator::CoinbaseCdpAdapter call failed operation=verify reason=kyt_risk_detected status=403 correlation_id=corr-4")
       end
     end
 
@@ -406,6 +433,22 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
 
       it "raises a credential error" do
         expect { settlement }.to raise_error(X402::Facilitator::CredentialError)
+      end
+    end
+
+    context "when CDP answers 402" do
+      before { stub_answer("settle", status: 402, body: {errorType: "payment_method_required"}.to_json) }
+
+      it "raises a credential error" do
+        expect { settlement }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.http_status).to eq(402) }
+      end
+    end
+
+    context "when screening declines the settle" do
+      before { stub_answer("settle", status: 403, body: {errorType: "kyt_risk_detected"}.to_json) }
+
+      it "raises a credential error" do
+        expect { settlement }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.error_type).to eq("kyt_risk_detected") }
       end
     end
 
