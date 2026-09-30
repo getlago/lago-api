@@ -10,12 +10,9 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
   let(:payment) { x402_evm_payment }
   let(:payment_requirements) { x402_evm_requirements }
   let(:fault) { nil }
-  let(:errors_counter) { Yabeda.x402.facilitator_errors_total }
-  let(:settle_duration) { Yabeda.x402.facilitator_settle_duration }
 
   before do
-    allow(errors_counter).to receive(:increment)
-    allow(settle_duration).to receive(:measure)
+    allow(Rails.logger).to receive(:warn)
     stub_cdp_facilitator(fault:)
   end
 
@@ -80,10 +77,11 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
         expect(verification).to have_attributes(valid?: false, invalid_reason: "invalid_exact_evm_payload_signature")
       end
 
-      it "counts the rejection" do
+      it "logs the rejection" do
         verification
 
-        expect(errors_counter).to have_received(:increment).with({operation: "verify", reason: "invalid_exact_evm_payload_signature"})
+        expect(Rails.logger).to have_received(:warn)
+          .with("X402::Facilitator::CoinbaseCdpAdapter call failed operation=verify reason=invalid_exact_evm_payload_signature status=200")
       end
     end
 
@@ -110,9 +108,9 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
         expect { verification }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.http_status).to eq(401) }
       end
 
-      it "counts it" do
+      it "logs it" do
         expect { verification }.to raise_error(X402::Facilitator::CredentialError)
-        expect(errors_counter).to have_received(:increment).with({operation: "verify", reason: "unauthorized"})
+        expect(Rails.logger).to have_received(:warn).with("X402::Facilitator::CoinbaseCdpAdapter call failed operation=verify reason=unauthorized status=401")
       end
     end
 
@@ -185,10 +183,10 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       )
     end
 
-    it "times the settle" do
+    it "logs nothing" do
       settlement
 
-      expect(settle_duration).to have_received(:measure).with({outcome: "settled"}, kind_of(Float))
+      expect(Rails.logger).not_to have_received(:warn)
     end
 
     context "with a spy on the HTTP client" do
@@ -208,10 +206,11 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
         expect(settlement).to have_attributes(outcome: :failed, error_reason: "invalid_exact_evm_signature", transaction: nil)
       end
 
-      it "counts the failure" do
+      it "logs the failure with its duration" do
         settlement
 
-        expect(errors_counter).to have_received(:increment).with({operation: "settle", reason: "invalid_exact_evm_signature"})
+        expect(Rails.logger).to have_received(:warn)
+          .with(/call failed operation=settle reason=invalid_exact_evm_signature outcome=failed network=eip155:84532 duration=\d+\.\d+\z/)
       end
     end
 
@@ -291,20 +290,10 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
         expect(settlement.outcome).to eq(:unconfirmed_failure)
       end
 
-      it "counts it as another reason" do
+      it "logs CDP's reason" do
         settlement
 
-        expect(errors_counter).to have_received(:increment).with({operation: "settle", reason: "settle_exact_new_failure"})
-      end
-    end
-
-    context "when CDP answers an odd reason" do
-      before { stub_answer("settle", status: 200, body: {success: false, errorReason: "Weird Reason!"}.to_json) }
-
-      it "counts it under other" do
-        settlement
-
-        expect(errors_counter).to have_received(:increment).with({operation: "settle", reason: "other"})
+        expect(Rails.logger).to have_received(:warn).with(/operation=settle reason=settle_exact_new_failure outcome=unconfirmed_failure duration=/)
       end
     end
 
@@ -365,6 +354,12 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
         settlement
 
         expect(a_request(:post, "#{cdp_facilitator_url}/settle")).to have_been_made.once
+      end
+
+      it "logs it" do
+        settlement
+
+        expect(Rails.logger).to have_received(:warn).with(/operation=settle reason=no_response outcome=no_response duration=/)
       end
     end
 

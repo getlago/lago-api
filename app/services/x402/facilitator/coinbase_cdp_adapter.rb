@@ -12,9 +12,6 @@ module X402
       TERMINAL_REASON = /\A(invalid_[a-z0-9_]+|insufficient_funds|unsupported_scheme)\z/
       AMBIGUOUS_REASON = /(nonce_already_used|nonce_used|already|transaction_failed|transaction_state|failed_onchain|simulation_failed)/
 
-      METRIC_REASON = /\A(invalid|insufficient|unsupported|settle|settlement|unexpected)_[a-z0-9_]{1,60}\z/
-      OWN_REASONS = %w[unauthorized forbidden rate_limited server_error no_response malformed_response].freeze
-
       Answer = Data.define(:status, :body, :parsed)
       class NoResponse < StandardError; end
       private_constant :Answer, :NoResponse
@@ -31,7 +28,7 @@ module X402
 
         body = answer.body
         reason = body["invalidReason"].presence || body["errorType"].presence || "verify_failed" unless body["isValid"] == true
-        count("verify", reason) if reason
+        log_failure("verify", reason, status: answer.status, correlation_id: body["correlationId"]) if reason
 
         VerifyResult.new(valid: body["isValid"] == true, payer: body["payer"], invalid_reason: reason, response: body)
       end
@@ -39,8 +36,11 @@ module X402
       def settle(payment:, payment_requirements:)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         result = settle_result(payment, payment_requirements)
-        Yabeda.x402.facilitator_settle_duration.measure({outcome: result.outcome.to_s}, Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at)
-        count("settle", result.error_reason) unless result.settled?
+
+        unless result.settled?
+          duration = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at).round(2)
+          log_failure("settle", result.error_reason, outcome: result.outcome, network: result.network, correlation_id: result.response["correlationId"], duration:)
+        end
 
         result
       end
@@ -60,8 +60,7 @@ module X402
       def settle_result(payment, payment_requirements)
         answer = begin
           post("/settle", payment, payment_requirements, SETTLE_READ_TIMEOUT)
-        rescue NoResponse => e
-          Rails.logger.warn("x402 settle got no response: #{e.message}")
+        rescue NoResponse
           return settle_outcome(:no_response, error_reason: "no_response")
         end
         raise_for_access!("settle", answer)
@@ -135,7 +134,7 @@ module X402
       def request_or_unavailable(operation)
         yield
       rescue NoResponse => e
-        count(operation, "no_response")
+        log_failure(operation, "no_response", error: e.message)
         raise UnavailableError, "#{operation}: #{e.message}"
       end
 
@@ -147,21 +146,18 @@ module X402
         end
         return unless error_class
 
-        count(operation, reason)
+        log_failure(operation, reason, status: answer.status, correlation_id: answer.body["correlationId"])
         raise error_class.new("#{operation}: HTTP #{answer.status}", http_status: answer.status, error_type: answer.body["errorType"], correlation_id: answer.body["correlationId"])
       end
 
       def unavailable(operation, answer)
-        count(operation, answer.parsed ? "server_error" : "malformed_response")
+        log_failure(operation, answer.parsed ? "server_error" : "malformed_response", status: answer.status, correlation_id: answer.body["correlationId"])
         UnavailableError.new("#{operation}: HTTP #{answer.status}", http_status: answer.status, error_type: answer.body["errorType"], correlation_id: answer.body["correlationId"])
       end
 
-      def count(operation, reason)
-        Yabeda.x402.facilitator_errors_total.increment({operation:, reason: metric_reason(reason)})
-      end
-
-      def metric_reason(reason)
-        (OWN_REASONS.include?(reason) || METRIC_REASON.match?(reason.to_s)) ? reason : "other"
+      def log_failure(operation, reason, **details)
+        context = {operation:, reason:, **details}.compact
+        Rails.logger.warn("#{self.class.name} call failed #{context.map { |k, v| "#{k}=#{v}" }.join(" ")}")
       end
 
       def client(path, read_timeout)
