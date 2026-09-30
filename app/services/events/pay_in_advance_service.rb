@@ -12,7 +12,7 @@ module Events
     def call
       return result unless billable_metric
       return result unless can_create_fee?
-      return result if already_processed?
+      return result if all_already_processed?
 
       # NOTE: Temporary condition to support both Postgres and Clickhouse (via kafka)
       if kafka_producer_enabled?
@@ -24,6 +24,8 @@ module Events
       end
 
       metered_item_selections.each do |selection|
+        next if already_processed?(selection.metered_item)
+
         enqueue_pay_in_advance_job(selection)
       end
 
@@ -41,8 +43,29 @@ module Events
       @metered_item_selections ||= Events::PayInAdvanceMeteredItemsResolver.call!(event:).selections
     end
 
-    def already_processed?
-      Fee.from_organization_pay_in_advance(event.organization).where(pay_in_advance_event_transaction_id: event.transaction_id).exists?
+    def all_already_processed?
+      return already_processed? unless event.organization.product_catalog_enabled?
+
+      metered_item_selections.present? && metered_item_selections.all? do |selection|
+        already_processed?(selection.metered_item)
+      end
+    end
+
+    def already_processed?(metered_item = nil)
+      if event.organization.product_catalog_enabled?
+        @processed_contract_rate_card_ids ||= Fee.from_organization(event.organization)
+          .where(pay_in_advance_event_transaction_id: event.transaction_id)
+          .pluck(:contract_rate_card_id)
+          .to_set
+
+        return @processed_contract_rate_card_ids.include?(metered_item.contract_rate_card.id)
+      end
+
+      return @charges_already_processed if defined?(@charges_already_processed)
+
+      @charges_already_processed = Fee.from_organization_pay_in_advance(event.organization)
+        .where(pay_in_advance_event_transaction_id: event.transaction_id)
+        .exists?
     end
 
     def can_create_fee?
