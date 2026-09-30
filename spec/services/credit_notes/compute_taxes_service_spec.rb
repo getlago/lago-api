@@ -64,6 +64,19 @@ RSpec.describe CreditNotes::ComputeTaxesService do
     end
   end
 
+  context "with two native taxes whose exact amounts round up on their own" do
+    let(:fee_amount_cents) { 10 }
+    let(:item_amount_cents) { 10 }
+    let(:fee_tax_amount_cents) { 1 }
+    let(:taxes) { [create(:tax, organization:, code: "state", rate: 5), create(:tax, organization:, code: "city", rate: 5)] }
+
+    it "splits the rounded tax total across the tax rows" do
+      expect(compute_result).to be_success
+      expect(credit_note.taxes_amount_cents).to eq(1)
+      expect(credit_note.applied_taxes.map(&:amount_cents)).to match_array([1, 0])
+    end
+  end
+
   context "when a fee tax has no matching invoice tax" do
     let(:invoice_tax_code) { "other" }
 

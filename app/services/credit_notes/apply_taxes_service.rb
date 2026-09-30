@@ -25,7 +25,11 @@ module CreditNotes
       indexed_items.each do |tax_key, entry|
         invoice_applied_tax = entry[:invoice_applied_tax]
         precise_base_amount_cents = base_amounts.fetch(tax_key) * taxes_base_rate(invoice_applied_tax)
-        precise_tax_amount_cents = (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        precise_tax_amount_cents = if invoice_applied_tax.provider_tax?
+          booked_tax_to_credit(tax_key, entry[:items].uniq)
+        else
+          (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        end
 
         applied_tax = build_applied_tax(
           invoice_applied_tax,
@@ -66,6 +70,33 @@ module CreditNotes
         base_amount_cents: base_amount_cents.round,
         amount_cents: tax_amount_cents.round
       )
+    end
+
+    def booked_tax_to_credit(tax_key, items)
+      booked_tax = booked_tax_by_key_and_fee.fetch(tax_key)
+
+      items.sum { |item| credited_portion(booked_tax.fetch(item.fee_id), item) }
+    end
+
+    def credited_portion(fee_amount_cents, item)
+      if item.fee.amount_cents.zero?
+        0.to_d
+      else
+        fee_amount_cents * item.precise_amount_cents / item.fee.amount_cents
+      end
+    end
+
+    # Same split as the invoice's credit limits, so crediting every fee returns what it charged.
+    def booked_tax_by_key_and_fee
+      @booked_tax_by_key_and_fee ||= invoice.booked_tax_by_fee_tax.each_with_object({}) do |(fee_tax, amount_cents), booked|
+        next unless fee_tax.is_a?(Fee::AppliedTax)
+
+        invoice_applied_tax = invoice.applied_tax_for(fee_tax)
+        next unless invoice_applied_tax
+
+        by_fee = booked[tax_key(invoice_applied_tax)] ||= Hash.new(0)
+        by_fee[fee_tax.fee_id] += amount_cents
+      end
     end
 
     # NOTE: indexes the credit note items by the invoice applied tax their fee taxes resolve to,
@@ -124,29 +155,16 @@ module CreditNotes
       items_rate * applied_tax.tax_rate
     end
 
-    # NOTE: a fee tax resolves to the invoice tax with the same code and rate. When no invoice tax
-    #       has that rate (the fee and the invoice were taxed at different rates, e.g. the tax rate
-    #       changed in between), it falls back to the invoice tax carrying the same code, but only
-    #       if exactly one does: several invoice taxes sharing a code is the provider multi-rate
-    #       case, where the rate is the only thing telling them apart.
     def find_invoice_applied_tax(fee_applied_tax)
-      key = tax_key(fee_applied_tax)
-      exact_match = invoice_applied_taxes.find { |applied_tax| tax_key(applied_tax) == key }
-      return exact_match if exact_match
-
-      code_matches = invoice_applied_taxes.select { |applied_tax| applied_tax.tax_code == fee_applied_tax.tax_code }
-      return code_matches.first if code_matches.one?
+      invoice_applied_tax = invoice.applied_tax_for(fee_applied_tax)
+      return invoice_applied_tax if invoice_applied_tax
 
       result.service_failure!(
         code: "invoice_applied_tax_not_found",
-        message: "Invoice #{invoice.id} has no applied tax matching #{key.join(", ")}"
+        message: "Invoice #{invoice.id} has no applied tax matching #{tax_key(fee_applied_tax).join(", ")}"
       )
 
       nil
-    end
-
-    def invoice_applied_taxes
-      @invoice_applied_taxes ||= invoice.applied_taxes.to_a
     end
 
     def tax_key(applied_tax)

@@ -1725,6 +1725,9 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 # setting item_id based on the test example
                 key = JSON.parse(request.body).first["fees"].last["item_key"]
                 response["succeededInvoices"].first["fees"].last["item_key"] = key
+                response["succeededInvoices"].first["fees"].last["amount_cents"] = 6
+                response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 1
+                response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 1
 
                 {body: response.to_json}
               end

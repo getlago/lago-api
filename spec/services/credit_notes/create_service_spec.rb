@@ -26,6 +26,7 @@ RSpec.describe CreditNotes::CreateService do
       organization:,
       customer:,
       currency: "EUR",
+      fees_amount_cents: 20,
       total_amount_cents: 24,
       total_paid_amount_cents: 6,
       payment_status: :succeeded,
@@ -663,6 +664,7 @@ RSpec.describe CreditNotes::CreateService do
           customer:,
           currency: "EUR",
           fees_amount_cents: 1000,
+          taxes_amount_cents: 200,
           total_amount_cents: 1200,
           total_paid_amount_cents: 1200,
           payment_status: :succeeded
@@ -1072,7 +1074,7 @@ RSpec.describe CreditNotes::CreateService do
       context "when payment is pending" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :pending)
+            fees_amount_cents: 1000, taxes_amount_cents: 200, total_amount_cents: 1200, payment_status: :pending)
         end
 
         it "allows offset_amount_cents only" do
@@ -1117,7 +1119,7 @@ RSpec.describe CreditNotes::CreateService do
       context "when payment failed" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :failed)
+            fees_amount_cents: 1000, taxes_amount_cents: 200, total_amount_cents: 1200, payment_status: :failed)
         end
 
         it "allows offset_amount_cents only" do

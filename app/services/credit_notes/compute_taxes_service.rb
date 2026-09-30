@@ -24,6 +24,8 @@ module CreditNotes
       credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
       credit_note.taxes_rate = taxes_result.taxes_rate
 
+      amounts = Integrations::Aggregator::Taxes::Allocation.call(credit_note.taxes_amount_cents, taxes_result.precise_tax_amounts)
+      taxes_result.applied_taxes.each_with_index { |tax, index| tax.amount_cents = amounts[index] }
       taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
 
       result.credit_note = credit_note
