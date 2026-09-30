@@ -122,6 +122,8 @@ end
 # Models
 
 - New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
+- Before adding an index, inspect the model's annotated indexes and the actual schema in `db/structure.sql`. Avoid duplicate indexes and account for the column order of existing composite indexes (their leftmost prefixes).
+- Before building or changing a query, inspect the relevant models' indexes and consider whether the query's filters, joins, and ordering can use them. For composite indexes, the order of indexed columns matters; reordering `where` conditions does not change the index's column order.
 
 Soft deletion
 - not all models are soft deletable

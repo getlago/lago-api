@@ -36,11 +36,11 @@ end
 #
 # Indexes
 #
-#  index_credit_notes_taxes_on_credit_note_id       (credit_note_id)
-#  index_credit_notes_taxes_on_note_id_code_rate    (credit_note_id,tax_code,tax_rate) UNIQUE
-#  index_credit_notes_taxes_on_organization_id      (organization_id)
-#  index_credit_notes_taxes_on_tax_code             (tax_code)
-#  index_credit_notes_taxes_on_tax_id               (tax_id)
+#  index_credit_notes_taxes_on_credit_note_id     (credit_note_id)
+#  index_credit_notes_taxes_on_note_id_code_rate  (credit_note_id,tax_code,tax_rate) UNIQUE
+#  index_credit_notes_taxes_on_organization_id    (organization_id)
+#  index_credit_notes_taxes_on_tax_code           (tax_code)
+#  index_credit_notes_taxes_on_tax_id             (tax_id)
 #
 # Foreign Keys
 #
