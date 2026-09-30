@@ -92,4 +92,153 @@ RSpec.describe AppliedCoupon do
         change(applied_coupon, :terminated_at).to be_present
     end
   end
+
+  describe "billing period usage" do
+    let(:applied_coupon) { create(:applied_coupon, amount_cents: 100) }
+    let(:organization) { applied_coupon.organization }
+    let(:billing_entity) { organization.default_billing_entity }
+    let(:customer) { applied_coupon.customer }
+    let(:subscription) { create(:subscription, customer:, organization:) }
+    let(:period_start) { Time.current.beginning_of_month }
+    let(:period_end) { Time.current.end_of_month }
+    let(:charges_boundaries) { {charges_from_datetime: period_start, charges_to_datetime: period_end} }
+    let(:fixed_charges_boundaries) { {fixed_charges_from_datetime: period_start, fixed_charges_to_datetime: period_end} }
+    let(:invoice) { add_period_invoice }
+
+    def add_fee(inv, sub, properties: charges_boundaries)
+      create(:fee, invoice: inv, subscription: sub, amount_cents: 20, organization:, billing_entity:, properties:)
+    end
+
+    def add_period_invoice(offset: 0.months, voided: false, subs: [subscription])
+      traits = voided ? [:voided] : []
+      create(:invoice, :subscription, *traits, customer:, organization:, billing_entity:, subscriptions: subs).tap do |inv|
+        inv.invoice_subscriptions.update_all(timestamp: Time.current + offset, charges_from_datetime: period_start + offset, charges_to_datetime: period_end + offset) # rubocop:disable Rails/SkipsModelValidations
+      end
+    end
+
+    def add_credit(inv, amount_cents)
+      create(:credit, applied_coupon:, invoice: inv, amount_cents:, organization:)
+    end
+
+    before { add_fee(invoice, subscription) }
+
+    context "without any prior credits" do
+      it "returns the full amount" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(100)
+        expect(applied_coupon.used_in_billing_period?(invoice)).to be(false)
+      end
+    end
+
+    context "with a credit on another invoice in the same period" do
+      before { add_credit(add_period_invoice.tap { |other| add_fee(other, subscription) }, 30) }
+
+      it "deducts the credit" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(70)
+        expect(applied_coupon.used_in_billing_period?(invoice)).to be(true)
+      end
+    end
+
+    context "with a credit on a voided invoice" do
+      before { add_credit(add_period_invoice(voided: true).tap { |other| add_fee(other, subscription) }, 50) }
+
+      it "ignores the credit" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(100)
+        expect(applied_coupon.used_in_billing_period?(invoice)).to be(false)
+      end
+    end
+
+    context "with a credit in the previous billing period" do
+      before do
+        other = add_period_invoice(offset: -1.month)
+        add_fee(other, subscription, properties: {charges_from_datetime: period_start - 1.month, charges_to_datetime: period_end - 1.month})
+        add_credit(other, 40)
+      end
+
+      it "ignores the credit" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(100)
+        expect(applied_coupon.used_in_billing_period?(invoice)).to be(false)
+      end
+    end
+
+    context "with credits exceeding the coupon amount" do
+      before { add_credit(invoice, 150) }
+
+      it "returns zero" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(0)
+      end
+    end
+
+    context "with a fee without charges boundaries on the invoice" do
+      before do
+        add_fee(invoice, subscription, properties: {from_datetime: period_start - 1.month, to_datetime: period_end - 1.month})
+        add_credit(add_period_invoice.tap { |other| add_fee(other, subscription) }, 30)
+      end
+
+      it "uses the boundaries of the fees that have them" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(70)
+      end
+    end
+
+    context "when the invoice only has a pay-in-advance fixed charge fee" do
+      let(:fixed_charge_invoice) { add_period_invoice.tap { |inv| add_fee(inv, subscription, properties: fixed_charges_boundaries) } }
+
+      before { add_credit(invoice, 30) }
+
+      it "uses the fixed charges boundaries" do
+        expect(applied_coupon.remaining_amount_in_billing_period(fixed_charge_invoice)).to eq(70)
+      end
+    end
+
+    context "with a credit on a pay-in-advance fixed charge invoice in the same period" do
+      before { add_credit(add_period_invoice.tap { |other| add_fee(other, subscription, properties: fixed_charges_boundaries) }, 30) }
+
+      it "deducts the credit" do
+        expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(70)
+      end
+    end
+
+    context "with multiple subscriptions on the invoice" do
+      let(:subscription_2) { create(:subscription, customer:, organization:) }
+
+      before do
+        create(:invoice_subscription, invoice:, subscription: subscription_2, organization:,
+          timestamp: Time.current, charges_from_datetime: period_start, charges_to_datetime: period_end)
+        add_fee(invoice, subscription_2)
+      end
+
+      context "with a credit on the shared invoice" do
+        before { add_credit(invoice, 20) }
+
+        it "counts the credit once per subscription" do
+          expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(60)
+          expect(applied_coupon.used_in_billing_period?(invoice)).to be(true)
+        end
+      end
+
+      context "with credits split between subscriptions" do
+        before do
+          add_credit(invoice, 20)
+          add_credit(add_period_invoice(subs: [subscription_2]).tap { |other| add_fee(other, subscription_2) }, 30)
+        end
+
+        it "sums the credits of every subscription billing period" do
+          expect(applied_coupon.remaining_amount_in_billing_period(invoice)).to eq(30)
+        end
+      end
+
+      context "with one subscription that has no usage in this period" do
+        let(:subscription_3) { create(:subscription, customer:, organization:) }
+        let(:invoice_3) { add_period_invoice(subs: [subscription_3, subscription_2]) }
+
+        before do
+          add_fee(invoice_3, subscription_3)
+          add_credit(invoice, 20)
+        end
+
+        it "sums the credits found through the other subscription" do
+          expect(applied_coupon.remaining_amount_in_billing_period(invoice_3)).to eq(80)
+        end
+      end
+    end
+  end
 end
