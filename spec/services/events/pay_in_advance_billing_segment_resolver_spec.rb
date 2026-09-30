@@ -45,6 +45,7 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
       customer:,
       contract:,
       contract_rate_card:,
+      cycle_started_at: segment_started_at,
       started_at: segment_started_at,
       ended_at: segment_ended_at,
       status: segment_status
@@ -144,6 +145,94 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
 
     it "does not return the billing segment" do
       expect(billing_segments).to be_empty
+    end
+  end
+
+  context "with adjacent rate segments" do
+    let(:boundary_at) { Time.zone.parse("2027-01-15 12:00:00") }
+    let(:segment_started_at) { Time.zone.parse("2027-01-01 00:00:00") }
+    let(:segment_ended_at) { BillingSegment.inclusive_end(boundary_at) }
+    let(:next_cycle_started_at) { segment_started_at }
+    let(:next_segment) do
+      create(:billing_segment, organization:, customer:, contract:, contract_rate_card:,
+        rate_card_rate: billing_segment.rate_card_rate,
+        cycle_started_at: next_cycle_started_at, started_at: boundary_at,
+        ended_at: BillingSegment.inclusive_end(boundary_at + 1.day), status: :processing)
+    end
+
+    before { next_segment }
+
+    context "when the event falls in the last millisecond before the rate change" do
+      let(:timestamp) { boundary_at - Rational(500, 1_000_000) }
+
+      it "selects the previous segment" do
+        expect(billing_segments).to contain_exactly(billing_segment)
+      end
+    end
+
+    context "when the event occurs at the rate change" do
+      let(:timestamp) { boundary_at }
+
+      it "selects the next segment only" do
+        expect(billing_segments).to contain_exactly(next_segment)
+      end
+    end
+
+    context "when the rate change is at the beginning of a new cycle" do
+      let(:boundary_at) { Time.zone.parse("2027-02-01 00:00:00") }
+      let(:next_cycle_started_at) { boundary_at }
+
+      context "when the event has millisecond precision before the new cycle" do
+        let(:timestamp) { boundary_at - Rational(1, 1000) }
+
+        it "selects the old cycle" do
+          expect(billing_segments).to contain_exactly(billing_segment)
+        end
+      end
+
+      context "when the event occurs at the last microsecond of the old cycle" do
+        let(:timestamp) { boundary_at - BillingSegment::MICROSECOND }
+
+        it "selects the old cycle" do
+          expect(billing_segments).to contain_exactly(billing_segment)
+        end
+      end
+
+      context "when the event has submicrosecond precision before the new cycle" do
+        let(:timestamp) { boundary_at - Rational(1, 2_000_000) }
+
+        it "selects the old cycle using the database's microsecond precision" do
+          expect(billing_segments).to contain_exactly(billing_segment)
+        end
+      end
+
+      context "when the event occurs at the start of the new cycle" do
+        let(:timestamp) { boundary_at }
+
+        it "selects the new cycle" do
+          expect(billing_segments).to contain_exactly(next_segment)
+        end
+      end
+    end
+
+    context "when the new segment starts between milliseconds" do
+      let(:boundary_at) { Time.zone.parse("2027-01-15 12:00:00.123456") }
+
+      context "when the event occurs before the start" do
+        let(:timestamp) { Time.zone.parse("2027-01-15 12:00:00.123000") }
+
+        it "does not select the new segment early" do
+          expect(billing_segments).to contain_exactly(billing_segment)
+        end
+      end
+
+      context "when the event occurs just before the start" do
+        let(:timestamp) { boundary_at - BillingSegment::MICROSECOND }
+
+        it "selects the previous segment" do
+          expect(billing_segments).to contain_exactly(billing_segment)
+        end
+      end
     end
   end
 
