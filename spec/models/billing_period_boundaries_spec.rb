@@ -43,6 +43,26 @@ RSpec.describe BillingPeriodBoundaries do
     end
   end
 
+  describe "#to_contract_fee_properties" do
+    let(:from_datetime) { Time.iso8601("2026-09-01T02:00:00.123456+02:00") }
+    let(:to_datetime) { Time.iso8601("2026-10-01T01:59:59.999999+02:00") }
+    let(:charges_from_datetime) { from_datetime }
+    let(:charges_to_datetime) { to_datetime }
+
+    it "normalizes boundary properties to UTC without losing microseconds" do
+      expect(boundaries.to_contract_fee_properties).to eq(
+        boundaries.to_h.merge(
+          "from_datetime" => "2026-09-01T00:00:00.123456Z",
+          "to_datetime" => "2026-09-30T23:59:59.999999Z",
+          "charges_from_datetime" => "2026-09-01T00:00:00.123456Z",
+          "charges_to_datetime" => "2026-09-30T23:59:59.999999Z"
+        )
+      )
+      expect(boundaries.to_h["charges_from_datetime"]).to eq(charges_from_datetime)
+      expect(boundaries.to_h["charges_to_datetime"]).to eq(charges_to_datetime)
+    end
+  end
+
   describe ".from_fee" do
     let(:fee) { build(:charge_fee) }
 

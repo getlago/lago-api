@@ -42,6 +42,7 @@ RSpec.describe BillingSegments::Fees::ComputeService do
 
       it "prices the fee" do
         expect(result).to be_success
+        expect(result.fee).to have_attributes(contract:, contract_rate_card:)
         expect(result.fee.amount_cents).to eq(45_000)
         expect(result.fee.unit_amount_cents).to eq(3_000)
         expect(result.fee.precise_unit_amount).to eq(30)
@@ -49,16 +50,15 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.fee).to have_attributes(contract:, contract_rate_card:)
         expect(result.fee.amount_currency).to eq("USD")
         expect(result.fee.properties).to eq(
-          "from_datetime" => billing_segment.started_at.iso8601(3),
-          "to_datetime" => billing_segment.ended_at.iso8601(3),
-          "charges_from_datetime" => billing_segment.started_at.iso8601(3),
-          "charges_to_datetime" => billing_segment.ended_at.iso8601(3),
+          "from_datetime" => billing_segment.started_at.iso8601(6),
+          "to_datetime" => billing_segment.ended_at.iso8601(6),
+          "charges_from_datetime" => billing_segment.started_at.iso8601(6),
+          "charges_to_datetime" => billing_segment.ended_at.iso8601(6),
           "charges_duration" => billing_segment.duration_in_days,
           "timestamp" => billing_segment.billing_at.iso8601(3),
           "fixed_charges_from_datetime" => nil,
           "fixed_charges_to_datetime" => nil,
-          "fixed_charges_duration" => nil,
-          "billing_segment_id" => billing_segment.id
+          "fixed_charges_duration" => nil
         )
         expect(result.fee.subscription).to be_nil
         expect(result.true_up_fee).to be_nil
@@ -80,6 +80,8 @@ RSpec.describe BillingSegments::Fees::ComputeService do
             true_up_parent_fee: result.fee,
             pricing_unit_usage: nil
           )
+          expect(result.true_up_fee.properties).to eq(result.fee.properties)
+          expect(result.true_up_fee.properties).not_to have_key("billing_segment_id")
         end
       end
 

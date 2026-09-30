@@ -147,6 +147,29 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "without an invoice for a charge" do
+      let(:invoice) { nil }
+      let(:fee_result) { charge_subscription_service.call }
+      let(:existing_fee) do
+        create(:charge_fee, invoice: nil, subscription:, organization:, charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime.iso8601(3),
+            charges_to_datetime: boundaries.charges_to_datetime.iso8601(3)
+          })
+      end
+
+      before do
+        existing_fee
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "returns the existing charge fee without recalculating" do
+        expect { fee_result }.not_to change(Fee, :count)
+        expect(fee_result.fees).to match_array([existing_fee])
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+    end
+
     context "without filters" do
       it "creates a fee" do
         result = charge_subscription_service.call
