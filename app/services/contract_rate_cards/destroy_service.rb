@@ -14,11 +14,12 @@ module ContractRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless contract_rate_card
 
-      unless contract_rate_card.contract.editable?
-        return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
-      end
+      # Locked so the editable check holds: the clock may activate the contract meanwhile.
+      contract_rate_card.contract.with_lock do
+        unless contract_rate_card.contract.editable?
+          return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        end
 
-      ActiveRecord::Base.transaction do
         phases = contract_rate_card.rate_phases.to_a
         RateOverride.where(id: phases.filter_map(&:rate_override_id)).discard_all!
         contract_rate_card.rate_phases.discard_all!

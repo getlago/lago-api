@@ -22,10 +22,33 @@ RSpec.describe Contracts::ActivateService do
     expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
   end
 
+  context "with rate cards" do
+    let(:queries) { [] }
+
+    before { create(:contract_rate_card, organization:, contract:) }
+
+    # Card and phase edits take the card lock, so holding it serializes them with activation.
+    it "locks the cards while activating" do
+      ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record") { result }
+
+      expect(queries).to include(a_string_matching(/FROM "contract_rate_cards".*FOR UPDATE/m))
+    end
+  end
+
   context "when the start has not arrived yet" do
     let(:timestamp) { started_at - 1.second }
 
     it "keeps the contract pending" do
+      expect(result).to be_success
+      expect(contract.reload).to be_pending
+      expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+    end
+  end
+
+  context "when the customer was deleted since the activation was enqueued" do
+    before { customer.discard! }
+
+    it "keeps the contract pending without scheduling billing" do
       expect(result).to be_success
       expect(contract.reload).to be_pending
       expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
