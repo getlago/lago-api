@@ -94,6 +94,7 @@ module UsageAttributions
 
     def validation_errors
       @validation_errors ||= {
+        group_by: group_by_errors,
         filters: filters_errors,
         to_datetime: window_errors,
         limit: (["value_is_out_of_range"] unless limit.is_a?(Integer) && limit.between?(1, MAX_LIMIT)),
@@ -104,6 +105,18 @@ module UsageAttributions
         charges: charges_errors,
         split_charge: split_charge_errors
       }.compact_blank
+    end
+
+    # A level of the hierarchy is read under one of its parents, as the tree is expanded one level at a
+    # time. The top level, and a level whose parent type was deleted, need no filter.
+    def group_by_errors
+      parent = attribution_types[group_by].parent
+
+      if parent.nil? || parent.discarded? || filters.key?(parent.code)
+        []
+      else
+        ["parent_filter_required"]
+      end
     end
 
     def order_by_errors

@@ -243,6 +243,41 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
+  context "with a hierarchical level under a parent type" do
+    let(:department_type) { create(:usage_attribution_type, organization:, code: "department") }
+    let(:group_by) { "squad" }
+
+    before { create(:usage_attribution_type, organization:, code: "squad", parent: department_type) }
+
+    it "returns a validation failure without a filter on the parent" do
+      expect(result.error.messages).to eq(group_by: ["parent_filter_required"])
+    end
+
+    context "with a filter on the parent" do
+      let(:filters) { {"department" => "rnd"} }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+    end
+
+    context "with a filter on the unattributed parent" do
+      let(:filters) { {"department" => nil} }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+    end
+
+    context "when the parent type is deleted" do
+      let(:department_type) { create(:usage_attribution_type, organization:, code: "department", deleted_at: Time.current) }
+
+      it "reads the level as a top level" do
+        expect(result).to be_success
+      end
+    end
+  end
+
   context "with a search" do
     let(:search) { "EN" }
 
