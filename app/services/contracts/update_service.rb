@@ -102,6 +102,7 @@ module Contracts
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
       end
+      start_moved = contract.started_at_changed?
       contract.save!
 
       # Replace the old plan's materialised cards. The destroy service also
@@ -116,8 +117,10 @@ module Contracts
         reseed_rate_cards(previous_billing_anchor_date)
       end
 
-      # A start moved to today or earlier takes effect now, as on create.
-      Contracts::ActivateService.call!(contract:) if contract.pending?
+      # A start moved to today or earlier takes effect now, as on create. Other
+      # edits leave activation to the clock, so a contract it cannot activate
+      # stays editable.
+      Contracts::ActivateService.call!(contract:) if start_moved && contract.pending?
 
       result.contract = contract
     end

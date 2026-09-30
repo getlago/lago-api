@@ -53,9 +53,10 @@ class Contract < ApplicationRecord
   # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
-  # Pending contracts whose start has arrived. A start is stored as the
-  # customer's local midnight, so comparing instants is timezone-correct and
-  # stays on index_contracts_on_started_at_pending.
+  # Pending contracts whose start has arrived, compared as an instant: the rule
+  # creation uses to choose pending or active. A start given as a date is the
+  # customer's local midnight, so it activates on the customer's day. No
+  # timezone expression, so the bound stays on index_contracts_on_started_at_pending.
   scope :due_for_activation, ->(timestamp) { pending.where(started_at: ..timestamp) }
 
   def self.live_by_external_id(external_id)
