@@ -143,6 +143,22 @@ RSpec.describe Events::PayInAdvanceService do
         end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
 
+      context "when another product shares the billable metric" do
+        let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:other_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
+        let(:other_attachment) { create(:contract_rate_card, organization:, contract:, rate_card: other_card) }
+        let(:other_rate) { create(:rate_card_rate, organization:, rate_card: other_card) }
+
+        before do
+          other_attachment
+          other_rate
+        end
+
+        it "enqueues one fee job for each product" do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
+        end
+      end
+
       context "when the rate card is displayed on the invoice" do
         let(:display_on_invoice) { true }
 

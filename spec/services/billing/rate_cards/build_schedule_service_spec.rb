@@ -72,6 +72,12 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       expect(cycles.first.started_at).to eq(Time.utc(2026, 3, 1))
     end
 
+    it "can build a schedule without reading the stored cycle cursor" do
+      schedule = described_class.call!(contract_rate_card:, resume_from_billing_segments: false).schedule
+
+      expect(schedule.segments_due_by(Time.utc(2026, 6, 1)).first.cycle_index).to eq(0)
+    end
+
     it "answers the same cycles the full walk would have" do
       resumed = result.schedule.segments_due_by(Time.utc(2026, 6, 1))
       contract_rate_card.billing_segments.destroy_all
