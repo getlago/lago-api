@@ -18,6 +18,7 @@ module UsageAttributions
     MAX_GROUPS = 250_000
     MAX_EXECUTION_TIME = 8
 
+    BASES = %w[units amount].freeze
     ORDERS = %w[amount events_count].freeze
     SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
     PRICED_CHARGE_MODELS = %w[standard].freeze
@@ -29,7 +30,7 @@ module UsageAttributions
     }.freeze
 
     def initialize(subscription:, group_by:, filters: {}, from_datetime: nil, to_datetime: nil, charges: nil,
-      split_charge: nil, search: nil, order_by: "amount", limit: DEFAULT_LIMIT, offset: 0)
+      split_charge: nil, search: nil, basis: "units", order_by: nil, limit: DEFAULT_LIMIT, offset: 0)
       @subscription = subscription
       @group_by = group_by.to_s
       @filters = filters.to_h.to_h { |code, values| [code.to_s, (values.is_a?(Array) ? values : [values]).map(&:to_s)] }
@@ -38,7 +39,8 @@ module UsageAttributions
       @requested_charges = charges&.to_a
       @split_charge = split_charge
       @search = search.presence
-      @order_by = order_by.to_s
+      @basis = basis.to_s
+      @order_by = (order_by || ((@basis == "amount") ? "amount" : "events_count")).to_s
       @limit = limit
       @offset = offset
 
@@ -72,7 +74,7 @@ module UsageAttributions
     private
 
     attr_reader :subscription, :group_by, :filters, :from_datetime, :to_datetime, :requested_charges, :split_charge,
-      :search, :order_by, :limit, :offset
+      :search, :basis, :order_by, :limit, :offset
 
     delegate :organization, to: :subscription
 
@@ -97,10 +99,18 @@ module UsageAttributions
         limit: (["value_is_out_of_range"] unless limit.is_a?(Integer) && limit.between?(1, MAX_LIMIT)),
         offset: (["value_is_out_of_range"] unless offset.is_a?(Integer) && offset >= 0),
         search: (["value_is_too_long"] if search && search.length > MAX_SEARCH_LENGTH),
-        order_by: (["value_is_invalid"] unless ORDERS.include?(order_by)),
+        basis: (["value_is_invalid"] unless BASES.include?(basis)),
+        order_by: order_by_errors,
         charges: charges_errors,
         split_charge: split_charge_errors
       }.compact_blank
+    end
+
+    def order_by_errors
+      return ["value_is_invalid"] unless ORDERS.include?(order_by)
+      return ["requires_amount_basis"] if order_by == "amount" && !amount_basis?
+
+      []
     end
 
     def charges_errors
@@ -261,7 +271,11 @@ module UsageAttributions
     end
 
     def priced?(charge)
-      PRICED_CHARGE_MODELS.include?(charge.charge_model)
+      amount_basis? && PRICED_CHARGE_MODELS.include?(charge.charge_model)
+    end
+
+    def amount_basis?
+      basis == "amount"
     end
 
     def assign_result(rows)
@@ -308,7 +322,7 @@ module UsageAttributions
       Row.new(
         value: row["node"],
         rank: row["rank"].to_i,
-        amount_cents: values["amount"],
+        amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
         cells: build_cells(values)
       )
@@ -316,7 +330,7 @@ module UsageAttributions
 
     def build_aggregate(values)
       Aggregate.new(
-        amount_cents: values["amount"],
+        amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
         cells: build_cells(values)
       )

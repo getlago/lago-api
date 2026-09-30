@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true} do
   subject(:result) do
     described_class.call(
-      subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, search:, order_by:, limit:, offset:
+      subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, search:, basis:, order_by:, limit:, offset:
     )
   end
 
@@ -31,7 +31,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   let(:charges) { nil }
   let(:split_charge) { nil }
   let(:search) { nil }
-  let(:order_by) { "amount" }
+  let(:basis) { "amount" }
+  let(:order_by) { nil }
   let(:limit) { 50 }
   let(:offset) { 0 }
 
@@ -189,6 +190,55 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
             [tokens_charge.id, nil, 1500, 75_000, 2]
           ]
         )
+      end
+    end
+  end
+
+  context "with the default basis" do
+    subject(:result) { described_class.call(subscription:, group_by:) }
+
+    let(:model_filter) { create(:billable_metric_filter, billable_metric: tokens_metric, key: "model", values: %w[opus sonnet]) }
+
+    before do
+      create(:charge_filter_value, charge_filter: create(:charge_filter, charge: tokens_charge), billable_metric_filter: model_filter, values: ["opus"])
+      allow(UsageAttributions::ChargePriceLookupService).to receive(:call!).and_call_original
+    end
+
+    it "returns the units ranked by events, without amounts" do
+      expect(summary(result.rows)).to eq([["eng", nil, 3], ["data", nil, 1]])
+      expect(cells_of(result.rows.first)).to eq(
+        [
+          [requests_charge.id, nil, 1, nil, 1],
+          [tokens_charge.id, nil, 1500, nil, 2]
+        ]
+      )
+      expect(aggregate(result.totals)).to eq([nil, 5])
+    end
+
+    it "does not match the events with the charge filters" do
+      result
+      expect(UsageAttributions::ChargePriceLookupService).not_to have_received(:call!)
+    end
+
+    context "with a split charge" do
+      subject(:result) { described_class.call(subscription:, group_by:, split_charge: tokens_charge) }
+
+      it "returns the units of each filter" do
+        expect(cells_of(result.rows.first)).to eq(
+          [
+            [requests_charge.id, nil, 1, nil, 1],
+            [tokens_charge.id, nil, 500, nil, 1],
+            [tokens_charge.id, tokens_charge.filters.first.id, 1000, nil, 1]
+          ]
+        )
+      end
+    end
+
+    context "when ordered by amount" do
+      subject(:result) { described_class.call(subscription:, group_by:, order_by: "amount") }
+
+      it "returns a validation failure" do
+        expect(result.error.messages).to eq(order_by: ["requires_amount_basis"])
       end
     end
   end
@@ -475,6 +525,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     let(:to_datetime) { Time.zone.parse("2026-10-15") }
     let(:split_charge) { requests_charge }
     let(:search) { "a" * 101 }
+    let(:basis) { "euros" }
     let(:order_by) { "units" }
     let(:limit) { 101 }
     let(:offset) { -1 }
@@ -486,6 +537,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
         limit: ["value_is_out_of_range"],
         offset: ["value_is_out_of_range"],
         search: ["value_is_too_long"],
+        basis: ["value_is_invalid"],
         order_by: ["value_is_invalid"],
         split_charge: ["must_have_filters"]
       )
