@@ -146,7 +146,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     expect([first_fee.units, second_fee.units]).to eq([80, 40])
     expect([first_fee.rate_card_rate, second_fee.rate_card_rate]).to eq([first_rate, second_rate])
     expect(first_fee.reload.amount_cents).to eq(8_000)
-    expect(BillingSegment.where(contract:).order(:started_at).pluck(:started_at, :cycle_started_at)).to eq([
+    expect(BillingSegment.where(contract:, cycle_started_at:).order(:started_at).pluck(:started_at, :cycle_started_at)).to eq([
       [cycle_started_at, cycle_started_at], [rate_changed_at, cycle_started_at]
     ])
     expect(second_fee.properties).to include(
@@ -201,7 +201,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
         "to_datetime" => BillingSegment.inclusive_end(cycle_ended_at).iso8601(6),
         "charges_from_datetime" => cycle_started_at.iso8601(6)
       )
-      expect(BillingSegment.where(contract:).pluck(:rate_card_rate_id, :ended_at)).to eq([
+      expect(BillingSegment.where(contract:, cycle_started_at:).pluck(:rate_card_rate_id, :ended_at)).to eq([
         [first_rate.id, BillingSegment.inclusive_end(cycle_ended_at)]
       ])
     end
