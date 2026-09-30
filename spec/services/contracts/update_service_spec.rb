@@ -366,6 +366,16 @@ RSpec.describe Contracts::UpdateService do
         expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 9, 29))
         expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
       end
+
+      context "when an active contract shares its external id" do
+        before { create(:contract, organization:, customer:, external_id: contract.external_id) }
+
+        it "fails and keeps the previous start" do
+          expect(result.error.messages[:external_id]).to eq(["active_contract_exists"])
+          expect(contract.reload).to have_attributes(status: "pending", started_at: Time.zone.parse("2026-10-15"))
+          expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 10, 15))
+        end
+      end
     end
   end
 
@@ -373,9 +383,11 @@ RSpec.describe Contracts::UpdateService do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: 1.hour.ago) }
     let(:params) { {name: "Renamed"} }
 
-    it "activates it" do
+    before { create(:contract, organization:, customer:, external_id: contract.external_id) }
+
+    it "leaves activation to the clock, so the edit goes through next to an active sibling" do
       expect(result).to be_success
-      expect(contract.reload).to have_attributes(name: "Renamed", status: "active")
+      expect(contract.reload).to have_attributes(name: "Renamed", status: "pending")
     end
   end
 

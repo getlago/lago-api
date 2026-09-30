@@ -297,8 +297,11 @@ RSpec.describe Contract do
         # status alike and may settle on the live external id one.
         before { ActiveRecord::Base.connection.execute("ANALYZE contracts") }
 
+        # The relation the activation clock batches over.
         it "reads the pending start index" do
-          expect(described_class.due_for_activation(timestamp).explain.inspect).to include("index_contracts_on_started_at_pending")
+          relation = described_class.due_for_activation(timestamp).joins(:customer).where(customers: {deleted_at: nil})
+
+          expect(relation.order(:id).limit(1000).explain.inspect).to include("index_contracts_on_started_at_pending")
         end
       end
     end

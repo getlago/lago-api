@@ -20,6 +20,10 @@ module ContractRateCards
           return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
         end
 
+        # Phase moves renumber under the card lock; discarding the phases without
+        # it could lock them in the opposite order and deadlock.
+        contract_rate_card.lock!
+
         phases = contract_rate_card.rate_phases.to_a
         RateOverride.where(id: phases.filter_map(&:rate_override_id)).discard_all!
         contract_rate_card.rate_phases.discard_all!

@@ -36,6 +36,11 @@ module Contracts
 
       result.contract = contract
       result
+    rescue ActiveRecord::RecordNotUnique => e
+      # An active sibling committed after the check; same answer as the check.
+      raise unless e.message.include?("index_contracts_on_live_external_id")
+
+      result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
     end
 
     private
