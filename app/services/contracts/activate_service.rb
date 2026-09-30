@@ -26,6 +26,10 @@ module Contracts
           return result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
         end
 
+        # Card and phase edits lock the card, then read the contract: holding the
+        # cards makes an edit in flight finish first, and a later one see the activation.
+        contract.applied_rate_cards.lock.pluck(:id)
+
         contract.update!(status: :active)
         BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
       end
@@ -38,8 +42,9 @@ module Contracts
 
     attr_reader :contract, :timestamp
 
+    # A customer deleted since the job was enqueued has nothing left to bill.
     def due?
-      contract.pending? && contract.started_at.present? && contract.started_at <= timestamp
+      contract.pending? && contract.started_at.present? && contract.started_at <= timestamp && contract.customer.kept?
     end
 
     def active_sibling?

@@ -2,8 +2,10 @@
 
 module ContractRateCards
   # Starts a card's billing lifecycle from its contract: the card begins on the
-  # contract's start day, keeps an anchor of its own or inherits the contract's,
-  # and a contract that started in the past has its card join the current period.
+  # contract's start day and keeps an anchor of its own or inherits the
+  # contract's. On a contract that started in the past, the clock waits for the
+  # billing date of the current period; the schedule still walks from the
+  # card's start, so the periods before it are billed on that date.
   class SeedLifecycleService < BaseService
     Result = BaseResult[:contract_rate_card]
 

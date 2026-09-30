@@ -51,7 +51,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:)
     end
 
-    it "joins the current period, billed at its end on an arrears card" do
+    it "waits for the billing date of the current period, its end on an arrears card" do
       result
 
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-15"))
