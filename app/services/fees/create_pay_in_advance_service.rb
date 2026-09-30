@@ -43,6 +43,11 @@ module Fees
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.single_validation_failure!(
+        field: :pay_in_advance_event_transaction_id,
+        error_code: "pay_in_advance_fee_already_exists"
+      )
     end
 
     private

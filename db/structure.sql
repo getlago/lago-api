@@ -1001,6 +1001,7 @@ DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_pif_values_on_filter_metric_filter_and_value;
+DROP INDEX IF EXISTS public.idx_pay_in_advance_product_card_event;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge_filter;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge;
 DROP INDEX IF EXISTS public.idx_on_wallet_transaction_id_ac2826109e;
@@ -1530,7 +1531,6 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 CREATE TYPE public.billing_segment_status AS ENUM (
     'pending',
-    'collecting',
     'processing',
     'done',
     'failed'
@@ -7761,6 +7761,13 @@ CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees U
 --
 
 CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
+
+
+--
+-- Name: idx_pay_in_advance_product_card_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_pay_in_advance_product_card_event ON public.fees USING btree (pay_in_advance_event_transaction_id, contract_rate_card_id) WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
@@ -14993,13 +15000,12 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260930161929'),
 ('20260918125239'),
-('20260918124414'),
 ('20260918124413'),
 ('20260918103214'),
 ('20260917164501'),
 ('20260916141523'),
-('20260916122921'),
 ('20260914145333'),
 ('20260914145022'),
 ('20260911144853'),
@@ -15007,7 +15013,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260910124306'),
 ('20260910124234'),
 ('20260910095513'),
-('20260909154904'),
 ('20260909103355'),
 ('20260908222044'),
 ('20260908211313'),
