@@ -457,11 +457,25 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       end
     end
 
+    context "when CDP answers 403" do
+      before { stub_answer("settle", status: 403, body: {errorType: "forbidden"}.to_json) }
+
+      it "raises a credential error" do
+        expect { settlement }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.error_type).to eq("forbidden") }
+      end
+    end
+
     context "when screening declines the settle" do
       before { stub_answer("settle", status: 403, body: {errorType: "kyt_risk_detected"}.to_json) }
 
-      it "raises a credential error" do
-        expect { settlement }.to raise_error(X402::Facilitator::CredentialError) { |error| expect(error.error_type).to eq("kyt_risk_detected") }
+      it "stays unconfirmed with CDP's reason" do
+        expect(settlement).to have_attributes(outcome: :unconfirmed_failure, error_reason: "kyt_risk_detected", transaction: nil)
+      end
+
+      it "logs the decline" do
+        settlement
+
+        expect(Rails.logger).to have_received(:warn).with(/operation=settle reason=kyt_risk_detected outcome=unconfirmed_failure duration=/)
       end
     end
 

@@ -60,7 +60,7 @@ module X402
         rescue NoResponse
           return settle_outcome(:no_response, error_reason: "no_response")
         end
-        raise_for_access!("settle", answer)
+        raise_for_access!("settle", answer) unless screening_decline?(answer)
 
         classify_settle(answer)
       end
