@@ -41,11 +41,12 @@ describe X402::Settlement do
     let(:customer) { create(:customer, organization:, deleted_at: Time.current) }
     let(:settlement) { create(:x402_settlement, organization:, x402_connection: connection, customer:) }
 
-    it "still resolves a discarded connection and customer" do
-      reloaded = described_class.find(settlement.id)
+    it "still resolves a discarded connection" do
+      expect(described_class.find(settlement.id).x402_connection).to eq(connection)
+    end
 
-      expect(reloaded.x402_connection).to eq(connection)
-      expect(reloaded.customer).to eq(customer)
+    it "still resolves a discarded customer" do
+      expect(described_class.find(settlement.id).customer).to eq(customer)
     end
   end
 

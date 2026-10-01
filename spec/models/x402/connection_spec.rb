@@ -75,7 +75,7 @@ describe X402::Connection do
         it { expect(connection.errors.messages[:networks]).to eq(["value_is_invalid"]) }
       end
 
-      context "with mainnet and testnet networks" do
+      context "with networks of mixed environments" do
         let(:networks) { ["eip155:8453", "eip155:84532"] }
 
         it { expect(connection.errors.messages[:networks]).to eq(["mixed_environments"]) }
@@ -165,7 +165,7 @@ describe X402::Connection do
       context "with symbol keys" do
         let(:payout_addresses) { {evm: evm_address.downcase} }
 
-        it "stores string keys and the checksummed address" do
+        it "stores the normalised address" do
           expect(connection.errors).to be_empty
           expect(connection.payout_addresses).to eq("evm" => evm_address)
         end
@@ -176,6 +176,14 @@ describe X402::Connection do
 
         it { expect(connection.errors).to be_empty }
       end
+    end
+
+    describe "auto_create_customers validation" do
+      subject(:connection) { build(:x402_connection, auto_create_customers: nil) }
+
+      before { connection.valid? }
+
+      it { expect(connection.errors.messages[:auto_create_customers]).to eq(["value_is_invalid"]) }
     end
   end
 
