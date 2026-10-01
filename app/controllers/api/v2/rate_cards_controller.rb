@@ -2,7 +2,7 @@
 
 module Api
   module V2
-    class RateCardsController < Api::BaseController
+    class RateCardsController < Api::V2::BaseController
       include Api::RequiresProductCatalog
 
       def create

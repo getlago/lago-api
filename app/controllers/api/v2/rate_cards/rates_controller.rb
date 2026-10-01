@@ -3,7 +3,7 @@
 module Api
   module V2
     module RateCards
-      class RatesController < Api::BaseController
+      class RatesController < Api::V2::BaseController
         include Api::RequiresProductCatalog
 
         before_action :find_rate_card

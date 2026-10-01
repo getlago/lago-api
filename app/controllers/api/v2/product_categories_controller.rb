@@ -2,7 +2,7 @@
 
 module Api
   module V2
-    class ProductCategoriesController < Api::BaseController
+    class ProductCategoriesController < Api::V2::BaseController
       include Api::RequiresProductCatalog
 
       def create

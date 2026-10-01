@@ -6,6 +6,12 @@ module Api
     include Common
     include ApiErrors
 
+    # Prepended, so that it runs before the authentication and authorization callbacks and
+    # 401 and 403 responses carry the header too. Keyed on the path rather than set by the
+    # v2 controllers: every /api/v2 path is beta by contract, including those still served
+    # by v1 controllers.
+    prepend_before_action :set_beta_header!, if: :api_v2_request?
+
     before_action :authenticate
     before_action :set_context_source
     before_action :track_api_key_usage
@@ -44,6 +50,10 @@ module Api
 
     def set_beta_header!
       response.set_header("X-Lago-Endpoint-Status", "beta")
+    end
+
+    def api_v2_request?
+      request.path.start_with?("/api/v2/")
     end
 
     def track_api_key_usage

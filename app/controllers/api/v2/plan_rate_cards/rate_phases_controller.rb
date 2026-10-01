@@ -3,7 +3,7 @@
 module Api
   module V2
     module PlanRateCards
-      class RatePhasesController < Api::BaseController
+      class RatePhasesController < Api::V2::BaseController
         include Api::RequiresProductCatalog
 
         def index
