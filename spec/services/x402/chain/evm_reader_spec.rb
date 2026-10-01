@@ -460,6 +460,22 @@ describe X402::Chain::EvmReader do
     end
   end
 
+  context "when the stored payload is not an object" do
+    let(:payment) { {"x402Version" => 2, "payload" => "abc"} }
+
+    it "raises" do
+      expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
+  end
+
+  context "when the stored authorization is a list" do
+    let(:payment) { {"x402Version" => 2, "payload" => {"authorization" => ["abc"]}} }
+
+    it "raises" do
+      expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
+  end
+
   context "when the requirements name no contract" do
     let(:payment_requirements) { {"asset" => "USDC"} }
 

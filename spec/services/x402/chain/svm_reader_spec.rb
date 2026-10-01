@@ -424,4 +424,12 @@ describe X402::Chain::SvmReader do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError)
     end
   end
+
+  context "when the stored payload is not an object" do
+    let(:payment) { {"payload" => "abc"} }
+
+    it "raises" do
+      expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
+  end
 end

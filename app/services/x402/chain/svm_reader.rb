@@ -150,7 +150,7 @@ module X402
 
       def transaction
         @transaction ||= begin
-          stored = SolanaTransaction.decode(Base64.strict_decode64(payment.to_h.deep_stringify_keys.dig("payload", "transaction").to_s))
+          stored = SolanaTransaction.decode(Base64.strict_decode64(stored_transaction.to_s))
           raise UnreadablePaymentError, "the stored Solana transaction uses a durable nonce and never expires" if stored.durable_nonce?
           raise UnreadablePaymentError, "the stored Solana transaction has no TransferChecked" unless stored.transfer_checked
 
@@ -158,6 +158,15 @@ module X402
         end
       rescue ArgumentError
         raise UnreadablePaymentError, "the stored Solana transaction is not base64"
+      end
+
+      def stored_transaction
+        payload = object(payment)["payload"]
+        payload.is_a?(Hash) ? payload["transaction"] : nil
+      end
+
+      def object(value)
+        value.is_a?(Hash) ? value.deep_stringify_keys : {}
       end
 
       def authority

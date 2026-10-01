@@ -191,11 +191,18 @@ module X402
       end
 
       def authorization
-        @authorization ||= payment.to_h.deep_stringify_keys.dig("payload", "authorization") || {}
+        @authorization ||= begin
+          payload = object(payment)["payload"]
+          object(payload.is_a?(Hash) ? payload["authorization"] : nil)
+        end
       end
 
       def asset
-        payment_requirements.to_h.deep_stringify_keys["asset"]
+        object(payment_requirements)["asset"]
+      end
+
+      def object(value)
+        value.is_a?(Hash) ? value.deep_stringify_keys : {}
       end
 
       def payer
