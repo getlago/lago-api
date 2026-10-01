@@ -16,8 +16,15 @@ module CursorPagination
       @records
     end
 
+    # Runs the count when the cursor asks for the total, once per page.
     def meta
-      {next_cursor:, prev_cursor:}
+      cursors = {next_cursor:, prev_cursor:}
+
+      if cursor.include_total_count?
+        cursors.merge(total_count_meta)
+      else
+        cursors
+      end
     end
 
     private
@@ -67,6 +74,27 @@ module CursorPagination
       when :backward
         encode(records.first) if has_more?
       end
+    end
+
+    # Counts the page's own relation. A count is only allowed on the first page, where the
+    # keyset adds nothing but its order and limit, which the count drops: it then counts
+    # exactly the rows of the list, with the same filters as the page.
+    def total_count_meta
+      raise ArgumentError, "a total count is only computed on the first page" unless cursor.direction == :first
+
+      @total_count ||= TotalCount.call(relation)
+
+      if @total_count.estimated
+        {total_count: [@total_count.value, rows_seen].max, total_count_estimated: true}
+      else
+        {total_count: @total_count.value}
+      end
+    end
+
+    # The rows of the first page, plus the one fetched past it, are a lower bound of the
+    # total that an estimate must not undercut.
+    def rows_seen
+      records.size + (has_more? ? 1 : 0)
     end
 
     def encode(record)
