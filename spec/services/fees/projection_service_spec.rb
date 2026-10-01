@@ -83,6 +83,42 @@ RSpec.describe Fees::ProjectionService do
     end
   end
 
+  context "with a package charge" do
+    let(:charge) { create(:package_charge, billable_metric:, properties: {amount: "1", free_units: 5, package_size: 10}) }
+
+    it "prices the projected units in packages" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 200)
+    end
+  end
+
+  context "with a volume charge" do
+    let(:charge) do
+      create(
+        :volume_charge,
+        billable_metric:,
+        properties: {
+          volume_ranges: [
+            {from_value: 0, to_value: 10, per_unit_amount: "0.1", flat_amount: "0"},
+            {from_value: 11, to_value: nil, per_unit_amount: "0.05", flat_amount: "0"}
+          ]
+        }
+      )
+    end
+
+    it "prices every projected unit at the tier they reach" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 100)
+    end
+  end
+
+  context "with negative units" do
+    let(:units) { "-4" }
+    let(:amount_cents) { 0 }
+
+    it "returns a zero projection" do
+      expect(result.projection).to have_attributes(units: BigDecimal(0), amount_cents: 0)
+    end
+  end
+
   context "with a charge filter" do
     let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "1"}) }
 

@@ -266,6 +266,54 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
       end
     end
 
+    context "with a charge code in the usage filters" do
+      let(:params) { {external_subscription_id: subscription.external_id, charge_code: charge.code} }
+      let(:other_metric) { create(:billable_metric, aggregation_type: "count_agg", organization:) }
+
+      before do
+        create(:standard_charge, plan: subscription.plan, billable_metric: other_metric, properties: {amount: "1"})
+
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create(:event, organization:, customer:, subscription:, code: other_metric.code, timestamp: Time.zone.now)
+        end
+      end
+
+      it "projects the filtered charge only" do
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
+
+          charges_usage = json[:customer_projected_usage][:charges_usage]
+
+          expect(charges_usage.map { |usage| usage[:charge][:lago_id] }).to eq([charge.id])
+          expect(json[:customer_projected_usage][:projected_amount_cents]).to eq(charges_usage.sole[:projected_amount_cents])
+        end
+      end
+    end
+
+    context "with a group in the usage filters" do
+      let(:params) { {external_subscription_id: subscription.external_id, filter_by_group: {region: "eu"}} }
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric: metric, properties: {amount: "1", pricing_group_keys: ["region"]})
+      end
+
+      before do
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create(:event, organization:, customer:, subscription:, code: metric.code, timestamp: Time.zone.now, properties: {region: "eu"})
+          create(:event, organization:, customer:, subscription:, code: metric.code, timestamp: Time.zone.now, properties: {region: "us"})
+        end
+      end
+
+      it "projects the filtered group only" do
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
+
+          charge_usage = json[:customer_projected_usage][:charges_usage].sole
+
+          expect(charge_usage).to include(units: "1.0", projected_units: "10.33")
+        end
+      end
+    end
+
     context "when customer does not belongs to the organization" do
       let(:customer) { create(:customer) }
 
