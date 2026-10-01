@@ -36,7 +36,7 @@ module PaymentTerms
     attr_reader :customer, :subscription, :billing_entity
 
     def issuing_billing_entity
-      billing_entity || customer.billing_entity
+      billing_entity || subscription&.billing_entity || customer.billing_entity
     end
   end
 end

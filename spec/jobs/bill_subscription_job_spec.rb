@@ -161,6 +161,25 @@ RSpec.describe BillSubscriptionJob do
       end
     end
 
+    context "when a subscription term changes after the group was enqueued" do
+      let(:customer) { create(:customer, payment_term: {term_type: "net", days: 30}) }
+
+      before do
+        allow(PaymentTerms::ResolveService).to receive(:call!).and_call_original
+        allow(Invoices::SubscriptionService).to receive(:call)
+        subscriptions
+        subscription1.update!(payment_term: {term_type: "end_of_month"})
+      end
+
+      it "splits by the current terms instead of failing" do
+        expect { described_class.perform_now(subscriptions, timestamp, invoicing_reason:) }.not_to raise_error
+
+        expect(Invoices::SubscriptionService).not_to have_received(:call)
+        expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:)
+        expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:)
+      end
+    end
+
     context "when subscriptions resolve to the same term with different sources" do
       before do
         allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, net_customer_resolution)
