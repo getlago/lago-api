@@ -64,6 +64,10 @@ Yabeda.configure do
       comment: "BillSubscriptionJob runs that found mixed payment terms and split into one job per term",
       tags: %i[invoicing_reason]
 
+    counter :guard_failures_total,
+      comment: "Invoices::SubscriptionService calls rejected for mixed payment terms; any increment is a split bug",
+      tags: %i[invoicing_reason]
+
     histogram :invoices_per_customer,
       comment: "Subscription invoices a customer gets from one periodic billing run",
       buckets: [1, 2, 3, 5, 10]

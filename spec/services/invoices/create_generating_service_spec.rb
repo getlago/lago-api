@@ -67,6 +67,36 @@ RSpec.describe Invoices::CreateGeneratingService do
         expect(result).to be_success
         expect(result.invoice.billing_entity).to eq(billing_entity)
       end
+
+      context "when that billing entity has its own payment term" do
+        let(:billing_entity) { create(:billing_entity, organization: customer.organization, payment_term: {term_type: "end_of_month"}) }
+
+        before { customer.billing_entity.update!(payment_term: {term_type: "net", days: 30}) }
+
+        it "snapshots the issuing entity's term rather than the customer's default entity" do
+          result = create_service.call
+
+          expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+          expect(result.invoice.payment_term_source).to eq("billing_entity")
+        end
+      end
+    end
+
+    context "when a subscription with its own payment term is passed" do
+      subject(:create_service) do
+        described_class.new(customer:, invoice_type:, currency:, datetime:, subscription:)
+      end
+
+      let(:customer) { create(:customer, payment_term: {term_type: "net", days: 30}) }
+      let(:subscription) { create(:subscription, customer:, payment_term: {term_type: "net", days: 45}) }
+
+      it "snapshots the subscription term" do
+        result = create_service.call
+
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 45)
+        expect(result.invoice.payment_term_source).to eq("subscription")
+        expect(result.invoice.payment_due_date).to eq(datetime.to_date + 45.days)
+      end
     end
 
     context "when purchase_order_number is passed" do

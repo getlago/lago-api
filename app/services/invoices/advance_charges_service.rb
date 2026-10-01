@@ -104,7 +104,11 @@ module Invoices
     #       Same for subscriptions resolving to different payment terms.
     def create_group_invoices
       resolutions = pending_billing_contexts_with_fees.index_with do |billing_context|
-        PaymentTerms::ResolveService.call!(customer: billing_context.customer, subscription: billing_context.subscription)
+        PaymentTerms::ResolveService.call!(
+          customer: billing_context.customer,
+          subscription: billing_context.subscription,
+          billing_entity: billing_context.applicable_billing_entity
+        )
       end
 
       groups = pending_billing_contexts_with_fees.group_by do |billing_context|
