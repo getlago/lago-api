@@ -104,7 +104,11 @@ module X402
           return log if log
         end
 
-        raise InconclusiveError, "the nonce is used but no AuthorizationUsed event was found in blocks #{from_block}..#{to_block}"
+        if to_block - from_block >= LOG_CHUNK_BLOCKS * MAX_LOG_CHUNKS
+          raise InconclusiveError, "the log window over blocks #{from_block}..#{to_block} exceeds #{MAX_LOG_CHUNKS} chunks"
+        else
+          raise InconclusiveError, "the nonce is used but no AuthorizationUsed event was found in blocks #{from_block}..#{to_block}"
+        end
       end
 
       def paid_payee?(receipt)

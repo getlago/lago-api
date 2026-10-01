@@ -335,6 +335,10 @@ describe X402::Chain::EvmReader do
     it "starts at block 0" do
       expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /blocks 0\.\./)
     end
+
+    it "says the scan stopped at its chunk cap" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /exceeds 50 chunks/)
+    end
   end
 
   context "when the endpoint has no head block" do
