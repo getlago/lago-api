@@ -85,7 +85,7 @@ module Fees
         applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(charge.applied_pricing_unit)
       ).amount
 
-      [amount.amount_cents, amount.pricing_unit_usage&.amount_cents]
+      [amount.amount_cents.to_i, amount.pricing_unit_usage&.amount_cents&.to_i]
     end
 
     def scaled_amounts
@@ -139,8 +139,10 @@ module Fees
     def period_ratio
       return @period_ratio if defined?(@period_ratio)
 
-      from_datetime = Time.zone.parse(fee.properties["from_datetime"].to_s)
-      to_datetime = Time.zone.parse(fee.properties["to_datetime"].to_s)
+      # The units cover the charges period, which is shorter than the billing period for yearly
+      # plans billing charges monthly.
+      from_datetime = Time.zone.parse(fee.properties["charges_from_datetime"].to_s)
+      to_datetime = Time.zone.parse(fee.properties["charges_to_datetime"].to_s)
       current_time = Time.current
 
       return @period_ratio = 1.0 if current_time >= to_datetime

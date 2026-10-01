@@ -109,7 +109,7 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
         expect(json[:customer_projected_usage][:amount_cents]).to eq(5)
         expect(json[:customer_projected_usage][:currency]).to eq("EUR")
         expect(json[:customer_projected_usage][:total_amount_cents]).to eq(6)
-        expect(json[:customer_projected_usage][:projected_amount_cents]).to be_present
+        expect(json[:customer_projected_usage][:projected_amount_cents]).to be_an(Integer)
 
         charge_usage = json[:customer_projected_usage][:charges_usage].first
         expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
@@ -121,6 +121,21 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
         expect(charge_usage[:amount_currency]).to eq("EUR")
         expect(charge_usage[:projected_units]).to be_present
         expect(charge_usage[:projected_amount_cents]).to be_present
+      end
+    end
+
+    context "with full_usage" do
+      let(:params) { {external_subscription_id: subscription.external_id, charge_id: charge.id, full_usage: true} }
+
+      before { organization.update!(premium_integrations: organization.premium_integrations | %w[granular_lifetime_usage]) }
+
+      it "projects the current period, as lifetime usage has no period to project over" do
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_projected_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
+        end
       end
     end
 

@@ -161,8 +161,8 @@ module V1
 
       def precompute_groupings
         {
-          by_charge_filter: model.group_by { |f| f.charge_filter&.id },
-          by_grouped_by: model.group_by(&:grouped_by)
+          by_charge_filter: model.group_by { |f| [f.charge_id, f.charge_filter&.id] },
+          by_grouped_by: model.group_by { |f| [f.charge_id, f.grouped_by] }
         }
       end
 

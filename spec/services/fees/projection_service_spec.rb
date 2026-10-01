@@ -14,6 +14,8 @@ RSpec.describe Fees::ProjectionService do
   let(:from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
   let(:to_datetime) { Time.zone.parse("2025-01-10T23:59:59") }
   let(:current_time) { Time.zone.parse("2025-01-05T12:00:00") } # 5 of 10 days, ratio 0.5
+  let(:billing_from_datetime) { from_datetime }
+  let(:billing_to_datetime) { to_datetime }
 
   let(:units) { "10" }
   let(:amount_cents) { 100 }
@@ -32,7 +34,12 @@ RSpec.describe Fees::ProjectionService do
       precise_amount_cents:,
       amount_currency: currency,
       pricing_unit_usage:,
-      properties: {"from_datetime" => from_datetime.iso8601, "to_datetime" => to_datetime.iso8601}
+      properties: {
+        "from_datetime" => billing_from_datetime,
+        "to_datetime" => billing_to_datetime,
+        "charges_from_datetime" => from_datetime,
+        "charges_to_datetime" => to_datetime
+      }
     )
   end
 
@@ -45,6 +52,16 @@ RSpec.describe Fees::ProjectionService do
       pricing_unit_amount_cents: nil,
       presentation_breakdowns: []
     )
+    expect(result.projection.amount_cents).to be_an(Integer)
+  end
+
+  context "with a billing period longer than the charges period" do
+    let(:billing_from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
+    let(:billing_to_datetime) { Time.zone.parse("2025-12-31T23:59:59") }
+
+    it "projects over the charges period" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 200)
+    end
   end
 
   context "with a graduated charge" do

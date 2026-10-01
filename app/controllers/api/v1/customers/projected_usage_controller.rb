@@ -13,7 +13,8 @@ module Api
               organization_id: current_organization.id,
               apply_taxes:,
               with_projection: true,
-              usage_filters: UsageFilters.init_from_params(params),
+              # Lifetime usage has no period to project over.
+              usage_filters: UsageFilters.init_from_params(params.except(:full_usage)),
               use_usage_buckets: true
             ).call
 

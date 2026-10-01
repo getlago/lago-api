@@ -161,6 +161,37 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     end
   end
 
+  context "with several filtered charges" do
+    let(:charge_2) { create(:standard_charge) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+    let(:charge_2_filter) { create(:charge_filter, charge: charge_2) }
+    let(:usage) do
+      [
+        build(:charge_fee, charge:, subscription:, units: "1.0", amount_cents: 10, amount_currency: "EUR", grouped_by: {"region" => "eu"}, charge_filter:),
+        build(:charge_fee, charge:, subscription:, units: "2.0", amount_cents: 20, amount_currency: "EUR", grouped_by: {"region" => "eu"}, charge_filter: nil),
+        build(:charge_fee, charge: charge_2, subscription:, units: "3.0", amount_cents: 30, amount_currency: "EUR", grouped_by: {"region" => "eu"}, charge_filter: charge_2_filter),
+        build(:charge_fee, charge: charge_2, subscription:, units: "4.0", amount_cents: 40, amount_currency: "EUR", grouped_by: {"region" => "eu"}, charge_filter: nil)
+      ]
+    end
+    let(:fee_projections) do
+      [
+        projection(units: 2, amount_cents: 20),
+        projection(units: 4, amount_cents: 40),
+        projection(units: 6, amount_cents: 60),
+        projection(units: 8, amount_cents: 80)
+      ]
+    end
+
+    it "keeps the default filter and the groups of each charge apart" do
+      charges = result["charges"].index_by { |c| c["charge"]["lago_id"] }
+
+      expect(charges[charge.id]["filters"].map { |f| f["projected_amount_cents"] }).to match_array([20, 40])
+      expect(charges[charge_2.id]["filters"].map { |f| f["projected_amount_cents"] }).to match_array([60, 80])
+      expect(charges[charge.id]["grouped_usage"].map { |g| g["projected_amount_cents"] }).to eq([60])
+      expect(charges[charge_2.id]["grouped_usage"].map { |g| g["projected_amount_cents"] }).to eq([140])
+    end
+  end
+
   context "with groups and filters" do
     let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "Mixed Filter") }
     let(:usage) do
