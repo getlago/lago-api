@@ -7,6 +7,9 @@ module Api
       # Every native v2 endpoint belongs to the product catalog. Included ahead of the cursor
       # callback, so that a disabled catalog is a 403 before any pagination parameter is read.
       include Api::RequiresProductCatalog
+      # Right after the catalog check, so that an invalid `expand` is a 400 on every action,
+      # before any pagination parameter is read and before any lookup.
+      include Api::Expandable
 
       rescue_from ActionController::ParameterMissing, with: :missing_parameter_error
       rescue_from ::CursorPagination::Error, with: :pagination_error
