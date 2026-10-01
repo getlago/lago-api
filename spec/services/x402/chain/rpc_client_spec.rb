@@ -146,6 +146,14 @@ describe X402::Chain::RpcClient do
       end
     end
 
+    context "when the endpoint answers without a body" do
+      before { stub_request(:post, url).to_return(status: 204, body: nil) }
+
+      it "raises" do
+        expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: JSON::ParserError")
+      end
+    end
+
     context "when a keyed endpoint fails" do
       let(:rpc_urls) { {"eip155:84532" => "https://rpc.example.com/v2/secret-key"}.to_json }
 
@@ -160,7 +168,7 @@ describe X402::Chain::RpcClient do
       end
     end
 
-    [Net::ReadTimeout, Net::OpenTimeout, Errno::ECONNREFUSED, SocketError].each do |transport_error|
+    [Net::ReadTimeout, Net::OpenTimeout, Errno::ECONNREFUSED, Errno::ENETUNREACH, Errno::EHOSTDOWN, SocketError, IOError].each do |transport_error|
       context "when the connection fails with #{transport_error}" do
         before { stub_request(:post, url).to_raise(transport_error) }
 

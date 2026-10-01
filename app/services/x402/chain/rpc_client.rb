@@ -12,9 +12,7 @@ module X402
 
       OPEN_TIMEOUT = 5
       READ_TIMEOUT = 10
-      TRANSPORT_ERRORS = [
-        *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES, Net::WriteTimeout, SocketError, Errno::EPIPE, Errno::ECONNABORTED, Net::HTTPBadResponse
-      ].freeze
+      TRANSPORT_ERRORS = [SystemCallError, IOError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError, Net::HTTPBadResponse].freeze
 
       attr_reader :url
 
@@ -26,7 +24,7 @@ module X402
         response = LagoHttpClient::Client
           .new(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT)
           .post_with_response({jsonrpc: "2.0", id: 1, method:, params:}, {})
-        body = JSON.parse(response.body)
+        body = JSON.parse(response.body.to_s)
         raise UnreachableError, "#{method}: not a JSON-RPC response" unless body.is_a?(Hash)
 
         error = body["error"]
