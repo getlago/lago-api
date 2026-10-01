@@ -46,7 +46,8 @@ module V2
       ::CollectionSerializer.new(
         model.applied_rate_cards.includes(:rate_phases, :rate_card, :contract),
         ::V2::ContractAppliedRateCardSerializer,
-        collection_name: "applied_rate_cards"
+        collection_name: "applied_rate_cards",
+        includes: nested_includes
       ).serialize[:applied_rate_cards]
     end
   end

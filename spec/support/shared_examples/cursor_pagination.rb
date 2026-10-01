@@ -124,4 +124,31 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
     expect(json[:code]).to eq("invalid_pagination_cursor")
     expect(json[:error_details]).to eq(after: {reason: "wrong_resource"})
   end
+
+  # A contract is never deleted: DELETE ends its lifecycle instead.
+  if model == Contract
+    it "renders no deleted_at" do
+      expect(fetch_page(limit: 100)[paginated_collection].flat_map(&:keys)).not_to include(:deleted_at)
+    end
+  else
+    it "renders a null deleted_at on every row" do
+      expect(fetch_page(limit: 100)[paginated_collection]).to all(include(deleted_at: nil))
+    end
+  end
+
+  # Read after an anchor newer than the seeded rows and older than those of the including
+  # group, so that both pages hold seeded rows only: a row without a foreign key skips its
+  # preload, which would change the count.
+  it "runs as many queries for a page of five rows as for a page of one" do
+    anchor = model.new(id: SecureRandom.uuid, created_at: created_at + 1.second)
+    after = CursorPagination::Token.encode(table: model.table_name, record: anchor)
+    # The first request alone may load the schema of the tables it reads.
+    fetch_page(limit: 1, after:)
+
+    short_page_queries = capture_sql { fetch_page(limit: 1, after:) }
+    long_page_queries = capture_sql { fetch_page(limit: 5, after:) }
+
+    expect(json[paginated_collection].size).to eq(5)
+    expect(long_page_queries.size).to eq(short_page_queries.size)
+  end
 end

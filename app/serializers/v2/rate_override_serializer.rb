@@ -10,7 +10,8 @@ module V2
         min_amount_cents: model.min_amount_cents,
         billing_interval_count: model.billing_interval_count,
         billing_interval_unit: model.billing_interval_unit,
-        pricing_unit_conversion_rate: model.pricing_unit_conversion_rate
+        pricing_unit_conversion_rate: model.pricing_unit_conversion_rate,
+        **deleted_at_payload
       }
     end
   end

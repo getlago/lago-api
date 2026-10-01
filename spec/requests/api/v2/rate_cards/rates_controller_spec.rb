@@ -151,6 +151,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate][:lago_id]).to eq(rate.id)
+      expect(json[:rate]).to include(deleted_at: nil)
     end
   end
 
@@ -193,6 +194,32 @@ RSpec.describe Api::V2::RateCards::RatesController do
       end
     end
 
+    context "with one rate on this card and three on another" do
+      let(:other_rate_card) { create(:rate_card, organization:) }
+
+      # In effective_from order, since a rate must start after the active one.
+      before do
+        [2.days.ago, 1.day.ago, 1.day.from_now].each do |effective_from|
+          create(:rate_card_rate, organization:, rate_card: other_rate_card, effective_from: effective_from.beginning_of_day)
+        end
+      end
+
+      def rates_queries(card)
+        capture_sql { get_with_token(organization, "/api/v2/rate_cards/#{card.code}/rates") }
+      end
+
+      it "runs as many queries for three rates as for one" do
+        # The first request alone may load the schema of the tables it reads.
+        rates_queries(rate_card)
+
+        one_rate_queries = rates_queries(rate_card)
+        three_rates_queries = rates_queries(other_rate_card)
+
+        expect(json[:rates].size).to eq(3)
+        expect(three_rates_queries.size).to eq(one_rate_queries.size)
+      end
+    end
+
     context "with more rates than a default page" do
       # Scheduled one after the other, since a rate must start after the active one.
       let(:scheduled_rates) do
@@ -219,6 +246,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "deletes the rate" do
         expect { subject }.to change { rate.reload.discarded? }.from(false).to(true)
         expect(response).to have_http_status(:success)
+        expect(json[:rate][:deleted_at]).to eq(rate.deleted_at.iso8601)
       end
     end
 

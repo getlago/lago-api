@@ -74,4 +74,13 @@ class ModelSerializer
   def expanded_payload
     self.class.expandable_relations.keys.select { include?(it) }.index_with { send(:"expand_#{it}") }
   end
+
+  # Includes of a record rendered inside this one: never expansions, so it stays flat.
+  def nested_includes(forward: [])
+    [:deleted_at, *forward].select { include?(it) }
+  end
+
+  def deleted_at_payload
+    include?(:deleted_at) ? {deleted_at: model.deleted_at&.iso8601} : {}
+  end
 end

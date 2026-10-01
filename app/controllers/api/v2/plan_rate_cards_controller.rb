@@ -68,7 +68,8 @@ module Api
               page.records,
               ::V2::PlanRateCardSerializer,
               collection_name: "applied_rate_cards",
-              meta: page.meta
+              meta: page.meta,
+              includes: serializer_includes
             )
           )
         else
@@ -124,7 +125,7 @@ module Api
       end
 
       def render_plan_rate_card(plan_rate_card)
-        render(json: ::V2::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card"))
+        render(json: ::V2::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card", includes: serializer_includes))
       end
 
       def resource_name
