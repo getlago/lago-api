@@ -15,7 +15,8 @@ module V2
         billing_interval_unit: model.billing_interval_unit,
         applied_pricing_unit_conversion_rate: model.applied_pricing_unit_conversion_rate,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        **deleted_at_payload
       }
     end
   end

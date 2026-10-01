@@ -14,7 +14,8 @@ module V2
         # size counts the loaded collection when the caller preloaded it.
         rate_phases_count: model.rate_phases.size,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        **deleted_at_payload
       }
     end
   end

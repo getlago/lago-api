@@ -102,7 +102,8 @@ module Api
               page.records,
               ::V2::ProductSerializer,
               collection_name: "products",
-              meta: page.meta
+              meta: page.meta,
+              includes: serializer_includes
             )
           )
         else
@@ -155,7 +156,7 @@ module Api
       end
 
       def render_product(product)
-        render(json: ::V2::ProductSerializer.new(product, root_name: "product"))
+        render(json: ::V2::ProductSerializer.new(product, root_name: "product", includes: serializer_includes))
       end
 
       def render_item_error(result)
