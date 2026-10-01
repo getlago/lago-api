@@ -78,10 +78,13 @@ module X402
       end
 
       def match_candidate(entry)
-        landed = rpc.call("getTransaction", [entry["signature"], {"encoding" => "base64", "commitment" => COMMITMENT, "maxSupportedTransactionVersion" => 0}])
-        raise InconclusiveError, "getTransaction returned nothing for a listed signature" unless landed
+        landed = rpc.call("getTransaction", [entry["signature"], {"encoding" => "json", "commitment" => COMMITMENT, "maxSupportedTransactionVersion" => 1}])
+        raise InconclusiveError, "getTransaction returned no transaction for a listed signature" unless landed.is_a?(Hash)
 
-        {signature: entry["signature"], transaction: landed} if SolanaTransaction.decode(Base64.strict_decode64(landed.dig("transaction", 0).to_s)).signatures.include?(buyer_signature)
+        signatures = landed["transaction"].is_a?(Hash) && landed["transaction"]["signatures"]
+        raise InconclusiveError, "getTransaction returned no signatures for #{entry["signature"]}" unless signatures.is_a?(Array)
+
+        {signature: entry["signature"], transaction: landed} if signatures.include?(Base58.encode(buyer_signature))
       end
 
       def succeeded?(match)

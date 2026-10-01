@@ -11,6 +11,7 @@ module X402
       SYSTEM_PROGRAM = ("\x00" * 32).b
       TRANSFER_CHECKED = 12
       ADVANCE_NONCE_ACCOUNT = [4].pack("L<")
+      UNSUPPORTED_VERSION = "only legacy and v0 Solana transactions are readable"
 
       def self.decode(bytes)
         Reader.new(bytes).transaction
@@ -39,8 +40,12 @@ module X402
         end
 
         def transaction
+          raise UnreadablePaymentError, UNSUPPORTED_VERSION unless (peek & 0x80).zero?
+
           signatures = Array.new(compact_u16) { read(64) }
           version = ((peek & 0x80).zero? ? :legacy : (byte & 0x7f))
+          raise UnreadablePaymentError, UNSUPPORTED_VERSION unless [:legacy, 0].include?(version)
+
           num_required_signatures, = read(3).bytes
           account_keys = Array.new(compact_u16) { read(32) }
           recent_blockhash = read(32)

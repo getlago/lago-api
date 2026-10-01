@@ -84,7 +84,7 @@ describe X402::Chain::SolanaTransaction do
     end
 
     context "when a length prefix runs past three bytes" do
-      let(:bytes) { "\xff\xff\xff\x01".b }
+      let(:bytes) { compact_u16(1) + ("\x01".b * 64) + "\x80\x01\x00\x00\xff\xff\xff\x01".b }
 
       it "raises" do
         expect { transaction }.to raise_error(X402::Chain::UnreadablePaymentError, /compact-u16/)
@@ -104,6 +104,22 @@ describe X402::Chain::SolanaTransaction do
 
       it "raises" do
         expect { transaction }.to raise_error(X402::Chain::UnreadablePaymentError, /trailing/)
+      end
+    end
+
+    context "with a v1 transaction" do
+      let(:bytes) { "\x81\x01\x00\x00".b + ("\x00".b * 64) }
+
+      it "raises" do
+        expect { transaction }.to raise_error(X402::Chain::UnreadablePaymentError, /legacy and v0/)
+      end
+    end
+
+    context "with a message version above 0" do
+      let(:bytes) { build_solana_transaction(keys: [fee_payer], instructions: [], signatures: ["\x01".b * 64], version: 1) }
+
+      it "raises" do
+        expect { transaction }.to raise_error(X402::Chain::UnreadablePaymentError, /legacy and v0/)
       end
     end
   end

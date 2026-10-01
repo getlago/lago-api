@@ -9,6 +9,7 @@ describe X402::Chain::SvmReader do
 
   let(:landed) { JSON.parse(File.read(Rails.root.join("spec/fixtures/x402/chain/solana_devnet_transfer.json"))) }
   let(:landed_bytes) { Base64.strict_decode64(landed["transaction"].first) }
+  let(:landed_as_json) { JSON.parse(File.read(Rails.root.join("spec/fixtures/x402/chain/solana_devnet_transfer_as_json.json"))) }
   let(:transaction_id) { "7scJSNzkdyryaFQcfRX52upVRridoUijgMNaUmLBtJTxB9iCjmEDk2Mk54eEuTYoPqAgdtajPvxDMk9RFimsZ93" }
   let(:signed_by_buyer) { landed_bytes.dup.tap { |bytes| bytes[1, 64] = "\x00".b * 64 } }
   let(:payment) { {"x402Version" => 2, "payload" => {"transaction" => Base64.strict_encode64(signed_by_buyer)}} }
@@ -19,7 +20,7 @@ describe X402::Chain::SvmReader do
   let(:context_slot) { landed["slot"] + 400 }
   let(:genesis_hash) { "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcWFFmQcPYDT" }
   let(:history) { [{"signature" => transaction_id, "slot" => landed["slot"], "err" => nil, "blockTime" => landed["blockTime"]}] }
-  let(:transactions) { {transaction_id => landed} }
+  let(:transactions) { {transaction_id => landed_as_json} }
   let(:rpc_calls) { [] }
 
   before do
@@ -40,8 +41,18 @@ describe X402::Chain::SvmReader do
       when "getGenesisHash"
         genesis_hash
       end
-      {status: 200, body: {jsonrpc: "2.0", id: 1, result:}.to_json}
+
+      if rpc["method"] == "getTransaction" && unsupported_version?(result, rpc["params"].last["maxSupportedTransactionVersion"])
+        {status: 200, body: {jsonrpc: "2.0", id: 1, error: {code: -32015, message: "Transaction version (#{result["version"]}) is not supported by the requesting client"}}.to_json}
+      else
+        {status: 200, body: {jsonrpc: "2.0", id: 1, result:}.to_json}
+      end
     end
+  end
+
+  def unsupported_version?(transaction, max_version)
+    version = transaction.is_a?(Hash) && transaction["version"]
+    version.is_a?(Integer) && (max_version.nil? || version > max_version)
   end
 
   def calls(method)
@@ -57,9 +68,7 @@ describe X402::Chain::SvmReader do
   end
 
   def other_transaction
-    signature = OpenSSL::Random.random_bytes(64)
-    bytes = build_solana_transaction(keys: [buyer, SolanaTransactionBuilder::TOKEN_PROGRAM], instructions: [], signatures: [signature])
-    landed.merge("transaction" => [Base64.strict_encode64(bytes), "base64"])
+    landed_as_json.merge("transaction" => {"signatures" => [X402::Base58.encode(OpenSSL::Random.random_bytes(64))]})
   end
 
   context "when the buyer's transaction landed" do
@@ -87,6 +96,12 @@ describe X402::Chain::SvmReader do
       expect(calls("isBlockhashValid").sole["params"]).to eq(["7LPzenu2Lg6XG5aSrZ6ihu7GFy9gHYEh5KVpVVxrQYue", {"commitment" => "finalized"}])
     end
 
+    it "fetches each candidate as JSON, at any transaction version" do
+      reader.settled?
+
+      expect(calls("getTransaction").sole["params"]).to eq([transaction_id, {"encoding" => "json", "commitment" => "finalized", "maxSupportedTransactionVersion" => 1}])
+    end
+
     it "reads each fact once" do
       2.times { [reader.settled?, reader.identifier, reader.final?] }
 
@@ -99,6 +114,15 @@ describe X402::Chain::SvmReader do
     let(:transactions) { super().merge(history[0]["signature"] => other_transaction, history[1]["signature"] => other_transaction) }
 
     it "matches on the buyer's signature" do
+      expect(reader.identifier).to eq(transaction_id)
+    end
+  end
+
+  context "when a v1 transaction of the buyer comes first" do
+    let(:history) { [other_entry(1), super().first] }
+    let(:transactions) { super().merge(history[0]["signature"] => other_transaction.merge("version" => 1)) }
+
+    it "still finds the payment" do
       expect(reader.identifier).to eq(transaction_id)
     end
   end
@@ -187,7 +211,7 @@ describe X402::Chain::SvmReader do
 
   context "when the buyer's transaction landed with an error" do
     let(:history) { [super().first.merge("err" => {"InstructionError" => [2, {"Custom" => 1}]})] }
-    let(:transactions) { {transaction_id => landed.merge("meta" => {"err" => {"InstructionError" => [2, {"Custom" => 1}]}})} }
+    let(:transactions) { {transaction_id => landed_as_json.merge("meta" => {"err" => {"InstructionError" => [2, {"Custom" => 1}]}})} }
 
     it "is not settled" do
       expect(reader.settled?).to be(false)
@@ -200,7 +224,7 @@ describe X402::Chain::SvmReader do
 
   context "when the endpoint returns the transaction with null metadata" do
     let(:history) { [super().first.merge("err" => {"InstructionError" => [2, {"Custom" => 1}]})] }
-    let(:transactions) { {transaction_id => landed.merge("meta" => nil)} }
+    let(:transactions) { {transaction_id => landed_as_json.merge("meta" => nil)} }
 
     it "is inconclusive" do
       expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no status/)
@@ -208,7 +232,7 @@ describe X402::Chain::SvmReader do
   end
 
   context "when the endpoint returns the transaction without metadata" do
-    let(:transactions) { {transaction_id => landed.except("meta")} }
+    let(:transactions) { {transaction_id => landed_as_json.except("meta")} }
 
     it "is inconclusive" do
       expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no status/)
@@ -216,7 +240,7 @@ describe X402::Chain::SvmReader do
   end
 
   context "when the metadata has no error field" do
-    let(:transactions) { {transaction_id => landed.merge("meta" => {})} }
+    let(:transactions) { {transaction_id => landed_as_json.merge("meta" => {})} }
 
     it "is inconclusive" do
       expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no status/)
@@ -279,6 +303,22 @@ describe X402::Chain::SvmReader do
 
     it "is inconclusive" do
       expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /getTransaction/)
+    end
+  end
+
+  context "when the endpoint returns a transaction that is not an object" do
+    let(:transactions) { {transaction_id => "oops"} }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /getTransaction/)
+    end
+  end
+
+  context "when the endpoint returns a transaction without its signatures" do
+    let(:transactions) { {transaction_id => landed_as_json.merge("transaction" => {})} }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /signatures/)
     end
   end
 
