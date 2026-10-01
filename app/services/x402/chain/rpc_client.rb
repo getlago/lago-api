@@ -52,9 +52,13 @@ module X402
         raise UnreachableError, "LAGO_X402_RPC_URLS must be a JSON object mapping a CAIP-2 network to a URL" unless configured.is_a?(Hash)
 
         configured.each do |network, endpoint|
-          raise UnreachableError, "LAGO_X402_RPC_URLS has an invalid URL for #{network}", cause: nil unless http_url?(endpoint)
+          raise UnreachableError, "LAGO_X402_RPC_URLS has an invalid URL for #{named(network)}", cause: nil unless http_url?(endpoint)
         end
         DEFAULT_URLS.merge(configured)
+      end
+
+      def named(network)
+        Network::NETWORKS.key?(network) ? network : "a key that is not a supported network"
       end
 
       def http_url?(endpoint)

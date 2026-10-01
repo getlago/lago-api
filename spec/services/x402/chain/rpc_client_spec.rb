@@ -70,6 +70,22 @@ describe X402::Chain::RpcClient do
       end
     end
 
+    context "when a configured key is a URL" do
+      let(:rpc_urls) { {"https://rpc.example.com/v2/SECRETKEY" => "eip155:84532"}.to_json }
+
+      it "raises without the key" do
+        expect { client }.to raise_error(X402::Chain::UnreachableError, /not a supported network/) { |error| expect(error.message).not_to include("SECRETKEY") }
+      end
+    end
+
+    context "when a supported network has an invalid URL" do
+      let(:rpc_urls) { {"eip155:84532" => "ftp://rpc.example.com"}.to_json }
+
+      it "names the network" do
+        expect { client }.to raise_error(X402::Chain::UnreachableError, /for eip155:84532/)
+      end
+    end
+
     context "when the malformed JSON quotes a key" do
       let(:rpc_urls) { "{'eip155:84532':'https://rpc.example.com/v2/SECRETKEY'}" }
 
