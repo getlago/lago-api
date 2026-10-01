@@ -4,9 +4,10 @@ module ChargeModels
   # Prorated graduated pricing for tiers that touch, each starting where the
   # previous one ends: the shape of catalog rates. An event's units fill the
   # tiers between the usage before and after it, so an addition fills upward
-  # and a removal empties the top tiers first, and each tier's share is priced
-  # at the event's proration. Nothing steps by whole units, so bounds can be
-  # decimals.
+  # and a removal of a sum empties the top tiers first, and each tier's share
+  # is priced at the event's proration. Nothing steps by whole units, so bounds
+  # can be decimals. A unique count keeps each id at the tier it entered, as
+  # the step calculator does.
   class ProratedAdjacentGraduatedService < ProratedGraduatedService
     protected
 
@@ -15,6 +16,9 @@ module ChargeModels
     end
 
     def compute_amount
+      # Catalog tiers stored before they were defined by their upper bound
+      # still step by one unit: the step calculator prices those.
+      return super if ranges.size >= 2 && !AdjacentRanges.adjacent?(ranges)
       return result_with_flat_amount(0, 0, 0) if units.zero?
 
       full_sum = BigDecimal(0)

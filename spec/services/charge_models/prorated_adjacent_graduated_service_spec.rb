@@ -111,6 +111,47 @@ RSpec.describe ChargeModels::ProratedAdjacentGraduatedService do
     end
   end
 
+  context "with tiers stored stepping by one unit" do
+    let(:graduated_ranges) do
+      [
+        {"from_value" => 0, "to_value" => 10, "per_unit_amount" => "1", "flat_amount" => "0"},
+        {"from_value" => 11, "to_value" => nil, "per_unit_amount" => "2", "flat_amount" => "0"}
+      ]
+    end
+    let(:full_units) { [15] }
+
+    # 10 x 1 + 5 x 2, as the step calculator counts them.
+    it "prices them as step tiers" do
+      expect(apply_service.amount).to eq(20)
+    end
+  end
+
+  context "with a removal whose addition was left out" do
+    let(:full_units) { [-1, 5] }
+    let(:prorated_units) { [0, 5] }
+
+    it "leaves the removal out of the tiers" do
+      expect(apply_service.amount).to eq(5)
+    end
+  end
+
+  context "with a unique count" do
+    # Ids added for the time they stay, a removal carrying nothing.
+    let(:full_units) { [1, 1, -1] }
+    let(:prorated_units) { [0.5, 0.25, 0] }
+    let(:graduated_ranges) do
+      [
+        {"from_value" => 0, "to_value" => 1, "per_unit_amount" => "10", "flat_amount" => "0"},
+        {"from_value" => 1, "to_value" => nil, "per_unit_amount" => "1", "flat_amount" => "0"}
+      ]
+    end
+
+    # The first id at 10 for half the period, the second at 1 for a quarter.
+    it "keeps each id at the tier it entered" do
+      expect(apply_service.amount).to eq(5.25)
+    end
+  end
+
   context "with an addition worth nothing in the period" do
     let(:full_units) { [10, 5] }
     let(:prorated_units) { [0, 5] }
