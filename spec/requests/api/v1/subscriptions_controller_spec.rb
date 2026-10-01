@@ -76,6 +76,18 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         expect(subscription.payment_term).to eq({"term_type" => "net", "days" => 45})
       end
 
+      context "when the payment_term is null" do
+        let(:params) { super().merge(payment_term: nil) }
+
+        it "creates the subscription without an override" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:subscription][:payment_term]).to be_nil
+          expect(Subscription.find_by(external_id: json[:subscription][:external_id]).payment_term).to be_nil
+        end
+      end
+
       context "when the payment_term is invalid" do
         let(:params) { super().merge(payment_term: {term_type: "unknown"}) }
 
