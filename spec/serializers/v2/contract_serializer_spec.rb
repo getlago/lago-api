@@ -19,9 +19,9 @@ RSpec.describe V2::ContractSerializer do
   end
 
   context "with invoice custom sections" do
-    let(:includes) { %i[applied_invoice_custom_sections] }
-    # Oldest first, the reverse of the listed order, on sections created the other way around: listed
-    # by the sections instead of the links, the oldest link would come first.
+    let(:includes) { %i[invoice_custom_sections] }
+    # Selected oldest first, the reverse of the listed order, and the sections created the other way
+    # around: listed by the sections instead of their selection, the oldest selection would come first.
     let!(:applied_sections) do
       [1, 0, 0].map do |age|
         invoice_custom_section = create(:invoice_custom_section, organization: contract.organization, created_at: created_at + age.seconds)
@@ -29,10 +29,10 @@ RSpec.describe V2::ContractSerializer do
       end
     end
 
-    it "embeds them newest first, ties ordered by id" do
-      expected = applied_sections.sort_by { [it.created_at, it.id] }.reverse.map(&:id)
+    it "expands them in the order they were selected, newest first, ties ordered by id" do
+      expected = applied_sections.sort_by { [it.created_at, it.id] }.reverse.map(&:invoice_custom_section_id)
 
-      expect(payload[:applied_invoice_custom_sections].pluck(:lago_id)).to eq(expected)
+      expect(payload[:invoice_custom_sections].pluck(:lago_id)).to eq(expected)
     end
   end
 end

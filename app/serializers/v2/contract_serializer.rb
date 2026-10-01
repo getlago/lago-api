@@ -6,8 +6,21 @@ module V2
   # billing anchor. There are no plan-interval fields — pricing lives on the
   # applied rate cards.
   class ContractSerializer < ModelSerializer
+    EXPANDABLE_RELATIONS = {
+      # One card per rate card the contract prices.
+      applied_rate_cards: nil,
+      plan: :catalog_plan,
+      customer: {customer: :billing_entity},
+      # Few per contract, chosen one by one through invoice_custom_section_codes.
+      invoice_custom_sections: nil
+    }.freeze
+
+    def self.expandable_relations
+      EXPANDABLE_RELATIONS
+    end
+
     def serialize
-      payload = {
+      {
         lago_id: model.id,
         external_id: model.external_id,
         lago_customer_id: model.customer_id,
@@ -27,43 +40,33 @@ module V2
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        applied_rate_cards_count: applied_rate_cards_count
+        **expanded_payload
       }
-
-      payload[:applied_rate_cards] = applied_rate_cards if include?(:applied_rate_cards)
-      payload[:applied_invoice_custom_sections] = applied_invoice_custom_sections if include?(:applied_invoice_custom_sections)
-
-      payload
     end
 
     private
 
-    # The index passes one grouped count for the whole page; show falls back
-    # to a count on the single record.
-    def applied_rate_cards_count
-      counts = options[:applied_rate_cards_counts]
-      return counts.fetch(model.id, 0) if counts
-
-      model.applied_rate_cards.count
-    end
-
-    # In the order of /applied_rate_cards.
-    def applied_rate_cards
-      ::CollectionSerializer.new(
-        model.applied_rate_cards.includes(:rate_card, :contract).order(::CursorPagination::DEFAULT_SORT),
-        ::V2::ContractAppliedRateCardSerializer,
-        collection_name: "applied_rate_cards",
-        includes: nested_includes
-      ).serialize[:applied_rate_cards]
-    end
-
-    # A section deleted before its links were cleaned up is skipped, not served as nil.
-    def applied_invoice_custom_sections
-      ::CollectionSerializer.new(
-        model.applied_invoice_custom_sections.joins(:invoice_custom_section).includes(:invoice_custom_section).order(::CursorPagination::DEFAULT_SORT),
-        ::V1::AppliedInvoiceCustomSectionSerializer,
-        collection_name: "applied_invoice_custom_sections"
-      ).serialize[:applied_invoice_custom_sections]
+    def expand(name)
+      case name
+      when :applied_rate_cards
+        # In the order of /applied_rate_cards.
+        model.applied_rate_cards.preload(:rate_card, :contract).order(::CursorPagination::DEFAULT_SORT).map do |applied_rate_card|
+          ::V2::ContractAppliedRateCardSerializer.new(applied_rate_card, includes: nested_includes).serialize
+        end
+      when :plan
+        # The plan and the customer are read with_discarded, so that a discarded one carries its deleted_at.
+        model.catalog_plan&.then { ::V2::CatalogPlanSerializer.new(it, includes: nested_includes).serialize }
+      when :customer
+        ::V2::CustomerSerializer.new(model.customer, includes: nested_includes).serialize
+      when :invoice_custom_sections
+        # The selected sections, the last selected first. Their default scope leaves out a section
+        # deleted while its link remains.
+        model.selected_invoice_custom_sections
+          .merge(::Contract::AppliedInvoiceCustomSection.order(::CursorPagination::DEFAULT_SORT))
+          .map { ::V2::InvoiceCustomSectionSerializer.new(it, includes: nested_includes).serialize }
+      else
+        super
+      end
     end
   end
 end
