@@ -18,7 +18,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
   end
 
   it "walks every native controller" do
-    expect(native_controllers.size).to eq(11)
+    expect(native_controllers.size).to eq(12)
   end
 
   native_controllers.each do |native_controller|

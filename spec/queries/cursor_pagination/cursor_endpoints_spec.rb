@@ -208,4 +208,16 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
 
     it_behaves_like "a keyset-paginated query", table: "contract_rate_cards", index: "index_contract_rate_cards_by_cursor"
   end
+
+  # Joined to the taxes, to leave out the discarded ones: the cursor index serves the links,
+  # the outer side of the join.
+  context "with RateCardTaxesQuery" do
+    let(:filtered_scope) do
+      ->(pagination) { RateCardTaxesQuery.call(organization:, pagination:, filters: {rate_card_id: SecureRandom.uuid}).applied_taxes }
+    end
+    # The endpoint always passes the only filter.
+    let(:default_scope) { filtered_scope }
+
+    it_behaves_like "a keyset-paginated query", table: "rate_cards_taxes", index: "index_rate_cards_taxes_by_cursor"
+  end
 end

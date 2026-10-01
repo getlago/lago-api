@@ -13,7 +13,7 @@ RSpec.describe "API v2 expand" do
   end
 
   it "walks every native route" do
-    expect(native_routes.size).to eq(63)
+    expect(native_routes.size).to eq(64)
   end
 
   # Without a body and on records that do not exist: the expansion is rejected before any
