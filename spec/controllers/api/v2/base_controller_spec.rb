@@ -12,7 +12,9 @@ RSpec.describe Api::V2::BaseController, type: :controller do
     cursor_paginated_index(Product)
 
     def index
-      render(json: {limit: cursor.limit, direction: cursor.direction})
+      page = ::CursorPagination::Page.new(records: ::CursorPagination::Keyset.apply(current_organization.products, cursor), cursor:)
+
+      render(json: {products: page.records.map(&:id), meta: page.meta})
     end
 
     def show
@@ -37,11 +39,12 @@ RSpec.describe Api::V2::BaseController, type: :controller do
   let(:organization) { create(:organization, feature_flags:) }
   let(:feature_flags) { ["product_catalog"] }
   let(:params) { {} }
-  let(:product) { create(:product, organization:) }
+  let(:products) { create_list(:product, 3, organization:).sort_by { [it.created_at, it.id] }.reverse }
   let(:errors_counter) { Yabeda.api_pagination.errors_total }
 
   before do
     # A controller spec has no `get_with_token`: the helper's headers are set on the test request.
+    products
     set_headers(organization, request.headers)
     allow(errors_counter).to receive(:increment)
   end
@@ -49,10 +52,14 @@ RSpec.describe Api::V2::BaseController, type: :controller do
   context "with a limit" do
     let(:params) { {limit: "2"} }
 
-    it "reads the cursor parameters" do
+    it "returns the page and its cursors" do
       index
 
-      expect(json).to eq(limit: 2, direction: "first")
+      expect(json[:products]).to eq(products.first(2).map(&:id))
+      expect(json[:meta]).to eq(
+        next_cursor: CursorPagination::Token.encode(table: "products", record: products[1]),
+        prev_cursor: nil
+      )
     end
   end
 
@@ -138,7 +145,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
   end
 
   context "with include_total_count on a later page" do
-    let(:params) { {include_total_count: "true", after: CursorPagination::Token.encode(table: "products", record: product)} }
+    let(:params) { {include_total_count: "true", after: CursorPagination::Token.encode(table: "products", record: products[0])} }
 
     it "returns a bad request error" do
       index
