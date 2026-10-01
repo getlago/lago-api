@@ -3,410 +3,178 @@
 require "rails_helper"
 
 RSpec.describe Fees::ProjectionService do
-  subject(:service) { described_class.new(fees: fees) }
+  subject(:result) { described_class.call!(fee:, timezone:) }
 
   let(:organization) { create(:organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:charge) { create(:standard_charge, billable_metric:, properties: {amount: "0.1"}) }
+  let(:charge_filter) { nil }
+  let(:timezone) { "UTC" }
 
-  let(:fees) { [fee] }
-  let(:fee) do
-    build(:fee,
-      charge: charge,
-      subscription: subscription,
-      charge_filter: charge_filter,
-      properties: fee_properties,
-      amount_cents: 100,
-      amount_currency: currency)
-  end
+  let(:from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
+  let(:to_datetime) { Time.zone.parse("2025-01-10T23:59:59") }
+  let(:current_time) { Time.zone.parse("2025-01-05T12:00:00") } # 5 of 10 days, ratio 0.5
 
-  let(:billable_metric) do
-    create(:billable_metric, recurring: false, organization:)
-  end
-
-  let(:charge) do
-    create(:standard_charge,
-      applied_pricing_unit: applied_pricing_unit,
-      filters: [],
-      billable_metric: billable_metric)
-  end
-
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, plan:, organization:, customer:) }
-  let(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
+  let(:units) { "10" }
+  let(:amount_cents) { 100 }
+  let(:precise_amount_cents) { BigDecimal(amount_cents) }
+  let(:pricing_unit_usage) { nil }
   let(:currency) { "EUR" }
 
-  let(:charge_filter) { nil }
-  let(:applied_pricing_unit) { nil }
-
-  let(:fee_properties) do
-    {
-      "from_datetime" => from_datetime,
-      "to_datetime" => to_datetime,
-      "charges_duration" => charges_duration
-    }
-  end
-
-  let(:from_datetime) { Time.current.beginning_of_month }
-  let(:to_datetime) { Time.current.end_of_month }
-  let(:charges_duration) { nil }
-
-  let(:aggregation_result) do
-    instance_double(
-      "AggregationResult",
-      success?: true,
-      error: nil
+  let(:fee) do
+    build(
+      :charge_fee,
+      organization:,
+      charge:,
+      charge_filter:,
+      units:,
+      amount_cents:,
+      precise_amount_cents:,
+      amount_currency: currency,
+      pricing_unit_usage:,
+      properties: {"from_datetime" => from_datetime.iso8601, "to_datetime" => to_datetime.iso8601}
     )
   end
 
-  let(:charge_model_result) do
-    instance_double(
-      "ChargeModelResult",
-      success?: true,
-      error: nil,
-      projected_amount: BigDecimal("100.50"),
-      projected_units: BigDecimal(10),
-      unit_amount: BigDecimal("10.05")
+  around { |example| travel_to(current_time) { example.run } }
+
+  it "reprices the projected units with the charge properties" do
+    expect(result.projection).to have_attributes(
+      units: BigDecimal(20),
+      amount_cents: 200,
+      pricing_unit_amount_cents: nil,
+      presentation_breakdowns: []
     )
   end
 
-  before do
-    allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(
-      instance_double("Aggregator", aggregate: aggregation_result)
-    )
+  context "with a graduated charge" do
+    let(:charge) do
+      create(
+        :graduated_charge,
+        billable_metric:,
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 10, per_unit_amount: "0.1", flat_amount: "0"},
+            {from_value: 11, to_value: nil, per_unit_amount: "0.05", flat_amount: "0"}
+          ]
+        }
+      )
+    end
 
-    allow(ChargeModels::Factory).to receive(:new_instance).and_return(
-      instance_double("ChargeModel", apply: charge_model_result)
-    )
-
-    middle_time = from_datetime + ((to_datetime - from_datetime) / 2)
-    travel_to(middle_time)
+    it "prices the projected units through the tiers" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 150)
+    end
   end
 
-  after do
-    travel_back
+  context "with a charge filter" do
+    let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "1"}) }
+
+    it "prices the projected units with the filter properties" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 2000)
+    end
   end
 
-  describe "#call" do
-    context "when aggregation fails" do
-      let(:aggregation_result) do
-        instance_double(
-          "AggregationResult",
-          success?: false,
-          error: StandardError.new("Aggregation failed")
-        )
-      end
+  context "with a grouped charge" do
+    let(:charge) { create(:standard_charge, billable_metric:, properties: {amount: "0.1", pricing_group_keys: ["region"]}) }
 
-      it "returns failure with aggregation error" do
-        result = service.call
+    it "projects the group of the fee" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 200)
+    end
+  end
 
-        expect(result).to be_failure
-        expect(result.error).to be_a(StandardError)
-        expect(result.error.message).to eq("Aggregation failed")
-      end
+  context "with a percentage charge" do
+    let(:charge) { create(:percentage_charge, billable_metric:) }
+    let(:precise_amount_cents) { BigDecimal("123.4") }
+
+    it "scales the current amount" do
+      expect(result.projection).to have_attributes(units: BigDecimal(20), amount_cents: 247)
+    end
+  end
+
+  context "with pricing units" do
+    let(:pricing_unit) { create(:pricing_unit, organization:) }
+    let(:applied_pricing_unit) { create(:applied_pricing_unit, organization:, pricing_unit:, pricing_unitable: charge, conversion_rate: 0.5) }
+    let(:pricing_unit_usage) do
+      build(:pricing_unit_usage, organization:, pricing_unit:, amount_cents: 100, precise_amount_cents: BigDecimal("100.6"), conversion_rate: 0.5)
+    end
+    let(:amount_cents) { 50 }
+
+    before { applied_pricing_unit }
+
+    it "prices the projected units in pricing units and converts them to the fee currency" do
+      expect(result.projection).to have_attributes(amount_cents: 100, pricing_unit_amount_cents: 200)
     end
 
-    context "when charge model fails" do
-      let(:charge_model_result) do
-        instance_double(
-          "ChargeModelResult",
-          success?: false,
-          error: StandardError.new("Charge model failed")
-        )
-      end
+    context "with a percentage charge" do
+      let(:charge) { create(:percentage_charge, billable_metric:) }
 
-      it "returns failure with charge model error" do
-        result = service.call
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(StandardError)
-        expect(result.error.message).to eq("Charge model failed")
-      end
-    end
-
-    context "when everything succeeds" do
-      it "returns projected values" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.projected_amount_cents).to eq(10050) # 100.50 * 100
-        expect(result.projected_units).to eq(BigDecimal(10))
-        expect(result.projected_pricing_unit_amount_cents).to eq(nil) # No applied_pricing_unit
-      end
-
-      it "calls aggregation with correct parameters" do
-        aggregator = instance_double("Aggregator", aggregate: aggregation_result)
-        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
-        service.call
-        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          metered_item: have_attributes(charge:, charge_filter: nil),
-          billing_context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
-          boundaries: {
-            from_datetime: match_datetime(from_datetime),
-            to_datetime: match_datetime(to_datetime),
-            charges_duration: charges_duration
-          },
-          filters: {charge_id: charge.id},
-          current_usage: true
-        )
-        expect(aggregator).to have_received(:aggregate).with(options: {is_current_usage: true})
-      end
-
-      it "calls charge model factory with correct parameters" do
-        from_date = from_datetime.to_date
-        to_date = to_datetime.to_date
-        current_date = Time.current.to_date
-
-        total_days = (to_date - from_date).to_i + 1
-        days_passed = (current_date - from_date).to_i + 1
-        expected_period_ratio = days_passed.fdiv(total_days)
-
-        service.call
-
-        expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          pricing_structure: have_attributes(
-            charge_model: charge.charge_model,
-            properties: charge.properties,
-            prorated: charge.prorated?,
-            accepts_target_wallet: charge.accepts_target_wallet,
-            currency: charge.plan.amount.currency
-          ),
-          aggregation_result:,
-          period_ratio: expected_period_ratio,
-          calculate_projected_usage: true
-        )
-      end
-
-      context "with presentation_breakdowns" do
-        let(:from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
-        let(:to_datetime) { Time.zone.parse("2025-01-10T23:59:59") }
-
-        before do
-          travel_to(from_datetime + 4.days)
-          fee.presentation_breakdowns.build(
-            organization: organization,
-            presentation_by: {"department" => "engineering"},
-            units: 60.33642
-          )
-        end
-
-        it "returns projected_presentation_breakdowns as current units plus period_ratio applied to units" do
-          result = service.call
-
-          expect(result).to be_success
-          expect(result.projected_presentation_breakdowns).to match_array([
-            have_attributes(presentation_by: {"department" => "engineering"}, units: 120.67)
-          ])
-        end
-      end
-    end
-
-    context "with charge filter" do
-      let(:charge_filter) do
-        create(:charge_filter, charge:, properties: {"amount" => "1000"})
-      end
-
-      let(:filter_service_result) do
-        instance_double(
-          "FilterServiceResult",
-          matching_filters: ["filter1"],
-          ignored_filters: ["filter2"]
-        )
-      end
-
-      before do
-        allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call)
-          .and_return(filter_service_result)
-      end
-
-      it "uses charge filter properties and filters" do
-        allow(service).to receive(:period_ratio).and_return(0.5) # rubocop:disable RSpec/SubjectStub
-        aggregator = instance_double("Aggregator", aggregate: aggregation_result)
-        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
-        service.call
-        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          metered_item: have_attributes(charge:, charge_filter:),
-          billing_context: have_attributes(external_id: subscription.external_id, organization: subscription.organization),
-          boundaries: {
-            from_datetime: match_datetime(from_datetime),
-            to_datetime: match_datetime(to_datetime),
-            charges_duration: charges_duration
-          },
-          filters: {
-            charge_id: charge.id,
-            charge_filter: charge_filter,
-            matching_filters: ["filter1"],
-            ignored_filters: ["filter2"]
-          },
-          current_usage: true
-        )
-
-        expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          pricing_structure: have_attributes(
-            charge_model: charge.charge_model,
-            properties: charge_filter.properties,
-            prorated: charge.prorated?,
-            accepts_target_wallet: charge.accepts_target_wallet,
-            currency: charge.plan.amount.currency
-          ),
-          aggregation_result:,
-          period_ratio: 0.5,
-          calculate_projected_usage: true
-        )
-
-        service.call
-      end
-    end
-
-    context "with applied pricing unit" do
-      let(:applied_pricing_unit) { build(:applied_pricing_unit) }
-      let(:pricing_unit_usage) do
-        instance_double(
-          "PricingUnitUsage",
-          to_fiat_currency_cents: {amount_cents: 5000}
-        )
-      end
-
-      before do
-        allow(PricingUnitUsage).to receive(:build_from_fiat_amounts)
-          .and_return(pricing_unit_usage)
-      end
-
-      it "calculates projected pricing unit amount cents" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.projected_pricing_unit_amount_cents).to eq(5000)
-
-        expect(PricingUnitUsage).to have_received(:build_from_fiat_amounts).with(
-          amount: BigDecimal("100.50"),
-          unit_amount: BigDecimal("10.05"),
-          applied_pricing_unit: applied_pricing_unit
-        )
-      end
-    end
-
-    context "when billable metric is recurring" do
-      let(:billable_metric) { create(:billable_metric, recurring: true, aggregation_type: "sum_agg", field_name: "amount", organization:) }
-
-      it "returns projected values without applying period_ratio" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.projected_amount_cents).to eq(100)
-        expect(result.projected_presentation_breakdowns).to eq([])
-      end
-
-      context "with presentation_breakdowns" do
-        before do
-          fee.presentation_breakdowns.build(
-            organization: organization,
-            presentation_by: {"department" => "engineering"},
-            units: 60.0
-          )
-        end
-
-        it "returns presentation_breakdowns with units unchanged" do
-          result = service.call
-
-          expect(result).to be_success
-          expect(result.projected_presentation_breakdowns).to match_array([
-            have_attributes(presentation_by: {"department" => "engineering"}, units: 60.0)
-          ])
-        end
-      end
-    end
-
-    context "when period_ratio is out of range" do
-      before { travel_to(from_datetime - 1.day) }
-
-      it "returns empty projected_presentation_breakdowns" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.projected_presentation_breakdowns).to eq([])
+      it "scales both amounts" do
+        expect(result.projection).to have_attributes(amount_cents: 100, pricing_unit_amount_cents: 201)
       end
     end
   end
 
-  describe "period_ratio calculation" do
-    let(:from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
-    let(:to_datetime) { Time.zone.parse("2025-01-31T23:59:59") }
-
-    context "when current date is in the middle of period" do
-      before { travel_to(from_datetime + 10.days) }
-
-      it "calculates correct ratio" do
-        service.call
-
-        expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          hash_including(period_ratio: 11.fdiv(31)) # January has 31 days
-        )
-      end
+  context "with presentation breakdowns" do
+    before do
+      fee.presentation_breakdowns.build(organization:, presentation_by: {"department" => "engineering"}, units: 60.33642)
     end
 
-    context "when customer is in a different timezone" do
-      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
-      let(:from_datetime) { Time.zone.parse("2025-01-01T05:00:00") }
-      let(:to_datetime) { Time.zone.parse("2025-02-01T04:59:59") }
-
-      before { travel_to(from_datetime + 10.days) }
-
-      it "calculates correct ratio" do
-        service.call
-
-        expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          hash_including(period_ratio: 11.fdiv(31))
-        )
-      end
+    it "projects the breakdown units" do
+      expect(result.projection.presentation_breakdowns).to match_array([
+        have_attributes(presentation_by: {"department" => "engineering"}, units: 120.67)
+      ])
     end
   end
 
-  describe "edge cases" do
-    context "when projected_amount is nil" do
-      let(:charge_model_result) do
-        instance_double(
-          "ChargeModelResult",
-          success?: true,
-          error: nil,
-          projected_amount: nil,
-          projected_units: BigDecimal(10),
-          unit_amount: nil
-        )
-      end
+  context "with a recurring billable metric" do
+    let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
-      it "returns 0 for amount cents" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.projected_amount_cents).to eq(0)
-        expect(result.projected_pricing_unit_amount_cents).to eq(nil)
-      end
+    before do
+      fee.presentation_breakdowns.build(organization:, presentation_by: {"department" => "engineering"}, units: 60)
     end
 
-    context "when currency has different exponent" do
-      let(:currency) { "KWD" }
-
-      it "rounds and converts correctly" do
-        result = service.call
-
-        expect(result).to be_success
-        expect(result.projected_amount_cents).to eq(100500) # 100.50 * 1000
-      end
+    it "returns the current usage" do
+      expect(result.projection).to have_attributes(
+        units: BigDecimal(10),
+        amount_cents: 100,
+        presentation_breakdowns: [have_attributes(units: 60)]
+      )
     end
+  end
 
-    context "when on the last day of the period" do
-      let(:from_datetime) { Time.current.beginning_of_month }
-      let(:to_datetime) { Time.current.end_of_month }
+  context "when the period has not started" do
+    let(:current_time) { from_datetime - 1.day }
 
-      before { travel_to(to_datetime - 5.hours) }
+    it "returns a zero projection" do
+      expect(result.projection).to eq(UsageProjection.zero)
+    end
+  end
 
-      it "returns projected values" do
-        result = service.call
+  context "when the period is over" do
+    let(:current_time) { to_datetime + 1.hour }
 
-        expect(result).to be_success
-        expect(result.projected_amount_cents).to eq(10050) # 100.50 * 100
-        expect(result.projected_units).to eq(BigDecimal(10))
-        expect(result.projected_pricing_unit_amount_cents).to eq(nil) # No applied_pricing_unit
-      end
+    it "projects the current usage" do
+      expect(result.projection).to have_attributes(units: BigDecimal(10), amount_cents: 100)
+    end
+  end
+
+  context "with a customer timezone" do
+    let(:timezone) { "America/New_York" }
+    let(:from_datetime) { Time.zone.parse("2025-01-01T05:00:00") }
+    let(:to_datetime) { Time.zone.parse("2025-02-01T04:59:59") }
+    let(:current_time) { from_datetime + 10.days }
+
+    it "computes the elapsed ratio in the customer timezone" do
+      expect(result.projection.units).to eq((BigDecimal(10) / 11.fdiv(31).to_d).round(2))
+    end
+  end
+
+  context "with a currency of a different exponent" do
+    let(:currency) { "KWD" }
+    let(:amount_cents) { 1000 }
+
+    it "rounds the projected amount to the currency exponent" do
+      expect(result.projection.amount_cents).to eq(2000)
     end
   end
 end

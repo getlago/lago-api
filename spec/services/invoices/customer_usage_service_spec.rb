@@ -92,6 +92,41 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         .with(hash_including(options: have_attributes(skip_adjusted_fees: true)))
     end
 
+    it "does not project the usage" do
+      expect(usage_service.call.usage.projections).to be_nil
+    end
+
+    context "with projection" do
+      subject(:usage_service) do
+        described_class.with_ids(organization_id: organization.id, customer_id:, subscription_id:, apply_taxes:, with_projection: true)
+      end
+
+      let(:current_date) { DateTime.parse("2025-06-15") } # 15 of 30 days, ratio 0.5
+      let(:timestamp) { current_date }
+
+      around { |example| travel_to(current_date) { example.run } }
+
+      it "projects every fee" do
+        usage = usage_service.call.usage
+
+        expect(usage.projections.for(usage.fees)).to have_attributes(units: BigDecimal(4), amount_cents: 5064)
+      end
+
+      context "when the fees are served from the charge cache" do
+        before do
+          described_class.with_ids(organization_id: organization.id, customer_id:, subscription_id:, apply_taxes:).call
+          allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+        end
+
+        it "projects the cached fees without aggregating" do
+          usage = usage_service.call.usage
+
+          expect(usage.projections.for(usage.fees)).to have_attributes(units: BigDecimal(4), amount_cents: 5064)
+          expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+        end
+      end
+    end
+
     context "when initializes an invoice" do
       let(:current_date) { DateTime.parse("2025-06-15") }
       let(:timestamp) { current_date }
@@ -1138,18 +1173,21 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           customer:,
           subscription:,
           apply_taxes: false,
-          calculate_projected_usage: true,
+          with_projection: true,
           use_usage_buckets: true
         )
       end
 
-      before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+      before { allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original }
 
-      it "counts the events, which the projection re-aggregates from at presentation time" do
+      it "projects the units served by the buckets without aggregating again" do
         usage = usage_service.call.usage
+        fee = usage.fees.sole
+        expected_projection = Fees::ProjectionService.call!(fee:, timezone: customer.applicable_timezone).projection
 
-        expect(usage.fees.first).to have_attributes(units: 2)
-        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+        expect(fee).to have_attributes(units: 5)
+        expect(usage.projections.for([fee])).to eq(expected_projection)
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).once
       end
     end
 

@@ -6,7 +6,7 @@ module Types
       class ProjectedGroupedUsage < Types::BaseObject
         graphql_name "ProjectedGroupedChargeUsage"
 
-        delegate :projected_units, :projected_amount_cents, to: :projection_result
+        delegate :units, :amount_cents, to: :projection, prefix: :projected
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
@@ -37,7 +37,7 @@ module Types
         end
 
         def pricing_unit_projected_amount_cents
-          projection_result.projected_pricing_unit_amount_cents
+          projection.pricing_unit_amount_cents
         end
 
         def events_count
@@ -69,13 +69,13 @@ module Types
         def projected_presentation_breakdowns
           return [] if presentation_breakdowns.empty?
 
-          projection_result.projected_presentation_breakdowns
+          projection.presentation_breakdowns
         end
 
         private
 
-        def projection_result
-          @projection_result ||= ::Fees::ProjectionService.call!(fees: object)
+        def projection
+          @projection ||= context[:usage_projections].for(object)
         end
       end
     end

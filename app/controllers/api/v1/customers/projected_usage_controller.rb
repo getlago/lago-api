@@ -12,7 +12,9 @@ module Api
               external_subscription_id: params[:external_subscription_id],
               organization_id: current_organization.id,
               apply_taxes:,
-              calculate_projected_usage: true
+              with_projection: true,
+              usage_filters: UsageFilters.init_from_params(params),
+              use_usage_buckets: true
             ).call
 
           if result.success?

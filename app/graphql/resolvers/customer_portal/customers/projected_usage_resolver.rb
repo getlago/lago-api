@@ -18,10 +18,14 @@ module Resolvers
             customer_id: context[:customer_portal_user].id,
             subscription_id:,
             apply_taxes: false,
-            calculate_projected_usage: true
+            with_projection: true,
+            use_usage_buckets: true
           ).call
 
-          result.success? ? result.usage : result_error(result)
+          return result_error(result) unless result.success?
+
+          context.scoped_set!(:usage_projections, result.usage.projections)
+          result.usage
         rescue ActiveRecord::RecordNotFound
           not_found_error(resource: "customer")
         end

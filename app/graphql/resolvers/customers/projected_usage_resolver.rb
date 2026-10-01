@@ -21,10 +21,14 @@ module Resolvers
           customer_id:,
           subscription_id:,
           apply_taxes: false,
-          calculate_projected_usage: true
+          with_projection: true,
+          use_usage_buckets: true
         ).call
 
-        result.success? ? result.usage : result_error(result)
+        return result_error(result) unless result.success?
+
+        context.scoped_set!(:usage_projections, result.usage.projections)
+        result.usage
       end
     end
   end

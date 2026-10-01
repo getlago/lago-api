@@ -6,7 +6,7 @@ module Types
       class ProjectedChargeFilter < Types::BaseObject
         graphql_name "ProjectedChargeFilterUsage"
 
-        delegate :projected_units, :projected_amount_cents, to: :projection_result
+        delegate :units, :amount_cents, to: :projection, prefix: :projected
 
         field :id, ID, null: true, method: :charge_filter_id
 
@@ -31,7 +31,7 @@ module Types
         end
 
         def pricing_unit_projected_amount_cents
-          projection_result.projected_pricing_unit_amount_cents
+          projection.pricing_unit_amount_cents
         end
 
         def invoice_display_name
@@ -45,13 +45,13 @@ module Types
         def projected_presentation_breakdowns
           return [] if presentation_breakdowns.empty?
 
-          projection_result.projected_presentation_breakdowns
+          projection.presentation_breakdowns
         end
 
         private
 
-        def projection_result
-          @projection_result ||= ::Fees::ProjectionService.call!(fees: [object])
+        def projection
+          @projection ||= context[:usage_projections].for([object])
         end
       end
     end

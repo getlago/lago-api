@@ -45,7 +45,7 @@ module Types
         end
 
         def pricing_unit_projected_amount_cents
-          projection_result.projected_pricing_unit_amount_cents
+          projection.pricing_unit_amount_cents
         end
 
         def charge
@@ -69,11 +69,11 @@ module Types
         end
 
         def projected_units
-          calculate_projection(:projected_units, BigDecimal(0))
+          projection.units
         end
 
         def projected_amount_cents
-          calculate_projection(:projected_amount_cents, 0)
+          projection.amount_cents
         end
 
         def presentation_breakdowns
@@ -87,47 +87,13 @@ module Types
         def projected_presentation_breakdowns
           return [] if presentation_breakdowns.empty?
 
-          calculate_projection(:projected_presentation_breakdowns, [])
+          projection.presentation_breakdowns
         end
 
         private
 
-        def calculate_projection(attribute, zero_value)
-          if charge.filters.any?
-            calculate_filtered_projection(attribute, zero_value)
-          elsif has_grouping?
-            calculate_grouped_projection(attribute)
-          else
-            projection_result.public_send(attribute)
-          end
-        end
-
-        def calculate_filtered_projection(attribute, zero_value)
-          filter_groups = object.group_by(&:charge_filter_id).values
-
-          filter_groups.sum(zero_value) do |filter_fee_group|
-            next zero_value unless filter_fee_group.first.charge_filter_id
-
-            result = ::Fees::ProjectionService.call!(fees: filter_fee_group)
-            result.public_send(attribute)
-          end
-        end
-
-        def calculate_grouped_projection(attribute)
-          grouped_fees = object.group_by(&:grouped_by).values
-
-          grouped_fees.sum do |group_fee_list|
-            result = ::Fees::ProjectionService.call!(fees: group_fee_list)
-            result.public_send(attribute)
-          end
-        end
-
-        def has_grouping?
-          object.any? { |f| f.grouped_by.present? }
-        end
-
-        def projection_result
-          @projection_result ||= ::Fees::ProjectionService.call!(fees: object)
+        def projection
+          @projection ||= context[:usage_projections].for(object)
         end
       end
     end
