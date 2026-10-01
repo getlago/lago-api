@@ -17,6 +17,7 @@ module X402
 
       BOOLEAN_WORD = /\A0x0{63}[01]\z/
       NONCE = /\A0x\h{64}\z/
+      HEX_QUANTITY = /\A0x\h+\z/
 
       def initialize(network:, payment:, payment_requirements:, since:)
         @network = network
@@ -66,7 +67,8 @@ module X402
         return :canceled if log["topics"].first == AUTHORIZATION_CANCELED
 
         receipt = rpc.call("eth_getTransactionReceipt", [log["transactionHash"]])
-        raise InconclusiveError, "no successful receipt for #{log["transactionHash"]}" unless receipt && receipt["status"] == "0x1"
+        raise InconclusiveError, "no successful receipt for #{log["transactionHash"]}" unless receipt.is_a?(Hash) && receipt["status"] == "0x1"
+        raise InconclusiveError, "the receipt for #{log["transactionHash"]} lists no logs" unless receipt["logs"].is_a?(Array) && receipt["logs"].all?(Hash)
         return :superseded unless paid_payee?(receipt)
 
         @identifier = log["transactionHash"]
@@ -97,8 +99,10 @@ module X402
             "topics" => [events, "0x#{padded(payer)}", nonce.downcase],
             "fromBlock" => hex(chunk_start),
             "toBlock" => hex(chunk_end)
-          }])
-          log = Array(logs).find { |entry| !entry["removed"] }
+          }]) || []
+          raise InconclusiveError, "eth_getLogs returned a malformed answer" unless logs.is_a?(Array) && logs.all? { |entry| usable_log?(entry) }
+
+          log = logs.find { |entry| !entry["removed"] }
           return log if log
         end
 
@@ -107,8 +111,12 @@ module X402
         end
       end
 
+      def usable_log?(entry)
+        entry.is_a?(Hash) && entry["topics"].is_a?(Array) && entry["transactionHash"].is_a?(String)
+      end
+
       def paid_payee?(receipt)
-        Array(receipt["logs"]).any? do |entry|
+        receipt["logs"].any? do |entry|
           entry["address"].to_s.casecmp?(asset) &&
             entry["topics"] == [TRANSFER, "0x#{padded(payer)}", "0x#{padded(payee)}"] &&
             entry["data"].to_s.to_i(16) == value
@@ -150,7 +158,7 @@ module X402
       end
 
       def safe_head
-        @safe_head ||= rpc.call("eth_getBlockByNumber", ["safe", false]) || raise(InconclusiveError, "no safe block")
+        @safe_head ||= read_block("safe", "no safe block")
       end
 
       def safe_head_number
@@ -162,10 +170,17 @@ module X402
       end
 
       def block_timestamp(number)
-        block = rpc.call("eth_getBlockByNumber", [hex(number), false])
-        raise InconclusiveError, "block #{number} is unknown to the endpoint" unless block
+        read_block(hex(number), "block #{number} is unknown to the endpoint")["timestamp"].to_i(16)
+      end
 
-        block["timestamp"].to_i(16)
+      def read_block(tag, missing)
+        block = rpc.call("eth_getBlockByNumber", [tag, false])
+
+        if block.is_a?(Hash) && HEX_QUANTITY.match?(block["number"].to_s) && HEX_QUANTITY.match?(block["timestamp"].to_s)
+          block
+        else
+          raise InconclusiveError, missing
+        end
       end
 
       def validate_payment!

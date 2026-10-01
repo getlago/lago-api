@@ -192,6 +192,44 @@ describe X402::Chain::EvmReader do
     end
   end
 
+  context "when the safe block has no number" do
+    before do
+      stub_request(:post, "https://sepolia.base.org").with { |request| JSON.parse(request.body)["params"] == ["safe", false] }
+        .to_return(status: 200, body: {jsonrpc: "2.0", id: 1, result: {"timestamp" => "0x1"}}.to_json)
+    end
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no safe block/)
+    end
+  end
+
+  context "when eth_getLogs answers something other than a list" do
+    before do
+      stub_request(:post, "https://sepolia.base.org").with { |request| JSON.parse(request.body)["method"] == "eth_getLogs" }
+        .to_return(status: 200, body: {jsonrpc: "2.0", id: 1, result: {"logs" => []}}.to_json)
+    end
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /eth_getLogs/)
+    end
+  end
+
+  context "when a log carries no topics" do
+    let(:logs) { [log.except("topics")] }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /eth_getLogs/)
+    end
+  end
+
+  context "when the receipt lists no logs" do
+    let(:receipt) { chain_data["receipt"].except("logs") }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /receipt/)
+    end
+  end
+
   context "when the authorization was canceled" do
     let(:logs) { [log.merge("topics" => ["0x1cdd46ff242716cdaa72d159d339a485b3438398348d68f09d7c8c0a59353d81", *log["topics"].drop(1)])] }
 

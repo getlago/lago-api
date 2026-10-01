@@ -59,7 +59,7 @@ module X402
         window_pages = 0
 
         MAX_PAGES.times do
-          page = Array(rpc.call("getSignaturesForAddress", [Base58.encode(authority), signature_query(before)]))
+          page = history_page(before)
           candidates = page.reject { |entry| entry["blockTime"] && entry["blockTime"] > since.to_i + LANDING_WINDOW.to_i }
           window_pages += 1 if candidates.any?
           raise InconclusiveError, "the buyer's history around the payment exceeds #{MAX_WINDOW_PAGES} pages" if window_pages > MAX_WINDOW_PAGES
@@ -77,6 +77,20 @@ module X402
         end
 
         raise InconclusiveError, "the buyer's history since the payment exceeds #{MAX_PAGES} pages"
+      end
+
+      def history_page(before)
+        page = rpc.call("getSignaturesForAddress", [Base58.encode(authority), signature_query(before)]) || []
+
+        if page.is_a?(Array) && page.all? { |entry| signature_entry?(entry) }
+          page
+        else
+          raise InconclusiveError, "getSignaturesForAddress returned a malformed page"
+        end
+      end
+
+      def signature_entry?(entry)
+        entry.is_a?(Hash) && entry["signature"].is_a?(String) && (entry["blockTime"].nil? || entry["blockTime"].is_a?(Integer))
       end
 
       def match_candidate(entry)
@@ -109,7 +123,12 @@ module X402
 
       def slot_dated_past_expiry?
         slot_time = rpc.call("getBlockTime", [expiry["context"]["slot"]])
-        slot_time.present? && slot_time >= since.to_i + EXPIRY_PROOF.to_i
+
+        if slot_time.nil? || slot_time.is_a?(Integer)
+          slot_time.present? && slot_time >= since.to_i + EXPIRY_PROOF.to_i
+        else
+          raise InconclusiveError, "getBlockTime answered something other than a time"
+        end
       end
 
       def verify_cluster!
@@ -118,8 +137,15 @@ module X402
       end
 
       def expiry
-        @expiry ||= rpc.call("isBlockhashValid", [Base58.encode(transaction.recent_blockhash), {"commitment" => COMMITMENT}]) ||
-          raise(InconclusiveError, "isBlockhashValid returned nothing")
+        @expiry ||= begin
+          answer = rpc.call("isBlockhashValid", [Base58.encode(transaction.recent_blockhash), {"commitment" => COMMITMENT}])
+
+          if answer.is_a?(Hash) && answer["context"].is_a?(Hash) && answer["context"]["slot"].is_a?(Integer) && [true, false].include?(answer["value"])
+            answer
+          else
+            raise InconclusiveError, "isBlockhashValid returned no usable answer"
+          end
+        end
       end
 
       def transaction

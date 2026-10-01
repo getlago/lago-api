@@ -18,6 +18,7 @@ describe X402::Chain::SvmReader do
 
   let(:blockhash_valid) { false }
   let(:context_slot) { landed["slot"] + 400 }
+  let(:expiry_answer) { {"context" => {"slot" => context_slot}, "value" => blockhash_valid} }
   let(:genesis_hash) { "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcWFFmQcPYDT" }
   let(:history) { [{"signature" => transaction_id, "slot" => landed["slot"], "err" => nil, "blockTime" => landed["blockTime"]}] }
   let(:transactions) { {transaction_id => landed_as_json} }
@@ -29,7 +30,7 @@ describe X402::Chain::SvmReader do
       rpc_calls << rpc
       result = case rpc["method"]
       when "isBlockhashValid"
-        {"context" => {"slot" => context_slot}, "value" => blockhash_valid}
+        expiry_answer
       when "getSignaturesForAddress"
         before = rpc["params"].last["before"]
         start = before ? history.index { |entry| entry["signature"] == before } + 1 : 0
@@ -183,6 +184,34 @@ describe X402::Chain::SvmReader do
 
     it "raises" do
       expect { reader.settled? }.to raise_error(ArgumentError, /since/)
+    end
+  end
+
+  context "when isBlockhashValid answers without its context" do
+    let(:expiry_answer) { {"value" => false} }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /isBlockhashValid/)
+    end
+  end
+
+  context "when the history holds an entry without a signature" do
+    let(:history) { [{"slot" => landed["slot"], "blockTime" => landed["blockTime"]}] }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /getSignaturesForAddress/)
+    end
+  end
+
+  context "when getBlockTime answers something other than a time" do
+    let(:history) { [] }
+
+    def slot_time(_slot)
+      "soon"
+    end
+
+    it "is inconclusive" do
+      expect { reader.final? }.to raise_error(X402::Chain::InconclusiveError, /getBlockTime/)
     end
   end
 
