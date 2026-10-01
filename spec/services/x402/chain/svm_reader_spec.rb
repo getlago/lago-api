@@ -327,6 +327,15 @@ describe X402::Chain::SvmReader do
     end
   end
 
+  context "when the window fills exactly five pages" do
+    let(:history) { Array.new(5_000) { |index| other_entry(index + 10) } + [other_entry(9, block_time: since.to_i - 3_600)] }
+    let(:transactions) { Hash.new { |hash, key| hash[key] = other_transaction } }
+
+    it "stops at the first older entry" do
+      expect(reader.settled?).to be(false)
+    end
+  end
+
   context "when even the later transactions exceed the total page cap" do
     let(:history) { Array.new(50_000) { |index| other_entry(index + 10, block_time: since.to_i + 3_600) } }
 

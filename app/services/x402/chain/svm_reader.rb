@@ -61,11 +61,11 @@ module X402
         MAX_PAGES.times do
           page = history_page(before)
           candidates = page.reject { |entry| entry["blockTime"] && entry["blockTime"] > since.to_i + LANDING_WINDOW.to_i }
-          window_pages += 1 if candidates.any?
+          window_pages += 1 if candidates.any? { |entry| !before_window?(entry) }
           raise InconclusiveError, "the buyer's history around the payment exceeds #{MAX_WINDOW_PAGES} pages" if window_pages > MAX_WINDOW_PAGES
 
           candidates.each do |entry|
-            return nil if entry["blockTime"] && entry["blockTime"] < since.to_i - SINCE_MARGIN.to_i
+            return nil if before_window?(entry)
 
             match = match_candidate(entry)
             return match if match
@@ -77,6 +77,10 @@ module X402
         end
 
         raise InconclusiveError, "the buyer's history since the payment exceeds #{MAX_PAGES} pages"
+      end
+
+      def before_window?(entry)
+        !entry["blockTime"].nil? && entry["blockTime"] < since.to_i - SINCE_MARGIN.to_i
       end
 
       def history_page(before)
