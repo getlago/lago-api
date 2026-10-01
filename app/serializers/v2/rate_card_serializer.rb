@@ -18,7 +18,8 @@ module V2
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         rates_count: model.rates.size,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        **deleted_at_payload
       }
 
       payload[:active_rate] = active_rate if include?(:active_rate)
@@ -34,14 +35,15 @@ module V2
       rate = model.active_rate
       return if rate.nil?
 
-      ::V2::RateCardRateSerializer.new(rate).serialize
+      ::V2::RateCardRateSerializer.new(rate, includes: nested_includes).serialize
     end
 
     def rates
       ::CollectionSerializer.new(
         model.rates,
         ::V2::RateCardRateSerializer,
-        collection_name: "rates"
+        collection_name: "rates",
+        includes: nested_includes
       ).serialize
     end
 

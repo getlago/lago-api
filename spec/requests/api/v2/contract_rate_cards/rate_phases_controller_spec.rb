@@ -14,9 +14,10 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
   end
 
   let(:default_position) { 1 }
+  let(:default_override) { nil }
 
   before do
-    create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: default_position)
+    create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "default", position: default_position, rate_override: default_override)
   end
 
   describe "GET .../rate_phases" do
@@ -29,6 +30,35 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_phases].map { it[:code] }).to eq(%w[default])
+      expect(json[:rate_phases]).to all(include(deleted_at: nil))
+    end
+
+    # Every phase has an override, since a phase without one skips the override preload.
+    context "with one phase on this card and three on another" do
+      let(:default_override) { create(:rate_override, organization:) }
+      let(:other_rate_card) { create(:rate_card, organization:) }
+      let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card) }
+
+      before do
+        (1..3).each do |position|
+          create(:rate_phase, :contract_level, organization:, contract_rate_card: other_contract_rate_card, position:, rate_override: create(:rate_override, organization:))
+        end
+      end
+
+      def rate_phases_queries(card)
+        capture_counted_queries { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{card.code}/rate_phases") }
+      end
+
+      it "runs as many queries for three phases as for one" do
+        # A first request can run lookups the process then caches.
+        rate_phases_queries(rate_card)
+
+        one_phase_queries = rate_phases_queries(rate_card)
+        three_phases_queries = rate_phases_queries(other_rate_card)
+
+        expect(json[:rate_phases].size).to eq(3)
+        expect(three_phases_queries.size).to eq(one_phase_queries.size)
+      end
     end
   end
 
@@ -116,8 +146,8 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
     let(:phase_code) { "extra" }
     let(:default_position) { 2 }
-
-    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 1, billing_interval_cycle_count: 2) }
+    let(:extra_override) { nil }
+    let!(:extra) { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 1, billing_interval_cycle_count: 2, rate_override: extra_override) }
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
@@ -126,6 +156,18 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[default])
+      expect(json[:rate_phase][:deleted_at]).to eq(extra.reload.deleted_at.iso8601)
+    end
+
+    context "with a rate override" do
+      let(:extra_override) { create(:rate_override, organization:) }
+
+      it "returns the override, deleted with the phase" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override][:deleted_at]).to eq(extra_override.reload.deleted_at.iso8601)
+      end
     end
 
     context "when deleting the indefinite tail" do
