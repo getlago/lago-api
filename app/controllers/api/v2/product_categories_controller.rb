@@ -56,8 +56,7 @@ module Api
         )
 
         if result.success?
-          # Preloaded so products_count reads the loaded association.
-          page = ::CursorPagination::Page.new(records: result.product_categories.includes(:products), cursor:)
+          page = ::CursorPagination::Page.new(records: result.product_categories, cursor:)
 
           render(
             json: ::CollectionSerializer.new(

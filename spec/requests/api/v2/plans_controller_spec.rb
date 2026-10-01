@@ -78,14 +78,14 @@ RSpec.describe Api::V2::PlansController do
 
     include_examples "requires API permission", "plan", "read"
 
-    it "returns the catalog plan shape" do
+    it "returns the flat catalog plan shape" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:plan][:lago_id]).to eq(catalog_plan.id)
-      expect(json[:plan][:applied_rate_cards_count]).to eq(0)
       expect(json[:plan]).not_to have_key(:interval)
       expect(json[:plan]).to include(deleted_at: nil)
+      expect(json[:plan]).to be_a_flat_v2_payload
     end
 
     context "when the plan does not exist" do
@@ -107,18 +107,22 @@ RSpec.describe Api::V2::PlansController do
 
     include_examples "requires API permission", "plan", "read"
 
-    it "lists the organization catalog plans" do
-      create(:catalog_plan)
-      create_list(:plan_rate_card, 2, organization:, catalog_plan:)
+    context "with applied rate cards and a plan of another organization" do
+      before do
+        create(:catalog_plan)
+        create_list(:plan_rate_card, 2, organization:, catalog_plan:)
+      end
 
-      subject
+      it "lists the organization catalog plans, flat" do
+        subject
 
-      expect(response).to have_http_status(:success)
-      expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
-      expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
-      expect(json[:plans].first[:applied_rate_cards_count]).to eq(2)
-      expect(json[:plans].first).not_to have_key(:interval)
-      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+        expect(response).to have_http_status(:success)
+        expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
+        expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
+        expect(json[:plans].first).not_to have_key(:interval)
+        expect(json[:plans]).to all(be_a_flat_v2_payload)
+        expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+      end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :plans, model: CatalogPlan do
@@ -135,6 +139,27 @@ RSpec.describe Api::V2::PlansController do
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
       end
+    end
+  end
+
+  # applied_rate_cards_count left the payload: the total count of the plan's applied rate cards replaces it.
+  describe "GET /api/v2/plans/:code/applied_rate_cards?include_total_count=true" do
+    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {include_total_count: true}) }
+
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:webhook_applied_rate_cards_count) { V2::CatalogPlanSerializer.new(catalog_plan, includes: %i[counts]).serialize[:applied_rate_cards_count] }
+
+    before do
+      create_list(:plan_rate_card, 2, organization:, catalog_plan:)
+      create(:plan_rate_card, organization:, catalog_plan:).discard!
+      create(:plan_rate_card, organization:)
+    end
+
+    it "equals the applied_rate_cards_count webhooks and activity logs still render" do
+      subject
+
+      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:meta][:total_count]).to eq(webhook_applied_rate_cards_count)
     end
   end
 

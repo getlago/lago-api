@@ -9,11 +9,15 @@ module V2
         code: model.code,
         description: model.description,
         invoice_display_name: model.invoice_display_name,
-        products_count: model.products.size,
+        **counts,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         **deleted_at_payload
       }
     end
+
+    private
+
+    def counts = include?(:counts) ? {products_count: model.products.size} : {}
   end
 end
