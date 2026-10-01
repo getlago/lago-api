@@ -104,4 +104,72 @@ RSpec.describe ModelSerializer do
       end
     end
   end
+
+  describe ".expandable_relations" do
+    it "is empty and frozen by default" do
+      expect(described_class.expandable_relations).to eq({}).and be_frozen
+    end
+  end
+
+  describe "#expanded_payload" do
+    subject(:payload) { serializer.serialize }
+
+    let(:serializer) { serializer_class.new(model, options) }
+    let(:options) { {includes: %i[second unlisted first]} }
+
+    context "with an expandable list" do
+      let(:serializer_class) do
+        Class.new(described_class) do
+          def self.expandable_relations = {first: :first, second: nil, third: nil}.freeze
+
+          def serialize = expanded_payload
+
+          private
+
+          def expand(name)
+            case name
+            when :first then "first expansion"
+            when :second then "second expansion"
+            when :third then "third expansion"
+            else super
+            end
+          end
+        end
+      end
+
+      before { allow(serializer).to receive(:expand).and_call_original }
+
+      it "renders the included names, in the order of the list" do
+        expect(payload.to_a).to eq([[:first, "first expansion"], [:second, "second expansion"]])
+      end
+
+      it "expands no other name" do
+        payload
+
+        expect(serializer).to have_received(:expand).twice
+      end
+    end
+
+    context "with a listed name the serializer does not expand" do
+      let(:serializer_class) do
+        Class.new(described_class) do
+          def self.expandable_relations = {first: nil}.freeze
+
+          def serialize = expanded_payload
+        end
+      end
+
+      it "raises" do
+        expect { payload }.to raise_error(NotImplementedError, /cannot expand first/)
+      end
+    end
+
+    context "without an expandable list" do
+      let(:serializer_class) { Class.new(described_class) { def serialize = expanded_payload } }
+
+      it "renders nothing" do
+        expect(payload).to eq({})
+      end
+    end
+  end
 end
