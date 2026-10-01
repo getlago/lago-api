@@ -83,6 +83,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - Look records up with `find_by` and answer `not_found_error(resource: "alert")`. `find` gives a generic error code.
 - Render failures with `render_error_response(result)`, records with `::V1::<Model>Serializer`, and lists with `::CollectionSerializer` and `pagination_metadata`. `create` returns 200, not 201.
 - Routes go in `config/routes/shared_api.rb`, which is also served under `/api/v2` as beta. Native v2 controllers (`app/controllers/api/v2`) only cover the product catalog and contracts: cursor pagination, `app/serializers/v2`, no nested resources in lists. See `app/controllers/api/v2/product_categories_controller.rb`.
+- A native v2 `show` embeds related records only through `expand[]`, one level deep (`Api::Expandable`): the controller declares `expandable_with ::V2::<Model>Serializer` and calls `preload_expansions`, the serializer lists `expandable_relations name: preload` and renders each name in its private `expand(name)`.
 - Mask secret parameters in API logs with `filter_audit_log_params!`.
 
 ## GraphQL

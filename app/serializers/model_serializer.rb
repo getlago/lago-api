@@ -1,7 +1,24 @@
 # frozen_string_literal: true
 
 class ModelSerializer
+  NO_EXPANDABLE_RELATIONS = {}.freeze
+
+  # Set once per serializer, when its class is loaded, through `expandable_relations`.
+  class_attribute :declared_expandable_relations, instance_accessor: false, instance_predicate: false, default: NO_EXPANDABLE_RELATIONS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+
   attr_reader :model, :options
+
+  # Names a v2 `show` accepts in `expand`, mapped to what a single record loads in advance:
+  # nil for a computed value or a list built by its own query. Each renders through `expand`.
+  # Internal options (`:counts`, `:deleted_at`) are never listed. A serializer declares its list
+  # with `expandable_relations name: preload, ...`; without arguments, it is read.
+  def self.expandable_relations(**relations)
+    if relations.any?
+      self.declared_expandable_relations = relations.freeze
+    else
+      declared_expandable_relations
+    end
+  end
 
   # The possible values for the options are:
   # - includes: Specify the relation to include in the payload
@@ -58,5 +75,17 @@ class ModelSerializer
     return default if include.is_a?(Symbol) || include.nil?
 
     include[value]
+  end
+
+  private
+
+  def expanded_payload
+    self.class.expandable_relations.keys.select { include?(it) }.index_with { expand(it) }
+  end
+
+  # Renders one name of the expand list. A serializer with a list overrides it with a `case` on
+  # the names, falling back to `super` for any other.
+  def expand(name)
+    raise NotImplementedError, "#{self.class} cannot expand #{name}"
   end
 end
