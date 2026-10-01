@@ -23,7 +23,15 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_card][:lago_id]).to be_present
       expect(json[:applied_rate_card][:external_contract_id]).to eq(contract.external_id)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
-      expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
+      expect(ContractRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.count).to eq(1)
+    end
+
+    # rate_phases_count left the payload: the list of the card's rate phases replaces it.
+    it "lists the default phase on the card's rate_phases" do
+      subject
+      get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}/rate_phases")
+
+      expect(json[:rate_phases].pluck(:position)).to eq([1])
     end
 
     context "when the contract does not exist" do
@@ -83,6 +91,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { it[:lago_id] }).to eq([contract_rate_card.id])
+      expect(json[:applied_rate_cards]).to all(be_a_flat_v2_payload)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
@@ -120,6 +129,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to eq(contract_rate_card.id)
       expect(json[:applied_rate_card]).to include(deleted_at: nil)
+      expect(json[:applied_rate_card]).to be_a_flat_v2_payload
     end
 
     # A finished schedule has no next instant, and the payload has to say so rather than raise.

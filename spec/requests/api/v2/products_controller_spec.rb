@@ -172,22 +172,123 @@ RSpec.describe Api::V2::ProductsController do
   end
 
   describe "GET /api/v2/products/:id" do
-    subject { get_with_token(organization, "/api/v2/products/#{product.code}") }
+    subject { get_with_token(organization, "/api/v2/products/#{product.code}", params) }
 
     let(:product) { create(:product, organization:) }
+    let(:params) { {} }
 
     include_examples "requires API permission", "product", "read"
 
-    it "returns the product" do
-      create(:product_filter, organization:, product:)
-
+    it "returns the flat product" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
-      expect(json[:product][:filters_count]).to eq(1)
       expect(json[:product]).to include(deleted_at: nil)
+      expect(json[:product]).to be_a_flat_v2_payload
+    end
+
+    context "with expand[]=product_category" do
+      let(:params) { {expand: %w[product_category]} }
+
+      it "embeds the product category as its own show renders it" do
+        subject
+        expanded = json[:product]
+        get_with_token(organization, "/api/v2/product_categories/#{product.product_category.code}")
+
+        expect(expanded[:product_category]).to eq(json[:product_category])
+        expect(expanded[:product_category]).to be_a_flat_v2_payload
+        expect(expanded).not_to have_key(:billable_metric)
+      end
+    end
+
+    context "with expand[]=billable_metric" do
+      let(:params) { {expand: %w[billable_metric]} }
+
+      it "embeds the flat billable metric, with a null deleted_at" do
+        subject
+
+        expect(json[:product][:billable_metric]).to include(lago_id: product.billable_metric.id, code: product.billable_metric.code, deleted_at: nil)
+        expect(json[:product][:billable_metric]).to be_a_flat_v2_payload
+        expect(json[:product]).not_to have_key(:product_category)
+      end
+
+      context "when the billable metric is discarded" do
+        before { product.billable_metric.discard! }
+
+        it "embeds it with its deleted_at" do
+          subject
+
+          expect(json[:product][:billable_metric]).to include(
+            lago_id: product.billable_metric.id,
+            deleted_at: product.billable_metric.reload.deleted_at.iso8601
+          )
+        end
+      end
+    end
+
+    context "with both expansions" do
+      let(:params) { {expand: %w[product_category billable_metric]} }
+
+      it "embeds both records, so that the product itself is no longer flat" do
+        subject
+
+        expect(json[:product].keys.last(2)).to eq(%i[product_category billable_metric])
+        expect(json[:product]).not_to be_a_flat_v2_payload
+      end
+
+      it "loads each expanded record in one query, as many queries as the flat show runs" do
+        flat_show = -> { get_with_token(organization, "/api/v2/products/#{product.code}") }
+        # The first request alone may load the schema of the tables it reads.
+        flat_show.call
+
+        flat_queries = capture_sql { flat_show.call }
+        expanded_queries = capture_sql { subject }
+
+        expect(json[:product].keys).to include(:product_category, :billable_metric)
+        expect(expanded_queries.size).to eq(flat_queries.size)
+        expect(expanded_queries.grep(/FROM "product_categories"/).size).to eq(1)
+        expect(expanded_queries.grep(/FROM "billable_metrics"/).size).to eq(1)
+      end
+
+      context "with a standalone fixed product" do
+        let(:product) { create(:product, :fixed, :standalone, organization:) }
+
+        it "renders both expansions as null" do
+          subject
+
+          expect(json[:product]).to include(product_category: nil, billable_metric: nil)
+        end
+      end
+    end
+
+    context "with the three forms of expand" do
+      it "renders the same product" do
+        bodies = %w[expand[]=billable_metric expand=billable_metric expand[0]=billable_metric].map do |query|
+          get_with_token(organization, "/api/v2/products/#{product.code}?#{query}")
+          json
+        end
+
+        expect(bodies.first[:product]).to have_key(:billable_metric)
+        expect(bodies.uniq.size).to eq(1)
+      end
+    end
+
+    context "with expand[]=filters" do
+      let(:params) { {expand: %w[filters]} }
+
+      it "returns an invalid expand error listing the allowed expansions" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          status: 400,
+          error: "Bad Request",
+          code: "invalid_expand",
+          error_details: {expand: {invalid_values: %w[filters], allowed_values: %w[product_category billable_metric]}}
+        )
+      end
     end
 
     context "when the product belongs to another organization" do
@@ -216,6 +317,7 @@ RSpec.describe Api::V2::ProductsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:products].map { it[:lago_id] }).to match_array([usage_item.id, fixed_item.id])
+      expect(json[:products]).to all(be_a_flat_v2_payload)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
@@ -244,16 +346,6 @@ RSpec.describe Api::V2::ProductsController do
 
         expect(json[:products].map { it[:lago_id] }).to eq([fixed_item.id])
       end
-    end
-
-    it "returns the batched filters counts" do
-      create(:product_filter, organization:, product: usage_item)
-      create(:product_filter, organization:, product: usage_item, code: "second")
-
-      subject
-
-      counts = json[:products].to_h { [it[:lago_id], it[:filters_count]] }
-      expect(counts).to eq(usage_item.id => 2, fixed_item.id => 0)
     end
 
     context "with an product_type filter" do
@@ -365,6 +457,27 @@ RSpec.describe Api::V2::ProductsController do
 
         expect(response).to be_not_found_error("product")
       end
+    end
+  end
+
+  # filters_count left the payload: the total count of the product's filters replaces it.
+  describe "GET /api/v2/products/:code/filters?include_total_count=true" do
+    subject { get_with_token(organization, "/api/v2/products/#{product.code}/filters", {include_total_count: true}) }
+
+    let(:product) { create(:product, organization:) }
+    let(:activity_log_filters_count) { V2::ProductSerializer.new(product, includes: %i[counts]).serialize[:filters_count] }
+
+    before do
+      create_list(:product_filter, 2, organization:, product:)
+      create(:product_filter, organization:, product:).discard!
+      create(:product_filter, organization:)
+    end
+
+    it "equals the filters_count the activity log still renders" do
+      subject
+
+      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:meta][:total_count]).to eq(activity_log_filters_count)
     end
   end
 end
