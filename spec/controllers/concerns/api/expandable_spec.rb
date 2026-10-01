@@ -5,10 +5,7 @@ require "rails_helper"
 RSpec.describe Api::Expandable, type: :controller do
   include ApiHelper
 
-  # rubocop:disable RSpec/DescribedClass
   controller(Api::V2::BaseController) do
-    include Api::Expandable
-
     # A relation loaded in advance and a computed value, the two kinds a v2 serializer lists.
     expandable_with(
       Class.new(ModelSerializer) do
@@ -16,7 +13,7 @@ RSpec.describe Api::Expandable, type: :controller do
       end
     )
 
-    # A lookup of the controller's own, declared after the include like those of the v2 controllers.
+    # A lookup of the controller's own, like those of the v2 controllers.
     before_action(only: :show) { not_found_error(resource: "product") unless product }
 
     def index
@@ -45,7 +42,6 @@ RSpec.describe Api::Expandable, type: :controller do
       "product"
     end
   end
-  # rubocop:enable RSpec/DescribedClass
 
   # A nil expand is left out of the request: a GET would send it as `expand=`, an empty value.
   subject(:show) { get(:show, params: {id: product.code, expand:}.compact) }
