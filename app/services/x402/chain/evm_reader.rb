@@ -77,9 +77,12 @@ module X402
 
       def authorization_used?
         word = rpc.call("eth_call", [{"to" => asset, "data" => "#{AUTHORIZATION_STATE}#{padded(payer)}#{nonce.downcase.delete_prefix("0x")}"}, hex(safe_head_number)])
-        raise InconclusiveError, "authorizationState answered #{word.inspect}" unless BOOLEAN_WORD.match?(word.to_s)
 
-        word.end_with?("1")
+        if BOOLEAN_WORD.match?(word.to_s)
+          word.end_with?("1")
+        else
+          raise InconclusiveError, "authorizationState answered #{word.inspect}"
+        end
       end
 
       def find_authorization_log
@@ -184,10 +187,12 @@ module X402
       end
 
       def validate_payment!
-        return if Network::EVM_ADDRESS.match?(asset.to_s) && [payer, payee].all? { |address| Network::EVM_ADDRESS.match?(address.to_s) } &&
-          NONCE.match?(nonce.to_s) && [value, valid_after, valid_before].all?
+        raise UnreadablePaymentError, "the stored EVM payment has no usable authorization" unless usable_authorization?
+      end
 
-        raise UnreadablePaymentError, "the stored EVM payment has no usable authorization"
+      def usable_authorization?
+        Network::EVM_ADDRESS.match?(asset.to_s) && [payer, payee].all? { |address| Network::EVM_ADDRESS.match?(address.to_s) } &&
+          NONCE.match?(nonce.to_s) && [value, valid_after, valid_before].all?
       end
 
       def authorization

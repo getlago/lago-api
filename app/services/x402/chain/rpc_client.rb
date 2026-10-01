@@ -29,9 +29,12 @@ module X402
 
         error = body["error"]
         raise UnreachableError, "#{method}: #{error.is_a?(Hash) ? error["message"] : "malformed error"}" if error
-        raise UnreachableError, "#{method}: no result" unless body.key?("result")
 
-        body["result"]
+        if body.key?("result")
+          body["result"]
+        else
+          raise UnreachableError, "#{method}: no result"
+        end
       rescue LagoHttpClient::HttpError => e
         raise UnreachableError, "#{method}: HTTP #{e.error_code}", cause: nil
       rescue JSON::ParserError, *TRANSPORT_ERRORS => e

@@ -55,9 +55,12 @@ module X402
             Instruction.new(program_id_index: byte, accounts: read(compact_u16).bytes, data: read(compact_u16))
           end
           lookups = (version == :legacy) ? [] : Array.new(compact_u16) { lookup }
-          raise UnreadablePaymentError, "trailing bytes after the Solana transaction" unless @offset == @bytes.bytesize
 
-          SolanaTransaction.new(signatures:, version:, num_required_signatures:, account_keys:, recent_blockhash:, instructions:, address_table_lookups: lookups)
+          if @offset == @bytes.bytesize
+            SolanaTransaction.new(signatures:, version:, num_required_signatures:, account_keys:, recent_blockhash:, instructions:, address_table_lookups: lookups)
+          else
+            raise UnreadablePaymentError, "trailing bytes after the Solana transaction"
+          end
         end
 
         private
@@ -89,9 +92,11 @@ module X402
         end
 
         def peek
-          raise UnreadablePaymentError, "truncated Solana transaction" if @offset >= @bytes.bytesize
-
-          @bytes.getbyte(@offset)
+          if @offset < @bytes.bytesize
+            @bytes.getbyte(@offset)
+          else
+            raise UnreadablePaymentError, "truncated Solana transaction"
+          end
         end
       end
       private_constant :Reader

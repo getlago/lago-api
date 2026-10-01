@@ -102,16 +102,22 @@ module X402
         raise InconclusiveError, "getTransaction returned no transaction for a listed signature" unless landed.is_a?(Hash)
 
         signatures = landed["transaction"].is_a?(Hash) && landed["transaction"]["signatures"]
-        raise InconclusiveError, "getTransaction returned no signatures for #{entry["signature"]}" unless signatures.is_a?(Array)
 
-        {signature: entry["signature"], transaction: landed} if signatures.include?(Base58.encode(buyer_signature))
+        if signatures.is_a?(Array)
+          {signature: entry["signature"], transaction: landed} if signatures.include?(Base58.encode(buyer_signature))
+        else
+          raise InconclusiveError, "getTransaction returned no signatures for #{entry["signature"]}"
+        end
       end
 
       def succeeded?(match)
         meta = match[:transaction]["meta"]
-        raise InconclusiveError, "getTransaction returned no status for #{match[:signature]}" unless meta.is_a?(Hash) && meta.key?("err")
 
-        meta["err"].nil?
+        if meta.is_a?(Hash) && meta.key?("err")
+          meta["err"].nil?
+        else
+          raise InconclusiveError, "getTransaction returned no status for #{match[:signature]}"
+        end
       end
 
       def signature_query(before)
@@ -120,9 +126,11 @@ module X402
       end
 
       def blockhash_expired?
-        return @blockhash_expired if defined?(@blockhash_expired)
-
-        @blockhash_expired = expiry["value"] == false && slot_dated_past_expiry?
+        if defined?(@blockhash_expired)
+          @blockhash_expired
+        else
+          @blockhash_expired = expiry["value"] == false && slot_dated_past_expiry?
+        end
       end
 
       def slot_dated_past_expiry?
@@ -155,10 +163,14 @@ module X402
       def transaction
         @transaction ||= begin
           stored = SolanaTransaction.decode(Base64.strict_decode64(stored_transaction.to_s))
-          raise UnreadablePaymentError, "the stored Solana transaction uses a durable nonce and never expires" if stored.durable_nonce?
-          raise UnreadablePaymentError, "the stored Solana transaction has no TransferChecked" unless stored.transfer_checked
 
-          stored
+          if stored.durable_nonce?
+            raise UnreadablePaymentError, "the stored Solana transaction uses a durable nonce and never expires"
+          elsif stored.transfer_checked.nil?
+            raise UnreadablePaymentError, "the stored Solana transaction has no TransferChecked"
+          else
+            stored
+          end
         end
       rescue ArgumentError
         raise UnreadablePaymentError, "the stored Solana transaction is not base64"
@@ -180,9 +192,12 @@ module X402
       def buyer_signature
         @buyer_signature ||= begin
           signature = authority && transaction.signature_for(authority)
-          raise UnreadablePaymentError, "the TransferChecked authority is not a signer" if signature.nil? || signature.count("\x00") == signature.bytesize
 
-          signature
+          if signature.nil? || signature.count("\x00") == signature.bytesize
+            raise UnreadablePaymentError, "the TransferChecked authority is not a signer"
+          else
+            signature
+          end
         end
       end
 
