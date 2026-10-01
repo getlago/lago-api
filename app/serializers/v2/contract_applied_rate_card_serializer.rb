@@ -11,8 +11,6 @@ module V2
         effective_date: model.effective_date.iso8601,
         billing_anchor_date: model.billing_anchor_date.iso8601,
         next_billing_at: model.next_billing_at&.iso8601,
-        # size counts the loaded collection when the caller preloaded it.
-        rate_phases_count: model.rate_phases.size,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         **deleted_at_payload
