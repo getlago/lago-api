@@ -22,7 +22,7 @@ module X402
 
       def call(method, params)
         response = LagoHttpClient::Client
-          .new(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT)
+          .new(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, retry_on_transient_errors: true)
           .post_with_response({jsonrpc: "2.0", id: 1, method:, params:}, {})
         body = JSON.parse(response.body.to_s)
         raise UnreachableError, "#{method}: not a JSON-RPC response" unless body.is_a?(Hash)

@@ -8,7 +8,10 @@ describe X402::Chain::RpcClient do
   let(:network) { "eip155:84532" }
   let(:rpc_urls) { nil }
 
-  before { stub_const("ENV", ENV.to_h.merge("LAGO_X402_RPC_URLS" => rpc_urls)) }
+  before do
+    stub_const("ENV", ENV.to_h.merge("LAGO_X402_RPC_URLS" => rpc_urls))
+    stub_const("LagoHttpClient::Client::RETRY_BACKOFF_RANGE", 0.0..0.0)
+  end
 
   describe "#url" do
     {
@@ -159,6 +162,16 @@ describe X402::Chain::RpcClient do
         it "raises" do
           expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: not a JSON-RPC response")
         end
+      end
+    end
+
+    context "when the endpoint fails once" do
+      before do
+        stub_request(:post, url).to_return({status: 502, body: ""}, {status: 200, body: {jsonrpc: "2.0", id: 1, result: "0x2d40e01"}.to_json})
+      end
+
+      it "retries" do
+        expect(call).to eq("0x2d40e01")
       end
     end
 

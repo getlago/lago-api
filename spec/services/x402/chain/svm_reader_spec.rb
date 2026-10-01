@@ -369,7 +369,10 @@ describe X402::Chain::SvmReader do
   end
 
   context "when the endpoint is unreachable" do
-    before { stub_request(:post, "https://api.devnet.solana.com").to_raise(Errno::ECONNREFUSED) }
+    before do
+      stub_const("LagoHttpClient::Client::RETRY_BACKOFF_RANGE", 0.0..0.0)
+      stub_request(:post, "https://api.devnet.solana.com").to_raise(Errno::ECONNREFUSED)
+    end
 
     it "raises instead of reading false" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreachableError)

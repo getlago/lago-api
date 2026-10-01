@@ -445,7 +445,10 @@ describe X402::Chain::EvmReader do
   end
 
   context "when the endpoint is unreachable" do
-    before { stub_request(:post, "https://sepolia.base.org").to_raise(Net::ReadTimeout) }
+    before do
+      stub_const("LagoHttpClient::Client::RETRY_BACKOFF_RANGE", 0.0..0.0)
+      stub_request(:post, "https://sepolia.base.org").to_raise(Net::ReadTimeout)
+    end
 
     it "raises instead of reading false" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreachableError)
