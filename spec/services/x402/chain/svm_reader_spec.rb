@@ -78,13 +78,13 @@ describe X402::Chain::SvmReader do
     it "scans the buyer's address, pinned to the expiry check's slot" do
       reader.settled?
 
-      expect(calls("getSignaturesForAddress").sole["params"]).to eq([buyer, {"limit" => 1000, "commitment" => "confirmed", "minContextSlot" => context_slot}])
+      expect(calls("getSignaturesForAddress").sole["params"]).to eq([buyer, {"limit" => 1000, "commitment" => "finalized", "minContextSlot" => context_slot}])
     end
 
     it "checks the transaction's own blockhash" do
       reader.settled?
 
-      expect(calls("isBlockhashValid").sole["params"]).to eq(["7LPzenu2Lg6XG5aSrZ6ihu7GFy9gHYEh5KVpVVxrQYue", {"commitment" => "confirmed"}])
+      expect(calls("isBlockhashValid").sole["params"]).to eq(["7LPzenu2Lg6XG5aSrZ6ihu7GFy9gHYEh5KVpVVxrQYue", {"commitment" => "finalized"}])
     end
 
     it "reads each fact once" do

@@ -9,7 +9,7 @@ module X402
       SINCE_MARGIN = 10.minutes
       LANDING_WINDOW = 10.minutes
       EXPIRY_PROOF = 120.seconds
-      COMMITMENT = "confirmed"
+      COMMITMENT = "finalized"
 
       def initialize(network:, payment:, payment_requirements:, since:)
         @network = network
