@@ -6,9 +6,8 @@ module RateProperties
   class NormalizeRangesService < BaseService
     Result = BaseResult[:rate_properties]
 
-    def initialize(rate_properties:, proration: false)
+    def initialize(rate_properties:)
       @rate_properties = rate_properties
-      @proration = proration
       super
     end
 
@@ -32,12 +31,6 @@ module RateProperties
         bounds = ranges.all?(Hash) && upper_bounds(ranges)
         return result.single_validation_failure!(field: key.to_sym, error_code: "invalid_#{key}") unless bounds
 
-        # Prorated graduated billing steps between tiers one whole unit at a
-        # time, so a decimal bound would skip part of the next tier.
-        if proration && key == "graduated_ranges" && bounds.any?(Float)
-          return result.single_validation_failure!(field: key.to_sym, error_code: "decimal_bound_not_allowed_with_proration")
-        end
-
         properties[key] = ranges.each_with_index.map do |range, index|
           range.merge("from_value" => index.zero? ? 0 : bounds[index - 1], "to_value" => bounds[index])
         end
@@ -49,7 +42,7 @@ module RateProperties
 
     private
 
-    attr_reader :rate_properties, :proration
+    attr_reader :rate_properties
 
     # Upper bounds as stored numbers, or nil unless they rise strictly and only the
     # last tier is open-ended.
