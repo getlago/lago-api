@@ -8,6 +8,8 @@
 #   sees their preloads
 # - `other_table_record`: optional, a record of another table whose cursor the endpoint
 #   must reject, typically one rendered under the same collection name
+# - `keyset_ids`: optional, a lambda mapping the listed lago_ids to the ids of the `model`
+#   rows the list is paged on, for a list rendering rows of another table
 #
 # Rows already listed by the including group are tolerated: the walks are compared with
 # the whole list, read in a single page.
@@ -17,6 +19,7 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
   let(:other_table_record) do
     (model == ProductCategory) ? create(:product, organization:) : create(:product_category, organization:)
   end
+  let(:keyset_ids) { ->(listed) { listed } }
 
   # Rows share timestamps, so that pages break on ties.
   before do
@@ -33,7 +36,7 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
   end
 
   it "lists the rows ordered by created_at then id, both descending" do
-    ids = listed_ids
+    ids = keyset_ids.call(listed_ids)
 
     expect(ids.size).to be >= 6
     expect(model.unscoped.where(id: ids).order(created_at: :desc, id: :desc).ids).to eq(ids)

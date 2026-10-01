@@ -15,7 +15,7 @@ RSpec.describe "API v2 expand" do
   # A floor, not the exact count: a route added later is walked like the others, while a filter
   # that stopped matching would leave nothing to walk.
   it "walks every native route" do
-    expect(native_routes.size).to be >= 63
+    expect(native_routes.size).to be >= 64
   end
 
   # Without a body and on records that do not exist: the expansion is rejected before any
