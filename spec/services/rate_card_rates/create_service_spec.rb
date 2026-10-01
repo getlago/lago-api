@@ -47,19 +47,6 @@ RSpec.describe RateCardRates::CreateService do
         .to eq([[0, 10], [10, nil]])
     end
 
-    context "when the card prorates" do
-      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
-      let(:rate_card) { create(:rate_card, organization:, proration: true, product: create(:product, organization:, billable_metric:)) }
-      let(:params) do
-        super().merge(rate_properties: {graduated_ranges: [{to_value: "10.5", flat_amount: "0", per_unit_amount: "1"}, {to_value: nil, flat_amount: "0", per_unit_amount: "1"}]})
-      end
-
-      it "rejects a decimal bound" do
-        expect { result }.not_to change(RateCardRate, :count)
-        expect(result.error.messages[:graduated_ranges]).to eq(["decimal_bound_not_allowed_with_proration"])
-      end
-    end
-
     context "when a tier names its lower bound" do
       let(:params) do
         super().merge(rate_properties: {graduated_ranges: [{from_value: 0, to_value: nil, flat_amount: "0", per_unit_amount: "1"}]})

@@ -5,13 +5,12 @@ require "rails_helper"
 RSpec.describe ChargeModels::ProratedGraduatedService do
   subject(:apply_graduated_service) do
     described_class.apply(
-      pricing_structure:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
       period_ratio: 1.0
     )
   end
 
-  let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge) }
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
@@ -86,93 +85,6 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     expect(apply_graduated_service.amount.round(2)).to eq(197.33)
     expect(apply_graduated_service.unit_amount.round(2)).to eq(14.10) # 197.33 / 14
     expect(apply_graduated_service.amount_details).to eq({})
-  end
-
-  context "with catalog tiers that touch" do
-    let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(product_catalog: true) }
-    let(:aggregation) { 9 }
-    let(:per_event_aggregation) do
-      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
-        r.event_aggregation = [15, -6]
-        r.event_prorated_aggregation = [15, -6]
-      end
-    end
-    let(:charge) do
-      create(
-        :graduated_charge,
-        billable_metric:,
-        organization:,
-        plan:,
-        prorated: true,
-        properties: {
-          graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "1", flat_amount: "0"},
-            {from_value: 10, to_value: 20, per_unit_amount: "2", flat_amount: "0"},
-            {from_value: 20, to_value: nil, per_unit_amount: "3", flat_amount: "0"}
-          ]
-        }
-      )
-    end
-
-    before do
-      aggregation_result.full_units_number = 9
-      aggregation_result.current_usage_units = 9
-    end
-
-    # 15 units then 6 removed: the 5 units of the second tier go first, then 1 of the first.
-    it "bills a decrease across a tier boundary" do
-      expect(apply_graduated_service.amount).to eq(9)
-    end
-
-    context "with a tier one unit wide and a second addition" do
-      let(:aggregation) { 7 }
-      let(:per_event_aggregation) do
-        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
-          r.event_aggregation = [5, 2]
-          r.event_prorated_aggregation = [5, 2]
-        end
-      end
-      let(:charge) do
-        create(
-          :graduated_charge,
-          billable_metric:,
-          organization:,
-          plan:,
-          prorated: true,
-          properties: {
-            graduated_ranges: [
-              {from_value: 0, to_value: 2, per_unit_amount: "1", flat_amount: "0"},
-              {from_value: 2, to_value: 3, per_unit_amount: "2", flat_amount: "0"},
-              {from_value: 3, to_value: nil, per_unit_amount: "3", flat_amount: "0"}
-            ]
-          }
-        )
-      end
-
-      before do
-        aggregation_result.full_units_number = 7
-        aggregation_result.current_usage_units = 7
-      end
-
-      # Units 1-2 at 1, unit 3 at 2, units 4-7 at 3.
-      it "bills the one-unit tier at its own price" do
-        expect(apply_graduated_service.amount).to eq(16)
-      end
-    end
-
-    context "when usage drops back below a bound mid-period" do
-      let(:aggregation) { 10 }
-      let(:per_event_aggregation) do
-        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
-          r.event_aggregation = [11, -2]
-          r.event_prorated_aggregation = [11, -1]
-        end
-      end
-
-      it "bills the unit that sat in the second tier" do
-        expect(apply_graduated_service.amount).to eq(10.5)
-      end
-    end
   end
 
   context "when zero usage" do

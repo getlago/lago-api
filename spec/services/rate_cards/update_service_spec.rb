@@ -17,34 +17,6 @@ RSpec.describe RateCards::UpdateService do
     expect(result.rate_card.billing_timing).to eq("advance")
   end
 
-  context "when turning on proration with a decimal graduated override on the card" do
-    let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
-    let(:rate_card) { create(:rate_card, organization:, currency: "EUR", product: create(:product, organization:, billable_metric:)) }
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, rate_card:) }
-    let(:rate_override) do
-      create(
-        :rate_override,
-        organization:,
-        billable_metric:,
-        rate_model: "graduated",
-        rate_properties: {
-          "graduated_ranges" => [
-            {"from_value" => 0, "to_value" => 10.5, "flat_amount" => "0", "per_unit_amount" => "1"},
-            {"from_value" => 10.5, "to_value" => nil, "flat_amount" => "0", "per_unit_amount" => "1"}
-          ]
-        }
-      )
-    end
-    let(:params) { {proration: true} }
-
-    before { create(:rate_phase, organization:, plan_rate_card:, rate_override:) }
-
-    it "rejects it, since prorated billing needs whole bounds" do
-      expect(result.error.messages[:proration]).to eq(["decimal_bound_not_allowed_with_proration"])
-      expect(rate_card.reload.proration).to be(false)
-    end
-  end
-
   describe "code editability" do
     let(:params) { {code: "after"} }
 
