@@ -36,6 +36,8 @@ module X402
 
       def outcome
         @outcome ||= begin
+          raise ArgumentError, "since must be a Time" unless since.is_a?(Time)
+
           buyer_signature
           verify_cluster!
           expiry

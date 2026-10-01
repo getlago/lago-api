@@ -43,6 +43,8 @@ module X402
 
       def outcome
         @outcome ||= begin
+          raise ArgumentError, "since must be a Time" unless since.is_a?(Time)
+
           validate_payment!
           verify_chain!
 

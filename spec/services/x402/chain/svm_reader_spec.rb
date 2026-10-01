@@ -178,6 +178,14 @@ describe X402::Chain::SvmReader do
     end
   end
 
+  context "without a since" do
+    let(:since) { nil }
+
+    it "raises" do
+      expect { reader.settled? }.to raise_error(ArgumentError, /since/)
+    end
+  end
+
   context "when the endpoint serves another cluster" do
     let(:genesis_hash) { "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d" }
 
