@@ -19,7 +19,7 @@ module X402
       attr_reader :url
 
       def initialize(network:)
-        @url = configured_urls.fetch(network.to_s) { raise ArgumentError, "no RPC endpoint for #{network.inspect}" }
+        @url = configured_urls.fetch(network.to_s) { raise UnreachableError, "no RPC endpoint for #{network.inspect}" }
       end
 
       def call(method, params)
@@ -27,8 +27,10 @@ module X402
           .new(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT)
           .post_with_response({jsonrpc: "2.0", id: 1, method:, params:}, {})
         body = JSON.parse(response.body)
+        raise UnreachableError, "#{method}: not a JSON-RPC response" unless body.is_a?(Hash)
 
-        raise UnreachableError, "#{method}: #{body.dig("error", "message")}" if body["error"]
+        error = body["error"]
+        raise UnreachableError, "#{method}: #{error.is_a?(Hash) ? error["message"] : "malformed error"}" if error
         raise UnreachableError, "#{method}: no result" unless body.key?("result")
 
         body["result"]
@@ -47,12 +49,12 @@ module X402
         configured = begin
           JSON.parse(raw)
         rescue JSON::ParserError
-          raise ArgumentError, "LAGO_X402_RPC_URLS is not valid JSON", cause: nil
+          raise UnreachableError, "LAGO_X402_RPC_URLS is not valid JSON", cause: nil
         end
-        raise ArgumentError, "LAGO_X402_RPC_URLS must be a JSON object mapping a CAIP-2 network to a URL" unless configured.is_a?(Hash)
+        raise UnreachableError, "LAGO_X402_RPC_URLS must be a JSON object mapping a CAIP-2 network to a URL" unless configured.is_a?(Hash)
 
         configured.each do |network, endpoint|
-          raise ArgumentError, "LAGO_X402_RPC_URLS has an invalid URL for #{network}", cause: nil unless http_url?(endpoint)
+          raise UnreachableError, "LAGO_X402_RPC_URLS has an invalid URL for #{network}", cause: nil unless http_url?(endpoint)
         end
         DEFAULT_URLS.merge(configured)
       end

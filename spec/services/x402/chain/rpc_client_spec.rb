@@ -42,7 +42,7 @@ describe X402::Chain::RpcClient do
       let(:rpc_urls) { "eip155:84532=https://example.com" }
 
       it "raises" do
-        expect { client }.to raise_error(ArgumentError, /LAGO_X402_RPC_URLS/)
+        expect { client }.to raise_error(X402::Chain::UnreachableError, /LAGO_X402_RPC_URLS/)
       end
     end
 
@@ -50,7 +50,7 @@ describe X402::Chain::RpcClient do
       let(:rpc_urls) { ["https://example.com"].to_json }
 
       it "raises" do
-        expect { client }.to raise_error(ArgumentError, /LAGO_X402_RPC_URLS/)
+        expect { client }.to raise_error(X402::Chain::UnreachableError, /LAGO_X402_RPC_URLS/)
       end
     end
 
@@ -58,7 +58,7 @@ describe X402::Chain::RpcClient do
       let(:rpc_urls) { {"eip155:84532" => "https://rpc.example.com/v2/SECRETKEY\n"}.to_json }
 
       it "raises without the URL" do
-        expect { client }.to raise_error(ArgumentError) { |error| expect(error.message).not_to include("SECRETKEY") }
+        expect { client }.to raise_error(X402::Chain::UnreachableError) { |error| expect(error.message).not_to include("SECRETKEY") }
       end
     end
 
@@ -66,7 +66,7 @@ describe X402::Chain::RpcClient do
       let(:rpc_urls) { {"eip155:84532" => "ftp://rpc.example.com/SECRETKEY"}.to_json }
 
       it "raises without the URL" do
-        expect { client }.to raise_error(ArgumentError) { |error| expect(error.message).not_to include("SECRETKEY") }
+        expect { client }.to raise_error(X402::Chain::UnreachableError) { |error| expect(error.message).not_to include("SECRETKEY") }
       end
     end
 
@@ -74,7 +74,7 @@ describe X402::Chain::RpcClient do
       let(:rpc_urls) { "{'eip155:84532':'https://rpc.example.com/v2/SECRETKEY'}" }
 
       it "drops the parser's cause, which quotes the value" do
-        expect { client }.to raise_error(ArgumentError) { |error| expect([error.message.include?("SECRETKEY"), error.cause]).to eq([false, nil]) }
+        expect { client }.to raise_error(X402::Chain::UnreachableError) { |error| expect([error.message.include?("SECRETKEY"), error.cause]).to eq([false, nil]) }
       end
     end
 
@@ -82,7 +82,7 @@ describe X402::Chain::RpcClient do
       let(:network) { "eip155:1" }
 
       it "raises" do
-        expect { client }.to raise_error(ArgumentError, /no RPC endpoint/)
+        expect { client }.to raise_error(X402::Chain::UnreachableError, /no RPC endpoint/)
       end
     end
   end
@@ -125,6 +125,24 @@ describe X402::Chain::RpcClient do
 
       it "raises" do
         expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: JSON::ParserError")
+      end
+    end
+
+    context "when the endpoint answers a JSON-RPC error that is not an object" do
+      before { stub_request(:post, url).to_return(status: 200, body: {jsonrpc: "2.0", id: 1, error: "rate limited"}.to_json) }
+
+      it "raises" do
+        expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: malformed error")
+      end
+    end
+
+    {"an array" => "[]", "a number" => "42", "a string" => "\"rate limited\"", "null" => "null"}.each do |shape, body|
+      context "when the endpoint answers #{shape}" do
+        before { stub_request(:post, url).to_return(status: 200, body:) }
+
+        it "raises" do
+          expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: not a JSON-RPC response")
+        end
       end
     end
 

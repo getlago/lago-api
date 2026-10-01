@@ -10,6 +10,7 @@ module X402
       TOKEN_PROGRAMS = %w[TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb].map { |key| Base58.decode(key) }.freeze
       SYSTEM_PROGRAM = ("\x00" * 32).b
       TRANSFER_CHECKED = 12
+      TRANSFER_CHECKED_ACCOUNTS = 4
       ADVANCE_NONCE_ACCOUNT = [4].pack("L<")
       UNSUPPORTED_VERSION = "only legacy and v0 Solana transactions are readable"
 
@@ -19,7 +20,8 @@ module X402
 
       def transfer_checked
         instructions.find do |instruction|
-          TOKEN_PROGRAMS.include?(account_keys[instruction.program_id_index]) && instruction.data.getbyte(0) == TRANSFER_CHECKED
+          TOKEN_PROGRAMS.include?(account_keys[instruction.program_id_index]) && instruction.data.getbyte(0) == TRANSFER_CHECKED &&
+            instruction.accounts.size >= TRANSFER_CHECKED_ACCOUNTS
         end
       end
 

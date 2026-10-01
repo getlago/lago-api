@@ -143,6 +143,18 @@ describe X402::Chain::SolanaTransaction do
       end
     end
 
+    context "with a transfer short of its authority" do
+      let(:bytes) do
+        build_solana_transaction(
+          keys: [fee_payer, buyer, SolanaTransactionBuilder::TOKEN_PROGRAM],
+          instructions: [{program: 2, accounts: [1, 1, 1], data: transfer_checked_data(5)}],
+          signatures: ["\x01".b * 64, "\x02".b * 64]
+        )
+      end
+
+      it { expect(transaction.transfer_checked).to be_nil }
+    end
+
     context "without a transfer" do
       let(:bytes) do
         build_solana_transaction(keys: [fee_payer, SolanaTransactionBuilder::TOKEN_PROGRAM], instructions: [{program: 1, accounts: [0], data: "\x03".b}], signatures: ["\x01".b * 64])

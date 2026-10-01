@@ -352,6 +352,20 @@ describe X402::Chain::SvmReader do
     end
   end
 
+  context "when the TransferChecked lists no authority" do
+    let(:signed_by_buyer) do
+      build_solana_transaction(
+        keys: [buyer, SolanaTransactionBuilder::TOKEN_PROGRAM],
+        instructions: [{program: 1, accounts: [0, 0, 0], data: transfer_checked_data(1000)}],
+        signatures: ["\x02".b * 64]
+      )
+    end
+
+    it "raises" do
+      expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError, /TransferChecked/)
+    end
+  end
+
   context "when the authority does not sign" do
     let(:signed_by_buyer) do
       build_solana_transaction(
