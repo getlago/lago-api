@@ -53,6 +53,7 @@ module UsageAttributions
       return result.not_found_failure!(resource: "subscription") unless subscription
       return result.forbidden_failure! unless available?
       return result.not_allowed_failure!(code: "subscription_not_started") unless subscription.started_at
+      return result.not_allowed_failure!(code: "subscription_not_active") unless subscription.active?
       return result.not_found_failure!(resource: "usage_attribution_type") unless attribution_types_found?
       return result.not_found_failure!(resource: "charge") unless requested_charges_in_plan?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
@@ -168,7 +169,7 @@ module UsageAttributions
     def window_errors
       return [] if from_datetime.nil? && to_datetime.nil?
       return ["both_boundaries_are_required"] if from_datetime.nil? || to_datetime.nil?
-      return ["invalid_date_range"] if from_datetime >= to_datetime
+      return ["invalid_date_range"] if from_datetime >= to_datetime || to_datetime <= subscription.started_at
       return ["window_too_long"] if to_datetime - from_datetime > MAX_CUSTOM_WINDOW
 
       []
@@ -179,7 +180,7 @@ module UsageAttributions
     end
 
     def window_to
-      [to_datetime || default_window.last, subscription.terminated_at].compact.min
+      to_datetime || default_window.last
     end
 
     # The current billing period. A period longer than a custom window (quarterly or yearly charges)

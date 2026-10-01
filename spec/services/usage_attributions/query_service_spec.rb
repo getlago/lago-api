@@ -152,18 +152,6 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with a terminated subscription" do
-    let(:subscription) do
-      create(:subscription, :calendar, customer:, plan:, started_at:, subscription_at: started_at,
-        status: :terminated, terminated_at: Time.zone.parse("2026-09-05"))
-    end
-
-    it "stops the window at the termination" do
-      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-05"))
-      expect(result.rows).to be_empty
-    end
-  end
-
   context "with pagination" do
     let(:limit) { 1 }
     let(:offset) { 1 }
@@ -519,6 +507,17 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
+  context "with a terminated subscription" do
+    let(:subscription) do
+      create(:subscription, :calendar, customer:, plan:, started_at:, subscription_at: started_at,
+        status: :terminated, terminated_at: Time.zone.parse("2026-09-05"))
+    end
+
+    it "returns a not allowed failure" do
+      expect(result.error.code).to eq("subscription_not_active")
+    end
+  end
+
   context "with an unknown group_by type" do
     let(:group_by) { "department" }
 
@@ -591,6 +590,15 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   context "with an inverted window" do
     let(:from_datetime) { Time.zone.parse("2026-09-10") }
     let(:to_datetime) { Time.zone.parse("2026-09-01") }
+
+    it "returns a validation failure" do
+      expect(result.error.messages).to eq(to_datetime: ["invalid_date_range"])
+    end
+  end
+
+  context "with a window ending before the subscription start" do
+    let(:from_datetime) { Time.zone.parse("2026-07-01") }
+    let(:to_datetime) { Time.zone.parse("2026-07-20") }
 
     it "returns a validation failure" do
       expect(result.error.messages).to eq(to_datetime: ["invalid_date_range"])
