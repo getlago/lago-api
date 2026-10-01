@@ -18,10 +18,51 @@ RSpec.describe V2::ContractSerializer do
     expect(payload[:applied_rate_cards].pluck(:lago_id)).to eq(expected)
   end
 
+  # What a v2 render passes without expand: contracts are never deleted, so no deleted_at.
+  context "with deleted_at only" do
+    let(:includes) { %i[deleted_at] }
+    let(:customer) { create(:customer) }
+    let(:catalog_plan) { create(:catalog_plan, organization: customer.organization) }
+    let(:contract) do
+      create(
+        :contract, :terminated,
+        customer:, catalog_plan:, name: "Annual deal", billing_time: :anniversary, consolidate_invoice: false,
+        purchase_order_number: "PO-42", skip_invoice_custom_sections: true,
+        started_at: Time.zone.parse("2026-01-10T08:00:00Z"), ended_at: Time.zone.parse("2026-12-31T00:00:00Z"),
+        terminated_at: Time.zone.parse("2026-09-30T12:00:00Z"),
+        created_at: Time.zone.parse("2026-01-05T09:00:00Z"), updated_at: Time.zone.parse("2026-09-30T12:00:01Z")
+      )
+    end
+
+    it "renders the flat contract" do
+      expect(payload).to eq(
+        lago_id: contract.id,
+        external_id: contract.external_id,
+        lago_customer_id: customer.id,
+        external_customer_id: customer.external_id,
+        name: "Annual deal",
+        plan_code: catalog_plan.code,
+        status: "terminated",
+        billing_time: "anniversary",
+        consolidate_invoice: false,
+        purchase_order_number: "PO-42",
+        billing_anchor_date: nil,
+        effective_billing_anchor_date: "2026-01-10",
+        started_at: "2026-01-10T08:00:00Z",
+        ended_at: "2026-12-31T00:00:00Z",
+        terminated_at: "2026-09-30T12:00:00Z",
+        canceled_at: nil,
+        skip_invoice_custom_sections: true,
+        created_at: "2026-01-05T09:00:00Z",
+        updated_at: "2026-09-30T12:00:01Z"
+      )
+    end
+  end
+
   context "with invoice custom sections" do
-    let(:includes) { %i[applied_invoice_custom_sections] }
-    # Oldest first, the reverse of the listed order, on sections created the other way around: listed
-    # by the sections instead of the links, the oldest link would come first.
+    let(:includes) { %i[invoice_custom_sections] }
+    # Selected oldest first, the reverse of the listed order, and the sections created the other way
+    # around: listed by the sections instead of their selection, the oldest selection would come first.
     let!(:applied_sections) do
       [1, 0, 0].map do |age|
         invoice_custom_section = create(:invoice_custom_section, organization: contract.organization, created_at: created_at + age.seconds)
@@ -29,10 +70,10 @@ RSpec.describe V2::ContractSerializer do
       end
     end
 
-    it "embeds them newest first, ties ordered by id" do
-      expected = applied_sections.sort_by { [it.created_at, it.id] }.reverse.map(&:id)
+    it "expands them in the order they were selected, newest first, ties ordered by id" do
+      expected = applied_sections.sort_by { [it.created_at, it.id] }.reverse.map(&:invoice_custom_section_id)
 
-      expect(payload[:applied_invoice_custom_sections].pluck(:lago_id)).to eq(expected)
+      expect(payload[:invoice_custom_sections].pluck(:lago_id)).to eq(expected)
     end
   end
 end
