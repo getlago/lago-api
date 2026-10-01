@@ -128,6 +128,12 @@ module Types
         end
       end
 
+      def payment_term
+        if object.payment_term.present?
+          PaymentTerm.from_h(object.payment_term)
+        end
+      end
+
       def dates_service
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time, current_usage: true)
       end
