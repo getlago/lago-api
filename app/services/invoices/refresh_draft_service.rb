@@ -30,60 +30,32 @@ module Invoices
     def call
       return result.forbidden_failure! unless invoice.subscription?
 
-      if invoice.billing_segments.exists?
-        return BillingSegments::RefreshDraftService.call(
-          invoice:,
-          context: billing_segment_context
-        )
-      end
-
       result.invoice = invoice
       return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
         invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
         old_total_amount_cents = invoice.total_amount_cents
+        billing_segment_invoice = billing_segment_invoice?
+        subscription_refresh_data = build_subscription_refresh_data unless billing_segment_invoice
 
-        old_fee_values = invoice_credit_note_items.map do |item|
-          {credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents}
+        calculate_result = if billing_segment_invoice
+          refresh_billing_segment_fees
+        else
+          refresh_subscription_fees(subscription_refresh_data)
         end
-        cn_subscription_ids = invoice.credit_notes.map do |cn|
-          {credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id)}
-        end
-        timestamp = fetch_timestamp
 
-        reset_invoice_values
-
-        Invoices::CreateInvoiceSubscriptionService.call(
-          invoice:,
-          subscriptions: Subscription.find(subscription_ids),
-          timestamp:,
-          invoicing_reason:,
-          refresh: true
-        ).raise_if_error!
-
-        calculate_result = Invoices::CalculateFeesService.call(
-          invoice: invoice.reload,
-          recurring:,
-          context:
-        )
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-
-        invoice.credit_notes.each do |credit_note|
-          subscription_id = cn_subscription_ids.find { |h| h[:credit_note_id] == credit_note.id }[:subscription_id]
-          fee = invoice.fees.subscription.find_by(subscription_id:)
-          CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:).raise_if_error!
-        end
+        refresh_subscription_credit_notes(subscription_refresh_data) unless billing_segment_invoice
 
         calculate_result.raise_if_error! unless tax_error?(calculate_result.error)
 
         if old_total_amount_cents != invoice.total_amount_cents
-          flag_lifetime_usage_for_refresh
+          flag_lifetime_usage_for_refresh unless billing_segment_invoice
           invoice.customer.flag_wallets_for_refresh
         end
 
-        # NOTE: In case of a refresh the same day of the termination.
-        invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
+        preserve_subscription_fee_creation_date unless billing_segment_invoice
 
         return result if tax_error?(calculate_result.error) # rubocop:disable Rails/TransactionExitStatement
 
@@ -94,12 +66,22 @@ module Invoices
 
       result
     rescue BaseService::FailedResult => e
-      e.result
+      if billing_segment_invoice?
+        result.fail_with_error!(e)
+      else
+        e.result
+      end
     end
 
     private
 
     attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
+
+    def billing_segment_invoice?
+      return @billing_segment_invoice if defined?(@billing_segment_invoice)
+
+      @billing_segment_invoice = invoice.billing_segments.exists?
+    end
 
     def billing_segment_context
       if context == :finalize
@@ -107,6 +89,69 @@ module Invoices
       else
         :draft
       end
+    end
+
+    def refresh_billing_segment_fees
+      reset_billing_segment_invoice_values!
+
+      BillingSegments::ComputeInvoiceService.call!(
+        invoice:,
+        billing_segments:,
+        context: billing_segment_context
+      )
+    end
+
+    def refresh_subscription_fees(refresh_data)
+      reset_subscription_invoice_values!
+
+      Invoices::CreateInvoiceSubscriptionService.call(
+        invoice:,
+        subscriptions: Subscription.find(subscription_ids),
+        timestamp: refresh_data[:timestamp],
+        invoicing_reason:,
+        refresh: true
+      ).raise_if_error!
+
+      Invoices::CalculateFeesService.call(
+        invoice: invoice.reload,
+        recurring:,
+        context:
+      )
+    end
+
+    def build_subscription_refresh_data
+      {
+        old_fee_values: invoice_credit_note_items.map do |item|
+          {credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents}
+        end,
+        credit_note_subscription_ids: invoice.credit_notes.map do |credit_note|
+          {credit_note_id: credit_note.id, subscription_id: credit_note.fees.pick(:subscription_id)}
+        end,
+        timestamp: fetch_timestamp
+      }
+    end
+
+    def refresh_subscription_credit_notes(refresh_data)
+      invoice.credit_notes.each do |credit_note|
+        subscription_id = refresh_data[:credit_note_subscription_ids]
+          .find { |item| item[:credit_note_id] == credit_note.id }[:subscription_id]
+        fee = invoice.fees.subscription.find_by(subscription_id:)
+        CreditNotes::RefreshDraftService.call(
+          credit_note:,
+          fee:,
+          old_fee_values: refresh_data[:old_fee_values]
+        ).raise_if_error!
+      end
+    end
+
+    def billing_segments
+      @billing_segments ||= invoice.billing_segments.includes(
+        :pricing_unit,
+        :rate_override,
+        :contract,
+        contract_rate_card: {rate_card: :product},
+        rate_card_rate: :rate_card
+      )
     end
 
     def fetch_timestamp
@@ -131,28 +176,46 @@ module Invoices
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
     end
 
+    def preserve_subscription_fee_creation_date
+      # NOTE: In case of a refresh the same day of the termination.
+      invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
+    end
+
     def tax_error?(error)
       error&.is_a?(BaseService::UnknownTaxFailure)
     end
 
-    def reset_invoice_values
+    def reset_subscription_invoice_values!
       invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
       invoice.fees.destroy_all
       invoice_subscriptions.destroy_all
-      invoice.applied_taxes.destroy_all
-      invoice.error_details.discard_all # rubocop:disable Lago/DiscardAll
-      invoice.applied_invoice_custom_sections.destroy_all
+      reset_shared_invoice_values!
       invoice.credits.progressive_billing_invoice_kind.destroy_all
-
-      invoice.taxes_amount_cents = 0
-      invoice.total_amount_cents = 0
-      invoice.taxes_rate = 0
-      invoice.fees_amount_cents = 0
-      invoice.sub_total_excluding_taxes_amount_cents = 0
-      invoice.sub_total_including_taxes_amount_cents = 0
       invoice.progressive_billing_credit_amount_cents = 0
 
       invoice.save!
+    end
+
+    def reset_billing_segment_invoice_values!
+      invoice.fees.discard_all!
+      reset_shared_invoice_values!
+
+      invoice.save!
+    end
+
+    def reset_shared_invoice_values!
+      invoice.applied_taxes.destroy_all
+      invoice.error_details.discard_all # rubocop:disable Lago/DiscardAll
+      invoice.applied_invoice_custom_sections.destroy_all
+
+      invoice.assign_attributes(
+        taxes_amount_cents: 0,
+        total_amount_cents: 0,
+        taxes_rate: 0,
+        fees_amount_cents: 0,
+        sub_total_excluding_taxes_amount_cents: 0,
+        sub_total_including_taxes_amount_cents: 0
+      )
     end
   end
 end
