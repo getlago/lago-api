@@ -27,21 +27,21 @@ module Types
         end
 
         def events_count
-          object.sum(&:events_count)
+          fees.sum(&:events_count)
         end
 
         def units
-          object.map { |f| BigDecimal(f.units) }.sum
+          fees.map { |f| BigDecimal(f.units) }.sum
         end
 
         def amount_cents
-          object.sum(&:amount_cents)
+          fees.sum(&:amount_cents)
         end
 
         def pricing_unit_amount_cents
           return if charge.applied_pricing_unit.nil?
 
-          object.map(&:pricing_unit_usage).sum(&:amount_cents)
+          fees.map(&:pricing_unit_usage).sum(&:amount_cents)
         end
 
         def pricing_unit_projected_amount_cents
@@ -49,23 +49,23 @@ module Types
         end
 
         def charge
-          object.first.charge
+          fees.first.charge
         end
 
         def billable_metric
-          object.first.billable_metric
+          fees.first.billable_metric
         end
 
         def filters
-          return [] unless object.first.has_charge_filters?
+          return [] unless fees.first.has_charge_filters?
 
-          object.sort_by { |f| f.charge_filter&.display_name.to_s }
+          fees.sort_by { |f| f.charge_filter&.display_name.to_s }.map { |fee| object.wrap([fee]) }
         end
 
         def grouped_usage
-          return [] unless object.any? { |f| f.grouped_by.present? }
+          return [] unless fees.any? { |f| f.grouped_by.present? }
 
-          object.group_by(&:grouped_by).values
+          fees.group_by(&:grouped_by).values.map { |group_fees| object.wrap(group_fees) }
         end
 
         def projected_units
@@ -78,7 +78,7 @@ module Types
 
         def presentation_breakdowns
           @presentation_breakdowns ||= Types::Fees::PresentationBreakdownBuilder.call(
-            object,
+            fees,
             filter: Types::Fees::PresentationBreakdownBuilder::UNGROUPED,
             filter_breakdown: Types::Fees::PresentationBreakdownBuilder::ALL
           )
@@ -93,7 +93,11 @@ module Types
         private
 
         def projection
-          @projection ||= context[:usage_projections].for(object)
+          @projection ||= object.projection
+        end
+
+        def fees
+          object.fees
         end
       end
     end

@@ -20,7 +20,7 @@ module Types
         field :charges_usage, [Types::Customers::Usage::ProjectedCharge], null: false
 
         def charges_usage
-          object.fees.group_by(&:charge_id).values
+          object.fees.group_by(&:charge_id).values.map { |fees| object.projections.wrap(fees) }
         end
 
         def projected_amount_cents

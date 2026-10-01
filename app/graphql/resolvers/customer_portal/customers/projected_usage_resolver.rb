@@ -22,10 +22,7 @@ module Resolvers
             use_usage_buckets: true
           ).call
 
-          return result_error(result) unless result.success?
-
-          context.scoped_set!(:usage_projections, result.usage.projections)
-          result.usage
+          result.success? ? result.usage : result_error(result)
         rescue ActiveRecord::RecordNotFound
           not_found_error(resource: "customer")
         end
