@@ -32,6 +32,7 @@ module Subscriptions
         subscription_groups = split_consolidation_opted_out(subscription_groups)
         subscription_groups = group_by_purchase_order_number(subscription_groups)
         subscription_groups = group_by_resolved_payment_term(subscription_groups)
+        Yabeda.payment_terms.invoices_per_customer.measure({}, subscription_groups.size)
 
         subscription_groups.each do |subscriptions|
           BillSubscriptionJob.perform_later(

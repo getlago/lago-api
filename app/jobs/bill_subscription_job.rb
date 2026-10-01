@@ -26,8 +26,11 @@ class BillSubscriptionJob < ApplicationJob
       term_groups = subscriptions.zip(resolutions).group_by { |_, resolution| resolution.payment_term.to_h }.values
       Rails.logger.info("BillSubscriptionJob - Mixed payment terms, splitting into #{term_groups.size} groups")
 
+      Yabeda.payment_terms.splits_total.increment({invoicing_reason: invoicing_reason.to_s})
+
+      # Same kwargs as this job so a child's lock key matches the one its caller would compute
       term_groups.each do |pairs|
-        self.class.perform_later(pairs.map(&:first), timestamp, invoicing_reason:, skip_charges:)
+        self.class.perform_later(pairs.map(&:first), timestamp, **arguments.last)
       end
 
       return
