@@ -1178,15 +1178,15 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         )
       end
 
+      around { |example| travel_to(DateTime.parse("2025-06-15")) { example.run } } # 15 of 30 days, ratio 0.5
+
       before { allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original }
 
       it "projects the units served by the buckets without aggregating again" do
         usage = usage_service.call.usage
-        fee = usage.fees.sole
-        expected_projection = Fees::ProjectionService.call!(fee:, timezone: customer.applicable_timezone).projection
 
-        expect(fee).to have_attributes(units: 5)
-        expect(usage.projections.for([fee])).to eq(expected_projection)
+        expect(usage.fees.sole).to have_attributes(units: 5)
+        expect(usage.projections.for(usage.fees)).to have_attributes(units: BigDecimal(10), amount_cents: 12660)
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).once
       end
     end
