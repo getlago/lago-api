@@ -82,11 +82,17 @@ module X402
         from_block = lower_bound
         to_block = upper_bound
 
+        scan_logs(from_block, to_block, [AUTHORIZATION_USED, AUTHORIZATION_CANCELED]) ||
+          scan_logs(to_block + 1, safe_head_number, [AUTHORIZATION_CANCELED]) ||
+          raise(InconclusiveError, "the nonce is used but no AuthorizationUsed or AuthorizationCanceled event was found in blocks #{from_block}..#{safe_head_number}")
+      end
+
+      def scan_logs(from_block, to_block, events)
         (from_block..to_block).step(LOG_CHUNK_BLOCKS).first(MAX_LOG_CHUNKS).each do |chunk_start|
           chunk_end = [chunk_start + LOG_CHUNK_BLOCKS - 1, to_block].min
           logs = rpc.call("eth_getLogs", [{
             "address" => asset,
-            "topics" => [[AUTHORIZATION_USED, AUTHORIZATION_CANCELED], "0x#{padded(payer)}", nonce.downcase],
+            "topics" => [events, "0x#{padded(payer)}", nonce.downcase],
             "fromBlock" => hex(chunk_start),
             "toBlock" => hex(chunk_end)
           }])
@@ -96,8 +102,6 @@ module X402
 
         if to_block - from_block >= LOG_CHUNK_BLOCKS * MAX_LOG_CHUNKS
           raise InconclusiveError, "the log window over blocks #{from_block}..#{to_block} exceeds #{MAX_LOG_CHUNKS} chunks"
-        else
-          raise InconclusiveError, "the nonce is used but no AuthorizationUsed event was found in blocks #{from_block}..#{to_block}"
         end
       end
 

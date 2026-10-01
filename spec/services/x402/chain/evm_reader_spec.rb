@@ -204,6 +204,27 @@ describe X402::Chain::EvmReader do
     end
   end
 
+  [300, 1_000].each do |offset|
+    context "when the buyer canceled #{offset} blocks after the payment's block" do
+      let(:safe_block) { log_block + 5_000 }
+      let(:logs) { [log.merge("blockNumber" => "0x#{(log_block + offset).to_s(16)}", "topics" => ["0x1cdd46ff242716cdaa72d159d339a485b3438398348d68f09d7c8c0a59353d81", *log["topics"].drop(1)])] }
+
+      it "is not settled" do
+        expect(reader.settled?).to be(false)
+      end
+
+      it "is final" do
+        expect(reader.final?).to be(true)
+      end
+
+      it "looks only for cancellations past the window" do
+        reader.settled?
+
+        expect(calls("eth_getLogs").last["params"].first["topics"].first).to eq(["0x1cdd46ff242716cdaa72d159d339a485b3438398348d68f09d7c8c0a59353d81"])
+      end
+    end
+  end
+
   context "when the nonce paid someone else" do
     let(:receipt) do
       transfer = chain_data["receipt"]["logs"].last
