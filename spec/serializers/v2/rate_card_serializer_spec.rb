@@ -49,6 +49,26 @@ RSpec.describe V2::RateCardSerializer do
     end
   end
 
+  # As a show preloads them for expand[]=rates.
+  context "with the rates loaded" do
+    let(:includes) { %i[active_rate rates] }
+    # Supersedes the effective rate, while the next one is still pending.
+    let!(:superseding_rate) { create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_from: Time.current.beginning_of_day) }
+
+    before do
+      create(:rate_card_rate, organization: rate_card.organization, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
+      rate_card.rates.load
+    end
+
+    it "reads the active rate from them" do
+      queries = capture_counted_queries { payload }
+
+      expect(payload[:active_rate]).to include(lago_id: superseding_rate.id, status: "active")
+      expect(payload[:active_rate]).to eq(payload[:rates].find { it[:status] == "active" })
+      expect(queries.grep(/FROM "rate_card_rates"/)).to be_empty
+    end
+  end
+
   context "with taxes sharing created_at" do
     let(:includes) { %i[taxes] }
     let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
@@ -65,6 +85,29 @@ RSpec.describe V2::RateCardSerializer do
       expected = applied_taxes.sort_by { [it.created_at, it.id] }.reverse.map(&:tax_id)
 
       expect(payload[:taxes].pluck(:lago_id)).to eq(expected)
+    end
+  end
+
+  # What the activity log passes, with the rates left out.
+  context "with taxes and counts" do
+    let(:includes) { %i[taxes counts] }
+    let!(:applied_tax) { create(:rate_card_applied_tax, rate_card:) }
+
+    it "renders the rates count and each tax in the V1 shape, with its zero counts" do
+      expect(payload[:rates_count]).to eq(1)
+      expect(payload[:taxes]).to eq([V1::TaxSerializer.new(applied_tax.tax).serialize])
+    end
+  end
+
+  # What a v2 show passes with expand[]=taxes.
+  context "with taxes and deleted_at" do
+    let(:includes) { %i[taxes deleted_at] }
+    let!(:applied_tax) { create(:rate_card_applied_tax, rate_card:) }
+
+    it "renders deleted_at on each tax, and no count" do
+      expect(payload).not_to have_key(:rates_count)
+      expect(payload[:taxes].sole).to include(lago_id: applied_tax.tax_id, deleted_at: nil)
+      expect(payload[:taxes].sole.keys & V2::TaxSerializer::ZERO_COUNTS.keys).to be_empty
     end
   end
 end
