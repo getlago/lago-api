@@ -150,6 +150,24 @@ RSpec.describe ChargeModels::ProratedAdjacentGraduatedService do
     it "keeps each id at the tier it entered" do
       expect(apply_service.amount).to eq(5.25)
     end
+
+    context "when the ids fill three tiers before two leave" do
+      let(:full_units) { [1, 1, 1, -1, -1] }
+      let(:prorated_units) { [0.25, 1, 1, 0, 0] }
+      let(:graduated_ranges) do
+        [
+          {"from_value" => 0, "to_value" => 1, "per_unit_amount" => "2", "flat_amount" => "0"},
+          {"from_value" => 1, "to_value" => 2, "per_unit_amount" => "9", "flat_amount" => "0"},
+          {"from_value" => 2, "to_value" => nil, "per_unit_amount" => "2", "flat_amount" => "0"}
+        ]
+      end
+
+      # 2 x 0.25 + 9 x 1 + 2 x 1. The step calculator bills 18.5, pricing the third id
+      # at the second tier.
+      it "prices the third id at the tier it entered" do
+        expect(apply_service.amount).to eq(11.5)
+      end
+    end
   end
 
   context "with an addition worth nothing in the period" do
