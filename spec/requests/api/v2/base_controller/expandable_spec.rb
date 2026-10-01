@@ -32,11 +32,9 @@ RSpec.describe "Api::Expandable" do
     serializer = self.serializer
 
     stub_const("Api::V2::ExpandableTestsController", Class.new(Api::V2::BaseController) do
-      include Api::Expandable
-
       expandable_with(serializer)
 
-      # A lookup of the controller's own, declared after the include like those of the v2 controllers.
+      # A lookup of the controller's own, like those of the v2 controllers.
       before_action(only: :show) { not_found_error(resource: "product") unless product }
 
       def index
@@ -67,8 +65,6 @@ RSpec.describe "Api::Expandable" do
     end)
 
     stub_const("Api::V2::NotExpandableTestsController", Class.new(Api::V2::BaseController) do
-      include Api::Expandable
-
       def show
         render(json: {includes: serializer_includes})
       end
