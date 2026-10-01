@@ -3,9 +3,7 @@
 module Api
   module V2
     module PlanRateCards
-      class RatePhasesController < Api::BaseController
-        include Api::RequiresProductCatalog
-
+      class RatePhasesController < Api::V2::BaseController
         def index
           return not_found_error(resource: "applied_rate_card") unless plan_rate_card
 

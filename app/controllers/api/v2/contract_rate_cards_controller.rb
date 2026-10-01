@@ -2,9 +2,7 @@
 
 module Api
   module V2
-    class ContractRateCardsController < Api::BaseController
-      include Api::RequiresProductCatalog
-
+    class ContractRateCardsController < Api::V2::BaseController
       def create
         return not_found_error(resource: "contract") unless find_contract
 

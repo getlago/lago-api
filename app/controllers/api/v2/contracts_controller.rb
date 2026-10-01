@@ -2,9 +2,7 @@
 
 module Api
   module V2
-    class ContractsController < Api::BaseController
-      include Api::RequiresProductCatalog
-
+    class ContractsController < Api::V2::BaseController
       def create
         result = ::Contracts::CreateService.call(
           organization: current_organization,

@@ -2,9 +2,7 @@
 
 module Api
   module V2
-    class PlansController < Api::BaseController
-      include Api::RequiresProductCatalog
-
+    class PlansController < Api::V2::BaseController
       def index
         result = CatalogPlansQuery.call(
           organization: current_organization,
