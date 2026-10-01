@@ -12,6 +12,7 @@ module X402
     PAYOUT_FAMILIES = {"evm" => :evm, "svm" => :svm}.freeze
 
     belongs_to :organization
+    has_many :settlements, class_name: "X402::Settlement", foreign_key: :x402_connection_id, inverse_of: :x402_connection
 
     enum :facilitator, FACILITATORS, validate: true
     enum :asset, ASSETS, validate: true

@@ -64,6 +64,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:usage_attribution_types)
       expect(subject).to have_many(:usage_attribution_values)
       expect(subject).to have_many(:x402_connections).class_name("X402::Connection")
+      expect(subject).to have_many(:x402_settlements).class_name("X402::Settlement")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
       expect(subject).to have_many(:pending_vies_checks)

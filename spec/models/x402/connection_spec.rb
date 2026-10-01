@@ -28,6 +28,7 @@ describe X402::Connection do
   describe "associations" do
     it do
       expect(connection).to belong_to(:organization)
+      expect(connection).to have_many(:settlements).class_name("X402::Settlement").with_foreign_key(:x402_connection_id).inverse_of(:x402_connection)
     end
   end
 
