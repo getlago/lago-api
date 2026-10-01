@@ -12,6 +12,9 @@ module ChargePropertiesValidation
     graduated_percentage: Charges::Validators::GraduatedPercentageService
   }.freeze
 
+  # Catalog rates and overrides store adjacent tiers (see RateProperties).
+  RATE_PROPERTIES_VALIDATORS = PROPERTIES_VALIDATORS.merge(volume: Charges::Validators::AdjacentVolumeService).freeze
+
   def validate_charge_model_properties(charge_model)
     return unless charge_model
 

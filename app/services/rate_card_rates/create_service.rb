@@ -24,12 +24,15 @@ module RateCardRates
         return result.single_validation_failure!(field: :effective_from, error_code: "must_not_be_before_today")
       end
 
+      normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties], proration: rate_card.proration?)
+      return result.fail_with_error!(normalized.error) if normalized.failure?
+
       rate = rate_card.rates.create!(
         organization_id: rate_card.organization_id,
         code: params[:code].presence,
         effective_from: params[:effective_from],
         rate_model: params[:rate_model],
-        rate_properties: params[:rate_properties] || {},
+        rate_properties: normalized.rate_properties,
         min_amount_cents: params[:min_amount_cents] || 0,
         billing_interval_count: params[:billing_interval_count] || 1,
         billing_interval_unit: params[:billing_interval_unit],

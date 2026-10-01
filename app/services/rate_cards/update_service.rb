@@ -38,6 +38,12 @@ module RateCards
         end
       end
 
+      # Overrides on the card's plan and contract phases outlive its rates, and
+      # prorated graduated billing needs whole tier bounds.
+      if turning_on_proration? && decimal_graduated_override?
+        return result.single_validation_failure!(field: :proration, error_code: "decimal_bound_not_allowed_with_proration")
+      end
+
       # An attachment is created only when the card and its plan share a
       # currency, so the currency freezes once the card is attached.
       if params.key?(:currency) && params[:currency] != rate_card.currency && rate_card.attached_to_plan_or_subscription?
@@ -66,6 +72,21 @@ module RateCards
     private
 
     attr_reader :rate_card, :params
+
+    def turning_on_proration?
+      params.key?(:proration) && ActiveModel::Type::Boolean.new.cast(params[:proration]) && !rate_card.proration?
+    end
+
+    def decimal_graduated_override?
+      phases = RatePhase.where(plan_rate_card_id: rate_card.plan_applied_rate_cards.select(:id))
+        .or(RatePhase.where(contract_rate_card_id: rate_card.contract_applied_rate_cards.select(:id)))
+
+      RateOverride.where(id: phases.select(:rate_override_id)).any? do |rate_override|
+        Array(rate_override.rate_properties["graduated_ranges"]).any? do |range|
+          range["to_value"].present? && !BigDecimal(range["to_value"].to_s).frac.zero?
+        end
+      end
+    end
 
     def apply_taxes
       return unless params.key?(:tax_codes) && !params[:tax_codes].nil?
