@@ -34,7 +34,11 @@ module X402
       end
 
       def final?
-        (outcome != :unused) || head_timestamp >= valid_before
+        case outcome
+        when :unused then head_timestamp >= valid_before
+        when :unsafe then false
+        else true
+        end
       end
 
       private
@@ -47,7 +51,8 @@ module X402
           verify_chain!
 
           if authorization_used?
-            classify(find_authorization_log)
+            log = find_authorization_log
+            safe?(log) ? classify(log) : :unsafe
           else
             :unused
           end
@@ -58,6 +63,11 @@ module X402
         expected = network.to_s.split(":", 2).last.to_i
         actual = rpc.call("eth_chainId", []).to_s.to_i(16)
         raise InconclusiveError, "the endpoint for #{network} serves another chain (#{actual})" unless actual == expected
+      end
+
+      def safe?(log)
+        safe_block = rpc.call("eth_getBlockByNumber", ["safe", false]) || raise(InconclusiveError, "no safe block")
+        log["blockNumber"].to_s.to_i(16) <= safe_block["number"].to_i(16)
       end
 
       def classify(log)

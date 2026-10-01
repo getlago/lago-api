@@ -28,6 +28,7 @@ describe X402::Chain::EvmReader do
   let(:since) { Time.zone.at(log_time - 4) }
 
   let(:head_block) { log_block + 90 }
+  let(:safe_block) { head_block }
   let(:authorization_used) { true }
   let(:logs) { [log] }
   let(:rpc_calls) { [] }
@@ -45,7 +46,7 @@ describe X402::Chain::EvmReader do
       when "eth_chainId"
         chain_id
       when "eth_getBlockByNumber"
-        number = (rpc["params"].first == "latest") ? head_block : rpc["params"].first.to_i(16)
+        number = {"latest" => head_block, "safe" => safe_block}.fetch(rpc["params"].first) { |tag| tag.to_i(16) }
         {"number" => "0x#{number.to_s(16)}", "timestamp" => "0x#{block_time(number).to_s(16)}"}
       when "eth_call"
         "0x#{(authorization_used ? 1 : 0).to_s.rjust(64, "0")}"
@@ -128,12 +129,67 @@ describe X402::Chain::EvmReader do
       expect(reader.final?).to be(true)
     end
 
+    it "reads only the head block" do
+      reader.final?
+
+      expect(calls("eth_getBlockByNumber").map { |call| call["params"].first }).to eq(["latest"])
+    end
+
     context "when the head is still before validBefore" do
       let(:head_block) { log_block + 10 }
 
       it "is not final" do
         expect(reader.final?).to be(false)
       end
+    end
+  end
+
+  context "when the log's block is not yet safe" do
+    let(:safe_block) { log_block - 1 }
+
+    it "is not settled" do
+      expect(reader.settled?).to be(false)
+    end
+
+    it "has no identifier" do
+      expect(reader.identifier).to be_nil
+    end
+
+    it "is not final" do
+      expect(reader.final?).to be(false)
+    end
+
+    it "reads no receipt" do
+      reader.settled?
+
+      expect(calls("eth_getTransactionReceipt")).to be_empty
+    end
+
+    context "when the log is a cancellation" do
+      let(:logs) { [log.merge("topics" => ["0x1cdd46ff242716cdaa72d159d339a485b3438398348d68f09d7c8c0a59353d81", *log["topics"].drop(1)])] }
+
+      it "is not final" do
+        expect(reader.final?).to be(false)
+      end
+    end
+  end
+
+  context "when the log's block is the safe block" do
+    let(:safe_block) { log_block }
+
+    it "is settled" do
+      expect(reader.settled?).to be(true)
+    end
+  end
+
+  context "when the endpoint has no safe block" do
+    before do
+      stub_request(:post, "https://sepolia.base.org").with { |request| JSON.parse(request.body)["params"] == ["safe", false] }
+        .to_return(status: 200, body: {jsonrpc: "2.0", id: 1, result: nil}.to_json)
+    end
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no safe block/)
     end
   end
 
