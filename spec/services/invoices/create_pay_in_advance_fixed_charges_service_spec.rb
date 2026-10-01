@@ -107,6 +107,19 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
+    context "when the subscription has its own payment term" do
+      let(:subscription) do
+        create(:subscription, customer:, plan:, status: :active, payment_term: {"term_type" => "net", "days" => 45})
+      end
+
+      it "snapshots the subscription term instead of the customer's" do
+        invoice = invoice_service.call.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 45)
+        expect(invoice.payment_term_source).to eq("subscription")
+      end
+    end
+
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 

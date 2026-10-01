@@ -48,8 +48,10 @@ module Invoices
       end
 
       # NOTE: Guard for direct callers — BillSubscriptionJob resolves, splits mixed groups
-      #       and passes the term down, so this is unreachable from the job path.
-      if payment_term.nil? && mixed_payment_terms?
+      #       and passes the term down, so this is unreachable from the job path. A given
+      #       invoice already holds its frozen term, so a retry never re-checks.
+      if invoice.nil? && payment_term.nil? && mixed_payment_terms?
+        Yabeda.payment_terms.guard_failures_total.increment({invoicing_reason: invoicing_reason.to_s})
         return result.validation_failure!(errors: {payment_term: ["mixed_payment_terms"]})
       end
 

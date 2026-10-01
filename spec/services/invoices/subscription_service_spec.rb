@@ -78,6 +78,19 @@ RSpec.describe Invoices::SubscriptionService do
         expect(invoice.payment_term_source).to eq("subscription")
         expect(invoice.net_payment_term).to eq(60)
       end
+
+      context "when the subscription is terminating" do
+        let(:invoicing_reason) { :subscription_terminating }
+
+        before { subscription.update!(status: :terminated, terminated_at: timestamp) }
+
+        it "snapshots the subscription term on the termination invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.payment_term).to eq({"term_type" => "net", "days" => 60})
+          expect(invoice.payment_term_source).to eq("subscription")
+        end
+      end
     end
 
     context "when subscriptions resolve to mixed payment terms" do
@@ -94,11 +107,48 @@ RSpec.describe Invoices::SubscriptionService do
       end
       let(:subscriptions) { [subscription, other_subscription] }
 
+      let(:guard_failures) { Yabeda.payment_terms.guard_failures_total }
+
+      before { allow(guard_failures).to receive(:increment) }
+
       it "fails with a mixed_payment_terms validation error" do
         result = invoice_service.call
 
         expect(result).not_to be_success
         expect(result.error.messages[:payment_term]).to eq(["mixed_payment_terms"])
+        expect(guard_failures).to have_received(:increment).with({invoicing_reason: "subscription_periodic"})
+      end
+
+      context "when retrying a generating invoice created before the terms diverged" do
+        subject(:invoice_service) do
+          described_class.new(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:, invoice: existing_invoice)
+        end
+
+        let(:existing_invoice) do
+          create(
+            :invoice,
+            customer:,
+            organization:,
+            invoice_type: :subscription,
+            status: :generating,
+            payment_term: {"term_type" => "net", "days" => 30},
+            payment_term_source: "customer",
+            net_payment_term: 30
+          )
+        end
+
+        before do
+          create(:invoice_subscription, :boundaries, invoice: existing_invoice, subscription:, timestamp:)
+          create(:invoice_subscription, :boundaries, invoice: existing_invoice, subscription: other_subscription, timestamp:)
+        end
+
+        it "completes the invoice with its frozen term" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(existing_invoice.reload.payment_term).to eq("term_type" => "net", "days" => 30)
+          expect(guard_failures).not_to have_received(:increment)
+        end
       end
 
       context "when a pre-resolved payment term is given" do
