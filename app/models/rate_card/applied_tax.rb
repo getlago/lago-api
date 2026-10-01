@@ -8,6 +8,11 @@ class RateCard::AppliedTax < ApplicationRecord
   belongs_to :rate_card
   belongs_to :tax
   belongs_to :organization
+
+  # The links of kept taxes, in the order of the v2 lists. It selects the columns of
+  # `rate_cards_taxes` only, and the join adds no duplicates since a link points at a single
+  # tax: the taxes load in their own query.
+  scope :listed, -> { joins(:tax).merge(Tax.kept).preload(:tax).order(::CursorPagination::DEFAULT_SORT) }
 end
 
 # == Schema Information

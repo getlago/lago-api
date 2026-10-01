@@ -47,9 +47,10 @@ module V2
       model.applied_rate_cards.count
     end
 
+    # In the order of /applied_rate_cards.
     def applied_rate_cards
       ::CollectionSerializer.new(
-        model.applied_rate_cards.includes(:rate_phases, :rate_card, :contract),
+        model.applied_rate_cards.includes(:rate_phases, :rate_card, :contract).order(::CursorPagination::DEFAULT_SORT),
         ::V2::ContractAppliedRateCardSerializer,
         collection_name: "applied_rate_cards",
         includes: nested_includes
@@ -59,7 +60,7 @@ module V2
     # A section deleted before its links were cleaned up is skipped, not served as nil.
     def applied_invoice_custom_sections
       ::CollectionSerializer.new(
-        model.applied_invoice_custom_sections.joins(:invoice_custom_section).includes(:invoice_custom_section),
+        model.applied_invoice_custom_sections.joins(:invoice_custom_section).includes(:invoice_custom_section).order(::CursorPagination::DEFAULT_SORT),
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize[:applied_invoice_custom_sections]
