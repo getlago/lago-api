@@ -121,6 +121,10 @@ RSpec.describe BillSubscriptionJob do
       end
     end
 
+    let(:splits) { Yabeda.payment_terms.splits_total }
+
+    before { allow(splits).to receive(:increment) }
+
     context "when subscriptions resolve to mixed terms" do
       before do
         allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
@@ -131,10 +135,29 @@ RSpec.describe BillSubscriptionJob do
         described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
 
         expect(Invoices::SubscriptionService).not_to have_received(:call)
-        expect(described_class).to have_been_enqueued
-          .with([subscription1], timestamp, invoicing_reason:, skip_charges: false)
-        expect(described_class).to have_been_enqueued
-          .with([subscription2], timestamp, invoicing_reason:, skip_charges: false)
+        expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:)
+        expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:)
+        expect(splits).to have_received(:increment).with({invoicing_reason: invoicing_reason.to_s})
+      end
+
+      it "gives each child the lock key a direct enqueue of its group would have" do
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+
+        children = enqueued_jobs.map { |job| described_class.new(*ActiveJob::Arguments.deserialize(job[:args])) }
+        expected = [[subscription1], [subscription2]].map do |group|
+          described_class.new(group, timestamp, invoicing_reason:).lock_key_arguments
+        end
+
+        expect(children.map(&:lock_key_arguments)).to match_array(expected)
+      end
+
+      context "when the parent job skips charges" do
+        it "forwards skip_charges to every child" do
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:, skip_charges: true)
+
+          expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:, skip_charges: true)
+          expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:, skip_charges: true)
+        end
       end
     end
 
@@ -168,16 +191,21 @@ RSpec.describe BillSubscriptionJob do
     end
 
     context "when an invoice is given" do
-      let(:invoice) { create(:invoice, :generating) }
+      let(:invoice) { create(:invoice, :generating, customer:) }
 
-      before { allow(PaymentTerms::ResolveService).to receive(:call!) }
+      before do
+        create(:invoice_subscription, invoice:, subscription: subscription1)
+        create(:invoice_subscription, invoice:, subscription: subscription2)
+        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
+      end
 
-      it "never re-resolves nor splits" do
+      it "keeps the combined invoice instead of splitting it, even when the terms have diverged" do
         described_class.perform_now(subscriptions, timestamp, invoicing_reason:, invoice:)
 
         expect(PaymentTerms::ResolveService).not_to have_received(:call!)
-        expect(Invoices::SubscriptionService).to have_received(:call)
+        expect(Invoices::SubscriptionService).to have_received(:call).with(hash_including(subscriptions:, invoice:))
         expect(described_class).not_to have_been_enqueued
+        expect(splits).not_to have_received(:increment)
       end
     end
   end
