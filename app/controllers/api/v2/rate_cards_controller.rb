@@ -3,8 +3,6 @@
 module Api
   module V2
     class RateCardsController < Api::V2::BaseController
-      include Api::RequiresProductCatalog
-
       def create
         if create_params[:product_filter_code].present? && product && product_filter.nil?
           return not_found_error(resource: "product_filter")

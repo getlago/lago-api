@@ -3,8 +3,6 @@
 module Api
   module V2
     class ProductCategoriesController < Api::V2::BaseController
-      include Api::RequiresProductCatalog
-
       def create
         result = ::ProductCategories::CreateService.call(
           organization: current_organization,
