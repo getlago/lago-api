@@ -27,8 +27,7 @@ describe X402::Chain::EvmReader do
   let(:payment_requirements) { {"scheme" => "exact", "network" => "eip155:84532", "asset" => asset} }
   let(:since) { Time.zone.at(log_time - 4) }
 
-  let(:head_block) { log_block + 90 }
-  let(:safe_block) { head_block }
+  let(:safe_block) { log_block + 90 }
   let(:authorization_used) { true }
   let(:logs) { [log] }
   let(:rpc_calls) { [] }
@@ -46,10 +45,10 @@ describe X402::Chain::EvmReader do
       when "eth_chainId"
         chain_id
       when "eth_getBlockByNumber"
-        number = {"latest" => head_block, "safe" => safe_block}.fetch(rpc["params"].first) { |tag| tag.to_i(16) }
+        number = {"safe" => safe_block}.fetch(rpc["params"].first) { |tag| tag.to_i(16) }
         {"number" => "0x#{number.to_s(16)}", "timestamp" => "0x#{block_time(number).to_s(16)}"}
       when "eth_call"
-        "0x#{(authorization_used ? 1 : 0).to_s.rjust(64, "0")}"
+        "0x#{((authorization_used && rpc["params"].last.to_i(16) >= log_block) ? 1 : 0).to_s.rjust(64, "0")}"
       when "eth_getLogs"
         from, to = rpc["params"].first.values_at("fromBlock", "toBlock").map { |block| block.to_i(16) }
         logs.select { |entry| (from..to).cover?(entry["blockNumber"].to_i(16)) }
@@ -77,12 +76,12 @@ describe X402::Chain::EvmReader do
       expect(reader.final?).to be(true)
     end
 
-    it "asks the asset contract, at the head it read" do
+    it "asks the asset contract, at the safe block it read" do
       reader.settled?
 
       expect(calls("eth_call").sole["params"]).to eq([
         {"to" => asset, "data" => "0xe94a0102#{"f4a43b9cc729c9e4e139cb86808f48e3ed09dcb2".rjust(64, "0")}8568d530303a96028f64623cfc5c7bbb166c4aa2889b25bbe09e1d699193f174"},
-        "0x#{head_block.to_s(16)}"
+        "0x#{safe_block.to_s(16)}"
       ])
     end
 
@@ -125,18 +124,18 @@ describe X402::Chain::EvmReader do
       expect(reader.identifier).to be_nil
     end
 
-    it "is final once the head is past validBefore" do
+    it "is final once the safe block is past validBefore" do
       expect(reader.final?).to be(true)
     end
 
-    it "reads only the head block" do
+    it "reads only the safe block" do
       reader.final?
 
-      expect(calls("eth_getBlockByNumber").map { |call| call["params"].first }).to eq(["latest"])
+      expect(calls("eth_getBlockByNumber").map { |call| call["params"].first }).to eq(["safe"])
     end
 
-    context "when the head is still before validBefore" do
-      let(:head_block) { log_block + 10 }
+    context "when the safe block is still before validBefore" do
+      let(:safe_block) { log_block + 10 }
 
       it "is not final" do
         expect(reader.final?).to be(false)
@@ -144,7 +143,7 @@ describe X402::Chain::EvmReader do
     end
   end
 
-  context "when the log's block is not yet safe" do
+  context "when the payment's block is not yet safe" do
     let(:safe_block) { log_block - 1 }
 
     it "is not settled" do
@@ -165,7 +164,7 @@ describe X402::Chain::EvmReader do
       expect(calls("eth_getTransactionReceipt")).to be_empty
     end
 
-    context "when the log is a cancellation" do
+    context "when that block holds a cancellation" do
       let(:logs) { [log.merge("topics" => ["0x1cdd46ff242716cdaa72d159d339a485b3438398348d68f09d7c8c0a59353d81", *log["topics"].drop(1)])] }
 
       it "is not final" do
@@ -259,7 +258,7 @@ describe X402::Chain::EvmReader do
   end
 
   context "when the row is read a day later" do
-    let(:head_block) { log_block + 43_200 }
+    let(:safe_block) { log_block + 43_200 }
 
     it "scans inclusive chunks of at most 1,000 blocks" do
       reader.settled?
@@ -284,7 +283,7 @@ describe X402::Chain::EvmReader do
       log_time + (3 * (number - log_block))
     end
 
-    let(:head_block) { log_block + 2_000 }
+    let(:safe_block) { log_block + 2_000 }
 
     it "widens the window to find the transaction" do
       expect(reader.identifier).to eq(log["transactionHash"])
@@ -296,7 +295,7 @@ describe X402::Chain::EvmReader do
       log_time + ((number - log_block) * 9 / 5)
     end
 
-    let(:head_block) { log_block + 2_000 }
+    let(:safe_block) { log_block + 2_000 }
 
     it "widens the window to find the transaction" do
       expect(reader.identifier).to eq(log["transactionHash"])
@@ -315,14 +314,14 @@ describe X402::Chain::EvmReader do
 
   context "when block times stall before validBefore" do
     def block_time(number)
-      return log_time + (2 * (number - log_block)) if number < log_block || number == head_block
+      return log_time + (2 * (number - log_block)) if number < log_block || number == safe_block
 
       valid_before - 1
     end
 
-    let(:head_block) { log_block + 43_200 }
+    let(:safe_block) { log_block + 43_200 }
 
-    it "scans up to the head" do
+    it "scans up to the safe block" do
       expect(reader.identifier).to eq(log["transactionHash"])
     end
   end
@@ -341,20 +340,9 @@ describe X402::Chain::EvmReader do
     end
   end
 
-  context "when the endpoint has no head block" do
-    before do
-      stub_request(:post, "https://sepolia.base.org").with { |request| JSON.parse(request.body)["params"] == ["latest", false] }
-        .to_return(status: 200, body: {jsonrpc: "2.0", id: 1, result: nil}.to_json)
-    end
-
-    it "is inconclusive" do
-      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /no head block/)
-    end
-  end
-
   context "when a bound block is unknown to the endpoint" do
     before do
-      stub_request(:post, "https://sepolia.base.org").with { |request| JSON.parse(request.body).then { |rpc| rpc["method"] == "eth_getBlockByNumber" && rpc["params"].first != "latest" } }
+      stub_request(:post, "https://sepolia.base.org").with { |request| JSON.parse(request.body).then { |rpc| rpc["method"] == "eth_getBlockByNumber" && rpc["params"].first != "safe" } }
         .to_return(status: 200, body: {jsonrpc: "2.0", id: 1, result: nil}.to_json)
     end
 

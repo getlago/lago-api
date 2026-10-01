@@ -34,11 +34,7 @@ module X402
       end
 
       def final?
-        case outcome
-        when :unused then head_timestamp >= valid_before
-        when :unsafe then false
-        else true
-        end
+        (outcome != :unused) || safe_head_timestamp >= valid_before
       end
 
       private
@@ -51,8 +47,7 @@ module X402
           verify_chain!
 
           if authorization_used?
-            log = find_authorization_log
-            safe?(log) ? classify(log) : :unsafe
+            classify(find_authorization_log)
           else
             :unused
           end
@@ -63,11 +58,6 @@ module X402
         expected = network.to_s.split(":", 2).last.to_i
         actual = rpc.call("eth_chainId", []).to_s.to_i(16)
         raise InconclusiveError, "the endpoint for #{network} serves another chain (#{actual})" unless actual == expected
-      end
-
-      def safe?(log)
-        safe_block = rpc.call("eth_getBlockByNumber", ["safe", false]) || raise(InconclusiveError, "no safe block")
-        log["blockNumber"].to_s.to_i(16) <= safe_block["number"].to_i(16)
       end
 
       def classify(log)
@@ -82,7 +72,7 @@ module X402
       end
 
       def authorization_used?
-        word = rpc.call("eth_call", [{"to" => asset, "data" => "#{AUTHORIZATION_STATE}#{padded(payer)}#{nonce.downcase.delete_prefix("0x")}"}, hex(head_number)])
+        word = rpc.call("eth_call", [{"to" => asset, "data" => "#{AUTHORIZATION_STATE}#{padded(payer)}#{nonce.downcase.delete_prefix("0x")}"}, hex(safe_head_number)])
         raise InconclusiveError, "authorizationState answered #{word.inspect}" unless BOOLEAN_WORD.match?(word.to_s)
 
         word.end_with?("1")
@@ -135,34 +125,34 @@ module X402
       end
 
       def upper_bound
-        time = [valid_before, head_timestamp].min
+        time = [valid_before, safe_head_timestamp].min
         block = estimated_block(time) + MARGIN_BLOCKS
 
         MAX_BOUND_ATTEMPTS.times do
-          return head_number if block >= head_number
+          return safe_head_number if block >= safe_head_number
 
           early = time - block_timestamp(block)
           return block if early <= 0
 
           block += (early.fdiv(SECONDS_PER_BLOCK).ceil + MARGIN_BLOCKS)
         end
-        head_number
+        safe_head_number
       end
 
       def estimated_block(time)
-        head_number - (head_timestamp - time).fdiv(SECONDS_PER_BLOCK).ceil
+        safe_head_number - (safe_head_timestamp - time).fdiv(SECONDS_PER_BLOCK).ceil
       end
 
-      def head
-        @head ||= rpc.call("eth_getBlockByNumber", ["latest", false]) || raise(InconclusiveError, "no head block")
+      def safe_head
+        @safe_head ||= rpc.call("eth_getBlockByNumber", ["safe", false]) || raise(InconclusiveError, "no safe block")
       end
 
-      def head_number
-        head["number"].to_i(16)
+      def safe_head_number
+        safe_head["number"].to_i(16)
       end
 
-      def head_timestamp
-        head["timestamp"].to_i(16)
+      def safe_head_timestamp
+        safe_head["timestamp"].to_i(16)
       end
 
       def block_timestamp(number)
