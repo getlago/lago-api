@@ -26,7 +26,7 @@ module ChargeModels
     # v1 charges keep counting touching tiers with a one-unit step, so their
     # billing does not change; only catalog rates bill them half-open.
     def half_open_ranges?
-      pricing_structure.catalog && adjacent_ranges?
+      pricing_structure.product_catalog && adjacent_ranges?
     end
 
     def compute_amount

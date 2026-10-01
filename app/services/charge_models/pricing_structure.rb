@@ -7,9 +7,9 @@ module ChargeModels
     :prorated,
     :accepts_target_wallet,
     :currency,
-    :catalog
+    :product_catalog
   ) do
-    def initialize(charge_model:, properties:, prorated:, accepts_target_wallet:, currency:, catalog: false)
+    def initialize(charge_model:, properties:, prorated:, accepts_target_wallet:, currency:, product_catalog: false)
       if currency.nil?
         raise ArgumentError, "currency is mandatory"
       end
@@ -46,7 +46,7 @@ module ChargeModels
         prorated: billing_segment.contract_rate_card.rate_card.proration?,
         accepts_target_wallet: false,
         currency: Money::Currency.new(billing_segment.currency),
-        catalog: true
+        product_catalog: true
       )
     end
 

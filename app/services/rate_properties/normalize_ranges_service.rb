@@ -13,17 +13,23 @@ module RateProperties
     end
 
     def call
+      # Anything but a hash is left for the record validations to judge.
+      unless rate_properties.is_a?(Hash)
+        result.rate_properties = rate_properties
+        return result
+      end
+
       properties = rate_properties.to_h.deep_stringify_keys
 
       RANGE_KEYS.each do |key|
         ranges = properties[key]
         next unless ranges.is_a?(Array) && ranges.any?
 
-        if ranges.any? { !it.is_a?(Hash) || it.key?("from_value") }
+        if ranges.any? { it.is_a?(Hash) && it.key?("from_value") }
           return result.single_validation_failure!(field: key.to_sym, error_code: "from_value_not_allowed")
         end
 
-        bounds = upper_bounds(ranges)
+        bounds = ranges.all?(Hash) && upper_bounds(ranges)
         return result.single_validation_failure!(field: key.to_sym, error_code: "invalid_#{key}") unless bounds
 
         # Prorated graduated billing steps between tiers one whole unit at a
@@ -53,9 +59,10 @@ module RateProperties
 
       bounds = closed.map { stored_bound(it) }
       return if bounds.any? { it.nil? || !it.positive? }
-      return unless bounds.each_cons(2).all? { |low, high| high > low }
 
-      bounds + [nil]
+      if bounds.each_cons(2).all? { |low, high| high > low }
+        bounds + [nil]
+      end
     end
 
     def stored_bound(value)
@@ -66,9 +73,10 @@ module RateProperties
 
       if bound.frac.zero?
         bound.to_i
-      elsif BigDecimal(bound.to_f.to_s) == bound
-        # Decimals are stored as floats: one a float cannot hold exactly is
-        # rejected rather than billed against a bound the customer never set.
+      elsif bound.n_significant_digits <= Float::DIG
+        # Decimals are stored as floats, which hold 15 significant digits
+        # exactly and compare exactly against usage. A finer bound is rejected
+        # rather than billed against a value the customer never set.
         bound.to_f
       end
     rescue ArgumentError

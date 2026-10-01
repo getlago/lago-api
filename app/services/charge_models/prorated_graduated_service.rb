@@ -4,8 +4,17 @@ module ChargeModels
   class ProratedGraduatedService < ChargeModels::BaseService
     protected
 
+    # This calculator steps one whole unit between tiers. Catalog tiers touch
+    # instead, so each one after the first is read as starting one unit later:
+    # with whole bounds, which a prorating card requires, it covers the same units.
     def ranges
-      properties["graduated_ranges"]&.map(&:with_indifferent_access)
+      @ranges ||= if pricing_structure.product_catalog && AdjacentRanges.adjacent?(stored_ranges) && whole_bounds?
+        stored_ranges.each_with_index.map do |range, index|
+          index.zero? ? range : range.merge(from_value: range[:from_value] + 1)
+        end
+      else
+        stored_ranges
+      end
     end
 
     def compute_amount
@@ -108,6 +117,14 @@ module ChargeModels
     end
 
     private
+
+    def stored_ranges
+      @stored_ranges ||= properties["graduated_ranges"]&.map(&:with_indifferent_access)
+    end
+
+    def whole_bounds?
+      stored_ranges.all? { BigDecimal(it[:from_value].to_s).frac.zero? }
+    end
 
     def result_with_flat_amount(result, total_full_units, max_full_units)
       return 0 if total_full_units.negative?

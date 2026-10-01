@@ -69,7 +69,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
     end
 
     context "with a catalog rate" do
-      let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(catalog: true) }
+      let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(product_catalog: true) }
 
       it "bills each unit in a single tier" do
         expect(apply_graduated_percentage_service.amount_details[:graduated_percentage_ranges].map { it[:units] })
@@ -80,7 +80,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
 
     context "with decimal bounds on a catalog rate" do
       let(:aggregation) { 1 }
-      let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(catalog: true) }
+      let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(product_catalog: true) }
       let(:charge) do
         create(
           :graduated_percentage_charge,

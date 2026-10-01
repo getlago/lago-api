@@ -15,7 +15,7 @@ RSpec.describe ChargeModels::PricingStructure do
       expect(structure.prorated).to eq(true)
       expect(structure.accepts_target_wallet).to eq(false)
       expect(structure.currency).to eq(Money::Currency.new(charge.plan.amount_currency))
-      expect(structure.catalog).to eq(false)
+      expect(structure.product_catalog).to eq(false)
     end
 
     context "when chargeable is not a charge" do
