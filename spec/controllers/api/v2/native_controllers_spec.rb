@@ -19,7 +19,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
 
   # A floor, as for the routes in expand_spec.
   it "walks every native controller" do
-    expect(native_controllers.size).to be >= 11
+    expect(native_controllers.size).to be >= 12
   end
 
   native_controllers.each do |native_controller|

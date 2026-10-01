@@ -25,6 +25,12 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized[:plan_code]).to eq("foo")
   end
 
+  it "routes the taxes of a rate card to their v2 controller despite the greedy rate card code" do
+    recognized = Rails.application.routes.recognize_path("/api/v2/rate_cards/foo/taxes", method: :get)
+
+    expect(recognized).to eq(controller: "api/v2/rate_cards/taxes", action: "index", rate_card_code: "foo")
+  end
+
   it "falls back to v1 controllers for shared resources" do
     customers = Rails.application.routes.routes.find do |route|
       route.path.spec.to_s.start_with?("/api/v2/customers(") && route.verb == "GET"
