@@ -124,6 +124,42 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       expect(apply_graduated_service.amount).to eq(9)
     end
 
+    context "with a tier one unit wide and a second addition" do
+      let(:aggregation) { 7 }
+      let(:per_event_aggregation) do
+        BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
+          r.event_aggregation = [5, 2]
+          r.event_prorated_aggregation = [5, 2]
+        end
+      end
+      let(:charge) do
+        create(
+          :graduated_charge,
+          billable_metric:,
+          organization:,
+          plan:,
+          prorated: true,
+          properties: {
+            graduated_ranges: [
+              {from_value: 0, to_value: 2, per_unit_amount: "1", flat_amount: "0"},
+              {from_value: 2, to_value: 3, per_unit_amount: "2", flat_amount: "0"},
+              {from_value: 3, to_value: nil, per_unit_amount: "3", flat_amount: "0"}
+            ]
+          }
+        )
+      end
+
+      before do
+        aggregation_result.full_units_number = 7
+        aggregation_result.current_usage_units = 7
+      end
+
+      # Units 1-2 at 1, unit 3 at 2, units 4-7 at 3.
+      it "bills the one-unit tier at its own price" do
+        expect(apply_graduated_service.amount).to eq(16)
+      end
+    end
+
     context "when usage drops back below a bound mid-period" do
       let(:aggregation) { 10 }
       let(:per_event_aggregation) do

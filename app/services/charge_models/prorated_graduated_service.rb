@@ -149,7 +149,11 @@ module ChargeModels
       end
 
       ranges.each_with_index do |range, index|
-        return ranges[index + 1] if units == range[:to_value] && next_full_unit&.positive?
+        # Usage resting on a tier's top moves to the next tier when an event follows.
+        # A catalog tier one unit wide starts on its top, so while an overflow is
+        # spread that unit is its own: only usage at rest moves on there.
+        at_rest = overflow.zero? || !pricing_structure.product_catalog
+        return ranges[index + 1] if at_rest && units == range[:to_value] && next_full_unit&.positive?
         return range if units == range[:to_value]
         return range if units >= range[:from_value] && (range[:to_value].nil? || units < range[:to_value])
       end
