@@ -35,6 +35,17 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with a payment_term conflicting with the net_payment_term sent alongside" do
+      before { create_params.merge!(payment_term: {term_type: "net", days: 30}, net_payment_term: 60) }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["conflicting_net_payment_term"])
+      end
+    end
+
     context "with a payment_term carrying an unexpected field" do
       before { create_params[:payment_term] = {term_type: "end_of_month", days: 3} }
 

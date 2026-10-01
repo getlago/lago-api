@@ -8,6 +8,7 @@ module PaymentTerms
     def valid?
       valid_net_payment_term?
       valid_payment_term?
+      valid_alias_equivalence? unless errors?
 
       if errors?
         result.validation_failure!(errors:)
@@ -18,6 +19,17 @@ module PaymentTerms
     end
 
     private
+
+    def valid_alias_equivalence?
+      return true if payment_term.nil? || args[:net_payment_term].nil?
+
+      alias_value = PaymentTerm.from_h(payment_term).net_payment_term_alias
+      if alias_value != args[:net_payment_term]
+        add_error(field: :payment_term, error_code: "conflicting_net_payment_term")
+      else
+        true
+      end
+    end
 
     def valid_net_payment_term?
       value = args[:net_payment_term]
