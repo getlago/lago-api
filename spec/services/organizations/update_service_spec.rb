@@ -249,6 +249,10 @@ RSpec.describe Organizations::UpdateService do
 
         before do
           draft_invoice
+          organization.default_billing_entity.update!(
+            net_payment_term: 30,
+            payment_term: {"term_type" => "net", "days" => 30}
+          )
           allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
         end
 
@@ -260,6 +264,7 @@ RSpec.describe Organizations::UpdateService do
             expect(result).to be_success
 
             expect(result.organization.net_payment_term).to eq(2)
+            expect(result.organization.default_billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
             expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity: organization.default_billing_entity, net_payment_term: 2)
           end
         end

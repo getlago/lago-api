@@ -22,6 +22,15 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     )
   end
 
+  # Backward compatibility for the legacy net_payment_term_field
+  def self.from_net_payment_term(days)
+    if days.nil?
+      nil
+    else
+      new(term_type: "net", days:)
+    end
+  end
+
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
     term_type = term_type.to_s
     fields = FIELDS_BY_TERM_TYPE.fetch(term_type, [])

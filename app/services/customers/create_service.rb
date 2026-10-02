@@ -70,6 +70,8 @@ module Customers
         customer_type: args[:customer_type]
       )
 
+      PaymentTerms::AssignService.call(record: customer, params: args)
+
       if customer&.organization&.revenue_share_enabled?
         customer.account_type = args[:account_type] if args.key?(:account_type)
         customer.exclude_from_dunning_campaign = customer.partner_account?
