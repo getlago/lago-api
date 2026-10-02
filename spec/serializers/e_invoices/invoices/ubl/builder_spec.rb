@@ -230,8 +230,18 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
 
         it "contains the payment information on note" do
           expect(subject).to contains_xml_node("//cac:PaymentTerms/cbc:Note").with_value(
-            "Payment term 2 days, Prepaid credits of USD 10.00 applied, and Credit notes of USD 20.00 applied"
+            "Payment due within 2 days, Prepaid credits of USD 10.00 applied, and Credit notes of USD 20.00 applied"
           )
+        end
+      end
+
+      context "with a snapshotted structured payment term" do
+        before do
+          invoice.update(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+        end
+
+        it "renders the term sentence from the snapshot" do
+          expect(subject).to contains_xml_node("//cac:PaymentTerms/cbc:Note").with_value("Due at end of month")
         end
       end
     end
